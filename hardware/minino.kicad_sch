@@ -2724,7 +2724,7 @@
     (property "Reference" "U?" (id 0) (at 55.7404 26.67 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
-    (property "Value" "ESP32-WROOM-32U" (id 1) (at 55.7404 29.21 0)
+    (property "Value" "ESP32-S3-WROOM-1U-N16" (id 1) (at 55.7404 29.21 0)
       (effects (font (size 1.27 1.27)) (justify left))
     )
     (property "Footprint" "RF_Module:ESP32-WROOM-32U" (id 2) (at 53.721 102.616 0)
@@ -3528,7 +3528,7 @@
       (reference "SW?") (unit 1) (value "DOWN") (footprint "Button_Switch_SMD:SW_SPST_TL3342")
     )
     (path "/82258c3e-1da4-4e22-a1d7-11a4d68ce128"
-      (reference "U?") (unit 1) (value "ESP32-WROOM-32U") (footprint "RF_Module:ESP32-WROOM-32U")
+      (reference "U?") (unit 1) (value "ESP32-S3-WROOM-1U-N16") (footprint "RF_Module:ESP32-WROOM-32U")
     )
     (path "/a2a906dc-0b93-419b-9dd7-3da36aee1d16"
       (reference "U?") (unit 1) (value "MCP73831-3-OT") (footprint "Package_TO_SOT_SMD:SOT-23-5")
