@@ -1,0 +1,4 @@
+(sym_lib_table
+  (lib (name "minino-cache")(type "Legacy")(uri "${KIPRJMOD}/minino-cache.lib")(options "")(descr ""))
+  (lib (name "ESP32-S3-WROOM")(type "Legacy")(uri "${KIPRJMOD}/Library/ESP32-S3-WROOM.lib")(options "")(descr ""))
+)
