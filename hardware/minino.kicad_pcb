@@ -936,6 +936,11 @@
       (scale (xyz 1 1 1))
       (rotate (xyz -90 0 0))
     )
+    (model "C:/Users/Admin/Documents/GitHub/ElectronicCats-KiCad-Libraries/Footprints/Connectors.pretty/3D/HRO  TYPE-C-31-M-12.step"
+      (offset (xyz -4.5 -7 0))
+      (scale (xyz 1 1 1))
+      (rotate (xyz 90 -180 180))
+    )
   )
 
   (footprint "Package_TO_SOT_SMD:SOT-23-5" (layer "B.Cu")
@@ -1887,6 +1892,11 @@
     (pad "3" smd rect locked (at 2.5 1 270) (size 1.2 2.5) (layers "B.Cu" "B.Paste" "B.Mask") (tstamp c10f8f39-f839-4cd8-8ce5-1f4c006c60f0))
     (pad "4" thru_hole circle locked (at -3.4 -1.75 270) (size 1.4 1.4) (drill 0.9) (layers *.Cu *.Mask) (tstamp 6978623c-7287-4db7-9ab8-82ba268973c5))
     (pad "5" thru_hole circle locked (at 3.4 -1.75 270) (size 1.4 1.4) (drill 0.9) (layers *.Cu *.Mask) (tstamp 3ab96841-2f11-4fa3-a4f1-f732e03727b1))
+    (model "${KIPRJMOD}/3D/JS102011SAQN.STEP"
+      (offset (xyz 4.5 -4 0.5))
+      (scale (xyz 1 1 1))
+      (rotate (xyz -90 0 -180))
+    )
   )
 
   (footprint "Resistor_SMD:R_0603_1608Metric" (layer "B.Cu")
@@ -2199,7 +2209,7 @@
   (dimension (type aligned) (layer "Margin") (tstamp 32c3863a-86cf-47b0-a281-32580bb8a27a)
     (pts (xy 46.5 47.05) (xy 46.5 119.5))
     (height 30.88)
-    (gr_text "72.4500 mm" (at 14.47 83.275 90) (layer "Margin") (tstamp 8cc3339c-805e-4260-9cc3-2649e5486648)
+    (gr_text "72.4500 mm" (at 14.47 83.275 90) (layer "Margin") (tstamp 32c3863a-86cf-47b0-a281-32580bb8a27a)
       (effects (font (size 1 1) (thickness 0.15)))
     )
     (format (units 3) (units_format 1) (precision 4))
@@ -2217,7 +2227,7 @@
   (dimension (type aligned) (layer "Margin") (tstamp 54f22fff-247a-4616-ad7b-b51747716af3)
     (pts (xy 97.5 47) (xy 46.5 47.05))
     (height 30.020299)
-    (gr_text "51.0000 mm" (at 71.969441 15.854716 0.05617231486) (layer "Margin") (tstamp 9510068a-b9c9-4f26-959b-d6980e4f7bc3)
+    (gr_text "51.0000 mm" (at 71.969441 15.854716 0.05617231486) (layer "Margin") (tstamp 54f22fff-247a-4616-ad7b-b51747716af3)
       (effects (font (size 1 1) (thickness 0.15)))
     )
     (format (units 3) (units_format 1) (precision 4))
