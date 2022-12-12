@@ -1,0 +1,11 @@
+### Missing 3D models - created on 2022-12-12 16:08
+### Printed by checking_3D_models plugin
+Board file: C:\Users\Admin\Documents\GitHub\Minino\hardware\minino.kicad_pcb
+3D missing models written to:
+C:\Users\Admin\Documents\GitHub\Minino\hardware\minino_missing3Dmodels.txt
+-------
+('P1', '${KICAD_EC_PCB}/Connectors.pretty/3D/HRO  TYPE-C-31-M-12.step')
+('U1', 'C:\\Program Files\\KiCad\\6.0\\share\\kicad\\3dmodels\\RF_Module.3dshapes\\ESP32-S3-WROOM-1U.wrl')
+-------
+NUM of 3D missing models:2
+checked extensions ['.stp', '.step', '.stpZ']
