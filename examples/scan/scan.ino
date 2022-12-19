@@ -11,7 +11,7 @@ uint8_t advertisement[31]; //Save actual AirTag Advertising
 
 void setup() {
   Serial.begin(9600);
-  //while (!Serial);
+  while (!Serial);
   
   // Begin initialization
   if (!BLE.begin()) {
