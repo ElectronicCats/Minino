@@ -42,7 +42,6 @@ void spoofDevice(){ //Spoof advertising data
   BLE.setManufacturerData(idm, adv, sizeof(adv));
   BLE.advertise();
   
-  while (1){}
 }
 
 void loop(){
