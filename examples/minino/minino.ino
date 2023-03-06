@@ -9,8 +9,10 @@
 
 Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-
-
+BLEService myService("fff0");
+BLEIntCharacteristic myCharacteristic("fff1", BLERead | BLEBroadcast);
+const uint8_t manufactData[4] = {0x01, 0x02, 0x03, 0x04};
+const uint8_t serviceData[3] = {0x00, 0x01, 0x02};
 void setup() {
   pinMode(5, INPUT_PULLUP);
   pinMode(6, INPUT_PULLUP);
@@ -42,12 +44,11 @@ void setup() {
    while (1);
   }
     BLE.scan();
-
 }
   
 void loop() {
   displayMenu();
-   
+
 }
 
 void displayMenu() {
@@ -110,8 +111,9 @@ void displayMenu() {
     //una vrez presionado back sale de funcion
   } 
   if (Layer ==1) {
-   
     //spoofDevice();
+       //llamar funcion de spoof 
+      //una vez presionado back sale de funcion
   }
    if (Layer == 2) {
     display.clearDisplay();
@@ -126,7 +128,10 @@ void displayMenu() {
   } 
    if (Layer == 3) {
    soundDevice();
-  } 
+     //llamar funcion de sound 
+    //una vez presionado back sale de funcion
+  }
+   
    
 
  display.display();
@@ -136,7 +141,7 @@ void displayMenu() {
 //una vez presionado back sale de funcion
 void Scanner(){
   
-    display.println("BLE scan - filtering AirTags");
+    //display.println("BLE scan - filtering AirTags");
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
@@ -157,15 +162,15 @@ BLEDevice peripheral = BLE.available();
          delay(2000);
 
       display.println("-------"); 
-      
+      display.clearDisplay(); 
       display.setTextSize(1);
       display.setTextColor(SH110X_WHITE);
       
       display.print("Detected AirTag!! - ");
-      delay(2000);
       
       if (advertisement[4] == 0x12 && advertisement[6] == 0x10){
-    
+  
+       display.clearDisplay(); 
        display.setTextSize(1);
        display.setTextColor(SH110X_WHITE);
        display.println("Registered and active device");
@@ -184,8 +189,8 @@ BLEDevice peripheral = BLE.available();
       //Serial.println("");
       //Serial.println("-------"); 
       
-      //Serial.print("RSSI: ");
-      //Serial.println(peripheral.rssi());
+      display.print("RSSI: ");
+      display.println(peripheral.rssi());
     }
     else {
       
@@ -195,7 +200,10 @@ BLEDevice peripheral = BLE.available();
       display.println("it is not an AirTag");
       display.println("Address:"); display.println(peripheral.address()); display.println(peripheral.deviceName());
           delay(1000);
-
+      Serial.println("Found device, but ");
+      Serial.println("it is not an AirTag");
+      Serial.println("Address:"); Serial.println(peripheral.address()); Serial.println(peripheral.deviceName());
+          delay(1000);
     }
   }
 }
@@ -203,26 +211,48 @@ BLEDevice peripheral = BLE.available();
 //--------------------------------Init spoof device Function------------------------------------//
 
 
-void spoofDevice(){ //Spoof advertising data
+//void blePol(){//Spoof advertising data
+  //BLE.poll();
+//}
+/*void spoofDevice(){
+
    display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
     display.setCursor(0, 0);
     display.println("Spoof Function");
     
+  myService.addCharacteristic(myCharacteristic);
+  BLE.addService(myService);
+  // Build scan response data packet
+  BLEAdvertisingData scanData;
+  // Set parameters for scan response packet
+  //scanData.setLocalName("Test enhanced advertising");
+  // Copy set parameters in the actual scan response packet
+  //BLE.setScanResponseData(scanData);
+
+  // Build advertising data packet
+  BLEAdvertisingData advData;
+
   uint8_t adv[27];
   for (int x = 4; x < 31; x++) {
     adv[x-4] = (byte)advertisement[x];
   }
 
   uint16_t idm = 0x004c; //Apple ID
-  //setAdvertisingData(BLEAdvertisingData& advertisingData)
-
-  BLE.setManufacturerData(idm, adv, sizeof(adv));
-  BLE.advertise();
   
-  while (1){}
-}
+  // Set parameters for advertising packet
+  advData.setManufacturerData(idm, adv, sizeof(adv));
+  advData.setAdvertisedService(myService);
+  advData.setAdvertisedServiceData(0xfff0, serviceData, sizeof(serviceData));
+  // Copy set parameters in the actual advertising packet
+  BLE.setAdvertisingData(advData);
+
+  BLE.advertise();
+  Serial.println("advertising ...");
+}*/
+  
+ 
 
 
 //--------------------------------Init sound device Function------------------------------------//

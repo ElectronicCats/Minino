@@ -10,14 +10,23 @@
 
 
 
+
+uint8_t advertisement[31] = { //Data to be advertise
+  0x1E, 0xFF, 0x4C, 0x00, 0x12, 0x19, 0x10, 0x12, 0x12, 0x34, 0x56, 
+  0x78, 0x12, 0x34, 0x56, 0x78, 0x90, 0x12, 0x34, 0x56, 0x78, 0x90, 
+  0x12, 0x34, 0x56, 0x78, 0x90, 0x12, 0x34, 0x56, 0x90
+  };  
+
+  
 int selected = 0;
 int Layer = -1;
+
 
 uint8_t limitDevices = 10;//How many devices able to detect (if this variable change, must change the next variables section)
 unsigned long delayStart[10];//Activity per AirTag
 bool actives[10];         //To check if the Airtag is around more than 10 minutes
 String mairtags[10];      //Save Mac AirTags for reference
-uint8_t advertisement[31];//Save actual AirTag Advertising
+//uint8_t advertisement[31];//Save actual AirTag Advertising
 uint8_t advertags[10][31];//Save active AirTags Advertinsings
 uint8_t positiona = 0;    //The last Active AirTag
 bool playSoundm = false;  //Write chrac to play a sound without waiting 10 minutes
