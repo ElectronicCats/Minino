@@ -18,7 +18,20 @@ void setup() {
   pinMode(6, INPUT_PULLUP);
   pinMode(9, INPUT_PULLUP);
   pinMode(10,INPUT_PULLUP);
+ myService.addCharacteristic(myCharacteristic);
 
+  BLE.addService(myService);
+
+  // Build scan response data packet
+  BLEAdvertisingData scanData;
+
+  // Set parameters for scan response packet
+  //scanData.setLocalName("Test enhanced advertising");
+  // Copy set parameters in the actual scan response packet
+  //BLE.setScanResponseData(scanData);
+  // Build advertising data packet
+
+  
   Serial.begin(9600);
 
   // Begin initialization
@@ -44,6 +57,7 @@ void setup() {
    while (1);
   }
     BLE.scan();
+    
 }
   
 void loop() {
@@ -108,10 +122,10 @@ void displayMenu() {
   if (Layer == 0) {
     Scanner();
     //llamar funcion de scan 
-    //una vrez presionado back sale de funcion
+    //una vez presionado back sale de funcion
   } 
   if (Layer ==1) {
-    //spoofDevice();
+    spoofDevice();
        //llamar funcion de spoof 
       //una vez presionado back sale de funcion
   }
@@ -211,27 +225,14 @@ BLEDevice peripheral = BLE.available();
 //--------------------------------Init spoof device Function------------------------------------//
 
 
-//void blePol(){//Spoof advertising data
-  //BLE.poll();
-//}
-/*void spoofDevice(){
 
+void spoofDevice(){
    display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
     display.setCursor(0, 0);
     display.println("Spoof Function");
-    
-  myService.addCharacteristic(myCharacteristic);
-  BLE.addService(myService);
-  // Build scan response data packet
-  BLEAdvertisingData scanData;
-  // Set parameters for scan response packet
-  //scanData.setLocalName("Test enhanced advertising");
-  // Copy set parameters in the actual scan response packet
-  //BLE.setScanResponseData(scanData);
 
-  // Build advertising data packet
   BLEAdvertisingData advData;
 
   uint8_t adv[27];
@@ -243,18 +244,26 @@ BLEDevice peripheral = BLE.available();
   
   // Set parameters for advertising packet
   advData.setManufacturerData(idm, adv, sizeof(adv));
+  Serial.println("1");
   advData.setAdvertisedService(myService);
+    Serial.println("2");
   advData.setAdvertisedServiceData(0xfff0, serviceData, sizeof(serviceData));
+    Serial.println("3");
+
   // Copy set parameters in the actual advertising packet
   BLE.setAdvertisingData(advData);
+  Serial.println("4");
 
   BLE.advertise();
-  Serial.println("advertising ...");
-}*/
+  display.println("advertising ...");
+
   
  
+}
+void Poll(){
+      BLE.poll();
 
-
+}
 //--------------------------------Init sound device Function------------------------------------//
 
 
