@@ -13,6 +13,8 @@ BLEService myService("fff0");
 BLEIntCharacteristic myCharacteristic("fff1", BLERead | BLEBroadcast);
 const uint8_t manufactData[4] = {0x01, 0x02, 0x03, 0x04};
 const uint8_t serviceData[3] = {0x00, 0x01, 0x02};
+
+
 void setup() {
   pinMode(5, INPUT_PULLUP);
   pinMode(6, INPUT_PULLUP);
@@ -123,23 +125,15 @@ void displayMenu() {
     Scanner();
     //llamar funcion de scan 
     //una vez presionado back sale de funcion
-  } 
+  }
   if (Layer ==1) {
     spoofDevice();
        //llamar funcion de spoof 
       //una vez presionado back sale de funcion
   }
    if (Layer == 2) {
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SH110X_WHITE);
-    display.setCursor(0, 0);
-    display.println(F("Detect"));
-    display.println("configuration");
-    display.setTextColor(SH110X_WHITE);
-    display.setTextSize(2);
-    display.println("Detecting...");
-  } 
+ detect();
+  }
    if (Layer == 3) {
    soundDevice();
      //llamar funcion de sound 
@@ -151,38 +145,40 @@ void displayMenu() {
  display.display();
 }
 
-//--------------------------------Init sound device Function------------------------------------//
+//--------------------------------Init scan device Function------------------------------------//
 //una vez presionado back sale de funcion
 void Scanner(){
-  
+    
     //display.println("BLE scan - filtering AirTags");
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
     display.setCursor(0, 0);
     display.println(F("Scan Function"));
-    delay(1000);
+    delay(2000);
+
   // Start scanning for peripheral
 BLEDevice peripheral = BLE.available(); 
-  
+
   if (peripheral){
+    
+      
     
     int adLength = peripheral.advertisementData(advertisement,31);
     if (advertisement[0] == 0x1e && advertisement[2] == 0x4c && advertisement[3] == 0x00){ //Check if it is an Apple AirTag
-
+        
+    display.clearDisplay();
     display.setTextSize(1);
-    display.setTextColor(SH110X_WHITE);    
-    display.println(F("Detected AirTag!! -"));
-         delay(2000);
-
-      display.println("-------"); 
-      display.clearDisplay(); 
-      display.setTextSize(1);
-      display.setTextColor(SH110X_WHITE);
-      
-      display.print("Detected AirTag!! - ");
-      
-      if (advertisement[4] == 0x12 && advertisement[6] == 0x10){
+    display.setTextColor(SH110X_WHITE);
+    display.setCursor(0, 0);
+    display.println(F("Airtags"));
+    //display.print(selected);
+    display.print("Address: "); display.println(peripheral.address());
+    display.println("");
+   delay(1000);
+    
+    
+     /* if (advertisement[4] == 0x12 && advertisement[6] == 0x10){
   
        display.clearDisplay(); 
        display.setTextSize(1);
@@ -205,21 +201,17 @@ BLEDevice peripheral = BLE.available();
       
       display.print("RSSI: ");
       display.println(peripheral.rssi());
-    }
+ */ }
     else {
       
       display.setTextSize(1);
       display.setTextColor(SH110X_WHITE);
       display.println("Found device, but ");
       display.println("it is not an AirTag");
-      display.println("Address:"); display.println(peripheral.address()); display.println(peripheral.deviceName());
-          delay(1000);
-      Serial.println("Found device, but ");
-      Serial.println("it is not an AirTag");
-      Serial.println("Address:"); Serial.println(peripheral.address()); Serial.println(peripheral.deviceName());
-          delay(1000);
-    }
+      
+  
   }
+ }
 }
 
 //--------------------------------Init spoof device Function------------------------------------//
@@ -227,6 +219,8 @@ BLEDevice peripheral = BLE.available();
 
 
 void spoofDevice(){
+  
+
    display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
@@ -244,15 +238,11 @@ void spoofDevice(){
   
   // Set parameters for advertising packet
   advData.setManufacturerData(idm, adv, sizeof(adv));
-  Serial.println("1");
   advData.setAdvertisedService(myService);
-    Serial.println("2");
   advData.setAdvertisedServiceData(0xfff0, serviceData, sizeof(serviceData));
-    Serial.println("3");
 
   // Copy set parameters in the actual advertising packet
   BLE.setAdvertisingData(advData);
-  Serial.println("4");
 
   BLE.advertise();
   display.println("advertising ...");
@@ -260,6 +250,7 @@ void spoofDevice(){
   
  
 }
+
 void Poll(){
       BLE.poll();
 
@@ -283,21 +274,21 @@ bool conec (BLEDevice peripheral){                //Establish the BLE connection
   BLE.stopScan();
   
   if (peripheral.connect()) {
-    Serial.println("Connected");
+    display.println("Connected");
     cn = true;
     
-    Serial.println("Discovering attributes...");
+    display.println("Discovering attributes...");
     if (peripheral.discoverAttributes() ) {
-      Serial.println("Attributes discovered");
+      display.println("Attributes discovered");
     }
     else {
-      Serial.println("Attribute discovery failed!");
+      display.println("Attribute discovery failed!");
       peripheral.disconnect();
       cn = false;
     }
   }
   else {
-    Serial.println("Failed to connect!");
+    display.println("Failed to connect!");
   }
   
   return cn;
@@ -305,13 +296,14 @@ bool conec (BLEDevice peripheral){                //Establish the BLE connection
 void wcharc(BLEDevice peripheral){ //Play a sound
   BLECharacteristic nCharac = peripheral.characteristic("7dfc9001-7d1c-4951-86aa-8d9728f8d66c");
   if (nCharac) {
-   Serial.print("Found characteristic! Writing..."); 
-   Serial.println(nCharac.writeValue((byte)0x01));
+   display.print("Found characteristic! Writing..."); 
+   display.println(nCharac.writeValue((byte)0x01));
   } else {
-    Serial.println("Peripheral does NOT have that characteristic");
+    display.println("Peripheral does NOT have that characteristic");
   }
 }
 void soundDevice(){
+
      display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
@@ -328,22 +320,22 @@ void soundDevice(){
     
     if (advertisement[0] == 0x1e && advertisement[2] == 0x4c && advertisement[3] == 0x00){ //Check if it is an Apple AirTag
       // print address
-      Serial.println("-------"); 
-      Serial.print("Detected AirTag!! - ");
+      display.println("-------"); 
+      display.print("Detected AirTag!! - ");
       if (advertisement[4] == 0x12 && advertisement[6] == 0x10){
-        Serial.print("Registered and active device");
+        display.print("Registered and active device");
         rtag = true;
       }
       else if(advertisement[4] == 0x07 && advertisement[6] == 0x05){
-        Serial.print("Unregister device");
+        display.print("Unregister device");
       }
       
-      Serial.print(" - Address: "); Serial.println(peripheral.address());
-      Serial.print("Advertising data: ");
+      display.print(" - Address: "); display.println(peripheral.address());
+      display.print("Advertising data: ");
       for (int x = 0; x < 31; x++) {
-        Serial.print(advertisement[x],HEX); Serial.print(" ");
+        display.print(advertisement[x],HEX); display.print(" ");
       }
-      Serial.println("");
+      display.println("");
         
       if(rtag == true) {
         checkTimeout();      
@@ -355,7 +347,7 @@ void soundDevice(){
               if (chkc) {
                 
                 mairtags[i] = peripheral.address(); 
-                Serial.print("Saved in memory "); Serial.println(mairtags[i]);Serial.print(" - Position: "); Serial.println(i);
+                display.print("Saved in memory "); display.println(mairtags[i]);display.print(" - Position: "); display.println(i);
               
                 delayStart[i] = millis();
                 positiona = i;
@@ -383,7 +375,7 @@ void soundDevice(){
         BLE.scan();
         delay(50);
       }
-      Serial.println("-------");
+      display.println("-------");
     }
     else {
       display.println("Found device, but");
@@ -392,4 +384,16 @@ void soundDevice(){
       delay(1000);
     }
   }
+}
+  //--------------------------------Init detect device Function------------------------------------//
+void detect(){
+  display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(SH110X_WHITE);
+    display.setCursor(0, 0);
+    display.println(F("Detect"));
+    display.println("configuration");
+    display.setTextColor(SH110X_WHITE);
+    display.setTextSize(2);
+    display.println("Detecting...");
 }

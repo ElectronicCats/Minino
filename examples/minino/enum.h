@@ -1,5 +1,3 @@
-
-
 #define SCREEN_ADDRESS 0x3c
 #define LOGO_WIDTH    84
 #define LOGO_HEIGHT   52
