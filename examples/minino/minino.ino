@@ -155,7 +155,7 @@ void Scanner(){
     display.setTextColor(SH110X_WHITE);
     display.setCursor(0, 0);
     display.println(F("Scan Function"));
-    delay(2000);
+    delay(1000);
 
   // Start scanning for peripheral
 BLEDevice peripheral = BLE.available(); 
@@ -174,8 +174,7 @@ BLEDevice peripheral = BLE.available();
     display.println(F("Airtags"));
     //display.print(selected);
     display.print("Address: "); display.println(peripheral.address());
-    display.println("");
-   delay(1000);
+    delay(2000);
     
     
      /* if (advertisement[4] == 0x12 && advertisement[6] == 0x10){
@@ -208,6 +207,7 @@ BLEDevice peripheral = BLE.available();
       display.setTextColor(SH110X_WHITE);
       display.println("Found device, but ");
       display.println("it is not an AirTag");
+      
       
   
   }
@@ -245,7 +245,7 @@ void spoofDevice(){
   BLE.setAdvertisingData(advData);
 
   BLE.advertise();
-  display.println("advertising ...");
+  display.println("spoofing ...");
 
   
  
@@ -391,9 +391,9 @@ void detect(){
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
     display.setCursor(0, 0);
-    display.println(F("Detect"));
+    display.println(F("Detect Function"));
     display.println("configuration");
     display.setTextColor(SH110X_WHITE);
-    display.setTextSize(2);
+    display.setTextSize(1);
     display.println("Detecting...");
 }
