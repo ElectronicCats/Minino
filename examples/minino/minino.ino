@@ -173,7 +173,10 @@ BLEDevice peripheral = BLE.available();
     display.setCursor(0, 0);
     display.println(F("Airtags"));
     //display.print(selected);
+    Serial.print("Address: "); Serial.println(peripheral.address());
+
     display.print("Address: "); display.println(peripheral.address());
+
     delay(2000);
     
     
