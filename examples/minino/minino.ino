@@ -148,14 +148,15 @@ void displayMenu() {
 //--------------------------------Init scan device Function------------------------------------//
 //una vez presionado back sale de funcion
 void Scanner(){
-    
+      int back = digitalRead(10);
+
     //display.println("BLE scan - filtering AirTags");
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
-    display.setCursor(0, 0);
+    display.setCursor(0, 20);
     display.println(F("Scan Function"));
-    delay(1000);
+    delay(500);
 
   // Start scanning for peripheral
 BLEDevice peripheral = BLE.available(); 
@@ -166,20 +167,30 @@ BLEDevice peripheral = BLE.available();
     
     int adLength = peripheral.advertisementData(advertisement,31);
     if (advertisement[0] == 0x1e && advertisement[2] == 0x4c && advertisement[3] == 0x00){ //Check if it is an Apple AirTag
-        
+
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
     display.setCursor(0, 0);
     display.println(F("Airtags"));
     //display.print(selected);
-    Serial.print("Address: "); Serial.println(peripheral.address());
-
-    display.print("Address: "); display.println(peripheral.address());
-
-    delay(2000);
+    //display.print("Address: "); display.println(peripheral.address());
     
     
+   /*  String airtags[4] = {
+    " 1.-",
+    " 2.-",
+    " 3.-",
+    " 4.-"
+  };*/
+for (int i = 0; i < 3; i++) {
+  display.print("- "); display.println(peripheral.address());
+   // airtags == peripheral.address()) {
+       // display.println(airtags[i]);
+      }
+}
+          while(back==LOW);
+
      /* if (advertisement[4] == 0x12 && advertisement[6] == 0x10){
   
        display.clearDisplay(); 
@@ -215,7 +226,7 @@ BLEDevice peripheral = BLE.available();
   
   }
  }
-}
+
 
 //--------------------------------Init spoof device Function------------------------------------//
 
