@@ -26,3 +26,6 @@ fp-info-cache
 *.csv
 
 hardware/minino-backups/
+
+# Visual Studio Code files
+.vscode/
