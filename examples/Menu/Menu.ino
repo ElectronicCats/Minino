@@ -2,8 +2,22 @@
 #include <Adafruit_SH110X.h>
 #include <SPI.h>
 #include <Wire.h>
+#include <ezButton.h>
 
 #include "enum.h"
+
+#define DEBOUNCE_DELAY_MS 50
+#define UP_PIN 5
+#define DOWN_PIN 6
+#define RIGHT_PIN 10
+#define LEFT_PIN 9
+#define SELECT_PIN 46
+
+ezButton buttonUp(UP_PIN);
+ezButton buttonDown(DOWN_PIN);
+ezButton buttonSelect(SELECT_PIN);
+ezButton buttonRight(RIGHT_PIN);
+ezButton buttonLeft(LEFT_PIN);
 
 Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 uint8_t advertisement[31];
@@ -12,10 +26,21 @@ int selected = 0;
 int Layer = -1;
 
 void setup() {
-  pinMode(2, INPUT_PULLUP);
-  pinMode(5, INPUT_PULLUP);
-  pinMode(6, INPUT_PULLUP);
-  pinMode(17, INPUT_PULLUP);
+  // pinMode(2, INPUT_PULLUP);
+  // pinMode(5, INPUT_PULLUP);
+  // pinMode(6, INPUT_PULLUP);
+  // pinMode(17, INPUT_PULLUP);
+  pinMode(UP_PIN, INPUT_PULLUP);
+  pinMode(DOWN_PIN, INPUT_PULLUP);
+  pinMode(RIGHT_PIN, INPUT_PULLUP);
+  pinMode(LEFT_PIN, INPUT_PULLUP);
+  pinMode(SELECT_PIN, INPUT_PULLUP);
+
+  buttonUp.setDebounceTime(DEBOUNCE_DELAY_MS);
+  buttonDown.setDebounceTime(DEBOUNCE_DELAY_MS);
+  buttonSelect.setDebounceTime(DEBOUNCE_DELAY_MS);
+  buttonRight.setDebounceTime(DEBOUNCE_DELAY_MS);
+  buttonLeft.setDebounceTime(DEBOUNCE_DELAY_MS);
 
   Serial.begin(9600);
 
@@ -40,7 +65,29 @@ void setup() {
 }
 
 void loop() {
-  displayMenu();
+  // displayMenu();
+  buttonUp.loop();
+  buttonDown.loop();
+  buttonSelect.loop();
+  buttonRight.loop();
+  buttonLeft.loop();
+
+  // Print the name of the pressed button
+  if (buttonUp.isPressed()) {
+    Serial.println("UP");
+  }
+  if (buttonDown.isPressed()) {
+    Serial.println("DOWN");
+  }
+  if (buttonSelect.isPressed()) {
+    Serial.println("SELECT");
+  }
+  if (buttonRight.isPressed()) {
+    Serial.println("RIGHT");
+  }
+  if (buttonLeft.isPressed()) {
+    Serial.println("LEFT");
+  }
 }
 
 void displayMenu(void) {

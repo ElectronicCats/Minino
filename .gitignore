@@ -29,3 +29,5 @@ hardware/minino-backups/
 
 # Visual Studio Code files
 .vscode/
+.DS_Store
+hardware/.DS_Store
