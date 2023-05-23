@@ -4,6 +4,7 @@
 #include <Wire.h>
 #include <ezButton.h>
 
+#include "Keyboard.h"
 #include "enum.h"
 
 Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
@@ -11,6 +12,8 @@ uint8_t advertisement[31];
 
 int selected = 0;
 int Layer = -1;
+
+Keyboard keyboard;
 
 void setup() {
   Serial.begin(9600);
@@ -37,6 +40,19 @@ void setup() {
 
 void loop() {
   // displayMenu();
+  keyboard.loop();
+
+  if (keyboard.up.isPressed()) {
+    Serial.println("UP");
+  } else if (keyboard.down.isPressed()) {
+    Serial.println("DOWN");
+  } else if (keyboard.right.isPressed()) {
+    Serial.println("RIGHT");
+  } else if (keyboard.left.isPressed()) {
+    Serial.println("LEFT");
+  } else if (keyboard.select.isPressed()) {
+    Serial.println("SELECT");
+  }
 }
 
 void displayMenu(void) {
@@ -65,8 +81,7 @@ void displayMenu(void) {
       " 1.-SCAN",
       " 2.-SPOOF",
       " 3.-DETECT",
-      " 4.-SOUND "
-      };
+      " 4.-SOUND "};
 
   if (Layer == -1) {
     display.clearDisplay();
