@@ -45,10 +45,10 @@ void loop() {
 }
 
 void displayMenu(void) {
-  if (keyboard.up.isPressed()) {
+  if (keyboard.up.isPressed() && selected > 0) {
     selected = selected - 1;
   }
-  if (keyboard.down.isPressed()) {
+  if (keyboard.down.isPressed() && selected < 3) {
     selected = selected + 1;
   }
   if (keyboard.select.isPressed()) {
