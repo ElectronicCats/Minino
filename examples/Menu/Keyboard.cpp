@@ -29,3 +29,19 @@ void Keyboard::loop() {
   this->left.loop();
   this->select.loop();
 }
+
+void Keyboard::printPressedButton() {
+  if (this->up.isPressed()) {
+    Serial.println("UP");
+  } else if (this->down.isPressed()) {
+    Serial.println("DOWN");
+  } else if (this->right.isPressed()) {
+    Serial.println("RIGHT");
+  } else if (this->left.isPressed()) {
+    Serial.println("LEFT");
+  } else if (this->left.isPressed()) {
+    Serial.println("LEFT");
+  } else if (this->select.isPressed()) {
+    Serial.println("SELECT");
+  }
+}

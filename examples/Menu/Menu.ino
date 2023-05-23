@@ -39,49 +39,30 @@ void setup() {
 }
 
 void loop() {
-  // displayMenu();
   keyboard.loop();
-
-  if (keyboard.up.isPressed()) {
-    Serial.println("UP");
-  } else if (keyboard.down.isPressed()) {
-    Serial.println("DOWN");
-  } else if (keyboard.right.isPressed()) {
-    Serial.println("RIGHT");
-  } else if (keyboard.left.isPressed()) {
-    Serial.println("LEFT");
-  } else if (keyboard.select.isPressed()) {
-    Serial.println("SELECT");
-  }
+  keyboard.printPressedButton();
+  displayMenu();
 }
 
 void displayMenu(void) {
-  int down = digitalRead(6);
-  int up = digitalRead(5);
-  int enter = digitalRead(17);
-  int back = digitalRead(2);
-
-  if (up == LOW && down == LOW) {
-  };
-  if (up == LOW) {
-    selected = selected + 1;
-    delay(200);
-  };
-  if (down == LOW) {
+  if (keyboard.up.isPressed()) {
     selected = selected - 1;
-    delay(200);
-  };
-  if (enter == LOW) {
+  }
+  if (keyboard.down.isPressed()) {
+    selected = selected + 1;
+  }
+  if (keyboard.select.isPressed()) {
     Layer = selected;
-  };
-  if (back == LOW) {
+  }
+  if (keyboard.left.isPressed()) {
     Layer = -1;
-  };
+  }
+
   const char *options[4] = {
-      " 1.-SCAN",
-      " 2.-SPOOF",
-      " 3.-DETECT",
-      " 4.-SOUND "};
+      " 1. SCAN",
+      " 2. SPOOF",
+      " 3. DETECT",
+      " 4. SOUND "};
 
   if (Layer == -1) {
     display.clearDisplay();

@@ -18,4 +18,5 @@ class Keyboard {
   ezButton right;
   ezButton left;
   ezButton select;
+  void printPressedButton();
 };
