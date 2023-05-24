@@ -26,11 +26,8 @@ Keyboard keyboard;
 
 void setup() {
   Serial.begin(9600);
-  while (!Serial)
-    ;
-  Serial.println("Starting...");
 
-  //  inicialización
+  /// Start I2C communication
   if (!display.begin(SCREEN_ADDRESS)) {
     Serial.println(F("SH110X allocation failed"));
     for (;;)
@@ -47,7 +44,7 @@ void setup() {
   display.display();
   display.drawBitmap((display.width() - LOGO_WIDTH) / 2, ((display.height() - LOGO_HEIGHT) / 2) + 4, logo, LOGO_WIDTH, LOGO_HEIGHT, SH110X_WHITE);
   display.display();
-  delay(2000);
+  delay(1000);
 
   setupBLE();
 }
