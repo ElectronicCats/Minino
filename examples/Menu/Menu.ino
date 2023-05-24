@@ -14,6 +14,7 @@ Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, 
 Layer layer;
 int selected = layer.Scan;
 int currentLayer = layer.Menu;
+bool detectAirTagsFlag = false;
 
 Keyboard keyboard;
 
@@ -45,15 +46,16 @@ void setup() {
 
 void loop() {
   keyboard.loop();
-  keyboard.printPressedButton();
   displayMenu();
+
+  if (detectAirTagsFlag) detectAirTags();
 }
 
 void displayMenu(void) {
-  if (keyboard.up.isPressed() && selected > 0) {
+  if (keyboard.up.isPressed() && selected > layer.Scan) {
     selected = selected - 1;
   }
-  if (keyboard.down.isPressed() && selected < 3) {
+  if (keyboard.down.isPressed() && selected < layer.Sound) {
     selected = selected + 1;
   }
   if (keyboard.select.isPressed()) {
@@ -61,6 +63,7 @@ void displayMenu(void) {
   }
   if (keyboard.left.isPressed()) {
     currentLayer = layer.Menu;
+    detectAirTagsFlag = false;
   }
 
   const char *options[4] = {
@@ -96,8 +99,7 @@ void displayMenu(void) {
     display.setTextColor(SH110X_WHITE);
     display.setTextSize(2);
     display.println("Scanning...");
-    // llamar funcion de scan
-    // una vez presionado back sale de funcion
+    detectAirTagsFlag = true;
   } else if (currentLayer == layer.Spoof) {
     display.clearDisplay();
     display.setTextSize(1);

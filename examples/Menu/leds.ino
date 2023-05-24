@@ -82,7 +82,7 @@ void rssip(int rssid){                 //Check the signal power to know how far 
   Serial.println("-------"); 
 }
 
-void detect(){
+void detectAirTags(){
   BLEDevice peripheral = BLE.available(); 
   
   if (peripheral){
@@ -92,7 +92,7 @@ void detect(){
     if (advertisement[0] == 0x1e && advertisement[2] == 0x4c && advertisement[3] == 0x00){ //Check if it is an Apple AirTag
 
       Serial.println("-------"); 
-      Serial.print("Detected AirTag!! - ");
+      Serial.print("AirTag detected! - ");
       
       if (advertisement[4] == 0x12 && advertisement[6] == 0x10){
         Serial.print("Registered and active device");
@@ -112,8 +112,8 @@ void detect(){
       rssip(peripheral.rssi());
     }
     else {
-      Serial.println("- Found device, but it is not an AirTag");
-      Serial.print("\tAddress: "); Serial.print(peripheral.address()); Serial.println(peripheral.deviceName());
+      // Serial.println("- Found device, but it is not an AirTag");
+      // Serial.print("\tAddress: "); Serial.print(peripheral.address()); Serial.println(peripheral.deviceName());
     }
   }
 }
