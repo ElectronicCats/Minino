@@ -12,10 +12,6 @@ uint8_t advertisement[31];          // Save actual AirTag advertising packet
 
 void setupBLE() {
   Serial.begin(9600);
-  while (!Serial)
-    ;
-  // delay(4000);
-  Serial.println("Starting...");
 
   for (uint8_t i = 0; i < 4; i++) {
     // pinMode(leds[i], OUTPUT);
@@ -113,8 +109,8 @@ void detectAirTags() {
 
       rssip(peripheral.rssi());
     } else {
-      // Serial.println("- Found device, but it is not an AirTag");
-      // Serial.print("\tAddress: "); Serial.print(peripheral.address()); Serial.println(peripheral.deviceName());
+      Serial.println("- Found device, but it is not an AirTag");
+      Serial.print("\tAddress: "); Serial.print(peripheral.address()); Serial.println(peripheral.deviceName());
     }
   }
 }

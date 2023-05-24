@@ -5,8 +5,8 @@
 #include <ezButton.h>
 
 #include "Keyboard.h"
-#include "enum.h"
 #include "Layer.h"
+#include "enum.h"
 
 Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 // uint8_t advertisement[31];
@@ -16,10 +16,18 @@ int selected = layer.Scan;
 int currentLayer = layer.Menu;
 bool detectAirTagsFlag = false;
 
+const char *options[4] = {
+    " 1. SCAN",
+    " 2. SPOOF",
+    " 3. DETECT",
+    " 4. SOUND "};
+
 Keyboard keyboard;
 
 void setup() {
   Serial.begin(9600);
+  while (!Serial)
+    ;
   Serial.println("Starting...");
 
   //  inicialización
@@ -51,6 +59,64 @@ void loop() {
   if (detectAirTagsFlag) detectAirTags();
 }
 
+void printOptions() {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SH110X_WHITE);
+  display.setCursor(0, 0);
+  display.println(F("MAIN MENU"));
+  display.println("");
+  
+  for (int i = 0; i < 4; i++) {
+    if (i == selected) {
+      display.setTextColor(SH110X_BLACK, SH110X_WHITE);
+      display.println(options[i]);
+    } else if (i != selected) {
+      display.setTextColor(SH110X_WHITE);
+      display.println(options[i]);
+    }
+  }
+}
+
+void showLayer(int currentLayer) {
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SH110X_WHITE);
+  display.setCursor(0, 0);
+
+  switch (currentLayer) {
+    case layer.Menu:
+      printOptions();
+      break;
+    case layer.Scan:
+      display.println(F("Scan"));
+      display.println("configuration");
+      display.setTextSize(2);
+      display.println("Scanning...");
+      detectAirTagsFlag = true;
+      break;
+    case layer.Spoof:
+      display.println(F("Spoof"));
+      display.println("configuration");
+      display.setTextSize(2);
+      display.println("Spoofing...");
+      break;
+    case layer.Detect:
+      display.println(F("Detect"));
+      display.println("configuration");
+      display.setTextSize(2);
+      display.println("Detecting...");
+      break;
+    case layer.Sound:
+      display.println(F("Sound"));
+      display.println("configuration");
+      display.setTextSize(2);
+      display.println("Playing...");
+      break;
+  }
+  display.display();
+}
+
 void displayMenu(void) {
   if (keyboard.up.isPressed() && selected > layer.Scan) {
     selected = selected - 1;
@@ -66,70 +132,5 @@ void displayMenu(void) {
     detectAirTagsFlag = false;
   }
 
-  const char *options[4] = {
-      " 1. SCAN",
-      " 2. SPOOF",
-      " 3. DETECT",
-      " 4. SOUND "};
-
-  if (currentLayer == layer.Menu) {
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SH110X_WHITE);
-    display.setCursor(0, 0);
-    display.println(F("MAIN MENU"));
-    display.print(selected);
-    display.println("");
-    for (int i = 0; i < 4; i++) {
-      if (i == selected) {
-        display.setTextColor(SH110X_BLACK, SH110X_WHITE);
-        display.println(options[i]);
-      } else if (i != selected) {
-        display.setTextColor(SH110X_WHITE);
-        display.println(options[i]);
-      }
-    }
-  } else if (currentLayer == layer.Scan) {
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SH110X_WHITE);
-    display.setCursor(0, 0);
-    display.println(F("Scan"));
-    display.println("configuration");
-    display.setTextColor(SH110X_WHITE);
-    display.setTextSize(2);
-    display.println("Scanning...");
-    detectAirTagsFlag = true;
-  } else if (currentLayer == layer.Spoof) {
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SH110X_WHITE);
-    display.setCursor(0, 0);
-    display.println(F("Spoof"));
-    display.println("configuration");
-    display.setTextColor(SH110X_WHITE);
-    display.setTextSize(2);
-    display.println("Spoofing...");
-  } else if (currentLayer == layer.Detect) {
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SH110X_WHITE);
-    display.setCursor(0, 0);
-    display.println(F("Detect"));
-    display.println("configuration");
-    display.setTextColor(SH110X_WHITE);
-    display.setTextSize(2);
-    display.println("Detecting...");
-  } else if (currentLayer == layer.Sound) {
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SH110X_WHITE);
-    display.setCursor(0, 0);
-    display.println(F("Sound"));
-    display.println("configuration");
-    display.setTextColor(SH110X_WHITE);
-    display.setTextSize(2);
-    display.println("Sound...");
-  }
-  display.display();
+  showLayer(currentLayer);
 }
