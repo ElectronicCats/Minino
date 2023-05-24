@@ -1,5 +1,5 @@
 BOARD_TAG = esp32:esp32:esp32s3:CDCOnBoot=cdc
-MONITOR_PORT = /dev/cu.usbmodem11201
+MONITOR_PORT = /dev/cu.usbmodem1101
 
 compile:
 	arduino-cli compile --fqbn $(BOARD_TAG)

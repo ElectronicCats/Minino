@@ -6,17 +6,20 @@
 
 #include "Keyboard.h"
 #include "enum.h"
+#include "Layer.h"
 
 Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-uint8_t advertisement[31];
+// uint8_t advertisement[31];
 
-int selected = 0;
-int Layer = -1;
+Layer layer;
+int selected = layer.Scan;
+int currentLayer = layer.Menu;
 
 Keyboard keyboard;
 
 void setup() {
   Serial.begin(9600);
+  Serial.println("Starting...");
 
   //  inicialización
   if (!display.begin(SCREEN_ADDRESS)) {
@@ -36,6 +39,8 @@ void setup() {
   display.drawBitmap((display.width() - LOGO_WIDTH) / 2, ((display.height() - LOGO_HEIGHT) / 2) + 4, logo, LOGO_WIDTH, LOGO_HEIGHT, SH110X_WHITE);
   display.display();
   delay(2000);
+
+  setupBLE();
 }
 
 void loop() {
@@ -52,10 +57,10 @@ void displayMenu(void) {
     selected = selected + 1;
   }
   if (keyboard.select.isPressed()) {
-    Layer = selected;
+    currentLayer = selected;
   }
   if (keyboard.left.isPressed()) {
-    Layer = -1;
+    currentLayer = layer.Menu;
   }
 
   const char *options[4] = {
@@ -64,7 +69,7 @@ void displayMenu(void) {
       " 3. DETECT",
       " 4. SOUND "};
 
-  if (Layer == -1) {
+  if (currentLayer == layer.Menu) {
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
@@ -81,7 +86,7 @@ void displayMenu(void) {
         display.println(options[i]);
       }
     }
-  } else if (Layer == 0) {
+  } else if (currentLayer == layer.Scan) {
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
@@ -93,7 +98,7 @@ void displayMenu(void) {
     display.println("Scanning...");
     // llamar funcion de scan
     // una vez presionado back sale de funcion
-  } else if (Layer == 1) {
+  } else if (currentLayer == layer.Spoof) {
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
@@ -103,7 +108,7 @@ void displayMenu(void) {
     display.setTextColor(SH110X_WHITE);
     display.setTextSize(2);
     display.println("Spoofing...");
-  } else if (Layer == 2) {
+  } else if (currentLayer == layer.Detect) {
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
@@ -113,7 +118,7 @@ void displayMenu(void) {
     display.setTextColor(SH110X_WHITE);
     display.setTextSize(2);
     display.println("Detecting...");
-  } else if (Layer == 3) {
+  } else if (currentLayer == layer.Sound) {
     display.clearDisplay();
     display.setTextSize(1);
     display.setTextColor(SH110X_WHITE);
