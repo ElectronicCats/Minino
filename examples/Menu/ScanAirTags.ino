@@ -94,6 +94,7 @@ void scanAirTags() {
     // Scan for AirTags every 500ms
     if (millis() - lastTime > 500) {
       lastTime = millis();
+      unsigned long start = millis();
       display.clearDisplay();
       display.setTextSize(1);
       display.setTextColor(SH110X_WHITE);
@@ -162,6 +163,7 @@ void scanAirTags() {
           Serial.println(peripheral.deviceName());
         }
         display.display();
+        Serial.println("Time: " + String(millis() - start) + "ms");
       }
     }
   }

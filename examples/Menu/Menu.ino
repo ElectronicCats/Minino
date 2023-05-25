@@ -116,18 +116,28 @@ void showLayer() {
 void displayMenu(void) {
   keyboard.loop();
 
-  if (keyboard.up.isPressed() && selectedOption > layer.Scan) {
+  if (keyboard.up.isPressed()) {
     selectedOption = selectedOption - 1;  // Move the selection up
   }
-  if (keyboard.down.isPressed() && selectedOption < layer.Sound) {
+
+  if (keyboard.down.isPressed()) {
     selectedOption = selectedOption + 1;  // Move the selection down
   }
+
   if (keyboard.select.isPressed()) {
     currentLayer = selectedOption;  // Select the current layer
   }
 
   if (keyboard.left.isPressed()) {
     currentLayer = layer.Menu;  // Go back to the main menu
+  }
+
+  if (selectedOption < layer.Scan) {
+    selectedOption = layer.Sound;
+  }
+
+  if (selectedOption > layer.Sound) {
+    selectedOption = layer.Scan;
   }
 
   showLayer();
