@@ -108,6 +108,14 @@ void scanAirTags() {
         display.setTextColor(SH110X_WHITE);
         display.setCursor(0, 0);
         display.println(F("Airtag detected!"));
+        display.println("");
+
+        display.println("Address: ");
+        display.println(peripheral.address());
+        display.println("");
+        display.println("Press right to");
+        display.println("continue");
+        display.display();
 
         Serial.println("-------");
         Serial.print("AirTag detected! - ");
@@ -129,6 +137,13 @@ void scanAirTags() {
         Serial.println("-------");
 
         rssip(peripheral.rssi());
+
+        while (true) {
+          keyboard.loop();
+          if (keyboard.right.isPressed()) {
+            break;
+          }
+        }
       } else {
         display.setTextSize(1);
         display.setTextColor(SH110X_WHITE);
