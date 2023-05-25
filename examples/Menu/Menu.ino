@@ -9,18 +9,10 @@
 #include "enum.h"
 
 Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-// uint8_t advertisement[31];
 
 Layer layer;
-int selected = layer.Scan;
-int currentLayer = layer.Menu;
-bool detectAirTagsFlag = false;
-
-const char *options[4] = {
-    " 1. SCAN",
-    " 2. SPOOF",
-    " 3. DETECT",
-    " 4. SOUND "};
+int selectedOption = layer.Scan;  // Default selected option
+int currentLayer = layer.Menu;    // Default layer
 
 Keyboard keyboard;
 
@@ -37,7 +29,7 @@ void setup() {
   display.setTextSize(1);
   display.setTextColor(SH110X_WHITE);
   display.setCursor(0, 0);
-  display.println("BIENVENIDO");
+  display.println("WELCOME!");
   display.display();
 
   display.drawLine(0, 10, 128, 10, SH110X_WHITE);
@@ -50,18 +42,16 @@ void setup() {
 }
 
 void loop() {
-  keyboard.loop();
   displayMenu();
-
-  if (detectAirTagsFlag) detectAirTags();
 }
 
 void printOptions() {
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SH110X_WHITE);
-  display.setCursor(0, 0);
-  
+  const char *options[4] = {
+      " 1. SCAN",
+      " 2. SPOOF",
+      " 3. DETECT",
+      " 4. SOUND "};
+
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(SH110X_WHITE);
@@ -70,23 +60,24 @@ void printOptions() {
   display.println("");
 
   for (int i = 0; i < 4; i++) {
-    if (i == selected) {
+    if (i == selectedOption) {
       display.setTextColor(SH110X_BLACK, SH110X_WHITE);
       display.println(options[i]);
-    } else if (i != selected) {
+    } else if (i != selectedOption) {
       display.setTextColor(SH110X_WHITE);
       display.println(options[i]);
     }
   }
 }
 
-void showLayer(int currentLayer) {
+void showLayer() {
   switch (currentLayer) {
     case layer.Menu:
       printOptions();
       break;
     case layer.Scan:
-      detectAirTagsFlag = true;
+      scanAirTags();
+      currentLayer = layer.Menu;
       break;
     case layer.Spoof:
       display.clearDisplay();
@@ -123,19 +114,21 @@ void showLayer(int currentLayer) {
 }
 
 void displayMenu(void) {
-  if (keyboard.up.isPressed() && selected > layer.Scan) {
-    selected = selected - 1;
+  keyboard.loop();
+
+  if (keyboard.up.isPressed() && selectedOption > layer.Scan) {
+    selectedOption = selectedOption - 1;  // Move the selection up
   }
-  if (keyboard.down.isPressed() && selected < layer.Sound) {
-    selected = selected + 1;
+  if (keyboard.down.isPressed() && selectedOption < layer.Sound) {
+    selectedOption = selectedOption + 1;  // Move the selection down
   }
   if (keyboard.select.isPressed()) {
-    currentLayer = selected;
-  }
-  if (keyboard.left.isPressed()) {
-    currentLayer = layer.Menu;
-    detectAirTagsFlag = false;
+    currentLayer = selectedOption;  // Select the current layer
   }
 
-  showLayer(currentLayer);
+  if (keyboard.left.isPressed()) {
+    currentLayer = layer.Menu;  // Go back to the main menu
+  }
+
+  showLayer();
 }
