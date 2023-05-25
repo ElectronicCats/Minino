@@ -83,81 +83,86 @@ void rssip(int rssid) {  // Check the signal power to know how far the AirTag is
 
 void scanAirTags() {
   while (true) {
+    static unsigned long lastTime = millis();
+
     // Exit to main menu
     keyboard.loop();
     if (keyboard.left.isPressed()) {
       break;
     }
 
-    display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SH110X_WHITE);
-    display.setCursor(0, 0);
-    display.println(F("Scan Function"));
-    display.println("");
-    delay(500);
+    // Scan for AirTags every 500ms
+    if (millis() - lastTime > 500) {
+      lastTime = millis();
+      display.clearDisplay();
+      display.setTextSize(1);
+      display.setTextColor(SH110X_WHITE);
+      display.setCursor(0, 0);
+      display.println(F("Scan Function"));
+      display.println("");
 
-    BLEDevice peripheral = BLE.available();
+      BLEDevice peripheral = BLE.available();
 
-    if (peripheral) {
-      int adLength = peripheral.advertisementData(advertisement, 31);
+      if (peripheral) {
+        int adLength = peripheral.advertisementData(advertisement, 31);
 
-      if (advertisement[0] == 0x1e && advertisement[2] == 0x4c && advertisement[3] == 0x00) {  // Check if it is an Apple AirTag
-        display.clearDisplay();
-        display.setTextSize(1);
-        display.setTextColor(SH110X_WHITE);
-        display.setCursor(0, 0);
-        display.println(F("Airtag detected!"));
-        display.println("");
+        if (advertisement[0] == 0x1e && advertisement[2] == 0x4c && advertisement[3] == 0x00) {  // Check if it is an Apple AirTag
+          display.clearDisplay();
+          display.setTextSize(1);
+          display.setTextColor(SH110X_WHITE);
+          display.setCursor(0, 0);
+          display.println(F("Airtag detected!"));
+          display.println("");
 
-        display.println("Address: ");
-        display.println(peripheral.address());
-        display.println("");
-        display.println("Press right to");
-        display.println("continue");
-        display.display();
+          display.println("Address: ");
+          display.println(peripheral.address());
+          display.println("");
+          display.println("Press right to");
+          display.println("continue");
+          display.display();
 
-        Serial.println("-------");
-        Serial.print("AirTag detected! - ");
+          Serial.println("-------");
+          Serial.print("AirTag detected! - ");
 
-        if (advertisement[4] == 0x12 && advertisement[6] == 0x10) {
-          Serial.print("Registered and active device");
-        } else if (advertisement[4] == 0x07 && advertisement[6] == 0x05) {
-          Serial.print("Unregister device");
-        }
-
-        Serial.print(" - Address: ");
-        Serial.println(peripheral.address());
-        Serial.print("Advertising data: ");
-        for (int x = 0; x < 31; x++) {
-          Serial.print(advertisement[x], HEX);
-          Serial.print(" ");
-        }
-        Serial.println("");
-        Serial.println("-------");
-
-        rssip(peripheral.rssi());
-
-        while (true) {
-          keyboard.loop();
-          if (keyboard.right.isPressed()) {
-            break;
+          if (advertisement[4] == 0x12 && advertisement[6] == 0x10) {
+            Serial.print("Registered and active device");
+          } else if (advertisement[4] == 0x07 && advertisement[6] == 0x05) {
+            Serial.print("Unregister device");
           }
-        }
-      } else {
-        display.setTextSize(1);
-        display.setTextColor(SH110X_WHITE);
-        display.println("Found device, but ");
-        display.println("it is not an AirTag");
-        display.println("Address: ");
-        display.println(peripheral.address());
 
-        Serial.println("- Found device, but it is not an AirTag");
-        Serial.print("\tAddress: ");
-        Serial.print(peripheral.address());
-        Serial.println(peripheral.deviceName());
+          Serial.print(" - Address: ");
+          Serial.println(peripheral.address());
+          Serial.print("Advertising data: ");
+          for (int x = 0; x < 31; x++) {
+            Serial.print(advertisement[x], HEX);
+            Serial.print(" ");
+          }
+          Serial.println("");
+          Serial.println("-------");
+
+          rssip(peripheral.rssi());
+
+          while (true) {
+            keyboard.loop();
+            if (keyboard.right.isPressed()) {
+              break;
+            }
+          }
+        } else {
+          display.setTextSize(1);
+          display.setTextColor(SH110X_WHITE);
+          display.println("Found device, but ");
+          display.println("it is not an AirTag");
+          display.println("Address: ");
+          display.println(peripheral.address());
+
+          Serial.println("- Found device, but it is not an AirTag");
+          Serial.print("\tAddress: ");
+          Serial.print(peripheral.address());
+          Serial.println(peripheral.deviceName());
+        }
+        display.display();
       }
-      display.display();
     }
   }
 }
