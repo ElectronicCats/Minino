@@ -61,9 +61,14 @@ void printOptions() {
   display.setTextSize(1);
   display.setTextColor(SH110X_WHITE);
   display.setCursor(0, 0);
+  
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SH110X_WHITE);
+  display.setCursor(0, 0);
   display.println(F("MAIN MENU"));
   display.println("");
-  
+
   for (int i = 0; i < 4; i++) {
     if (i == selected) {
       display.setTextColor(SH110X_BLACK, SH110X_WHITE);
@@ -76,35 +81,38 @@ void printOptions() {
 }
 
 void showLayer(int currentLayer) {
-  display.clearDisplay();
-  display.setTextSize(1);
-  display.setTextColor(SH110X_WHITE);
-  display.setCursor(0, 0);
-
   switch (currentLayer) {
     case layer.Menu:
       printOptions();
       break;
     case layer.Scan:
-      display.println(F("Scan"));
-      display.println("configuration");
-      display.setTextSize(2);
-      display.println("Scanning...");
       detectAirTagsFlag = true;
       break;
     case layer.Spoof:
+      display.clearDisplay();
+      display.setTextSize(1);
+      display.setTextColor(SH110X_WHITE);
+      display.setCursor(0, 0);
       display.println(F("Spoof"));
       display.println("configuration");
       display.setTextSize(2);
       display.println("Spoofing...");
       break;
     case layer.Detect:
+      display.clearDisplay();
+      display.setTextSize(1);
+      display.setTextColor(SH110X_WHITE);
+      display.setCursor(0, 0);
       display.println(F("Detect"));
       display.println("configuration");
       display.setTextSize(2);
       display.println("Detecting...");
       break;
     case layer.Sound:
+      display.clearDisplay();
+      display.setTextSize(1);
+      display.setTextColor(SH110X_WHITE);
+      display.setCursor(0, 0);
       display.println(F("Sound"));
       display.println("configuration");
       display.setTextSize(2);
