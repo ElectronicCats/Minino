@@ -133,11 +133,11 @@ void displayMenu(void) {
   }
 
   if (selectedOption < layer.Scan) {
-    selectedOption = layer.Sound;
+    selectedOption = layer.Sound;  // Go to the last option
   }
 
   if (selectedOption > layer.Sound) {
-    selectedOption = layer.Scan;
+    selectedOption = layer.Scan;  // Go to the first option
   }
 
   showLayer();
