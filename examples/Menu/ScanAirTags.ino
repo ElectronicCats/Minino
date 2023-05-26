@@ -140,6 +140,7 @@ void scanAirTags() {
             display.println(peripheral.address());
             display.println("");
 
+            // Show distance every 2 seconds
             if (millis() - lastTime > SHOW_DISTANCE_DELAY_MS) {
               lastTime = millis();
               showDistance = !showDistance;

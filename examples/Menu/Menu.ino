@@ -80,14 +80,8 @@ void showLayer() {
       currentLayer = layer.Menu;
       break;
     case layer.Spoof:
-      display.clearDisplay();
-      display.setTextSize(1);
-      display.setTextColor(SH110X_WHITE);
-      display.setCursor(0, 0);
-      display.println(F("Spoof"));
-      display.println("configuration");
-      display.setTextSize(2);
-      display.println("Spoofing...");
+      spoof();
+      currentLayer = layer.Menu;
       break;
     case layer.Detect:
       display.clearDisplay();
