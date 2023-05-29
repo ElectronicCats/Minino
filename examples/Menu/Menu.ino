@@ -14,6 +14,10 @@ Layer layer;
 int selectedOption = layer.Scan;  // Default selected option
 int currentLayer = layer.Menu;    // Default layer
 
+// Detect AirTags
+uint8_t leds[] = {18, 19, 22, 21};  // Frontier board - Bast
+uint8_t advertisement[31];          // Save actual AirTag advertising packet
+
 Keyboard keyboard;
 
 void setup() {
@@ -84,14 +88,8 @@ void showLayer() {
       currentLayer = layer.Menu;
       break;
     case layer.Detect:
-      display.clearDisplay();
-      display.setTextSize(1);
-      display.setTextColor(SH110X_WHITE);
-      display.setCursor(0, 0);
-      display.println(F("Detect"));
-      display.println("configuration");
-      display.setTextSize(2);
-      display.println("Detecting...");
+      detectAirTags();
+      currentLayer = layer.Menu;
       break;
     case layer.Sound:
       display.clearDisplay();
