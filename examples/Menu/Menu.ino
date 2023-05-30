@@ -9,6 +9,9 @@
 #include "Layer.h"
 #include "enum.h"
 
+#define BLACK SH110X_BLACK
+#define WHITE SH110X_WHITE
+
 Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 Layer layer;
