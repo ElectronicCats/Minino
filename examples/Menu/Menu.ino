@@ -3,6 +3,7 @@
 #include <SPI.h>
 #include <Wire.h>
 #include <ezButton.h>
+#include <ArduinoBLE.h>
 
 #include "Keyboard.h"
 #include "Layer.h"
@@ -14,9 +15,23 @@ Layer layer;
 int selectedOption = layer.Scan;  // Default selected option
 int currentLayer = layer.Menu;    // Default layer
 
-// Detect AirTags
+// Detect AirTags variables
 uint8_t leds[] = {18, 19, 22, 21};  // Frontier board - Bast
 uint8_t advertisement[31];          // Save actual AirTag advertising packet
+
+// Sound variables
+uint8_t limitDevices = 10;        // How many devices able to detect (if this variable change, must change the next variables section)
+unsigned long delayStart[10];     // Activity per AirTag
+bool actives[10];                 // To check if the Airtag is around more than 10 minutes
+String mairtags[10];              // Save Mac AirTags for reference
+// uint8_t advertisement[31];        // Save actual AirTag Advertising
+uint8_t advertags[10][31];        // Save active AirTags Advertinsings
+uint8_t positiona = 0;            // The last Active AirTag
+bool playSoundm = false;          // Write chrac to play a sound without waiting 10 minutes
+float MINUTES = 10.2;             // Minimum 10 minutes to make it play a sound
+unsigned long ONEMINUTE = 60000;  // 1 minute
+unsigned long DELAY_TIME = ONEMINUTE * MINUTES;
+uint8_t delayRunning = 1;  // True if still waiting for a delay to finish
 
 Keyboard keyboard;
 
@@ -43,6 +58,7 @@ void setup() {
   delay(1000);
 
   setupBLE();
+  setupSound();
 }
 
 void loop() {
@@ -92,14 +108,8 @@ void showLayer() {
       currentLayer = layer.Menu;
       break;
     case layer.Sound:
-      display.clearDisplay();
-      display.setTextSize(1);
-      display.setTextColor(SH110X_WHITE);
-      display.setCursor(0, 0);
-      display.println(F("Sound"));
-      display.println("configuration");
-      display.setTextSize(2);
-      display.println("Playing...");
+      sound();
+      currentLayer = layer.Menu;
       break;
   }
   display.display();
@@ -118,10 +128,6 @@ void displayMenu(void) {
 
   if (keyboard.select.isPressed()) {
     currentLayer = selectedOption;  // Select the current layer
-  }
-
-  if (keyboard.left.isPressed()) {
-    currentLayer = layer.Menu;  // Go back to the main menu
   }
 
   if (selectedOption < layer.Scan) {
