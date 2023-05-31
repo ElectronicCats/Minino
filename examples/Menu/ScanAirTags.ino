@@ -1,5 +1,3 @@
-// #include <ArduinoBLE.h>
-
 /*
   Salvador Mendoza - Metabase Q
 
@@ -103,9 +101,10 @@ void scanAirTags() {
     if (millis() - lastTime > SCAN_DELAY_MS) {
       lastTime = millis();
       unsigned long start = millis();
+
       display.clearDisplay();
       display.setTextSize(1);
-      display.setTextColor(SH110X_WHITE);
+      display.setTextColor(WHITE);
       display.setCursor(0, 0);
       display.println(F("Scan Function"));
       display.println("");
@@ -114,26 +113,24 @@ void scanAirTags() {
 
       if (peripheral) {
         int adLength = peripheral.advertisementData(advertisement, 31);
+        String address = peripheral.address();
 
         if (advertisement[0] == 0x1e && advertisement[2] == 0x4c && advertisement[3] == 0x00) {  // Check if it is an Apple AirTag
           display.clearDisplay();
-          display.setTextSize(1);
-          display.setTextColor(SH110X_WHITE);
           display.setCursor(0, 0);
           display.println(F("Airtag detected!"));
           display.println("");
 
-          display.println("Address: ");
-          display.println(peripheral.address());
-          display.println("");
+          // Add the AirTag to the list
+          airTags.push_back(address);
         } else {
-          display.setTextSize(1);
-          display.setTextColor(SH110X_WHITE);
           display.println("Found device, but ");
           display.println("it is not an AirTag");
-          display.println("Address: ");
-          display.println(peripheral.address());
+          airTags.push_back(address);
         }
+
+        display.println("Address: ");
+        display.println(address);
         display.display();
         Serial.println("Time: " + String(millis() - start) + "ms");
       }

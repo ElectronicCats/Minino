@@ -1,36 +1,37 @@
-// #include <ArduinoBLE.h>
-
-/*
-  Salvador Mendoza - Metabase Q
-
-  LEDs detection - Apple AirTags
-  Aug 10th, 2022
-*/
+void drawFrame() {
+  display.drawLine(0, 10, 128, 10, SH110X_WHITE);    // Top horizontal line
+  display.drawLine(0, 10, 0, 64, SH110X_WHITE);      // Left vertical line
+  display.drawLine(0, 63, 128, 63, SH110X_WHITE);    // Bottom horizontal line
+  display.drawLine(127, 10, 127, 63, SH110X_WHITE);  // Right vertical line
+}
 
 void toggleList() {
   static bool isBlackList = true;
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setCursor(0, 0);
+  drawFrame();
 
   if (isBlackList) {
     isBlackList = false;
-    display.clearDisplay();
-    display.setTextSize(1);
     display.setTextColor(BLACK, WHITE);
-    display.setCursor(0, 0);
     display.print(F("Black list"));
     display.setTextColor(WHITE);
     display.println(F(" White list"));
-    display.display();
+    display.println("");
+
+    for (auto &address : airTags) {
+      String message = "  " + address;
+      display.println(message);
+    }
   } else {
     isBlackList = true;
-    display.clearDisplay();
-    display.setTextSize(1);
     display.setTextColor(WHITE);
-    display.setCursor(0, 0);
     display.print(F("Black list "));
     display.setTextColor(BLACK, WHITE);
     display.println(F("White list"));
-    display.display();
   }
+  display.display();
 }
 
 void detectAirTags() {

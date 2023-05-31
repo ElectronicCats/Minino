@@ -4,10 +4,12 @@
 #include <Wire.h>
 #include <ezButton.h>
 #include <ArduinoBLE.h>
+#include <vector>
 
 #include "Keyboard.h"
 #include "Layer.h"
 #include "enum.h"
+#include "DetectAirTags.h"
 
 #define BLACK SH110X_BLACK
 #define WHITE SH110X_WHITE
