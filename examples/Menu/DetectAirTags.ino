@@ -20,15 +20,13 @@ void focusWhiteTitle() {
   display.println(F("White list"));
 }
 
-void toggleList() {
-  static bool isBlackList = true;
+void toggleList(bool isBlackList) {
   display.clearDisplay();
   display.setTextSize(1);
   display.setCursor(0, 0);
   drawFrame();
 
   if (isBlackList) {
-    isBlackList = false;
     focusBlackTitle();
 
     for (auto &address : airTags) {
@@ -37,28 +35,28 @@ void toggleList() {
       display.println(message);
     }
   } else {
-    isBlackList = true;
     focusWhiteTitle();
   }
   display.display();
 }
 
 void detectAirTags() {
-  // TODO: Run this method only once
-  toggleList();
+  toggleList(true);
 
   while (true) {
-    static unsigned long lastTime = millis();
+    static bool isBlackList = false;
 
     // Exit to main menu
     keyboard.loop();
     if (keyboard.left.isPressed()) {
+      isBlackList = false;
       break;
     }
 
     // Toggle list with right button
     if (keyboard.right.isPressed()) {
-      toggleList();
+      toggleList(isBlackList);
+      isBlackList = !isBlackList;
     }
   }
 }
