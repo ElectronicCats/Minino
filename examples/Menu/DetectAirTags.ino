@@ -28,17 +28,21 @@ void toggleList(bool isBlackList, int selectedAirTag) {
 
   if (isBlackList) {
     focusBlackTitle();
+    int count = 0;
 
     for (auto &address : airTags) {
       int index = std::distance(airTags.begin(), std::find(airTags.begin(), airTags.end(), address));
       String message = " " + String(index) + " " + address + " ";
 
-      if (index == selectedAirTag) {
-        display.setTextColor(BLACK, WHITE);
-        display.println(message);
-      } else {
-        display.setTextColor(WHITE);
-        display.println(message);
+      if (count < 5) {
+        count++;
+        if (index == selectedAirTag) {
+          display.setTextColor(BLACK, WHITE);
+          display.println(message);
+        } else {
+          display.setTextColor(WHITE);
+          display.println(message);
+        }
       }
     }
   } else {
@@ -57,7 +61,7 @@ void detectAirTags() {
     // Exit to main menu
     keyboard.loop();
     if (keyboard.left.isPressed()) {
-      isBlackList = false;
+      isBlackList = true;
       break;
     }
 
