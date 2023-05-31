@@ -20,7 +20,7 @@ void focusWhiteTitle() {
   display.println(F("White list"));
 }
 
-void toggleList(bool isBlackList) {
+void toggleList(bool isBlackList, int selectedAirTag) {
   display.clearDisplay();
   display.setTextSize(1);
   display.setCursor(0, 0);
@@ -31,8 +31,15 @@ void toggleList(bool isBlackList) {
 
     for (auto &address : airTags) {
       int index = std::distance(airTags.begin(), std::find(airTags.begin(), airTags.end(), address));
-      String message = " " + String(index) + " " + address;
-      display.println(message);
+      String message = " " + String(index) + " " + address + " ";
+
+      if (index == selectedAirTag) {
+        display.setTextColor(BLACK, WHITE);
+        display.println(message);
+      } else {
+        display.setTextColor(WHITE);
+        display.println(message);
+      }
     }
   } else {
     focusWhiteTitle();
@@ -41,10 +48,11 @@ void toggleList(bool isBlackList) {
 }
 
 void detectAirTags() {
-  toggleList(true);
+  toggleList(true, 0);
 
   while (true) {
-    static bool isBlackList = false;
+    static bool isBlackList = true;
+    static int selectedAirTag = 0;
 
     // Exit to main menu
     keyboard.loop();
@@ -55,8 +63,22 @@ void detectAirTags() {
 
     // Toggle list with right button
     if (keyboard.right.isPressed()) {
-      toggleList(isBlackList);
       isBlackList = !isBlackList;
+      selectedAirTag = 0;
+      toggleList(isBlackList, selectedAirTag);
+    }
+
+    // Select AirTag with up and down buttons
+    if (keyboard.up.isPressed()) {
+      selectedAirTag = constrain(selectedAirTag - 1, 0, airTags.size() - 1);
+      Serial.println(selectedAirTag);
+      toggleList(isBlackList, selectedAirTag);
+    }
+
+    if (keyboard.down.isPressed()) {
+      selectedAirTag = constrain(selectedAirTag + 1, 0, airTags.size() - 1);
+      Serial.println(selectedAirTag);
+      toggleList(isBlackList, selectedAirTag);
     }
   }
 }
