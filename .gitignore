@@ -25,7 +25,14 @@ fp-info-cache
 
 hardware/minino-backups/
 
-# Visual Studio Code files
+# Visual Studio config files
 .vscode/
-.DS_Store
-hardware/.DS_Store
+
+# macOS folder attributes
+/**/.DS_Store
+
+# Firmware binaries
+/**/build/
+
+# sdkconfig files
+/**/sdkconfig
