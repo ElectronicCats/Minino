@@ -33,6 +33,3 @@ hardware/minino-backups/
 
 # Firmware binaries
 /**/build/
-
-# sdkconfig files
-/**/sdkconfig
