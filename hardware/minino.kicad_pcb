@@ -778,7 +778,7 @@
 
   (footprint "kibuzzard-65BBE4ED" (layer "F.Cu")
     (tstamp 3a6bdfae-f566-46b0-a35d-a44a8c78079b)
-    (at 72.225 96.675)
+    (at 72.258 96.675)
     (descr "Generated with KiBuzzard")
     (tags "kb_params=eyJBbGlnbm1lbnRDaG9pY2UiOiAiQ2VudGVyIiwgIkNhcExlZnRDaG9pY2UiOiAiKCIsICJDYXBSaWdodENob2ljZSI6ICJcXCIsICJGb250Q29tYm9Cb3giOiAiVWJ1bnR1TW9uby1CIiwgIkhlaWdodEN0cmwiOiAiMC44IiwgIkxheWVyQ29tYm9Cb3giOiAiRi5TaWxrUyIsICJNdWx0aUxpbmVUZXh0IjogIkJBQ0siLCAiUGFkZGluZ0JvdHRvbUN0cmwiOiAiNSIsICJQYWRkaW5nTGVmdEN0cmwiOiAiNSIsICJQYWRkaW5nUmlnaHRDdHJsIjogIjUiLCAiUGFkZGluZ1RvcEN0cmwiOiAiNSIsICJXaWR0aEN0cmwiOiAiMC44In0=")
     (attr board_only exclude_from_pos_files exclude_from_bom)
@@ -1918,7 +1918,7 @@
 
   (footprint "kibuzzard-65BBE46A" (layer "F.Cu")
     (tstamp ba23e31b-756c-4dde-9658-b31d990bc1ce)
-    (at 90.775 81.575)
+    (at 90.79 81.57)
     (descr "Generated with KiBuzzard")
     (tags "kb_params=eyJBbGlnbm1lbnRDaG9pY2UiOiAiQ2VudGVyIiwgIkNhcExlZnRDaG9pY2UiOiAiLyIsICJDYXBSaWdodENob2ljZSI6ICJcXCIsICJGb250Q29tYm9Cb3giOiAiVWJ1bnR1TW9uby1CIiwgIkhlaWdodEN0cmwiOiAiMC44IiwgIkxheWVyQ29tYm9Cb3giOiAiRi5TaWxrUyIsICJNdWx0aUxpbmVUZXh0IjogIlVQIiwgIlBhZGRpbmdCb3R0b21DdHJsIjogIjUiLCAiUGFkZGluZ0xlZnRDdHJsIjogIjUiLCAiUGFkZGluZ1JpZ2h0Q3RybCI6ICI1IiwgIlBhZGRpbmdUb3BDdHJsIjogIjUiLCAiV2lkdGhDdHJsIjogIjAuOCJ9")
     (attr board_only exclude_from_pos_files exclude_from_bom)
@@ -2154,7 +2154,7 @@
 
   (footprint "kibuzzard-65BBE4AF" (layer "F.Cu")
     (tstamp bbe4c463-b05c-4726-b0ba-b388e117b6a9)
-    (at 90.775 119.975)
+    (at 90.79 119.975)
     (descr "Generated with KiBuzzard")
     (tags "kb_params=eyJBbGlnbm1lbnRDaG9pY2UiOiAiQ2VudGVyIiwgIkNhcExlZnRDaG9pY2UiOiAiXFwiLCAiQ2FwUmlnaHRDaG9pY2UiOiAiLyIsICJGb250Q29tYm9Cb3giOiAiVWJ1bnR1TW9uby1CIiwgIkhlaWdodEN0cmwiOiAiMC44IiwgIkxheWVyQ29tYm9Cb3giOiAiRi5TaWxrUyIsICJNdWx0aUxpbmVUZXh0IjogIkRPV04iLCAiUGFkZGluZ0JvdHRvbUN0cmwiOiAiNSIsICJQYWRkaW5nTGVmdEN0cmwiOiAiNSIsICJQYWRkaW5nUmlnaHRDdHJsIjogIjUiLCAiUGFkZGluZ1RvcEN0cmwiOiAiNSIsICJXaWR0aEN0cmwiOiAiMC44In0=")
     (attr board_only exclude_from_pos_files exclude_from_bom)
@@ -3641,7 +3641,7 @@
 
   (footprint "kibuzzard-65BBE507" (layer "F.Cu")
     (tstamp f2596d95-70f1-4a41-bdd6-4554a0c2093a)
-    (at 109.3 96.4)
+    (at 109.342 96.4)
     (descr "Generated with KiBuzzard")
     (tags "kb_params=eyJBbGlnbm1lbnRDaG9pY2UiOiAiQ2VudGVyIiwgIkNhcExlZnRDaG9pY2UiOiAiLyIsICJDYXBSaWdodENob2ljZSI6ICIpIiwgIkZvbnRDb21ib0JveCI6ICJVYnVudHVNb25vLUIiLCAiSGVpZ2h0Q3RybCI6ICIwLjgiLCAiTGF5ZXJDb21ib0JveCI6ICJGLlNpbGtTIiwgIk11bHRpTGluZVRleHQiOiAiU0VMRUNUIiwgIlBhZGRpbmdCb3R0b21DdHJsIjogIjUiLCAiUGFkZGluZ0xlZnRDdHJsIjogIjUiLCAiUGFkZGluZ1JpZ2h0Q3RybCI6ICI1IiwgIlBhZGRpbmdUb3BDdHJsIjogIjUiLCAiV2lkdGhDdHJsIjogIjAuOCJ9")
     (attr board_only exclude_from_pos_files exclude_from_bom)
