@@ -33,3 +33,4 @@ hardware/minino-backups/
 
 # Firmware binaries
 /**/build/
+/**/managed_components/
