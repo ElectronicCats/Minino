@@ -1,4 +1,4 @@
-PORT := /dev/cu.usbmodem11301
+PORT := /dev/cu.usbmodem1132101
 
 compile:
 	idf.py build
@@ -10,7 +10,8 @@ monitor:
 	idf.py -p $(PORT) monitor
 
 clean:
-	idf.py fullclean
+	rm -rf build/ managed_components/
+	rm sdkconfig sdkconfig.old
 
 all: compile flash monitor
 
