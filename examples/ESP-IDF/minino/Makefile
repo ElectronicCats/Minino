@@ -1,4 +1,4 @@
-PORT := /dev/cu.usbmodem1132101
+PORT := /dev/cu.usbmodem1101
 
 compile:
 	idf.py build
