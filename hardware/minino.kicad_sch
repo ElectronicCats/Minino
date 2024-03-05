@@ -5787,7 +5787,7 @@
     (property "Datasheet" "~" (at 28.194 139.573 0)
       (effects (font (size 1.27 1.27)) hide)
     )
-    (property "manf#" "Display Oled Azul 128×64 1.3 ” I2C SH1106" (at 28.194 139.573 0)
+    (property "manf#" "I2C SH1106 Display Oled Azul 128×64 1.3 ” " (at 28.194 139.573 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "provedor" "UNIT Electronics" (at 28.194 139.573 0)
