@@ -1,7 +1,5 @@
 ## IDF Component Manager Manifest File
 dependencies:
-  espressif/esp_lcd_sh1107: "^1.1.0"
-  espressif/esp_lvgl_port: "^1.4.0"
   espressif/button: "^3.2.0"
   ## Required IDF version
   idf:
