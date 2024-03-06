@@ -477,7 +477,7 @@ void sh1106_bitmaps(SH1106_t* dev, int xpos, int ypos, uint8_t* bitmap, int widt
 void _sh1106_pixel(SH1106_t* dev, int xpos, int ypos, bool invert) {
     uint8_t _page = (ypos / 8);
     uint8_t _bits = (ypos % 8);
-    uint8_t _seg = xpos;
+    uint8_t _seg = xpos + 2;
     uint8_t wk0 = dev->_page[_page]._segs[_seg];
     uint8_t wk1 = 1 << _bits;
     ESP_LOGD(TAG, "ypos=%d _page=%d _bits=%d wk0=0x%02x wk1=0x%02x", ypos, _page, _bits, wk0, wk1);
@@ -614,4 +614,31 @@ void sh1106_dump(SH1106_t dev) {
 
 void sh1106_dump_page(SH1106_t* dev, int page, int seg) {
     ESP_LOGI(TAG, "dev->_page[%d]._segs[%d]=%02x", page, seg, dev->_page[page]._segs[seg]);
+}
+
+void sh1106_draw_line(SH1106_t* dev, int x1, int y1, int x2, int y2, bool invert) {
+    _sh1106_line(dev, x1, y1, x2, y2, invert);
+    sh1106_show_buffer(dev);
+}
+
+void sh1106_draw_hline(SH1106_t* dev, int x, int y, int width, bool invert) {
+    for (int i = 0; i < width; i++) {
+        _sh1106_pixel(dev, x + i, y, invert);
+    }
+    sh1106_show_buffer(dev);
+}
+
+void sh1106_draw_vline(SH1106_t* dev, int x, int y, int height, bool invert) {
+    for (int i = 0; i < height; i++) {
+        _sh1106_pixel(dev, x, y + i, invert);
+    }
+    sh1106_show_buffer(dev);
+}
+
+void sh1106_draw_rect(SH1106_t* dev, int x, int y, int width, int height, bool invert) {
+    sh1106_draw_hline(dev, x, y, width, invert);
+    sh1106_draw_hline(dev, x, y + height - 1, width, invert);
+    sh1106_draw_vline(dev, x, y, height, invert);
+    sh1106_draw_vline(dev, x + width - 1, y, height, invert);
+    sh1106_show_buffer(dev);
 }
