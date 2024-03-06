@@ -42,7 +42,7 @@ U8X8_SH1106_128X64_NONAME_HW_I2C u8x8(/* reset=*/ U8X8_PIN_NONE);
 
 void setup(void)
 {
-  Serial.begin(115200);
+  Serial.begin(9600);
   ss.begin(GPSBaud);
   while(!Serial);
 
