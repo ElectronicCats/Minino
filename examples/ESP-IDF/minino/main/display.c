@@ -7,13 +7,15 @@
 static const char* TAG = "display";
 SH1106_t dev;
 uint8_t selected_option;
-uint8_t previous_layer;
-uint8_t current_layer;
+Layer previous_layer;
+Layer current_layer;
+int options_length;
 
 void display_init() {
     selected_option = 0;
-    previous_layer = 0;
-    current_layer = 0;
+    previous_layer = LAYER_MAIN_MENU;
+    current_layer = LAYER_MAIN_MENU;
+    options_length = 0;
 
 #if CONFIG_I2C_INTERFACE
     ESP_LOGI(TAG, "INTERFACE is i2c");
@@ -67,19 +69,60 @@ void display_clear() {
     sh1106_clear_screen(&dev, false);
 }
 
+/// @brief Display text on the screen
+/// @param text 
+/// @param text_size 
+/// @param page 
+/// @param invert 
 void display_text(const char* text, int text_size, int page, int invert) {
     sh1106_display_text(&dev, page, text, text_size, invert);
 }
 
+/// @brief Display a box around the selected item
 void display_selected_item_box() {
     sh1106_draw_custom_box(&dev);
 }
 
+/// @brief Add empty strings at the beginning and end of the array
+/// @param array 
+/// @param length 
+/// @return 
+char** add_empty_strings(char** array, int length) {
+    char** newArray = malloc((length + 2) * sizeof(char*));
+
+    // Add the empty string at the beginning
+    newArray[0] = strdup("");
+
+    // Copy the original array
+    for (int i = 0; i < length; i++) {
+        newArray[i + 1] = strdup(array[i]);
+    }
+
+    // Add the empty string at the end
+    newArray[length + 1] = strdup("");
+
+    options_length = length + 2;
+
+    return newArray;
+}
+
+char** get_menu_items() {
+    switch (current_layer) {
+        case LAYER_MAIN_MENU:
+            options_length = sizeof(mainOptions) / sizeof(mainOptions[0]);
+            return add_empty_strings(mainOptions, options_length);
+        // case SETTINGS:
+        // return settingsOptions;
+        // case ABOUT:
+        // return aboutOptions;
+        default:
+            ESP_LOGE(TAG, "Invalid layer");
+            return NULL;
+    }
+}
+
 void display_menu(uint8_t button_name, uint8_t button_event) {
-    char** options = mainOptions;
-    int options_length = sizeof(mainOptions) / sizeof(mainOptions[0]);
-    int page = 1;
-    ESP_LOGI(TAG, "Options length: %d", options_length);
+    char** options = get_menu_items();
 
     switch (button_name) {
         case BOOT:
@@ -96,15 +139,8 @@ void display_menu(uint8_t button_name, uint8_t button_event) {
             break;
     }
 
-    // TODO: Add two spaces to the beginning of each option
     ESP_LOGI(TAG, "Selected option: %d", selected_option);
-    for (int i = 0; i < options_length; i++) {
-        char* option = malloc(strlen(options[i]) + 2);
-        strcpy(option, "  ");
-        strcat(option, options[i]);
-        ESP_LOGI(TAG, "Option: %s", options[i]);
-        ESP_LOGI(TAG, "Option length: %d", strlen(options[i]));
-    }
+    ESP_LOGI(TAG, "Options length: %d", options_length);
 
     // Show only 3 options at a time in the following order:
     // Page 1: Option 1
@@ -112,8 +148,18 @@ void display_menu(uint8_t button_name, uint8_t button_event) {
     // Page 5: Option 3
 
     display_clear();
+    int page = 1;
     for (int i = 0; i < 3; i++) {
-        display_text(options[i + selected_option], strlen(options[i + selected_option]), page, NO_INVERT);
+        char* text = (char*)malloc(16);
+        if (i == 0) {
+            sprintf(text, " %s", options[i + selected_option]);
+        } else if (i == 1) {
+            sprintf(text, "  %s", options[i + selected_option]);
+        } else {
+            sprintf(text, " %s", options[i + selected_option]);
+        }
+
+        display_text(text, strlen(text), page, NO_INVERT);
         page += 2;
     }
 

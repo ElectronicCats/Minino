@@ -35,31 +35,6 @@ static void button_event_cb(void* arg, void* data) {
         return;
 
     display_menu(button_name, button_event);
-
-    // display_clear();
-    // int position = 3;
-    // display_text("  BOOT", 4 + 2, position - 2, NO_INVERT);
-    // switch (button_name) {
-    //     case BOOT:
-    //         display_text("  BOOT", 4 + 2, position, NO_INVERT);
-    //         break;
-    //     case LEFT:
-    //         display_text("  LEFT", 4 + 2, position, NO_INVERT);
-    //         break;
-    //     case RIGHT:
-    //         display_text("  RIGHT", 5 + 2, position, NO_INVERT);
-    //         break;
-    //     case UP:
-    //         display_text("  UP", 2 + 2, position, NO_INVERT);
-    //         break;
-    //     case DOWN:
-    //         display_text("  DOWN", 4 + 2, position, NO_INVERT);
-    //         break;
-    // }
-    // display_text("  BOOT", 4 + 2, position + 2, NO_INVERT);
-
-    // // // Draw a rectangle to wrap the text
-    // display_selected_item_box();
 }
 
 void button_init(uint32_t button_num, uint8_t mask) {
