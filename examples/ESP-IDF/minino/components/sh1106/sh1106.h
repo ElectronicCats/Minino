@@ -136,6 +136,8 @@ void sh1106_draw_line(SH1106_t* dev, int x1, int y1, int x2, int y2, bool invert
 void sh1106_draw_hline(SH1106_t* dev, int x, int y, int width, bool invert);
 void sh1106_draw_vline(SH1106_t* dev, int x, int y, int height, bool invert);
 void sh1106_draw_rect(SH1106_t* dev, int x, int y, int width, int height, bool invert);
+void sh1106_draw_pixel(SH1106_t* dev, int x, int y, bool invert);
+void sh1106_draw_custom_box(SH1106_t* dev);
 
 void i2c_master_init(SH1106_t* dev, int16_t sda, int16_t scl, int16_t reset);
 void i2c_init(SH1106_t* dev, int width, int height);

@@ -618,27 +618,69 @@ void sh1106_dump_page(SH1106_t* dev, int page, int seg) {
 
 void sh1106_draw_line(SH1106_t* dev, int x1, int y1, int x2, int y2, bool invert) {
     _sh1106_line(dev, x1, y1, x2, y2, invert);
-    sh1106_show_buffer(dev);
+    // sh1106_show_buffer(dev);
 }
 
 void sh1106_draw_hline(SH1106_t* dev, int x, int y, int width, bool invert) {
     for (int i = 0; i < width; i++) {
         _sh1106_pixel(dev, x + i, y, invert);
     }
-    sh1106_show_buffer(dev);
+    // sh1106_show_buffer(dev);
 }
 
 void sh1106_draw_vline(SH1106_t* dev, int x, int y, int height, bool invert) {
     for (int i = 0; i < height; i++) {
         _sh1106_pixel(dev, x, y + i, invert);
     }
-    sh1106_show_buffer(dev);
+    // sh1106_show_buffer(dev);
 }
 
 void sh1106_draw_rect(SH1106_t* dev, int x, int y, int width, int height, bool invert) {
-    sh1106_draw_hline(dev, x, y, width, invert);
-    sh1106_draw_hline(dev, x, y + height - 1, width, invert);
-    sh1106_draw_vline(dev, x, y, height, invert);
-    sh1106_draw_vline(dev, x + width - 1, y, height, invert);
+    sh1106_draw_hline(dev, x, y, width, invert);               // Top
+    sh1106_draw_hline(dev, x, y + height - 1, width, invert);  // Bottom
+    sh1106_draw_vline(dev, x, y, height, invert);              // Left
+    sh1106_draw_vline(dev, x + width - 1, y, height, invert);  // Right
+    // sh1106_show_buffer(dev);
+}
+
+void sh1106_draw_pixel(SH1106_t* dev, int x, int y, bool invert) {
+    _sh1106_pixel(dev, x, y, invert);
+    // sh1106_show_buffer(dev);
+}
+
+void sh1106_draw_custom_box(SH1106_t* dev) {
+    int page = 3;
+    int x = 0;
+    int y = page * 8 - 3;
+    int width = x + 126;
+    int height = y - 6;
+
+    sh1106_draw_rect(dev, x, y, width, height, 0);
+    sh1106_draw_rect(dev, x, y, width - 1, height - 1, 0);
+
+    // Top left border
+    sh1106_draw_pixel(dev, x, y, 1);
+    sh1106_draw_pixel(dev, x + 1, y, 1);
+    sh1106_draw_pixel(dev, x, y + 1, 1);
+    sh1106_draw_pixel(dev, x + 1, y + 1, 0);
+
+    // Top right border
+    sh1106_draw_pixel(dev, width - 1, y, 1);
+    sh1106_draw_pixel(dev, width - 2, y, 1);
+    sh1106_draw_pixel(dev, width - 1, y + 1, 1);
+    sh1106_draw_pixel(dev, width - 2, y + 1, 0);
+
+    // Bottom left border
+    sh1106_draw_pixel(dev, x, y + height - 1, 1);
+    sh1106_draw_pixel(dev, x + 1, y + height - 1, 1);
+    sh1106_draw_pixel(dev, x, y + height - 2, 1);
+    sh1106_draw_pixel(dev, x + 1, y + height - 2, 0);
+
+    // Bottom right border
+    sh1106_draw_pixel(dev, width - 1, y + height - 1, 1);
+    sh1106_draw_pixel(dev, width - 2, y + height - 1, 1);
+    sh1106_draw_pixel(dev, width - 1, y + height - 2, 1);
+    sh1106_draw_pixel(dev, width - 2, y + height - 2, 0);
+
     sh1106_show_buffer(dev);
 }

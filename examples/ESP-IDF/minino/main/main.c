@@ -21,6 +21,8 @@
 #define UP_BUTTON_MASK 0b0011 << 4
 #define DOWN_BUTTON_MASK 0b0100 << 4
 
+extern void display_draw_selected_item_box(SH1106_t* dev);
+
 #define LOGO_HEIGHT 128
 #define LOGO_WIDTH 64
 const unsigned char epd_bitmap_logo[] = {
@@ -90,34 +92,40 @@ enum button_name {
 };
 
 static void button_event_cb(void* arg, void* data) {
-    uint8_t button_name = (((button_event_t)data) >> 4); // >> 4 to get the button number
-    uint8_t button_event = ((button_event_t)data) & 0x0F; // & 0x0F to get the event number without the mask
+    uint8_t button_name = (((button_event_t)data) >> 4);   // >> 4 to get the button number
+    uint8_t button_event = ((button_event_t)data) & 0x0F;  // & 0x0F to get the event number without the mask
     const char* button_name_str = button_name_table[button_name];
     const char* button_event_str = button_event_table[button_event];
     ESP_LOGI(TAG, "Button: %s, Event: %s", button_name_str, button_event_str);
 
+    if (button_event != BUTTON_PRESS_DOWN)
+        return;
+
     // Show button name (from table) in the display
     sh1106_clear_screen(&dev, false);
-    switch(button_name) {
+    int position = 3;
+    sh1106_display_text(&dev, position - 2, "  BOOT", 4 + 2, false);
+    switch (button_name) {
         case BOOT:
-            sh1106_display_text(&dev, 0, "BOOT", 4, false);
+            sh1106_display_text(&dev, position, "  BOOT", 4 + 2, false);
             break;
         case LEFT:
-            sh1106_display_text(&dev, 0, "LEFT", 4, false);
+            sh1106_display_text(&dev, position, "  LEFT", 4 + 2, false);
             break;
         case RIGHT:
-            sh1106_display_text(&dev, 0, "RIGHT", 5, false);
+            sh1106_display_text(&dev, position, "  RIGHT", 5 + 2, false);
             break;
         case UP:
-            sh1106_display_text(&dev, 0, "UP", 2, false);
+            sh1106_display_text(&dev, position, "  UP", 2 + 2, false);
             break;
         case DOWN:
-            sh1106_display_text(&dev, 0, "DOWN", 4, false);
+            sh1106_display_text(&dev, position, "  DOWN", 4 + 2, false);
             break;
     }
+    sh1106_display_text(&dev, position + 2, "  BOOT", 4 + 2, false);
 
-    // Draw a rectangle to embbed the text
-    sh1106_draw_rect(&dev, 0, 0, 126, 8, 0);
+    // Draw a rectangle to wrap the text
+    sh1106_draw_custom_box(&dev);
 }
 
 void button_init(uint32_t button_num, uint8_t mask) {
@@ -197,54 +205,55 @@ void app_main(void) {
     sh1106_draw_rect(&dev, 0, 0, 126, 63, 0);
     // Draw a 8x8 box in the center of the screen
     sh1106_draw_rect(&dev, 60, 28, 8, 8, 0);
+    sh1106_show_buffer(&dev);
     // Show logo
     // sh1106_bitmaps(&dev, 0, 0, (uint8_t*)epd_bitmap_logo, LOGO_WIDTH, LOGO_HEIGHT, false);
     // sh1106_bitmaps(&dev, 0, 0, (uint8_t*)epd_bitmap_logo, 128, 32, false);
 
-//     sh1106_clear_screen(&dev, false);
-//     sh1106_contrast(&dev, 0xff);
-//     sh1106_display_text_x3(&dev, 0, "Hello", 5, false);
-//     vTaskDelay(3000 / portTICK_PERIOD_MS);
+    //     sh1106_clear_screen(&dev, false);
+    //     sh1106_contrast(&dev, 0xff);
+    //     sh1106_display_text_x3(&dev, 0, "Hello", 5, false);
+    //     vTaskDelay(3000 / portTICK_PERIOD_MS);
 
-// #if CONFIG_SH1106_128x64
-//     top = 2;
-//     center = 3;
-//     bottom = 8;
-//     sh1106_display_text(&dev, 0, "SH1106 128x64", 14, false);
-//     sh1106_display_text(&dev, 1, "ABCDEFGHIJKLMNOP", 16, false);
-//     sh1106_display_text(&dev, 2, "abcdefghijklmnop", 16, false);
-//     sh1106_display_text(&dev, 3, "Hello World!!", 13, false);
-//     // sh1106_clear_line(&dev, 4, true);
-//     // sh1106_clear_line(&dev, 5, true);
-//     // sh1106_clear_line(&dev, 6, true);
-//     // sh1106_clear_line(&dev, 7, true);
-//     sh1106_display_text(&dev, 4, "SH1106 128x64", 14, true);
-//     sh1106_display_text(&dev, 5, "ABCDEFGHIJKLMNOP", 16, true);
-//     sh1106_display_text(&dev, 6, "abcdefghijklmnop", 16, true);
-//     sh1106_display_text(&dev, 7, "Hello World!!", 13, true);
-// #endif  // CONFIG_SH1106_128x64
+    // #if CONFIG_SH1106_128x64
+    //     top = 2;
+    //     center = 3;
+    //     bottom = 8;
+    //     sh1106_display_text(&dev, 0, "SH1106 128x64", 14, false);
+    //     sh1106_display_text(&dev, 1, "ABCDEFGHIJKLMNOP", 16, false);
+    //     sh1106_display_text(&dev, 2, "abcdefghijklmnop", 16, false);
+    //     sh1106_display_text(&dev, 3, "Hello World!!", 13, false);
+    //     // sh1106_clear_line(&dev, 4, true);
+    //     // sh1106_clear_line(&dev, 5, true);
+    //     // sh1106_clear_line(&dev, 6, true);
+    //     // sh1106_clear_line(&dev, 7, true);
+    //     sh1106_display_text(&dev, 4, "SH1106 128x64", 14, true);
+    //     sh1106_display_text(&dev, 5, "ABCDEFGHIJKLMNOP", 16, true);
+    //     sh1106_display_text(&dev, 6, "abcdefghijklmnop", 16, true);
+    //     sh1106_display_text(&dev, 7, "Hello World!!", 13, true);
+    // #endif  // CONFIG_SH1106_128x64
 
-// #if CONFIG_SH1106_128x32
-//     top = 1;
-//     center = 1;
-//     bottom = 4;
-//     sh1106_display_text(&dev, 0, "SH1106 128x32", 14, false);
-//     sh1106_display_text(&dev, 1, "Hello World!!", 13, false);
-//     // sh1106_clear_line(&dev, 2, true);
-//     // sh1106_clear_line(&dev, 3, true);
-//     sh1106_display_text(&dev, 2, "SH1106 128x32", 14, true);
-//     sh1106_display_text(&dev, 3, "Hello World!!", 13, true);
-// #endif  // CONFIG_SH1106_128x32
-//     vTaskDelay(3000 / portTICK_PERIOD_MS);
+    // #if CONFIG_SH1106_128x32
+    //     top = 1;
+    //     center = 1;
+    //     bottom = 4;
+    //     sh1106_display_text(&dev, 0, "SH1106 128x32", 14, false);
+    //     sh1106_display_text(&dev, 1, "Hello World!!", 13, false);
+    //     // sh1106_clear_line(&dev, 2, true);
+    //     // sh1106_clear_line(&dev, 3, true);
+    //     sh1106_display_text(&dev, 2, "SH1106 128x32", 14, true);
+    //     sh1106_display_text(&dev, 3, "Hello World!!", 13, true);
+    // #endif  // CONFIG_SH1106_128x32
+    //     vTaskDelay(3000 / portTICK_PERIOD_MS);
 
-//     // Invert
-//     sh1106_clear_screen(&dev, true);
-//     sh1106_contrast(&dev, 0xff);
-//     sh1106_display_text(&dev, center, "  Good Bye!!", 12, true);
-//     vTaskDelay(5000 / portTICK_PERIOD_MS);
+    //     // Invert
+    //     sh1106_clear_screen(&dev, true);
+    //     sh1106_contrast(&dev, 0xff);
+    //     sh1106_display_text(&dev, center, "  Good Bye!!", 12, true);
+    //     vTaskDelay(5000 / portTICK_PERIOD_MS);
 
-//     // Fade Out
-//     sh1106_fadeout(&dev);
+    //     // Fade Out
+    //     sh1106_fadeout(&dev);
 
 #if 0
 	// Fade Out
