@@ -115,32 +115,17 @@ char** get_menu_items() {
         // return settingsOptions;
         // case ABOUT:
         // return aboutOptions;
+        case LAYER_APPLICATIONS:
+            options_length = sizeof(applicationsOptions) / sizeof(applicationsOptions[0]);
+            return add_empty_strings(applicationsOptions, options_length);
         default:
             ESP_LOGE(TAG, "Invalid layer");
             return NULL;
     }
 }
 
-void display_menu(uint8_t button_name, uint8_t button_event) {
+void display_menu() {
     char** options = get_menu_items();
-
-    switch (button_name) {
-        case BOOT:
-            break;
-        case LEFT:
-            break;
-        case RIGHT:
-            break;
-        case UP:
-            selected_option = (selected_option == 0) ? 0 : selected_option - 1;
-            break;
-        case DOWN:
-            selected_option = (selected_option == options_length - 3) ? selected_option : selected_option + 1;
-            break;
-    }
-
-    ESP_LOGI(TAG, "Selected option: %d", selected_option);
-    ESP_LOGI(TAG, "Options length: %d", options_length);
 
     // Show only 3 options at a time in the following order:
     // Page 1: Option 1
