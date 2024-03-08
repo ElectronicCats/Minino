@@ -24,18 +24,38 @@ enum ApplicationsMenuItem {
 
 typedef enum MenuLayer Layer;
 
-static char* mainOptions[] = {
+static char* main_options[] = {
     "Applications",
     "Settings",
     "About",
 };
 
-static char* applicationsOptions[] = {
+static char* applications_options[] = {
     "WiFi",
     "Bluetooth",
     "Zigbee",
     "Thread",
     "Matter",
+    "GPS",
 };
 
-#endif // DISPLAY_HELPER_H
+static char* settings_options[] = {
+    "Display",
+    "Sound",
+    "Network",
+    "System",
+};
+
+static char* about_options[] = {
+    "Version",
+    "License",
+    "Credits",
+    "Legal",
+};
+
+static char* wifi_options[] = {
+    "Analizer",
+    "Help",
+};
+
+#endif  // DISPLAY_HELPER_H

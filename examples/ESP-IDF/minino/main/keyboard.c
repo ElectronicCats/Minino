@@ -6,9 +6,9 @@
 static const char* TAG = "keyboard";
 
 static void button_event_cb(void* arg, void* data);
+void handle_back(void);
 void handle_selected_option(void);
 void update_previous_layer(void);
-void handle_back(void);
 
 void button_init(uint32_t button_num, uint8_t mask) {
     button_config_t btn_cfg = {
@@ -47,14 +47,11 @@ static void button_event_cb(void* arg, void* data) {
     const char* button_event_str = button_event_table[button_event];
     ESP_LOGI(TAG, "Button: %s, Event: %s", button_name_str, button_event_str);
 
-    if (button_event != BUTTON_PRESS_DOWN)
-        return;
-
     switch (button_name) {
         case BOOT:
             break;
         case LEFT:
-            if (current_layer != LAYER_MAIN_MENU)
+            if (button_event == BUTTON_PRESS_DOWN)
                 handle_back();
             break;
         case RIGHT:
@@ -62,18 +59,28 @@ static void button_event_cb(void* arg, void* data) {
                 handle_selected_option();
             break;
         case UP:
-            selected_option = (selected_option == 0) ? 0 : selected_option - 1;
-            display_menu();
+            if (button_event == BUTTON_PRESS_DOWN) {
+                selected_option = (selected_option == 0) ? 0 : selected_option - 1;
+                display_menu();
+            }
             break;
         case DOWN:
-            selected_option = (selected_option == options_length - 3) ? selected_option : selected_option + 1;
-            display_menu();
+            if (button_event == BUTTON_PRESS_DOWN) {
+                selected_option = (selected_option == options_length - 3) ? selected_option : selected_option + 1;
+                display_menu();
+            }
             break;
     }
 
     ESP_LOGI(TAG, "Selected option: %d", selected_option);
     ESP_LOGI(TAG, "Options length: %d", options_length);
     update_previous_layer();
+}
+
+void handle_back() {
+    current_layer = previous_layer;
+    selected_option = 0;
+    display_menu();
 }
 
 void handle_selected_option() {
@@ -112,10 +119,4 @@ void update_previous_layer() {
             ESP_LOGE(TAG, "Invalid layer");
             break;
     }
-}
-
-void handle_back() {
-    current_layer = previous_layer;
-    selected_option = 0;
-    display_menu();
 }
