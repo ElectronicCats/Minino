@@ -179,6 +179,7 @@ static void wifi_sniffer_run(void* buff, wifi_promiscuous_pkt_type_t type) {
         };
 
         wifi_sniffer_cb(record);
+        // vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 

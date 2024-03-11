@@ -161,7 +161,7 @@ void display_menu() {
 
 void display_wifi_sniffer(wifi_sniffer_record_t record) {
     char* channel_str = (char*)malloc(16);
-    char* ssid_str = (char*)malloc(16);
+    char* ssid_str = (char*)malloc(50);
     char* rssi_str = (char*)malloc(16);
     char* addr_str = (char*)malloc(16);
     char* hash_str = (char*)malloc(16);
@@ -170,7 +170,7 @@ void display_wifi_sniffer(wifi_sniffer_record_t record) {
     char* time_str = (char*)malloc(16);
 
     sprintf(channel_str, "Channel=%d", record.channel);
-    // sprintf(ssid_str, "SSID=%s", record.ssid);
+    sprintf(ssid_str, "SSID=%s", record.ssid);
     // sprintf(addr_str, "ADDR=%02x:%02x:%02x:%02x:%02x:%02x", record.addr[0], record.addr[1], record.addr[2], record.addr[3], record.addr[4], record.addr[5]);
     sprintf(hash_str, "Hash=%s", record.hash);
     sprintf(rssi_str, "RSSI=%d", record.rssi);
@@ -180,7 +180,7 @@ void display_wifi_sniffer(wifi_sniffer_record_t record) {
 
     display_clear();
     display_text(channel_str, 16, 0, NO_INVERT);
-    // display_text(ssid_str, 16, 1, NO_INVERT);
+    display_text(ssid_str, 16, 1, NO_INVERT);
     // display_text(addr_str, 16, 2, NO_INVERT);
     display_text(hash_str, 16, 3, NO_INVERT);
     display_text(rssi_str, 16, 4, NO_INVERT);
