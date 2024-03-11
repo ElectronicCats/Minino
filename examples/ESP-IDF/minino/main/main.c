@@ -17,8 +17,9 @@ void hello_task(void* pvParameter) {
 }
 
 void app_main(void) {
-    keyboard_init();
+    buzzer_init();
     display_init();
+    keyboard_init();  // Init the keyboard after the display to avoid skipping the logo
     xTaskCreate(&hello_task, "hello_task", 2048, NULL, 5, NULL);
     printf("Hello world!\n");
 }

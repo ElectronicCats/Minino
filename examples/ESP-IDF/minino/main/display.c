@@ -53,8 +53,11 @@ void display_init() {
 
     // Show logo
     display_clear();
+    buzzer_play();
     sh1106_bitmaps(&dev, 0, 0, epd_bitmap_logo_1, 128, 64, NO_INVERT);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    buzzer_stop();
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+    vTaskDelay(900 / portTICK_PERIOD_MS);
     display_menu();
 }
 
@@ -108,9 +111,10 @@ char** get_menu_items() {
         case LAYER_MAIN_MENU:
             options_length = sizeof(main_options) / sizeof(main_options[0]);
             return add_empty_strings(main_options, options_length);
-        // case SETTINGS:
-        // return settings_options;
-        // case ABOUT:
+        case LAYER_SETTINGS:
+            options_length = sizeof(settings_options) / sizeof(settings_options[0]);
+            return add_empty_strings(settings_options, options_length);
+        // case LAYER_ABOUT:
         // return about_options;
         case LAYER_APPLICATIONS:
             options_length = sizeof(applications_options) / sizeof(applications_options[0]);
@@ -188,13 +192,14 @@ void display_wifi_sniffer(wifi_sniffer_record_t record) {
     display_text(sn_str, 16, 6, NO_INVERT);
     display_text(time_str, 16, 7, NO_INVERT);
 
-    ESP_LOGI(TAG, "ADDR=%02x:%02x:%02x:%02x:%02x:%02x, "
-            "SSID=%s, "
-            "TIMESTAMP=%d, "
-            "HASH=%s, "
-            "RSSI=%02d, "
-            "SN=%d, "
-            "HT CAP. INFO=%s",
-            record.addr[0], record.addr[1], record.addr[2], record.addr[3], record.addr[4],
-            record.addr[5], record.ssid, (int)record.timestamp, record.hash, record.rssi, record.sn, record.htci);
+    ESP_LOGI(TAG,
+             "ADDR=%02x:%02x:%02x:%02x:%02x:%02x, "
+             "SSID=%s, "
+             "TIMESTAMP=%d, "
+             "HASH=%s, "
+             "RSSI=%02d, "
+             "SN=%d, "
+             "HT CAP. INFO=%s",
+             record.addr[0], record.addr[1], record.addr[2], record.addr[3], record.addr[4],
+             record.addr[5], record.ssid, (int)record.timestamp, record.hash, record.rssi, record.sn, record.htci);
 }

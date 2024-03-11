@@ -82,18 +82,7 @@ void sh1106_display_image(SH1106_t* dev, int page, int seg, uint8_t* images, int
 void sh1106_display_text(SH1106_t* dev, int page, char* text, int text_len, bool invert) {
     if (page >= dev->_pages)
         return;
-    // int _text_len = text_len;
-    int _text_len = 0;
     int c;
-
-    // while ((c = *text++)) {
-    //     _text_len++;
-    // }
-
-    if (_text_len > 16)
-        _text_len = 16;
-
-    ESP_LOGI(TAG, "Text length: %d", _text_len);
 
     uint8_t seg = 2;
     uint8_t image[8];

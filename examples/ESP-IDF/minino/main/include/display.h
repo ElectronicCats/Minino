@@ -4,6 +4,7 @@
 #include "sh1106.h"
 #include "display_helper.h"
 #include "wifi_sniffer.h"
+#include "buzzer.h"
 
 #define INVERT 1
 #define NO_INVERT 0

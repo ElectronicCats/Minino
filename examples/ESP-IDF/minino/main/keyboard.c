@@ -115,6 +115,7 @@ void handle_selected_option() {
             break;
     }
 
+    selected_option = 0;
     display_menu();
 }
 
@@ -149,7 +150,7 @@ void handle_main_selection() {
             current_layer = LAYER_APPLICATIONS;
             break;
         case MAIN_MENU_SETTINGS:
-            // current_layer = LAYER_SETTINGS;
+            current_layer = LAYER_SETTINGS;
             break;
         case MAIN_MENU_ABOUT:
             // current_layer = LAYER_ABOUT;
