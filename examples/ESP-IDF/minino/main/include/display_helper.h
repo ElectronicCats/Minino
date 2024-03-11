@@ -6,7 +6,18 @@ enum MenuLayer {
     LAYER_APPLICATIONS,
     LAYER_SETTINGS,
     LAYER_ABOUT,
+    /* Applications */
+    LAYER_WIFI_APPS,
+    LAYER_BLUETOOTH_APPS,
+    LAYER_ZIGBEE_APPS,
+    LAYER_THREAD_APPS,
+    LAYER_MATTER_APPS,
+    LAYER_GPS,
+    /* WiFi applications */
+    LAYER_WIFI_ANALIZER,
 };
+
+typedef enum MenuLayer Layer;
 
 enum MainMenuItem {
     MAIN_MENU_APPLICATIONS = 0,
@@ -20,9 +31,25 @@ enum ApplicationsMenuItem {
     APPLICATIONS_MENU_ZIGBEE,
     APPLICATIONS_MENU_THREAD,
     APPLICATIONS_MENU_MATTER,
+    APPLICATIONS_MENU_GPS,
 };
 
-typedef enum MenuLayer Layer;
+enum SettingsMenuItem {
+    SETTINGS_MENU_DISPLAY = 0,
+    SETTINGS_MENU_SOUND,
+    SETTINGS_MENU_SYSTEM,
+};
+
+enum AboutMenuItem {
+    ABOUT_MENU_VERSION = 0,
+    ABOUT_MENU_LICENSE,
+    ABOUT_MENU_CREDITS,
+    ABOUT_MENU_LEGAL,
+};
+
+enum WifiMenuItem {
+    WIFI_MENU_ANALIZER = 0,
+};
 
 static char* main_options[] = {
     "Applications",
@@ -42,7 +69,6 @@ static char* applications_options[] = {
 static char* settings_options[] = {
     "Display",
     "Sound",
-    "Network",
     "System",
 };
 
@@ -55,7 +81,6 @@ static char* about_options[] = {
 
 static char* wifi_options[] = {
     "Analizer",
-    "Help",
 };
 
 #endif  // DISPLAY_HELPER_H

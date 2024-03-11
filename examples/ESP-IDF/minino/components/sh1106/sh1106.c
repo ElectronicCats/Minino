@@ -427,7 +427,7 @@ void sh1106_bitmaps(SH1106_t* dev, int xpos, int ypos, uint8_t* bitmap, int widt
     uint8_t wk1;
     uint8_t wk2;
     uint8_t page = (ypos / 8);
-    uint8_t _seg = xpos;
+    uint8_t _seg = xpos + 2;
     uint8_t dstBits = (ypos % 8);
     ESP_LOGD(TAG, "ypos=%d page=%d dstBits=%d", ypos, page, dstBits);
     int offset = 0;

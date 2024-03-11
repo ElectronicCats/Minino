@@ -9,6 +9,9 @@ static void button_event_cb(void* arg, void* data);
 void handle_back(void);
 void handle_selected_option(void);
 void update_previous_layer(void);
+void handle_main_selection(void);
+void handle_applications_selection(void);
+void handle_wifi_apps_selection(void);
 
 void button_init(uint32_t button_num, uint8_t mask) {
     button_config_t btn_cfg = {
@@ -74,10 +77,15 @@ static void button_event_cb(void* arg, void* data) {
 
     ESP_LOGI(TAG, "Selected option: %d", selected_option);
     ESP_LOGI(TAG, "Options length: %d", options_length);
+    ESP_LOGI(TAG, "Current layer: %d", current_layer);
     update_previous_layer();
 }
 
 void handle_back() {
+    if (current_layer == LAYER_WIFI_ANALIZER) {
+        wifi_sniffer_deinit();
+    }
+
     current_layer = previous_layer;
     selected_option = 0;
     display_menu();
@@ -86,21 +94,24 @@ void handle_back() {
 void handle_selected_option() {
     switch (current_layer) {
         case LAYER_MAIN_MENU:
-            switch (selected_option) {
-                case MAIN_MENU_APPLICATIONS:
-                    current_layer = LAYER_APPLICATIONS;
-                    break;
-                case MAIN_MENU_SETTINGS:
-                    // current_layer = LAYER_SETTINGS;
-                    break;
-                case MAIN_MENU_ABOUT:
-                    // current_layer = LAYER_ABOUT;
-                    break;
-            }
+            handle_main_selection();
             break;
         case LAYER_APPLICATIONS:
+            handle_applications_selection();
+            break;
         case LAYER_SETTINGS:
         case LAYER_ABOUT:
+            break;
+        case LAYER_WIFI_APPS:
+            handle_wifi_apps_selection();
+            break;
+        case LAYER_BLUETOOTH_APPS:
+        case LAYER_ZIGBEE_APPS:
+        case LAYER_THREAD_APPS:
+        case LAYER_MATTER_APPS:
+        case LAYER_GPS:
+            break;
+        case LAYER_WIFI_ANALIZER:
             break;
     }
 
@@ -115,8 +126,65 @@ void update_previous_layer() {
         case LAYER_ABOUT:
             previous_layer = LAYER_MAIN_MENU;
             break;
+        case LAYER_WIFI_APPS:
+        case LAYER_BLUETOOTH_APPS:
+        case LAYER_ZIGBEE_APPS:
+        case LAYER_THREAD_APPS:
+        case LAYER_MATTER_APPS:
+        case LAYER_GPS:
+            previous_layer = LAYER_APPLICATIONS;
+            break;
+        case LAYER_WIFI_ANALIZER:
+            previous_layer = LAYER_WIFI_APPS;
+            break;
         default:
             ESP_LOGE(TAG, "Invalid layer");
+            break;
+    }
+}
+
+void handle_main_selection() {
+    switch (selected_option) {
+        case MAIN_MENU_APPLICATIONS:
+            current_layer = LAYER_APPLICATIONS;
+            break;
+        case MAIN_MENU_SETTINGS:
+            // current_layer = LAYER_SETTINGS;
+            break;
+        case MAIN_MENU_ABOUT:
+            // current_layer = LAYER_ABOUT;
+            break;
+    }
+}
+
+void handle_applications_selection() {
+    switch (selected_option) {
+        case APPLICATIONS_MENU_WIFI:
+            current_layer = LAYER_WIFI_APPS;
+            break;
+        case APPLICATIONS_MENU_BLUETOOTH:
+            // current_layer = LAYER_BLUETOOTH_APPS;
+            break;
+        case APPLICATIONS_MENU_ZIGBEE:
+            // current_layer = LAYER_ZIGBEE_APPS;
+            break;
+        case APPLICATIONS_MENU_THREAD:
+            // current_layer = LAYER_THREAD_APPS;
+            break;
+        case APPLICATIONS_MENU_MATTER:
+            // current_layer = LAYER_MATTER_APPS;
+            break;
+        case APPLICATIONS_MENU_GPS:
+            // current_layer = LAYER_GPS;
+            break;
+    }
+}
+
+void handle_wifi_apps_selection() {
+    switch (selected_option) {
+        case WIFI_MENU_ANALIZER:
+            current_layer = LAYER_WIFI_ANALIZER;
+            wifi_sniffer_init();
             break;
     }
 }

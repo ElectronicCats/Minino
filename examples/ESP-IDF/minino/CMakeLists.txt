@@ -5,6 +5,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 set(EXTRA_COMPONENT_DIRS components/sh1106)
+set(EXTRA_COMPONENT_DIRS components/wifi_sniffer)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(minino)
