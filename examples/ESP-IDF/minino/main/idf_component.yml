@@ -1,9 +1,12 @@
 ## IDF Component Manager Manifest File
 dependencies:
+  espressif/esp_ot_cli_extension: "^1.0.2"
   espressif/button: "^3.2.0"
   ## Required IDF version
   idf:
     version: ">=4.1.0"
+  iperf:
+    path: ${IDF_PATH}/examples/common_components/iperf
   # # Put list of dependencies here
   # # For components maintained by Espressif:
   # component: "~1.0.0"

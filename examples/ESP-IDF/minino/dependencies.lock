@@ -11,11 +11,23 @@ dependencies:
       service_url: https://api.components.espressif.com/
       type: service
     version: 0.5.3
+  espressif/esp_ot_cli_extension:
+    component_hash: 3420518e85bfadb957f5f70e7773a7ae5bd04d8cc8b35bc16081902cfdd77ac6
+    source:
+      service_url: https://api.components.espressif.com/
+      type: service
+    version: 1.0.2
   idf:
     component_hash: null
     source:
       type: idf
     version: 5.3.0
-manifest_hash: 91bbd1f28d7ed3da25bfdb59cfc2909dd839188b9102ba7b0a0447edcd1ba820
+  iperf:
+    component_hash: null
+    source:
+      path: /Users/deimos/esp/esp-idf/examples/common_components/iperf
+      type: local
+    version: '*'
+manifest_hash: e0dc26cf35305f81d78aa955db3cd280e1aeb234daf21dd027f13971da32596f
 target: esp32c6
 version: 1.0.0
