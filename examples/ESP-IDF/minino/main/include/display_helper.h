@@ -15,6 +15,8 @@ enum MenuLayer {
     LAYER_GPS,
     /* WiFi applications */
     LAYER_WIFI_ANALIZER,
+    /* Thread applications */
+    LAYER_THREAD_CLI,
 };
 
 typedef enum MenuLayer Layer;
@@ -51,6 +53,10 @@ enum WifiMenuItem {
     WIFI_MENU_ANALIZER = 0,
 };
 
+enum ThreadMenuItem {
+    THREAD_MENU_CLI = 0,
+};
+
 static char* main_options[] = {
     "Applications",
     "Settings",
@@ -81,6 +87,10 @@ static char* about_options[] = {
 
 static char* wifi_options[] = {
     "Analizer",
+};
+
+static char* thread_options[] = {
+    "Thread CLI",
 };
 
 #endif  // DISPLAY_HELPER_H

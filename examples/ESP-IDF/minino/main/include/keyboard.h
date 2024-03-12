@@ -17,6 +17,6 @@
 #define DOWN_BUTTON_MASK 0b0100 << 4
 
 void button_init(uint32_t button_num, uint8_t mask);
-void keyboard_init(void);
+void keyboard_init();
 
 #endif // KEYBOARD_H

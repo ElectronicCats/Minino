@@ -101,5 +101,6 @@ char** add_empty_strings(char** array, int length);
 char** get_menu_items();
 void display_menu();
 void display_wifi_sniffer(wifi_sniffer_record_t record);
+void display_thread_cli();
 
 #endif // DISPLAY_H

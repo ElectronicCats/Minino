@@ -125,6 +125,12 @@ char** get_menu_items() {
         case LAYER_WIFI_ANALIZER:
             options_length = 0;
             return NULL;
+        case LAYER_THREAD_APPS:
+            options_length = sizeof(thread_options) / sizeof(thread_options[0]);
+            return add_empty_strings(thread_options, options_length);
+        case LAYER_THREAD_CLI:
+            options_length = 0;
+            return NULL;
         default:
             ESP_LOGE(TAG, "Invalid layer");
             return NULL;
@@ -202,4 +208,17 @@ void display_wifi_sniffer(wifi_sniffer_record_t record) {
              "HT CAP. INFO=%s",
              record.addr[0], record.addr[1], record.addr[2], record.addr[3], record.addr[4],
              record.addr[5], record.ssid, (int)record.timestamp, record.hash, record.rssi, record.sn, record.htci);
+}
+
+void display_thread_cli() {
+    display_clear();
+    display_text("Thread CLI      ", 16, 0, INVERT);
+    display_text("Connect Minino", 16, 1, NO_INVERT);
+    display_text("to a computer", 16, 2, NO_INVERT);
+    display_text("via USB and use", 16, 3, NO_INVERT);
+    display_text("screen command", 16, 4, NO_INVERT);
+    display_text("(linux or mac)", 16, 5, NO_INVERT);
+    display_text("or putty in", 16, 6, NO_INVERT);
+    display_text("windows", 16, 7, NO_INVERT);
+    display_show();
 }

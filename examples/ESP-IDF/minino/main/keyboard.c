@@ -6,12 +6,13 @@
 static const char* TAG = "keyboard";
 
 static void button_event_cb(void* arg, void* data);
-void handle_back(void);
-void handle_selected_option(void);
-void update_previous_layer(void);
-void handle_main_selection(void);
-void handle_applications_selection(void);
-void handle_wifi_apps_selection(void);
+void handle_back();
+void handle_selected_option();
+void update_previous_layer();
+void handle_main_selection();
+void handle_applications_selection();
+void handle_wifi_apps_selection();
+void handle_thread_apps_selection();
 
 void button_init(uint32_t button_num, uint8_t mask) {
     button_config_t btn_cfg = {
@@ -108,10 +109,15 @@ void handle_selected_option() {
         case LAYER_BLUETOOTH_APPS:
         case LAYER_ZIGBEE_APPS:
         case LAYER_THREAD_APPS:
+            handle_thread_apps_selection();
+            break;
         case LAYER_MATTER_APPS:
         case LAYER_GPS:
             break;
         case LAYER_WIFI_ANALIZER:
+            break;
+        default:
+            ESP_LOGE(TAG, "Invalid layer");
             break;
     }
 
@@ -170,7 +176,7 @@ void handle_applications_selection() {
             // current_layer = LAYER_ZIGBEE_APPS;
             break;
         case APPLICATIONS_MENU_THREAD:
-            // current_layer = LAYER_THREAD_APPS;
+            current_layer = LAYER_THREAD_APPS;
             break;
         case APPLICATIONS_MENU_MATTER:
             // current_layer = LAYER_MATTER_APPS;
@@ -186,6 +192,15 @@ void handle_wifi_apps_selection() {
         case WIFI_MENU_ANALIZER:
             current_layer = LAYER_WIFI_ANALIZER;
             wifi_sniffer_init();
+            break;
+    }
+}
+
+void handle_thread_apps_selection() {
+    switch (selected_option) {
+        case THREAD_MENU_CLI:
+            current_layer = LAYER_THREAD_CLI;
+            display_thread_cli();
             break;
     }
 }
