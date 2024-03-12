@@ -53,9 +53,9 @@ void display_init() {
 
     // Show logo
     display_clear();
-    buzzer_play();
+    // buzzer_play();
     sh1106_bitmaps(&dev, 0, 0, epd_bitmap_logo_1, 128, 64, NO_INVERT);
-    buzzer_stop();
+    // buzzer_stop();
     vTaskDelay(100 / portTICK_PERIOD_MS);
     vTaskDelay(900 / portTICK_PERIOD_MS);
     display_menu();
