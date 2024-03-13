@@ -12,7 +12,7 @@
 extern uint8_t selected_option;
 extern Layer previous_layer;
 extern Layer current_layer;
-extern int options_length;
+extern int num_items;
 
 // 'logo-1', 128x64px
 static const unsigned char epd_bitmap_logo_1[] = {

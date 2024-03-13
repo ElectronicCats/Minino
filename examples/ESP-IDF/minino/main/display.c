@@ -9,13 +9,13 @@ SH1106_t dev;
 uint8_t selected_option;
 Layer previous_layer;
 Layer current_layer;
-int options_length;
+int num_items;
 
 void display_init() {
     selected_option = 0;
     previous_layer = LAYER_MAIN_MENU;
     current_layer = LAYER_MAIN_MENU;
-    options_length = 0;
+    num_items = 0;
 
 #if CONFIG_I2C_INTERFACE
     ESP_LOGI(TAG, "INTERFACE is i2c");
@@ -101,46 +101,33 @@ char** add_empty_strings(char** array, int length) {
     // Add the empty string at the end
     newArray[length + 1] = strdup("");
 
-    options_length = length + 2;
+    num_items = length + 2;
 
     return newArray;
 }
 
 char** get_menu_items() {
-    switch (current_layer) {
-        case LAYER_MAIN_MENU:
-            options_length = sizeof(main_options) / sizeof(main_options[0]);
-            return add_empty_strings(main_options, options_length);
-        case LAYER_SETTINGS:
-            options_length = sizeof(settings_options) / sizeof(settings_options[0]);
-            return add_empty_strings(settings_options, options_length);
-        // case LAYER_ABOUT:
-        // return about_options;
-        case LAYER_APPLICATIONS:
-            options_length = sizeof(applications_options) / sizeof(applications_options[0]);
-            return add_empty_strings(applications_options, options_length);
-        case LAYER_WIFI_APPS:
-            options_length = sizeof(wifi_options) / sizeof(wifi_options[0]);
-            return add_empty_strings(wifi_options, options_length);
-        case LAYER_WIFI_ANALIZER:
-            options_length = 0;
-            return NULL;
-        case LAYER_THREAD_APPS:
-            options_length = sizeof(thread_options) / sizeof(thread_options[0]);
-            return add_empty_strings(thread_options, options_length);
-        case LAYER_THREAD_CLI:
-            options_length = 0;
-            return NULL;
-        default:
-            ESP_LOGE(TAG, "Invalid layer");
-            return NULL;
+    num_items = 0;
+    char** submenu = menu_items[current_layer];
+    if (submenu != NULL) {
+        while (submenu[num_items] != NULL) {
+            ESP_LOGI(TAG, "Item: %s", submenu[num_items]);
+            num_items++;
+        }
     }
+    ESP_LOGI(TAG, "Number of items: %d", num_items);
+
+    if (num_items == 0) {
+        return NULL;
+    }
+
+    return add_empty_strings(menu_items[current_layer], num_items);
 }
 
 void display_menu() {
-    char** options = get_menu_items();
+    char** items = get_menu_items();
 
-    if (options == NULL) {
+    if (items == NULL) {
         ESP_LOGE(TAG, "Options is NULL");
         return;
     }
@@ -155,11 +142,11 @@ void display_menu() {
     for (int i = 0; i < 3; i++) {
         char* text = (char*)malloc(16);
         if (i == 0) {
-            sprintf(text, " %s", options[i + selected_option]);
+            sprintf(text, " %s", items[i + selected_option]);
         } else if (i == 1) {
-            sprintf(text, "  %s", options[i + selected_option]);
+            sprintf(text, "  %s", items[i + selected_option]);
         } else {
-            sprintf(text, " %s", options[i + selected_option]);
+            sprintf(text, " %s", items[i + selected_option]);
         }
 
         display_text(text, strlen(text), page, NO_INVERT);

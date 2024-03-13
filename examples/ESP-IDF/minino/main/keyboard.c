@@ -70,14 +70,14 @@ static void button_event_cb(void* arg, void* data) {
             break;
         case DOWN:
             if (button_event == BUTTON_PRESS_DOWN) {
-                selected_option = (selected_option == options_length - 3) ? selected_option : selected_option + 1;
+                selected_option = (selected_option == num_items - 3) ? selected_option : selected_option + 1;
                 display_menu();
             }
             break;
     }
 
     ESP_LOGI(TAG, "Selected option: %d", selected_option);
-    ESP_LOGI(TAG, "Options length: %d", options_length);
+    ESP_LOGI(TAG, "Options length: %d", num_items);
     ESP_LOGI(TAG, "Current layer: %d", current_layer);
     update_previous_layer();
 }

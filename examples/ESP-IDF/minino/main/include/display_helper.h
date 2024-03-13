@@ -57,40 +57,66 @@ enum ThreadMenuItem {
     THREAD_MENU_CLI = 0,
 };
 
-static char* main_options[] = {
+static char* main_items[] = {
     "Applications",
     "Settings",
     "About",
+    NULL,
 };
 
-static char* applications_options[] = {
+static char* applications_items[] = {
     "WiFi",
     "Bluetooth",
     "Zigbee",
     "Thread",
     "Matter",
     "GPS",
+    NULL,
 };
 
-static char* settings_options[] = {
+static char* settings_items[] = {
     "Display",
     "Sound",
     "System",
+    NULL,
 };
 
-static char* about_options[] = {
+static char* about_items[] = {
     "Version",
     "License",
     "Credits",
     "Legal",
+    NULL,
 };
 
-static char* wifi_options[] = {
+static char* wifi_items[] = {
     "Analizer",
+    NULL,
 };
 
-static char* thread_options[] = {
+static char* thread_items[] = {
     "Thread CLI",
+    NULL,
+};
+
+static char* empty_items[] = {
+    NULL,
+};
+
+// List of menus, it must be in the same order as the enum MenuLayer
+static char** menu_items[] = {
+    main_items,
+    applications_items,
+    settings_items,
+    about_items,
+    wifi_items,
+    empty_items,  // Bluetooth
+    empty_items,  // Zigbee
+    thread_items,
+    empty_items,  // Matter
+    empty_items,  // GPS
+    empty_items,  // WiFi Analizer
+    empty_items,  // Thread CLI
 };
 
 #endif  // DISPLAY_HELPER_H
