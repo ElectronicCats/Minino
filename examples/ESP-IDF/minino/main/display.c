@@ -3,6 +3,7 @@
 #include "display_helper.h"
 #include "esp_log.h"
 #include "string.h"
+#include "thread_cli.h"
 
 static const char* TAG = "display";
 SH1106_t dev;
@@ -111,11 +112,11 @@ char** get_menu_items() {
     char** submenu = menu_items[current_layer];
     if (submenu != NULL) {
         while (submenu[num_items] != NULL) {
-            ESP_LOGI(TAG, "Item: %s", submenu[num_items]);
+            // ESP_LOGI(TAG, "Item: %s", submenu[num_items]);
             num_items++;
         }
     }
-    ESP_LOGI(TAG, "Number of items: %d", num_items);
+    // ESP_LOGI(TAG, "Number of items: %d", num_items);
 
     if (num_items == 0) {
         return NULL;
@@ -198,6 +199,8 @@ void display_wifi_sniffer(wifi_sniffer_record_t record) {
 }
 
 void display_thread_cli() {
+    thread_cli_start();
+
     display_clear();
     display_text("Thread CLI      ", 16, 0, INVERT);
     display_text("Connect Minino", 16, 1, NO_INVERT);

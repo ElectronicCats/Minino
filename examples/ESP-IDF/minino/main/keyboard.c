@@ -2,6 +2,7 @@
 #include "button_helper.h"
 #include "display.h"
 #include "esp_log.h"
+#include "thread_cli.h"
 
 static const char* TAG = "keyboard";
 
@@ -83,8 +84,15 @@ static void button_event_cb(void* arg, void* data) {
 }
 
 void handle_back() {
-    if (current_layer == LAYER_WIFI_ANALIZER) {
-        wifi_sniffer_deinit();
+    switch (current_layer) {
+        case LAYER_WIFI_ANALIZER:
+            wifi_sniffer_deinit();
+            break;
+        case LAYER_THREAD_CLI:
+            thread_cli_stop();
+            break;
+        default:
+            break;
     }
 
     current_layer = previous_layer;
