@@ -1,6 +1,18 @@
 #ifndef BLUETOOTH_SCANNER_H
 #define BLUETOOTH_SCANNER_H
 
+typedef struct {
+    const char* mac;
+    int rssi;
+    const char* name;
+    bool is_airtag;
+} bluetooth_scanner_record_t;
+
+typedef void (*bluetooth_scanner_cb_t)(bluetooth_scanner_record_t record);
+
 void bluetooth_scanner_init();
+void bluetooth_scanner_register_cb(bluetooth_scanner_cb_t cb);
+void bluetooth_scanner_start();
+void bluetooth_scanner_stop();
 
 #endif

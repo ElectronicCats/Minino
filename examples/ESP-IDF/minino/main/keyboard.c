@@ -3,6 +3,7 @@
 #include "display.h"
 #include "esp_log.h"
 #include "thread_cli.h"
+#include "bluetooth_scanner.h"
 
 static const char* TAG = "keyboard";
 
@@ -13,6 +14,7 @@ void update_previous_layer();
 void handle_main_selection();
 void handle_applications_selection();
 void handle_wifi_apps_selection();
+void handle_bluetooth_apps_selection();
 void handle_thread_apps_selection();
 
 void button_init(uint32_t button_num, uint8_t mask) {
@@ -50,6 +52,10 @@ static void button_event_cb(void* arg, void* data) {
     uint8_t button_event = ((button_event_t)data) & 0x0F;  // & 0x0F to get the event number without the mask
     const char* button_name_str = button_name_table[button_name];
     const char* button_event_str = button_event_table[button_event];
+    ESP_LOGI("", "");
+    if (button_event != BUTTON_PRESS_DOWN) {
+        return;
+    }
     ESP_LOGI(TAG, "Button: %s, Event: %s", button_name_str, button_event_str);
 
     switch (button_name) {
@@ -88,6 +94,9 @@ void handle_back() {
         case LAYER_WIFI_ANALIZER:
             wifi_sniffer_deinit();
             break;
+        case LAYER_BLUETOOTH_AIRTAGS_SCAN:
+            bluetooth_scanner_stop();
+            break;
         case LAYER_THREAD_CLI:
             thread_cli_stop();
             break;
@@ -115,7 +124,10 @@ void handle_selected_option() {
             handle_wifi_apps_selection();
             break;
         case LAYER_BLUETOOTH_APPS:
+            handle_bluetooth_apps_selection();
+            break;
         case LAYER_ZIGBEE_APPS:
+            break;
         case LAYER_THREAD_APPS:
             handle_thread_apps_selection();
             break;
@@ -178,7 +190,7 @@ void handle_applications_selection() {
             current_layer = LAYER_WIFI_APPS;
             break;
         case APPLICATIONS_MENU_BLUETOOTH:
-            // current_layer = LAYER_BLUETOOTH_APPS;
+            current_layer = LAYER_BLUETOOTH_APPS;
             break;
         case APPLICATIONS_MENU_ZIGBEE:
             // current_layer = LAYER_ZIGBEE_APPS;
@@ -200,6 +212,15 @@ void handle_wifi_apps_selection() {
         case WIFI_MENU_ANALIZER:
             current_layer = LAYER_WIFI_ANALIZER;
             wifi_sniffer_init();
+            break;
+    }
+}
+
+void handle_bluetooth_apps_selection() {
+    switch (selected_option) {
+        case BLUETOOTH_MENU_AIRTAGS_SCAN:
+            current_layer = LAYER_BLUETOOTH_AIRTAGS_SCAN;
+            bluetooth_scanner_start();
             break;
     }
 }

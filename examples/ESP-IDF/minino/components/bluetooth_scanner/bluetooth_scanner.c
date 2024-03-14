@@ -30,7 +30,7 @@
 #include "freertos/FreeRTOS.h"
 #include "bluetooth_scanner.h"
 
-#define GATTC_TAG "GATTC_DEMO"
+#define GATTC_TAG "Bluetooth Scanner"
 #define REMOTE_SERVICE_UUID 0x00FF
 #define REMOTE_NOTIFY_CHAR_UUID 0xFF01
 #define PROFILE_NUM 1
@@ -47,6 +47,8 @@ static esp_gattc_descr_elem_t* descr_elem_result = NULL;
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param);
 static void esp_gattc_cb(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t* param);
 static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t* param);
+
+static bluetooth_scanner_cb_t scanner_cb = NULL;
 
 static esp_bt_uuid_t remote_filter_service_uuid = {
     .len = ESP_UUID_LEN_16,
@@ -345,7 +347,21 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* par
             esp_ble_gap_cb_param_t* scan_result = (esp_ble_gap_cb_param_t*)param;
             switch (scan_result->scan_rst.search_evt) {
                 case ESP_GAP_SEARCH_INQ_RES_EVT:
-                    esp_log_buffer_hex(GATTC_TAG, scan_result->scan_rst.bda, 6);
+                    bluetooth_scanner_record_t record = {
+                        .mac = {0},
+                        .rssi = 0,
+                        .name = "",
+                        .is_airtag = false,
+                    };
+
+                    record.rssi = scan_result->scan_rst.rssi;
+                    // memcpy(record.mac, scan_result->scan_rst.bda, 6);
+                    record.is_airtag = false;
+
+                    ESP_LOGI(GATTC_TAG, "Address: %02X:%02X:%02X:%02X:%02X:%02X",
+                             scan_result->scan_rst.bda[5], scan_result->scan_rst.bda[4], scan_result->scan_rst.bda[3],
+                             scan_result->scan_rst.bda[2], scan_result->scan_rst.bda[1], scan_result->scan_rst.bda[0]);
+                    // esp_log_buffer_hex(GATTC_TAG, scan_result->scan_rst.bda, 6);
                     ESP_LOGI(GATTC_TAG, "searched Adv Data Len %d, Scan Response Len %d", scan_result->scan_rst.adv_data_len, scan_result->scan_rst.scan_rsp_len);
                     adv_name = esp_ble_resolve_adv_data(scan_result->scan_rst.ble_adv,
                                                         ESP_BLE_AD_TYPE_NAME_CMPL, &adv_name_len);
@@ -357,7 +373,9 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* par
                         // Check if this is an Apple Airtag
                         if (scan_result->scan_rst.ble_adv[0] == 0x1E && scan_result->scan_rst.ble_adv[2] == 0x4C && scan_result->scan_rst.ble_adv[3] == 0x00) {
                             ESP_LOGI(GATTC_TAG, "Apple Airtag found");
-                            vTaskDelay(5000 / portTICK_PERIOD_MS);
+                            record.is_airtag = true;
+                            record.name = "Apple Airtag";
+                            // vTaskDelay(5000 / portTICK_PERIOD_MS);
                         }
 
                         ESP_LOGI(GATTC_TAG, "adv data:");
@@ -380,6 +398,14 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* par
                                 esp_ble_gattc_open(gl_profile_tab[PROFILE_A_APP_ID].gattc_if, scan_result->scan_rst.bda, scan_result->scan_rst.ble_addr_type, true);
                             }
                         }
+                    }
+                    if (scanner_cb) {
+                        scanner_cb(record);
+                    }
+
+                    if (record.is_airtag) {
+                        // Stop scanning
+                        esp_ble_gap_stop_scanning();
                     }
                     break;
                 case ESP_GAP_SEARCH_INQ_CMPL_EVT:
@@ -506,4 +532,19 @@ void bluetooth_scanner_init() {
     if (local_mtu_ret) {
         ESP_LOGE(GATTC_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
     }
+
+    bluetooth_scanner_stop();
+}
+
+void bluetooth_scanner_register_cb(bluetooth_scanner_cb_t callback) {
+    scanner_cb = callback;
+}
+
+void bluetooth_scanner_start() {
+    ESP_LOGI(GATTC_TAG, "Starting Bluetooth scanner");
+    esp_ble_gap_set_scan_params(&ble_scan_params);
+}
+
+void bluetooth_scanner_stop() {
+    esp_ble_gap_stop_scanning();
 }

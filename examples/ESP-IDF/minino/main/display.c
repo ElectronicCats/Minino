@@ -51,6 +51,7 @@ void display_init() {
 #endif  // CONFIG_SH1106_128x32
 
     wifi_sniffer_register_cb(display_wifi_sniffer);
+    bluetooth_scanner_register_cb(display_bluetooth_scanner);
 
     // Show logo
     display_clear();
@@ -112,11 +113,11 @@ char** get_menu_items() {
     char** submenu = menu_items[current_layer];
     if (submenu != NULL) {
         while (submenu[num_items] != NULL) {
-            // ESP_LOGI(TAG, "Item: %s", submenu[num_items]);
+            ESP_LOGI(TAG, "Item: %s", submenu[num_items]);
             num_items++;
         }
     }
-    // ESP_LOGI(TAG, "Number of items: %d", num_items);
+    ESP_LOGI(TAG, "Number of items: %d", num_items);
 
     if (num_items == 0) {
         return NULL;
@@ -141,7 +142,7 @@ void display_menu() {
     display_clear();
     int page = 1;
     for (int i = 0; i < 3; i++) {
-        char* text = (char*)malloc(16);
+        char* text = (char*)malloc(20);
         if (i == 0) {
             sprintf(text, " %s", items[i + selected_option]);
         } else if (i == 1) {
@@ -196,6 +197,33 @@ void display_wifi_sniffer(wifi_sniffer_record_t record) {
              "HT CAP. INFO=%s",
              record.addr[0], record.addr[1], record.addr[2], record.addr[3], record.addr[4],
              record.addr[5], record.ssid, (int)record.timestamp, record.hash, record.rssi, record.sn, record.htci);
+}
+
+void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
+    display_clear();
+    display_text("Airtags Scanner", 0, 0, INVERT);
+    static uint8_t device_count = 0;
+
+    if (!record.is_airtag) {
+        device_count++;
+        char* device_count_str = (char*)malloc(16);
+        sprintf(device_count_str, "Devices=%d", device_count);
+        display_text(device_count_str, 16, 1, NO_INVERT);
+        return;
+    }
+
+    char* name_str = (char*)malloc(50);
+    char* addr_str = (char*)malloc(16);
+    char* rssi_str = (char*)malloc(16);
+
+    sprintf(name_str, "%s", record.name);
+    // sprintf(addr_str, "ADDR=%02x:%02x:%02x:%02x:%02x:%02x", record.addr[0], record.addr[1], record.addr[2], record.addr[3], record.addr[4], record.addr[5]);
+    sprintf(rssi_str, "RSSI=%d", record.rssi);
+
+    display_text(name_str, 16, 2, NO_INVERT);
+    // display_text(addr_str, 16, 3, NO_INVERT);
+    display_text(rssi_str, 16, 4, NO_INVERT);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
 void display_thread_cli() {

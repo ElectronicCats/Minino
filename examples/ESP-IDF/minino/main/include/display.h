@@ -5,6 +5,7 @@
 #include "display_helper.h"
 #include "wifi_sniffer.h"
 #include "buzzer.h"
+#include "bluetooth_scanner.h"
 
 #define INVERT 1
 #define NO_INVERT 0
@@ -101,6 +102,7 @@ char** add_empty_strings(char** array, int length);
 char** get_menu_items();
 void display_menu();
 void display_wifi_sniffer(wifi_sniffer_record_t record);
+void display_bluetooth_scanner(bluetooth_scanner_record_t record);
 void display_thread_cli();
 
 #endif // DISPLAY_H
