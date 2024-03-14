@@ -7,6 +7,7 @@
 #include "freertos/task.h"
 #include "keyboard.h"
 #include "thread_cli.h"
+#include "bluetooth_scanner.h"
 
 static const char* TAG = "main";
 
@@ -19,6 +20,7 @@ void hello_task(void* pvParameter) {
 
 void app_main(void) {
     // buzzer_init();
+    bluetooth_scanner_init();
     thread_cli_init();
     display_init();
     keyboard_init();  // Init the keyboard after the display to avoid skipping the logo
