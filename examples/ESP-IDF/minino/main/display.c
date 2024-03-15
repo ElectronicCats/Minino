@@ -208,7 +208,7 @@ void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
         device_count++;
         char* device_count_str = (char*)malloc(16);
         sprintf(device_count_str, "Devices=%d", device_count);
-        display_text(device_count_str, 16, 1, NO_INVERT);
+        display_text(device_count_str, 16, 2, NO_INVERT);
         return;
     }
 
@@ -223,7 +223,7 @@ void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
     display_text(name_str, 16, 2, NO_INVERT);
     // display_text(addr_str, 16, 3, NO_INVERT);
     display_text(rssi_str, 16, 4, NO_INVERT);
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    // vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
 void display_thread_cli() {

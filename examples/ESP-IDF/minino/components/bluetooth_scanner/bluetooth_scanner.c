@@ -40,6 +40,7 @@
 static const char remote_device_name[] = "ESP_GATTS_DEMO";
 static bool connect = false;
 static bool get_server = false;
+static bool scan_active = false;
 static esp_gattc_char_elem_t* char_elem_result = NULL;
 static esp_gattc_descr_elem_t* descr_elem_result = NULL;
 
@@ -347,6 +348,10 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* par
             esp_ble_gap_cb_param_t* scan_result = (esp_ble_gap_cb_param_t*)param;
             switch (scan_result->scan_rst.search_evt) {
                 case ESP_GAP_SEARCH_INQ_RES_EVT:
+                    if (!scan_active) {
+                        break;
+                    }
+
                     bluetooth_scanner_record_t record = {
                         .mac = {0},
                         .rssi = 0,
@@ -404,8 +409,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* par
                     }
 
                     if (record.is_airtag) {
-                        // Stop scanning
-                        esp_ble_gap_stop_scanning();
+                        bluetooth_scanner_stop();
                     }
                     break;
                 case ESP_GAP_SEARCH_INQ_CMPL_EVT:
@@ -542,9 +546,24 @@ void bluetooth_scanner_register_cb(bluetooth_scanner_cb_t callback) {
 
 void bluetooth_scanner_start() {
     ESP_LOGI(GATTC_TAG, "Starting Bluetooth scanner");
+    scan_active = true;
     esp_ble_gap_set_scan_params(&ble_scan_params);
 }
 
 void bluetooth_scanner_stop() {
+    scan_active = false;
     esp_ble_gap_stop_scanning();
+    // bluetooth_scanner_deinit();
+}
+
+void bluetooth_scanner_deinit() {
+    esp_bluedroid_disable();
+    esp_bluedroid_deinit();
+    esp_bt_controller_disable();
+    esp_bt_controller_deinit();
+    esp_bt_controller_mem_release(ESP_BT_MODE_BLE);
+}
+
+bool bluetooth_scanner_is_active() {
+    return scan_active;
 }

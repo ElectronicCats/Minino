@@ -1,9 +1,9 @@
 #include "keyboard.h"
+#include "bluetooth_scanner.h"
 #include "button_helper.h"
 #include "display.h"
 #include "esp_log.h"
 #include "thread_cli.h"
-#include "bluetooth_scanner.h"
 
 static const char* TAG = "keyboard";
 
@@ -95,7 +95,10 @@ void handle_back() {
             wifi_sniffer_deinit();
             break;
         case LAYER_BLUETOOTH_AIRTAGS_SCAN:
-            bluetooth_scanner_stop();
+            if (bluetooth_scanner_is_active()) {
+                bluetooth_scanner_stop();
+            }
+            vTaskDelay(100 / portTICK_PERIOD_MS);  // Wait for the scanner to stop
             break;
         case LAYER_THREAD_CLI:
             thread_cli_stop();
@@ -163,6 +166,9 @@ void update_previous_layer() {
             break;
         case LAYER_WIFI_ANALIZER:
             previous_layer = LAYER_WIFI_APPS;
+            break;
+        case LAYER_BLUETOOTH_AIRTAGS_SCAN:
+            previous_layer = LAYER_BLUETOOTH_APPS;
             break;
         default:
             ESP_LOGE(TAG, "Invalid layer");

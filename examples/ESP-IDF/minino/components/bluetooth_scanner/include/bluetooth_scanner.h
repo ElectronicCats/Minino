@@ -14,5 +14,7 @@ void bluetooth_scanner_init();
 void bluetooth_scanner_register_cb(bluetooth_scanner_cb_t cb);
 void bluetooth_scanner_start();
 void bluetooth_scanner_stop();
+void bluetooth_scanner_deinit();
+bool bluetooth_scanner_is_active();
 
 #endif
