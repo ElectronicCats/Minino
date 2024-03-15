@@ -245,6 +245,7 @@ void handle_wifi_apps_selection() {
     switch (selected_option) {
         case WIFI_MENU_ANALIZER:
             current_layer = LAYER_WIFI_ANALIZER;
+            display_clear();
             wifi_sniffer_init();
             break;
     }

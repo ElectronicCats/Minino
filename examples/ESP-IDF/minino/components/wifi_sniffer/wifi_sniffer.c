@@ -61,7 +61,7 @@ void wifi_sniffer_task(void* pvParameter) {
     while (true) {
         wifi_sniffer_record_t record = {
             .channel = channel_current,
-            .ssid = "",
+            .ssid = NULL,
             .rssi = 0,
             .addr = {0},
             .hash = "",

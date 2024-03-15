@@ -171,15 +171,23 @@ void display_wifi_sniffer(wifi_sniffer_record_t record) {
     char* channel_str = (char*)malloc(16);
     char* ssid_str = (char*)malloc(50);
     char* rssi_str = (char*)malloc(16);
-    char* addr_str = (char*)malloc(16);
+    char* addr_str = (char*)malloc(30);
     char* hash_str = (char*)malloc(16);
     char* htci_str = (char*)malloc(16);
     char* sn_str = (char*)malloc(16);
     char* time_str = (char*)malloc(16);
 
     sprintf(channel_str, "Channel=%d", record.channel);
+    display_text("WiFi Sniffer    ", 0, 0, INVERT);
+    display_clear_line(1, NO_INVERT);
+    display_text(channel_str, 0, 1, NO_INVERT);
+
+    if (record.ssid == NULL && record.timestamp == 0) {
+        return;
+    }
+
     sprintf(ssid_str, "SSID=%s", record.ssid);
-    // sprintf(addr_str, "ADDR=%02x:%02x:%02x:%02x:%02x:%02x", record.addr[0], record.addr[1], record.addr[2], record.addr[3], record.addr[4], record.addr[5]);
+    sprintf(addr_str, "ADDR=%02x:%02x:%02x:%02x:%02x:%02x", record.addr[0], record.addr[1], record.addr[2], record.addr[3], record.addr[4], record.addr[5]);
     sprintf(hash_str, "Hash=%s", record.hash);
     sprintf(rssi_str, "RSSI=%d", record.rssi);
     sprintf(htci_str, "HTCI=%s", record.htci);
@@ -187,14 +195,14 @@ void display_wifi_sniffer(wifi_sniffer_record_t record) {
     sprintf(time_str, "Time=%d", (int)record.timestamp);
 
     display_clear();
-    display_text(channel_str, 0, 0, NO_INVERT);
-    display_text(ssid_str, 0, 1, NO_INVERT);
-    // display_text(addr_str, 0, 2, NO_INVERT);
-    display_text(hash_str, 0, 3, NO_INVERT);
-    display_text(rssi_str, 0, 4, NO_INVERT);
-    display_text(htci_str, 0, 5, NO_INVERT);
-    display_text(sn_str, 0, 6, NO_INVERT);
-    display_text(time_str, 0, 7, NO_INVERT);
+    display_text("WiFi Sniffer    ", 0, 0, INVERT);
+    display_text(ssid_str, 0, 2, NO_INVERT);
+    display_text(addr_str, 0, 3, NO_INVERT);
+    display_text(hash_str, 0, 4, NO_INVERT);
+    display_text(rssi_str, 0, 5, NO_INVERT);
+    display_text(htci_str, 0, 7, NO_INVERT);
+    // display_text(sn_str, 0, 6, NO_INVERT);
+    display_text(time_str, 0, 8, NO_INVERT);
 
     ESP_LOGI(TAG,
              "ADDR=%02x:%02x:%02x:%02x:%02x:%02x, "
