@@ -226,6 +226,7 @@ void handle_bluetooth_apps_selection() {
     switch (selected_option) {
         case BLUETOOTH_MENU_AIRTAGS_SCAN:
             current_layer = LAYER_BLUETOOTH_AIRTAGS_SCAN;
+            display_clear();
             bluetooth_scanner_start();
             break;
     }

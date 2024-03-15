@@ -79,12 +79,12 @@ void sh1106_display_image(SH1106_t* dev, int page, int seg, uint8_t* images, int
     memcpy(&dev->_page[page]._segs[seg], images, width);
 }
 
-void sh1106_display_text(SH1106_t* dev, int page, char* text, int text_len, bool invert) {
+void sh1106_display_text(SH1106_t* dev, int page, char* text, int x, bool invert) {
     if (page >= dev->_pages)
         return;
     int c;
 
-    uint8_t seg = 2;
+    uint8_t seg = x + 2;
     uint8_t image[8];
     while ((c = *text++)) {
         memcpy(image, font8x8_basic_tr[(uint8_t)c], 8);
@@ -169,7 +169,7 @@ void sh1106_clear_screen(SH1106_t* dev, bool invert) {
     char* space = "                ";
     int pages = 7;
     for (int page = 0; page <= pages; page++) {
-        sh1106_display_text(dev, page, space, 16, invert);
+        sh1106_display_text(dev, page, space, 0, invert);
     }
 }
 
@@ -178,7 +178,7 @@ void sh1106_clear_line(SH1106_t* dev, int page, bool invert) {
     // memset(space, 0x00, sizeof(space));
     // sh1106_display_text(dev, page, space, sizeof(space), invert);
     char* space = "                ";
-    sh1106_display_text(dev, page, space, 16, invert);
+    sh1106_display_text(dev, page, space, 0, invert);
 }
 
 void sh1106_contrast(SH1106_t* dev, int contrast) {

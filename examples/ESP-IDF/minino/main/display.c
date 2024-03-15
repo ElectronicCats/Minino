@@ -78,8 +78,15 @@ void display_show() {
 /// @param text_size
 /// @param page
 /// @param invert
-void display_text(const char* text, int text_size, int page, int invert) {
-    sh1106_display_text(&dev, page, text, text_size, invert);
+void display_text(const char* text, int x, int page, int invert) {
+    sh1106_display_text(&dev, page, text, x, invert);
+}
+
+/// @brief Clear a line on the screen
+/// @param page 
+/// @param invert 
+void display_clear_line(int page, int invert) {
+    sh1106_clear_line(&dev, page, invert);
 }
 
 /// @brief Display a box around the selected item
@@ -115,11 +122,11 @@ char** get_menu_items() {
     char** submenu = menu_items[current_layer];
     if (submenu != NULL) {
         while (submenu[num_items] != NULL) {
-            ESP_LOGI(TAG, "Item: %s", submenu[num_items]);
+            // ESP_LOGI(TAG, "Item: %s", submenu[num_items]);
             num_items++;
         }
     }
-    ESP_LOGI(TAG, "Number of items: %d", num_items);
+    // ESP_LOGI(TAG, "Number of items: %d", num_items);
 
     if (num_items == 0) {
         return NULL;
@@ -153,7 +160,7 @@ void display_menu() {
             sprintf(text, " %s", items[i + selected_option]);
         }
 
-        display_text(text, strlen(text), page, NO_INVERT);
+        display_text(text, 0, page, NO_INVERT);
         page += 2;
     }
 
@@ -180,14 +187,14 @@ void display_wifi_sniffer(wifi_sniffer_record_t record) {
     sprintf(time_str, "Time=%d", (int)record.timestamp);
 
     display_clear();
-    display_text(channel_str, 16, 0, NO_INVERT);
-    display_text(ssid_str, 16, 1, NO_INVERT);
-    // display_text(addr_str, 16, 2, NO_INVERT);
-    display_text(hash_str, 16, 3, NO_INVERT);
-    display_text(rssi_str, 16, 4, NO_INVERT);
-    display_text(htci_str, 16, 5, NO_INVERT);
-    display_text(sn_str, 16, 6, NO_INVERT);
-    display_text(time_str, 16, 7, NO_INVERT);
+    display_text(channel_str, 0, 0, NO_INVERT);
+    display_text(ssid_str, 0, 1, NO_INVERT);
+    // display_text(addr_str, 0, 2, NO_INVERT);
+    display_text(hash_str, 0, 3, NO_INVERT);
+    display_text(rssi_str, 0, 4, NO_INVERT);
+    display_text(htci_str, 0, 5, NO_INVERT);
+    display_text(sn_str, 0, 6, NO_INVERT);
+    display_text(time_str, 0, 7, NO_INVERT);
 
     ESP_LOGI(TAG,
              "ADDR=%02x:%02x:%02x:%02x:%02x:%02x, "
@@ -202,14 +209,14 @@ void display_wifi_sniffer(wifi_sniffer_record_t record) {
 }
 
 void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
-    display_clear();
     display_text("Airtags Scanner", 0, 0, INVERT);
+    display_clear_line(2, NO_INVERT);
 
     if (!record.is_airtag) {
         bluetooth_device_count++;
         char* device_count_str = (char*)malloc(16);
         sprintf(device_count_str, "Devices=%d", record.count);
-        display_text(device_count_str, 16, 2, NO_INVERT);
+        display_text(device_count_str, 0, 2, NO_INVERT);
         return;
     }
 
@@ -223,10 +230,10 @@ void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
     sprintf(addr_str2, "     %02X:%02X:%02X", record.mac[2], record.mac[1], record.mac[0]);
     sprintf(rssi_str, "RSSI=%d", record.rssi);
 
-    display_text(name_str, 16, 2, NO_INVERT);
-    display_text(addr_str1, 16, 3, NO_INVERT);
-    display_text(addr_str2, 16, 4, NO_INVERT);
-    display_text(rssi_str, 16, 5, NO_INVERT);
+    display_text(name_str, 0, 2, NO_INVERT);
+    display_text(addr_str1, 0, 3, NO_INVERT);
+    display_text(addr_str2, 0, 4, NO_INVERT);
+    display_text(rssi_str, 0, 5, NO_INVERT);
     // vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
@@ -234,13 +241,13 @@ void display_thread_cli() {
     thread_cli_start();
 
     display_clear();
-    display_text("Thread CLI      ", 16, 0, INVERT);
-    display_text("Connect Minino", 16, 1, NO_INVERT);
-    display_text("to a computer", 16, 2, NO_INVERT);
-    display_text("via USB and use", 16, 3, NO_INVERT);
-    display_text("screen command", 16, 4, NO_INVERT);
-    display_text("(linux or mac)", 16, 5, NO_INVERT);
-    display_text("or putty in", 16, 6, NO_INVERT);
-    display_text("windows", 16, 7, NO_INVERT);
+    display_text("Thread CLI      ", 0, 0, INVERT);
+    display_text("Connect Minino", 0, 1, NO_INVERT);
+    display_text("to a computer", 0, 2, NO_INVERT);
+    display_text("via USB and use", 0, 3, NO_INVERT);
+    display_text("screen command", 0, 4, NO_INVERT);
+    display_text("(linux or mac)", 0, 5, NO_INVERT);
+    display_text("or putty in", 0, 6, NO_INVERT);
+    display_text("windows", 0, 7, NO_INVERT);
     display_show();
 }

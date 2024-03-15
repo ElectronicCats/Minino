@@ -112,7 +112,7 @@ void sh1106_show_buffer(SH1106_t* dev);
 void sh1106_set_buffer(SH1106_t* dev, uint8_t* buffer);
 void sh1106_get_buffer(SH1106_t* dev, uint8_t* buffer);
 void sh1106_display_image(SH1106_t* dev, int page, int seg, uint8_t* images, int width);
-void sh1106_display_text(SH1106_t* dev, int page, char* text, int text_len, bool invert);
+void sh1106_display_text(SH1106_t* dev, int page, char* text, int x, bool invert);
 void sh1106_display_text_x3(SH1106_t* dev, int page, char* text, int text_len, bool invert);
 void sh1106_clear_screen(SH1106_t* dev, bool invert);
 void sh1106_clear_line(SH1106_t* dev, int page, bool invert);

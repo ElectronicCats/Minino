@@ -96,7 +96,8 @@ static const unsigned char epd_bitmap_face_logo[] = {
 void display_init(void);
 void display_clear(void);
 void display_show(void);
-void display_text(const char* text, int text_size, int page, int invert);
+void display_text(const char* text, int x, int page, int invert);
+void display_clear_line(int page, int invert);
 void display_selected_item_box();
 char** add_empty_strings(char** array, int length);
 char** get_menu_items();
