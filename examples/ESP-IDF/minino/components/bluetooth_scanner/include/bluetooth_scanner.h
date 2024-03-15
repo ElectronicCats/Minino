@@ -2,10 +2,11 @@
 #define BLUETOOTH_SCANNER_H
 
 typedef struct {
-    const char* mac;
+    uint8_t mac[6];
     int rssi;
     const char* name;
     bool is_airtag;
+    uint16_t count;
 } bluetooth_scanner_record_t;
 
 typedef void (*bluetooth_scanner_cb_t)(bluetooth_scanner_record_t record);

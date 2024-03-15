@@ -43,6 +43,7 @@ static bool get_server = false;
 static bool scan_active = false;
 static esp_gattc_char_elem_t* char_elem_result = NULL;
 static esp_gattc_descr_elem_t* descr_elem_result = NULL;
+static uint16_t devices_found_count = 0;
 
 /* Declare static functions */
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param);
@@ -357,10 +358,11 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* par
                         .rssi = 0,
                         .name = "",
                         .is_airtag = false,
+                        .count = devices_found_count++,
                     };
 
                     record.rssi = scan_result->scan_rst.rssi;
-                    // memcpy(record.mac, scan_result->scan_rst.bda, 6);
+                    memcpy(record.mac, scan_result->scan_rst.bda, 6);
                     record.is_airtag = false;
 
                     ESP_LOGI(GATTC_TAG, "Address: %02X:%02X:%02X:%02X:%02X:%02X",
@@ -547,6 +549,7 @@ void bluetooth_scanner_register_cb(bluetooth_scanner_cb_t callback) {
 void bluetooth_scanner_start() {
     ESP_LOGI(GATTC_TAG, "Starting Bluetooth scanner");
     scan_active = true;
+    devices_found_count = 0;
     esp_ble_gap_set_scan_params(&ble_scan_params);
 }
 

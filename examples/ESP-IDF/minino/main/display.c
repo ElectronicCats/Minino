@@ -11,12 +11,14 @@ uint8_t selected_option;
 Layer previous_layer;
 Layer current_layer;
 int num_items;
+uint8_t bluetooth_device_count;
 
 void display_init() {
     selected_option = 0;
     previous_layer = LAYER_MAIN_MENU;
     current_layer = LAYER_MAIN_MENU;
     num_items = 0;
+    bluetooth_device_count = 0;
 
 #if CONFIG_I2C_INTERFACE
     ESP_LOGI(TAG, "INTERFACE is i2c");
@@ -202,27 +204,29 @@ void display_wifi_sniffer(wifi_sniffer_record_t record) {
 void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
     display_clear();
     display_text("Airtags Scanner", 0, 0, INVERT);
-    static uint8_t device_count = 0;
 
     if (!record.is_airtag) {
-        device_count++;
+        bluetooth_device_count++;
         char* device_count_str = (char*)malloc(16);
-        sprintf(device_count_str, "Devices=%d", device_count);
+        sprintf(device_count_str, "Devices=%d", record.count);
         display_text(device_count_str, 16, 2, NO_INVERT);
         return;
     }
 
     char* name_str = (char*)malloc(50);
-    char* addr_str = (char*)malloc(16);
+    char* addr_str1 = (char*)malloc(14);
+    char* addr_str2 = (char*)malloc(14);
     char* rssi_str = (char*)malloc(16);
 
     sprintf(name_str, "%s", record.name);
-    // sprintf(addr_str, "ADDR=%02x:%02x:%02x:%02x:%02x:%02x", record.addr[0], record.addr[1], record.addr[2], record.addr[3], record.addr[4], record.addr[5]);
+    sprintf(addr_str1, "MAC= %02X:%02X:%02X", record.mac[5], record.mac[4], record.mac[3]);
+    sprintf(addr_str2, "     %02X:%02X:%02X", record.mac[2], record.mac[1], record.mac[0]);
     sprintf(rssi_str, "RSSI=%d", record.rssi);
 
     display_text(name_str, 16, 2, NO_INVERT);
-    // display_text(addr_str, 16, 3, NO_INVERT);
-    display_text(rssi_str, 16, 4, NO_INVERT);
+    display_text(addr_str1, 16, 3, NO_INVERT);
+    display_text(addr_str2, 16, 4, NO_INVERT);
+    display_text(rssi_str, 16, 5, NO_INVERT);
     // vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
