@@ -19,6 +19,11 @@ enum MenuLayer {
     LAYER_BLUETOOTH_AIRTAGS_SCAN,
     /* Thread applications */
     LAYER_THREAD_CLI,
+    /* About */
+    LAYER_ABOUT_VERSION,
+    LAYER_ABOUT_LICENSE,
+    LAYER_ABOUT_CREDITS,
+    LAYER_ABOUT_LEGAL,
 };
 
 typedef enum MenuLayer Layer;
@@ -128,16 +133,21 @@ static char** menu_items[] = {
     /* Applications */
     wifi_items,
     bluetooth_items,
-    empty_items,      // Zigbee
+    empty_items,  // Zigbee
     thread_items,
-    empty_items,      // Matter
-    empty_items,      // GPS
+    empty_items,  // Matter
+    empty_items,  // GPS
     /* WiFi applications */
-    empty_items,      // WiFi Analizer
+    empty_items,  // WiFi Analizer
     /* Bluetooth applications */
-    empty_items,      // Bluetooth Airtags scan
+    empty_items,  // Bluetooth Airtags scan
     /* Thread applications */
-    empty_items,      // Thread CLI
+    empty_items,  // Thread CLI
+    /* About */
+    empty_items,  // Version
+    empty_items,  // License
+    empty_items,  // Credits
+    empty_items,  // Legal
 };
 
 #endif  // DISPLAY_HELPER_H

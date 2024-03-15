@@ -13,6 +13,7 @@ void handle_selected_option();
 void update_previous_layer();
 void handle_main_selection();
 void handle_applications_selection();
+void handle_about_selection();
 void handle_wifi_apps_selection();
 void handle_bluetooth_apps_selection();
 void handle_thread_apps_selection();
@@ -121,7 +122,9 @@ void handle_selected_option() {
             handle_applications_selection();
             break;
         case LAYER_SETTINGS:
+            break;
         case LAYER_ABOUT:
+            handle_about_selection();
             break;
         case LAYER_WIFI_APPS:
             handle_wifi_apps_selection();
@@ -170,6 +173,12 @@ void update_previous_layer() {
         case LAYER_BLUETOOTH_AIRTAGS_SCAN:
             previous_layer = LAYER_BLUETOOTH_APPS;
             break;
+        case LAYER_ABOUT_VERSION:
+        case LAYER_ABOUT_LICENSE:
+        case LAYER_ABOUT_CREDITS:
+        case LAYER_ABOUT_LEGAL:
+            previous_layer = LAYER_ABOUT;
+            break;
         default:
             ESP_LOGE(TAG, "Invalid layer");
             break;
@@ -185,7 +194,7 @@ void handle_main_selection() {
             current_layer = LAYER_SETTINGS;
             break;
         case MAIN_MENU_ABOUT:
-            // current_layer = LAYER_ABOUT;
+            current_layer = LAYER_ABOUT;
             break;
     }
 }
@@ -211,6 +220,25 @@ void handle_applications_selection() {
             // current_layer = LAYER_GPS;
             break;
     }
+}
+
+void handle_about_selection() {
+    switch (selected_option) {
+        case ABOUT_MENU_VERSION:
+            current_layer = LAYER_ABOUT_VERSION;
+            break;
+        case ABOUT_MENU_LICENSE:
+            current_layer = LAYER_ABOUT_LICENSE;
+            break;
+        case ABOUT_MENU_CREDITS:
+            current_layer = LAYER_ABOUT_CREDITS;
+            break;
+        case ABOUT_MENU_LEGAL:
+            current_layer = LAYER_ABOUT_LEGAL;
+            break;
+    }
+
+    display_about_info();
 }
 
 void handle_wifi_apps_selection() {

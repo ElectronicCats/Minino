@@ -83,8 +83,8 @@ void display_text(const char* text, int x, int page, int invert) {
 }
 
 /// @brief Clear a line on the screen
-/// @param page 
-/// @param invert 
+/// @param page
+/// @param invert
 void display_clear_line(int page, int invert) {
     sh1106_clear_line(&dev, page, invert);
 }
@@ -139,7 +139,7 @@ void display_menu() {
     char** items = get_menu_items();
 
     if (items == NULL) {
-        ESP_LOGE(TAG, "Options is NULL");
+        ESP_LOGW(TAG, "Options is NULL");
         return;
     }
 
@@ -250,4 +250,28 @@ void display_thread_cli() {
     display_text("or putty in", 0, 6, NO_INVERT);
     display_text("windows", 0, 7, NO_INVERT);
     display_show();
+}
+
+void display_about_info() {
+    display_clear();
+
+    switch (selected_option) {
+        case ABOUT_MENU_VERSION:
+            display_text(" Minino v1.3.0", 0, 3, NO_INVERT);
+            display_text("     BETA", 0, 4, NO_INVERT);
+            break;
+        case ABOUT_MENU_LICENSE:
+            display_text("  GNU GPL 3.0", 0, 3, NO_INVERT);
+            break;
+        case ABOUT_MENU_CREDITS:
+            display_text("Developed by", 0, 0, NO_INVERT);
+            display_text("Electronic Cats", 0, 1, NO_INVERT);
+            display_text("This product is", 0, 3, NO_INVERT);
+            display_text("in a BETA stage", 0, 4, NO_INVERT);
+            display_text("use at your own", 0, 5, NO_INVERT);
+            break;
+        case ABOUT_MENU_LEGAL:
+            display_text(" In development", 0, 3, NO_INVERT);
+            break;
+    }
 }

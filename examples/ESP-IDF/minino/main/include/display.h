@@ -105,5 +105,6 @@ void display_menu();
 void display_wifi_sniffer(wifi_sniffer_record_t record);
 void display_bluetooth_scanner(bluetooth_scanner_record_t record);
 void display_thread_cli();
+void display_about_info();
 
 #endif // DISPLAY_H
