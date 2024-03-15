@@ -7,6 +7,7 @@ typedef struct {
     const char* name;
     bool is_airtag;
     uint16_t count;
+    bool has_finished;
 } bluetooth_scanner_record_t;
 
 typedef void (*bluetooth_scanner_cb_t)(bluetooth_scanner_record_t record);

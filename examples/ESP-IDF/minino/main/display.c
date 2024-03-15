@@ -200,9 +200,9 @@ void display_wifi_sniffer(wifi_sniffer_record_t record) {
     display_text(addr_str, 0, 3, NO_INVERT);
     display_text(hash_str, 0, 4, NO_INVERT);
     display_text(rssi_str, 0, 5, NO_INVERT);
-    display_text(htci_str, 0, 7, NO_INVERT);
+    display_text(htci_str, 0, 6, NO_INVERT);
     // display_text(sn_str, 0, 6, NO_INVERT);
-    display_text(time_str, 0, 8, NO_INVERT);
+    display_text(time_str, 0, 7, NO_INVERT);
 
     ESP_LOGI(TAG,
              "ADDR=%02x:%02x:%02x:%02x:%02x:%02x, "
@@ -217,10 +217,18 @@ void display_wifi_sniffer(wifi_sniffer_record_t record) {
 }
 
 void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
+    static bool airtag_detected = false;
     display_text("Airtags Scanner", 0, 0, INVERT);
     display_clear_line(2, NO_INVERT);
 
+    if (record.has_finished && !airtag_detected) {
+        display_text("    Scanning", 0, 3, NO_INVERT);
+        display_text("    Finished", 0, 4, NO_INVERT);
+        return;
+    }
+
     if (!record.is_airtag) {
+        airtag_detected = false;
         bluetooth_device_count++;
         char* device_count_str = (char*)malloc(16);
         sprintf(device_count_str, "Devices=%d", record.count);
@@ -228,6 +236,7 @@ void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
         return;
     }
 
+    airtag_detected = true;
     char* name_str = (char*)malloc(50);
     char* addr_str1 = (char*)malloc(14);
     char* addr_str2 = (char*)malloc(14);
@@ -242,7 +251,6 @@ void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
     display_text(addr_str1, 0, 3, NO_INVERT);
     display_text(addr_str2, 0, 4, NO_INVERT);
     display_text(rssi_str, 0, 5, NO_INVERT);
-    // vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
 void display_thread_cli() {

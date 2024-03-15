@@ -20,6 +20,7 @@
 #include "nvs.h"
 #include "nvs_flash.h"
 
+#include "bluetooth_scanner.h"
 #include "esp_bt.h"
 #include "esp_bt_main.h"
 #include "esp_gap_ble_api.h"
@@ -28,7 +29,6 @@
 #include "esp_gattc_api.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
-#include "bluetooth_scanner.h"
 
 #define GATTC_TAG "Bluetooth Scanner"
 #define REMOTE_SERVICE_UUID 0x00FF
@@ -44,6 +44,8 @@ static bool scan_active = false;
 static esp_gattc_char_elem_t* char_elem_result = NULL;
 static esp_gattc_descr_elem_t* descr_elem_result = NULL;
 static uint16_t devices_found_count = 0;
+static uint8_t scan_timer = 0;
+TaskHandle_t scan_timer_task_handle = NULL;
 
 /* Declare static functions */
 static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param);
@@ -99,6 +101,20 @@ static struct gattc_profile_inst gl_profile_tab[PROFILE_NUM] = {
         .gattc_if = ESP_GATT_IF_NONE, /* Not get the gatt_if, so initial is ESP_GATT_IF_NONE */
     },
 };
+
+void timer_task(void* arg) {
+    scan_timer = 0;
+
+    while (true) {
+        scan_timer++;
+        ESP_LOGI(GATTC_TAG, "Scan timer: %d", scan_timer);
+
+        if (scan_timer >= 30) {
+            bluetooth_scanner_stop();
+        }
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+}
 
 static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t gattc_if, esp_ble_gattc_cb_param_t* param) {
     esp_ble_gattc_cb_param_t* p_data = (esp_ble_gattc_cb_param_t*)param;
@@ -331,6 +347,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* par
     uint8_t adv_name_len = 0;
     switch (event) {
         case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
+            ESP_LOGI(GATTC_TAG, "Start scanning...");
             // the unit of the duration is second
             uint32_t duration = 30;
             esp_ble_gap_start_scanning(duration);
@@ -359,6 +376,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* par
                         .name = "",
                         .is_airtag = false,
                         .count = devices_found_count++,
+                        .has_finished = false,
                     };
 
                     record.rssi = scan_result->scan_rst.rssi;
@@ -382,7 +400,6 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* par
                             ESP_LOGI(GATTC_TAG, "Apple Airtag found");
                             record.is_airtag = true;
                             record.name = "Apple Airtag";
-                            // vTaskDelay(5000 / portTICK_PERIOD_MS);
                         }
 
                         ESP_LOGI(GATTC_TAG, "adv data:");
@@ -423,6 +440,19 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* par
         }
 
         case ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT:
+            bluetooth_scanner_record_t record = {
+                .mac = {0},
+                .rssi = 0,
+                .name = "",
+                .is_airtag = false,
+                .count = 0,
+                .has_finished = true,
+            };
+
+            if (scanner_cb) {
+                scanner_cb(record);
+            }
+
             if (param->scan_stop_cmpl.status != ESP_BT_STATUS_SUCCESS) {
                 ESP_LOGE(GATTC_TAG, "scan stop failed, error status = %x", param->scan_stop_cmpl.status);
                 break;
@@ -447,6 +477,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* par
                      param->update_conn_params.timeout);
             break;
         default:
+            ESP_LOGI(GATTC_TAG, "event %d", event);
             break;
     }
 }
@@ -539,6 +570,8 @@ void bluetooth_scanner_init() {
         ESP_LOGE(GATTC_TAG, "set local  MTU failed, error code = %x", local_mtu_ret);
     }
 
+    xTaskCreate(timer_task, "timer_task", 2048, NULL, 10, &scan_timer_task_handle);
+    vTaskSuspend(scan_timer_task_handle);
     bluetooth_scanner_stop();
 }
 
@@ -551,11 +584,14 @@ void bluetooth_scanner_start() {
     scan_active = true;
     devices_found_count = 0;
     esp_ble_gap_set_scan_params(&ble_scan_params);
+    scan_timer = 0;
+    vTaskResume(scan_timer_task_handle);
 }
 
 void bluetooth_scanner_stop() {
     scan_active = false;
     esp_ble_gap_stop_scanning();
+    vTaskSuspend(scan_timer_task_handle);
     // bluetooth_scanner_deinit();
 }
 
