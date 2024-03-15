@@ -24,6 +24,10 @@ enum MenuLayer {
     LAYER_ABOUT_LICENSE,
     LAYER_ABOUT_CREDITS,
     LAYER_ABOUT_LEGAL,
+    /* Settings items */
+    LAYER_SETTINGS_DISPLAY,
+    LAYER_SETTINGS_SOUND,
+    LAYER_SETTINGS_SYSTEM,
 };
 
 typedef enum MenuLayer Layer;
@@ -148,6 +152,10 @@ static char** menu_items[] = {
     empty_items,  // License
     empty_items,  // Credits
     empty_items,  // Legal
+    /* Settings items */
+    empty_items,  // Display
+    empty_items,  // Sound
+    empty_items,  // System
 };
 
 #endif  // DISPLAY_HELPER_H

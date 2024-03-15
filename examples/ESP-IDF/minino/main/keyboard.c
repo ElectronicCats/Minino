@@ -13,6 +13,7 @@ void handle_selected_option();
 void update_previous_layer();
 void handle_main_selection();
 void handle_applications_selection();
+void handle_settings_selection();
 void handle_about_selection();
 void handle_wifi_apps_selection();
 void handle_bluetooth_apps_selection();
@@ -122,6 +123,7 @@ void handle_selected_option() {
             handle_applications_selection();
             break;
         case LAYER_SETTINGS:
+            handle_settings_selection();
             break;
         case LAYER_ABOUT:
             handle_about_selection();
@@ -179,6 +181,11 @@ void update_previous_layer() {
         case LAYER_ABOUT_LEGAL:
             previous_layer = LAYER_ABOUT;
             break;
+        case LAYER_SETTINGS_DISPLAY:
+        case LAYER_SETTINGS_SOUND:
+        case LAYER_SETTINGS_SYSTEM:
+            previous_layer = LAYER_SETTINGS;
+            break;
         default:
             ESP_LOGE(TAG, "Invalid layer");
             break;
@@ -208,16 +215,42 @@ void handle_applications_selection() {
             current_layer = LAYER_BLUETOOTH_APPS;
             break;
         case APPLICATIONS_MENU_ZIGBEE:
-            // current_layer = LAYER_ZIGBEE_APPS;
+            current_layer = LAYER_ZIGBEE_APPS;
+            display_clear();
+            display_in_development_banner();
             break;
         case APPLICATIONS_MENU_THREAD:
             current_layer = LAYER_THREAD_APPS;
             break;
         case APPLICATIONS_MENU_MATTER:
-            // current_layer = LAYER_MATTER_APPS;
+            current_layer = LAYER_MATTER_APPS;
+            display_clear();
+            display_in_development_banner();
             break;
         case APPLICATIONS_MENU_GPS:
-            // current_layer = LAYER_GPS;
+            current_layer = LAYER_GPS;
+            display_clear();
+            display_in_development_banner();
+            break;
+    }
+}
+
+void handle_settings_selection() {
+    switch (selected_option) {
+        case SETTINGS_MENU_DISPLAY:
+            current_layer = LAYER_SETTINGS_DISPLAY;
+            display_clear();
+            display_in_development_banner();
+            break;
+        case SETTINGS_MENU_SOUND:
+            current_layer = LAYER_SETTINGS_SOUND;
+            display_clear();
+            display_in_development_banner();
+            break;
+        case SETTINGS_MENU_SYSTEM:
+            current_layer = LAYER_SETTINGS_SYSTEM;
+            display_clear();
+            display_in_development_banner();
             break;
     }
 }

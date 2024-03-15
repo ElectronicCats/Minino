@@ -287,7 +287,11 @@ void display_about_info() {
             display_text("use at your own", 0, 5, NO_INVERT);
             break;
         case ABOUT_MENU_LEGAL:
-            display_text(" In development", 0, 3, NO_INVERT);
+            display_in_development_banner();
             break;
     }
+}
+
+void display_in_development_banner() {
+    display_text(" In development", 0, 3, NO_INVERT);
 }
