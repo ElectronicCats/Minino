@@ -54,6 +54,15 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_
 
 static bluetooth_scanner_cb_t scanner_cb = NULL;
 
+bluetooth_scanner_record_t record = {
+    .mac = {0},
+    .rssi = 0,
+    .name = "",
+    .is_airtag = false,
+    .count = 0,
+    .has_finished = true,
+};
+
 static esp_bt_uuid_t remote_filter_service_uuid = {
     .len = ESP_UUID_LEN_16,
     .uuid = {
@@ -370,18 +379,21 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* par
                         break;
                     }
 
-                    bluetooth_scanner_record_t record = {
-                        .mac = {0},
-                        .rssi = 0,
-                        .name = "",
-                        .is_airtag = false,
-                        .count = devices_found_count++,
-                        .has_finished = false,
-                    };
+                    // bluetooth_scanner_record_t record = {
+                    //     .mac = {0},
+                    //     .rssi = 0,
+                    //     .name = "",
+                    //     .is_airtag = false,
+                    //     .count = devices_found_count++,
+                    //     .has_finished = false,
+                    // };
 
-                    record.rssi = scan_result->scan_rst.rssi;
                     memcpy(record.mac, scan_result->scan_rst.bda, 6);
+                    record.rssi = scan_result->scan_rst.rssi;
+                    record.name = "Unknown";
                     record.is_airtag = false;
+                    record.count = devices_found_count++;
+                    record.has_finished = false;
 
                     ESP_LOGI(GATTC_TAG, "Address: %02X:%02X:%02X:%02X:%02X:%02X",
                              scan_result->scan_rst.bda[5], scan_result->scan_rst.bda[4], scan_result->scan_rst.bda[3],
@@ -440,17 +452,10 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* par
         }
 
         case ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT:
-            bluetooth_scanner_record_t record = {
-                .mac = {0},
-                .rssi = 0,
-                .name = "",
-                .is_airtag = false,
-                .count = 0,
-                .has_finished = true,
-            };
-
             if (scanner_cb) {
+                record.has_finished = true;
                 scanner_cb(record);
+                ESP_LOGI(GATTC_TAG, "%s", record.name);
             }
 
             if (param->scan_stop_cmpl.status != ESP_BT_STATUS_SUCCESS) {
