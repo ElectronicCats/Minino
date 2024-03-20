@@ -9,6 +9,7 @@
 #include "thread_cli.h"
 #include "bluetooth_scanner.h"
 #include "driver/ledc.h"
+#include "leds.h"
 
 #define LEDC_TIMER LEDC_TIMER_0
 #define LEDC_MODE LEDC_LOW_SPEED_MODE
@@ -71,18 +72,14 @@ void led_off() {
 }
 
 void app_main(void) {
+    leds_init();
+    leds_on();
     buzzer_init();
     bluetooth_scanner_init();
     thread_cli_init();
     display_init();
     keyboard_init();  // Init the keyboard after the display to avoid skipping the logo
+    leds_off();
     xTaskCreate(&hello_task, "hello_task", 2048, NULL, 5, NULL);
     printf("Hello world!\n");
-
-    led_init();
-    led_on();
-    ESP_LOGI(TAG, "LED on");
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-    led_off();
-    ESP_LOGI(TAG, "LED off");
 }

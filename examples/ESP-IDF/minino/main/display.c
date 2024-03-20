@@ -4,6 +4,7 @@
 #include "esp_log.h"
 #include "string.h"
 #include "thread_cli.h"
+#include "leds.h"
 
 static const char* TAG = "display";
 SH1106_t dev;

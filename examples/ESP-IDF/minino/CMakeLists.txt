@@ -9,6 +9,7 @@ set(EXTRA_COMPONENT_DIRS components/wifi_sniffer)
 set(EXTRA_COMPONENT_DIRS components/buzzer)
 set(EXTRA_COMPONENT_DIRS components/iperf)
 set(EXTRA_COMPONENT_DIRS components/bluetooth_scanner)
+set(EXTRA_COMPONENT_DIRS components/leds)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(minino)
