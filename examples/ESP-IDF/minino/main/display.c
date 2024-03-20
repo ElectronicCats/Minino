@@ -11,14 +11,14 @@ uint8_t selected_option;
 Layer previous_layer;
 Layer current_layer;
 int num_items;
-uint8_t bluetooth_device_count;
+uint8_t bluetooth_devices_count;
 
 void display_init() {
     selected_option = 0;
     previous_layer = LAYER_MAIN_MENU;
     current_layer = LAYER_MAIN_MENU;
     num_items = 0;
-    bluetooth_device_count = 0;
+    bluetooth_devices_count = 0;
 
 #if CONFIG_I2C_INTERFACE
     ESP_LOGI(TAG, "INTERFACE is i2c");
@@ -57,11 +57,10 @@ void display_init() {
 
     // Show logo
     display_clear();
-    // buzzer_play();
+    buzzer_play();
     sh1106_bitmaps(&dev, 0, 0, epd_bitmap_logo_1, 128, 64, NO_INVERT);
-    // buzzer_stop();
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-    vTaskDelay(900 / portTICK_PERIOD_MS);
+    buzzer_stop();
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
     display_menu();
 }
 
@@ -229,7 +228,7 @@ void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
 
     if (!record.is_airtag) {
         airtag_detected = false;
-        bluetooth_device_count++;
+        bluetooth_devices_count++;
         char* device_count_str = (char*)malloc(16);
         sprintf(device_count_str, "Devices=%d", record.count);
         display_text(device_count_str, 0, 2, NO_INVERT);

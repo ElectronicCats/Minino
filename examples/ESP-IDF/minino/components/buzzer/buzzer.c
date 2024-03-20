@@ -32,20 +32,22 @@ void buzzer_init() {
 }
 
 void buzzer_play() {
+    buzzer_init();
     ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
     ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
 }
 
 void buzzer_stop() {
-    ESP_ERROR_CHECK(ledc_timer_pause(LEDC_MODE, LEDC_TIMER));
+    ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 0));
+    ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
 
-    ledc_channel_config_t ledc_channel = {
-        .speed_mode = LEDC_MODE,
-        .channel = LEDC_CHANNEL,
-        .timer_sel = LEDC_TIMER,
-        .intr_type = LEDC_INTR_DISABLE,
-        .gpio_num = LEDC_OUTPUT_IO,
-        .duty = 0,  // Set duty to 0%
-        .hpoint = 0};
-    ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
+    // Configure LEDC_OUTPUT_IO as input
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << LEDC_OUTPUT_IO),
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE};
+
+    ESP_ERROR_CHECK(gpio_config(&io_conf));
 }
