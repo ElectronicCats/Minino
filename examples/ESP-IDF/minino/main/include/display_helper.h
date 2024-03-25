@@ -19,6 +19,9 @@ enum MenuLayer {
     LAYER_BLUETOOTH_AIRTAGS_SCAN,
     /* Thread applications */
     LAYER_THREAD_CLI,
+    /* GPS applications */
+    LAYER_GPS_DATE_TIME,
+    LAYER_GPS_LOCATION,
     /* About */
     LAYER_ABOUT_VERSION,
     LAYER_ABOUT_LICENSE,
@@ -70,6 +73,11 @@ enum BluetoothMenuItem {
 
 enum ThreadMenuItem {
     THREAD_MENU_CLI = 0,
+};
+
+enum GpsMenuItem {
+    GPS_MENU_DATE_TIME = 0,
+    GPS_MENU_LOCATION,
 };
 
 static char* main_items[] = {
@@ -124,6 +132,12 @@ static char* thread_items[] = {
     NULL,
 };
 
+static char* gps_items[] = {
+    "Date & Time",
+    "Location",
+    NULL,
+};
+
 static char* empty_items[] = {
     NULL,
 };
@@ -140,13 +154,16 @@ static char** menu_items[] = {
     empty_items,  // Zigbee
     thread_items,
     empty_items,  // Matter
-    empty_items,  // GPS
+    gps_items,
     /* WiFi applications */
     empty_items,  // WiFi Analizer
     /* Bluetooth applications */
     empty_items,  // Bluetooth Airtags scan
     /* Thread applications */
     empty_items,  // Thread CLI
+    /* GPS applications */
+    empty_items,  // Date & Time
+    empty_items,  // Location
     /* About */
     empty_items,  // Version
     empty_items,  // License

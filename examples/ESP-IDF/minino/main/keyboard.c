@@ -18,6 +18,7 @@ void handle_about_selection();
 void handle_wifi_apps_selection();
 void handle_bluetooth_apps_selection();
 void handle_thread_apps_selection();
+void handle_gps_selection();
 
 void button_init(uint32_t button_num, uint8_t mask) {
     button_config_t btn_cfg = {
@@ -140,7 +141,9 @@ void handle_selected_option() {
             handle_thread_apps_selection();
             break;
         case LAYER_MATTER_APPS:
+            break;
         case LAYER_GPS:
+            handle_gps_selection();
             break;
         case LAYER_WIFI_ANALIZER:
             break;
@@ -169,12 +172,6 @@ void update_previous_layer() {
         case LAYER_GPS:
             previous_layer = LAYER_APPLICATIONS;
             break;
-        case LAYER_WIFI_ANALIZER:
-            previous_layer = LAYER_WIFI_APPS;
-            break;
-        case LAYER_BLUETOOTH_AIRTAGS_SCAN:
-            previous_layer = LAYER_BLUETOOTH_APPS;
-            break;
         case LAYER_ABOUT_VERSION:
         case LAYER_ABOUT_LICENSE:
         case LAYER_ABOUT_CREDITS:
@@ -185,6 +182,19 @@ void update_previous_layer() {
         case LAYER_SETTINGS_SOUND:
         case LAYER_SETTINGS_SYSTEM:
             previous_layer = LAYER_SETTINGS;
+            break;
+        /* WiFi applications */
+        case LAYER_WIFI_ANALIZER:
+            previous_layer = LAYER_WIFI_APPS;
+            break;
+        /* Bluetooth applications */
+        case LAYER_BLUETOOTH_AIRTAGS_SCAN:
+            previous_layer = LAYER_BLUETOOTH_APPS;
+            break;
+        /* GPS applications */
+        case LAYER_GPS_DATE_TIME:
+        case LAYER_GPS_LOCATION:
+            previous_layer = LAYER_GPS;
             break;
         default:
             ESP_LOGE(TAG, "Invalid layer");
@@ -229,8 +239,6 @@ void handle_applications_selection() {
             break;
         case APPLICATIONS_MENU_GPS:
             current_layer = LAYER_GPS;
-            display_clear();
-            display_in_development_banner();
             break;
     }
 }
@@ -299,6 +307,17 @@ void handle_thread_apps_selection() {
         case THREAD_MENU_CLI:
             current_layer = LAYER_THREAD_CLI;
             display_thread_cli();
+            break;
+    }
+}
+
+void handle_gps_selection() {
+    switch (selected_option) {
+        case GPS_MENU_DATE_TIME:
+            current_layer = LAYER_GPS_DATE_TIME;
+            break;
+        case GPS_MENU_LOCATION:
+            current_layer = LAYER_GPS_LOCATION;
             break;
     }
 }

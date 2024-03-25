@@ -2,9 +2,13 @@
 #include "button_helper.h"
 #include "display_helper.h"
 #include "esp_log.h"
+#include "gps.h"
+#include "leds.h"
 #include "string.h"
 #include "thread_cli.h"
-#include "leds.h"
+
+#define TIME_ZONE (+8)    // Beijing Time
+#define YEAR_BASE (2000)  // date in GPS starts from 2000
 
 static const char* TAG = "display";
 SH1106_t dev;
@@ -13,6 +17,9 @@ Layer previous_layer;
 Layer current_layer;
 int num_items;
 uint8_t bluetooth_devices_count;
+nmea_parser_handle_t nmea_hdl;
+
+static void gps_event_handler(void* event_handler_arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
 
 void display_init() {
     selected_option = 0;
@@ -20,6 +27,7 @@ void display_init() {
     current_layer = LAYER_MAIN_MENU;
     num_items = 0;
     bluetooth_devices_count = 0;
+    nmea_hdl = NULL;
 
 #if CONFIG_I2C_INTERFACE
     ESP_LOGI(TAG, "INTERFACE is i2c");
@@ -63,6 +71,7 @@ void display_init() {
     buzzer_stop();
     vTaskDelay(1000 / portTICK_PERIOD_MS);
     display_menu();
+    display_gps_init();
 }
 
 void display_clear() {
@@ -294,4 +303,89 @@ void display_about_info() {
 
 void display_in_development_banner() {
     display_text(" In development", 0, 3, NO_INVERT);
+}
+
+void display_gps_init() {
+    /* NMEA parser configuration */
+    nmea_parser_config_t config = NMEA_PARSER_CONFIG_DEFAULT();
+    /* init NMEA parser library */
+    nmea_hdl = gps_init(&config);
+    /* register event handler for NMEA parser library */
+    gps_add_handler(nmea_hdl, gps_event_handler, NULL);
+}
+
+void display_gps_deinit() {
+    /* unregister event handler */
+    gps_remove_handler(nmea_hdl, gps_event_handler);
+    /* deinit NMEA parser library */
+    gps_deinit(nmea_hdl);
+}
+
+/**
+ * @brief GPS Event Handler
+ *
+ * @param event_handler_arg handler specific arguments
+ * @param event_base event base, here is fixed to ESP_NMEA_EVENT
+ * @param event_id event id
+ * @param event_data event specific arguments
+ */
+static void gps_event_handler(void* event_handler_arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
+    if (current_layer != LAYER_GPS_DATE_TIME && current_layer != LAYER_GPS_LOCATION) {
+        return;
+    }
+
+    gps_t* gps = NULL;
+    switch (event_id) {
+        case GPS_UPDATE:
+            gps = (gps_t*)event_data;
+            /* print information parsed from GPS statements */
+            ESP_LOGI(TAG,
+                     "%d/%d/%d %d:%d:%d => \r\n"
+                     "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
+                     "\t\t\t\t\t\tlongitude = %.05f°E\r\n"
+                     "\t\t\t\t\t\taltitude   = %.02fm\r\n"
+                     "\t\t\t\t\t\tspeed      = %fm/s",
+                     gps->date.year + YEAR_BASE, gps->date.month, gps->date.day,
+                     gps->tim.hour + TIME_ZONE, gps->tim.minute, gps->tim.second,
+                     gps->latitude, gps->longitude, gps->altitude, gps->speed);
+
+            if (current_layer == LAYER_GPS_DATE_TIME) {
+                char* date_str = (char*)malloc(20);
+                char* time_str = (char*)malloc(20);
+
+                sprintf(date_str, "Date: %d/%d/%d", gps->date.year + YEAR_BASE, gps->date.month, gps->date.day);
+                // TODO: fix time +24
+                sprintf(time_str, "Time: %d:%d:%d", gps->tim.hour + TIME_ZONE, gps->tim.minute, gps->tim.second);
+
+                display_clear();
+                display_text("GPS Date/Time", 0, 0, INVERT);
+                // TODO: refresh only the date and time
+                display_text(date_str, 0, 2, NO_INVERT);
+                display_text(time_str, 0, 3, NO_INVERT);
+            } else if (current_layer == LAYER_GPS_LOCATION) {
+                char* latitude_str = (char*)malloc(22);
+                char* longitude_str = (char*)malloc(22);
+                char* altitude_str = (char*)malloc(22);
+                char* speed_str = (char*)malloc(22);
+
+                sprintf(latitude_str, "Latitude: %.05f°N", gps->latitude);
+                sprintf(longitude_str, "Longitude: %.05f°E", gps->longitude);
+                sprintf(altitude_str, "Altitude: %.02fm", gps->altitude);
+                sprintf(speed_str, "Speed: %fm/s", gps->speed);
+
+                display_clear();
+                display_text("GPS Location", 0, 0, INVERT);
+                display_text(latitude_str, 0, 2, NO_INVERT);
+                display_text(longitude_str, 0, 3, NO_INVERT);
+                display_text(altitude_str, 0, 4, NO_INVERT);
+                display_text(speed_str, 0, 5, NO_INVERT);
+            }
+            break;
+        case GPS_UNKNOWN:
+            /* print unknown statements */
+            ESP_LOGW(TAG, "Unknown statement:%s", (char*)event_data);
+            break;
+        default:
+            break;
+    }
 }

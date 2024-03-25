@@ -107,5 +107,7 @@ void display_bluetooth_scanner(bluetooth_scanner_record_t record);
 void display_thread_cli();
 void display_about_info();
 void display_in_development_banner();
+void display_gps_init();
+void display_gps_deinit();
 
 #endif // DISPLAY_H
