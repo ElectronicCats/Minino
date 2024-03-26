@@ -278,8 +278,6 @@ void handle_about_selection() {
             current_layer = LAYER_ABOUT_LEGAL;
             break;
     }
-
-    display_about_info();
 }
 
 void handle_wifi_apps_selection() {

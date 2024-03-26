@@ -131,9 +131,9 @@ char** remove_srolling_text_flag(char** items, int length) {
 
     for (int i = 0; i < length - 1; i++) {
         newArray[i] = strdup(items[i + 1]);
-        ESP_LOGI(TAG, "Item: %s", newArray[i]);
+        // ESP_LOGI(TAG, "Item: %s", newArray[i]);
     }
-    ESP_LOGI(TAG, "Number of items: %d", length - 1);
+    // ESP_LOGI(TAG, "Number of items: %d", length - 1);
 
     num_items = length + 1;
 
@@ -191,17 +191,16 @@ void display_scrolling_text(char** text) {
     uint8_t startIdx = (selected_option >= 7) ? selected_option - 6 : 0;
     selected_option = (num_items - 2 > 7 && selected_option < 6) ? 6 : selected_option;
     display_clear();
-    ESP_LOGI(TAG, "num: %d", num_items - 2);
+    // ESP_LOGI(TAG, "num: %d", num_items - 2);
 
     for (uint8_t i = startIdx; i < num_items - 2; i++) {
-        ESP_LOGI(TAG, "Text[%d]: %s", i, text[i]);
+        // ESP_LOGI(TAG, "Text[%d]: %s", i, text[i]);
         if (i == selected_option) {
             display_text(text[i], 0, i - startIdx, NO_INVERT);  // Change it to INVERT to debug
         } else {
             display_text(text[i], 0, i - startIdx, NO_INVERT);
         }
     }
-    ESP_LOGI(TAG, "here");
 }
 
 void display_menu() {
@@ -215,7 +214,6 @@ void display_menu() {
     if (strcmp(items[0], SCROLLING_TEXT) == 0) {
         char** text = remove_srolling_text_flag(items, num_items);
         display_scrolling_text(text);
-        ESP_LOGI(TAG, "Scrolling text");
     } else {
         display_menu_items(items);
     }
@@ -320,30 +318,6 @@ void display_thread_cli() {
     display_text("or putty in", 0, 6, NO_INVERT);
     display_text("windows", 0, 7, NO_INVERT);
     display_show();
-}
-
-void display_about_info() {
-    display_clear();
-
-    switch (selected_option) {
-        case ABOUT_MENU_VERSION:
-            display_text(" Minino v1.3.0", 0, 3, NO_INVERT);
-            display_text("     BETA", 0, 4, NO_INVERT);
-            break;
-        case ABOUT_MENU_LICENSE:
-            display_text("  GNU GPL 3.0", 0, 3, NO_INVERT);
-            break;
-        case ABOUT_MENU_CREDITS:
-            display_text("Developed by", 0, 0, NO_INVERT);
-            display_text("Electronic Cats", 0, 1, NO_INVERT);
-            display_text("This product is", 0, 3, NO_INVERT);
-            display_text("in a BETA stage", 0, 4, NO_INVERT);
-            display_text("use at your own", 0, 5, NO_INVERT);
-            break;
-        case ABOUT_MENU_LEGAL:
-            // display_in_development_banner();
-            break;
-    }
 }
 
 void display_in_development_banner() {

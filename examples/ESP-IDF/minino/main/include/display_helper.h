@@ -115,6 +115,39 @@ static char* about_items[] = {
     NULL,
 };
 
+static char* version_text[] = {
+    SCROLLING_TEXT,
+    /***************/
+    "",
+    "",
+    "",
+    " Minino v1.3.0",
+    "     BETA",
+    NULL,
+};
+
+static char* license_text[] = {
+    SCROLLING_TEXT,
+    /***************/
+    "",
+    "",
+    "",
+    "  GNU GPL 3.0",
+    NULL,
+};
+
+static char* credits_text[] = {
+    SCROLLING_TEXT,
+    /***************/
+    "Developed by",
+    "Electronic Cats",
+    "",
+    "This product is",
+    "in a BETA stage",
+    "use at your own",
+    NULL,
+};
+
 static char* legal_text[] = {
     SCROLLING_TEXT,
     /***************/
@@ -189,9 +222,9 @@ static char** menu_items[] = {
     empty_items,  // Date & Time
     empty_items,  // Location
     /* About */
-    empty_items,  // Version
-    empty_items,  // License
-    empty_items,  // Credits
+    version_text,
+    license_text,
+    credits_text,
     legal_text,
     /* Settings items */
     empty_items,  // Display
