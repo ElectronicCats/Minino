@@ -1,6 +1,8 @@
 #ifndef DISPLAY_HELPER_H
 #define DISPLAY_HELPER_H
 
+#define SCROLLING_TEXT "scrollable"
+
 enum MenuLayer {
     LAYER_MAIN_MENU = 0,
     LAYER_APPLICATIONS,
@@ -22,7 +24,7 @@ enum MenuLayer {
     /* GPS applications */
     LAYER_GPS_DATE_TIME,
     LAYER_GPS_LOCATION,
-    /* About */
+    /* About items */
     LAYER_ABOUT_VERSION,
     LAYER_ABOUT_LICENSE,
     LAYER_ABOUT_CREDITS,
@@ -31,6 +33,7 @@ enum MenuLayer {
     LAYER_SETTINGS_DISPLAY,
     LAYER_SETTINGS_SOUND,
     LAYER_SETTINGS_SYSTEM,
+    /* About submenus */
 };
 
 typedef enum MenuLayer Layer;
@@ -112,6 +115,27 @@ static char* about_items[] = {
     NULL,
 };
 
+static char* legal_text[] = {
+    SCROLLING_TEXT,
+    /***************/
+    "The user",
+    "assumes all",
+    "responsibility",
+    "for the use of",
+    "MININO and",
+    "agrees to use",
+    "it legally and",
+    "ethically,",
+    "avoiding any",
+    "activities that",
+    "may cause harm,",
+    "interference,",
+    "or unauthorized",
+    "access to",
+    "systems or data.",
+    NULL,
+};
+
 static char* wifi_items[] = {
     "Analizer",
     NULL,
@@ -168,7 +192,7 @@ static char** menu_items[] = {
     empty_items,  // Version
     empty_items,  // License
     empty_items,  // Credits
-    empty_items,  // Legal
+    legal_text,
     /* Settings items */
     empty_items,  // Display
     empty_items,  // Sound

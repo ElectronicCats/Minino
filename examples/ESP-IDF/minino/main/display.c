@@ -126,6 +126,20 @@ char** add_empty_strings(char** array, int length) {
     return newArray;
 }
 
+char** remove_srolling_text_flag(char** items, int length) {
+    char** newArray = malloc((length - 1) * sizeof(char*));
+
+    for (int i = 0; i < length - 1; i++) {
+        newArray[i] = strdup(items[i + 1]);
+        ESP_LOGI(TAG, "Item: %s", newArray[i]);
+    }
+    ESP_LOGI(TAG, "Number of items: %d", length - 1);
+
+    num_items = length + 1;
+
+    return newArray;
+}
+
 char** get_menu_items() {
     num_items = 0;
     char** submenu = menu_items[current_layer];
@@ -141,17 +155,14 @@ char** get_menu_items() {
         return NULL;
     }
 
+    if (strcmp(submenu[0], SCROLLING_TEXT) == 0) {
+        return submenu;
+    }
+
     return add_empty_strings(menu_items[current_layer], num_items);
 }
 
-void display_menu() {
-    char** items = get_menu_items();
-
-    if (items == NULL) {
-        ESP_LOGW(TAG, "Options is NULL");
-        return;
-    }
-
+void display_menu_items(char** items) {
     // Show only 3 options at a time in the following order:
     // Page 1: Option 1
     // Page 3: Option 2 -> selected option
@@ -174,6 +185,40 @@ void display_menu() {
     }
 
     display_selected_item_box();
+}
+
+void display_scrolling_text(char** text) {
+    uint8_t startIdx = (selected_option >= 7) ? selected_option - 6 : 0;
+    selected_option = (num_items - 2 > 7 && selected_option < 6) ? 6 : selected_option;
+    display_clear();
+    ESP_LOGI(TAG, "num: %d", num_items - 2);
+
+    for (uint8_t i = startIdx; i < num_items - 2; i++) {
+        ESP_LOGI(TAG, "Text[%d]: %s", i, text[i]);
+        if (i == selected_option) {
+            display_text(text[i], 0, i - startIdx, NO_INVERT);  // Change it to INVERT to debug
+        } else {
+            display_text(text[i], 0, i - startIdx, NO_INVERT);
+        }
+    }
+    ESP_LOGI(TAG, "here");
+}
+
+void display_menu() {
+    char** items = get_menu_items();
+
+    if (items == NULL) {
+        ESP_LOGW(TAG, "Options is NULL");
+        return;
+    }
+
+    if (strcmp(items[0], SCROLLING_TEXT) == 0) {
+        char** text = remove_srolling_text_flag(items, num_items);
+        display_scrolling_text(text);
+        ESP_LOGI(TAG, "Scrolling text");
+    } else {
+        display_menu_items(items);
+    }
 }
 
 void display_wifi_sniffer(wifi_sniffer_record_t record) {
@@ -296,7 +341,7 @@ void display_about_info() {
             display_text("use at your own", 0, 5, NO_INVERT);
             break;
         case ABOUT_MENU_LEGAL:
-            display_in_development_banner();
+            // display_in_development_banner();
             break;
     }
 }
