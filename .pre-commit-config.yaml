@@ -11,4 +11,5 @@ repos:
     rev: v18.1.2  # Use the sha / tag you want to point at
     hooks:
     -   id: clang-format
+        types_or: [c++, c]
         args: ['--style=file']
