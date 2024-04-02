@@ -1,4 +1,4 @@
-menu "Example Configuration"
+menu "Frequency Configuration"
 
     choice EXAMPLE_MAX_CPU_FREQ
         prompt "Maximum CPU frequency"
@@ -105,7 +105,7 @@ menu "Example Configuration"
 
 endmenu
 
-menu "OpenThread CLI Example"
+menu "OpenThread CLI Configuration"
 
     config OPENTHREAD_AUTO_START
         bool 'Enable the automatic start mode.'
@@ -113,4 +113,50 @@ menu "OpenThread CLI Example"
         help
             If enabled, the Openthread Device will create or connect to thread network with pre-configured
             network parameters automatically. Otherwise, user need to configure Thread via CLI command manually.
+endmenu
+
+menu "SD SPI Configuration"
+
+    config EXAMPLE_FORMAT_IF_MOUNT_FAILED
+        bool "Format the card if mount failed"
+        default n
+        help
+            If this config item is set, format_if_mount_failed will be set to true and the card will be formatted if
+            the mount has failed.
+
+    config EXAMPLE_PIN_MOSI
+        int "MOSI GPIO number"
+        default 15 if IDF_TARGET_ESP32
+        default 35 if IDF_TARGET_ESP32S2
+        default 35 if IDF_TARGET_ESP32S3
+        default 5  if IDF_TARGET_ESP32H2
+        default 11 if IDF_TARGET_ESP32P4
+        default 4  # C3 and others
+
+    config EXAMPLE_PIN_MISO
+        int "MISO GPIO number"
+        default 2 if IDF_TARGET_ESP32
+        default 37 if IDF_TARGET_ESP32S2
+        default 37 if IDF_TARGET_ESP32S3
+        default 0  if IDF_TARGET_ESP32H2
+        default 13 if IDF_TARGET_ESP32P4
+        default 6  # C3 and others
+
+    config EXAMPLE_PIN_CLK
+        int "CLK GPIO number"
+        default 14 if IDF_TARGET_ESP32
+        default 36 if IDF_TARGET_ESP32S2
+        default 36 if IDF_TARGET_ESP32S3
+        default 4  if IDF_TARGET_ESP32H2
+        default 12 if IDF_TARGET_ESP32P4
+        default 5  # C3 and others
+
+    config EXAMPLE_PIN_CS
+        int "CS GPIO number"
+        default 13 if IDF_TARGET_ESP32
+        default 34 if IDF_TARGET_ESP32S2
+        default 34 if IDF_TARGET_ESP32S3
+        default 10 if IDF_TARGET_ESP32P4
+        default 1  # C3 and others
+
 endmenu

@@ -511,7 +511,7 @@ CONFIG_PARTITION_TABLE_MD5=y
 # end of Partition Table
 
 #
-# Example Configuration
+# Frequency Configuration
 #
 CONFIG_EXAMPLE_MAX_CPU_FREQ_80=y
 # CONFIG_EXAMPLE_MAX_CPU_FREQ_160 is not set
@@ -525,13 +525,23 @@ CONFIG_EXAMPLE_LCD_CONTROLLER_SSD1306=y
 CONFIG_EXAMPLE_SSD1306_HEIGHT_64=y
 # CONFIG_EXAMPLE_SSD1306_HEIGHT_32 is not set
 CONFIG_EXAMPLE_SSD1306_HEIGHT=64
-# end of Example Configuration
+# end of Frequency Configuration
 
 #
-# OpenThread CLI Example
+# OpenThread CLI Configuration
 #
 # CONFIG_OPENTHREAD_AUTO_START is not set
-# end of OpenThread CLI Example
+# end of OpenThread CLI Configuration
+
+#
+# SD SPI Configuration
+#
+CONFIG_EXAMPLE_FORMAT_IF_MOUNT_FAILED=y
+CONFIG_EXAMPLE_PIN_MOSI=19
+CONFIG_EXAMPLE_PIN_MISO=20
+CONFIG_EXAMPLE_PIN_CLK=21
+CONFIG_EXAMPLE_PIN_CS=18
+# end of SD SPI Configuration
 
 #
 # GPS Configuration
