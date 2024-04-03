@@ -6,18 +6,18 @@
 #include "esp_wifi.h"
 
 #define SSID_MAX_LEN (32 + 1)  // max length of a SSID
-#define MD5_LEN (32 + 1)       // length of md5 hash
-#define CHANNEL_MAX 13         // US = 11, EU = 13, JP = 14
+#define MD5_LEN      (32 + 1)  // length of md5 hash
+#define CHANNEL_MAX  13        // US = 11, EU = 13, JP = 14
 
 typedef struct {
-    uint8_t channel;
-    uint8_t addr[6];
-    char* ssid;
-    time_t timestamp;
-    char* hash;
-    int8_t rssi;
-    uint8_t sn;
-    char htci[5];
+  uint8_t channel;
+  uint8_t addr[6];
+  char* ssid;
+  time_t timestamp;
+  char* hash;
+  int8_t rssi;
+  uint8_t sn;
+  char htci[5];
 
 } wifi_sniffer_record_t;
 

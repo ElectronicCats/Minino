@@ -4,12 +4,12 @@
 #include <stdbool.h>
 
 typedef struct {
-    uint8_t mac[6];
-    int rssi;
-    const char* name;
-    bool is_airtag;
-    uint16_t count;
-    bool has_finished;
+  uint8_t mac[6];
+  int rssi;
+  const char* name;
+  bool is_airtag;
+  uint16_t count;
+  bool has_finished;
 } bluetooth_scanner_record_t;
 
 typedef void (*bluetooth_scanner_cb_t)(bluetooth_scanner_record_t record);
