@@ -2,6 +2,7 @@
 #define BLUETOOTH_SCANNER_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 typedef struct {
   uint8_t mac[6];

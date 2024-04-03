@@ -1,6 +1,8 @@
 #ifndef DISPLAY_HELPER_H
 #define DISPLAY_HELPER_H
 
+#include <stddef.h>
+
 #define SCROLLING_TEXT "scrollable"
 
 enum MenuLayer {

@@ -1,7 +1,7 @@
 #include "keyboard.h"
 
 #include "bluetooth_scanner.h"
-#include "button_helper.h"
+#include "keyboard_helper.h"
 #include "display.h"
 #include "esp_log.h"
 #include "thread_cli.h"
