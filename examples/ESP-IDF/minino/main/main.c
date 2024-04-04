@@ -7,6 +7,7 @@
 #include "leds.h"
 #include "sdcard.h"
 #include "thread_cli.h"
+#include "simple_sniffer.h"
 
 static const char* TAG = "main";
 
@@ -18,6 +19,8 @@ void hello_task(void* pvParameter) {
 }
 
 void app_main(void) {
+  simple_wifi_sniffer_init();
+  return;
   leds_init();
   leds_on();
   sdcard_test();
