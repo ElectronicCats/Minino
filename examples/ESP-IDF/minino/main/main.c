@@ -20,7 +20,7 @@ void hello_task(void* pvParameter) {
 
 void app_main(void) {
   simple_wifi_sniffer_init();
-  return;
+  // return;
   leds_init();
   leds_on();
   // sdcard_test();
