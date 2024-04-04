@@ -23,10 +23,10 @@ void app_main(void) {
   return;
   leds_init();
   leds_on();
-  sdcard_test();
+  // sdcard_test();
   buzzer_init();
   bluetooth_scanner_init();
-  thread_cli_init();
+  // thread_cli_init();
   display_init();
   keyboard_init();  // Init the keyboard after the display to avoid skipping
                     // the logo

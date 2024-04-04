@@ -156,6 +156,11 @@ static struct {
 /** 'mount' command */
 static int mount(int argc, char** argv) {
   esp_err_t ret;
+  ESP_LOGW(TAG, "argc: %d", argc);
+  // Print argv
+  for (int i = 0; i < argc; i++) {
+    ESP_LOGW(TAG, "argv[%d]: %s", i, argv[i]);
+  }
 
   int nerrors = arg_parse(argc, argv, (void**) &mount_args);
   if (nerrors != 0) {
@@ -291,60 +296,69 @@ void simple_wifi_sniffer_init() {
   initialize_eth();
 
   /*--- Initialize Console ---*/
-  esp_console_repl_t* repl = NULL;
-  esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
-#if CONFIG_SNIFFER_STORE_HISTORY
-  initialize_filesystem();
-  repl_config.history_save_path = HISTORY_FILE_PATH;
-#endif
-  repl_config.prompt = "sniffer>";
+//   esp_console_repl_t* repl = NULL;
+//   esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
+// #if CONFIG_SNIFFER_STORE_HISTORY
+//   initialize_filesystem();
+//   repl_config.history_save_path = HISTORY_FILE_PATH;
+// #endif
+//   repl_config.prompt = "sniffer>";
 
-  // install console REPL environment
-#if CONFIG_ESP_CONSOLE_UART
-  esp_console_dev_uart_config_t uart_config =
-      ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();
-  ESP_ERROR_CHECK(esp_console_new_repl_uart(&uart_config, &repl_config, &repl));
-#elif CONFIG_ESP_CONSOLE_USB_CDC
-  esp_console_dev_usb_cdc_config_t cdc_config =
-      ESP_CONSOLE_DEV_CDC_CONFIG_DEFAULT();
-  ESP_ERROR_CHECK(
-      esp_console_new_repl_usb_cdc(&cdc_config, &repl_config, &repl));
-#elif CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
-  esp_console_dev_usb_serial_jtag_config_t usbjtag_config =
-      ESP_CONSOLE_DEV_USB_SERIAL_JTAG_CONFIG_DEFAULT();
-  ESP_ERROR_CHECK(esp_console_new_repl_usb_serial_jtag(&usbjtag_config,
-                                                       &repl_config, &repl));
-#endif
+//   // install console REPL environment
+// #if CONFIG_ESP_CONSOLE_UART
+//   esp_console_dev_uart_config_t uart_config =
+//       ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();
+//   ESP_ERROR_CHECK(esp_console_new_repl_uart(&uart_config, &repl_config, &repl));
+// #elif CONFIG_ESP_CONSOLE_USB_CDC
+//   esp_console_dev_usb_cdc_config_t cdc_config =
+//       ESP_CONSOLE_DEV_CDC_CONFIG_DEFAULT();
+//   ESP_ERROR_CHECK(
+//       esp_console_new_repl_usb_cdc(&cdc_config, &repl_config, &repl));
+// #elif CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
+//   esp_console_dev_usb_serial_jtag_config_t usbjtag_config =
+//       ESP_CONSOLE_DEV_USB_SERIAL_JTAG_CONFIG_DEFAULT();
+//   ESP_ERROR_CHECK(esp_console_new_repl_usb_serial_jtag(&usbjtag_config,
+//                                                        &repl_config, &repl));
+// #endif
 
-  /* Register commands */
-#if CONFIG_SNIFFER_PCAP_DESTINATION_SD
+//   /* Register commands */
+// #if CONFIG_SNIFFER_PCAP_DESTINATION_SD
   register_mount();
-  register_unmount();
-#endif
-  register_sniffer_cmd();
-  register_pcap_cmd();
-#if CONFIG_SNIFFER_PCAP_DESTINATION_SD
-  printf("\n =======================================================\n");
-  printf(" |         Steps to sniff network packets              |\n");
-  printf(" |                                                     |\n");
-  printf(" |  1. Enter 'help' to check all commands usage        |\n");
-  printf(" |  2. Enter 'mount <device>' to mount filesystem      |\n");
-  printf(" |  3. Enter 'pcap' to create pcap file                |\n");
-  printf(" |  4. Enter 'sniffer' to start capture packets        |\n");
-  printf(" |  5. Enter 'unmount <device>' to unmount filesystem  |\n");
-  printf(" |                                                     |\n");
-  printf(" =======================================================\n\n");
-#else
-  printf("\n =======================================================\n");
-  printf(" |         Steps to sniff network packets              |\n");
-  printf(" |                                                     |\n");
-  printf(" |  1. Enter 'help' to check all commands' usage       |\n");
-  printf(" |  2. Enter 'pcap' to create pcap file                |\n");
-  printf(" |  3. Enter 'sniffer' to start capture packets        |\n");
-  printf(" |                                                     |\n");
-  printf(" =======================================================\n\n");
-#endif
+//   register_unmount();
+// #endif
+//   register_sniffer_cmd();
+//   register_pcap_cmd();
+// #if CONFIG_SNIFFER_PCAP_DESTINATION_SD
+//   printf("\n =======================================================\n");
+//   printf(" |         Steps to sniff network packets              |\n");
+//   printf(" |                                                     |\n");
+//   printf(" |  1. Enter 'help' to check all commands usage        |\n");
+//   printf(" |  2. Enter 'mount <device>' to mount filesystem      |\n");
+//   printf(" |  3. Enter 'pcap' to create pcap file                |\n");
+//   printf(" |  4. Enter 'sniffer' to start capture packets        |\n");
+//   printf(" |  5. Enter 'unmount <device>' to unmount filesystem  |\n");
+//   printf(" |                                                     |\n");
+//   printf(" =======================================================\n\n");
+// #else
+//   printf("\n =======================================================\n");
+//   printf(" |         Steps to sniff network packets              |\n");
+//   printf(" |                                                     |\n");
+//   printf(" |  1. Enter 'help' to check all commands' usage       |\n");
+//   printf(" |  2. Enter 'pcap' to create pcap file                |\n");
+//   printf(" |  3. Enter 'sniffer' to start capture packets        |\n");
+//   printf(" |                                                     |\n");
+//   printf(" =======================================================\n\n");
+// #endif
 
-  // start console REPL
-  ESP_ERROR_CHECK(esp_console_start_repl(repl));
+//   // start console REPL
+//   ESP_ERROR_CHECK(esp_console_start_repl(repl));
+
+  const char** mount_argv[] = {"mount", "sd"};
+  int mount_argc = 2;
+  mount(mount_argc, (char**) mount_argv);
+  vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+  const char** unmount_argv[] = {"unmount", "sd"};
+  int unmount_argc = 2;
+  unmount(unmount_argc, (char**) unmount_argv);
 }
