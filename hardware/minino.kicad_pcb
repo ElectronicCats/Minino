@@ -940,7 +940,7 @@
 		(uuid "17ae549d-516a-4145-be4a-5344f40f479c")
 		(at 60.706 86.106)
 		(property "Reference" "G***"
-			(at 0 0 360)
+			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
 			(uuid "78ee8792-888b-444e-b79f-985d9805820b")
@@ -952,7 +952,7 @@
 			)
 		)
 		(property "Value" "LOGO"
-			(at 0.75 0 360)
+			(at 0.75 0 0)
 			(layer "F.SilkS")
 			(hide yes)
 			(uuid "1a473e66-3b36-4185-9f4a-4067c913c1fa")
@@ -1939,7 +1939,7 @@
 		(uuid "28104b89-76a9-4b09-8b59-a66349fee2ab")
 		(at 120.142 86.487)
 		(property "Reference" "G***"
-			(at 0 0 360)
+			(at 0 0 0)
 			(layer "F.SilkS")
 			(hide yes)
 			(uuid "0e1ed1c5-7428-4dc7-b76e-49b2d5f8177d")
@@ -1951,7 +1951,7 @@
 			)
 		)
 		(property "Value" "LOGO"
-			(at 0.75 0 360)
+			(at 0.75 0 0)
 			(layer "F.SilkS")
 			(hide yes)
 			(uuid "14c51520-6d91-4098-a59a-5121f2a898f7")
@@ -11527,7 +11527,7 @@
 			(at 0 0 180)
 			(layer "B.SilkS")
 			(hide yes)
-			(uuid "78ee8792-888b-444e-b79f-985d9805820b")
+			(uuid "d153d01a-bb97-482c-a982-3cdea23344cb")
 			(effects
 				(font
 					(size 1.524 1.524)
@@ -11540,7 +11540,7 @@
 			(at 0.75 0 180)
 			(layer "B.SilkS")
 			(hide yes)
-			(uuid "1a473e66-3b36-4185-9f4a-4067c913c1fa")
+			(uuid "72461421-13d3-43c8-902d-0f5b8590c08f")
 			(effects
 				(font
 					(size 1.524 1.524)
@@ -11607,7 +11607,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "4d669e85-4051-4b30-a8bc-aadf84a405d0")
+			(uuid "5917b5e1-29bf-4190-842e-36d6f0f4f15c")
 		)
 		(fp_poly
 			(pts
@@ -11630,7 +11630,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "1b5c80f3-708c-4569-b9eb-f0770ade55d0")
+			(uuid "0788e087-eabe-491c-b104-a758f9e45fd2")
 		)
 		(fp_poly
 			(pts
@@ -11663,7 +11663,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "34b9019b-5d0b-4ad2-928b-cb3f796a55f3")
+			(uuid "91bd7c8b-1e9b-4cba-89f1-38ada2db87f6")
 		)
 		(fp_poly
 			(pts
@@ -11696,7 +11696,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "95012228-afef-4089-b9d0-678d77a24fec")
+			(uuid "e108140e-3114-4c87-a8d8-25d32f4b7c91")
 		)
 		(fp_poly
 			(pts
@@ -11729,7 +11729,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "ac59d6ca-1fcc-40e1-85b6-09a3c566eb50")
+			(uuid "91e7370c-e982-4cb6-8c29-9b8df8a9bd6b")
 		)
 		(fp_poly
 			(pts
@@ -11766,7 +11766,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "46487ccf-9e33-4489-b8fa-3277d6cb3b05")
+			(uuid "4365422a-d8a2-457f-ad50-997783ba5a69")
 		)
 		(fp_poly
 			(pts
@@ -11802,7 +11802,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "177a8f90-6351-4f76-b8e4-202ebf7fa206")
+			(uuid "a56fc411-a609-4401-a481-efcd3a84c851")
 		)
 		(fp_poly
 			(pts
@@ -11840,7 +11840,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "f6462f59-79b9-4318-aa35-42cad753cde0")
+			(uuid "4f530f92-3cbc-4101-8e35-e9ea54b05a09")
 		)
 		(fp_poly
 			(pts
@@ -11879,7 +11879,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "3294b17e-ef45-44e3-8f62-9e68df3be484")
+			(uuid "ad739c4d-b9bf-426e-8f52-880bb92f01bd")
 		)
 		(fp_poly
 			(pts
@@ -11919,7 +11919,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "935a7c49-fab2-4b44-a48e-46577d69c7c6")
+			(uuid "a3b5589f-494b-4e55-a1c3-c5c3372e7b04")
 		)
 		(fp_poly
 			(pts
@@ -11963,7 +11963,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "772c9474-5afd-45df-bad4-ffdae383dd31")
+			(uuid "d9c9f096-c787-485c-b017-1b611897e943")
 		)
 		(fp_poly
 			(pts
@@ -12005,7 +12005,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "4ac41180-a05c-4016-aebb-a8baee9d728e")
+			(uuid "41e40263-0b28-4aac-93da-6e61e5c307e7")
 		)
 		(fp_poly
 			(pts
@@ -12058,7 +12058,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "0694c69a-059a-4066-b264-e58731987acc")
+			(uuid "715d853c-bc52-41ec-8d64-9c3376355428")
 		)
 		(fp_poly
 			(pts
@@ -12108,7 +12108,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "5040b5c6-b84f-428a-a902-0858b250d5b2")
+			(uuid "648042c4-56a3-482e-9600-7d4ea89792b5")
 		)
 		(fp_poly
 			(pts
@@ -12303,7 +12303,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "f029e701-5b93-43b5-b250-a43a0db6af00")
+			(uuid "159ba8f5-2ef8-462f-bbc0-13824b6fb69b")
 		)
 	)
 	(footprint "CatSniffer:calderon"
@@ -12314,7 +12314,7 @@
 			(at 0 0 180)
 			(layer "B.SilkS")
 			(hide yes)
-			(uuid "0e1ed1c5-7428-4dc7-b76e-49b2d5f8177d")
+			(uuid "16909343-5f0b-4974-977a-c054056a4bb6")
 			(effects
 				(font
 					(size 1.524 1.524)
@@ -12327,7 +12327,7 @@
 			(at 0.75 0 180)
 			(layer "B.SilkS")
 			(hide yes)
-			(uuid "14c51520-6d91-4098-a59a-5121f2a898f7")
+			(uuid "2b63649d-af76-4df5-a434-167caa924622")
 			(effects
 				(font
 					(size 1.524 1.524)
@@ -12390,7 +12390,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "6284122b-79c3-4e04-925e-3d32cc3ec077")
+			(uuid "605e97b1-aef2-4dc1-b4b0-f41ebf42a3b0")
 		)
 		(fp_poly
 			(pts
@@ -12425,7 +12425,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "2d67a417-188f-4014-9282-000265d80009")
+			(uuid "b37cf80f-530a-4c67-86e6-32a879097c63")
 		)
 		(fp_poly
 			(pts
@@ -12466,7 +12466,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "84e5506c-143e-495f-9aa4-d3a71622f213")
+			(uuid "6a687bc3-ae66-4f21-80f0-d239cfe8ff67")
 		)
 		(fp_poly
 			(pts
@@ -12514,7 +12514,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "477311b9-8f81-40c8-9c55-fd87e287247a")
+			(uuid "577fb02c-fc6f-41aa-b4e7-1575d811051a")
 		)
 		(fp_poly
 			(pts
@@ -12561,7 +12561,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "67763d19-f622-4e1e-81e5-5b24da7c3f99")
+			(uuid "3ad37f40-5ca1-4349-8c4f-bd9e8cd146c8")
 		)
 		(fp_poly
 			(pts
@@ -12610,7 +12610,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "994b6220-4755-4d84-91b3-6122ac1c2c5e")
+			(uuid "59b3ba61-2211-41ce-b374-9f270486f898")
 		)
 		(fp_poly
 			(pts
@@ -12671,7 +12671,7 @@
 			)
 			(fill solid)
 			(layer "B.SilkS")
-			(uuid "097edb1b-8998-4e70-b670-bba125982348")
+			(uuid "f0d499ad-fde3-4b68-8e9f-92dab168ce1d")
 		)
 	)
 	(footprint "Capacitor_SMD:C_0603_1608Metric"
@@ -22777,7 +22777,7 @@
 		(layer "Edge.Cuts")
 		(uuid "fe954b61-0480-4f79-8d03-1a924ffa19bd")
 	)
-	(gr_text "V1.2"
+	(gr_text "V1.4"
 		(at 75.797044 38.691558 0)
 		(layer "B.SilkS")
 		(uuid "efec2cb8-ae6c-4789-aef1-cd7fb521a509")
