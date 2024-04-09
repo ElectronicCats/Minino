@@ -52,6 +52,12 @@ esp_err_t sniff_packet_stop(void);
  */
 void register_pcap_cmd(void);
 
+/**
+ * @brief Do pcap command
+ *
+ */
+int do_pcap_cmd(int argc, char** argv);
+
 #ifdef __cplusplus
 }
 #endif

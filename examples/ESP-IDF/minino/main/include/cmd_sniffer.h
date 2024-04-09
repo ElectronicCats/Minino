@@ -41,6 +41,7 @@ typedef enum {
 
 void register_sniffer_cmd(void);
 esp_err_t sniffer_reg_eth_intf(esp_eth_handle_t eth_handle);
+int do_sniffer_cmd(int argc, char** argv);
 
 #ifdef __cplusplus
 }
