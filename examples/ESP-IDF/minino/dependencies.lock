@@ -23,12 +23,6 @@ dependencies:
       service_url: https://api.components.espressif.com/
       type: service
     version: 1.0.2
-  ethernet_init:
-    component_hash: null
-    source:
-      path: /Users/deimos/esp/esp-idf/examples/ethernet/basic/components/ethernet_init
-      type: local
-    version: '*'
   idf:
     component_hash: null
     source:
@@ -40,6 +34,6 @@ dependencies:
       path: /Users/deimos/esp/esp-idf/examples/common_components/iperf
       type: local
     version: '*'
-manifest_hash: 428b7b9b9b8015402f5f0861a0ae14a76da8a72f8eaa6bdc07b6a8ef909a1e7a
+manifest_hash: af508fdc77a8773f959d826e57fc3474933c6ab8ffd3322e59bb21ac995358c0
 target: esp32c6
 version: 1.0.0

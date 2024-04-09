@@ -10,13 +10,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include "argtable3/argtable3.h"
-#include "esp_console.h"
 #include "esp_err.h"
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
 #include "esp_wifi.h"
-#include "ethernet_init.h"
 #include "linenoise/linenoise.h"
 #include "sdkconfig.h"
 #if CONFIG_SNIFFER_PCAP_DESTINATION_SD
@@ -159,12 +157,6 @@ static void register_mount(void) {
   mount_args.device =
       arg_str1(NULL, NULL, "<sd>", "choose a proper device to mount/unmount");
   mount_args.end = arg_end(1);
-  // const esp_console_cmd_t cmd = {.command = "mount",
-  //                                .help = "mount the filesystem",
-  //                                .hint = NULL,
-  //                                .func = &mount,
-  //                                .argtable = &mount_args};
-  // ESP_ERROR_CHECK(esp_console_cmd_register(&cmd));
 }
 
 static int unmount(int argc, char** argv) {
@@ -188,12 +180,6 @@ static void register_unmount(void) {
   mount_args.device =
       arg_str1(NULL, NULL, "<sd>", "choose a proper device to mount/unmount");
   mount_args.end = arg_end(1);
-  const esp_console_cmd_t cmd = {.command = "unmount",
-                                 .help = "unmount the filesystem",
-                                 .hint = NULL,
-                                 .func = &unmount,
-                                 .argtable = &mount_args};
-  ESP_ERROR_CHECK(esp_console_cmd_register(&cmd));
 }
 
 void simple_wifi_sniffer_init() {

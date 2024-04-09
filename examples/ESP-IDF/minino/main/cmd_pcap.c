@@ -21,7 +21,6 @@
 #include "cmd_sniffer.h"
 #include "esp_app_trace.h"
 #include "esp_check.h"
-#include "esp_console.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "sdkconfig.h"
@@ -312,11 +311,5 @@ void register_pcap_cmd(void) {
   pcap_args.close = arg_lit0(NULL, "close", "close .pcap file");
   pcap_args.open = arg_lit0(NULL, "open", "open .pcap file");
   pcap_args.end = arg_end(1);
-  const esp_console_cmd_t pcap_cmd = {.command = "pcap",
-                                      .help = "Save and parse pcap file",
-                                      .hint = NULL,
-                                      .func = &do_pcap_cmd,
-                                      .argtable = &pcap_args};
-  ESP_ERROR_CHECK(esp_console_cmd_register(&pcap_cmd));
 #endif  // #if CONFIG_SNIFFER_PCAP_DESTINATION_JTAG
 }

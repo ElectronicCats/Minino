@@ -6,8 +6,8 @@
 #include "keyboard.h"
 #include "leds.h"
 #include "sdcard.h"
-#include "thread_cli.h"
 #include "simple_sniffer.h"
+#include "thread_cli.h"
 
 static const char* TAG = "main";
 
@@ -28,8 +28,8 @@ void app_main(void) {
   bluetooth_scanner_init();
   // thread_cli_init();
   display_init();
-  keyboard_init();  // Init the keyboard after the display to avoid skipping
-                    // the logo
+  // Init the keyboard after the display to avoid skipping the logo
+  keyboard_init();
   leds_off();
   xTaskCreate(&hello_task, "hello_task", 2048, NULL, 5, NULL);
   printf("Hello world!\n");
