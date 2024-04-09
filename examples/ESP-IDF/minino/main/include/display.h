@@ -130,7 +130,7 @@ char** get_menu_items();
 void display_menu_items(char** items);
 void display_scrolling_text(char** text);
 void display_menu();
-void display_wifi_sniffer(wifi_sniffer_record_t record);
+// void display_wifi_sniffer(wifi_sniffer_record_t record);
 void display_bluetooth_scanner(bluetooth_scanner_record_t record);
 void display_thread_cli();
 void display_in_development_banner();

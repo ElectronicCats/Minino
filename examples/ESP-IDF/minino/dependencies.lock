@@ -34,6 +34,6 @@ dependencies:
       path: /Users/deimos/esp/esp-idf/examples/common_components/iperf
       type: local
     version: '*'
-manifest_hash: af508fdc77a8773f959d826e57fc3474933c6ab8ffd3322e59bb21ac995358c0
+manifest_hash: 22cbeed4bca196fb4b2cbe026e71c352dbc256418c7668e62e2c4c20e6e4943e
 target: esp32c6
 version: 1.0.0

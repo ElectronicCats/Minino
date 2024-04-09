@@ -6,7 +6,7 @@
 #include "keyboard.h"
 #include "leds.h"
 #include "sdcard.h"
-#include "simple_sniffer.h"
+// #include "simple_sniffer.h"
 #include "thread_cli.h"
 
 static const char* TAG = "main";

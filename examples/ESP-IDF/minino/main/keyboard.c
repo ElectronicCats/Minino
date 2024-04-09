@@ -112,7 +112,7 @@ static void button_event_cb(void* arg, void* data) {
 void handle_back() {
   switch (current_layer) {
     case LAYER_WIFI_ANALIZER:
-      wifi_sniffer_deinit();
+      // wifi_sniffer_deinit();
       break;
     case LAYER_BLUETOOTH_AIRTAGS_SCAN:
       if (bluetooth_scanner_is_active()) {
@@ -302,7 +302,7 @@ void handle_wifi_apps_selection() {
     case WIFI_MENU_ANALIZER:
       current_layer = LAYER_WIFI_ANALIZER;
       display_clear();
-      wifi_sniffer_init();
+      // wifi_sniffer_init();
       break;
   }
 }

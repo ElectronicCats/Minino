@@ -65,7 +65,7 @@ void display_init() {
   sh1106_init(&dev, 128, 32);
 #endif  // CONFIG_SH1106_128x32
 
-  wifi_sniffer_register_cb(display_wifi_sniffer);
+  // wifi_sniffer_register_cb(display_wifi_sniffer);
   bluetooth_scanner_register_cb(display_bluetooth_scanner);
 
   // Show logo
@@ -225,57 +225,57 @@ void display_menu() {
   }
 }
 
-void display_wifi_sniffer(wifi_sniffer_record_t record) {
-  char* channel_str = (char*) malloc(16);
-  char* ssid_str = (char*) malloc(50);
-  char* rssi_str = (char*) malloc(16);
-  char* addr_str = (char*) malloc(30);
-  char* hash_str = (char*) malloc(16);
-  char* htci_str = (char*) malloc(16);
-  char* sn_str = (char*) malloc(16);
-  char* time_str = (char*) malloc(16);
+// void display_wifi_sniffer(wifi_sniffer_record_t record) {
+//   char* channel_str = (char*) malloc(16);
+//   char* ssid_str = (char*) malloc(50);
+//   char* rssi_str = (char*) malloc(16);
+//   char* addr_str = (char*) malloc(30);
+//   char* hash_str = (char*) malloc(16);
+//   char* htci_str = (char*) malloc(16);
+//   char* sn_str = (char*) malloc(16);
+//   char* time_str = (char*) malloc(16);
 
-  sprintf(channel_str, "Channel=%d", record.channel);
-  display_text("WiFi Sniffer    ", 0, 0, INVERT);
-  display_clear_line(1, NO_INVERT);
-  display_text(channel_str, 0, 1, NO_INVERT);
+//   sprintf(channel_str, "Channel=%d", record.channel);
+//   display_text("WiFi Sniffer    ", 0, 0, INVERT);
+//   display_clear_line(1, NO_INVERT);
+//   display_text(channel_str, 0, 1, NO_INVERT);
 
-  if (record.ssid == NULL && record.timestamp == 0) {
-    return;
-  }
+//   if (record.ssid == NULL && record.timestamp == 0) {
+//     return;
+//   }
 
-  sprintf(ssid_str, "SSID=%s", record.ssid);
-  sprintf(addr_str, "ADDR=%02x:%02x:%02x:%02x:%02x:%02x", record.addr[0],
-          record.addr[1], record.addr[2], record.addr[3], record.addr[4],
-          record.addr[5]);
-  sprintf(hash_str, "Hash=%s", record.hash);
-  sprintf(rssi_str, "RSSI=%d", record.rssi);
-  sprintf(htci_str, "HTCI=%s", record.htci);
-  sprintf(sn_str, "SN=%d", record.sn);
-  sprintf(time_str, "Time=%d", (int) record.timestamp);
+//   sprintf(ssid_str, "SSID=%s", record.ssid);
+//   sprintf(addr_str, "ADDR=%02x:%02x:%02x:%02x:%02x:%02x", record.addr[0],
+//           record.addr[1], record.addr[2], record.addr[3], record.addr[4],
+//           record.addr[5]);
+//   sprintf(hash_str, "Hash=%s", record.hash);
+//   sprintf(rssi_str, "RSSI=%d", record.rssi);
+//   sprintf(htci_str, "HTCI=%s", record.htci);
+//   sprintf(sn_str, "SN=%d", record.sn);
+//   sprintf(time_str, "Time=%d", (int) record.timestamp);
 
-  display_clear();
-  display_text("WiFi Sniffer    ", 0, 0, INVERT);
-  display_text(ssid_str, 0, 2, NO_INVERT);
-  display_text(addr_str, 0, 3, NO_INVERT);
-  display_text(hash_str, 0, 4, NO_INVERT);
-  display_text(rssi_str, 0, 5, NO_INVERT);
-  display_text(htci_str, 0, 6, NO_INVERT);
-  // display_text(sn_str, 0, 6, NO_INVERT);
-  display_text(time_str, 0, 7, NO_INVERT);
+//   display_clear();
+//   display_text("WiFi Sniffer    ", 0, 0, INVERT);
+//   display_text(ssid_str, 0, 2, NO_INVERT);
+//   display_text(addr_str, 0, 3, NO_INVERT);
+//   display_text(hash_str, 0, 4, NO_INVERT);
+//   display_text(rssi_str, 0, 5, NO_INVERT);
+//   display_text(htci_str, 0, 6, NO_INVERT);
+//   // display_text(sn_str, 0, 6, NO_INVERT);
+//   display_text(time_str, 0, 7, NO_INVERT);
 
-  ESP_LOGI(TAG,
-           "ADDR=%02x:%02x:%02x:%02x:%02x:%02x, "
-           "SSID=%s, "
-           "TIMESTAMP=%d, "
-           "HASH=%s, "
-           "RSSI=%02d, "
-           "SN=%d, "
-           "HT CAP. INFO=%s",
-           record.addr[0], record.addr[1], record.addr[2], record.addr[3],
-           record.addr[4], record.addr[5], record.ssid, (int) record.timestamp,
-           record.hash, record.rssi, record.sn, record.htci);
-}
+//   ESP_LOGI(TAG,
+//            "ADDR=%02x:%02x:%02x:%02x:%02x:%02x, "
+//            "SSID=%s, "
+//            "TIMESTAMP=%d, "
+//            "HASH=%s, "
+//            "RSSI=%02d, "
+//            "SN=%d, "
+//            "HT CAP. INFO=%s",
+//            record.addr[0], record.addr[1], record.addr[2], record.addr[3],
+//            record.addr[4], record.addr[5], record.ssid, (int) record.timestamp,
+//            record.hash, record.rssi, record.sn, record.htci);
+// }
 
 void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
   static bool airtag_detected = false;
