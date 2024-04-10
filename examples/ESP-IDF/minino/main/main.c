@@ -24,6 +24,7 @@ void app_main(void) {
   leds_on();
   sd_card_init();
   buzzer_init();
+  wifi_sniffer_init();
   bluetooth_scanner_init();
   // thread_cli_init();
   display_init();
@@ -32,5 +33,4 @@ void app_main(void) {
   leds_off();
   xTaskCreate(&hello_task, "hello_task", 2048, NULL, 5, NULL);
   printf("Hello world!\n");
-  wifi_sniffer_init();
 }

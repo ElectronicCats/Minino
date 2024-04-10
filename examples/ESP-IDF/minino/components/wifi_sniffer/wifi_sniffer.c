@@ -19,6 +19,8 @@
 #include "cmd_pcap.h"
 #include "cmd_sniffer.h"
 #include "sd_card.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #if CONFIG_SNIFFER_STORE_HISTORY
 #endif
@@ -44,32 +46,38 @@ void wifi_sniffer_init() {
 
   register_sniffer_cmd();
   register_pcap_cmd();
+}
 
+// TODO: show summary on the display
+void do_sniffer() {
+  const char** summary_argv[] = {"pcap", "--summary", "-f", "sniffer"};
+  uint8_t summary_argc = 4;
+  do_pcap_cmd(summary_argc, (char**) summary_argv);
+  vTaskDelay(1000 / portTICK_PERIOD_MS);
+}
+
+void wifi_sniffer_start() {
   sd_card_mount();
 
   const char** pcap_argv[] = {"pcap", "--open", "-f", "sniffer"};
   uint8_t pcap_argc = 4;
   do_pcap_cmd(pcap_argc, (char**) pcap_argv);
-  vTaskDelay(1000 / portTICK_PERIOD_MS);
+  // vTaskDelay(1000 / portTICK_PERIOD_MS);
 
   const char** sniffer_argv[] = {"sniffer", "-i", "wlan", "-c",
                                  "2",       "-n", "20"};
   uint8_t sniffer_argc = 7;
   do_sniffer_cmd(sniffer_argc, (char**) sniffer_argv);
-  vTaskDelay(150000 / portTICK_PERIOD_MS);
+}
 
+void wifi_sniffer_stop() {
   const char** stop_argv[] = {"sniffer", "--stop"};
   uint8_t stop_argc = 2;
   do_sniffer_cmd(stop_argc, (char**) stop_argv);
-  vTaskDelay(1000 / portTICK_PERIOD_MS);
+  vTaskDelay(500 / portTICK_PERIOD_MS);
 
   const char** close_argv[] = {"pcap", "--close", "-f", "sniffer"};
   uint8_t close_argc = 4;
   do_pcap_cmd(close_argc, (char**) close_argv);
-  vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-  const char** summary_argv[] = {"pcap", "--summary", "-f", "sniffer"};
-  uint8_t summary_argc = 4;
-  do_pcap_cmd(summary_argc, (char**) summary_argv);
-  vTaskDelay(1000 / portTICK_PERIOD_MS);
+  vTaskDelay(100 / portTICK_PERIOD_MS);
 }
