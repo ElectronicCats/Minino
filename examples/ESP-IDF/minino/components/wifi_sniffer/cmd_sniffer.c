@@ -6,7 +6,7 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 #include "cmd_sniffer.h"
-#include <stdlib.h>
+
 #include <string.h>
 #include <sys/fcntl.h>
 #include <sys/unistd.h>
@@ -16,10 +16,6 @@
 #include "esp_check.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/queue.h"
-#include "freertos/semphr.h"
-#include "freertos/task.h"
 #include "sdkconfig.h"
 
 #define SNIFFER_DEFAULT_CHANNEL           (1)
@@ -28,24 +24,12 @@
 #define SNIFFER_RX_FCS_ERR                (0X41)
 #define SNIFFER_DECIMAL_NUM               (10)
 
-static const char* SNIFFER_TAG = "cmd_sniffer";
+static const char* TAG = "cmd_sniffer";
 
 typedef struct {
   char* filter_name;
   uint32_t filter_val;
 } wlan_filter_table_t;
-
-typedef struct {
-  bool is_running;
-  sniffer_intf_t interf;
-  uint32_t interf_num;
-  uint32_t channel;
-  uint32_t filter;
-  int32_t packets_to_sniff;
-  TaskHandle_t task;
-  QueueHandle_t work_queue;
-  SemaphoreHandle_t sem_task_over;
-} sniffer_runtime_t;
 
 typedef struct {
   void* payload;
@@ -57,6 +41,21 @@ typedef struct {
 static sniffer_runtime_t snf_rt = {0};
 static wlan_filter_table_t wifi_filter_hash_table[SNIFFER_WLAN_FILTER_MAX] = {
     0};
+
+static sniffer_cb_t sniffer_cb = NULL;
+static sniffer_animation_cb_t sniffer_animation_start_cb = NULL;
+static sniffer_animation_cb_t sniffer_animation_stop_cb = NULL;
+
+void wifi_sniffer_register_cb(sniffer_cb_t callback) {
+  sniffer_cb = callback;
+}
+
+void wifi_sniffer_register_animation_cbs(sniffer_animation_cb_t start_cb,
+                                         sniffer_animation_cb_t stop_cb) {
+  sniffer_animation_start_cb = start_cb;
+  sniffer_animation_stop_cb = stop_cb;
+}
+
 static esp_err_t sniffer_stop(sniffer_runtime_t* sniffer);
 
 static uint32_t hash_func(const char* str, uint32_t max_num) {
@@ -120,12 +119,12 @@ static void queue_packet(void* recv_packet,
       if (xQueueSend(snf_rt.work_queue, packet_info,
                      pdMS_TO_TICKS(SNIFFER_PROCESS_PACKET_TIMEOUT_MS)) !=
           pdTRUE) {
-        ESP_LOGE(SNIFFER_TAG, "sniffer work queue full");
+        ESP_LOGE(TAG, "sniffer work queue full");
         free(packet_info->payload);
       }
     }
   } else {
-    ESP_LOGE(SNIFFER_TAG, "No enough memory for promiscuous packet");
+    ESP_LOGE(TAG, "No enough memory for promiscuous packet");
   }
 }
 
@@ -147,8 +146,16 @@ static void wifi_sniffer_cb(void* recv_buf, wifi_promiscuous_pkt_type_t type) {
 static void sniffer_task(void* parameters) {
   sniffer_packet_info_t packet_info;
   sniffer_runtime_t* sniffer = (sniffer_runtime_t*) parameters;
+  if (sniffer_animation_start_cb) {
+    sniffer_animation_start_cb();
+  }
+
+  if (sniffer_cb) {
+    sniffer_cb(sniffer);
+  }
 
   while (sniffer->is_running) {
+    // ESP_LOGI(TAG, "sniffer task running");
     if (sniffer->packets_to_sniff == 0) {
       sniffer_stop(sniffer);
       break;
@@ -162,40 +169,52 @@ static void sniffer_task(void* parameters) {
     if (packet_capture(packet_info.payload, packet_info.length,
                        packet_info.seconds,
                        packet_info.microseconds) != ESP_OK) {
-      ESP_LOGW(SNIFFER_TAG, "save captured packet failed");
+      ESP_LOGW(TAG, "save captured packet failed");
     }
     free(packet_info.payload);
     if (sniffer->packets_to_sniff > 0) {
+      if (sniffer_cb) {
+        sniffer_cb(sniffer);
+      }
       sniffer->packets_to_sniff--;
+      // TODO: Add a flag to make an animation when the sniffer is running
+      ESP_LOGW(TAG, "%" PRIi32 " packages left to capture",
+               sniffer->packets_to_sniff);
     }
   }
   /* notify that sniffer task is over */
   if (sniffer->packets_to_sniff != 0) {
     xSemaphoreGive(sniffer->sem_task_over);
   }
+  if (sniffer_cb) {
+    sniffer_cb(sniffer);
+  }
   vTaskDelete(NULL);
 }
 
 static esp_err_t sniffer_stop(sniffer_runtime_t* sniffer) {
+  if (sniffer_animation_stop_cb) {
+    sniffer_animation_stop_cb();
+  }
   esp_err_t ret = ESP_OK;
 
-  ESP_GOTO_ON_FALSE(sniffer->is_running, ESP_ERR_INVALID_STATE, err,
-                    SNIFFER_TAG, "sniffer is already stopped");
+  ESP_GOTO_ON_FALSE(sniffer->is_running, ESP_ERR_INVALID_STATE, err, TAG,
+                    "sniffer is already stopped");
 
   switch (sniffer->interf) {
     case SNIFFER_INTF_WLAN:
       /* Disable wifi promiscuous mode */
-      ESP_GOTO_ON_ERROR(esp_wifi_set_promiscuous(false), err, SNIFFER_TAG,
+      ESP_GOTO_ON_ERROR(esp_wifi_set_promiscuous(false), err, TAG,
                         "stop wifi promiscuous failed");
       break;
     case SNIFFER_INTF_ETH:
       // Ethernet support removed
     default:
-      ESP_GOTO_ON_FALSE(false, ESP_ERR_INVALID_ARG, err, SNIFFER_TAG,
+      ESP_GOTO_ON_FALSE(false, ESP_ERR_INVALID_ARG, err, TAG,
                         "unsupported interface");
       break;
   }
-  ESP_LOGI(SNIFFER_TAG, "stop promiscuous ok");
+  ESP_LOGI(TAG, "stop promiscuous ok");
 
   /* stop sniffer local task */
   sniffer->is_running = false;
@@ -229,8 +248,8 @@ static esp_err_t sniffer_start(sniffer_runtime_t* sniffer) {
   pcap_link_type_t link_type;
   wifi_promiscuous_filter_t wifi_filter;
 
-  ESP_GOTO_ON_FALSE(!(sniffer->is_running), ESP_ERR_INVALID_STATE, err,
-                    SNIFFER_TAG, "sniffer is already running");
+  ESP_GOTO_ON_FALSE(!(sniffer->is_running), ESP_ERR_INVALID_STATE, err, TAG,
+                    "sniffer is already running");
 
   switch (sniffer->interf) {
     case SNIFFER_INTF_WLAN:
@@ -240,27 +259,27 @@ static esp_err_t sniffer_start(sniffer_runtime_t* sniffer) {
       // Ethernet support removed
       break;
     default:
-      ESP_GOTO_ON_FALSE(false, ESP_ERR_INVALID_ARG, err, SNIFFER_TAG,
+      ESP_GOTO_ON_FALSE(false, ESP_ERR_INVALID_ARG, err, TAG,
                         "unsupported interface");
       break;
   }
 
   /* init a pcap session */
-  ESP_GOTO_ON_ERROR(sniff_packet_start(link_type), err, SNIFFER_TAG,
+  ESP_GOTO_ON_ERROR(sniff_packet_start(link_type), err, TAG,
                     "init pcap session failed");
 
   sniffer->is_running = true;
   sniffer->work_queue = xQueueCreate(CONFIG_SNIFFER_WORK_QUEUE_LEN,
                                      sizeof(sniffer_packet_info_t));
-  ESP_GOTO_ON_FALSE(sniffer->work_queue, ESP_FAIL, err_queue, SNIFFER_TAG,
+  ESP_GOTO_ON_FALSE(sniffer->work_queue, ESP_FAIL, err_queue, TAG,
                     "create work queue failed");
   sniffer->sem_task_over = xSemaphoreCreateBinary();
-  ESP_GOTO_ON_FALSE(sniffer->sem_task_over, ESP_FAIL, err_sem, SNIFFER_TAG,
+  ESP_GOTO_ON_FALSE(sniffer->sem_task_over, ESP_FAIL, err_sem, TAG,
                     "create work queue failed");
   ESP_GOTO_ON_FALSE(
       xTaskCreate(sniffer_task, "snifferT", CONFIG_SNIFFER_TASK_STACK_SIZE,
                   sniffer, CONFIG_SNIFFER_TASK_PRIORITY, &sniffer->task),
-      ESP_FAIL, err_task, SNIFFER_TAG, "create task failed");
+      ESP_FAIL, err_task, TAG, "create task failed");
 
   switch (sniffer->interf) {
     case SNIFFER_INTF_WLAN:
@@ -268,10 +287,10 @@ static esp_err_t sniffer_start(sniffer_runtime_t* sniffer) {
       wifi_filter.filter_mask = sniffer->filter;
       esp_wifi_set_promiscuous_filter(&wifi_filter);
       esp_wifi_set_promiscuous_rx_cb(wifi_sniffer_cb);
-      ESP_GOTO_ON_ERROR(esp_wifi_set_promiscuous(true), err_start, SNIFFER_TAG,
+      ESP_GOTO_ON_ERROR(esp_wifi_set_promiscuous(true), err_start, TAG,
                         "create work queue failed");
       esp_wifi_set_channel(sniffer->channel, WIFI_SECOND_CHAN_NONE);
-      ESP_LOGI(SNIFFER_TAG, "start WiFi promiscuous ok");
+      ESP_LOGI(TAG, "start WiFi promiscuous ok");
       break;
     case SNIFFER_INTF_ETH:
       // Ethernet support removed
@@ -323,13 +342,12 @@ int do_sniffer_cmd(int argc, char** argv) {
     if (!strncmp(sniffer_args.interface->sval[0], "wlan", 4)) {
       snf_rt.interf = SNIFFER_INTF_WLAN;
     } else {
-      ESP_LOGE(SNIFFER_TAG, "interface %s not found",
-               sniffer_args.interface->sval[0]);
+      ESP_LOGE(TAG, "interface %s not found", sniffer_args.interface->sval[0]);
       return 1;
     }
   } else {
     snf_rt.interf = SNIFFER_INTF_WLAN;
-    ESP_LOGW(SNIFFER_TAG, "sniffing interface set to wlan by default");
+    ESP_LOGW(TAG, "sniffing interface set to wlan by default");
   }
 
   /* Check channel: "-c" option */
@@ -374,7 +392,7 @@ int do_sniffer_cmd(int argc, char** argv) {
   snf_rt.packets_to_sniff = -1;
   if (sniffer_args.number->count) {
     snf_rt.packets_to_sniff = sniffer_args.number->ival[0];
-    ESP_LOGI(SNIFFER_TAG, "%" PRIi32 " packages will be captured",
+    ESP_LOGI(TAG, "%" PRIi32 " packages will be captured",
              snf_rt.packets_to_sniff);
   }
 

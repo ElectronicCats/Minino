@@ -17,11 +17,11 @@
 #include "esp_wifi.h"
 #include "linenoise/linenoise.h"
 #include "sdkconfig.h"
-#if CONFIG_SNIFFER_PCAP_DESTINATION_SD
+// #if CONFIG_SNIFFER_PCAP_DESTINATION_SD
   #include "driver/sdmmc_host.h"
   #include "driver/sdspi_host.h"
   #include "driver/spi_common.h"
-#endif
+// #endif
 #include "cmd_pcap.h"
 #include "cmd_sniffer.h"
 #include "nvs_flash.h"
@@ -30,6 +30,7 @@
 #if CONFIG_SNIFFER_STORE_HISTORY
 #endif
 
+#define MOUNT_POINT "/sdcard"
 #define PIN_NUM_MISO 20
 #define PIN_NUM_MOSI 19
 #define PIN_NUM_CLK  21
@@ -88,7 +89,6 @@ static int mount(int argc, char** argv) {
     // initialize SD card and mount FAT filesystem.
     sdmmc_card_t* card;
 
-#if CONFIG_SNIFFER_SD_SPI_MODE
     ESP_LOGI(TAG, "Using SPI peripheral");
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
     spi_bus_config_t bus_cfg = {
@@ -112,26 +112,10 @@ static int mount(int argc, char** argv) {
     slot_config.gpio_cs = PIN_NUM_CS;
     slot_config.host_id = host.slot;
 
-    ret = esp_vfs_fat_sdspi_mount(CONFIG_SNIFFER_MOUNT_POINT, &host,
+    // ret = esp_vfs_fat_sdspi_mount(CONFIG_SNIFFER_MOUNT_POINT, &host,
+    //                               &slot_config, &mount_config, &card);
+    ret = esp_vfs_fat_sdspi_mount(MOUNT_POINT, &host,
                                   &slot_config, &mount_config, &card);
-
-#else
-    ESP_LOGI(TAG, "Using SDMMC peripheral");
-    sdmmc_host_t host = SDMMC_HOST_DEFAULT();
-    sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
-
-    gpio_set_pull_mode(15,
-                       GPIO_PULLUP_ONLY);  // CMD, needed in 4- and 1-line modes
-    gpio_set_pull_mode(2,
-                       GPIO_PULLUP_ONLY);  // D0, needed in 4- and 1-line modes
-    gpio_set_pull_mode(4, GPIO_PULLUP_ONLY);   // D1, needed in 4-line mode only
-    gpio_set_pull_mode(12, GPIO_PULLUP_ONLY);  // D2, needed in 4-line mode only
-    gpio_set_pull_mode(13,
-                       GPIO_PULLUP_ONLY);  // D3, needed in 4- and 1-line modes
-
-    ret = esp_vfs_fat_sdmmc_mount(CONFIG_SNIFFER_MOUNT_POINT, &host,
-                                  &slot_config, &mount_config, &card);
-#endif
 
     if (ret != ESP_OK) {
       if (ret == ESP_FAIL) {
@@ -182,7 +166,7 @@ static void register_unmount(void) {
   mount_args.end = arg_end(1);
 }
 
-void simple_wifi_sniffer_init() {
+void wifi_sniffer_init() {
   initialize_nvs();
 
   /*--- Initialize Network ---*/
@@ -209,7 +193,7 @@ void simple_wifi_sniffer_init() {
                                  "2",       "-n", "10"};
   uint8_t sniffer_argc = 7;
   do_sniffer_cmd(sniffer_argc, (char**) sniffer_argv);
-  vTaskDelay(5000 / portTICK_PERIOD_MS);
+  vTaskDelay(15000 / portTICK_PERIOD_MS);
 
   const char** stop_argv[] = {"sniffer", "--stop"};
   uint8_t stop_argc = 2;

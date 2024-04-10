@@ -1,8 +1,8 @@
 #include "display.h"
-#include "keyboard_helper.h"
 #include "display_helper.h"
 #include "esp_log.h"
 #include "gps.h"
+#include "keyboard_helper.h"
 #include "leds.h"
 #include "string.h"
 #include "thread_cli.h"
@@ -18,6 +18,7 @@ Layer current_layer;
 int num_items;
 uint8_t bluetooth_devices_count;
 nmea_parser_handle_t nmea_hdl;
+TaskHandle_t wifi_sniffer_task_handle = NULL;
 
 static void gps_event_handler(void* event_handler_arg,
                               esp_event_base_t event_base,
@@ -65,7 +66,9 @@ void display_init() {
   sh1106_init(&dev, 128, 32);
 #endif  // CONFIG_SH1106_128x32
 
-  // wifi_sniffer_register_cb(display_wifi_sniffer);
+  wifi_sniffer_register_cb(display_wifi_sniffer_cb);
+  wifi_sniffer_register_animation_cbs(display_wifi_sniffer_animation_start,
+                                      display_wifi_sniffer_animation_stop);
   bluetooth_scanner_register_cb(display_bluetooth_scanner);
 
   // Show logo
@@ -76,6 +79,10 @@ void display_init() {
   vTaskDelay(1000 / portTICK_PERIOD_MS);
   display_menu();
   display_gps_init();
+  xTaskCreate(&display_wifi_sniffer_animation_task,
+              "display_wifi_sniffer_animation_task", 2048, NULL, 15,
+              &wifi_sniffer_task_handle);
+  display_wifi_sniffer_animation_stop();
 }
 
 void display_clear() {
@@ -110,7 +117,7 @@ void display_selected_item_box() {
 /// @brief Add empty strings at the beginning and end of the array
 /// @param array
 /// @param length
-/// @return
+/// @return Returns a new array with empty strings at the beginning and end
 char** add_empty_strings(char** array, int length) {
   char** newArray = malloc((length + 2) * sizeof(char*));
 
@@ -130,6 +137,10 @@ char** add_empty_strings(char** array, int length) {
   return newArray;
 }
 
+/// @brief Remove the scrolling text flag from the array
+/// @param items
+/// @param length
+/// @return Returns a new array without the scrolling text flag
 char** remove_srolling_text_flag(char** items, int length) {
   char** newArray = malloc((length - 1) * sizeof(char*));
 
@@ -273,9 +284,54 @@ void display_menu() {
 //            "SN=%d, "
 //            "HT CAP. INFO=%s",
 //            record.addr[0], record.addr[1], record.addr[2], record.addr[3],
-//            record.addr[4], record.addr[5], record.ssid, (int) record.timestamp,
-//            record.hash, record.rssi, record.sn, record.htci);
+//            record.addr[4], record.addr[5], record.ssid, (int)
+//            record.timestamp, record.hash, record.rssi, record.sn,
+//            record.htci);
 // }
+
+void display_wifi_sniffer_animation_task(void* pvParameter) {
+  // display_text("Packets", 64, 0, INVERT);
+  // display_text("23", 64, 1, INVERT);
+  // display_text("Progress", 64, 3, INVERT);
+  // display_text("48%", 64, 4, INVERT);
+  while (true) {
+    sh1106_bitmaps(&dev, 0, 0, epd_bitmap_wifi_loading_1, 64, 64, NO_INVERT);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+    sh1106_bitmaps(&dev, 0, 0, epd_bitmap_wifi_loading_2, 64, 64, NO_INVERT);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+    sh1106_bitmaps(&dev, 0, 0, epd_bitmap_wifi_loading_3, 64, 64, NO_INVERT);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+    sh1106_bitmaps(&dev, 0, 0, epd_bitmap_wifi_loading_4, 64, 64, NO_INVERT);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+  }
+}
+
+void display_wifi_sniffer_animation_start() {
+  // display_clear();
+  // display_text("Packets", 64, 0, INVERT);
+  // display_text("0", 64, 1, INVERT);
+  // display_text("Progress", 64, 3, INVERT);
+  // display_text("0%", 64, 4, INVERT);
+  vTaskResume(wifi_sniffer_task_handle);
+}
+
+void display_wifi_sniffer_animation_stop() {
+  vTaskSuspend(wifi_sniffer_task_handle);
+  // display_text("Timeout!", 64, 6, INVERT);
+}
+
+void display_wifi_sniffer_cb(sniffer_runtime_t* sniffer) {
+  if (sniffer->is_running) {
+    ESP_LOGI(TAG, "sniffer task running");
+    display_clear();
+    display_text("Packets", 64, 0, INVERT);
+    display_text("23", 64, 1, INVERT);
+    display_text("Progress", 64, 3, INVERT);
+    display_text("48%", 64, 4, INVERT);
+  } else {
+    ESP_LOGI(TAG, "sniffer task stopped");
+  }
+}
 
 void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
   static bool airtag_detected = false;

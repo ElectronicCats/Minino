@@ -19,8 +19,6 @@ void hello_task(void* pvParameter) {
 }
 
 void app_main(void) {
-  simple_wifi_sniffer_init();
-  // return;
   leds_init();
   leds_on();
   // sdcard_test();
@@ -33,4 +31,5 @@ void app_main(void) {
   leds_off();
   xTaskCreate(&hello_task, "hello_task", 2048, NULL, 5, NULL);
   printf("Hello world!\n");
+  wifi_sniffer_init();
 }

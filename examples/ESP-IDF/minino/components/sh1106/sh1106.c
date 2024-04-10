@@ -454,12 +454,13 @@ void sh1106_bitmaps(SH1106_t* dev,
     ESP_LOGE(TAG, "width must be a multiple of 8");
     return;
   }
+  xpos += 2;
   int _width = width / 8;
   uint8_t wk0;
   uint8_t wk1;
   uint8_t wk2;
   uint8_t page = (ypos / 8);
-  uint8_t _seg = xpos + 2;
+  uint8_t _seg = xpos;
   uint8_t dstBits = (ypos % 8);
   ESP_LOGD(TAG, "ypos=%d page=%d dstBits=%d", ypos, page, dstBits);
   int offset = 0;
