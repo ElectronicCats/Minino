@@ -190,10 +190,10 @@ void wifi_sniffer_init() {
   vTaskDelay(1000 / portTICK_PERIOD_MS);
 
   const char** sniffer_argv[] = {"sniffer", "-i", "wlan", "-c",
-                                 "2",       "-n", "10"};
+                                 "2",       "-n", "20"};
   uint8_t sniffer_argc = 7;
   do_sniffer_cmd(sniffer_argc, (char**) sniffer_argv);
-  vTaskDelay(15000 / portTICK_PERIOD_MS);
+  vTaskDelay(150000 / portTICK_PERIOD_MS);
 
   const char** stop_argv[] = {"sniffer", "--stop"};
   uint8_t stop_argc = 2;

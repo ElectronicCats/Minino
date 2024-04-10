@@ -322,12 +322,17 @@ void display_wifi_sniffer_animation_stop() {
 
 void display_wifi_sniffer_cb(sniffer_runtime_t* sniffer) {
   if (sniffer->is_running) {
-    ESP_LOGI(TAG, "sniffer task running");
+    const char* packets_str = malloc(16);
+    const char* channel_str = malloc(16);
+
+    sprintf(packets_str, "%ld", sniffer->sniffed_packets);
+    sprintf(channel_str, "%ld", sniffer->channel);
+
     display_clear();
     display_text("Packets", 64, 0, INVERT);
-    display_text("23", 64, 1, INVERT);
-    display_text("Progress", 64, 3, INVERT);
-    display_text("48%", 64, 4, INVERT);
+    display_text(packets_str, 64, 1, INVERT);
+    display_text("Channel", 64, 3, INVERT);
+    display_text(channel_str, 64, 4, INVERT);
   } else {
     ESP_LOGI(TAG, "sniffer task stopped");
   }

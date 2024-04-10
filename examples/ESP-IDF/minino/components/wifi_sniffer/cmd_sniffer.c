@@ -177,6 +177,7 @@ static void sniffer_task(void* parameters) {
         sniffer_cb(sniffer);
       }
       sniffer->packets_to_sniff--;
+      sniffer->sniffed_packets++;
       // TODO: Add a flag to make an animation when the sniffer is running
       ESP_LOGW(TAG, "%" PRIi32 " packages left to capture",
                sniffer->packets_to_sniff);

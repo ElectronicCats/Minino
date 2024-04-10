@@ -53,6 +53,7 @@ typedef struct {
   uint32_t channel;
   uint32_t filter;
   int32_t packets_to_sniff;
+  int32_t sniffed_packets;
   TaskHandle_t task;
   QueueHandle_t work_queue;
   SemaphoreHandle_t sem_task_over;
