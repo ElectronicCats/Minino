@@ -17,6 +17,7 @@ void handle_applications_selection();
 void handle_settings_selection();
 void handle_about_selection();
 void handle_wifi_apps_selection();
+void handle_wifi_sniffer_selection();
 void handle_bluetooth_apps_selection();
 void handle_thread_apps_selection();
 void handle_gps_selection();
@@ -111,7 +112,7 @@ static void button_event_cb(void* arg, void* data) {
 
 void handle_back() {
   switch (current_layer) {
-    case LAYER_WIFI_ANALIZER:
+    case LAYER_WIFI_SNIFFER_START:
       wifi_sniffer_stop();
       break;
     case LAYER_BLUETOOTH_AIRTAGS_SCAN:
@@ -162,7 +163,8 @@ void handle_selected_option() {
     case LAYER_GPS:
       handle_gps_selection();
       break;
-    case LAYER_WIFI_ANALIZER:
+    case LAYER_WIFI_SNIFFER:
+      handle_wifi_sniffer_selection();
       break;
     default:
       ESP_LOGE(TAG, "Invalid layer");
@@ -200,15 +202,20 @@ void update_previous_layer() {
     case LAYER_SETTINGS_SYSTEM:
       previous_layer = LAYER_SETTINGS;
       break;
-    /* WiFi applications */
-    case LAYER_WIFI_ANALIZER:
+    /* WiFi apps */
+    case LAYER_WIFI_SNIFFER:
       previous_layer = LAYER_WIFI_APPS;
       break;
-    /* Bluetooth applications */
+    /* WiFi sniffer apps */
+    case LAYER_WIFI_SNIFFER_START:
+    case LAYER_WIFI_SNIFFER_SETTINGS:
+      previous_layer = LAYER_WIFI_SNIFFER;
+      break;
+    /* Bluetooth apps */
     case LAYER_BLUETOOTH_AIRTAGS_SCAN:
       previous_layer = LAYER_BLUETOOTH_APPS;
       break;
-    /* GPS applications */
+    /* GPS apps */
     case LAYER_GPS_DATE_TIME:
     case LAYER_GPS_LOCATION:
       previous_layer = LAYER_GPS;
@@ -299,10 +306,24 @@ void handle_about_selection() {
 
 void handle_wifi_apps_selection() {
   switch (selected_option) {
-    case WIFI_MENU_ANALIZER:
-      current_layer = LAYER_WIFI_ANALIZER;
+    case WIFI_MENU_SNIFFER:
+      current_layer = LAYER_WIFI_SNIFFER;
+      break;
+  }
+}
+
+void handle_wifi_sniffer_selection() {
+  switch (selected_option) {
+    case WIFI_SNIFFER_START:
+      current_layer = LAYER_WIFI_SNIFFER_START;
       display_clear();
       wifi_sniffer_start();
+      break;
+    case WIFI_SNIFFER_SETTINGS:
+      current_layer = LAYER_WIFI_SNIFFER_SETTINGS;
+      break;
+    default:
+      ESP_LOGE(TAG, "Invalid option: %d", selected_option);
       break;
   }
 }

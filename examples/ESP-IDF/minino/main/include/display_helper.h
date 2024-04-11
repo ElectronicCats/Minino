@@ -18,7 +18,9 @@ enum MenuLayer {
   LAYER_MATTER_APPS,
   LAYER_GPS,
   /* WiFi applications */
-  LAYER_WIFI_ANALIZER,
+  LAYER_WIFI_SNIFFER,
+  LAYER_WIFI_SNIFFER_START,
+  LAYER_WIFI_SNIFFER_SETTINGS,
   /* Bluetooth applications */
   LAYER_BLUETOOTH_AIRTAGS_SCAN,
   /* Thread applications */
@@ -69,7 +71,12 @@ enum AboutMenuItem {
 };
 
 enum WifiMenuItem {
-  WIFI_MENU_ANALIZER = 0,
+  WIFI_MENU_SNIFFER = 0,
+};
+
+enum WifiSnifferMenuItem {
+  WIFI_SNIFFER_START = 0,
+  WIFI_SNIFFER_SETTINGS,
 };
 
 enum BluetoothMenuItem {
@@ -162,7 +169,19 @@ static char* legal_text[] = {
 };
 
 static char* wifi_items[] = {
-    "Analizer",
+    "Sniffer",
+    NULL,
+};
+
+static char* wifi_sniffer_items[] = {
+    "Start",
+    "Settings",
+    NULL,
+};
+
+static char* wifi_sniffer_settings_items[] = {
+    "Channel",
+    "Filter",
     NULL,
 };
 
@@ -201,7 +220,9 @@ static char** menu_items[] = {
     empty_items,  // Matter
     gps_items,
     /* WiFi applications */
-    empty_items,  // WiFi Analizer
+    wifi_sniffer_items,
+    empty_items,  // WiFi Sniffer Start
+    empty_items,  // WiFi Sniffer Settings
     /* Bluetooth applications */
     empty_items,  // Bluetooth Airtags scan
     /* Thread applications */
