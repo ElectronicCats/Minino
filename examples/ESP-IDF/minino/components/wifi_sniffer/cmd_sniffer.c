@@ -194,6 +194,7 @@ static void sniffer_task(void* parameters) {
 }
 
 static esp_err_t sniffer_stop(sniffer_runtime_t* sniffer) {
+  sniffer->sniffed_packets = 0;
   if (sniffer_animation_stop_cb) {
     sniffer_animation_stop_cb();
   }

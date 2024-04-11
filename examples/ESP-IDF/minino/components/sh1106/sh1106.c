@@ -185,12 +185,12 @@ void sh1106_clear_screen(SH1106_t* dev, bool invert) {
   }
 }
 
-void sh1106_clear_line(SH1106_t* dev, int page, bool invert) {
+void sh1106_clear_line(SH1106_t* dev, int x, int page, bool invert) {
   // char space[16];
   // memset(space, 0x00, sizeof(space));
   // sh1106_display_text(dev, page, space, sizeof(space), invert);
   char* space = "                ";
-  sh1106_display_text(dev, page, space, 0, invert);
+  sh1106_display_text(dev, page, space, x, invert);
 }
 
 void sh1106_contrast(SH1106_t* dev, int contrast) {
@@ -260,7 +260,7 @@ void sh1106_scroll_clear(SH1106_t* dev) {
   while (1) {
     int dstIndex = srcIndex + dev->_scDirection;
     ESP_LOGD(TAG, "srcIndex=%d dstIndex=%d", srcIndex, dstIndex);
-    sh1106_clear_line(dev, dstIndex, false);
+    sh1106_clear_line(dev, 0, dstIndex, false);
     if (dstIndex == dev->_scStart)
       break;
     srcIndex = srcIndex - dev->_scDirection;

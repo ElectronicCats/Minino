@@ -105,8 +105,9 @@ void display_text(const char* text, int x, int page, int invert) {
 /// @brief Clear a line on the screen
 /// @param page
 /// @param invert
-void display_clear_line(int page, int invert) {
-  sh1106_clear_line(&dev, page, invert);
+void display_clear_line(int x, int page, int invert) {
+  // sh1106_clear_line(&dev, x, page, invert);
+  sh1106_bitmaps(&dev, x, page * 8, epd_bitmap_clear_line, 128 - x, 8, invert);
 }
 
 /// @brief Display a box around the selected item
@@ -290,10 +291,6 @@ void display_menu() {
 // }
 
 void display_wifi_sniffer_animation_task(void* pvParameter) {
-  // display_text("Packets", 64, 0, INVERT);
-  // display_text("23", 64, 1, INVERT);
-  // display_text("Progress", 64, 3, INVERT);
-  // display_text("48%", 64, 4, INVERT);
   while (true) {
     sh1106_bitmaps(&dev, 0, 0, epd_bitmap_wifi_loading_1, 64, 64, NO_INVERT);
     vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -307,11 +304,6 @@ void display_wifi_sniffer_animation_task(void* pvParameter) {
 }
 
 void display_wifi_sniffer_animation_start() {
-  // display_clear();
-  // display_text("Packets", 64, 0, INVERT);
-  // display_text("0", 64, 1, INVERT);
-  // display_text("Progress", 64, 3, INVERT);
-  // display_text("0%", 64, 4, INVERT);
   vTaskResume(wifi_sniffer_task_handle);
 }
 
@@ -328,7 +320,8 @@ void display_wifi_sniffer_cb(sniffer_runtime_t* sniffer) {
     sprintf(packets_str, "%ld", sniffer->sniffed_packets);
     sprintf(channel_str, "%ld", sniffer->channel);
 
-    display_clear();
+    display_clear_line(64, 1, NO_INVERT);
+
     display_text("Packets", 64, 0, INVERT);
     display_text(packets_str, 64, 1, INVERT);
     display_text("Channel", 64, 3, INVERT);
@@ -341,7 +334,9 @@ void display_wifi_sniffer_cb(sniffer_runtime_t* sniffer) {
 void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
   static bool airtag_detected = false;
   display_text("Airtags Scanner", 0, 0, INVERT);
-  display_clear_line(2, NO_INVERT);
+  uint8_t x = 0;
+  uint8_t y = 2;
+  display_clear_line(x, y, NO_INVERT);
 
   if (record.has_finished && !airtag_detected) {
     display_text("    Scanning", 0, 3, NO_INVERT);

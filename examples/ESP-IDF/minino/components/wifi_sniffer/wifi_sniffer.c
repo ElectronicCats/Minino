@@ -61,11 +61,10 @@ void wifi_sniffer_start() {
 
   const char** pcap_argv[] = {"pcap", "--open", "-f", "sniffer"};
   uint8_t pcap_argc = 4;
-  do_pcap_cmd(pcap_argc, (char**) pcap_argv);
-  // vTaskDelay(1000 / portTICK_PERIOD_MS);
+  do_pcap_cmd(pcap_argc, (char**) pcap_argv); 
 
   const char** sniffer_argv[] = {"sniffer", "-i", "wlan", "-c",
-                                 "2",       "-n", "20"};
+                                 "2",       "-n", "2147483647"};
   uint8_t sniffer_argc = 7;
   do_sniffer_cmd(sniffer_argc, (char**) sniffer_argv);
 }

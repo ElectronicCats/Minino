@@ -131,7 +131,7 @@ void sh1106_display_text_x3(SH1106_t* dev,
                             int text_len,
                             bool invert);
 void sh1106_clear_screen(SH1106_t* dev, bool invert);
-void sh1106_clear_line(SH1106_t* dev, int page, bool invert);
+void sh1106_clear_line(SH1106_t* dev, int x, int page, bool invert);
 void sh1106_contrast(SH1106_t* dev, int contrast);
 void sh1106_software_scroll(SH1106_t* dev, int start, int end);
 void sh1106_scroll_text(SH1106_t* dev, char* text, int text_len, bool invert);
