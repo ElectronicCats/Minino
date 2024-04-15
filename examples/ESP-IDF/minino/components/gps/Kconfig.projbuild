@@ -9,6 +9,13 @@ menu "GPS Configuration"
         help
             GPIO number for UART RX pin. See UART documentation for more information
             about available pin numbers for UART.
+    
+    config NMEA_PARSE_UART_BAUDRATE
+        int "UART Baudrate"
+        range 0 115200
+        default 115200
+        help
+            Baudrate of UART.
 
     config NMEA_PARSER_RING_BUFFER_SIZE
         int "NMEA Parser Ring Buffer Size"
