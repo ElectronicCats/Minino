@@ -1,4 +1,8 @@
-PORT := /dev/cu.usbmodem1101
+PORT := /dev/cu.usbmodem132101
+
+setup:
+	idf.py set-target esp32c6
+	pre-commit install
 
 compile:
 	idf.py build
@@ -15,4 +19,4 @@ clean:
 
 all: compile flash monitor
 
-.PHONY: compile flash monitor clean all
+.PHONY: setup compile flash monitor clean all
