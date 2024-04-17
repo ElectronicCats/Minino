@@ -114,6 +114,8 @@ void register_mount(void) {
 }
 
 int unmount(int argc, char** argv) {
+  esp_err_t ret;
+  sdmmc_host_t host = SDSPI_HOST_DEFAULT();
   int nerrors = arg_parse(argc, argv, (void**) &mount_args);
   if (nerrors != 0) {
     arg_print_errors(stderr, mount_args.end, argv[0]);
@@ -126,6 +128,11 @@ int unmount(int argc, char** argv) {
       return -1;
     }
     ESP_LOGI(TAG, "Card unmounted");
+    ret = spi_bus_free(host.slot);
+    if (ret != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to deinitialize bus.");
+      return 1;
+    }
   }
   return 0;
 }

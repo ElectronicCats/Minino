@@ -78,5 +78,6 @@ void wifi_sniffer_stop() {
   const char** close_argv[] = {"pcap", "--close", "-f", "sniffer"};
   uint8_t close_argc = 4;
   do_pcap_cmd(close_argc, (char**) close_argv);
+  sd_card_unmount();
   vTaskDelay(100 / portTICK_PERIOD_MS);
 }

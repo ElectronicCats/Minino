@@ -31,9 +31,9 @@ dependencies:
   iperf:
     component_hash: null
     source:
-      path: /Users/deimos/esp/esp-idf/examples/common_components/iperf
+      path: /home/robertoarellanosegovia/Documents/ElectronicCats/Minino/examples/ESP-IDF/minino/components/iperf
       type: local
     version: '*'
-manifest_hash: 22cbeed4bca196fb4b2cbe026e71c352dbc256418c7668e62e2c4c20e6e4943e
+manifest_hash: a007955d3cf8866cff5d7b5cf6324b37f591c848fc3298985fcfa773689990d2
 target: esp32c6
 version: 1.0.0

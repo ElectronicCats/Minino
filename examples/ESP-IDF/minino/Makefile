@@ -1,4 +1,4 @@
-PORT := /dev/cu.usbmodem132101
+PORT := /dev/ttyACM0
 
 setup:
 	idf.py set-target esp32c6
