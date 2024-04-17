@@ -6,7 +6,7 @@ dependencies:
   idf:
     version: ">=4.1.0"
   iperf:
-    path: ${IDF_PATH}/examples/common_components/iperf
+    path: ../components/iperf
   # # Put list of dependencies here
   # # For components maintained by Espressif:
   # component: "~1.0.0"
