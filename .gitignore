@@ -38,3 +38,4 @@ hardware/minino-backups/
 # IDF sdkconfig
 /**/sdkconfig
 /**/sdkconfig.old
+/**/dependencies.lock
