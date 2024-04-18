@@ -4,7 +4,6 @@
 #include "display.h"
 #include "esp_log.h"
 #include "keyboard_helper.h"
-#include "thread_cli.h"
 
 static const char* TAG = "keyboard";
 
@@ -122,7 +121,7 @@ void handle_back() {
       vTaskDelay(100 / portTICK_PERIOD_MS);  // Wait for the scanner to stop
       break;
     case LAYER_THREAD_CLI:
-      thread_cli_stop();
+      // thread_cli_stop();
       break;
     default:
       break;
@@ -342,7 +341,7 @@ void handle_thread_apps_selection() {
   switch (selected_option) {
     case THREAD_MENU_CLI:
       current_layer = LAYER_THREAD_CLI;
-      display_thread_cli();
+      // display_thread_cli();
       break;
   }
 }

@@ -5,7 +5,6 @@
 #include "keyboard_helper.h"
 #include "leds.h"
 #include "string.h"
-#include "thread_cli.h"
 
 #define TIME_ZONE (+8)    // Beijing Time
 #define YEAR_BASE (2000)  // date in GPS starts from 2000
@@ -320,7 +319,7 @@ void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
 }
 
 void display_thread_cli() {
-  thread_cli_start();
+  // thread_cli_start();
 
   display_clear();
   display_text("Thread CLI      ", 0, 0, INVERT);

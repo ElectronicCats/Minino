@@ -1,6 +1,7 @@
 ## IDF Component Manager Manifest File
 dependencies:
-  espressif/esp_ot_cli_extension: "^1.0.2"
+  espressif/esp-zboss-lib: "^1.2.3"
+  espressif/esp-zigbee-lib: "^1.2.3"
   espressif/button: "^3.2.0"
   ## Required IDF version
   idf:
