@@ -23,6 +23,10 @@ enum MenuLayer {
   LAYER_WIFI_SNIFFER_SETTINGS,
   /* Bluetooth applications */
   LAYER_BLUETOOTH_AIRTAGS_SCAN,
+  /* Zigbee applications */
+  LAYER_ZIGBEE_SPOOFING,
+  LAYER_ZIGBEE_SWITCH,
+  LAYER_ZIGBEE_LIGHT,
   /* Thread applications */
   LAYER_THREAD_CLI,
   /* GPS applications */
@@ -81,6 +85,15 @@ enum WifiSnifferMenuItem {
 
 enum BluetoothMenuItem {
   BLUETOOTH_MENU_AIRTAGS_SCAN = 0,
+};
+
+enum ZigbeeMenuItem {
+  ZIGBEE_MENU_SPOOFING = 0,
+};
+
+enum ZigbeeSpoofingMenuItem {
+  ZIGBEE_SPOOFING_SWITCH = 0,
+  ZIGBEE_SPOOFING_LIGHT,
 };
 
 enum ThreadMenuItem {
@@ -191,7 +204,13 @@ static char* bluetooth_items[] = {
 };
 
 static char* zigbee_items[] = {
-    "Zigbee CLI",
+    "Spoofing",
+    NULL,
+};
+
+static char* zigbee_spoofing_items[] = {
+    "Switch",
+    "Light",
     NULL,
 };
 
@@ -214,9 +233,7 @@ static char* empty_items[] = {
 static char** menu_items[] = {
     main_items, applications_items, settings_items, about_items,
     /* Applications */
-    wifi_items, bluetooth_items,
-    empty_items,  // Zigbee
-    thread_items,
+    wifi_items, bluetooth_items, zigbee_items, thread_items,
     empty_items,  // Matter
     gps_items,
     /* WiFi applications */
@@ -225,6 +242,10 @@ static char** menu_items[] = {
     empty_items,  // WiFi Sniffer Settings
     /* Bluetooth applications */
     empty_items,  // Bluetooth Airtags scan
+    /* Zigbee applications */
+    zigbee_spoofing_items,
+    empty_items,  // Zigbee Switch
+    empty_items,  // Zigbee Light
     /* Thread applications */
     empty_items,  // Thread CLI
     /* GPS applications */

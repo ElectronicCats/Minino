@@ -11,12 +11,12 @@ static const char* TAG = "main";
 void app_main(void) {
   leds_init();
   leds_on();  // Indicate that the system is booting
-  zb_switch_init();
-  return;
+  // return;
   sd_card_init();
   buzzer_init();
   wifi_sniffer_init();
   bluetooth_scanner_init();
+  zb_switch_init();
   // thread_cli_init();
   display_init();
   // Init the keyboard after the display to avoid skipping the logo

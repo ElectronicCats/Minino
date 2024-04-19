@@ -18,6 +18,8 @@ void handle_about_selection();
 void handle_wifi_apps_selection();
 void handle_wifi_sniffer_selection();
 void handle_bluetooth_apps_selection();
+void handle_zigbee_apps_selection();
+void handle_zigbee_spoofing_selection();
 void handle_thread_apps_selection();
 void handle_gps_selection();
 
@@ -55,7 +57,7 @@ void button_init(uint32_t button_num, uint8_t mask) {
 }
 
 void keyboard_init() {
-  button_init(BOOT_BUTTON_PIN, BOOT_BUTTON_MASK);
+  // button_init(BOOT_BUTTON_PIN, BOOT_BUTTON_MASK);
   button_init(LEFT_BUTTON_PIN, LEFT_BUTTON_MASK);
   button_init(RIGHT_BUTTON_PIN, RIGHT_BUTTON_MASK);
   button_init(UP_BUTTON_PIN, UP_BUTTON_MASK);
@@ -70,10 +72,10 @@ static void button_event_cb(void* arg, void* data) {
       0x0F;  // & 0x0F to get the event number without the mask
   const char* button_name_str = button_name_table[button_name];
   const char* button_event_str = button_event_table[button_event];
-  ESP_LOGI("", "");
   if (button_event != BUTTON_PRESS_DOWN) {
     return;
   }
+  printf("\n");
   ESP_LOGI(TAG, "Button: %s, Event: %s", button_name_str, button_event_str);
 
   switch (button_name) {
@@ -153,6 +155,7 @@ void handle_selected_option() {
       handle_bluetooth_apps_selection();
       break;
     case LAYER_ZIGBEE_APPS:
+      handle_zigbee_apps_selection();
       break;
     case LAYER_THREAD_APPS:
       handle_thread_apps_selection();
@@ -164,6 +167,9 @@ void handle_selected_option() {
       break;
     case LAYER_WIFI_SNIFFER:
       handle_wifi_sniffer_selection();
+      break;
+    case LAYER_ZIGBEE_SPOOFING:
+      handle_zigbee_spoofing_selection();
       break;
     default:
       ESP_LOGE(TAG, "Invalid layer");
@@ -214,13 +220,21 @@ void update_previous_layer() {
     case LAYER_BLUETOOTH_AIRTAGS_SCAN:
       previous_layer = LAYER_BLUETOOTH_APPS;
       break;
+    case LAYER_ZIGBEE_SPOOFING:
+      previous_layer = LAYER_ZIGBEE_APPS;
+      break;
+    case LAYER_ZIGBEE_SWITCH:
+    case LAYER_ZIGBEE_LIGHT:
+      previous_layer = LAYER_ZIGBEE_SPOOFING;
+      break;
     /* GPS apps */
     case LAYER_GPS_DATE_TIME:
     case LAYER_GPS_LOCATION:
       previous_layer = LAYER_GPS;
       break;
     default:
-      ESP_LOGE(TAG, "Invalid layer");
+      ESP_LOGE(TAG, "Unable to update previous layer, current layer: %d",
+               current_layer);
       break;
   }
 }
@@ -249,8 +263,6 @@ void handle_applications_selection() {
       break;
     case APPLICATIONS_MENU_ZIGBEE:
       current_layer = LAYER_ZIGBEE_APPS;
-      display_clear();
-      display_in_development_banner();
       break;
     case APPLICATIONS_MENU_THREAD:
       current_layer = LAYER_THREAD_APPS;
@@ -333,6 +345,27 @@ void handle_bluetooth_apps_selection() {
       current_layer = LAYER_BLUETOOTH_AIRTAGS_SCAN;
       display_clear();
       bluetooth_scanner_start();
+      break;
+  }
+}
+
+void handle_zigbee_apps_selection() {
+  switch (selected_option) {
+    case ZIGBEE_MENU_SPOOFING:
+      current_layer = LAYER_ZIGBEE_SPOOFING;
+      break;
+  }
+}
+
+void handle_zigbee_spoofing_selection() {
+  switch (selected_option) {
+    case ZIGBEE_SPOOFING_SWITCH:
+      current_layer = LAYER_ZIGBEE_SWITCH;
+      break;
+    case ZIGBEE_SPOOFING_LIGHT:
+      current_layer = LAYER_ZIGBEE_LIGHT;
+      display_clear();
+      display_in_development_banner();
       break;
   }
 }
