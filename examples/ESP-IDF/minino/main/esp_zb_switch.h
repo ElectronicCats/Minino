@@ -35,7 +35,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #include "esp_zigbee_core.h"
-#include "switch_driver.h"
 
 /* Zigbee configuration */
 #define MAX_CHILDREN 10 /* the max amount of connected devices */

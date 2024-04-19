@@ -52,9 +52,6 @@ typedef struct light_bulb_device_params_s {
   uint16_t short_addr;
 } light_bulb_device_params_t;
 
-static switch_func_pair_t button_func_pair[] = {
-    {GPIO_INPUT_IO_TOGGLE_SWITCH, SWITCH_ONOFF_TOGGLE_CONTROL}};
-
 static const char* TAG = "ESP_ZB_ON_OFF_SWITCH";
 
 void zb_switch_toggle() {
@@ -65,12 +62,6 @@ void zb_switch_toggle() {
   cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_TOGGLE_ID;
   ESP_EARLY_LOGI(TAG, "Send 'on_off toggle' command");
   esp_zb_zcl_on_off_cmd_req(&cmd_req);
-}
-
-static void esp_zb_buttons_handler(switch_func_pair_t* button_func_pair) {
-  if (button_func_pair->func == SWITCH_ONOFF_TOGGLE_CONTROL) {
-    zb_switch_toggle();
-  }
 }
 
 static void bdb_start_top_level_commissioning_cb(uint8_t mode_mask) {
@@ -201,7 +192,5 @@ void zb_switch_init() {
   };
   ESP_ERROR_CHECK(nvs_flash_init());
   ESP_ERROR_CHECK(esp_zb_platform_config(&config));
-  switch_driver_init(button_func_pair, PAIR_SIZE(button_func_pair),
-                     esp_zb_buttons_handler);
   xTaskCreate(esp_zb_task, "Zigbee_main", 4096, NULL, 5, NULL);
 }
