@@ -3,6 +3,7 @@
 #include "bluetooth_scanner.h"
 #include "display.h"
 #include "esp_log.h"
+#include "esp_zb_switch.h"
 #include "keyboard_helper.h"
 
 static const char* TAG = "keyboard";
@@ -20,6 +21,7 @@ void handle_wifi_sniffer_selection();
 void handle_bluetooth_apps_selection();
 void handle_zigbee_apps_selection();
 void handle_zigbee_spoofing_selection();
+void handle_zigbee_switch_selection();
 void handle_thread_apps_selection();
 void handle_gps_selection();
 
@@ -170,6 +172,9 @@ void handle_selected_option() {
       break;
     case LAYER_ZIGBEE_SPOOFING:
       handle_zigbee_spoofing_selection();
+      break;
+    case LAYER_ZIGBEE_SWITCH:
+      handle_zigbee_switch_selection();
       break;
     default:
       ESP_LOGE(TAG, "Invalid layer");
@@ -366,6 +371,15 @@ void handle_zigbee_spoofing_selection() {
       current_layer = LAYER_ZIGBEE_LIGHT;
       display_clear();
       display_in_development_banner();
+      break;
+  }
+}
+
+void handle_zigbee_switch_selection() {
+  switch (selected_option) {
+    case ZIGBEE_SWITCH_TOGGLE:
+      current_layer = LAYER_ZIGBEE_SWITCH;
+      zb_switch_toggle();
       break;
   }
 }

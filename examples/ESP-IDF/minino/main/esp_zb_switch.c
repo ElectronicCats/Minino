@@ -57,15 +57,19 @@ static switch_func_pair_t button_func_pair[] = {
 
 static const char* TAG = "ESP_ZB_ON_OFF_SWITCH";
 
+void zb_switch_toggle() {
+  /* implemented light switch toggle functionality */
+  esp_zb_zcl_on_off_cmd_t cmd_req;
+  cmd_req.zcl_basic_cmd.src_endpoint = HA_ONOFF_SWITCH_ENDPOINT;
+  cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
+  cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_TOGGLE_ID;
+  ESP_EARLY_LOGI(TAG, "Send 'on_off toggle' command");
+  esp_zb_zcl_on_off_cmd_req(&cmd_req);
+}
+
 static void esp_zb_buttons_handler(switch_func_pair_t* button_func_pair) {
   if (button_func_pair->func == SWITCH_ONOFF_TOGGLE_CONTROL) {
-    /* implemented light switch toggle functionality */
-    esp_zb_zcl_on_off_cmd_t cmd_req;
-    cmd_req.zcl_basic_cmd.src_endpoint = HA_ONOFF_SWITCH_ENDPOINT;
-    cmd_req.address_mode = ESP_ZB_APS_ADDR_MODE_DST_ADDR_ENDP_NOT_PRESENT;
-    cmd_req.on_off_cmd_id = ESP_ZB_ZCL_CMD_ON_OFF_TOGGLE_ID;
-    ESP_EARLY_LOGI(TAG, "Send 'on_off toggle' command");
-    esp_zb_zcl_on_off_cmd_req(&cmd_req);
+    zb_switch_toggle();
   }
 }
 

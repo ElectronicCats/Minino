@@ -62,3 +62,4 @@
   { .host_connection_mode = HOST_CONNECTION_MODE_NONE, }
 
 void zb_switch_init();
+void zb_switch_toggle();

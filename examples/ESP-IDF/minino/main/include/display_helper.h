@@ -96,6 +96,10 @@ enum ZigbeeSpoofingMenuItem {
   ZIGBEE_SPOOFING_LIGHT,
 };
 
+enum ZigbeeSwitchMenuItem {
+  ZIGBEE_SWITCH_TOGGLE = 0,
+};
+
 enum ThreadMenuItem {
   THREAD_MENU_CLI = 0,
 };
