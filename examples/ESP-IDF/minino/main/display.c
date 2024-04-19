@@ -11,7 +11,7 @@
 
 static const char* TAG = "display";
 SH1106_t dev;
-uint8_t selected_option;
+uint8_t selected_item;
 Layer previous_layer;
 Layer current_layer;
 int num_items;
@@ -25,7 +25,7 @@ static void gps_event_handler(void* event_handler_arg,
                               void* event_data);
 
 void display_init() {
-  selected_option = 0;
+  selected_item = 0;
   previous_layer = LAYER_MAIN_MENU;
   current_layer = LAYER_MAIN_MENU;
   num_items = 0;
@@ -188,11 +188,11 @@ void display_menu_items(char** items) {
   for (int i = 0; i < 3; i++) {
     char* text = (char*) malloc(20);
     if (i == 0) {
-      sprintf(text, " %s", items[i + selected_option]);
+      sprintf(text, " %s", items[i + selected_item]);
     } else if (i == 1) {
-      sprintf(text, "  %s", items[i + selected_option]);
+      sprintf(text, "  %s", items[i + selected_item]);
     } else {
-      sprintf(text, " %s", items[i + selected_option]);
+      sprintf(text, " %s", items[i + selected_item]);
     }
 
     display_text(text, 0, page, NO_INVERT);
@@ -203,15 +203,14 @@ void display_menu_items(char** items) {
 }
 
 void display_scrolling_text(char** text) {
-  uint8_t startIdx = (selected_option >= 7) ? selected_option - 6 : 0;
-  selected_option =
-      (num_items - 2 > 7 && selected_option < 6) ? 6 : selected_option;
+  uint8_t startIdx = (selected_item >= 7) ? selected_item - 6 : 0;
+  selected_item = (num_items - 2 > 7 && selected_item < 6) ? 6 : selected_item;
   display_clear();
   // ESP_LOGI(TAG, "num: %d", num_items - 2);
 
   for (uint8_t i = startIdx; i < num_items - 2; i++) {
     // ESP_LOGI(TAG, "Text[%d]: %s", i, text[i]);
-    if (i == selected_option) {
+    if (i == selected_item) {
       display_text(text[i], 0, i - startIdx,
                    NO_INVERT);  // Change it to INVERT to debug
     } else {
@@ -426,4 +425,13 @@ static void gps_event_handler(void* event_handler_arg,
     default:
       break;
   }
+}
+
+void display_zb_switch_toggle_pressed() {
+  sh1106_bitmaps(&dev, 0, 0, epd_bitmap_toggle_btn_pressed, 128, 64, NO_INVERT);
+}
+
+void display_zb_switch_toggle_released() {
+  sh1106_bitmaps(&dev, 0, 0, epd_bitmap_toggle_btn_released, 128, 64,
+                 NO_INVERT);
 }

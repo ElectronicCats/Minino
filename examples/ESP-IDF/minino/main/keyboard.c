@@ -25,6 +25,8 @@ void handle_zigbee_switch_selection();
 void handle_thread_apps_selection();
 void handle_gps_selection();
 
+uint8_t button_event;
+
 void button_init(uint32_t button_num, uint8_t mask) {
   button_config_t btn_cfg = {
       .type = BUTTON_TYPE_GPIO,
@@ -69,15 +71,13 @@ void keyboard_init() {
 static void button_event_cb(void* arg, void* data) {
   uint8_t button_name =
       (((button_event_t) data) >> 4);  // >> 4 to get the button number
-  uint8_t button_event =
-      ((button_event_t) data) &
-      0x0F;  // & 0x0F to get the event number without the mask
+  button_event = ((button_event_t) data) &
+                 0x0F;  // & 0x0F to get the event number without the mask
   const char* button_name_str = button_name_table[button_name];
   const char* button_event_str = button_event_table[button_event];
-  if (button_event != BUTTON_PRESS_DOWN) {
-    return;
-  }
-  printf("\n");
+  // if (button_event != BUTTON_PRESS_DOWN) {
+  //   return;
+  // }
   ESP_LOGI(TAG, "Button: %s, Event: %s", button_name_str, button_event_str);
 
   switch (button_name) {
@@ -90,26 +90,30 @@ static void button_event_cb(void* arg, void* data) {
     case RIGHT:
       if (button_event == BUTTON_PRESS_DOWN)
         handle_selected_option();
+      if (button_event == BUTTON_PRESS_UP &&
+          current_layer == LAYER_ZIGBEE_SWITCH)
+        handle_selected_option();
       break;
     case UP:
       if (button_event == BUTTON_PRESS_DOWN) {
-        selected_option = (selected_option == 0) ? 0 : selected_option - 1;
+        selected_item = (selected_item == 0) ? 0 : selected_item - 1;
         display_menu();
       }
       break;
     case DOWN:
       if (button_event == BUTTON_PRESS_DOWN) {
-        selected_option = (selected_option == num_items - 3)
-                              ? selected_option
-                              : selected_option + 1;
+        selected_item = (selected_item == num_items - 3) ? selected_item
+                                                         : selected_item + 1;
         display_menu();
       }
       break;
   }
 
-  ESP_LOGI(TAG, "Selected option: %d", selected_option);
-  ESP_LOGI(TAG, "Options length: %d", num_items);
-  ESP_LOGI(TAG, "Current layer: %d", current_layer);
+  if (button_event == BUTTON_PRESS_DOWN) {
+    ESP_LOGI(TAG, "Selected option: %d", selected_item);
+    ESP_LOGI(TAG, "Options length: %d", num_items);
+    ESP_LOGI(TAG, "Current layer: %d", current_layer);
+  }
   update_previous_layer();
 }
 
@@ -132,7 +136,7 @@ void handle_back() {
   }
 
   current_layer = previous_layer;
-  selected_option = 0;
+  selected_item = 0;
   display_menu();
 }
 
@@ -181,7 +185,7 @@ void handle_selected_option() {
       break;
   }
 
-  selected_option = 0;
+  selected_item = 0;
   display_menu();
 }
 
@@ -245,7 +249,7 @@ void update_previous_layer() {
 }
 
 void handle_main_selection() {
-  switch (selected_option) {
+  switch (selected_item) {
     case MAIN_MENU_APPLICATIONS:
       current_layer = LAYER_APPLICATIONS;
       break;
@@ -259,7 +263,7 @@ void handle_main_selection() {
 }
 
 void handle_applications_selection() {
-  switch (selected_option) {
+  switch (selected_item) {
     case APPLICATIONS_MENU_WIFI:
       current_layer = LAYER_WIFI_APPS;
       break;
@@ -284,7 +288,7 @@ void handle_applications_selection() {
 }
 
 void handle_settings_selection() {
-  switch (selected_option) {
+  switch (selected_item) {
     case SETTINGS_MENU_DISPLAY:
       current_layer = LAYER_SETTINGS_DISPLAY;
       display_clear();
@@ -304,7 +308,7 @@ void handle_settings_selection() {
 }
 
 void handle_about_selection() {
-  switch (selected_option) {
+  switch (selected_item) {
     case ABOUT_MENU_VERSION:
       current_layer = LAYER_ABOUT_VERSION;
       break;
@@ -321,7 +325,7 @@ void handle_about_selection() {
 }
 
 void handle_wifi_apps_selection() {
-  switch (selected_option) {
+  switch (selected_item) {
     case WIFI_MENU_SNIFFER:
       current_layer = LAYER_WIFI_SNIFFER;
       break;
@@ -329,7 +333,7 @@ void handle_wifi_apps_selection() {
 }
 
 void handle_wifi_sniffer_selection() {
-  switch (selected_option) {
+  switch (selected_item) {
     case WIFI_SNIFFER_START:
       current_layer = LAYER_WIFI_SNIFFER_START;
       display_clear();
@@ -339,13 +343,13 @@ void handle_wifi_sniffer_selection() {
       current_layer = LAYER_WIFI_SNIFFER_SETTINGS;
       break;
     default:
-      ESP_LOGE(TAG, "Invalid option: %d", selected_option);
+      ESP_LOGE(TAG, "Invalid option: %d", selected_item);
       break;
   }
 }
 
 void handle_bluetooth_apps_selection() {
-  switch (selected_option) {
+  switch (selected_item) {
     case BLUETOOTH_MENU_AIRTAGS_SCAN:
       current_layer = LAYER_BLUETOOTH_AIRTAGS_SCAN;
       display_clear();
@@ -355,7 +359,7 @@ void handle_bluetooth_apps_selection() {
 }
 
 void handle_zigbee_apps_selection() {
-  switch (selected_option) {
+  switch (selected_item) {
     case ZIGBEE_MENU_SPOOFING:
       current_layer = LAYER_ZIGBEE_SPOOFING;
       break;
@@ -363,7 +367,7 @@ void handle_zigbee_apps_selection() {
 }
 
 void handle_zigbee_spoofing_selection() {
-  switch (selected_option) {
+  switch (selected_item) {
     case ZIGBEE_SPOOFING_SWITCH:
       current_layer = LAYER_ZIGBEE_SWITCH;
       break;
@@ -376,16 +380,24 @@ void handle_zigbee_spoofing_selection() {
 }
 
 void handle_zigbee_switch_selection() {
-  switch (selected_option) {
+  ESP_LOGI(TAG, "Selected item: %d", selected_item);
+  switch (selected_item) {
     case ZIGBEE_SWITCH_TOGGLE:
       current_layer = LAYER_ZIGBEE_SWITCH;
-      zb_switch_toggle();
+      if (button_event == BUTTON_PRESS_DOWN) {
+        ESP_LOGI(TAG, "Button pressed");
+        display_zb_switch_toggle_pressed();
+      } else if (button_event == BUTTON_PRESS_UP) {
+        ESP_LOGI(TAG, "Button released");
+        display_zb_switch_toggle_released();
+        zb_switch_toggle();
+      }
       break;
   }
 }
 
 void handle_thread_apps_selection() {
-  switch (selected_option) {
+  switch (selected_item) {
     case THREAD_MENU_CLI:
       current_layer = LAYER_THREAD_CLI;
       // display_thread_cli();
@@ -394,7 +406,7 @@ void handle_thread_apps_selection() {
 }
 
 void handle_gps_selection() {
-  switch (selected_option) {
+  switch (selected_item) {
     case GPS_MENU_DATE_TIME:
       current_layer = LAYER_GPS_DATE_TIME;
       break;
