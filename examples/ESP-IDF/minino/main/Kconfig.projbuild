@@ -1,3 +1,45 @@
+menu "KEYBOARD Configuration"
+	config GPIO_RANGE_MAX
+		int
+		default 33 if IDF_TARGET_ESP32
+		default 46 if IDF_TARGET_ESP32S2
+		default 48 if IDF_TARGET_ESP32S3
+		default 18 if IDF_TARGET_ESP32C2
+		default 19 if IDF_TARGET_ESP32C3
+		default 30 if IDF_TARGET_ESP32C6
+		default 27 if IDF_TARGET_ESP32H2
+	config BOOT_BUTTON
+		int "GPIO BOOT Button Pin"
+		range 0 GPIO_RANGE_MAX
+		default 9 if IDF_TARGET_ESP32C6
+		help
+			Select the GPIO pin number for the BOOT button.
+	config GPIO_LEFT_BUTTON
+		int "GPIO LEFT Button Pin"
+		range 0 GPIO_RANGE_MAX
+		default 22 if IDF_TARGET_ESP32C6
+		help
+			Select the GPIO pin number for the LEFT button.
+	config GPIO_RIGHT_BUTTON
+		int "GPIO RIGHT Button Pin"
+		range 0 GPIO_RANGE_MAX
+		default 1 if IDF_TARGET_ESP32C6
+		help
+			Select the GPIO pin number for the RIGHT button.
+	config GPIO_UP_BUTTON
+		int "GPIO UP Button Pin"
+		range 0 GPIO_RANGE_MAX
+		default 15 if IDF_TARGET_ESP32C6
+		help
+			Select the GPIO pin number for the UP button.
+	config GPIO_DOWN_BUTTON
+		int "GPIO DOWN Button Pin"
+		range 0 GPIO_RANGE_MAX
+		default 23 if IDF_TARGET_ESP32C6
+		help
+			Select the GPIO pin number for the DOWN button.
+endmenu
+
 menu "Frequency Configuration"
 
     choice EXAMPLE_MAX_CPU_FREQ

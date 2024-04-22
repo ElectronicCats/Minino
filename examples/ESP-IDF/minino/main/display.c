@@ -2,8 +2,8 @@
 #include "display_helper.h"
 #include "esp_log.h"
 #include "gps.h"
-#include "keyboard_helper.h"
 #include "leds.h"
+#include "modules/bitmaps.h"
 #include "string.h"
 
 #define TIME_ZONE (+8)    // Beijing Time

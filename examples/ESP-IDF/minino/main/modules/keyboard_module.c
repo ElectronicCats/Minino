@@ -1,16 +1,14 @@
-#include "keyboard.h"
-
+#include "keyboard_module.h"
 #include "bluetooth_scanner.h"
 #include "display.h"
 #include "esp_log.h"
 #include "esp_zb_switch.h"
-#include "keyboard_helper.h"
 
 static const char* TAG = "keyboard";
 
 static void button_event_cb(void* arg, void* data);
 void handle_back();
-void handle_selected_option();
+void handle_selected_item();
 void update_previous_layer();
 void handle_main_selection();
 void handle_applications_selection();
@@ -73,34 +71,34 @@ static void button_event_cb(void* arg, void* data) {
       (((button_event_t) data) >> 4);  // >> 4 to get the button number
   button_event = ((button_event_t) data) &
                  0x0F;  // & 0x0F to get the event number without the mask
-  const char* button_name_str = button_name_table[button_name];
-  const char* button_event_str = button_event_table[button_event];
+  const char* button_name_str = button_names[button_name];
+  const char* button_event_str = button_events_table[button_event];
   // if (button_event != BUTTON_PRESS_DOWN) {
   //   return;
   // }
   ESP_LOGI(TAG, "Button: %s, Event: %s", button_name_str, button_event_str);
 
   switch (button_name) {
-    case BOOT:
+    case BUTTON_BOOT:
       break;
-    case LEFT:
+    case BUTTON_LEFT:
       if (button_event == BUTTON_PRESS_DOWN)
         handle_back();
       break;
-    case RIGHT:
+    case BUTTON_RIGHT:
       if (button_event == BUTTON_PRESS_DOWN)
-        handle_selected_option();
+        handle_selected_item();
       if (button_event == BUTTON_PRESS_UP &&
           current_layer == LAYER_ZIGBEE_SWITCH)
-        handle_selected_option();
+        handle_selected_item();
       break;
-    case UP:
+    case BUTTON_UP:
       if (button_event == BUTTON_PRESS_DOWN) {
         selected_item = (selected_item == 0) ? 0 : selected_item - 1;
         display_menu();
       }
       break;
-    case DOWN:
+    case BUTTON_DOWN:
       if (button_event == BUTTON_PRESS_DOWN) {
         selected_item = (selected_item == num_items - 3) ? selected_item
                                                          : selected_item + 1;
@@ -110,8 +108,8 @@ static void button_event_cb(void* arg, void* data) {
   }
 
   if (button_event == BUTTON_PRESS_DOWN) {
-    ESP_LOGI(TAG, "Selected option: %d", selected_item);
-    ESP_LOGI(TAG, "Options length: %d", num_items);
+    ESP_LOGI(TAG, "Selected item: %d", selected_item);
+    ESP_LOGI(TAG, "Menu items: %d", num_items);
     ESP_LOGI(TAG, "Current layer: %d", current_layer);
   }
   update_previous_layer();
@@ -140,7 +138,7 @@ void handle_back() {
   display_menu();
 }
 
-void handle_selected_option() {
+void handle_selected_item() {
   switch (current_layer) {
     case LAYER_MAIN_MENU:
       handle_main_selection();
@@ -343,7 +341,7 @@ void handle_wifi_sniffer_selection() {
       current_layer = LAYER_WIFI_SNIFFER_SETTINGS;
       break;
     default:
-      ESP_LOGE(TAG, "Invalid option: %d", selected_item);
+      ESP_LOGE(TAG, "Invalid item: %d", selected_item);
       break;
   }
 }
