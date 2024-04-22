@@ -1,5 +1,4 @@
-#include "display.h"
-#include "display_helper.h"
+#include "modules/menu_screen_modules.h"
 #include "esp_log.h"
 #include "gps.h"
 #include "leds.h"

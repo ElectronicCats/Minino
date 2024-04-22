@@ -1,5 +1,4 @@
-#ifndef DISPLAY_HELPER_H
-#define DISPLAY_HELPER_H
+#pragma once
 
 #include <stddef.h>
 
@@ -262,5 +261,3 @@ static char** menu_items[] = {
     empty_items,  // Sound
     empty_items,  // System
 };
-
-#endif  // DISPLAY_HELPER_H

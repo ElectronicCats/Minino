@@ -1,8 +1,8 @@
 #include "keyboard_module.h"
 #include "bluetooth_scanner.h"
-#include "display.h"
 #include "esp_log.h"
 #include "esp_zb_switch.h"
+#include "menu_screen_modules.h"
 
 static const char* TAG = "keyboard";
 

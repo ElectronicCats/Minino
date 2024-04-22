@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include "bluetooth_scanner.h"
-#include "display.h"
 #include "esp_zb_switch.h"
 #include "leds.h"
 #include "modules/keyboard_module.h"
+#include "modules/menu_screen_modules.h"
 #include "sd_card.h"
 
 static const char* TAG = "main";

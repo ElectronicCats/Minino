@@ -4,7 +4,7 @@
 #include "bluetooth_scanner.h"
 #include "buzzer.h"
 #include "cmd_sniffer.h"
-#include "display_helper.h"
+#include "screen_modules.h"
 #include "sh1106.h"
 #include "wifi_sniffer.h"
 
