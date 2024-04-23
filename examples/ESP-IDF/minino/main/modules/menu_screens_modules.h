@@ -30,6 +30,12 @@ void display_clear(void);
 void display_show(void);
 void display_text(const char* text, int x, int page, int invert);
 void display_clear_line(int x, int page, int invert);
+void display_bitmap(const uint8_t* bitmap,
+                    int x,
+                    int y,
+                    int width,
+                    int height,
+                    int invert);
 void display_selected_item_box();
 char** add_empty_strings(char** array, int length);
 char** remove_srolling_text_flag(char** items, int length);
@@ -46,8 +52,6 @@ void display_thread_cli();
 void display_in_development_banner();
 void display_gps_init();
 void display_gps_deinit();
-void display_zb_switch_toggle_pressed();
-void display_zb_switch_toggle_released();
 
 /**
  * @brief Get the app state

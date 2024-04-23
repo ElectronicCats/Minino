@@ -1,8 +1,8 @@
 #include "keyboard.h"
 #include "bluetooth_scanner.h"
 #include "esp_log.h"
-#include "esp_zb_switch.h"
 #include "menu_screens_modules.h"
+#include "zigbee_switch.h"
 
 static const char* TAG = "keyboard";
 

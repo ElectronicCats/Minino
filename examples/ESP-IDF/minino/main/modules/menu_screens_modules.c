@@ -4,6 +4,7 @@
 #include "leds.h"
 #include "modules/bitmaps.h"
 #include "string.h"
+#include "zigbee_switch.h"
 
 #define MAX_MENU_ITEMS_PER_SCREEN 3
 #define TIME_ZONE                 (+8)    // Beijing Time
@@ -126,6 +127,22 @@ void display_text(const char* text, int x, int page, int invert) {
 void display_clear_line(int x, int page, int invert) {
   // sh1106_clear_line(&dev, x, page, invert);
   sh1106_bitmaps(&dev, x, page * 8, epd_bitmap_clear_line, 128 - x, 8, invert);
+}
+
+/// @brief Display a bitmap on the screen
+/// @param bitmap
+/// @param x
+/// @param y
+/// @param width
+/// @param height
+/// @param invert
+void display_bitmap(const uint8_t* bitmap,
+                    int x,
+                    int y,
+                    int width,
+                    int height,
+                    int invert) {
+  sh1106_bitmaps(&dev, x, y, bitmap, width, height, invert);
 }
 
 /// @brief Display a box around the selected item
@@ -446,15 +463,6 @@ static void gps_event_handler(void* event_handler_arg,
   }
 }
 
-void display_zb_switch_toggle_pressed() {
-  sh1106_bitmaps(&dev, 0, 0, epd_bitmap_toggle_btn_pressed, 128, 64, NO_INVERT);
-}
-
-void display_zb_switch_toggle_released() {
-  sh1106_bitmaps(&dev, 0, 0, epd_bitmap_toggle_btn_released, 128, 64,
-                 NO_INVERT);
-}
-
 app_state_t menu_screens_get_app_state() {
   return app_state;
 }
@@ -738,6 +746,7 @@ void handle_zigbee_spoofing_selection() {
   switch (selected_item) {
     case ZIGBEE_SPOOFING_SWITCH:
       current_layer = LAYER_ZIGBEE_SWITCH;
+      zigbee_switch_init();
       break;
     case ZIGBEE_SPOOFING_LIGHT:
       current_layer = LAYER_ZIGBEE_LIGHT;
@@ -752,14 +761,6 @@ void handle_zigbee_switch_selection() {
   switch (selected_item) {
     case ZIGBEE_SWITCH_TOGGLE:
       current_layer = LAYER_ZIGBEE_SWITCH;
-      // if (button_event == BUTTON_PRESS_DOWN) {
-      //   ESP_LOGI(TAG, "Button pressed");
-      //   display_zb_switch_toggle_pressed();
-      // } else if (button_event == BUTTON_PRESS_UP) {
-      //   ESP_LOGI(TAG, "Button released");
-      //   display_zb_switch_toggle_released();
-      //   zb_switch_toggle();
-      // }
       break;
   }
 }

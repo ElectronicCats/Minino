@@ -60,5 +60,5 @@
 #define ESP_ZB_DEFAULT_HOST_CONFIG() \
   { .host_connection_mode = HOST_CONNECTION_MODE_NONE, }
 
-void zb_switch_init();
-void zb_switch_toggle();
+void zigbee_switch_init();
+void zigbee_switch_toggle();

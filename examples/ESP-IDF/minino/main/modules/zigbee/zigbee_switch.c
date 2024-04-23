@@ -35,13 +35,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "esp_zb_switch.h"
+#include "zigbee_switch.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "ha/esp_zigbee_ha_standard.h"
+#include "keyboard.h"
+#include "menu_screens_modules.h"
 #include "nvs_flash.h"
 #include "string.h"
+#include "zigbee_screens.h"
 
 #if defined ZB_ED_ROLE
   #error Define ZB_COORDINATOR_ROLE in idf.py menuconfig to compile light switch source code.
@@ -54,7 +57,7 @@ typedef struct light_bulb_device_params_s {
 
 static const char* TAG = "ESP_ZB_ON_OFF_SWITCH";
 
-void zb_switch_toggle() {
+void zigbee_switch_toggle() {
   /* implemented light switch toggle functionality */
   esp_zb_zcl_on_off_cmd_t cmd_req;
   cmd_req.zcl_basic_cmd.src_endpoint = HA_ONOFF_SWITCH_ENDPOINT;
@@ -185,7 +188,31 @@ static void esp_zb_task(void* pvParameters) {
   esp_zb_main_loop_iteration();
 }
 
-void zb_switch_init() {
+void zigbee_switch_state_machine(button_event_t button_pressed) {
+  uint8_t button_name = button_pressed >> 4;  // >> 4 to get the button number
+  uint8_t button_event =
+      button_pressed & 0x0F;  // & 0x0F to get the event number without the mask
+
+  switch (button_name) {
+    case BUTTON_RIGHT:
+      switch (button_event) {
+        case BUTTON_PRESS_DOWN:
+          display_zb_switch_toggle_pressed();
+          break;
+        case BUTTON_PRESS_UP:
+          display_zb_switch_toggle_released();
+          zigbee_switch_toggle();
+          break;
+      }
+      break;
+    default:
+      ESP_LOGI(TAG, "Button: %s, Event: %s", button_names[button_name],
+               button_events_table[button_event]);
+      break;
+  }
+}
+
+void zigbee_switch_init() {
   esp_zb_platform_config_t config = {
       .radio_config = ESP_ZB_DEFAULT_RADIO_CONFIG(),
       .host_config = ESP_ZB_DEFAULT_HOST_CONFIG(),
@@ -193,4 +220,6 @@ void zb_switch_init() {
   ESP_ERROR_CHECK(nvs_flash_init());
   ESP_ERROR_CHECK(esp_zb_platform_config(&config));
   xTaskCreate(esp_zb_task, "Zigbee_main", 4096, NULL, 5, NULL);
+
+  menu_screens_set_app_state(true, zigbee_switch_state_machine);
 }

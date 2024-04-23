@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include "bluetooth_scanner.h"
-#include "esp_zb_switch.h"
 #include "keyboard.h"
 #include "leds.h"
 #include "modules/menu_screens_modules.h"
@@ -16,7 +15,6 @@ void app_main(void) {
   buzzer_init();
   wifi_sniffer_init();
   bluetooth_scanner_init();
-  zb_switch_init();
   // thread_cli_init();
   menu_screens_init();
   // Init the keyboard after the display to avoid skipping the logo
