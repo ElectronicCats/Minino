@@ -44,5 +44,22 @@ enum button_name {
   BUTTON_DOWN,
 };
 
-void button_init(uint32_t button_num, uint8_t mask);
+/**
+ * @brief Struct to hold the button state
+ *
+ */
+typedef struct {
+  uint8_t button_pressed;
+  uint8_t button_event;
+} button_event_state_t;
+
+/**
+ * @brief Initialize the keyboard button
+ *
+ * @param uint32_t button_pin Button pin
+ * @param uint8_t mask Mask
+ * @param void handler function pointer for the button event callback
+ *
+ * @return void
+ */
 void keyboard_init();

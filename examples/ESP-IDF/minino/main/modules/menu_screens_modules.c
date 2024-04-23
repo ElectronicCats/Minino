@@ -1,14 +1,15 @@
-#include "modules/menu_screen_modules.h"
+#include "modules/menu_screens_modules.h"
 #include "esp_log.h"
 #include "gps.h"
 #include "leds.h"
 #include "modules/bitmaps.h"
 #include "string.h"
 
-#define TIME_ZONE (+8)    // Beijing Time
-#define YEAR_BASE (2000)  // date in GPS starts from 2000
+#define MAX_MENU_ITEMS_PER_SCREEN 3
+#define TIME_ZONE                 (+8)    // Beijing Time
+#define YEAR_BASE                 (2000)  // date in GPS starts from 2000
 
-static const char* TAG = "display";
+static const char* TAG = "menu_screens_modules";
 SH1106_t dev;
 uint8_t selected_item;
 Layer previous_layer;
@@ -18,12 +19,31 @@ uint8_t bluetooth_devices_count;
 nmea_parser_handle_t nmea_hdl;
 TaskHandle_t wifi_sniffer_task_handle = NULL;
 
+static app_state_t app_state = {
+    .in_app = false,
+    .app_handler = NULL,
+};
+
+// Function prototypes
+void handle_main_selection();
+void handle_applications_selection();
+void handle_settings_selection();
+void handle_about_selection();
+void handle_wifi_apps_selection();
+void handle_wifi_sniffer_selection();
+void handle_bluetooth_apps_selection();
+void handle_zigbee_apps_selection();
+void handle_zigbee_spoofing_selection();
+void handle_zigbee_switch_selection();
+void handle_thread_apps_selection();
+void handle_gps_selection();
+
 static void gps_event_handler(void* event_handler_arg,
                               esp_event_base_t event_base,
                               int32_t event_id,
                               void* event_data);
 
-void display_init() {
+void menu_screens_init() {
   selected_item = 0;
   previous_layer = LAYER_MAIN_MENU;
   current_layer = LAYER_MAIN_MENU;
@@ -433,4 +453,333 @@ void display_zb_switch_toggle_pressed() {
 void display_zb_switch_toggle_released() {
   sh1106_bitmaps(&dev, 0, 0, epd_bitmap_toggle_btn_released, 128, 64,
                  NO_INVERT);
+}
+
+app_state_t menu_screens_get_app_state() {
+  return app_state;
+}
+
+void menu_screens_set_app_state(
+    bool in_app,
+    void (*app_handler)(button_event_t button_pressed)) {
+  app_state.in_app = in_app;
+  app_state.app_handler = app_handler;
+}
+
+void menu_screens_exit_submenu() {
+  ESP_LOGI(TAG, "Exiting submenu");
+  ESP_LOGI(TAG, "Previous layer: %d Current: %d", previous_layer,
+           current_layer);
+
+  switch (current_layer) {
+    case LAYER_WIFI_SNIFFER_START:
+      wifi_sniffer_stop();
+      break;
+    case LAYER_BLUETOOTH_AIRTAGS_SCAN:
+      if (bluetooth_scanner_is_active()) {
+        bluetooth_scanner_stop();
+      }
+      vTaskDelay(100 / portTICK_PERIOD_MS);  // Wait for the scanner to stop
+      break;
+    case LAYER_THREAD_CLI:
+      // thread_cli_stop();
+      break;
+    default:
+      break;
+  }
+
+  current_layer = previous_layer;
+  selected_item = 0;
+  display_menu();
+}
+
+void menu_screens_enter_submenu() {
+  ESP_LOGI(TAG, "Selected item: %d", selected_item);
+  switch (current_layer) {
+    case LAYER_MAIN_MENU:
+      handle_main_selection();
+      break;
+    case LAYER_APPLICATIONS:
+      handle_applications_selection();
+      break;
+    case LAYER_SETTINGS:
+      handle_settings_selection();
+      break;
+    case LAYER_ABOUT:
+      handle_about_selection();
+      break;
+    case LAYER_WIFI_APPS:
+      handle_wifi_apps_selection();
+      break;
+    case LAYER_BLUETOOTH_APPS:
+      handle_bluetooth_apps_selection();
+      break;
+    case LAYER_ZIGBEE_APPS:
+      handle_zigbee_apps_selection();
+      break;
+    case LAYER_THREAD_APPS:
+      handle_thread_apps_selection();
+      break;
+    case LAYER_MATTER_APPS:
+      break;
+    case LAYER_GPS:
+      handle_gps_selection();
+      break;
+    case LAYER_WIFI_SNIFFER:
+      handle_wifi_sniffer_selection();
+      break;
+    case LAYER_ZIGBEE_SPOOFING:
+      handle_zigbee_spoofing_selection();
+      break;
+    case LAYER_ZIGBEE_SWITCH:
+      handle_zigbee_switch_selection();
+      break;
+    default:
+      ESP_LOGE(TAG, "Invalid layer");
+      break;
+  }
+
+  selected_item = 0;
+  if (!app_state.in_app) {
+    display_menu();
+  }
+}
+
+void menu_screens_ingrement_selected_item() {
+  selected_item = (selected_item == num_items - MAX_MENU_ITEMS_PER_SCREEN)
+                      ? selected_item
+                      : selected_item + 1;
+  display_menu();
+}
+
+void menu_screens_decrement_selected_item() {
+  selected_item = (selected_item == 0) ? 0 : selected_item - 1;
+  display_menu();
+}
+
+void menu_screens_update_previous_layer() {
+  switch (current_layer) {
+    case LAYER_MAIN_MENU:
+    case LAYER_APPLICATIONS:
+    case LAYER_SETTINGS:
+    case LAYER_ABOUT:
+      previous_layer = LAYER_MAIN_MENU;
+      break;
+    case LAYER_WIFI_APPS:
+    case LAYER_BLUETOOTH_APPS:
+    case LAYER_ZIGBEE_APPS:
+    case LAYER_THREAD_APPS:
+    case LAYER_MATTER_APPS:
+    case LAYER_GPS:
+      previous_layer = LAYER_APPLICATIONS;
+      break;
+    case LAYER_ABOUT_VERSION:
+    case LAYER_ABOUT_LICENSE:
+    case LAYER_ABOUT_CREDITS:
+    case LAYER_ABOUT_LEGAL:
+      previous_layer = LAYER_ABOUT;
+      break;
+    case LAYER_SETTINGS_DISPLAY:
+    case LAYER_SETTINGS_SOUND:
+    case LAYER_SETTINGS_SYSTEM:
+      previous_layer = LAYER_SETTINGS;
+      break;
+    /* WiFi apps */
+    case LAYER_WIFI_SNIFFER:
+      previous_layer = LAYER_WIFI_APPS;
+      break;
+    /* WiFi sniffer apps */
+    case LAYER_WIFI_SNIFFER_START:
+    case LAYER_WIFI_SNIFFER_SETTINGS:
+      previous_layer = LAYER_WIFI_SNIFFER;
+      break;
+    /* Bluetooth apps */
+    case LAYER_BLUETOOTH_AIRTAGS_SCAN:
+      previous_layer = LAYER_BLUETOOTH_APPS;
+      break;
+    case LAYER_ZIGBEE_SPOOFING:
+      previous_layer = LAYER_ZIGBEE_APPS;
+      break;
+    case LAYER_ZIGBEE_SWITCH:
+    case LAYER_ZIGBEE_LIGHT:
+      previous_layer = LAYER_ZIGBEE_SPOOFING;
+      break;
+    /* GPS apps */
+    case LAYER_GPS_DATE_TIME:
+    case LAYER_GPS_LOCATION:
+      previous_layer = LAYER_GPS;
+      break;
+    default:
+      ESP_LOGE(TAG, "Unable to update previous layer, current layer: %d",
+               current_layer);
+      break;
+  }
+}
+
+void handle_main_selection() {
+  switch (selected_item) {
+    case MAIN_MENU_APPLICATIONS:
+      current_layer = LAYER_APPLICATIONS;
+      break;
+    case MAIN_MENU_SETTINGS:
+      current_layer = LAYER_SETTINGS;
+      break;
+    case MAIN_MENU_ABOUT:
+      current_layer = LAYER_ABOUT;
+      break;
+  }
+}
+
+void handle_applications_selection() {
+  switch (selected_item) {
+    case APPLICATIONS_MENU_WIFI:
+      current_layer = LAYER_WIFI_APPS;
+      break;
+    case APPLICATIONS_MENU_BLUETOOTH:
+      current_layer = LAYER_BLUETOOTH_APPS;
+      break;
+    case APPLICATIONS_MENU_ZIGBEE:
+      current_layer = LAYER_ZIGBEE_APPS;
+      break;
+    case APPLICATIONS_MENU_THREAD:
+      current_layer = LAYER_THREAD_APPS;
+      break;
+    case APPLICATIONS_MENU_MATTER:
+      current_layer = LAYER_MATTER_APPS;
+      display_clear();
+      display_in_development_banner();
+      break;
+    case APPLICATIONS_MENU_GPS:
+      current_layer = LAYER_GPS;
+      break;
+  }
+}
+
+void handle_settings_selection() {
+  switch (selected_item) {
+    case SETTINGS_MENU_DISPLAY:
+      current_layer = LAYER_SETTINGS_DISPLAY;
+      display_clear();
+      display_in_development_banner();
+      break;
+    case SETTINGS_MENU_SOUND:
+      current_layer = LAYER_SETTINGS_SOUND;
+      display_clear();
+      display_in_development_banner();
+      break;
+    case SETTINGS_MENU_SYSTEM:
+      current_layer = LAYER_SETTINGS_SYSTEM;
+      display_clear();
+      display_in_development_banner();
+      break;
+  }
+}
+
+void handle_about_selection() {
+  switch (selected_item) {
+    case ABOUT_MENU_VERSION:
+      current_layer = LAYER_ABOUT_VERSION;
+      break;
+    case ABOUT_MENU_LICENSE:
+      current_layer = LAYER_ABOUT_LICENSE;
+      break;
+    case ABOUT_MENU_CREDITS:
+      current_layer = LAYER_ABOUT_CREDITS;
+      break;
+    case ABOUT_MENU_LEGAL:
+      current_layer = LAYER_ABOUT_LEGAL;
+      break;
+  }
+}
+
+void handle_wifi_apps_selection() {
+  switch (selected_item) {
+    case WIFI_MENU_SNIFFER:
+      current_layer = LAYER_WIFI_SNIFFER;
+      break;
+  }
+}
+
+void handle_wifi_sniffer_selection() {
+  switch (selected_item) {
+    case WIFI_SNIFFER_START:
+      current_layer = LAYER_WIFI_SNIFFER_START;
+      display_clear();
+      wifi_sniffer_start();
+      break;
+    case WIFI_SNIFFER_SETTINGS:
+      current_layer = LAYER_WIFI_SNIFFER_SETTINGS;
+      break;
+    default:
+      ESP_LOGE(TAG, "Invalid item: %d", selected_item);
+      break;
+  }
+}
+
+void handle_bluetooth_apps_selection() {
+  switch (selected_item) {
+    case BLUETOOTH_MENU_AIRTAGS_SCAN:
+      current_layer = LAYER_BLUETOOTH_AIRTAGS_SCAN;
+      display_clear();
+      bluetooth_scanner_start();
+      break;
+  }
+}
+
+void handle_zigbee_apps_selection() {
+  switch (selected_item) {
+    case ZIGBEE_MENU_SPOOFING:
+      current_layer = LAYER_ZIGBEE_SPOOFING;
+      break;
+  }
+}
+
+void handle_zigbee_spoofing_selection() {
+  switch (selected_item) {
+    case ZIGBEE_SPOOFING_SWITCH:
+      current_layer = LAYER_ZIGBEE_SWITCH;
+      break;
+    case ZIGBEE_SPOOFING_LIGHT:
+      current_layer = LAYER_ZIGBEE_LIGHT;
+      display_clear();
+      display_in_development_banner();
+      break;
+  }
+}
+
+void handle_zigbee_switch_selection() {
+  ESP_LOGI(TAG, "Selected item: %d", selected_item);
+  switch (selected_item) {
+    case ZIGBEE_SWITCH_TOGGLE:
+      current_layer = LAYER_ZIGBEE_SWITCH;
+      // if (button_event == BUTTON_PRESS_DOWN) {
+      //   ESP_LOGI(TAG, "Button pressed");
+      //   display_zb_switch_toggle_pressed();
+      // } else if (button_event == BUTTON_PRESS_UP) {
+      //   ESP_LOGI(TAG, "Button released");
+      //   display_zb_switch_toggle_released();
+      //   zb_switch_toggle();
+      // }
+      break;
+  }
+}
+
+void handle_thread_apps_selection() {
+  switch (selected_item) {
+    case THREAD_MENU_CLI:
+      current_layer = LAYER_THREAD_CLI;
+      // display_thread_cli();
+      break;
+  }
+}
+
+void handle_gps_selection() {
+  switch (selected_item) {
+    case GPS_MENU_DATE_TIME:
+      current_layer = LAYER_GPS_DATE_TIME;
+      break;
+    case GPS_MENU_LOCATION:
+      current_layer = LAYER_GPS_LOCATION;
+      break;
+  }
 }
