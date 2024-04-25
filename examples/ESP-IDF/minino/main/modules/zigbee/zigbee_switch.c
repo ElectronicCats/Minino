@@ -205,6 +205,15 @@ void zigbee_switch_state_machine(button_event_t button_pressed) {
           break;
       }
       break;
+    case BUTTON_LEFT:
+      switch (button_event) {
+        case BUTTON_PRESS_DOWN:
+          zigbee_switch_deinit();
+          menu_screens_set_app_state(false, NULL);
+          menu_screens_exit_submenu();
+          break;
+      }
+      break;
     default:
       ESP_LOGI(TAG, "Button: %s, Event: %s", button_names[button_name],
                button_events_table[button_event]);
@@ -222,4 +231,8 @@ void zigbee_switch_init() {
   xTaskCreate(esp_zb_task, "Zigbee_main", 4096, NULL, 5, NULL);
 
   menu_screens_set_app_state(true, zigbee_switch_state_machine);
+}
+
+void zigbee_switch_deinit() {
+  esp_zb_factory_reset();
 }

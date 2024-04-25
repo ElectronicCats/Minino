@@ -2,7 +2,7 @@
 #include "bluetooth_scanner.h"
 #include "keyboard.h"
 #include "leds.h"
-#include "modules/menu_screens_modules.h"
+#include "menu_screens_modules.h"
 #include "sd_card.h"
 
 static const char* TAG = "main";

@@ -98,6 +98,11 @@ void menu_screens_ingrement_selected_item();
  */
 void menu_screens_decrement_selected_item();
 
+/**
+ * @brief Update the previous layer
+ *
+ * @return void
+ */
 void menu_screens_update_previous_layer();
 
 #endif  // DISPLAY_H

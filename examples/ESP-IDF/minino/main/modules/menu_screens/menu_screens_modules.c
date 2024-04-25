@@ -1,8 +1,8 @@
-#include "modules/menu_screens_modules.h"
+#include "menu_screens_modules.h"
+#include "bitmaps.h"
 #include "esp_log.h"
 #include "gps.h"
 #include "leds.h"
-#include "modules/bitmaps.h"
 #include "string.h"
 #include "zigbee_switch.h"
 
