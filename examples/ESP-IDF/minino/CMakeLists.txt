@@ -11,6 +11,7 @@ set(EXTRA_COMPONENT_DIRS components/iperf)
 set(EXTRA_COMPONENT_DIRS components/bluetooth_scanner)
 set(EXTRA_COMPONENT_DIRS components/leds)
 set(EXTRA_COMPONENT_DIRS components/sd_card)
+set(EXTRA_COMPONENT_DIRS components/preferences)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(minino)
