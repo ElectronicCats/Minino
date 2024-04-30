@@ -10,8 +10,8 @@
 static const char* TAG = "main";
 
 void reboot_counter() {
-  int counter = preferences_get_int("reboot_counter", 0);
-  ESP_LOGI(TAG, "Reboot counter: %d", counter);
+  int32_t counter = preferences_get_int("reboot_counter", 0);
+  ESP_LOGI(TAG, "Reboot counter: %ld", counter);
   counter++;
   preferences_put_int("reboot_counter", counter);
 }
