@@ -3,6 +3,7 @@
 #include "esp_log.h"
 #include "gps.h"
 #include "leds.h"
+#include "preferences.h"
 #include "string.h"
 #include "zigbee_switch.h"
 
@@ -92,10 +93,18 @@ void menu_screens_init() {
 
   // Show logo
   display_clear();
-  buzzer_play();
-  sh1106_bitmaps(&dev, 0, 0, epd_bitmap_logo_1, 128, 64, NO_INVERT);
-  buzzer_stop();
-  vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+  if (preferences_get_bool("zigbee_deinit", false)) {
+    current_layer = LAYER_ZIGBEE_SPOOFING;
+    preferences_put_bool("zigbee_deinit", false);
+  } else {
+    leds_on();  // Indicate that the system is booting
+    buzzer_play();
+    sh1106_bitmaps(&dev, 0, 0, epd_bitmap_logo_1, 128, 64, NO_INVERT);
+    buzzer_stop();
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
+
   display_menu();
   display_gps_init();
   xTaskCreate(&display_wifi_sniffer_animation_task,

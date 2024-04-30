@@ -18,7 +18,6 @@ void reboot_counter() {
 
 void app_main(void) {
   leds_init();
-  leds_on();  // Indicate that the system is booting
   preferences_begin();
   sd_card_init();
   buzzer_init();

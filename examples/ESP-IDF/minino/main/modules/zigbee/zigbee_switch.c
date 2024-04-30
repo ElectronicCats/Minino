@@ -43,6 +43,7 @@
 #include "keyboard.h"
 #include "menu_screens_modules.h"
 #include "nvs_flash.h"
+#include "preferences.h"
 #include "string.h"
 #include "zigbee_screens.h"
 
@@ -208,9 +209,8 @@ void zigbee_switch_state_machine(button_event_t button_pressed) {
     case BUTTON_LEFT:
       switch (button_event) {
         case BUTTON_PRESS_DOWN:
+          preferences_put_bool("zigbee_deinit", true);
           zigbee_switch_deinit();
-          menu_screens_set_app_state(false, NULL);
-          menu_screens_exit_submenu();
           break;
       }
       break;
