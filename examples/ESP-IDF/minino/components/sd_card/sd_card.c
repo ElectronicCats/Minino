@@ -8,7 +8,6 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
-#include "nvs_flash.h"
 #include "sdmmc_cmd.h"
 
 #define MOUNT_POINT  "/sdcard"
@@ -23,16 +22,6 @@ static struct {
   struct arg_str* device;
   struct arg_end* end;
 } mount_args;
-
-void initialize_nvs(void) {
-  esp_err_t err = nvs_flash_init();
-  if (err == ESP_ERR_NVS_NO_FREE_PAGES ||
-      err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-    ESP_ERROR_CHECK(nvs_flash_erase());
-    err = nvs_flash_init();
-  }
-  ESP_ERROR_CHECK(err);
-}
 
 /** 'mount' command */
 int mount(int argc, char** argv) {
@@ -144,7 +133,6 @@ void register_unmount(void) {
 }
 
 void sd_card_init() {
-  initialize_nvs();
   register_mount();
   register_unmount();
 }
