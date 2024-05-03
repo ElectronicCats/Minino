@@ -43,6 +43,7 @@ enum MenuLayer {
   /* About submenus */
 };
 
+typedef enum menu_layer_t screen_module_layer_t;
 typedef enum MenuLayer Layer;
 
 enum MainMenuItem {

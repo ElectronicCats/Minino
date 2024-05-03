@@ -13,8 +13,8 @@
 #define NO_INVERT 0
 
 extern uint8_t selected_item;
-extern Layer previous_layer;
-extern Layer current_layer;
+// extern screen_module_layer_t previous_layer;
+// extern screen_module_layer_t current_layer;
 extern int num_items;
 
 /**
@@ -69,6 +69,13 @@ app_state_t menu_screens_get_app_state();
 void menu_screens_set_app_state(
     bool in_app,
     void (*app_handler)(button_event_t button_pressed));
+
+/**
+ * @brief Get the current layer
+ *
+ * @return screen_module_layer_t
+ */
+Layer screen_module_get_current_layer(void);
 
 /**
  * @brief Exit the submenu

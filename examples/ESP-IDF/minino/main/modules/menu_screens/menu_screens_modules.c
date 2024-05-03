@@ -5,6 +5,7 @@
 #include "leds.h"
 #include "preferences.h"
 #include "string.h"
+#include "zigbee_light.h"
 #include "zigbee_switch.h"
 
 #define MAX_MENU_ITEMS_PER_SCREEN 3
@@ -483,6 +484,10 @@ void menu_screens_set_app_state(
   app_state.app_handler = app_handler;
 }
 
+Layer screen_module_get_current_layer(void) {
+  return current_layer;
+}
+
 void menu_screens_exit_submenu() {
   ESP_LOGI(TAG, "Exiting submenu");
   ESP_LOGI(TAG, "Previous layer: %d Current: %d", previous_layer,
@@ -759,8 +764,7 @@ void handle_zigbee_spoofing_selection() {
       break;
     case ZIGBEE_SPOOFING_LIGHT:
       current_layer = LAYER_ZIGBEE_LIGHT;
-      display_clear();
-      display_in_development_banner();
+      zigbee_light_init();
       break;
   }
 }
