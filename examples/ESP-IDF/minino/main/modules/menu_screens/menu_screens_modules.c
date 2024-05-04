@@ -5,7 +5,6 @@
 #include "leds.h"
 #include "preferences.h"
 #include "string.h"
-#include "zigbee_light.h"
 #include "zigbee_switch.h"
 
 #define MAX_MENU_ITEMS_PER_SCREEN 3
@@ -764,7 +763,8 @@ void handle_zigbee_spoofing_selection() {
       break;
     case ZIGBEE_SPOOFING_LIGHT:
       current_layer = LAYER_ZIGBEE_LIGHT;
-      zigbee_light_init();
+      display_clear();
+      display_in_development_banner();
       break;
   }
 }
