@@ -45,13 +45,17 @@
 #include "preferences.h"
 #include "screen_modules.h"
 #include "string.h"
-#include "zigbee_screens.h"
+#include "zigbee_screens_module.h"
 
 typedef struct light_bulb_device_params_s {
   esp_zb_ieee_addr_t ieee_addr;
   uint8_t endpoint;
   uint16_t short_addr;
 } light_bulb_device_params_t;
+
+bool light_found = false;
+bool network_failed = false;
+TaskHandle_t network_failed_task_handle = NULL;
 
 static const char* TAG = "ESP_ZB_ON_OFF_SWITCH";
 
@@ -71,6 +75,8 @@ static void bdb_start_top_level_commissioning_cb(uint8_t mode_mask) {
 
 static void bind_cb(esp_zb_zdp_status_t zdo_status, void* user_ctx) {
   if (zdo_status == ESP_ZB_ZDP_STATUS_SUCCESS) {
+    light_found = true;
+    zigbee_screens_module_toggle_released();
     ESP_LOGI(TAG, "Bound successfully!");
     if (user_ctx) {
       light_bulb_device_params_t* light =
@@ -115,6 +121,7 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
   switch (sig_type) {
     case ESP_ZB_ZDO_SIGNAL_SKIP_STARTUP:
       ESP_LOGI(TAG, "Zigbee stack initialized");
+      zigbee_screens_module_creating_network();
       esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_INITIALIZATION);
       break;
     case ESP_ZB_BDB_SIGNAL_DEVICE_FIRST_START:
@@ -159,6 +166,7 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
     case ESP_ZB_BDB_SIGNAL_STEERING:
       if (err_status == ESP_OK) {
         ESP_LOGI(TAG, "Network steering started");
+        zigbee_screens_module_waiting_for_devices(3);
       }
       break;
     case ESP_ZB_ZDO_SIGNAL_DEVICE_ANNCE:
@@ -174,10 +182,12 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
     case ESP_ZB_NWK_SIGNAL_PERMIT_JOIN_STATUS:
       if (err_status == ESP_OK) {
         if (*(uint8_t*) esp_zb_app_signal_get_params(p_sg_p)) {
+          network_failed = false;
           ESP_LOGI(TAG, "Network(0x%04hx) is open for %d seconds",
                    esp_zb_get_pan_id(),
                    *(uint8_t*) esp_zb_app_signal_get_params(p_sg_p));
         } else {
+          network_failed = true;
           ESP_LOGW(TAG, "Network(0x%04hx) closed, devices joining not allowed.",
                    esp_zb_get_pan_id());
         }
@@ -188,6 +198,27 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
                esp_zb_zdo_signal_to_string(sig_type), sig_type,
                esp_err_to_name(err_status));
       break;
+  }
+}
+
+/**
+ * @brief Task to check if the network creation failed
+ *
+ * @param pvParameters
+ *
+ * @return void
+ */
+void network_failed_task(void* pvParameters) {
+  while (true) {
+    if (network_failed) {
+      // Wait for 2 seconds to check if the network creation failed
+      vTaskDelay(2000 / portTICK_PERIOD_MS);
+      if (network_failed && !light_found) {
+        zigbee_screens_module_creating_network_failed();
+        vTaskDelete(NULL);
+      }
+    }
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 }
 
@@ -213,18 +244,21 @@ void zigbee_switch_state_machine(button_event_t button_pressed) {
     case BUTTON_RIGHT:
       switch (button_event) {
         case BUTTON_PRESS_DOWN:
-          display_zb_switch_toggle_pressed();
+          if (light_found) {
+            zigbee_screens_module_toogle_pressed();
+          }
           break;
         case BUTTON_PRESS_UP:
-          display_zb_switch_toggle_released();
-          zigbee_switch_toggle();
+          if (light_found) {
+            zigbee_screens_module_toggle_released();
+            zigbee_switch_toggle();
+          }
           break;
       }
       break;
     case BUTTON_LEFT:
       switch (button_event) {
         case BUTTON_PRESS_DOWN:
-          preferences_put_bool("zigbee_deinit", true);
           zigbee_switch_deinit();
           break;
       }
@@ -244,8 +278,12 @@ void zigbee_switch_init() {
   ESP_ERROR_CHECK(esp_zb_platform_config(&config));
   menu_screens_set_app_state(true, zigbee_switch_state_machine);
   xTaskCreate(esp_zb_task, "Zigbee_main", 4096, NULL, 5, NULL);
+  xTaskCreate(network_failed_task, "Network_failed", 4096, NULL, 5,
+              &network_failed_task_handle);
 }
 
 void zigbee_switch_deinit() {
+  zigbee_screens_module_closing_network();
+  preferences_put_bool("zigbee_deinit", true);
   esp_zb_factory_reset();
 }
