@@ -23,11 +23,13 @@ void zigbee_screens_module_creating_network_failed() {
 }
 
 void zigbee_screens_module_waiting_for_devices(uint8_t dots) {
-  display_clear();
+  dots = dots > 3 ? 0 : dots;
+  display_clear_line(80, 4, NO_INVERT);
   display_text("Waiting for", 19, 3, NO_INVERT);
   display_text("devices", 24, 4, NO_INVERT);
+  // Print dots from lef to right
   for (int i = 0; i < dots; i++) {
-    display_text(".", 96 - (i * 8), 4, NO_INVERT);
+    display_text(".", 80 + (i * 8), 4, NO_INVERT);
   }
 }
 

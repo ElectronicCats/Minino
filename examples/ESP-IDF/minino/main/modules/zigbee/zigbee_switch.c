@@ -55,7 +55,9 @@ typedef struct light_bulb_device_params_s {
 
 bool light_found = false;
 bool network_failed = false;
+bool wait_for_devices = false;
 TaskHandle_t network_failed_task_handle = NULL;
+TaskFunction_t wait_for_devices_task_handle = NULL;
 
 static const char* TAG = "ESP_ZB_ON_OFF_SWITCH";
 
@@ -76,6 +78,7 @@ static void bdb_start_top_level_commissioning_cb(uint8_t mode_mask) {
 static void bind_cb(esp_zb_zdp_status_t zdo_status, void* user_ctx) {
   if (zdo_status == ESP_ZB_ZDP_STATUS_SUCCESS) {
     light_found = true;
+    wait_for_devices = false;
     zigbee_screens_module_toggle_released();
     ESP_LOGI(TAG, "Bound successfully!");
     if (user_ctx) {
@@ -166,7 +169,8 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
     case ESP_ZB_BDB_SIGNAL_STEERING:
       if (err_status == ESP_OK) {
         ESP_LOGI(TAG, "Network steering started");
-        zigbee_screens_module_waiting_for_devices(3);
+        wait_for_devices = true;
+        display_clear();
       }
       break;
     case ESP_ZB_ZDO_SIGNAL_DEVICE_ANNCE:
@@ -219,6 +223,25 @@ void network_failed_task(void* pvParameters) {
       }
     }
     vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
+}
+
+/**
+ * @brief Task to show the waiting for devices screen
+ *
+ * @param pvParameters
+ *
+ * @return void
+ */
+void wait_for_devices_task(void* pvParameters) {
+  uint8_t dots = 0;
+  while (true) {
+    if (!wait_for_devices) {
+      continue;
+    }
+    dots = dots > 3 ? 0 : dots + 1;
+    zigbee_screens_module_waiting_for_devices(dots);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
   }
 }
 
@@ -280,6 +303,8 @@ void zigbee_switch_init() {
   xTaskCreate(esp_zb_task, "Zigbee_main", 4096, NULL, 5, NULL);
   xTaskCreate(network_failed_task, "Network_failed", 4096, NULL, 5,
               &network_failed_task_handle);
+  xTaskCreate(wait_for_devices_task, "Wait_for_devices", 4096, NULL, 5,
+              &wait_for_devices_task_handle);
 }
 
 void zigbee_switch_deinit() {
