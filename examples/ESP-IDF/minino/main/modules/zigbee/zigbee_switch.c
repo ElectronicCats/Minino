@@ -40,7 +40,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "ha/esp_zigbee_ha_standard.h"
-#include "keyboard.h"
+#include "keyboard_module.h"
 #include "menu_screens_modules.h"
 #include "preferences.h"
 #include "screen_modules.h"
@@ -367,7 +367,7 @@ void switch_keyboard_cb(button_event_t button_pressed) {
       break;
     default:
       ESP_LOGI(TAG, "Button: %s, Event: %s", button_names[button_name],
-               button_events_table[button_event]);
+               button_events_name[button_event]);
       break;
   }
 }

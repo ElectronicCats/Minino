@@ -1,8 +1,6 @@
-#include "keyboard.h"
-#include "bluetooth_scanner.h"
+#include "keyboard_module.h"
 #include "esp_log.h"
 #include "menu_screens_modules.h"
-#include "zigbee_switch.h"
 
 static const char* TAG = "keyboard";
 
@@ -58,7 +56,7 @@ static void button_event_cb(void* arg, void* data) {
       ((button_event_t) data) &
       0x0F;  // & 0x0F to get the event number without the mask
   const char* button_name_str = button_names[button_name];
-  const char* button_event_str = button_events_table[button_event];
+  const char* button_event_str = button_events_name[button_event];
 
   ESP_LOGI(TAG, "Button: %s, Event: %s", button_name_str, button_event_str);
 
@@ -97,7 +95,7 @@ static void button_event_cb(void* arg, void* data) {
   menu_screens_update_previous_layer();
 }
 
-void keyboard_init() {
+void keyboard_module_begin() {
   // button_init(BOOT_BUTTON_PIN, BOOT_BUTTON_MASK);
   button_init(LEFT_BUTTON_PIN, LEFT_BUTTON_MASK);
   button_init(RIGHT_BUTTON_PIN, RIGHT_BUTTON_MASK);

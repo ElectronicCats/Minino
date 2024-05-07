@@ -2,7 +2,7 @@
 #include "bluetooth_scanner.h"
 #include "esp_log.h"
 #include "esp_timer.h"
-#include "keyboard.h"
+#include "keyboard_module.h"
 #include "leds.h"
 #include "menu_screens_modules.h"
 #include "preferences.h"
@@ -28,7 +28,7 @@ void app_main(void) {
   wifi_sniffer_init();
   bluetooth_scanner_init();
   menu_screens_init();
-  keyboard_init();
+  keyboard_module_begin();
   reboot_counter();
   leds_off();
 

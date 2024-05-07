@@ -1,4 +1,4 @@
-set(modules "modules/keyboard/keyboard.c"
+set(modules "modules/keyboard/keyboard_module.c"
             "modules/menu_screens/menu_screens_modules.c"
             "modules/zigbee/zigbee_switch.c"
             "modules/zigbee/zigbee_screens_module.c")
