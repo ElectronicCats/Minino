@@ -14,8 +14,8 @@
 static const char* TAG = "menu_screens_modules";
 SH1106_t dev;
 uint8_t selected_item;
-Layer previous_layer;
-Layer current_layer;
+screen_module_layer_t previous_layer;
+screen_module_layer_t current_layer;
 int num_items;
 uint8_t bluetooth_devices_count;
 nmea_parser_handle_t nmea_hdl;
@@ -483,7 +483,7 @@ void menu_screens_set_app_state(
   app_state.app_handler = app_handler;
 }
 
-Layer screen_module_get_current_layer(void) {
+screen_module_layer_t screen_module_get_current_layer() {
   return current_layer;
 }
 
@@ -715,7 +715,7 @@ void handle_about_selection() {
 
 void handle_wifi_apps_selection() {
   switch (selected_item) {
-    case WIFI_MENU_SNIFFER:
+    case WIFI_MENU_ANALIZER:
       current_layer = LAYER_WIFI_SNIFFER;
       break;
   }

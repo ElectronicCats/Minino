@@ -43,7 +43,7 @@
 #include "keyboard_module.h"
 #include "menu_screens_modules.h"
 #include "preferences.h"
-#include "screen_modules.h"
+#include "screens_modules.h"
 #include "string.h"
 #include "zigbee_screens_module.h"
 

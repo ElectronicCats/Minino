@@ -5,7 +5,7 @@
 #include "buzzer.h"
 #include "cmd_sniffer.h"
 #include "keyboard_module.h"
-#include "screen_modules.h"
+#include "screens_modules.h"
 #include "sh1106.h"
 #include "wifi_sniffer.h"
 
@@ -75,7 +75,7 @@ void menu_screens_set_app_state(
  *
  * @return screen_module_layer_t
  */
-Layer screen_module_get_current_layer(void);
+screen_module_layer_t screen_module_get_current_layer(void);
 
 /**
  * @brief Exit the submenu

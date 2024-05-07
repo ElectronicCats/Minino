@@ -4,7 +4,7 @@
 
 #define SCROLLING_TEXT "scrollable"
 
-enum MenuLayer {
+typedef enum {
   LAYER_MAIN_MENU = 0,
   LAYER_APPLICATIONS,
   LAYER_SETTINGS,
@@ -41,18 +41,15 @@ enum MenuLayer {
   LAYER_SETTINGS_SOUND,
   LAYER_SETTINGS_SYSTEM,
   /* About submenus */
-};
+} screen_module_layer_t;
 
-typedef enum menu_layer_t screen_module_layer_t;
-typedef enum MenuLayer Layer;
-
-enum MainMenuItem {
+enum menu_layer_main_items {
   MAIN_MENU_APPLICATIONS = 0,
   MAIN_MENU_SETTINGS,
   MAIN_MENU_ABOUT,
 };
 
-enum ApplicationsMenuItem {
+enum menu_layer_applications_items {
   APPLICATIONS_MENU_WIFI = 0,
   APPLICATIONS_MENU_BLUETOOTH,
   APPLICATIONS_MENU_ZIGBEE,
@@ -61,50 +58,50 @@ enum ApplicationsMenuItem {
   APPLICATIONS_MENU_GPS,
 };
 
-enum SettingsMenuItem {
+enum menu_layer_settings_items {
   SETTINGS_MENU_DISPLAY = 0,
   SETTINGS_MENU_SOUND,
   SETTINGS_MENU_SYSTEM,
 };
 
-enum AboutMenuItem {
+enum menu_layer_about_items {
   ABOUT_MENU_VERSION = 0,
   ABOUT_MENU_LICENSE,
   ABOUT_MENU_CREDITS,
   ABOUT_MENU_LEGAL,
 };
 
-enum WifiMenuItem {
-  WIFI_MENU_SNIFFER = 0,
+enum menu_layer_wifi_items {
+  WIFI_MENU_ANALIZER = 0,
 };
 
-enum WifiSnifferMenuItem {
+enum menu_layer_wifi_sniffer_items {
   WIFI_SNIFFER_START = 0,
   WIFI_SNIFFER_SETTINGS,
 };
 
-enum BluetoothMenuItem {
+enum menu_layer_bluetooth_items {
   BLUETOOTH_MENU_AIRTAGS_SCAN = 0,
 };
 
-enum ZigbeeMenuItem {
+enum menu_layer_zigbee_items {
   ZIGBEE_MENU_SPOOFING = 0,
 };
 
-enum ZigbeeSpoofingMenuItem {
+enum menu_layer_zigbee_spoofing_items {
   ZIGBEE_SPOOFING_SWITCH = 0,
   ZIGBEE_SPOOFING_LIGHT,
 };
 
-enum ZigbeeSwitchMenuItem {
+enum menu_layer_zigbee_switch_items {
   ZIGBEE_SWITCH_TOGGLE = 0,
 };
 
-enum ThreadMenuItem {
+enum menu_layer_thread_items {
   THREAD_MENU_CLI = 0,
 };
 
-enum GpsMenuItem {
+enum menu_layer_gps_items {
   GPS_MENU_DATE_TIME = 0,
   GPS_MENU_LOCATION,
 };
@@ -186,7 +183,7 @@ static char* legal_text[] = {
 };
 
 static char* wifi_items[] = {
-    "Sniffer",
+    "Analizer",
     NULL,
 };
 
@@ -233,7 +230,7 @@ static char* empty_items[] = {
     NULL,
 };
 
-// List of menus, it must be in the same order as the enum MenuLayer
+// List of menus, it must be in the same order as the enum screen_module_layer_t
 static char** menu_items[] = {
     main_items, applications_items, settings_items, about_items,
     /* Applications */
