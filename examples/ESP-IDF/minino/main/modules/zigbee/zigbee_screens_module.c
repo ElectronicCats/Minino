@@ -33,6 +33,12 @@ void zigbee_screens_module_waiting_for_devices(uint8_t dots) {
   }
 }
 
+void zigbee_screens_module_no_devices_found() {
+  display_clear();
+  display_text("No devices", 24, 3, NO_INVERT);
+  display_text("found", 44, 4, NO_INVERT);
+}
+
 void zigbee_screens_module_closing_network() {
   display_clear();
   display_text("Closing", 25, 3, NO_INVERT);

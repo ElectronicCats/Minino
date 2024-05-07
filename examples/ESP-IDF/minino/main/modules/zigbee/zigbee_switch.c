@@ -55,23 +55,26 @@ typedef struct light_bulb_device_params_s {
 
 typedef enum {
   SWITCH_CREATE_NETWORK = 0,
-  SWITCH_LIGHT_FOUND,
   SWITCH_NETWORK_FAILED,
   SWITCH_WAIT_FOR_DEVICES,
+  SWITCH_NO_DEVICES,
+  SWITCH_LIGHT_FOUND,
   SWITCH_EXIT,
 } switch_state_t;
 
 const char* switch_state_names[] = {
-    "SWITCH_CREATE_NETWORK",   "SWITCH_LIGHT_FOUND", "SWITCH_NETWORK_FAILED",
-    "SWITCH_WAIT_FOR_DEVICES", "SWITCH_EXIT",
+    "SWITCH_CREATE_NETWORK", "SWITCH_NETWORK_FAILED", "SWITCH_WAIT_FOR_DEVICES",
+    "SWITCH_LIGHT_FOUND",    "SWITCH_NO_DEVICES",     "SWITCH_EXIT",
 };
 
 switch_state_t switch_state = SWITCH_CREATE_NETWORK;
 switch_state_t switch_state_prev = SWITCH_EXIT;
+uint16_t open_network_duration = 0;
 
 TaskHandle_t network_failed_task_handle = NULL;
 TaskHandle_t wait_for_devices_task_handle = NULL;
 TaskHandle_t switch_state_machine_task_handle = NULL;
+TaskHandle_t network_open_task_handle = NULL;
 
 static const char* TAG = "ESP_ZB_ON_OFF_SWITCH";
 
@@ -136,7 +139,6 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
   switch (sig_type) {
     case ESP_ZB_ZDO_SIGNAL_SKIP_STARTUP:
       ESP_LOGI(TAG, "Zigbee stack initialized");
-      // zigbee_screens_module_creating_network();
       switch_state = SWITCH_CREATE_NETWORK;
       esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_INITIALIZATION);
       break;
@@ -201,9 +203,16 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
           ESP_LOGI(TAG, "Network(0x%04hx) is open for %d seconds",
                    esp_zb_get_pan_id(),
                    *(uint8_t*) esp_zb_app_signal_get_params(p_sg_p));
+          open_network_duration =
+              *(uint8_t*) esp_zb_app_signal_get_params(p_sg_p);
+          vTaskResume(network_open_task_handle);
         } else {
-          if (switch_state != SWITCH_LIGHT_FOUND) {
+          if (switch_state != SWITCH_LIGHT_FOUND &&
+              switch_state != SWITCH_WAIT_FOR_DEVICES) {
             switch_state = SWITCH_NETWORK_FAILED;
+          }
+          if (switch_state == SWITCH_WAIT_FOR_DEVICES) {
+            switch_state = SWITCH_NO_DEVICES;
           }
           ESP_LOGW(TAG, "Network(0x%04hx) closed, devices joining not allowed.",
                    esp_zb_get_pan_id());
@@ -215,6 +224,27 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
                esp_zb_zdo_signal_to_string(sig_type), sig_type,
                esp_err_to_name(err_status));
       break;
+  }
+}
+
+/**
+ * @brief Task to keep track of the network open duration
+ *
+ * @param pvParameters
+ *
+ * @return void
+ */
+void network_open_task(void* pvParameters) {
+  while (true) {
+    open_network_duration =
+        open_network_duration > 0 ? open_network_duration - 1 : 0;
+    if (open_network_duration > 0 && open_network_duration <= 10) {
+      ESP_LOGI(TAG, "Network open for %d seconds", open_network_duration);
+    }
+    if (open_network_duration > 0 && open_network_duration % 10 == 0) {
+      ESP_LOGI(TAG, "Network open for %d seconds", open_network_duration);
+    }
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 }
 
@@ -274,11 +304,16 @@ void switch_state_machine_task(void* pvParameters) {
         case SWITCH_CREATE_NETWORK:
           zigbee_screens_module_creating_network();
           break;
-        case SWITCH_LIGHT_FOUND:
-          zigbee_screens_module_toggle_released();
-          break;
         case SWITCH_WAIT_FOR_DEVICES:
           display_clear();
+          break;
+        case SWITCH_NO_DEVICES:
+          display_clear();
+          vTaskDelay(100 / portTICK_PERIOD_MS);
+          zigbee_screens_module_no_devices_found();
+          break;
+        case SWITCH_LIGHT_FOUND:
+          zigbee_screens_module_toggle_released();
           break;
         default:
           break;
@@ -351,6 +386,9 @@ void zigbee_switch_init() {
               &wait_for_devices_task_handle);
   xTaskCreate(switch_state_machine_task, "Switch_state_machine", 4096, NULL, 5,
               &switch_state_machine_task_handle);
+  xTaskCreate(network_open_task, "Network_open", 4096, NULL, 5,
+              &network_open_task_handle);
+  vTaskSuspend(network_open_task_handle);
 }
 
 void zigbee_switch_deinit() {
