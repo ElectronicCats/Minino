@@ -5,11 +5,11 @@ menu "GPS Configuration"
     config NMEA_PARSER_UART_RXD
         int "UART RXD pin number"
         range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
-        default 5
+        default 4
         help
             GPIO number for UART RX pin. See UART documentation for more information
             about available pin numbers for UART.
-    
+
     config NMEA_PARSE_UART_BAUDRATE
         int "UART Baudrate"
         range 0 115200
