@@ -12,11 +12,10 @@
 #define YEAR_BASE                 (2000)  // date in GPS starts from 2000
 
 static const char* TAG = "menu_screens_modules";
-SH1106_t dev;
 uint8_t selected_item;
+uint16_t num_items;
 screen_module_layer_t previous_layer;
 screen_module_layer_t current_layer;
-int num_items;
 uint8_t bluetooth_devices_count;
 nmea_parser_handle_t nmea_hdl;
 TaskHandle_t wifi_sniffer_task_handle = NULL;
@@ -53,38 +52,7 @@ void menu_screens_init() {
   bluetooth_devices_count = 0;
   nmea_hdl = NULL;
 
-#if CONFIG_I2C_INTERFACE
-  ESP_LOGI(TAG, "INTERFACE is i2c");
-  ESP_LOGI(TAG, "CONFIG_SDA_GPIO=%d", CONFIG_SDA_GPIO);
-  ESP_LOGI(TAG, "CONFIG_SCL_GPIO=%d", CONFIG_SCL_GPIO);
-  ESP_LOGI(TAG, "CONFIG_RESET_GPIO=%d", CONFIG_RESET_GPIO);
-  i2c_master_init(&dev, CONFIG_SDA_GPIO, CONFIG_SCL_GPIO, CONFIG_RESET_GPIO);
-#endif  // CONFIG_I2C_INTERFACE
-
-#if CONFIG_SPI_INTERFACE
-  ESP_LOGI(TAG, "INTERFACE is SPI");
-  ESP_LOGI(TAG, "CONFIG_MOSI_GPIO=%d", CONFIG_MOSI_GPIO);
-  ESP_LOGI(TAG, "CONFIG_SCLK_GPIO=%d", CONFIG_SCLK_GPIO);
-  ESP_LOGI(TAG, "CONFIG_CS_GPIO=%d", CONFIG_CS_GPIO);
-  ESP_LOGI(TAG, "CONFIG_DC_GPIO=%d", CONFIG_DC_GPIO);
-  ESP_LOGI(TAG, "CONFIG_RESET_GPIO=%d", CONFIG_RESET_GPIO);
-  spi_master_init(&dev, CONFIG_MOSI_GPIO, CONFIG_SCLK_GPIO, CONFIG_CS_GPIO,
-                  CONFIG_DC_GPIO, CONFIG_RESET_GPIO);
-#endif  // CONFIG_SPI_INTERFACE
-
-#if CONFIG_FLIP
-  dev._flip = true;
-  ESP_LOGW(TAG, "Flip upside down");
-#endif
-
-#if CONFIG_SH1106_128x64
-  ESP_LOGI(TAG, "Panel is 128x64");
-  sh1106_init(&dev, 128, 64);
-#endif  // CONFIG_SH1106_128x64
-#if CONFIG_SH1106_128x32
-  ESP_LOGI(TAG, "Panel is 128x32");
-  sh1106_init(&dev, 128, 32);
-#endif  // CONFIG_SH1106_128x32
+  oled_driver_init();
 
   wifi_sniffer_register_cb(display_wifi_sniffer_cb);
   wifi_sniffer_register_animation_cbs(display_wifi_sniffer_animation_start,
@@ -92,15 +60,14 @@ void menu_screens_init() {
   bluetooth_scanner_register_cb(display_bluetooth_scanner);
 
   // Show logo
-  display_clear();
+  oled_driver_clear();
 
   if (preferences_get_bool("zigbee_deinit", false)) {
     current_layer = LAYER_ZIGBEE_SPOOFING;
     preferences_put_bool("zigbee_deinit", false);
   } else {
-    leds_on();  // Indicate that the system is booting
     buzzer_play();
-    sh1106_bitmaps(&dev, 0, 0, epd_bitmap_logo_1, 128, 64, NO_INVERT);
+    oled_driver_display_bitmap(epd_bitmap_logo_1, 0, 0, 128, 64, NO_INVERT);
     buzzer_stop();
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
@@ -111,52 +78,6 @@ void menu_screens_init() {
               "display_wifi_sniffer_animation_task", 2048, NULL, 15,
               &wifi_sniffer_task_handle);
   display_wifi_sniffer_animation_stop();
-}
-
-void display_clear() {
-  sh1106_clear_screen(&dev, false);
-}
-
-void display_show() {
-  sh1106_show_buffer(&dev);
-}
-
-/// @brief Display text on the screen
-/// @param text
-/// @param text_size
-/// @param page
-/// @param invert
-void display_text(const char* text, int x, int page, int invert) {
-  sh1106_display_text(&dev, page, text, x, invert);
-}
-
-/// @brief Clear a line on the screen
-/// @param page
-/// @param invert
-void display_clear_line(int x, int page, int invert) {
-  // sh1106_clear_line(&dev, x, page, invert);
-  sh1106_bitmaps(&dev, x, page * 8, epd_bitmap_clear_line, 128 - x, 8, invert);
-}
-
-/// @brief Display a bitmap on the screen
-/// @param bitmap
-/// @param x
-/// @param y
-/// @param width
-/// @param height
-/// @param invert
-void display_bitmap(const uint8_t* bitmap,
-                    int x,
-                    int y,
-                    int width,
-                    int height,
-                    int invert) {
-  sh1106_bitmaps(&dev, x, y, bitmap, width, height, invert);
-}
-
-/// @brief Display a box around the selected item
-void display_selected_item_box() {
-  sh1106_draw_custom_box(&dev);
 }
 
 /// @brief Add empty strings at the beginning and end of the array
@@ -228,7 +149,7 @@ void display_menu_items(char** items) {
   // Page 3: Option 2 -> selected option
   // Page 5: Option 3
 
-  display_clear();
+  oled_driver_clear();
   int page = 1;
   for (int i = 0; i < 3; i++) {
     char* text = (char*) malloc(20);
@@ -240,26 +161,26 @@ void display_menu_items(char** items) {
       sprintf(text, " %s", items[i + selected_item]);
     }
 
-    display_text(text, 0, page, NO_INVERT);
+    oled_driver_display_text(text, 0, page, NO_INVERT);
     page += 2;
   }
 
-  display_selected_item_box();
+  oled_driver_display_selected_item_box();
 }
 
 void display_scrolling_text(char** text) {
   uint8_t startIdx = (selected_item >= 7) ? selected_item - 6 : 0;
   selected_item = (num_items - 2 > 7 && selected_item < 6) ? 6 : selected_item;
-  display_clear();
+  oled_driver_clear();
   // ESP_LOGI(TAG, "num: %d", num_items - 2);
 
   for (uint8_t i = startIdx; i < num_items - 2; i++) {
     // ESP_LOGI(TAG, "Text[%d]: %s", i, text[i]);
     if (i == selected_item) {
-      display_text(text[i], 0, i - startIdx,
-                   NO_INVERT);  // Change it to INVERT to debug
+      oled_driver_display_text(text[i], 0, i - startIdx,
+                               NO_INVERT);  // Change it to INVERT to debug
     } else {
-      display_text(text[i], 0, i - startIdx, NO_INVERT);
+      oled_driver_display_text(text[i], 0, i - startIdx, NO_INVERT);
     }
   }
 }
@@ -282,13 +203,17 @@ void display_menu() {
 
 void display_wifi_sniffer_animation_task(void* pvParameter) {
   while (true) {
-    sh1106_bitmaps(&dev, 0, 0, epd_bitmap_wifi_loading_1, 64, 64, NO_INVERT);
+    oled_driver_display_bitmap(epd_bitmap_wifi_loading_1, 0, 0, 64, 64,
+                               NO_INVERT);
     vTaskDelay(100 / portTICK_PERIOD_MS);
-    sh1106_bitmaps(&dev, 0, 0, epd_bitmap_wifi_loading_2, 64, 64, NO_INVERT);
+    oled_driver_display_bitmap(epd_bitmap_wifi_loading_2, 0, 0, 64, 64,
+                               NO_INVERT);
     vTaskDelay(100 / portTICK_PERIOD_MS);
-    sh1106_bitmaps(&dev, 0, 0, epd_bitmap_wifi_loading_3, 64, 64, NO_INVERT);
+    oled_driver_display_bitmap(epd_bitmap_wifi_loading_3, 0, 0, 64, 64,
+                               NO_INVERT);
     vTaskDelay(100 / portTICK_PERIOD_MS);
-    sh1106_bitmaps(&dev, 0, 0, epd_bitmap_wifi_loading_4, 64, 64, NO_INVERT);
+    oled_driver_display_bitmap(epd_bitmap_wifi_loading_4, 0, 0, 64, 64,
+                               NO_INVERT);
     vTaskDelay(100 / portTICK_PERIOD_MS);
   }
 }
@@ -299,7 +224,7 @@ void display_wifi_sniffer_animation_start() {
 
 void display_wifi_sniffer_animation_stop() {
   vTaskSuspend(wifi_sniffer_task_handle);
-  // display_text("Timeout!", 64, 6, INVERT);
+  // oled_driver_display_text("Timeout!", 64, 6, INVERT);
 }
 
 void display_wifi_sniffer_cb(sniffer_runtime_t* sniffer) {
@@ -310,12 +235,12 @@ void display_wifi_sniffer_cb(sniffer_runtime_t* sniffer) {
     sprintf(packets_str, "%ld", sniffer->sniffed_packets);
     sprintf(channel_str, "%ld", sniffer->channel);
 
-    display_clear_line(64, 1, NO_INVERT);
+    oled_driver_clear_line(64, 1, NO_INVERT);
 
-    display_text("Packets", 64, 0, INVERT);
-    display_text(packets_str, 64, 1, INVERT);
-    display_text("Channel", 64, 3, INVERT);
-    display_text(channel_str, 64, 4, INVERT);
+    oled_driver_display_text("Packets", 64, 0, INVERT);
+    oled_driver_display_text(packets_str, 64, 1, INVERT);
+    oled_driver_display_text("Channel", 64, 3, INVERT);
+    oled_driver_display_text(channel_str, 64, 4, INVERT);
   } else {
     ESP_LOGI(TAG, "sniffer task stopped");
   }
@@ -323,14 +248,14 @@ void display_wifi_sniffer_cb(sniffer_runtime_t* sniffer) {
 
 void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
   static bool airtag_detected = false;
-  display_text("Airtags Scanner", 0, 0, INVERT);
+  oled_driver_display_text("Airtags Scanner", 0, 0, INVERT);
   uint8_t x = 0;
   uint8_t y = 2;
-  display_clear_line(x, y, NO_INVERT);
+  oled_driver_clear_line(x, y, NO_INVERT);
 
   if (record.has_finished && !airtag_detected) {
-    display_text("    Scanning", 0, 3, NO_INVERT);
-    display_text("    Finished", 0, 4, NO_INVERT);
+    oled_driver_display_text("    Scanning", 0, 3, NO_INVERT);
+    oled_driver_display_text("    Finished", 0, 4, NO_INVERT);
     return;
   }
 
@@ -339,7 +264,7 @@ void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
     bluetooth_devices_count++;
     char* device_count_str = (char*) malloc(16);
     sprintf(device_count_str, "Devices=%d", record.count);
-    display_text(device_count_str, 0, 2, NO_INVERT);
+    oled_driver_display_text(device_count_str, 0, 2, NO_INVERT);
     return;
   }
 
@@ -356,29 +281,28 @@ void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
           record.mac[0]);
   sprintf(rssi_str, "RSSI=%d", record.rssi);
 
-  display_text(name_str, 0, 2, NO_INVERT);
-  display_text(addr_str1, 0, 3, NO_INVERT);
-  display_text(addr_str2, 0, 4, NO_INVERT);
-  display_text(rssi_str, 0, 5, NO_INVERT);
+  oled_driver_display_text(name_str, 0, 2, NO_INVERT);
+  oled_driver_display_text(addr_str1, 0, 3, NO_INVERT);
+  oled_driver_display_text(addr_str2, 0, 4, NO_INVERT);
+  oled_driver_display_text(rssi_str, 0, 5, NO_INVERT);
 }
 
 void display_thread_cli() {
   // thread_cli_start();
 
-  display_clear();
-  display_text("Thread CLI      ", 0, 0, INVERT);
-  display_text("Connect Minino", 0, 1, NO_INVERT);
-  display_text("to a computer", 0, 2, NO_INVERT);
-  display_text("via USB and use", 0, 3, NO_INVERT);
-  display_text("screen command", 0, 4, NO_INVERT);
-  display_text("(linux or mac)", 0, 5, NO_INVERT);
-  display_text("or putty in", 0, 6, NO_INVERT);
-  display_text("windows", 0, 7, NO_INVERT);
-  display_show();
+  oled_driver_clear();
+  oled_driver_display_text("Thread CLI      ", 0, 0, INVERT);
+  oled_driver_display_text("Connect Minino", 0, 1, NO_INVERT);
+  oled_driver_display_text("to a computer", 0, 2, NO_INVERT);
+  oled_driver_display_text("via USB and use", 0, 3, NO_INVERT);
+  oled_driver_display_text("screen command", 0, 4, NO_INVERT);
+  oled_driver_display_text("(linux or mac)", 0, 5, NO_INVERT);
+  oled_driver_display_text("or putty in", 0, 6, NO_INVERT);
+  oled_driver_display_text("windows", 0, 7, NO_INVERT);
 }
 
 void display_in_development_banner() {
-  display_text(" In development", 0, 3, NO_INVERT);
+  oled_driver_display_text(" In development", 0, 3, NO_INVERT);
 }
 
 void display_gps_init() {
@@ -439,11 +363,11 @@ static void gps_event_handler(void* event_handler_arg,
         sprintf(time_str, "Time: %d:%d:%d", gps->tim.hour + TIME_ZONE,
                 gps->tim.minute, gps->tim.second);
 
-        display_clear();
-        display_text("GPS Date/Time", 0, 0, INVERT);
+        oled_driver_clear();
+        oled_driver_display_text("GPS Date/Time", 0, 0, INVERT);
         // TODO: refresh only the date and time
-        display_text(date_str, 0, 2, NO_INVERT);
-        display_text(time_str, 0, 3, NO_INVERT);
+        oled_driver_display_text(date_str, 0, 2, NO_INVERT);
+        oled_driver_display_text(time_str, 0, 3, NO_INVERT);
       } else if (current_layer == LAYER_GPS_LOCATION) {
         char* latitude_str = (char*) malloc(22);
         char* longitude_str = (char*) malloc(22);
@@ -455,12 +379,12 @@ static void gps_event_handler(void* event_handler_arg,
         sprintf(altitude_str, "Altitude: %.02fm", gps->altitude);
         sprintf(speed_str, "Speed: %fm/s", gps->speed);
 
-        display_clear();
-        display_text("GPS Location", 0, 0, INVERT);
-        display_text(latitude_str, 0, 2, NO_INVERT);
-        display_text(longitude_str, 0, 3, NO_INVERT);
-        display_text(altitude_str, 0, 4, NO_INVERT);
-        display_text(speed_str, 0, 5, NO_INVERT);
+        oled_driver_clear();
+        oled_driver_display_text("GPS Location", 0, 0, INVERT);
+        oled_driver_display_text(latitude_str, 0, 2, NO_INVERT);
+        oled_driver_display_text(longitude_str, 0, 3, NO_INVERT);
+        oled_driver_display_text(altitude_str, 0, 4, NO_INVERT);
+        oled_driver_display_text(speed_str, 0, 5, NO_INVERT);
       }
       break;
     case GPS_UNKNOWN:
@@ -476,9 +400,7 @@ app_state_t menu_screens_get_app_state() {
   return app_state;
 }
 
-void menu_screens_set_app_state(
-    bool in_app,
-    void (*app_handler)(button_event_t button_pressed)) {
+void menu_screens_set_app_state(bool in_app, app_handler_t app_handler) {
   app_state.in_app = in_app;
   app_state.app_handler = app_handler;
 }
@@ -667,7 +589,7 @@ void handle_applications_selection() {
       break;
     case APPLICATIONS_MENU_MATTER:
       current_layer = LAYER_MATTER_APPS;
-      display_clear();
+      oled_driver_clear();
       display_in_development_banner();
       break;
     case APPLICATIONS_MENU_GPS:
@@ -680,17 +602,17 @@ void handle_settings_selection() {
   switch (selected_item) {
     case SETTINGS_MENU_DISPLAY:
       current_layer = LAYER_SETTINGS_DISPLAY;
-      display_clear();
+      oled_driver_clear();
       display_in_development_banner();
       break;
     case SETTINGS_MENU_SOUND:
       current_layer = LAYER_SETTINGS_SOUND;
-      display_clear();
+      oled_driver_clear();
       display_in_development_banner();
       break;
     case SETTINGS_MENU_SYSTEM:
       current_layer = LAYER_SETTINGS_SYSTEM;
-      display_clear();
+      oled_driver_clear();
       display_in_development_banner();
       break;
   }
@@ -725,7 +647,7 @@ void handle_wifi_sniffer_selection() {
   switch (selected_item) {
     case WIFI_SNIFFER_START:
       current_layer = LAYER_WIFI_SNIFFER_START;
-      display_clear();
+      oled_driver_clear();
       wifi_sniffer_start();
       break;
     case WIFI_SNIFFER_SETTINGS:
@@ -741,7 +663,7 @@ void handle_bluetooth_apps_selection() {
   switch (selected_item) {
     case BLUETOOTH_MENU_AIRTAGS_SCAN:
       current_layer = LAYER_BLUETOOTH_AIRTAGS_SCAN;
-      display_clear();
+      oled_driver_clear();
       bluetooth_scanner_start();
       break;
   }
@@ -763,7 +685,7 @@ void handle_zigbee_spoofing_selection() {
       break;
     case ZIGBEE_SPOOFING_LIGHT:
       current_layer = LAYER_ZIGBEE_LIGHT;
-      display_clear();
+      oled_driver_clear();
       display_in_development_banner();
       break;
   }

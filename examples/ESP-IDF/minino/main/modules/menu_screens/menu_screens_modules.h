@@ -1,42 +1,25 @@
-#ifndef DISPLAY_H
-#define DISPLAY_H
+#pragma once
 
 #include "bluetooth_scanner.h"
 #include "buzzer.h"
 #include "cmd_sniffer.h"
 #include "keyboard_module.h"
+#include "oled_driver.h"
 #include "screens_modules.h"
 #include "sh1106.h"
 #include "wifi_sniffer.h"
 
-#define INVERT    1
-#define NO_INVERT 0
-
-extern uint8_t selected_item;
-// extern screen_module_layer_t previous_layer;
-// extern screen_module_layer_t current_layer;
-extern int num_items;
+typedef void (*app_handler_t)(button_event_t button_pressed);
 
 /**
  * @brief Struct to hold the keyboard state in app
  */
 typedef struct {
   bool in_app;
-  void (*app_handler)(button_event_t button_pressed);
+  app_handler_t app_handler;
 } app_state_t;
 
 void menu_screens_init();
-void display_clear(void);
-void display_show(void);
-void display_text(const char* text, int x, int page, int invert);
-void display_clear_line(int x, int page, int invert);
-void display_bitmap(const uint8_t* bitmap,
-                    int x,
-                    int y,
-                    int width,
-                    int height,
-                    int invert);
-void display_selected_item_box();
 char** add_empty_strings(char** array, int length);
 char** remove_srolling_text_flag(char** items, int length);
 char** get_menu_items();
@@ -64,11 +47,11 @@ app_state_t menu_screens_get_app_state();
  * @brief Update the app state
  *
  * @param bool in_app
- * @param void app_handler function pointer
+ * @param app_handler_t app_handler
+ *
+ * @return void
  */
-void menu_screens_set_app_state(
-    bool in_app,
-    void (*app_handler)(button_event_t button_pressed));
+void menu_screens_set_app_state(bool in_app, app_handler_t app_handler);
 
 /**
  * @brief Get the current layer
@@ -111,5 +94,3 @@ void menu_screens_decrement_selected_item();
  * @return void
  */
 void menu_screens_update_previous_layer();
-
-#endif  // DISPLAY_H

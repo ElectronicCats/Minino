@@ -305,10 +305,10 @@ void switch_state_machine_task(void* pvParameters) {
           zigbee_screens_module_creating_network();
           break;
         case SWITCH_WAIT_FOR_DEVICES:
-          display_clear();
+          oled_driver_clear();
           break;
         case SWITCH_NO_DEVICES:
-          display_clear();
+          oled_driver_clear();
           vTaskDelay(100 / portTICK_PERIOD_MS);
           zigbee_screens_module_no_devices_found();
           break;
