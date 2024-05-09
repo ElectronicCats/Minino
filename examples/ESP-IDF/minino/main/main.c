@@ -27,8 +27,9 @@ void app_main(void) {
   buzzer_init();
   wifi_sniffer_init();
   bluetooth_scanner_init();
-  menu_screens_init();
+  menu_screens_begin();
   keyboard_module_begin();
+  menu_screens_display_menu();
   reboot_counter();
   leds_off();
 

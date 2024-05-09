@@ -44,7 +44,7 @@ static void gps_event_handler(void* event_handler_arg,
                               int32_t event_id,
                               void* event_data);
 
-void menu_screens_init() {
+void menu_screens_begin() {
   selected_item = 0;
   previous_layer = LAYER_MAIN_MENU;
   current_layer = LAYER_MAIN_MENU;
@@ -72,7 +72,6 @@ void menu_screens_init() {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 
-  display_menu();
   display_gps_init();
   xTaskCreate(&display_wifi_sniffer_animation_task,
               "display_wifi_sniffer_animation_task", 2048, NULL, 15,
@@ -80,10 +79,14 @@ void menu_screens_init() {
   display_wifi_sniffer_animation_stop();
 }
 
-/// @brief Add empty strings at the beginning and end of the array
-/// @param array
-/// @param length
-/// @return Returns a new array with empty strings at the beginning and end
+/**
+ * @brief Add empty strings at the beginning and end of the array
+ *
+ * @param array
+ * @param length
+ *
+ * @return char**
+ */
 char** add_empty_strings(char** array, int length) {
   char** newArray = malloc((length + 2) * sizeof(char*));
 
@@ -103,10 +106,14 @@ char** add_empty_strings(char** array, int length) {
   return newArray;
 }
 
-/// @brief Remove the scrolling text flag from the array
-/// @param items
-/// @param length
-/// @return Returns a new array without the scrolling text flag
+/**
+ * @brief Remove the scrolling text flag from the array
+ *
+ * @param items
+ * @param length
+ *
+ * @return char**
+ */
 char** remove_srolling_text_flag(char** items, int length) {
   char** newArray = malloc((length - 1) * sizeof(char*));
 
@@ -121,6 +128,11 @@ char** remove_srolling_text_flag(char** items, int length) {
   return newArray;
 }
 
+/**
+ * @brief Get the menu items for the current layer
+ *
+ * @return char**
+ */
 char** get_menu_items() {
   num_items = 0;
   char** submenu = menu_items[current_layer];
@@ -143,12 +155,19 @@ char** get_menu_items() {
   return add_empty_strings(menu_items[current_layer], num_items);
 }
 
+/**
+ * @brief Display the menu items
+ *
+ * Show only 3 options at a time in the following order:
+ * Page 1: Option 1
+ * Page 3: Option 2 -> selected option
+ * Page 5: Option 3
+ *
+ * @param items
+ *
+ * @return void
+ */
 void display_menu_items(char** items) {
-  // Show only 3 options at a time in the following order:
-  // Page 1: Option 1
-  // Page 3: Option 2 -> selected option
-  // Page 5: Option 3
-
   oled_driver_clear();
   int page = 1;
   for (int i = 0; i < 3; i++) {
@@ -168,6 +187,13 @@ void display_menu_items(char** items) {
   oled_driver_display_selected_item_box();
 }
 
+/**
+ * @brief Display the scrolling text
+ *
+ * @param text
+ *
+ * @return void
+ */
 void display_scrolling_text(char** text) {
   uint8_t startIdx = (selected_item >= 7) ? selected_item - 6 : 0;
   selected_item = (num_items - 2 > 7 && selected_item < 6) ? 6 : selected_item;
@@ -185,7 +211,12 @@ void display_scrolling_text(char** text) {
   }
 }
 
-void display_menu() {
+/**
+ * @brief Display the menu or the scrolling text
+ *
+ * @return void
+ */
+void menu_screens_display_menu() {
   char** items = get_menu_items();
 
   if (items == NULL) {
@@ -433,7 +464,7 @@ void menu_screens_exit_submenu() {
 
   current_layer = previous_layer;
   selected_item = 0;
-  display_menu();
+  menu_screens_display_menu();
 }
 
 void menu_screens_enter_submenu() {
@@ -484,7 +515,7 @@ void menu_screens_enter_submenu() {
 
   selected_item = 0;
   if (!app_state.in_app) {
-    display_menu();
+    menu_screens_display_menu();
   }
 }
 
@@ -492,12 +523,12 @@ void menu_screens_ingrement_selected_item() {
   selected_item = (selected_item == num_items - MAX_MENU_ITEMS_PER_SCREEN)
                       ? selected_item
                       : selected_item + 1;
-  display_menu();
+  menu_screens_display_menu();
 }
 
 void menu_screens_decrement_selected_item() {
   selected_item = (selected_item == 0) ? 0 : selected_item - 1;
-  display_menu();
+  menu_screens_display_menu();
 }
 
 void menu_screens_update_previous_layer() {

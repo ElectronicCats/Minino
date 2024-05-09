@@ -19,22 +19,19 @@ typedef struct {
   app_handler_t app_handler;
 } app_state_t;
 
-void menu_screens_init();
-char** add_empty_strings(char** array, int length);
-char** remove_srolling_text_flag(char** items, int length);
-char** get_menu_items();
-void display_menu_items(char** items);
-void display_scrolling_text(char** text);
-void display_menu();
-void display_wifi_sniffer_animation_task(void* pvParameter);
-void display_wifi_sniffer_animation_start();
-void display_wifi_sniffer_animation_stop();
-void display_wifi_sniffer_cb(sniffer_runtime_t* sniffer);
-void display_bluetooth_scanner(bluetooth_scanner_record_t record);
-void display_thread_cli();
-void display_in_development_banner();
-void display_gps_init();
-void display_gps_deinit();
+/**
+ * @brief Initialize the menu screens
+ *
+ * @return void
+ */
+void menu_screens_begin();
+
+/**
+ * @brief Display the main menu
+ *
+ * @return void
+ */
+void menu_screens_display_menu();
 
 /**
  * @brief Get the app state
@@ -94,3 +91,14 @@ void menu_screens_decrement_selected_item();
  * @return void
  */
 void menu_screens_update_previous_layer();
+
+// TODO: Move to separate files
+void display_wifi_sniffer_animation_task(void* pvParameter);
+void display_wifi_sniffer_animation_start();
+void display_wifi_sniffer_animation_stop();
+void display_wifi_sniffer_cb(sniffer_runtime_t* sniffer);
+void display_bluetooth_scanner(bluetooth_scanner_record_t record);
+void display_thread_cli();
+void display_in_development_banner();
+void display_gps_init();
+void display_gps_deinit();

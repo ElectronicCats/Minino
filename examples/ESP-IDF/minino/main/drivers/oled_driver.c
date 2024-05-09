@@ -41,7 +41,7 @@ void oled_driver_init() {
 }
 
 void oled_driver_clear() {
-  sh1106_clear_screen(&dev, false);
+  sh1106_clear_screen(&dev, NO_INVERT);
 }
 
 /// @brief Display text on the screen
