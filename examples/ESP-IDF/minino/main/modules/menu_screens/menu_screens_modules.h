@@ -4,7 +4,6 @@
 #include "buzzer.h"
 #include "cmd_sniffer.h"
 #include "keyboard_module.h"
-#include "oled_driver.h"
 #include "screens_modules.h"
 #include "sh1106.h"
 #include "wifi_sniffer.h"

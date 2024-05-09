@@ -42,6 +42,7 @@
 #include "ha/esp_zigbee_ha_standard.h"
 #include "keyboard_module.h"
 #include "menu_screens_modules.h"
+#include "oled_screen.h"
 #include "preferences.h"
 #include "screens_modules.h"
 #include "string.h"
@@ -305,10 +306,10 @@ void switch_state_machine_task(void* pvParameters) {
           zigbee_screens_module_creating_network();
           break;
         case SWITCH_WAIT_FOR_DEVICES:
-          oled_driver_clear();
+          oled_screen_clear();
           break;
         case SWITCH_NO_DEVICES:
-          oled_driver_clear();
+          oled_screen_clear();
           vTaskDelay(100 / portTICK_PERIOD_MS);
           zigbee_screens_module_no_devices_found();
           break;

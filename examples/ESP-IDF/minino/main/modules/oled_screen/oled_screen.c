@@ -1,11 +1,11 @@
-#include "oled_driver.h"
+#include "oled_screen.h"
 #include "bitmaps.h"
 #include "esp_log.h"
 
 static const char* TAG = "OLED_DRIVER";
 SH1106_t dev;
 
-void oled_driver_init() {
+void oled_screen_begin() {
 #if CONFIG_I2C_INTERFACE
   ESP_LOGI(TAG, "INTERFACE is i2c");
   ESP_LOGI(TAG, "CONFIG_SDA_GPIO=%d", CONFIG_SDA_GPIO);
@@ -40,44 +40,29 @@ void oled_driver_init() {
 #endif  // CONFIG_SH1106_128x32
 }
 
-void oled_driver_clear() {
+void oled_screen_clear() {
   sh1106_clear_screen(&dev, NO_INVERT);
 }
 
-/// @brief Display text on the screen
-/// @param text
-/// @param text_size
-/// @param page
-/// @param invert
-void oled_driver_display_text(const char* text, int x, int page, int invert) {
+void oled_screen_display_text(const char* text, int x, int page, bool invert) {
   sh1106_display_text(&dev, page, text, x, invert);
 }
 
-/// @brief Clear a line on the screen
-/// @param page
-/// @param invert
-void oled_driver_clear_line(int x, int page, int invert) {
+void oled_screen_clear_line(int x, int page, bool invert) {
   // sh1106_clear_line(&dev, x, page, invert);
   sh1106_bitmaps(&dev, x, page * 8, epd_bitmap_clear_line, 128 - x, 8, invert);
 }
 
-/// @brief Display a bitmap on the screen
-/// @param bitmap
-/// @param x
-/// @param y
-/// @param width
-/// @param height
-/// @param invert
-void oled_driver_display_bitmap(const uint8_t* bitmap,
+void oled_screen_display_bitmap(const uint8_t* bitmap,
                                 int x,
                                 int y,
                                 int width,
                                 int height,
-                                int invert) {
+                                bool invert) {
   sh1106_bitmaps(&dev, x, y, bitmap, width, height, invert);
 }
 
 /// @brief Display a box around the selected item
-void oled_driver_display_selected_item_box() {
+void oled_screen_display_selected_item_box() {
   sh1106_draw_custom_box(&dev);
 }

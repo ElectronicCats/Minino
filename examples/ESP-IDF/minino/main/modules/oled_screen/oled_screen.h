@@ -1,0 +1,69 @@
+#pragma once
+
+#include "sh1106.h"
+
+#define INVERT    true
+#define NO_INVERT false
+
+/**
+ * @brief Initialize the OLED driver display
+ *
+ * @return void
+ */
+void oled_screen_begin();
+
+/**
+ * @brief Clear the OLED display
+ *
+ * @return void
+ */
+void oled_screen_clear();
+
+/**
+ * @brief Display text on the OLED display
+ *
+ * @param text
+ * @param x
+ * @param page
+ * @param invert
+ *
+ * @return void
+ */
+void oled_screen_display_text(const char* text, int x, int page, bool invert);
+
+/**
+ * @brief Clear a line on the OLED display
+ *
+ * @param x Offset from the left
+ * @param page Page number, 0-7
+ * @param invert
+ *
+ * @return void
+ */
+void oled_screen_clear_line(int x, int page, bool invert);
+
+/**
+ * @brief Display a bitmap on the OLED display
+ *
+ * @param bitmap
+ * @param x
+ * @param y
+ * @param width
+ * @param height
+ * @param invert
+ *
+ * @return void
+ */
+void oled_screen_display_bitmap(const uint8_t* bitmap,
+                                int x,
+                                int y,
+                                int width,
+                                int height,
+                                bool invert);
+
+/**
+ * @brief Display the selected item box on the OLED display
+ *
+ * @return void
+ */
+void oled_screen_display_selected_item_box();
