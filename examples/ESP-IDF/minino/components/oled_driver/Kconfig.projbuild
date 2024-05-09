@@ -1,4 +1,4 @@
-menu "SH1106 Configuration"
+menu "OLED Screen Configuration"
 
 	config GPIO_RANGE_MAX
 		int
@@ -24,27 +24,35 @@ menu "SH1106 Configuration"
 				SPI Interface.
 	endchoice
 
-	choice PANEL
-		prompt "Panel Type"
-		default SH1106_128x64
+	choice DRIVER
+		prompt "Driver"
+		default SH1106
 		help
-			Select Panel Type.
-		config SH1106_128x32
+			Select Driver.
+		config SSD1306
+			bool "SSD1306"
+			help
+				SSD1306 Driver.
+		config SH1106
+			bool "SH1106"
+			help
+				SH1106 Driver.
+	endchoice
+
+	choice RESOLUTION
+		prompt "Panel resolution"
+		default RESOLUTION_128X64
+		help
+			Select Panel resolution.
+		config RESOLUTION_128X32
 			bool "128x32 Panel"
 			help
 				Panel is 128x32.
-		config SH1106_128x64
+		config RESOLUTION_128X64
 			bool "128x64 Panel"
 			help
 				Panel is 128x64.
 	endchoice
-
-	config OFFSETX
-		int "GRAM X OFFSET"
-		range 0 99
-		default 0
-		help
-			When your TFT have offset(X), set it.
 
 	config FLIP
 		bool "Flip upside down"
@@ -183,4 +191,3 @@ menu "SH1106 Configuration"
 	endchoice
 
 endmenu
-

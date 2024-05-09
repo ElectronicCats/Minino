@@ -186,6 +186,7 @@ void display_menu_items(char** items) {
   }
 
   oled_screen_display_selected_item_box();
+  oled_screen_display_show();
 }
 
 /**

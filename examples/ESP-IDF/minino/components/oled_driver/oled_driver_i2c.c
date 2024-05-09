@@ -6,9 +6,9 @@
 #include "driver/i2c.h"
 #include "esp_log.h"
 
-#include "sh1106.h"
+#include "oled_driver.h"
 
-#define tag "SH1106"
+#define tag "oled_driver_i2c"
 
 #if CONFIG_I2C_PORT_0
   #define I2C_NUM I2C_NUM_0
@@ -21,7 +21,10 @@
 #define I2C_MASTER_FREQ_HZ \
   400000 /*!< I2C clock of SH1106 can run at 400 kHz max. */
 
-void i2c_master_init(SH1106_t* dev, int16_t sda, int16_t scl, int16_t reset) {
+void i2c_master_init(oled_driver_t* dev,
+                     int16_t sda,
+                     int16_t scl,
+                     int16_t reset) {
   i2c_config_t i2c_config = {.mode = I2C_MODE_MASTER,
                              .sda_io_num = sda,
                              .scl_io_num = scl,
@@ -43,7 +46,7 @@ void i2c_master_init(SH1106_t* dev, int16_t sda, int16_t scl, int16_t reset) {
   dev->_flip = false;
 }
 
-void i2c_init(SH1106_t* dev, int width, int height) {
+void i2c_init(oled_driver_t* dev, int width, int height) {
   dev->_width = width;
   dev->_height = height;
   dev->_pages = 8;
@@ -109,7 +112,7 @@ void i2c_init(SH1106_t* dev, int width, int height) {
   i2c_cmd_link_delete(cmd);
 }
 
-void i2c_display_image(SH1106_t* dev,
+void i2c_display_image(oled_driver_t* dev,
                        int page,
                        int seg,
                        uint8_t* images,
@@ -121,7 +124,11 @@ void i2c_display_image(SH1106_t* dev,
   if (seg >= dev->_width)
     return;
 
-  int _seg = seg + CONFIG_OFFSETX;
+#ifdef CONFIG_SSD1306
+  int _seg = seg;
+#elif CONFIG_SH1106
+  int _seg = seg + 2;
+#endif
   uint8_t columLow = _seg & 0x0F;
   uint8_t columHigh = (_seg >> 4) & 0x0F;
 
@@ -158,7 +165,7 @@ void i2c_display_image(SH1106_t* dev,
   i2c_cmd_link_delete(cmd);
 }
 
-void i2c_contrast(SH1106_t* dev, int contrast) {
+void i2c_contrast(oled_driver_t* dev, int contrast) {
   i2c_cmd_handle_t cmd;
   int _contrast = contrast;
   if (contrast < 0x0)
@@ -177,7 +184,7 @@ void i2c_contrast(SH1106_t* dev, int contrast) {
   i2c_cmd_link_delete(cmd);
 }
 
-void i2c_hardware_scroll(SH1106_t* dev, sh1106_scroll_type_t scroll) {
+void i2c_hardware_scroll(oled_driver_t* dev, oled_driver_scroll_type_t scroll) {
   esp_err_t espRc;
 
   i2c_cmd_handle_t cmd = i2c_cmd_link_create();

@@ -3,7 +3,7 @@
 #include "esp_log.h"
 
 static const char* TAG = "OLED_DRIVER";
-SH1106_t dev;
+oled_driver_t dev;
 
 void oled_screen_begin() {
 #if CONFIG_I2C_INTERFACE
@@ -30,27 +30,31 @@ void oled_screen_begin() {
   ESP_LOGW(TAG, "Flip upside down");
 #endif
 
-#if CONFIG_SH1106_128x64
-  ESP_LOGI(TAG, "Panel is 128x64");
-  sh1106_init(&dev, 128, 64);
-#endif  // CONFIG_SH1106_128x64
-#if CONFIG_SH1106_128x32
-  ESP_LOGI(TAG, "Panel is 128x32");
-  sh1106_init(&dev, 128, 32);
-#endif  // CONFIG_SH1106_128x32
+#if CONFIG_RESOLUTION_128X64
+  ESP_LOGI(TAG, "PANEL: 128x64");
+  oled_driver_init(&dev, 128, 64);
+#elif CONFIG_RESOLUTION_128X32
+  ESP_LOGI(TAG, "PANEL: 128x32");
+  oled_driver_init(&dev, 128, 32);
+#endif
 }
 
 void oled_screen_clear() {
-  sh1106_clear_screen(&dev, NO_INVERT);
+  oled_driver_clear_screen(&dev, NO_INVERT);
+}
+
+void oled_screen_display_show() {
+  oled_driver_show_buffer(&dev);
 }
 
 void oled_screen_display_text(const char* text, int x, int page, bool invert) {
-  sh1106_display_text(&dev, page, text, x, invert);
+  oled_driver_display_text(&dev, page, text, x, invert);
 }
 
 void oled_screen_clear_line(int x, int page, bool invert) {
-  // sh1106_clear_line(&dev, x, page, invert);
-  sh1106_bitmaps(&dev, x, page * 8, epd_bitmap_clear_line, 128 - x, 8, invert);
+  // oled_driver_clear_line(&dev, x, page, invert);
+  oled_driver_bitmaps(&dev, x, page * 8, epd_bitmap_clear_line, 128 - x, 8,
+                      invert);
 }
 
 void oled_screen_display_bitmap(const uint8_t* bitmap,
@@ -59,10 +63,18 @@ void oled_screen_display_bitmap(const uint8_t* bitmap,
                                 int width,
                                 int height,
                                 bool invert) {
-  sh1106_bitmaps(&dev, x, y, bitmap, width, height, invert);
+  oled_driver_bitmaps(&dev, x, y, bitmap, width, height, invert);
+}
+
+void oled_screen_draw_pixel(int x, int y, bool invert) {
+  oled_driver_draw_pixel(&dev, x, y, invert);
+}
+
+void oled_screen_draw_rect(int x, int y, int width, int height, bool invert) {
+  oled_driver_draw_rect(&dev, x, y, width, height, invert);
 }
 
 /// @brief Display a box around the selected item
 void oled_screen_display_selected_item_box() {
-  sh1106_draw_custom_box(&dev);
+  oled_driver_draw_custom_box(&dev);
 }

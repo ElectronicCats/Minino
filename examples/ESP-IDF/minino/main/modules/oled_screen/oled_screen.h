@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sh1106.h"
+#include "oled_driver.h"
 
 #define INVERT    true
 #define NO_INVERT false
@@ -18,6 +18,13 @@ void oled_screen_begin();
  * @return void
  */
 void oled_screen_clear();
+
+/**
+ * @brief Show the content of the buffer on the OLED display
+ *
+ * @return void
+ */
+void oled_screen_display_show();
 
 /**
  * @brief Display text on the OLED display
@@ -60,6 +67,30 @@ void oled_screen_display_bitmap(const uint8_t* bitmap,
                                 int width,
                                 int height,
                                 bool invert);
+
+/**
+ * @brief Draw a pixel on the OLED display
+ *
+ * @param x
+ * @param y
+ * @param invert
+ *
+ * @return void
+ */
+void oled_screen_draw_pixel(int x, int y, bool invert);
+
+/**
+ * @brief Draw a rectangle on the OLED display
+ *
+ * @param x
+ * @param y
+ * @param width
+ * @param height
+ * @param invert
+ *
+ * @return void
+ */
+void oled_screen_draw_rect(int x, int y, int width, int height, bool invert);
 
 /**
  * @brief Display the selected item box on the OLED display

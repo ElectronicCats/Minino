@@ -6,9 +6,9 @@
 #include "esp_log.h"
 
 #include "font8x8_basic.h"
-#include "sh1106.h"
+#include "oled_driver.h"
 
-#define TAG "sh1106"
+#define TAG "oled_driver"
 
 #define PACK8 __attribute__((aligned(__alignof__(uint8_t)), packed))
 
@@ -17,7 +17,7 @@ typedef union out_column_t {
   uint8_t u8[4];
 } PACK8 out_column_t;
 
-void sh1106_init(SH1106_t* dev, int width, int height) {
+void oled_driver_init(oled_driver_t* dev, int width, int height) {
   if (dev->_address == SPIAddress) {
     spi_init(dev, width, height);
   } else {
@@ -25,23 +25,23 @@ void sh1106_init(SH1106_t* dev, int width, int height) {
   }
   // Initialize internal buffer
   for (int i = 0; i < dev->_pages; i++) {
-    memset(dev->_page[i]._segs, 0, 128);
+    memset(dev->_page[i]._segs, 0, width);
   }
 }
 
-int sh1106_get_width(SH1106_t* dev) {
+int oled_driver_get_width(oled_driver_t* dev) {
   return dev->_width;
 }
 
-int sh1106_get_height(SH1106_t* dev) {
+int oled_driver_get_height(oled_driver_t* dev) {
   return dev->_height;
 }
 
-int sh1106_get_pages(SH1106_t* dev) {
+int oled_driver_get_pages(oled_driver_t* dev) {
   return dev->_pages;
 }
 
-void sh1106_show_buffer(SH1106_t* dev) {
+void oled_driver_show_buffer(oled_driver_t* dev) {
   if (dev->_address == SPIAddress) {
     for (int page = 0; page < dev->_pages; page++) {
       spi_display_image(dev, page, 0, dev->_page[page]._segs, dev->_width);
@@ -53,27 +53,27 @@ void sh1106_show_buffer(SH1106_t* dev) {
   }
 }
 
-void sh1106_set_buffer(SH1106_t* dev, uint8_t* buffer) {
+void oled_driver_set_buffer(oled_driver_t* dev, uint8_t* buffer) {
   int index = 0;
   for (int page = 0; page < dev->_pages; page++) {
-    memcpy(&dev->_page[page]._segs, &buffer[index], 128);
-    index = index + 128;
+    memcpy(&dev->_page[page]._segs, &buffer[index], dev->_width);
+    index = index + dev->_width;
   }
 }
 
-void sh1106_get_buffer(SH1106_t* dev, uint8_t* buffer) {
+void oled_driver_get_buffer(oled_driver_t* dev, uint8_t* buffer) {
   int index = 0;
   for (int page = 0; page < dev->_pages; page++) {
-    memcpy(&buffer[index], &dev->_page[page]._segs, 128);
-    index = index + 128;
+    memcpy(&buffer[index], &dev->_page[page]._segs, dev->_width);
+    index = index + dev->_width;
   }
 }
 
-void sh1106_display_image(SH1106_t* dev,
-                          int page,
-                          int seg,
-                          uint8_t* images,
-                          int width) {
+void oled_driver_display_image(oled_driver_t* dev,
+                               int page,
+                               int seg,
+                               uint8_t* images,
+                               int width) {
   if (dev->_address == SPIAddress) {
     spi_display_image(dev, page, seg, images, width);
   } else {
@@ -83,24 +83,24 @@ void sh1106_display_image(SH1106_t* dev,
   memcpy(&dev->_page[page]._segs[seg], images, width);
 }
 
-void sh1106_display_text(SH1106_t* dev,
-                         int page,
-                         char* text,
-                         int x,
-                         bool invert) {
+void oled_driver_display_text(oled_driver_t* dev,
+                              int page,
+                              char* text,
+                              int x,
+                              bool invert) {
   if (page >= dev->_pages)
     return;
   int c;
 
-  uint8_t seg = x + 2;
+  uint8_t seg = x;
   uint8_t image[8];
   while ((c = *text++)) {
     memcpy(image, font8x8_basic_tr[(uint8_t) c], 8);
     if (invert)
-      sh1106_invert(image, 8);
+      oled_driver_invert(image, 8);
     if (dev->_flip)
-      sh1106_flip(image, 8);
-    sh1106_display_image(dev, page, seg, image, 8);
+      oled_driver_flip(image, 8);
+    oled_driver_display_image(dev, page, seg, image, 8);
 #if 0
 		if (dev->_address == SPIAddress) {
 			spi_display_image(dev, page, seg, image, 8);
@@ -113,11 +113,11 @@ void sh1106_display_text(SH1106_t* dev,
 }
 
 // by Coert Vonk
-void sh1106_display_text_x3(SH1106_t* dev,
-                            int page,
-                            char* text,
-                            int text_len,
-                            bool invert) {
+void oled_driver_display_text_x3(oled_driver_t* dev,
+                                 int page,
+                                 char* text,
+                                 int text_len,
+                                 bool invert) {
   if (page >= dev->_pages)
     return;
   int _text_len = text_len;
@@ -157,9 +157,9 @@ void sh1106_display_text_x3(SH1106_t* dev,
             out_columns[xx].u8[yy];
       }
       if (invert)
-        sh1106_invert(image, 24);
+        oled_driver_invert(image, 24);
       if (dev->_flip)
-        sh1106_flip(image, 24);
+        oled_driver_flip(image, 24);
       if (dev->_address == SPIAddress) {
         spi_display_image(dev, page + yy, seg, image, 24);
       } else {
@@ -171,29 +171,29 @@ void sh1106_display_text_x3(SH1106_t* dev,
   }
 }
 
-void sh1106_clear_screen(SH1106_t* dev, bool invert) {
+void oled_driver_clear_screen(oled_driver_t* dev, bool invert) {
   // char space[16];
   // memset(space, 0x00, sizeof(space));
   // for (int page = 0; page < dev->_pages; page++) {
-  //     sh1106_display_text(dev, page, space, sizeof(space), invert);
+  //     oled_driver_display_text(dev, page, space, sizeof(space), invert);
   // }
 
   char* space = "                ";
   int pages = 7;
   for (int page = 0; page <= pages; page++) {
-    sh1106_display_text(dev, page, space, 0, invert);
+    oled_driver_display_text(dev, page, space, 0, invert);
   }
 }
 
-void sh1106_clear_line(SH1106_t* dev, int x, int page, bool invert) {
+void oled_driver_clear_line(oled_driver_t* dev, int x, int page, bool invert) {
   // char space[16];
   // memset(space, 0x00, sizeof(space));
-  // sh1106_display_text(dev, page, space, sizeof(space), invert);
+  // oled_driver_display_text(dev, page, space, sizeof(space), invert);
   char* space = "                ";
-  sh1106_display_text(dev, page, space, x, invert);
+  oled_driver_display_text(dev, page, space, x, invert);
 }
 
-void sh1106_contrast(SH1106_t* dev, int contrast) {
+void oled_driver_contrast(oled_driver_t* dev, int contrast) {
   if (dev->_address == SPIAddress) {
     spi_contrast(dev, contrast);
   } else {
@@ -201,7 +201,7 @@ void sh1106_contrast(SH1106_t* dev, int contrast) {
   }
 }
 
-void sh1106_software_scroll(SH1106_t* dev, int start, int end) {
+void oled_driver_software_scroll(oled_driver_t* dev, int start, int end) {
   ESP_LOGD(TAG, "software_scroll start=%d end=%d _pages=%d", start, end,
            dev->_pages);
   if (start < 0 || end < 0) {
@@ -218,12 +218,16 @@ void sh1106_software_scroll(SH1106_t* dev, int start, int end) {
   }
 }
 
-void sh1106_scroll_text(SH1106_t* dev, char* text, int text_len, bool invert) {
+void oled_driver_scroll_text(oled_driver_t* dev,
+                             char* text,
+                             int text_len,
+                             bool invert) {
   ESP_LOGD(TAG, "dev->_scEnable=%d", dev->_scEnable);
   if (dev->_scEnable == false)
     return;
 
-  void (*func)(SH1106_t* dev, int page, int seg, uint8_t* images, int width);
+  void (*func)(oled_driver_t* dev, int page, int seg, uint8_t* images,
+               int width);
   if (dev->_address == SPIAddress) {
     func = spi_display_image;
   } else {
@@ -248,10 +252,10 @@ void sh1106_scroll_text(SH1106_t* dev, char* text, int text_len, bool invert) {
   if (_text_len > 16)
     _text_len = 16;
 
-  sh1106_display_text(dev, srcIndex, text, text_len, invert);
+  oled_driver_display_text(dev, srcIndex, text, text_len, invert);
 }
 
-void sh1106_scroll_clear(SH1106_t* dev) {
+void oled_driver_scroll_clear(oled_driver_t* dev) {
   ESP_LOGD(TAG, "dev->_scEnable=%d", dev->_scEnable);
   if (dev->_scEnable == false)
     return;
@@ -260,14 +264,15 @@ void sh1106_scroll_clear(SH1106_t* dev) {
   while (1) {
     int dstIndex = srcIndex + dev->_scDirection;
     ESP_LOGD(TAG, "srcIndex=%d dstIndex=%d", srcIndex, dstIndex);
-    sh1106_clear_line(dev, 0, dstIndex, false);
+    oled_driver_clear_line(dev, 0, dstIndex, false);
     if (dstIndex == dev->_scStart)
       break;
     srcIndex = srcIndex - dev->_scDirection;
   }
 }
 
-void sh1106_hardware_scroll(SH1106_t* dev, sh1106_scroll_type_t scroll) {
+void oled_driver_hardware_scroll(oled_driver_t* dev,
+                                 oled_driver_scroll_type_t scroll) {
   if (dev->_address == SPIAddress) {
     spi_hardware_scroll(dev, scroll);
   } else {
@@ -278,11 +283,11 @@ void sh1106_hardware_scroll(SH1106_t* dev, sh1106_scroll_type_t scroll) {
 // delay = 0 : display with no wait
 // delay > 0 : display with wait
 // delay < 0 : no display
-void sh1106_wrap_arround(SH1106_t* dev,
-                         sh1106_scroll_type_t scroll,
-                         int start,
-                         int end,
-                         int8_t delay) {
+void oled_driver_wrap_arround(oled_driver_t* dev,
+                              oled_driver_scroll_type_t scroll,
+                              int start,
+                              int end,
+                              int8_t delay) {
   if (scroll == SCROLL_RIGHT) {
     int _start = start;  // 0 to 7
     int _end = end;      // 0 to 7
@@ -321,21 +326,21 @@ void sh1106_wrap_arround(SH1106_t* dev,
     uint8_t wk0;
     uint8_t wk1;
     uint8_t wk2;
-    uint8_t save[128];
+    uint8_t save[dev->_width];
     // Save pages 0
-    for (int seg = 0; seg < 128; seg++) {
+    for (int seg = 0; seg < dev->_width; seg++) {
       save[seg] = dev->_page[0]._segs[seg];
     }
     // Page0 to Page6
     for (int page = 0; page < dev->_pages - 1; page++) {
-      // for (int seg=0;seg<128;seg++) {
+      // for (int seg=0;seg<dev->_width;seg++) {
       for (int seg = _start; seg <= _end; seg++) {
         wk0 = dev->_page[page]._segs[seg];
         wk1 = dev->_page[page + 1]._segs[seg];
         if (dev->_flip)
-          wk0 = sh1106_rotate_byte(wk0);
+          wk0 = oled_driver_rotate_byte(wk0);
         if (dev->_flip)
-          wk1 = sh1106_rotate_byte(wk1);
+          wk1 = oled_driver_rotate_byte(wk1);
         if (seg == 0) {
           ESP_LOGD(TAG, "b page=%d wk0=%02x wk1=%02x", page, wk0, wk1);
         }
@@ -348,26 +353,26 @@ void sh1106_wrap_arround(SH1106_t* dev,
                    wk2);
         }
         if (dev->_flip)
-          wk2 = sh1106_rotate_byte(wk2);
+          wk2 = oled_driver_rotate_byte(wk2);
         dev->_page[page]._segs[seg] = wk2;
       }
     }
     // Page7
     int pages = dev->_pages - 1;
-    // for (int seg=0;seg<128;seg++) {
+    // for (int seg=0;seg<dev->_width;seg++) {
     for (int seg = _start; seg <= _end; seg++) {
       wk0 = dev->_page[pages]._segs[seg];
       wk1 = save[seg];
       if (dev->_flip)
-        wk0 = sh1106_rotate_byte(wk0);
+        wk0 = oled_driver_rotate_byte(wk0);
       if (dev->_flip)
-        wk1 = sh1106_rotate_byte(wk1);
+        wk1 = oled_driver_rotate_byte(wk1);
       wk0 = wk0 >> 1;
       wk1 = wk1 & 0x01;
       wk1 = wk1 << 7;
       wk2 = wk0 | wk1;
       if (dev->_flip)
-        wk2 = sh1106_rotate_byte(wk2);
+        wk2 = oled_driver_rotate_byte(wk2);
       dev->_page[pages]._segs[seg] = wk2;
     }
 
@@ -379,22 +384,22 @@ void sh1106_wrap_arround(SH1106_t* dev,
     uint8_t wk0;
     uint8_t wk1;
     uint8_t wk2;
-    uint8_t save[128];
+    uint8_t save[dev->_width];
     // Save pages 7
     int pages = dev->_pages - 1;
-    for (int seg = 0; seg < 128; seg++) {
+    for (int seg = 0; seg < dev->_width; seg++) {
       save[seg] = dev->_page[pages]._segs[seg];
     }
     // Page7 to Page1
     for (int page = pages; page > 0; page--) {
-      // for (int seg=0;seg<128;seg++) {
+      // for (int seg=0;seg<dev->_width;seg++) {
       for (int seg = _start; seg <= _end; seg++) {
         wk0 = dev->_page[page]._segs[seg];
         wk1 = dev->_page[page - 1]._segs[seg];
         if (dev->_flip)
-          wk0 = sh1106_rotate_byte(wk0);
+          wk0 = oled_driver_rotate_byte(wk0);
         if (dev->_flip)
-          wk1 = sh1106_rotate_byte(wk1);
+          wk1 = oled_driver_rotate_byte(wk1);
         if (seg == 0) {
           ESP_LOGD(TAG, "b page=%d wk0=%02x wk1=%02x", page, wk0, wk1);
         }
@@ -407,25 +412,25 @@ void sh1106_wrap_arround(SH1106_t* dev,
                    wk2);
         }
         if (dev->_flip)
-          wk2 = sh1106_rotate_byte(wk2);
+          wk2 = oled_driver_rotate_byte(wk2);
         dev->_page[page]._segs[seg] = wk2;
       }
     }
     // Page0
-    // for (int seg=0;seg<128;seg++) {
+    // for (int seg=0;seg<dev->_width;seg++) {
     for (int seg = _start; seg <= _end; seg++) {
       wk0 = dev->_page[0]._segs[seg];
       wk1 = save[seg];
       if (dev->_flip)
-        wk0 = sh1106_rotate_byte(wk0);
+        wk0 = oled_driver_rotate_byte(wk0);
       if (dev->_flip)
-        wk1 = sh1106_rotate_byte(wk1);
+        wk1 = oled_driver_rotate_byte(wk1);
       wk0 = wk0 << 1;
       wk1 = wk1 & 0x80;
       wk1 = wk1 >> 7;
       wk2 = wk0 | wk1;
       if (dev->_flip)
-        wk2 = sh1106_rotate_byte(wk2);
+        wk2 = oled_driver_rotate_byte(wk2);
       dev->_page[0]._segs[seg] = wk2;
     }
   }
@@ -433,9 +438,9 @@ void sh1106_wrap_arround(SH1106_t* dev,
   if (delay >= 0) {
     for (int page = 0; page < dev->_pages; page++) {
       if (dev->_address == SPIAddress) {
-        spi_display_image(dev, page, 0, dev->_page[page]._segs, 128);
+        spi_display_image(dev, page, 0, dev->_page[page]._segs, dev->_width);
       } else {
-        i2c_display_image(dev, page, 0, dev->_page[page]._segs, 128);
+        i2c_display_image(dev, page, 0, dev->_page[page]._segs, dev->_width);
       }
       if (delay)
         vTaskDelay(delay);
@@ -443,13 +448,13 @@ void sh1106_wrap_arround(SH1106_t* dev,
   }
 }
 
-void sh1106_bitmaps(SH1106_t* dev,
-                    int xpos,
-                    int ypos,
-                    uint8_t* bitmap,
-                    int width,
-                    int height,
-                    bool invert) {
+void oled_driver_bitmaps(oled_driver_t* dev,
+                         int xpos,
+                         int ypos,
+                         uint8_t* bitmap,
+                         int width,
+                         int height,
+                         bool invert) {
   if ((width % 8) != 0) {
     ESP_LOGE(TAG, "width must be a multiple of 8");
     return;
@@ -469,16 +474,17 @@ void sh1106_bitmaps(SH1106_t* dev,
       for (int srcBits = 7; srcBits >= 0; srcBits--) {
         wk0 = dev->_page[page]._segs[_seg];
         if (dev->_flip)
-          wk0 = sh1106_rotate_byte(wk0);
+          wk0 = oled_driver_rotate_byte(wk0);
 
         wk1 = bitmap[index + offset];
         if (invert)
           wk1 = ~wk1;
 
-        // wk2 = sh1106_copy_bit(bitmap[index+offset], srcBits, wk0, dstBits);
-        wk2 = sh1106_copy_bit(wk1, srcBits, wk0, dstBits);
+        // wk2 = oled_driver_copy_bit(bitmap[index+offset], srcBits, wk0,
+        // dstBits);
+        wk2 = oled_driver_copy_bit(wk1, srcBits, wk0, dstBits);
         if (dev->_flip)
-          wk2 = sh1106_rotate_byte(wk2);
+          wk2 = oled_driver_rotate_byte(wk2);
 
         ESP_LOGD(TAG, "index=%d offset=%d page=%d _seg=%d, wk2=%02x", index,
                  offset, page, _seg, wk2);
@@ -498,20 +504,23 @@ void sh1106_bitmaps(SH1106_t* dev,
 
 #if 0
 	for (int _seg=ypos;_seg<ypos+width;_seg++) {
-		sh1106_dump_page(dev, page-1, _seg);
+		oled_driver_dump_page(dev, page-1, _seg);
 	}
 	for (int _seg=ypos;_seg<ypos+width;_seg++) {
-		sh1106_dump_page(dev, page, _seg);
+		oled_driver_dump_page(dev, page, _seg);
 	}
 #endif
-  sh1106_show_buffer(dev);
+  oled_driver_show_buffer(dev);
 }
 
 // Set pixel to internal buffer. Not show it.
-void _sh1106_pixel(SH1106_t* dev, int xpos, int ypos, bool invert) {
+void oled_driver_draw_pixel(oled_driver_t* dev,
+                            int xpos,
+                            int ypos,
+                            bool invert) {
   uint8_t _page = (ypos / 8);
   uint8_t _bits = (ypos % 8);
-  uint8_t _seg = xpos + 2;
+  uint8_t _seg = xpos;
   uint8_t wk0 = dev->_page[_page]._segs[_seg];
   uint8_t wk1 = 1 << _bits;
   ESP_LOGD(TAG, "ypos=%d _page=%d _bits=%d wk0=0x%02x wk1=0x%02x", ypos, _page,
@@ -522,13 +531,18 @@ void _sh1106_pixel(SH1106_t* dev, int xpos, int ypos, bool invert) {
     wk0 = wk0 | wk1;
   }
   if (dev->_flip)
-    wk0 = sh1106_rotate_byte(wk0);
+    wk0 = oled_driver_rotate_byte(wk0);
   ESP_LOGD(TAG, "wk0=0x%02x wk1=0x%02x", wk0, wk1);
   dev->_page[_page]._segs[_seg] = wk0;
 }
 
 // Set line to internal buffer. Not show it.
-void _sh1106_line(SH1106_t* dev, int x1, int y1, int x2, int y2, bool invert) {
+void _oled_driver_line(oled_driver_t* dev,
+                       int x1,
+                       int y1,
+                       int x2,
+                       int y2,
+                       bool invert) {
   int i;
   int dx, dy;
   int sx, sy;
@@ -546,7 +560,7 @@ void _sh1106_line(SH1106_t* dev, int x1, int y1, int x2, int y2, bool invert) {
   if (dx > dy) {
     E = -dx;
     for (i = 0; i <= dx; i++) {
-      _sh1106_pixel(dev, x1, y1, invert);
+      oled_driver_draw_pixel(dev, x1, y1, invert);
       x1 += sx;
       E += 2 * dy;
       if (E >= 0) {
@@ -559,7 +573,7 @@ void _sh1106_line(SH1106_t* dev, int x1, int y1, int x2, int y2, bool invert) {
   } else {
     E = -dy;
     for (i = 0; i <= dy; i++) {
-      _sh1106_pixel(dev, x1, y1, invert);
+      oled_driver_draw_pixel(dev, x1, y1, invert);
       y1 += sy;
       E += 2 * dx;
       if (E >= 0) {
@@ -570,7 +584,7 @@ void _sh1106_line(SH1106_t* dev, int x1, int y1, int x2, int y2, bool invert) {
   }
 }
 
-void sh1106_invert(uint8_t* buf, size_t blen) {
+void oled_driver_invert(uint8_t* buf, size_t blen) {
   uint8_t wk;
   for (int i = 0; i < blen; i++) {
     wk = buf[i];
@@ -579,13 +593,16 @@ void sh1106_invert(uint8_t* buf, size_t blen) {
 }
 
 // Flip upside down
-void sh1106_flip(uint8_t* buf, size_t blen) {
+void oled_driver_flip(uint8_t* buf, size_t blen) {
   for (int i = 0; i < blen; i++) {
-    buf[i] = sh1106_rotate_byte(buf[i]);
+    buf[i] = oled_driver_rotate_byte(buf[i]);
   }
 }
 
-uint8_t sh1106_copy_bit(uint8_t src, int srcBits, uint8_t dst, int dstBits) {
+uint8_t oled_driver_copy_bit(uint8_t src,
+                             int srcBits,
+                             uint8_t dst,
+                             int dstBits) {
   ESP_LOGD(TAG, "src=%02x srcBits=%d dst=%02x dstBits=%d", src, srcBits, dst,
            dstBits);
   uint8_t smask = 0x01 << srcBits;
@@ -607,7 +624,7 @@ uint8_t sh1106_copy_bit(uint8_t src, int srcBits, uint8_t dst, int dstBits) {
 
 // Rotate 8-bit data
 // 0x12-->0x48
-uint8_t sh1106_rotate_byte(uint8_t ch1) {
+uint8_t oled_driver_rotate_byte(uint8_t ch1) {
   uint8_t ch2 = 0;
   for (int j = 0; j < 8; j++) {
     ch2 = (ch2 << 1) + (ch1 & 0x01);
@@ -616,8 +633,9 @@ uint8_t sh1106_rotate_byte(uint8_t ch1) {
   return ch2;
 }
 
-void sh1106_fadeout(SH1106_t* dev) {
-  void (*func)(SH1106_t* dev, int page, int seg, uint8_t* images, int width);
+void oled_driver_fadeout(oled_driver_t* dev) {
+  void (*func)(oled_driver_t* dev, int page, int seg, uint8_t* images,
+               int width);
   if (dev->_address == SPIAddress) {
     func = spi_display_image;
   } else {
@@ -633,7 +651,7 @@ void sh1106_fadeout(SH1106_t* dev) {
       } else {
         image[0] = image[0] << 1;
       }
-      for (int seg = 0; seg < 128; seg++) {
+      for (int seg = 0; seg < dev->_width; seg++) {
         (*func)(dev, page, seg, image, 1);
         dev->_page[page]._segs[seg] = image[0];
       }
@@ -641,93 +659,96 @@ void sh1106_fadeout(SH1106_t* dev) {
   }
 }
 
-void sh1106_dump(SH1106_t dev) {
+void oled_driver_dump(oled_driver_t dev) {
   printf("_address=%x\n", dev._address);
   printf("_width=%x\n", dev._width);
   printf("_height=%x\n", dev._height);
   printf("_pages=%x\n", dev._pages);
 }
 
-void sh1106_dump_page(SH1106_t* dev, int page, int seg) {
+void oled_driver_dump_page(oled_driver_t* dev, int page, int seg) {
   ESP_LOGI(TAG, "dev->_page[%d]._segs[%d]=%02x", page, seg,
            dev->_page[page]._segs[seg]);
 }
 
-void sh1106_draw_line(SH1106_t* dev,
-                      int x1,
-                      int y1,
-                      int x2,
-                      int y2,
-                      bool invert) {
-  _sh1106_line(dev, x1, y1, x2, y2, invert);
-  // sh1106_show_buffer(dev);
+void oled_driver_draw_line(oled_driver_t* dev,
+                           int x1,
+                           int y1,
+                           int x2,
+                           int y2,
+                           bool invert) {
+  _oled_driver_line(dev, x1, y1, x2, y2, invert);
+  // oled_driver_show_buffer(dev);
 }
 
-void sh1106_draw_hline(SH1106_t* dev, int x, int y, int width, bool invert) {
+void oled_driver_draw_hline(oled_driver_t* dev,
+                            int x,
+                            int y,
+                            int width,
+                            bool invert) {
   for (int i = 0; i < width; i++) {
-    _sh1106_pixel(dev, x + i, y, invert);
+    oled_driver_draw_pixel(dev, x + i, y, invert);
   }
-  // sh1106_show_buffer(dev);
+  // oled_driver_show_buffer(dev);
 }
 
-void sh1106_draw_vline(SH1106_t* dev, int x, int y, int height, bool invert) {
+void oled_driver_draw_vline(oled_driver_t* dev,
+                            int x,
+                            int y,
+                            int height,
+                            bool invert) {
   for (int i = 0; i < height; i++) {
-    _sh1106_pixel(dev, x, y + i, invert);
+    oled_driver_draw_pixel(dev, x, y + i, invert);
   }
-  // sh1106_show_buffer(dev);
+  // oled_driver_show_buffer(dev);
 }
 
-void sh1106_draw_rect(SH1106_t* dev,
-                      int x,
-                      int y,
-                      int width,
-                      int height,
-                      bool invert) {
-  sh1106_draw_hline(dev, x, y, width, invert);               // Top
-  sh1106_draw_hline(dev, x, y + height - 1, width, invert);  // Bottom
-  sh1106_draw_vline(dev, x, y, height, invert);              // Left
-  sh1106_draw_vline(dev, x + width - 1, y, height, invert);  // Right
-  // sh1106_show_buffer(dev);
+void oled_driver_draw_rect(oled_driver_t* dev,
+                           int x,
+                           int y,
+                           int width,
+                           int height,
+                           bool invert) {
+  oled_driver_draw_hline(dev, x, y, width, invert);               // Top
+  oled_driver_draw_hline(dev, x, y + height - 1, width, invert);  // Bottom
+  oled_driver_draw_vline(dev, x, y, height, invert);              // Left
+  oled_driver_draw_vline(dev, x + width - 1, y, height, invert);  // Right
+  // oled_driver_show_buffer(dev);
 }
 
-void sh1106_draw_pixel(SH1106_t* dev, int x, int y, bool invert) {
-  _sh1106_pixel(dev, x, y, invert);
-  // sh1106_show_buffer(dev);
-}
-
-void sh1106_draw_custom_box(SH1106_t* dev) {
+void oled_driver_draw_custom_box(oled_driver_t* dev) {
   int page = 3;
   int x = 0;
   int y = page * 8 - 3;
-  int width = x + 126;
+  int width = x + dev->_width - 4;
   int height = y - 6;
 
-  sh1106_draw_rect(dev, x, y, width, height, 0);
-  sh1106_draw_rect(dev, x, y, width - 1, height - 1, 0);
+  oled_driver_draw_rect(dev, x, y, width, height, 0);
+  oled_driver_draw_rect(dev, x, y, width - 1, height - 1, 0);
 
   // Top left border
-  sh1106_draw_pixel(dev, x, y, 1);
-  sh1106_draw_pixel(dev, x + 1, y, 1);
-  sh1106_draw_pixel(dev, x, y + 1, 1);
-  sh1106_draw_pixel(dev, x + 1, y + 1, 0);
+  oled_driver_draw_pixel(dev, x, y, 1);
+  oled_driver_draw_pixel(dev, x + 1, y, 1);
+  oled_driver_draw_pixel(dev, x, y + 1, 1);
+  oled_driver_draw_pixel(dev, x + 1, y + 1, 0);
 
   // Top right border
-  sh1106_draw_pixel(dev, width - 1, y, 1);
-  sh1106_draw_pixel(dev, width - 2, y, 1);
-  sh1106_draw_pixel(dev, width - 1, y + 1, 1);
-  sh1106_draw_pixel(dev, width - 2, y + 1, 0);
+  oled_driver_draw_pixel(dev, width - 1, y, 1);
+  oled_driver_draw_pixel(dev, width - 2, y, 1);
+  oled_driver_draw_pixel(dev, width - 1, y + 1, 1);
+  oled_driver_draw_pixel(dev, width - 2, y + 1, 0);
 
   // Bottom left border
-  sh1106_draw_pixel(dev, x, y + height - 1, 1);
-  sh1106_draw_pixel(dev, x + 1, y + height - 1, 1);
-  sh1106_draw_pixel(dev, x, y + height - 2, 1);
-  sh1106_draw_pixel(dev, x + 1, y + height - 2, 0);
+  oled_driver_draw_pixel(dev, x, y + height - 1, 1);
+  oled_driver_draw_pixel(dev, x + 1, y + height - 1, 1);
+  oled_driver_draw_pixel(dev, x, y + height - 2, 1);
+  oled_driver_draw_pixel(dev, x + 1, y + height - 2, 0);
 
   // Bottom right border
-  sh1106_draw_pixel(dev, width - 1, y + height - 1, 1);
-  sh1106_draw_pixel(dev, width - 2, y + height - 1, 1);
-  sh1106_draw_pixel(dev, width - 1, y + height - 2, 1);
-  sh1106_draw_pixel(dev, width - 2, y + height - 2, 0);
+  oled_driver_draw_pixel(dev, width - 1, y + height - 1, 1);
+  oled_driver_draw_pixel(dev, width - 2, y + height - 1, 1);
+  oled_driver_draw_pixel(dev, width - 1, y + height - 2, 1);
+  oled_driver_draw_pixel(dev, width - 2, y + height - 2, 0);
 
-  sh1106_show_buffer(dev);
+  // oled_driver_show_buffer(dev);
 }
