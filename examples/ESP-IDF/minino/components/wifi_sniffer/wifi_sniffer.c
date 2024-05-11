@@ -57,7 +57,9 @@ void show_summary() {
 }
 
 void wifi_sniffer_start() {
-  // sd_card_mount();
+#if CONFIG_SNIFFER_PCAP_DESTINATION_SD
+  sd_card_mount();
+#endif
 
   const char** pcap_argv[] = {"pcap", "--open", "-f", "sniffer"};
   uint8_t pcap_argc = 4;
@@ -79,6 +81,8 @@ void wifi_sniffer_stop() {
   const char** close_argv[] = {"pcap", "--close", "-f", "sniffer"};
   uint8_t close_argc = 4;
   do_pcap_cmd(close_argc, (char**) close_argv);
-  // sd_card_unmount();
+#if CONFIG_SNIFFER_PCAP_DESTINATION_SD
+  sd_card_unmount();
+#endif
   vTaskDelay(100 / portTICK_PERIOD_MS);
 }

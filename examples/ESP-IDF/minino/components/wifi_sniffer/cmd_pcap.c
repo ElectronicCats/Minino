@@ -341,10 +341,6 @@ esp_err_t pcap_cmd_print_summary(pcap_file_handle_t pcap, FILE* print_file) {
       for (int j = 0; j < 5; j++) {
         fprintf(print_file, "%2x ", packet_payload[10 + j]);
       }
-      // fprintf(print_file, "%2x\n", packet_payload[15]);
-      // fprintf(print_file,
-      //         "----------------------------------------------------------------"
-      //         "--------\n");
       fprintf(print_file, "%2x\n", packet_payload[15]);
       // Check if the frame is a Beacon frame or Probe Response frame
       uint8_t frame_type = (packet_payload[0] >> 2) & 0x03;
@@ -367,8 +363,9 @@ esp_err_t pcap_cmd_print_summary(pcap_file_handle_t pcap, FILE* print_file) {
         fprintf(print_file, "\n");
         // The DS Parameter Set, which contains the channel, is located after
         // the SSID
+        uint8_t supported_rates_length = packet_payload[38 + ssid_length + 1];
         fprintf(print_file, "Channel: %d\n",
-                packet_payload[38 + ssid_length + 2]);
+                packet_payload[38 + ssid_length + supported_rates_length + 4]);
         // The Supported Rates, which contains the data rate, is located after
         // the DS Parameter Set
         fprintf(print_file, "Data Rate: %d Mbps\n",
@@ -378,6 +375,8 @@ esp_err_t pcap_cmd_print_summary(pcap_file_handle_t pcap, FILE* print_file) {
         // need to be inferred from the Capability Information field and the
         // Information Elements This requires a more complex parsing of the
         // packet payload
+        // Parse Information Elements to get Security Mode, Authentication Mode,
+        // RF Parameters, etc.
       }
       fprintf(print_file,
               "----------------------------------------------------------------"
@@ -456,7 +455,7 @@ int do_pcap_cmd(int argc, char** argv) {
     if (pcap_cmd_rt.is_opened) {
       ESP_GOTO_ON_FALSE(!(pcap_cmd_rt.is_writing), ESP_FAIL, err, TAG,
                         "still writing");
-      ESP_GOTO_ON_ERROR(pcap_print_summary(pcap_cmd_rt.pcap_handle, stdout),
+      ESP_GOTO_ON_ERROR(pcap_cmd_print_summary(pcap_cmd_rt.pcap_handle, stdout),
                         err, TAG, "pcap print summary failed");
     } else {
       FILE* fp;
@@ -471,7 +470,7 @@ int do_pcap_cmd(int argc, char** argv) {
       ESP_GOTO_ON_ERROR(
           pcap_new_session(&pcap_config, &pcap_cmd_rt.pcap_handle), err, TAG,
           "pcap init failed");
-      ESP_GOTO_ON_ERROR(pcap_print_summary(pcap_cmd_rt.pcap_handle, stdout),
+      ESP_GOTO_ON_ERROR(pcap_cmd_print_summary(pcap_cmd_rt.pcap_handle, stdout),
                         err, TAG, "pcap print summary failed");
       ESP_GOTO_ON_ERROR(pcap_del_session(pcap_cmd_rt.pcap_handle), err, TAG,
                         "stop pcap session failed");
@@ -485,10 +484,6 @@ int do_pcap_cmd(int argc, char** argv) {
     ESP_LOGI(TAG, "Memory is to be parsed");
     ESP_GOTO_ON_ERROR(pcap_cmd_print_summary(pcap_cmd_rt.pcap_handle, stdout),
                       err, TAG, "pcap print summary failed");
-    // ESP_GOTO_ON_ERROR(pcap_print_summary(pcap_cmd_rt.pcap_handle, stdout),
-    // err,
-    //                   TAG, "pcap print summary failed");
-    // Open file
   }
   #endif  // CONFIG_SNIFFER_PCAP_DESTINATION_MEMORY
 
