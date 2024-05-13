@@ -267,16 +267,19 @@ static struct {
   struct arg_end* end;
 } pcap_args;
 
+long pcap_cmd_get_file_size(FILE* file) {
+  fseek(file, 0L, SEEK_END);
+  long size = ftell(file);
+  fseek(file, 0L, SEEK_SET);
+  return size;
+}
+
 esp_err_t pcap_cmd_print_summary(pcap_file_handle_t pcap, FILE* print_file) {
   esp_err_t ret = ESP_OK;
-  long size = 0;
+  long size = pcap_cmd_get_file_size(pcap->file);
   char* packet_payload = NULL;
   ESP_RETURN_ON_FALSE(pcap && print_file, ESP_ERR_INVALID_ARG, TAG,
                       "invalid argument");
-  // get file size
-  fseek(pcap->file, 0L, SEEK_END);
-  size = ftell(pcap->file);
-  fseek(pcap->file, 0L, SEEK_SET);
   // file empty is allowed, so return ESP_OK
   ESP_RETURN_ON_FALSE(size, ESP_OK, TAG, "pcap file is empty");
   // packet index (by bytes)
@@ -366,34 +369,7 @@ esp_err_t pcap_cmd_print_summary(pcap_file_handle_t pcap, FILE* print_file) {
         uint8_t supported_rates_length = packet_payload[38 + ssid_length + 1];
         fprintf(print_file, "Channel: %d\n",
                 packet_payload[38 + ssid_length + supported_rates_length + 4]);
-        // The Supported Rates, which contains the data rate, is located after
-        // the DS Parameter Set
-        fprintf(print_file, "Data Rate: %d Mbps\n",
-                packet_payload[38 + ssid_length + 5] & 0x7F);
-        // The Security Mode, Authentication Mode, and RF Parameters are not
-        // directly available in the Beacon frame or Probe Response frame They
-        // need to be inferred from the Capability Information field and the
-        // Information Elements This requires a more complex parsing of the
-        // packet payload
-        // Parse Information Elements to get Security Mode, Authentication Mode,
-        // RF Parameters, etc.
       }
-      fprintf(print_file,
-              "----------------------------------------------------------------"
-              "--------\n");
-    } else if (file_header.link_type == PCAP_LINK_TYPE_ETHERNET) {
-      fprintf(print_file, "Destination: ");
-      for (int j = 0; j < 5; j++) {
-        fprintf(print_file, "%2x ", packet_payload[j]);
-      }
-      fprintf(print_file, "%2x\n", packet_payload[5]);
-      fprintf(print_file, "Source: ");
-      for (int j = 0; j < 5; j++) {
-        fprintf(print_file, "%2x ", packet_payload[6 + j]);
-      }
-      fprintf(print_file, "%2x\n", packet_payload[11]);
-      fprintf(print_file, "Type: 0x%x\n",
-              packet_payload[13] | (packet_payload[12] << 8));
       fprintf(print_file,
               "----------------------------------------------------------------"
               "--------\n");
