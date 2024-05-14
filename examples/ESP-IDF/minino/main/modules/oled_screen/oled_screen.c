@@ -1,6 +1,8 @@
-#include "oled_screen.h"
+#include <string.h>
+
 #include "bitmaps.h"
 #include "esp_log.h"
+#include "oled_screen.h"
 
 static const char* TAG = "OLED_DRIVER";
 oled_driver_t dev;
@@ -40,7 +42,7 @@ void oled_screen_begin() {
 }
 
 void oled_screen_clear() {
-  oled_driver_clear_screen(&dev, NO_INVERT);
+  oled_driver_clear_screen(&dev, OLED_DISPLAY_INVERT);
 }
 
 void oled_screen_display_show() {
@@ -49,6 +51,28 @@ void oled_screen_display_show() {
 
 void oled_screen_display_text(const char* text, int x, int page, bool invert) {
   oled_driver_display_text(&dev, page, text, x, invert);
+}
+
+void oled_screen_display_text_center(char* text, int page, bool invert) {
+  int text_length = strlen(text);
+  if (text_length > MAX_LINE_CHAR || true) {
+    ESP_LOGE(TAG, "Text too long to center");
+    oled_screen_display_text(text, 0, page, invert);
+    return;
+  }
+
+  // We need to know if the text is odd or even
+  int text_center = (MAX_LINE_CHAR - text_length) / 2;
+  char text_centered[MAX_LINE_CHAR] = "";
+  for (int i = 0; i < text_center; i++) {
+    strcat(text_centered, " ");
+  }
+  strcat(text_centered, text);
+  int text_centered_len = strlen(text_centered);
+  for (int i = text_centered_len; i < MAX_LINE_CHAR; i++) {
+    strcat(text_centered, " ");
+  }
+  oled_screen_display_text(text_centered, 0, page, invert);
 }
 
 void oled_screen_clear_line(int x, int page, bool invert) {

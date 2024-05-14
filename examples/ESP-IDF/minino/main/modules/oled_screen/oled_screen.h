@@ -1,9 +1,13 @@
 #pragma once
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "oled_driver.h"
 
-#define INVERT    true
-#define NO_INVERT false
+#define OLED_DISPLAY_NORMAL true
+#define OLED_DISPLAY_INVERT false
+#define MAX_LINE_CHAR       17
 
 /**
  * @brief Initialize the OLED driver display
@@ -37,6 +41,15 @@ void oled_screen_display_show();
  * @return void
  */
 void oled_screen_display_text(const char* text, int x, int page, bool invert);
+
+/**
+ * @brief Display the text on the center of the OLED display
+ *
+ * @param text Text to display on the OLED display
+ * @param page Page to display the text on the OLED display
+ * @param invert Invert the background and foreground color of the OLED display
+ */
+void oled_screen_display_text_center(char* text, int page, bool invert);
 
 /**
  * @brief Clear a line on the OLED display

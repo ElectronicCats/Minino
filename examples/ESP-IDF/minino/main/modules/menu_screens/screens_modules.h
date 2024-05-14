@@ -17,9 +17,11 @@ typedef enum {
   LAYER_MATTER_APPS,
   LAYER_GPS,
   /* WiFi applications */
-  LAYER_WIFI_SNIFFER,
-  LAYER_WIFI_SNIFFER_START,
-  LAYER_WIFI_SNIFFER_SETTINGS,
+  LAYER_WIFI_ANALIZER,
+  LAYER_WIFI_DEAUTH,
+  /* WiFi analizer items */
+  LAYER_WIFI_ANALIZER_START,
+  LAYER_WIFI_ANALIZER_SETTINGS,
   /* Bluetooth applications */
   LAYER_BLUETOOTH_AIRTAGS_SCAN,
   /* Zigbee applications */
@@ -73,6 +75,7 @@ enum menu_layer_about_items {
 
 enum menu_layer_wifi_items {
   WIFI_MENU_ANALIZER = 0,
+  WIFI_MENU_DEAUTH,
 };
 
 enum menu_layer_wifi_sniffer_items {
@@ -184,10 +187,11 @@ static char* legal_text[] = {
 
 static char* wifi_items[] = {
     "Analizer",
+    "Deauth",
     NULL,
 };
 
-static char* wifi_sniffer_items[] = {
+static char* wifi_analizer_items[] = {
     "Start",
     "Settings",
     NULL,
@@ -238,9 +242,10 @@ static char** menu_items[] = {
     empty_items,  // Matter
     gps_items,
     /* WiFi applications */
-    wifi_sniffer_items,
-    empty_items,  // WiFi Sniffer Start
-    empty_items,  // WiFi Sniffer Settings
+    wifi_analizer_items,
+    empty_items,  // WiFi Deauth
+    empty_items,  // WiFi Analizer Start
+    empty_items,  // WiFi Analizer Settings
     /* Bluetooth applications */
     empty_items,  // Bluetooth Airtags scan
     /* Zigbee applications */

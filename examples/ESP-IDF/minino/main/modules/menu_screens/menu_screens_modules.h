@@ -19,6 +19,14 @@ typedef struct {
 } app_state_t;
 
 /**
+ * @brief Enum with the screen module controls
+ */
+typedef enum {
+  SCREEN_IN_NAVIGATION = 0,
+  SCREEN_IN_APP,
+} screen_module_controls_type_t;
+
+/**
  * @brief Initialize the menu screens
  *
  * @return void

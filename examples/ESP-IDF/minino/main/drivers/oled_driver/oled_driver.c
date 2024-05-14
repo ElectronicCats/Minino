@@ -1,11 +1,9 @@
 #include <string.h>
 
+#include "esp_log.h"
+#include "font8x8_basic.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-
-#include "esp_log.h"
-
-#include "font8x8_basic.h"
 #include "oled_driver.h"
 
 #define TAG "oled_driver"
