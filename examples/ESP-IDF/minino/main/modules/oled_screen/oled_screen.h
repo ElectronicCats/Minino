@@ -5,8 +5,8 @@
 
 #include "oled_driver.h"
 
-#define OLED_DISPLAY_NORMAL true
-#define OLED_DISPLAY_INVERT false
+#define OLED_DISPLAY_INVERT true
+#define OLED_DISPLAY_NORMAL false
 #define MAX_LINE_CHAR       17
 
 /**

@@ -76,7 +76,7 @@ static void button_event_cb(void* arg, void* data) {
       }
       break;
     case BUTTON_RIGHT:
-      if (button_event == BUTTON_PRESS_DOWN) {
+      if (button_event == BUTTON_SINGLE_CLICK) {
         menu_screens_enter_submenu();
       }
       break;

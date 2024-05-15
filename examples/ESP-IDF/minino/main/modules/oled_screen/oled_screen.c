@@ -42,7 +42,7 @@ void oled_screen_begin() {
 }
 
 void oled_screen_clear() {
-  oled_driver_clear_screen(&dev, OLED_DISPLAY_INVERT);
+  oled_driver_clear_screen(&dev, OLED_DISPLAY_NORMAL);
 }
 
 void oled_screen_display_show() {

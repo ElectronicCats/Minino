@@ -1,6 +1,8 @@
 set(modules "modules/keyboard/keyboard_module.c"
             "modules/menu_screens/menu_screens_modules.c"
             "modules/oled_screen/oled_screen.c"
+            "modules/wifi/wifi_module.c"
+            "modules/wifi/wifi_screens_module.c"
             "modules/zigbee/zigbee_switch.c"
             "modules/zigbee/zigbee_screens_module.c")
 
@@ -15,8 +17,9 @@ idf_component_register(
                     "${drivers}"
                     INCLUDE_DIRS
                     "."
-                    "drivers/oled_driver/"
-                    "modules/menu_screens/"
-                    "modules/oled_screen/"
                     "modules/keyboard/"
+                    "modules/menu_screens/"
+                    "drivers/oled_driver/"
+                    "modules/oled_screen/"
+                    "modules/wifi/"
                     "modules/zigbee/")
