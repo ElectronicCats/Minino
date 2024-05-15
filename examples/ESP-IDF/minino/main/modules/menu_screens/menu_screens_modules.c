@@ -7,6 +7,7 @@
 #include "preferences.h"
 #include "string.h"
 #include "wifi_module.h"
+#include "wifi_sniffer.h"
 #include "zigbee_switch.h"
 
 #define MAX_MENU_ITEMS_PER_SCREEN 3
@@ -20,7 +21,6 @@ screen_module_layer_t previous_layer;
 screen_module_layer_t current_layer;
 uint8_t bluetooth_devices_count;
 nmea_parser_handle_t nmea_hdl;
-TaskHandle_t wifi_sniffer_task_handle = NULL;
 
 static app_state_t app_state = {
     .in_app = false,
@@ -56,9 +56,9 @@ void menu_screens_begin() {
 
   oled_screen_begin();
 
-  wifi_sniffer_register_cb(display_wifi_sniffer_cb);
-  wifi_sniffer_register_animation_cbs(display_wifi_sniffer_animation_start,
-                                      display_wifi_sniffer_animation_stop);
+  // wifi_sniffer_register_cb(display_wifi_sniffer_cb);
+  // wifi_sniffer_register_animation_cbs(display_wifi_sniffer_animation_start,
+  //                                     display_wifi_sniffer_animation_stop);
   bluetooth_scanner_register_cb(display_bluetooth_scanner);
 
   // Show logo
@@ -79,10 +79,10 @@ void menu_screens_begin() {
   }
 
   display_gps_init();
-  xTaskCreate(&display_wifi_sniffer_animation_task,
-              "display_wifi_sniffer_animation_task", 2048, NULL, 15,
-              &wifi_sniffer_task_handle);
-  display_wifi_sniffer_animation_stop();
+  // xTaskCreate(&display_wifi_sniffer_animation_task,
+  //             "display_wifi_sniffer_animation_task", 2048, NULL, 15,
+  //             &wifi_sniffer_animation_task_handle);
+  // display_wifi_sniffer_animation_stop();
 }
 
 /**
@@ -237,51 +237,6 @@ void menu_screens_display_menu() {
     display_scrolling_text(text);
   } else {
     display_menu_items(items);
-  }
-}
-
-void display_wifi_sniffer_animation_task(void* pvParameter) {
-  while (true) {
-    oled_screen_display_bitmap(epd_bitmap_wifi_loading_1, 0, 0, 64, 64,
-                               OLED_DISPLAY_NORMAL);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-    oled_screen_display_bitmap(epd_bitmap_wifi_loading_2, 0, 0, 64, 64,
-                               OLED_DISPLAY_NORMAL);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-    oled_screen_display_bitmap(epd_bitmap_wifi_loading_3, 0, 0, 64, 64,
-                               OLED_DISPLAY_NORMAL);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-    oled_screen_display_bitmap(epd_bitmap_wifi_loading_4, 0, 0, 64, 64,
-                               OLED_DISPLAY_NORMAL);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-  }
-}
-
-void display_wifi_sniffer_animation_start() {
-  vTaskResume(wifi_sniffer_task_handle);
-}
-
-void display_wifi_sniffer_animation_stop() {
-  vTaskSuspend(wifi_sniffer_task_handle);
-  // oled_screen_display_text("Timeout!", 64, 6, OLED_DISPLAY_INVERT);
-}
-
-void display_wifi_sniffer_cb(sniffer_runtime_t* sniffer) {
-  if (sniffer->is_running) {
-    const char* packets_str = malloc(16);
-    const char* channel_str = malloc(16);
-
-    sprintf(packets_str, "%ld", sniffer->sniffed_packets);
-    sprintf(channel_str, "%ld", sniffer->channel);
-
-    oled_screen_clear_line(64, 1, OLED_DISPLAY_NORMAL);
-
-    oled_screen_display_text("Packets", 64, 0, OLED_DISPLAY_INVERT);
-    oled_screen_display_text(packets_str, 64, 1, OLED_DISPLAY_INVERT);
-    oled_screen_display_text("Channel", 64, 3, OLED_DISPLAY_INVERT);
-    oled_screen_display_text(channel_str, 64, 4, OLED_DISPLAY_INVERT);
-  } else {
-    ESP_LOGI(TAG, "sniffer task stopped");
   }
 }
 
@@ -444,7 +399,7 @@ void menu_screens_set_app_state(bool in_app, app_handler_t app_handler) {
   app_state.app_handler = app_handler;
 }
 
-screen_module_layer_t screen_module_get_current_layer() {
+screen_module_layer_t menu_screens_get_current_layer() {
   return current_layer;
 }
 
@@ -682,6 +637,7 @@ void handle_wifi_apps_selection() {
   switch (selected_item) {
     case WIFI_MENU_ANALIZER:
       current_layer = LAYER_WIFI_ANALIZER;
+      wifi_module_begin();
       break;
     case WIFI_MENU_DEAUTH:
       current_layer = LAYER_WIFI_DEAUTH;

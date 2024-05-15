@@ -1,7 +1,10 @@
+#pragma once
+
 #include "esp_wifi.h"
-#ifndef WIFI_SCREENS_MODULE_H
-  #define WIFI_SCREENS_MODULE_H
-  #define TAG_WIFI_SCREENS_MODULE "module:wifi_screens"
+#include "wifi_sniffer.h"
+
+#define WIFI_SCREENS_MODULE_H
+#define TAG_WIFI_SCREENS_MODULE "module:wifi_screens"
 
 /**
  * @brief Display the wifi module scanning screen
@@ -65,4 +68,9 @@ void wifi_screens_module_display_captive_user_pass(char* ssid,
 void wifi_screens_module_display_captive_selector(char* attack_options[],
                                                   int list_count,
                                                   int current_option);
-#endif  // WIFI_SCREENS_MODULE_H
+
+void wifi_screens_module_display_sniffer_cb(sniffer_runtime_t* sniffer);
+void display_wifi_sniffer_animation_task(void* pvParameter);
+void wifi_screens_module_create_sniffer_task();
+void display_wifi_sniffer_animation_start();
+void display_wifi_sniffer_animation_stop();

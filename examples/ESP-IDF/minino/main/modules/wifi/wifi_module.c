@@ -11,6 +11,33 @@
 #include "wifi_controller.h"
 #include "wifi_scanner.h"
 
+/**
+ * @brief Enum with the wifi module states
+ *
+ */
+typedef enum {
+  WIFI_STATE_SCANNING = 0,
+  WIFI_STATE_SCANNED,
+  WIFI_STATE_DETAILS,
+  WIFI_STATE_ATTACK_SELECTOR,
+  WIFI_STATE_ATTACK,
+  WIFI_STATE_ATTACK_CAPTIVE_PORTAL,
+} wifi_state_t;
+
+/**
+ * @brief Structure to store the wifi module data
+ *
+ */
+typedef struct {
+  wifi_state_t state;
+  wifi_config_t wifi_config;
+} wifi_module_t;
+
+char* wifi_state_names[] = {
+    "WIFI_STATE_SCANNING", "WIFI_STATE_SCANNED",
+    "WIFI_STATE_DETAILS",  "WIFI_STATE_ATTACK_SELECTOR",
+    "WIFI_STATE_ATTACK",   "WIFI_STATE_ATTACK_CAPTIVE_PORTAL"};
+
 static TaskHandle_t task_display_scanning = NULL;
 static TaskHandle_t task_display_attacking = NULL;
 static wifi_scanner_ap_records_t* ap_records;
@@ -43,10 +70,9 @@ void wifi_module_exit() {
   menu_screens_exit_submenu();
 }
 
-void wifi_module_begin(void) {
+void wifi_module_deauth_init() {
   ESP_LOGI(TAG_WIFI_MODULE, "Initializing WiFi module");
-  menu_screens_set_app_state(true, wifi_module_state_machine);
-
+  menu_screens_set_app_state(true, wifi_module_keyboard_cb);
   current_wifi_state.state = WIFI_STATE_SCANNING;
   memset(&current_wifi_state.wifi_config, 0, sizeof(wifi_config_t));
   current_wifi_state.wifi_config = wifi_driver_access_point_begin();
@@ -68,7 +94,24 @@ void wifi_module_begin(void) {
   current_wifi_state.state = WIFI_STATE_SCANNED;
 }
 
-void wifi_module_state_machine(button_event_t button_pressed) {
+void wifi_module_analizer_init() {
+  wifi_sniffer_register_cb(wifi_screens_module_display_sniffer_cb);
+  wifi_sniffer_register_animation_cbs(display_wifi_sniffer_animation_start,
+                                      display_wifi_sniffer_animation_stop);
+  wifi_screens_module_create_sniffer_task();
+}
+
+void wifi_module_begin(void) {
+  if (menu_screens_get_current_layer() == LAYER_WIFI_ANALIZER) {
+    wifi_module_analizer_init();
+  } else if (menu_screens_get_current_layer() == LAYER_WIFI_DEAUTH) {
+    wifi_module_deauth_init();
+  } else {
+    ESP_LOGE(TAG_WIFI_MODULE, "Invalid wifi layer");
+  }
+}
+
+void wifi_module_keyboard_cb(button_event_t button_pressed) {
   uint8_t button_name = button_pressed >> 4;
   uint8_t button_event = button_pressed & 0x0F;
   ESP_LOGI(TAG_WIFI_MODULE, "State: %s",
