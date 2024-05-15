@@ -70,6 +70,14 @@ void wifi_driver_init_apsta(void) {
   wifi_driver_initialized = true;
 }
 
+void wifi_driver_init_null(void) {
+  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+  ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
+  wifi_driver_initialized = true;
+}
+
 void wifi_driver_sta_disconnect() {
   ESP_ERROR_CHECK(esp_wifi_disconnect());
 }

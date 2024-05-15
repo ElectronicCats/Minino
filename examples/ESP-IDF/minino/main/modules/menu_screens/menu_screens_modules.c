@@ -67,6 +67,9 @@ void menu_screens_begin() {
   if (preferences_get_bool("zigbee_deinit", false)) {
     current_layer = LAYER_ZIGBEE_SPOOFING;
     preferences_put_bool("zigbee_deinit", false);
+  } else if (preferences_get_bool("wifi_exit", false)) {
+    current_layer = LAYER_WIFI_APPS;
+    preferences_put_bool("wifi_exit", false);
   } else {
     buzzer_play();
     oled_screen_display_bitmap(epd_bitmap_logo_1, 0, 0, 128, 64,
@@ -452,7 +455,10 @@ void menu_screens_exit_submenu() {
 
   switch (current_layer) {
     case LAYER_WIFI_ANALIZER_START:
-      // wifi_sniffer_stop();
+      wifi_sniffer_stop();
+      break;
+    case LAYER_WIFI_ANALIZER:
+      wifi_sniffer_exit();
       break;
     case LAYER_BLUETOOTH_AIRTAGS_SCAN:
       if (bluetooth_scanner_is_active()) {
@@ -689,7 +695,7 @@ void handle_wifi_sniffer_selection() {
     case WIFI_SNIFFER_START:
       current_layer = LAYER_WIFI_ANALIZER_START;
       oled_screen_clear();
-      // wifi_sniffer_start();
+      wifi_sniffer_start();
       break;
     case WIFI_SNIFFER_SETTINGS:
       current_layer = LAYER_WIFI_ANALIZER_SETTINGS;
