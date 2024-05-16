@@ -69,8 +69,41 @@ void wifi_screens_module_display_captive_selector(char* attack_options[],
                                                   int list_count,
                                                   int current_option);
 
+/**
+ * @brief Display the wifi sniffer progress screen
+ *
+ * @param sniffer The sniffer runtime
+ *
+ * @return void
+ */
 void wifi_screens_module_display_sniffer_cb(sniffer_runtime_t* sniffer);
-void display_wifi_sniffer_animation_task(void* pvParameter);
+
+/**
+ * @brief Display the wifi sniffer animation screen
+ *
+ * @param sniffer The sniffer runtime
+ *
+ * @return void
+ */
+void wifi_screens_display_sniffer_animation_task(void* pvParameter);
+
+/**
+ * @brief Create the wifi sniffer task
+ *
+ * @return void
+ */
 void wifi_screens_module_create_sniffer_task();
-void display_wifi_sniffer_animation_start();
-void display_wifi_sniffer_animation_stop();
+
+/**
+ * @brief Start the wifi sniffer animation
+ *
+ * @return void
+ */
+void wifi_screens_sniffer_animation_start();
+
+/**
+ * @brief Stop the wifi sniffer animation
+ *
+ * @return void
+ */
+void wifi_screens_sniffer_animation_stop();

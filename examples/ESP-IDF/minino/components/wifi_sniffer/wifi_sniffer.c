@@ -40,6 +40,7 @@ void show_summary() {
 }
 
 void wifi_sniffer_start() {
+  ESP_LOGI(TAG, "Starting sniffer");
   wifi_driver_init_null();
   register_sniffer_cmd();
   register_pcap_cmd();

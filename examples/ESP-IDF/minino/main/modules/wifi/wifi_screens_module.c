@@ -221,7 +221,7 @@ void wifi_screens_module_display_sniffer_cb(sniffer_runtime_t* sniffer) {
   }
 }
 
-void display_wifi_sniffer_animation_task(void* pvParameter) {
+void wifi_screens_display_sniffer_animation_task(void* pvParameter) {
   while (true) {
     oled_screen_display_bitmap(epd_bitmap_wifi_loading_1, 0, 0, 64, 64,
                                OLED_DISPLAY_NORMAL);
@@ -239,16 +239,16 @@ void display_wifi_sniffer_animation_task(void* pvParameter) {
 }
 
 void wifi_screens_module_create_sniffer_task() {
-  xTaskCreate(&display_wifi_sniffer_animation_task,
-              "display_wifi_sniffer_animation_task", 2048, NULL, 15,
+  xTaskCreate(&wifi_screens_display_sniffer_animation_task,
+              "wifi_screens_display_sniffer_animation_task", 2048, NULL, 15,
               &wifi_sniffer_animation_task_handle);
-  display_wifi_sniffer_animation_stop();
+  wifi_screens_sniffer_animation_stop();
 }
 
-void display_wifi_sniffer_animation_start() {
+void wifi_screens_sniffer_animation_start() {
   vTaskResume(wifi_sniffer_animation_task_handle);
 }
 
-void display_wifi_sniffer_animation_stop() {
+void wifi_screens_sniffer_animation_stop() {
   vTaskSuspend(wifi_sniffer_animation_task_handle);
 }

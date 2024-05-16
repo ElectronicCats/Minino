@@ -5,60 +5,87 @@
 #define SCROLLING_TEXT "scrollable"
 
 typedef enum {
-  LAYER_MAIN_MENU = 0,
-  LAYER_APPLICATIONS,
-  LAYER_SETTINGS,
-  LAYER_ABOUT,
+  MENU_MAIN = 0,
+  MENU_APPLICATIONS,
+  MENU_SETTINGS,
+  MENU_ABOUT,
   /* Applications */
-  LAYER_WIFI_APPS,
-  LAYER_BLUETOOTH_APPS,
-  LAYER_ZIGBEE_APPS,
-  LAYER_THREAD_APPS,
-  LAYER_MATTER_APPS,
-  LAYER_GPS,
+  MENU_WIFI_APPS,
+  MENU_BLUETOOTH_APPS,
+  MENU_ZIGBEE_APPS,
+  MENU_THREAD_APPS,
+  MENU_MATTER_APPS,
+  MENU_GPS,
   /* WiFi applications */
-  LAYER_WIFI_ANALIZER,
-  LAYER_WIFI_DEAUTH,
+  MENU_WIFI_ANALIZER,
+  MENU_WIFI_DEAUTH,
   /* WiFi analizer items */
-  LAYER_WIFI_ANALIZER_START,
-  LAYER_WIFI_ANALIZER_SETTINGS,
+  MENU_WIFI_ANALIZER_START,
+  MENU_WIFI_ANALIZER_SETTINGS,
   /* Bluetooth applications */
-  LAYER_BLUETOOTH_AIRTAGS_SCAN,
+  MENU_BLUETOOTH_AIRTAGS_SCAN,
   /* Zigbee applications */
-  LAYER_ZIGBEE_SPOOFING,
-  LAYER_ZIGBEE_SWITCH,
-  LAYER_ZIGBEE_LIGHT,
+  MENU_ZIGBEE_SPOOFING,
+  MENU_ZIGBEE_SWITCH,
+  MENU_ZIGBEE_LIGHT,
   /* Thread applications */
-  LAYER_THREAD_CLI,
+  MENU_THREAD_CLI,
   /* GPS applications */
-  LAYER_GPS_DATE_TIME,
-  LAYER_GPS_LOCATION,
+  MENU_GPS_DATE_TIME,
+  MENU_GPS_LOCATION,
   /* About items */
-  LAYER_ABOUT_VERSION,
-  LAYER_ABOUT_LICENSE,
-  LAYER_ABOUT_CREDITS,
-  LAYER_ABOUT_LEGAL,
+  MENU_ABOUT_VERSION,
+  MENU_ABOUT_LICENSE,
+  MENU_ABOUT_CREDITS,
+  MENU_ABOUT_LEGAL,
   /* Settings items */
-  LAYER_SETTINGS_DISPLAY,
-  LAYER_SETTINGS_SOUND,
-  LAYER_SETTINGS_SYSTEM,
+  MENU_SETTINGS_DISPLAY,
+  MENU_SETTINGS_SOUND,
+  MENU_SETTINGS_SYSTEM,
   /* About submenus */
-} screen_module_layer_t;
+  /* Layer count */
+  MENU_COUNT,
+} screen_module_menu_t;
 
-enum menu_layer_main_items {
+static char* menus_list[MENU_COUNT] = {
+    "MENU_MAIN", "MENU_APPLICATIONS", "MENU_SETTINGS", "MENU_ABOUT",
+    /* Applications */
+    "MENU_WIFI_APPS", "MENU_BLUETOOTH_APPS", "MENU_ZIGBEE_APPS",
+    "MENU_THREAD_APPS", "MENU_MATTER_APPS", "MENU_GPS",
+    /* WiFi applications */
+    "MENU_WIFI_ANALIZER", "MENU_WIFI_DEAUTH",
+    /* WiFi analizer items */
+    "MENU_WIFI_ANALIZER_START", "MENU_WIFI_ANALIZER_SETTINGS",
+    /* Bluetooth applications */
+    "MENU_BLUETOOTH_AIRTAGS_SCAN",
+    /* Zigbee applications */
+    "MENU_ZIGBEE_SPOOFING", "MENU_ZIGBEE_SWITCH", "MENU_ZIGBEE_LIGHT",
+    /* Thread applications */
+    "MENU_THREAD_CLI",
+    /* GPS applications */
+    "MENU_GPS_DATE_TIME", "MENU_GPS_LOCATION",
+    /* About items */
+    "MENU_ABOUT_VERSION", "MENU_ABOUT_LICENSE", "MENU_ABOUT_CREDITS",
+    "MENU_ABOUT_LEGAL",
+    /* Settings items */
+    "MENU_SETTINGS_DISPLAY", "MENU_SETTINGS_SOUND", "MENU_SETTINGS_SYSTEM",
+    /* About submenus */
+};
+
+typedef enum {
   MAIN_MENU_APPLICATIONS = 0,
   MAIN_MENU_SETTINGS,
   MAIN_MENU_ABOUT,
-};
+} menu_layer_main_items_t;
 
-enum menu_layer_applications_items {
+typedef enum {
   APPLICATIONS_MENU_WIFI = 0,
   APPLICATIONS_MENU_BLUETOOTH,
   APPLICATIONS_MENU_ZIGBEE,
   APPLICATIONS_MENU_THREAD,
   APPLICATIONS_MENU_MATTER,
   APPLICATIONS_MENU_GPS,
-};
+} menu_layer_applications_items_t;
 
 enum menu_layer_settings_items {
   SETTINGS_MENU_DISPLAY = 0,
@@ -79,8 +106,8 @@ enum menu_layer_wifi_items {
 };
 
 enum menu_layer_wifi_sniffer_items {
-  WIFI_SNIFFER_START = 0,
-  WIFI_SNIFFER_SETTINGS,
+  WIFI_ANALIZER_START = 0,
+  WIFI_ANALIZER_SETTINGS,
 };
 
 enum menu_layer_bluetooth_items {
@@ -107,6 +134,71 @@ enum menu_layer_thread_items {
 enum menu_layer_gps_items {
   GPS_MENU_DATE_TIME = 0,
   GPS_MENU_LOCATION,
+};
+
+/**
+ * @brief List of menu layers [current_menu][selected_item]
+ * Used to get the next layer to display when the user selects an option
+ */
+static int menu_next_layer_table[MENU_COUNT][6] = {
+    // MENU_MAIN
+    {MENU_APPLICATIONS, MENU_SETTINGS, MENU_ABOUT},
+    // MENU_APPLICATIONS
+    {MENU_WIFI_APPS, MENU_BLUETOOTH_APPS, MENU_ZIGBEE_APPS, MENU_THREAD_APPS,
+     MENU_MATTER_APPS, MENU_GPS},
+    // MENU_SETTINGS
+    {MENU_SETTINGS_DISPLAY, MENU_SETTINGS_SOUND, MENU_SETTINGS_SYSTEM},
+    // MENU_ABOUT
+    {MENU_ABOUT_VERSION, MENU_ABOUT_LICENSE, MENU_ABOUT_CREDITS,
+     MENU_ABOUT_LEGAL},
+    // MENU_WIFI_APPS
+    {MENU_WIFI_ANALIZER, MENU_WIFI_DEAUTH},
+    // MENU_BLUETOOTH_APPS
+    {MENU_BLUETOOTH_AIRTAGS_SCAN},
+    // MENU_ZIGBEE_APPS
+    {MENU_ZIGBEE_SPOOFING},
+    // MENU_THREAD_APPS
+    {MENU_THREAD_CLI},
+    // MENU_MATTER_APPS
+    {},
+    // MENU_GPS
+    {MENU_GPS_DATE_TIME, MENU_GPS_LOCATION},
+    // MENU_WIFI_ANALIZER
+    {MENU_WIFI_ANALIZER_START, MENU_WIFI_ANALIZER_SETTINGS},
+    // MENU_WIFI_DEAUTH
+    {},
+    // MENU_WIFI_ANALIZER_START
+    {},
+    // MENU_WIFI_ANALIZER_SETTINGS
+    {},
+    // MENU_BLUETOOTH_AIRTAGS_SCAN
+    {},
+    // MENU_ZIGBEE_SPOOFING
+    {MENU_ZIGBEE_SWITCH, MENU_ZIGBEE_LIGHT},
+    // MENU_ZIGBEE_SWITCH
+    {},
+    // MENU_ZIGBEE_LIGHT
+    {},
+    // MENU_THREAD_CLI
+    {},
+    // MENU_GPS_DATE_TIME
+    {},
+    // MENU_GPS_LOCATION
+    {},
+    // MENU_ABOUT_VERSION
+    {},
+    // MENU_ABOUT_LICENSE
+    {},
+    // MENU_ABOUT_CREDITS
+    {},
+    // MENU_ABOUT_LEGAL
+    {},
+    // MENU_SETTINGS_DISPLAY
+    {},
+    // MENU_SETTINGS_SOUND
+    {},
+    // MENU_SETTINGS_SYSTEM
+    {},
 };
 
 static char* main_items[] = {
@@ -234,8 +326,8 @@ static char* empty_items[] = {
     NULL,
 };
 
-// List of menus, it must be in the same order as the enum screen_module_layer_t
-static char** menu_items[] = {
+// List of menus, it must be in the same order as the enum screen_module_menu_t
+static char** menu_items[MENU_COUNT] = {
     main_items, applications_items, settings_items, about_items,
     /* Applications */
     wifi_items, bluetooth_items, zigbee_items, thread_items,

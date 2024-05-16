@@ -57,11 +57,11 @@ app_state_t menu_screens_get_app_state();
 void menu_screens_set_app_state(bool in_app, app_handler_t app_handler);
 
 /**
- * @brief Get the current layer
+ * @brief Get the current menu
  *
- * @return screen_module_layer_t
+ * @return screen_module_menu_t
  */
-screen_module_layer_t menu_screens_get_current_layer(void);
+screen_module_menu_t menu_screens_get_current_menu();
 
 /**
  * @brief Exit the submenu

@@ -95,19 +95,21 @@ void wifi_module_deauth_init() {
 }
 
 void wifi_module_analizer_init() {
+  ESP_LOGI(TAG_WIFI_MODULE, "Initializing WiFi analizer module");
   wifi_sniffer_register_cb(wifi_screens_module_display_sniffer_cb);
-  wifi_sniffer_register_animation_cbs(display_wifi_sniffer_animation_start,
-                                      display_wifi_sniffer_animation_stop);
+  wifi_sniffer_register_animation_cbs(wifi_screens_sniffer_animation_start,
+                                      wifi_screens_sniffer_animation_stop);
   wifi_screens_module_create_sniffer_task();
 }
 
 void wifi_module_begin(void) {
-  if (menu_screens_get_current_layer() == LAYER_WIFI_ANALIZER) {
+  if (menu_screens_get_current_menu() == MENU_WIFI_ANALIZER) {
     wifi_module_analizer_init();
-  } else if (menu_screens_get_current_layer() == LAYER_WIFI_DEAUTH) {
+  } else if (menu_screens_get_current_menu() == MENU_WIFI_DEAUTH) {
     wifi_module_deauth_init();
   } else {
-    ESP_LOGE(TAG_WIFI_MODULE, "Invalid wifi layer");
+    ESP_LOGE(TAG_WIFI_MODULE, "Invalid wifi layer: %s",
+             menus_list[menu_screens_get_current_menu()]);
   }
 }
 
