@@ -91,13 +91,6 @@ void menu_screens_ingrement_selected_item();
  */
 void menu_screens_decrement_selected_item();
 
-/**
- * @brief Update the previous menu
- *
- * @return void
- */
-void menu_screens_update_previous_menu();
-
 // TODO: Move to separate files
 void display_bluetooth_scanner(bluetooth_scanner_record_t record);
 void display_thread_cli();

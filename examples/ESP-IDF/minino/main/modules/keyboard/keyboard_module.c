@@ -91,8 +91,6 @@ static void button_event_cb(void* arg, void* data) {
       }
       break;
   }
-
-  menu_screens_update_previous_menu();
 }
 
 void keyboard_module_begin() {

@@ -390,6 +390,7 @@ screen_module_menu_t menu_screens_get_current_menu() {
 
 void menu_screens_exit_submenu() {
   ESP_LOGI(TAG, "Exiting submenu");
+  previous_menu = prev_menu_table[current_menu];
   ESP_LOGI(TAG, "Previous: %s Current: %s", menus_list[previous_menu],
            menus_list[current_menu]);
 
@@ -406,14 +407,12 @@ void menu_screens_exit_submenu() {
       }
       vTaskDelay(100 / portTICK_PERIOD_MS);  // Wait for the scanner to stop
       break;
-    case MENU_THREAD_CLI:
-      // thread_cli_stop();
-      break;
     default:
       break;
   }
 
   current_menu = previous_menu;
+  // TODO: Track the previous selected item
   selected_item = 0;
   menu_screens_display_menu();
 }
@@ -421,7 +420,7 @@ void menu_screens_exit_submenu() {
 void menu_screens_enter_submenu() {
   ESP_LOGI(TAG, "Selected item: %d", selected_item);
   current_menu = menu_next_menu_table[current_menu][selected_item];
-  menu_screens_update_previous_menu();
+  previous_menu = prev_menu_table[current_menu];
   ESP_LOGI(TAG, "Previous: %s Current: %s", menus_list[previous_menu],
            menus_list[current_menu]);
 
@@ -473,64 +472,4 @@ void menu_screens_ingrement_selected_item() {
 void menu_screens_decrement_selected_item() {
   selected_item = (selected_item == 0) ? 0 : selected_item - 1;
   menu_screens_display_menu();
-}
-
-void menu_screens_update_previous_menu() {
-  switch (current_menu) {
-    case MENU_MAIN:
-    case MENU_APPLICATIONS:
-    case MENU_SETTINGS:
-    case MENU_ABOUT:
-      previous_menu = MENU_MAIN;
-      break;
-    case MENU_WIFI_APPS:
-    case MENU_BLUETOOTH_APPS:
-    case MENU_ZIGBEE_APPS:
-    case MENU_THREAD_APPS:
-    case MENU_MATTER_APPS:
-    case MENU_GPS:
-      previous_menu = MENU_APPLICATIONS;
-      break;
-    case MENU_ABOUT_VERSION:
-    case MENU_ABOUT_LICENSE:
-    case MENU_ABOUT_CREDITS:
-    case MENU_ABOUT_LEGAL:
-      previous_menu = MENU_ABOUT;
-      break;
-    case MENU_SETTINGS_DISPLAY:
-    case MENU_SETTINGS_SOUND:
-    case MENU_SETTINGS_SYSTEM:
-      previous_menu = MENU_SETTINGS;
-      break;
-    /* WiFi apps */
-    case MENU_WIFI_ANALIZER:
-    case MENU_WIFI_DEAUTH:
-      previous_menu = MENU_WIFI_APPS;
-      break;
-    /* WiFi sniffer apps */
-    case MENU_WIFI_ANALIZER_START:
-    case MENU_WIFI_ANALIZER_SETTINGS:
-      previous_menu = MENU_WIFI_ANALIZER;
-      break;
-    /* Bluetooth apps */
-    case MENU_BLUETOOTH_AIRTAGS_SCAN:
-      previous_menu = MENU_BLUETOOTH_APPS;
-      break;
-    case MENU_ZIGBEE_SPOOFING:
-      previous_menu = MENU_ZIGBEE_APPS;
-      break;
-    case MENU_ZIGBEE_SWITCH:
-    case MENU_ZIGBEE_LIGHT:
-      previous_menu = MENU_ZIGBEE_SPOOFING;
-      break;
-    /* GPS apps */
-    case MENU_GPS_DATE_TIME:
-    case MENU_GPS_LOCATION:
-      previous_menu = MENU_GPS;
-      break;
-    default:
-      ESP_LOGE(TAG, "Unable to update previous menu, current menu: %d",
-               current_menu);
-      break;
-  }
 }

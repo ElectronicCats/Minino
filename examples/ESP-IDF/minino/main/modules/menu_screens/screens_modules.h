@@ -137,6 +137,41 @@ static int menu_next_menu_table[MENU_COUNT][6] = {
     {},
 };
 
+/**
+ * @brief List of menus [current_menu]
+ * Used to get the previous menu to display when the user selects an option
+ */
+static int prev_menu_table[MENU_COUNT] = {
+    MENU_MAIN,             // MENU_MAIN
+    MENU_MAIN,             // MENU_APPLICATIONS
+    MENU_MAIN,             // MENU_SETTINGS
+    MENU_MAIN,             // MENU_ABOUT
+    MENU_APPLICATIONS,     // MENU_WIFI_APPS
+    MENU_APPLICATIONS,     // MENU_BLUETOOTH_APPS
+    MENU_APPLICATIONS,     // MENU_ZIGBEE_APPS
+    MENU_APPLICATIONS,     // MENU_THREAD_APPS
+    MENU_APPLICATIONS,     // MENU_MATTER_APPS
+    MENU_APPLICATIONS,     // MENU_GPS
+    MENU_WIFI_APPS,        // MENU_WIFI_ANALIZER
+    MENU_WIFI_APPS,        // MENU_WIFI_DEAUTH
+    MENU_WIFI_ANALIZER,    // MENU_WIFI_ANALIZER_START
+    MENU_WIFI_ANALIZER,    // MENU_WIFI_ANALIZER_SETTINGS
+    MENU_BLUETOOTH_APPS,   // MENU_BLUETOOTH_AIRTAGS_SCAN
+    MENU_ZIGBEE_APPS,      // MENU_ZIGBEE_SPOOFING
+    MENU_ZIGBEE_SPOOFING,  // MENU_ZIGBEE_SWITCH
+    MENU_ZIGBEE_SPOOFING,  // MENU_ZIGBEE_LIGHT
+    MENU_THREAD_APPS,      // MENU_THREAD_CLI
+    MENU_GPS,              // MENU_GPS_DATE_TIME
+    MENU_GPS,              // MENU_GPS_LOCATION
+    MENU_ABOUT,            // MENU_ABOUT_VERSION
+    MENU_ABOUT,            // MENU_ABOUT_LICENSE
+    MENU_ABOUT,            // MENU_ABOUT_CREDITS
+    MENU_ABOUT,            // MENU_ABOUT_LEGAL
+    MENU_SETTINGS,         // MENU_SETTINGS_DISPLAY
+    MENU_SETTINGS,         // MENU_SETTINGS_SOUND
+    MENU_SETTINGS,         // MENU_SETTINGS_SYSTEM
+};
+
 static char* main_items[] = {
     "Applications",
     "Settings",
