@@ -139,7 +139,8 @@ static int menu_next_menu_table[MENU_COUNT][6] = {
 
 /**
  * @brief List of menus [current_menu]
- * Used to get the previous menu to display when the user selects an option
+ * Used to get the previous menu to display when the user returns to the
+ * previous menu in `menu_screens_exit_submenu`
  */
 static int prev_menu_table[MENU_COUNT] = {
     MENU_MAIN,             // MENU_MAIN
@@ -171,6 +172,8 @@ static int prev_menu_table[MENU_COUNT] = {
     MENU_SETTINGS,         // MENU_SETTINGS_SOUND
     MENU_SETTINGS,         // MENU_SETTINGS_SYSTEM
 };
+
+static int selected_item_history[MENU_COUNT] = {0};
 
 static char* main_items[] = {
     "Applications",

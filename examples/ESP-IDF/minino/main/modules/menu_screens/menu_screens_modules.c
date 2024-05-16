@@ -411,16 +411,15 @@ void menu_screens_exit_submenu() {
       break;
   }
 
+  // TODO: Store selected item history into flash
+  selected_item = selected_item_history[current_menu];
   current_menu = previous_menu;
-  // TODO: Track the previous selected item
-  selected_item = 0;
   menu_screens_display_menu();
 }
 
 void menu_screens_enter_submenu() {
   ESP_LOGI(TAG, "Selected item: %d", selected_item);
   current_menu = menu_next_menu_table[current_menu][selected_item];
-  previous_menu = prev_menu_table[current_menu];
   ESP_LOGI(TAG, "Previous: %s Current: %s", menus_list[previous_menu],
            menus_list[current_menu]);
 
@@ -456,6 +455,7 @@ void menu_screens_enter_submenu() {
       break;
   }
 
+  selected_item_history[current_menu] = selected_item;
   selected_item = 0;
   if (!app_state.in_app) {
     menu_screens_display_menu();
