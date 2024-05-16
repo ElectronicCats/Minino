@@ -43,7 +43,7 @@ typedef enum {
   MENU_SETTINGS_SOUND,
   MENU_SETTINGS_SYSTEM,
   /* About submenus */
-  /* Layer count */
+  /* Menu count */
   MENU_COUNT,
 } screen_module_menu_t;
 
@@ -72,75 +72,11 @@ static char* menus_list[MENU_COUNT] = {
     /* About submenus */
 };
 
-typedef enum {
-  MAIN_MENU_APPLICATIONS = 0,
-  MAIN_MENU_SETTINGS,
-  MAIN_MENU_ABOUT,
-} menu_layer_main_items_t;
-
-typedef enum {
-  APPLICATIONS_MENU_WIFI = 0,
-  APPLICATIONS_MENU_BLUETOOTH,
-  APPLICATIONS_MENU_ZIGBEE,
-  APPLICATIONS_MENU_THREAD,
-  APPLICATIONS_MENU_MATTER,
-  APPLICATIONS_MENU_GPS,
-} menu_layer_applications_items_t;
-
-enum menu_layer_settings_items {
-  SETTINGS_MENU_DISPLAY = 0,
-  SETTINGS_MENU_SOUND,
-  SETTINGS_MENU_SYSTEM,
-};
-
-enum menu_layer_about_items {
-  ABOUT_MENU_VERSION = 0,
-  ABOUT_MENU_LICENSE,
-  ABOUT_MENU_CREDITS,
-  ABOUT_MENU_LEGAL,
-};
-
-enum menu_layer_wifi_items {
-  WIFI_MENU_ANALIZER = 0,
-  WIFI_MENU_DEAUTH,
-};
-
-enum menu_layer_wifi_sniffer_items {
-  WIFI_ANALIZER_START = 0,
-  WIFI_ANALIZER_SETTINGS,
-};
-
-enum menu_layer_bluetooth_items {
-  BLUETOOTH_MENU_AIRTAGS_SCAN = 0,
-};
-
-enum menu_layer_zigbee_items {
-  ZIGBEE_MENU_SPOOFING = 0,
-};
-
-enum menu_layer_zigbee_spoofing_items {
-  ZIGBEE_SPOOFING_SWITCH = 0,
-  ZIGBEE_SPOOFING_LIGHT,
-};
-
-enum menu_layer_zigbee_switch_items {
-  ZIGBEE_SWITCH_TOGGLE = 0,
-};
-
-enum menu_layer_thread_items {
-  THREAD_MENU_CLI = 0,
-};
-
-enum menu_layer_gps_items {
-  GPS_MENU_DATE_TIME = 0,
-  GPS_MENU_LOCATION,
-};
-
 /**
- * @brief List of menu layers [current_menu][selected_item]
- * Used to get the next layer to display when the user selects an option
+ * @brief List of menus [current_menu][selected_item]
+ * Used to get the next menu to display when the user selects an option
  */
-static int menu_next_layer_table[MENU_COUNT][6] = {
+static int menu_next_menu_table[MENU_COUNT][6] = {
     // MENU_MAIN
     {MENU_APPLICATIONS, MENU_SETTINGS, MENU_ABOUT},
     // MENU_APPLICATIONS
@@ -312,7 +248,6 @@ static char* zigbee_spoofing_items[] = {
 };
 
 static char* thread_items[] = {
-    "Thread CLI",
     NULL,
 };
 

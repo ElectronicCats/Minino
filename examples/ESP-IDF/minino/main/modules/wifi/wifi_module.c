@@ -70,7 +70,7 @@ void wifi_module_exit() {
   menu_screens_exit_submenu();
 }
 
-void wifi_module_deauth_init() {
+void wifi_module_deauth_begin() {
   ESP_LOGI(TAG_WIFI_MODULE, "Initializing WiFi module");
   menu_screens_set_app_state(true, wifi_module_keyboard_cb);
   current_wifi_state.state = WIFI_STATE_SCANNING;
@@ -94,23 +94,12 @@ void wifi_module_deauth_init() {
   current_wifi_state.state = WIFI_STATE_SCANNED;
 }
 
-void wifi_module_analizer_init() {
+void wifi_module_analizer_begin() {
   ESP_LOGI(TAG_WIFI_MODULE, "Initializing WiFi analizer module");
   wifi_sniffer_register_cb(wifi_screens_module_display_sniffer_cb);
   wifi_sniffer_register_animation_cbs(wifi_screens_sniffer_animation_start,
                                       wifi_screens_sniffer_animation_stop);
   wifi_screens_module_create_sniffer_task();
-}
-
-void wifi_module_begin(void) {
-  if (menu_screens_get_current_menu() == MENU_WIFI_ANALIZER) {
-    wifi_module_analizer_init();
-  } else if (menu_screens_get_current_menu() == MENU_WIFI_DEAUTH) {
-    wifi_module_deauth_init();
-  } else {
-    ESP_LOGE(TAG_WIFI_MODULE, "Invalid wifi layer: %s",
-             menus_list[menu_screens_get_current_menu()]);
-  }
 }
 
 void wifi_module_keyboard_cb(button_event_t button_pressed) {

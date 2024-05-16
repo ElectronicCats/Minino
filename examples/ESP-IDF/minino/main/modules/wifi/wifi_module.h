@@ -7,10 +7,18 @@
   #define TAG_WIFI_MODULE "module:wifi"
 
 /**
- * @brief Start the wifi module
+ * @brief Initialize the wifi module
  *
+ * @return void
  */
-void wifi_module_begin(void);
+void wifi_module_deauth_begin();
+
+/**
+ * @brief Initialize the wifi module
+ *
+ * @return void
+ */
+void wifi_module_analizer_begin();
 
 /**
  * @brief Stop the wifi module
