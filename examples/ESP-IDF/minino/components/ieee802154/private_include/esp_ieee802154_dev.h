@@ -227,6 +227,8 @@ ieee802154_state_t ieee802154_get_state(void);
  */
 extern void esp_ieee802154_cca_done(bool channel_free);
 
+extern void ot_esp_ieee802154_cca_done(bool channel_free);
+
 /**
  * @brief  Current receiving process is failed due to some reasons.
  *

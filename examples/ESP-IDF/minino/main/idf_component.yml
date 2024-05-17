@@ -10,6 +10,9 @@ dependencies:
     path: ../components/ieee802154
   openthread:
     path: ../components/openthread
+  espressif/iperf:
+    version: "~0.1.1"
+
   # # Put list of dependencies here
   # # For components maintained by Espressif:
   # component: "~1.0.0"

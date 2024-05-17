@@ -502,11 +502,16 @@ extern void esp_ieee802154_receive_done(
     uint8_t* frame,
     esp_ieee802154_frame_info_t* frame_info);
 
+extern void ot_esp_ieee802154_receive_done(
+    uint8_t* frame,
+    esp_ieee802154_frame_info_t* frame_info);
+
 /**
  * @brief  The SFD field of the frame was received.
  *
  */
 extern void esp_ieee802154_receive_sfd_done(void);
+extern void ot_esp_ieee802154_receive_sfd_done(void);
 
 /**
  * @brief  The Frame Transmission succeeded.
@@ -527,6 +532,11 @@ extern void esp_ieee802154_transmit_done(
     const uint8_t* ack,
     esp_ieee802154_frame_info_t* ack_frame_info);
 
+extern void ot_esp_ieee802154_transmit_done(
+    const uint8_t* frame,
+    const uint8_t* ack,
+    esp_ieee802154_frame_info_t* ack_frame_info);
+
 /**
  * @brief  The Frame Transmission failed. Refer to `esp_ieee802154_transmit()`.
  *
@@ -538,11 +548,16 @@ extern void esp_ieee802154_transmit_done(
 extern void esp_ieee802154_transmit_failed(const uint8_t* frame,
                                            esp_ieee802154_tx_error_t error);
 
+extern void ot_esp_ieee802154_transmit_failed(const uint8_t* frame,
+                                              esp_ieee802154_tx_error_t error);
+
 /**
  * @brief  The SFD field of the frame was transmitted.
  *
  */
 extern void esp_ieee802154_transmit_sfd_done(uint8_t* frame);
+
+extern void ot_esp_ieee802154_transmit_sfd_done(uint8_t* frame);
 
 /**
  * @brief  The energy detection done. Refer to `esp_ieee802154_energy_detect()`.
@@ -551,6 +566,8 @@ extern void esp_ieee802154_transmit_sfd_done(uint8_t* frame);
  *
  */
 extern void esp_ieee802154_energy_detect_done(int8_t power);
+
+extern void ot_esp_ieee802154_energy_detect_done(int8_t power);
 
 /**
  * @brief  Set the IEEE 802.15.4 Radio to receive state at a specific time.

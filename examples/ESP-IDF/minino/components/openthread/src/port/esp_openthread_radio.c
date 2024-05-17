@@ -562,9 +562,9 @@ uint8_t otPlatRadioGetCslUncertainty(otInstance* aInstance) {
 
 // events
 void IRAM_ATTR
-esp_ieee802154_transmit_done(const uint8_t* frame,
-                             const uint8_t* ack,
-                             esp_ieee802154_frame_info_t* ack_frame_info) {
+ot_esp_ieee802154_transmit_done(const uint8_t* frame,
+                                const uint8_t* ack,
+                                esp_ieee802154_frame_info_t* ack_frame_info) {
   ETS_ASSERT(frame == (uint8_t*) &s_transmit_psdu);
 
   if (ack != NULL) {
