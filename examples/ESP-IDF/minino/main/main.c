@@ -27,7 +27,7 @@ void app_main(void) {
   sd_card_init();
   buzzer_init();
   // wifi_sniffer_init();
-  openthread_init();
+  // openthread_init();
   bluetooth_scanner_init();
   menu_screens_init();
   keyboard_init();

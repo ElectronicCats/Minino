@@ -7,6 +7,8 @@
 #include "string.h"
 #include "zigbee_switch.h"
 
+#include "../../esp_ot_cli.h"
+
 #define MAX_MENU_ITEMS_PER_SCREEN 3
 #define TIME_ZONE                 (+8)    // Beijing Time
 #define YEAR_BASE                 (2000)  // date in GPS starts from 2000
@@ -782,7 +784,7 @@ void handle_thread_apps_selection() {
   switch (selected_item) {
     case THREAD_MENU_CLI:
       current_layer = LAYER_THREAD_CLI;
-      // display_thread_cli();
+      openthread_init();
       break;
   }
 }
