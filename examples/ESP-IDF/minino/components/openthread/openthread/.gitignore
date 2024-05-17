@@ -1,0 +1,36 @@
+*.a
+*.bak
+*.flash
+*.gcda
+*.gcno
+*.log
+*.o
+*.ninja*
+*.orig
+*.pcap
+*.pyc
+*.swn
+*.swo
+*.swp
+*.trs
+*.bak
+*~
+.DS_Store
+.vagrant
+build
+CMakeCache.txt
+CMakeFiles
+cmake_install.cmake
+doc/Doxyfile
+doc/html
+output
+/tmp/
+
+# IDE / editor files
+.idea/**
+.vscode/**
+cmake-build-*/**
+/tags
+
+# Python bytecodes
+__pycache__

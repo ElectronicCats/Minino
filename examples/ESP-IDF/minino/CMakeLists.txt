@@ -12,6 +12,8 @@ set(EXTRA_COMPONENT_DIRS components/bluetooth_scanner)
 set(EXTRA_COMPONENT_DIRS components/leds)
 set(EXTRA_COMPONENT_DIRS components/sd_card)
 set(EXTRA_COMPONENT_DIRS components/preferences)
+set(EXTRA_COMPONENT_DIRS components/ieee802154)
+set(EXTRA_COMPONENT_DIRS components/openthread)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(minino)

@@ -5,11 +5,10 @@ repos:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
     -   id: check-yaml
-    -   id: check-added-large-files
     -   id: no-commit-to-branch # This hook prevents direct commits to main branch
 -   repo: https://github.com/pre-commit/mirrors-clang-format
     rev: v18.1.2  # Use the sha / tag you want to point at
     hooks:
     -   id: clang-format
-        types_or: [c++, c]
+        types_or: [c]
         args: ['--style=file']

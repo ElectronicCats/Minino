@@ -1,0 +1,176 @@
+menu "IEEE 802.15.4"
+    visible if SOC_IEEE802154_SUPPORTED
+
+    config IEEE802154_ENABLED
+        bool "IEEE802154 Enable"
+        default "y" if SOC_IEEE802154_SUPPORTED
+
+    config IEEE802154_RX_BUFFER_SIZE
+        int "The number of 802.15.4 receive buffers"
+        depends on IEEE802154_ENABLED
+        default 20
+        range 2 100
+        help
+            The number of 802.15.4 receive buffers
+
+    choice IEEE802154_CCA_MODE
+        depends on IEEE802154_ENABLED
+        prompt "Clear Channel Assessment (CCA) mode"
+        default IEEE802154_CCA_ED
+        help
+            configure the CCA mode
+
+        config IEEE802154_CCA_CARRIER
+            bool "Carrier sense only"
+            help
+                configure the CCA mode to Energy above threshold
+
+        config IEEE802154_CCA_ED
+            bool "Energy above threshold"
+            help
+                configure the CCA mode to Energy above threshold
+
+        config IEEE802154_CCA_CARRIER_OR_ED
+            bool "Carrier sense OR energy above threshold"
+            help
+                configure the CCA mode to Carrier sense OR energy above threshold
+
+        config IEEE802154_CCA_CARRIER_AND_ED
+            bool "Carrier sense AND energy above threshold"
+            help
+                configure the CCA mode to Carrier sense AND energy above threshold
+    endchoice
+
+    config IEEE802154_CCA_MODE
+        depends on IEEE802154_ENABLED
+        int
+        default 0 if IEEE802154_CCA_CARRIER
+        default 1 if IEEE802154_CCA_ED
+        default 2 if IEEE802154_CCA_CARRIER_OR_ED
+        default 3 if IEEE802154_CCA_CARRIER_AND_ED
+
+    config IEEE802154_CCA_THRESHOLD
+        int "CCA detection threshold"
+        depends on IEEE802154_ENABLED
+        range -120 0
+        default -60
+        help
+            set the CCA threshold, in dB
+
+    config IEEE802154_PENDING_TABLE_SIZE
+        int "Pending table size"
+        depends on IEEE802154_ENABLED
+        range 1 100
+        default 20
+        help
+            set the pending table size
+
+    config IEEE802154_MULTI_PAN_ENABLE
+        bool "Enable multi-pan feature for frame filter"
+        depends on IEEE802154_ENABLED
+        default n
+        help
+            Enable IEEE802154 multi-pan
+
+    config IEEE802154_TIMING_OPTIMIZATION
+        bool "Enable throughput optimization"
+        depends on IEEE802154_ENABLED
+        default n
+        help
+            Enabling this option increases throughput by ~5% at the expense of ~2.1k
+            IRAM code size increase.
+
+    config IEEE802154_SLEEP_ENABLE
+        # Todo: Remove when support safe power-down of the power domain (IDF-7317)
+        bool "Enable IEEE802154 light sleep"
+        depends on PM_ENABLE && IEEE802154_ENABLED
+        default n
+        help
+            Enabling this option allows the IEEE802.15.4 module to be powered down during automatic light sleep,
+            which reduces current consumption.
+
+    menuconfig IEEE802154_DEBUG
+        bool "Enable IEEE802154 Debug"
+        depends on IEEE802154_ENABLED
+        default n
+        help
+            Enabling this option allows different kinds of IEEE802154 debug output.
+            All IEEE802154 debug features increase the size of the final binary.
+
+    config IEEE802154_ASSERT
+        bool "Enrich the assert information with IEEE802154 state and event"
+        depends on IEEE802154_DEBUG
+        default n
+        help
+            Enabling this option to add some probe codes in the driver, and these informations
+            will be printed when assert.
+
+    config IEEE802154_RECORD_EVENT
+        bool "Enable record event information for debugging"
+        depends on IEEE802154_DEBUG
+        default n
+        help
+            Enabling this option to record event, when assert, the recorded event will be printed.
+
+    config IEEE802154_RECORD_EVENT_SIZE
+        int "Record event table size"
+        depends on IEEE802154_RECORD_EVENT
+        range 1 50
+        default 30
+        help
+            set the record event table size
+
+    config IEEE802154_RECORD_STATE
+        bool "Enable record state information for debugging"
+        depends on IEEE802154_DEBUG
+        default n
+        help
+            Enabling this option to record state, when assert, the recorded state will be printed.
+
+    config IEEE802154_RECORD_STATE_SIZE
+        int "Record state table size"
+        depends on IEEE802154_RECORD_STATE
+        range 1 50
+        default 10
+        help
+            set the record state table size
+
+    config IEEE802154_RECORD_CMD
+        bool "Enable record command information for debugging"
+        depends on IEEE802154_DEBUG
+        default n
+        help
+            Enabling this option to record the command, when assert, the recorded
+            command will be printed.
+
+    config IEEE802154_RECORD_CMD_SIZE
+        int "Record command table size"
+        depends on IEEE802154_RECORD_CMD
+        range 1 50
+        default 10
+        help
+            set the record command table size
+
+    config IEEE802154_RECORD_ABORT
+        bool "Enable record abort information for debugging"
+        depends on IEEE802154_DEBUG
+        default n
+        help
+            Enabling this option to record the abort, when assert, the recorded
+            abort will be printed.
+
+    config IEEE802154_RECORD_ABORT_SIZE
+        int "Record abort table size"
+        depends on IEEE802154_RECORD_ABORT
+        range 1 50
+        default 10
+        help
+            set the record abort table size
+
+    config IEEE802154_TXRX_STATISTIC
+        bool "Enable record tx/rx packets information for debugging"
+        depends on IEEE802154_DEBUG
+        default n
+        help
+            Enabling this option to record the tx and rx
+endmenu  # IEEE 802.15.4
