@@ -39,11 +39,15 @@ void show_summary() {
   vTaskDelay(1000 / portTICK_PERIOD_MS);
 }
 
-void wifi_sniffer_start() {
-  ESP_LOGI(TAG, "Starting sniffer");
+void wifi_sniffer_begin() {
   wifi_driver_init_null();
   register_sniffer_cmd();
   register_pcap_cmd();
+  ESP_LOGI(TAG, "Commands registered");
+}
+
+void wifi_sniffer_start() {
+  ESP_LOGI(TAG, "Starting sniffer");
 
 #if CONFIG_SNIFFER_PCAP_DESTINATION_SD
   sd_card_mount();

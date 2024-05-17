@@ -212,10 +212,11 @@ void wifi_screens_module_display_sniffer_cb(sniffer_runtime_t* sniffer) {
 
     oled_screen_clear_line(64, 1, OLED_DISPLAY_NORMAL);
 
-    oled_screen_display_text("Packets", 64, 0, OLED_DISPLAY_INVERT);
-    oled_screen_display_text(packets_str, 64, 1, OLED_DISPLAY_INVERT);
-    oled_screen_display_text("Channel", 64, 3, OLED_DISPLAY_INVERT);
-    oled_screen_display_text(channel_str, 64, 4, OLED_DISPLAY_INVERT);
+    uint8_t x_offset = 66;
+    oled_screen_display_text("Packets", x_offset, 0, OLED_DISPLAY_INVERT);
+    oled_screen_display_text(packets_str, x_offset, 1, OLED_DISPLAY_INVERT);
+    oled_screen_display_text("Channel", x_offset, 3, OLED_DISPLAY_INVERT);
+    oled_screen_display_text(channel_str, x_offset, 4, OLED_DISPLAY_INVERT);
   } else {
     ESP_LOGI(TAG_WIFI_SCREENS_MODULE, "sniffer task stopped");
   }

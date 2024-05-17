@@ -100,6 +100,7 @@ void wifi_module_analizer_begin() {
   wifi_sniffer_register_animation_cbs(wifi_screens_sniffer_animation_start,
                                       wifi_screens_sniffer_animation_stop);
   wifi_screens_module_create_sniffer_task();
+  wifi_sniffer_begin();
 }
 
 void wifi_module_keyboard_cb(button_event_t button_pressed) {
