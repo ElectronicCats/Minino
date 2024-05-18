@@ -3,168 +3,85 @@
 #include "esp_log.h"
 #include "gps.h"
 #include "leds.h"
+#include "oled_screen.h"
 #include "preferences.h"
 #include "string.h"
+#include "wifi_module.h"
+#include "wifi_sniffer.h"
 #include "zigbee_switch.h"
 
-#include "../../esp_ot_cli.h"
+#include "esp_ot_cli.h"
+#include "radio_selector.h"
 
 #define MAX_MENU_ITEMS_PER_SCREEN 3
 #define TIME_ZONE                 (+8)    // Beijing Time
 #define YEAR_BASE                 (2000)  // date in GPS starts from 2000
 
 static const char* TAG = "menu_screens_modules";
-SH1106_t dev;
 uint8_t selected_item;
-Layer previous_layer;
-Layer current_layer;
-int num_items;
+uint16_t num_items;
+screen_module_menu_t previous_menu;
+screen_module_menu_t current_menu;
 uint8_t bluetooth_devices_count;
 nmea_parser_handle_t nmea_hdl;
-TaskHandle_t wifi_sniffer_task_handle = NULL;
 
 static app_state_t app_state = {
     .in_app = false,
     .app_handler = NULL,
 };
 
-// Function prototypes
-void handle_main_selection();
-void handle_applications_selection();
-void handle_settings_selection();
-void handle_about_selection();
-void handle_wifi_apps_selection();
-void handle_wifi_sniffer_selection();
-void handle_bluetooth_apps_selection();
-void handle_zigbee_apps_selection();
-void handle_zigbee_spoofing_selection();
-void handle_zigbee_switch_selection();
-void handle_thread_apps_selection();
-void handle_gps_selection();
-
 static void gps_event_handler(void* event_handler_arg,
                               esp_event_base_t event_base,
                               int32_t event_id,
                               void* event_data);
 
-void menu_screens_init() {
+void menu_screens_begin() {
   selected_item = 0;
-  previous_layer = LAYER_MAIN_MENU;
-  current_layer = LAYER_MAIN_MENU;
+  previous_menu = MENU_MAIN;
+  current_menu = MENU_MAIN;
   num_items = 0;
   bluetooth_devices_count = 0;
   nmea_hdl = NULL;
 
-#if CONFIG_I2C_INTERFACE
-  ESP_LOGI(TAG, "INTERFACE is i2c");
-  ESP_LOGI(TAG, "CONFIG_SDA_GPIO=%d", CONFIG_SDA_GPIO);
-  ESP_LOGI(TAG, "CONFIG_SCL_GPIO=%d", CONFIG_SCL_GPIO);
-  ESP_LOGI(TAG, "CONFIG_RESET_GPIO=%d", CONFIG_RESET_GPIO);
-  i2c_master_init(&dev, CONFIG_SDA_GPIO, CONFIG_SCL_GPIO, CONFIG_RESET_GPIO);
-#endif  // CONFIG_I2C_INTERFACE
+  oled_screen_begin();
 
-#if CONFIG_SPI_INTERFACE
-  ESP_LOGI(TAG, "INTERFACE is SPI");
-  ESP_LOGI(TAG, "CONFIG_MOSI_GPIO=%d", CONFIG_MOSI_GPIO);
-  ESP_LOGI(TAG, "CONFIG_SCLK_GPIO=%d", CONFIG_SCLK_GPIO);
-  ESP_LOGI(TAG, "CONFIG_CS_GPIO=%d", CONFIG_CS_GPIO);
-  ESP_LOGI(TAG, "CONFIG_DC_GPIO=%d", CONFIG_DC_GPIO);
-  ESP_LOGI(TAG, "CONFIG_RESET_GPIO=%d", CONFIG_RESET_GPIO);
-  spi_master_init(&dev, CONFIG_MOSI_GPIO, CONFIG_SCLK_GPIO, CONFIG_CS_GPIO,
-                  CONFIG_DC_GPIO, CONFIG_RESET_GPIO);
-#endif  // CONFIG_SPI_INTERFACE
-
-#if CONFIG_FLIP
-  dev._flip = true;
-  ESP_LOGW(TAG, "Flip upside down");
-#endif
-
-#if CONFIG_SH1106_128x64
-  ESP_LOGI(TAG, "Panel is 128x64");
-  sh1106_init(&dev, 128, 64);
-#endif  // CONFIG_SH1106_128x64
-#if CONFIG_SH1106_128x32
-  ESP_LOGI(TAG, "Panel is 128x32");
-  sh1106_init(&dev, 128, 32);
-#endif  // CONFIG_SH1106_128x32
-
-  wifi_sniffer_register_cb(display_wifi_sniffer_cb);
-  wifi_sniffer_register_animation_cbs(display_wifi_sniffer_animation_start,
-                                      display_wifi_sniffer_animation_stop);
+  // wifi_sniffer_register_cb(display_wifi_sniffer_cb);
+  // wifi_sniffer_register_animation_cbs(display_wifi_sniffer_animation_start,
+  //                                     display_wifi_sniffer_animation_stop);
   bluetooth_scanner_register_cb(display_bluetooth_scanner);
 
   // Show logo
-  display_clear();
+  oled_screen_clear();
 
   if (preferences_get_bool("zigbee_deinit", false)) {
-    current_layer = LAYER_ZIGBEE_SPOOFING;
+    current_menu = MENU_ZIGBEE_SPOOFING;
     preferences_put_bool("zigbee_deinit", false);
+  } else if (preferences_get_bool("wifi_exit", false)) {
+    current_menu = MENU_WIFI_APPS;
+    preferences_put_bool("wifi_exit", false);
   } else {
-    leds_on();  // Indicate that the system is booting
     buzzer_play();
-    sh1106_bitmaps(&dev, 0, 0, epd_bitmap_logo_1, 128, 64, NO_INVERT);
+    oled_screen_display_bitmap(epd_bitmap_logo_1, 0, 0, 128, 64,
+                               OLED_DISPLAY_NORMAL);
     buzzer_stop();
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 
-  display_menu();
   display_gps_init();
-  xTaskCreate(&display_wifi_sniffer_animation_task,
-              "display_wifi_sniffer_animation_task", 2048, NULL, 15,
-              &wifi_sniffer_task_handle);
-  display_wifi_sniffer_animation_stop();
+  // xTaskCreate(&display_wifi_sniffer_animation_task,
+  //             "display_wifi_sniffer_animation_task", 2048, NULL, 15,
+  //             &wifi_sniffer_animation_task_handle);
+  // display_wifi_sniffer_animation_stop();
 }
 
-void display_clear() {
-  sh1106_clear_screen(&dev, false);
-}
-
-void display_show() {
-  sh1106_show_buffer(&dev);
-}
-
-/// @brief Display text on the screen
-/// @param text
-/// @param text_size
-/// @param page
-/// @param invert
-void display_text(const char* text, int x, int page, int invert) {
-  sh1106_display_text(&dev, page, text, x, invert);
-}
-
-/// @brief Clear a line on the screen
-/// @param page
-/// @param invert
-void display_clear_line(int x, int page, int invert) {
-  // sh1106_clear_line(&dev, x, page, invert);
-  sh1106_bitmaps(&dev, x, page * 8, epd_bitmap_clear_line, 128 - x, 8, invert);
-}
-
-/// @brief Display a bitmap on the screen
-/// @param bitmap
-/// @param x
-/// @param y
-/// @param width
-/// @param height
-/// @param invert
-void display_bitmap(const uint8_t* bitmap,
-                    int x,
-                    int y,
-                    int width,
-                    int height,
-                    int invert) {
-  sh1106_bitmaps(&dev, x, y, bitmap, width, height, invert);
-}
-
-/// @brief Display a box around the selected item
-void display_selected_item_box() {
-  sh1106_draw_custom_box(&dev);
-}
-
-/// @brief Add empty strings at the beginning and end of the array
-/// @param array
-/// @param length
-/// @return Returns a new array with empty strings at the beginning and end
+/**
+ * @brief Add empty strings at the beginning and end of the array
+ *
+ * @param array
+ * @param length
+ *
+ * @return char**
+ */
 char** add_empty_strings(char** array, int length) {
   char** newArray = malloc((length + 2) * sizeof(char*));
 
@@ -184,10 +101,14 @@ char** add_empty_strings(char** array, int length) {
   return newArray;
 }
 
-/// @brief Remove the scrolling text flag from the array
-/// @param items
-/// @param length
-/// @return Returns a new array without the scrolling text flag
+/**
+ * @brief Remove the scrolling text flag from the array
+ *
+ * @param items
+ * @param length
+ *
+ * @return char**
+ */
 char** remove_srolling_text_flag(char** items, int length) {
   char** newArray = malloc((length - 1) * sizeof(char*));
 
@@ -202,9 +123,14 @@ char** remove_srolling_text_flag(char** items, int length) {
   return newArray;
 }
 
+/**
+ * @brief Get the menu items for the current menu
+ *
+ * @return char**
+ */
 char** get_menu_items() {
   num_items = 0;
-  char** submenu = menu_items[current_layer];
+  char** submenu = menu_items[current_menu];
   if (submenu != NULL) {
     while (submenu[num_items] != NULL) {
       // ESP_LOGI(TAG, "Item: %s", submenu[num_items]);
@@ -221,16 +147,23 @@ char** get_menu_items() {
     return submenu;
   }
 
-  return add_empty_strings(menu_items[current_layer], num_items);
+  return add_empty_strings(menu_items[current_menu], num_items);
 }
 
+/**
+ * @brief Display the menu items
+ *
+ * Show only 3 options at a time in the following order:
+ * Page 1: Option 1
+ * Page 3: Option 2 -> selected option
+ * Page 5: Option 3
+ *
+ * @param items
+ *
+ * @return void
+ */
 void display_menu_items(char** items) {
-  // Show only 3 options at a time in the following order:
-  // Page 1: Option 1
-  // Page 3: Option 2 -> selected option
-  // Page 5: Option 3
-
-  display_clear();
+  oled_screen_clear();
   int page = 1;
   for (int i = 0; i < 3; i++) {
     char* text = (char*) malloc(20);
@@ -242,31 +175,45 @@ void display_menu_items(char** items) {
       sprintf(text, " %s", items[i + selected_item]);
     }
 
-    display_text(text, 0, page, NO_INVERT);
+    oled_screen_display_text(text, 0, page, OLED_DISPLAY_NORMAL);
     page += 2;
   }
 
-  display_selected_item_box();
+  oled_screen_display_selected_item_box();
+  oled_screen_display_show();
 }
 
+/**
+ * @brief Display the scrolling text
+ *
+ * @param text
+ *
+ * @return void
+ */
 void display_scrolling_text(char** text) {
   uint8_t startIdx = (selected_item >= 7) ? selected_item - 6 : 0;
   selected_item = (num_items - 2 > 7 && selected_item < 6) ? 6 : selected_item;
-  display_clear();
+  oled_screen_clear();
   // ESP_LOGI(TAG, "num: %d", num_items - 2);
 
   for (uint8_t i = startIdx; i < num_items - 2; i++) {
     // ESP_LOGI(TAG, "Text[%d]: %s", i, text[i]);
     if (i == selected_item) {
-      display_text(text[i], 0, i - startIdx,
-                   NO_INVERT);  // Change it to INVERT to debug
+      oled_screen_display_text(
+          text[i], 0, i - startIdx,
+          OLED_DISPLAY_NORMAL);  // Change it to INVERT to debug
     } else {
-      display_text(text[i], 0, i - startIdx, NO_INVERT);
+      oled_screen_display_text(text[i], 0, i - startIdx, OLED_DISPLAY_NORMAL);
     }
   }
 }
 
-void display_menu() {
+/**
+ * @brief Display the menu or the scrolling text
+ *
+ * @return void
+ */
+void menu_screens_display_menu() {
   char** items = get_menu_items();
 
   if (items == NULL) {
@@ -282,57 +229,16 @@ void display_menu() {
   }
 }
 
-void display_wifi_sniffer_animation_task(void* pvParameter) {
-  while (true) {
-    sh1106_bitmaps(&dev, 0, 0, epd_bitmap_wifi_loading_1, 64, 64, NO_INVERT);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-    sh1106_bitmaps(&dev, 0, 0, epd_bitmap_wifi_loading_2, 64, 64, NO_INVERT);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-    sh1106_bitmaps(&dev, 0, 0, epd_bitmap_wifi_loading_3, 64, 64, NO_INVERT);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-    sh1106_bitmaps(&dev, 0, 0, epd_bitmap_wifi_loading_4, 64, 64, NO_INVERT);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-  }
-}
-
-void display_wifi_sniffer_animation_start() {
-  vTaskResume(wifi_sniffer_task_handle);
-}
-
-void display_wifi_sniffer_animation_stop() {
-  vTaskSuspend(wifi_sniffer_task_handle);
-  // display_text("Timeout!", 64, 6, INVERT);
-}
-
-void display_wifi_sniffer_cb(sniffer_runtime_t* sniffer) {
-  if (sniffer->is_running) {
-    const char* packets_str = malloc(16);
-    const char* channel_str = malloc(16);
-
-    sprintf(packets_str, "%ld", sniffer->sniffed_packets);
-    sprintf(channel_str, "%ld", sniffer->channel);
-
-    display_clear_line(64, 1, NO_INVERT);
-
-    display_text("Packets", 64, 0, INVERT);
-    display_text(packets_str, 64, 1, INVERT);
-    display_text("Channel", 64, 3, INVERT);
-    display_text(channel_str, 64, 4, INVERT);
-  } else {
-    ESP_LOGI(TAG, "sniffer task stopped");
-  }
-}
-
 void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
   static bool airtag_detected = false;
-  display_text("Airtags Scanner", 0, 0, INVERT);
+  oled_screen_display_text("Airtags Scanner", 0, 0, OLED_DISPLAY_INVERT);
   uint8_t x = 0;
   uint8_t y = 2;
-  display_clear_line(x, y, NO_INVERT);
+  oled_screen_clear_line(x, y, OLED_DISPLAY_NORMAL);
 
   if (record.has_finished && !airtag_detected) {
-    display_text("    Scanning", 0, 3, NO_INVERT);
-    display_text("    Finished", 0, 4, NO_INVERT);
+    oled_screen_display_text("    Scanning", 0, 3, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text("    Finished", 0, 4, OLED_DISPLAY_NORMAL);
     return;
   }
 
@@ -341,7 +247,7 @@ void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
     bluetooth_devices_count++;
     char* device_count_str = (char*) malloc(16);
     sprintf(device_count_str, "Devices=%d", record.count);
-    display_text(device_count_str, 0, 2, NO_INVERT);
+    oled_screen_display_text(device_count_str, 0, 2, OLED_DISPLAY_NORMAL);
     return;
   }
 
@@ -358,29 +264,28 @@ void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
           record.mac[0]);
   sprintf(rssi_str, "RSSI=%d", record.rssi);
 
-  display_text(name_str, 0, 2, NO_INVERT);
-  display_text(addr_str1, 0, 3, NO_INVERT);
-  display_text(addr_str2, 0, 4, NO_INVERT);
-  display_text(rssi_str, 0, 5, NO_INVERT);
+  oled_screen_display_text(name_str, 0, 2, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text(addr_str1, 0, 3, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text(addr_str2, 0, 4, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text(rssi_str, 0, 5, OLED_DISPLAY_NORMAL);
 }
 
 void display_thread_cli() {
   // thread_cli_start();
 
-  display_clear();
-  display_text("Thread CLI      ", 0, 0, INVERT);
-  display_text("Connect Minino", 0, 1, NO_INVERT);
-  display_text("to a computer", 0, 2, NO_INVERT);
-  display_text("via USB and use", 0, 3, NO_INVERT);
-  display_text("screen command", 0, 4, NO_INVERT);
-  display_text("(linux or mac)", 0, 5, NO_INVERT);
-  display_text("or putty in", 0, 6, NO_INVERT);
-  display_text("windows", 0, 7, NO_INVERT);
-  display_show();
+  oled_screen_clear();
+  oled_screen_display_text("Thread CLI      ", 0, 0, OLED_DISPLAY_INVERT);
+  oled_screen_display_text("Connect Minino", 0, 1, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("to a computer", 0, 2, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("via USB and use", 0, 3, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("screen command", 0, 4, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("(linux or mac)", 0, 5, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("or putty in", 0, 6, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("windows", 0, 7, OLED_DISPLAY_NORMAL);
 }
 
 void display_in_development_banner() {
-  display_text(" In development", 0, 3, NO_INVERT);
+  oled_screen_display_text(" In development", 0, 3, OLED_DISPLAY_NORMAL);
 }
 
 void display_gps_init() {
@@ -411,8 +316,7 @@ static void gps_event_handler(void* event_handler_arg,
                               esp_event_base_t event_base,
                               int32_t event_id,
                               void* event_data) {
-  if (current_layer != LAYER_GPS_DATE_TIME &&
-      current_layer != LAYER_GPS_LOCATION) {
+  if (current_menu != MENU_GPS_DATE_TIME && current_menu != MENU_GPS_LOCATION) {
     return;
   }
 
@@ -431,7 +335,7 @@ static void gps_event_handler(void* event_handler_arg,
                gps->tim.hour + TIME_ZONE, gps->tim.minute, gps->tim.second,
                gps->latitude, gps->longitude, gps->altitude, gps->speed);
 
-      if (current_layer == LAYER_GPS_DATE_TIME) {
+      if (current_menu == MENU_GPS_DATE_TIME) {
         char* date_str = (char*) malloc(20);
         char* time_str = (char*) malloc(20);
 
@@ -441,12 +345,12 @@ static void gps_event_handler(void* event_handler_arg,
         sprintf(time_str, "Time: %d:%d:%d", gps->tim.hour + TIME_ZONE,
                 gps->tim.minute, gps->tim.second);
 
-        display_clear();
-        display_text("GPS Date/Time", 0, 0, INVERT);
+        oled_screen_clear();
+        oled_screen_display_text("GPS Date/Time", 0, 0, OLED_DISPLAY_INVERT);
         // TODO: refresh only the date and time
-        display_text(date_str, 0, 2, NO_INVERT);
-        display_text(time_str, 0, 3, NO_INVERT);
-      } else if (current_layer == LAYER_GPS_LOCATION) {
+        oled_screen_display_text(date_str, 0, 2, OLED_DISPLAY_NORMAL);
+        oled_screen_display_text(time_str, 0, 3, OLED_DISPLAY_NORMAL);
+      } else if (current_menu == MENU_GPS_LOCATION) {
         char* latitude_str = (char*) malloc(22);
         char* longitude_str = (char*) malloc(22);
         char* altitude_str = (char*) malloc(22);
@@ -457,12 +361,12 @@ static void gps_event_handler(void* event_handler_arg,
         sprintf(altitude_str, "Altitude: %.02fm", gps->altitude);
         sprintf(speed_str, "Speed: %fm/s", gps->speed);
 
-        display_clear();
-        display_text("GPS Location", 0, 0, INVERT);
-        display_text(latitude_str, 0, 2, NO_INVERT);
-        display_text(longitude_str, 0, 3, NO_INVERT);
-        display_text(altitude_str, 0, 4, NO_INVERT);
-        display_text(speed_str, 0, 5, NO_INVERT);
+        oled_screen_clear();
+        oled_screen_display_text("GPS Location", 0, 0, OLED_DISPLAY_INVERT);
+        oled_screen_display_text(latitude_str, 0, 2, OLED_DISPLAY_NORMAL);
+        oled_screen_display_text(longitude_str, 0, 3, OLED_DISPLAY_NORMAL);
+        oled_screen_display_text(altitude_str, 0, 4, OLED_DISPLAY_NORMAL);
+        oled_screen_display_text(speed_str, 0, 5, OLED_DISPLAY_NORMAL);
       }
       break;
     case GPS_UNKNOWN:
@@ -478,93 +382,91 @@ app_state_t menu_screens_get_app_state() {
   return app_state;
 }
 
-void menu_screens_set_app_state(
-    bool in_app,
-    void (*app_handler)(button_event_t button_pressed)) {
+void menu_screens_set_app_state(bool in_app, app_handler_t app_handler) {
   app_state.in_app = in_app;
   app_state.app_handler = app_handler;
 }
 
-Layer screen_module_get_current_layer(void) {
-  return current_layer;
+screen_module_menu_t menu_screens_get_current_menu() {
+  return current_menu;
 }
 
 void menu_screens_exit_submenu() {
   ESP_LOGI(TAG, "Exiting submenu");
-  ESP_LOGI(TAG, "Previous layer: %d Current: %d", previous_layer,
-           current_layer);
+  previous_menu = prev_menu_table[current_menu];
+  ESP_LOGI(TAG, "Previous: %s Current: %s", menus_list[previous_menu],
+           menus_list[current_menu]);
 
-  switch (current_layer) {
-    case LAYER_WIFI_SNIFFER_START:
+  switch (current_menu) {
+    case MENU_WIFI_ANALIZER_START:
       wifi_sniffer_stop();
       break;
-    case LAYER_BLUETOOTH_AIRTAGS_SCAN:
+    case MENU_WIFI_ANALIZER:
+      wifi_sniffer_exit();
+      break;
+    case MENU_BLUETOOTH_AIRTAGS_SCAN:
       if (bluetooth_scanner_is_active()) {
         bluetooth_scanner_stop();
       }
       vTaskDelay(100 / portTICK_PERIOD_MS);  // Wait for the scanner to stop
       break;
-    case LAYER_THREAD_CLI:
-      // thread_cli_stop();
-      break;
     default:
       break;
   }
 
-  current_layer = previous_layer;
-  selected_item = 0;
-  display_menu();
+  // TODO: Store selected item history into flash
+  selected_item = selected_item_history[current_menu];
+  current_menu = previous_menu;
+  menu_screens_display_menu();
 }
 
 void menu_screens_enter_submenu() {
   ESP_LOGI(TAG, "Selected item: %d", selected_item);
-  switch (current_layer) {
-    case LAYER_MAIN_MENU:
-      handle_main_selection();
+  current_menu = menu_next_menu_table[current_menu][selected_item];
+  ESP_LOGI(TAG, "Previous: %s Current: %s", menus_list[previous_menu],
+           menus_list[current_menu]);
+
+  switch (current_menu) {
+    case MENU_WIFI_ANALIZER:
+      wifi_module_analizer_begin();
       break;
-    case LAYER_APPLICATIONS:
-      handle_applications_selection();
+    case MENU_WIFI_DEAUTH:
+      wifi_module_deauth_begin();
       break;
-    case LAYER_SETTINGS:
-      handle_settings_selection();
+    case MENU_WIFI_ANALIZER_START:
+      oled_screen_clear();
+      wifi_sniffer_start();
       break;
-    case LAYER_ABOUT:
-      handle_about_selection();
+    case MENU_BLUETOOTH_AIRTAGS_SCAN:
+      oled_screen_clear();
+      bluetooth_scanner_start();
       break;
-    case LAYER_WIFI_APPS:
-      handle_wifi_apps_selection();
+    case MENU_ZIGBEE_SWITCH:
+      radio_selector_disable_thread();
+      zigbee_switch_init();
       break;
-    case LAYER_BLUETOOTH_APPS:
-      handle_bluetooth_apps_selection();
+    case MENU_THREAD_BROADCAST:
+    case MENU_THREAD_APPS:
+      radio_selector_enable_thread();
+      openthread_init();
       break;
-    case LAYER_ZIGBEE_APPS:
-      handle_zigbee_apps_selection();
-      break;
-    case LAYER_THREAD_APPS:
-      handle_thread_apps_selection();
-      break;
-    case LAYER_MATTER_APPS:
-      break;
-    case LAYER_GPS:
-      handle_gps_selection();
-      break;
-    case LAYER_WIFI_SNIFFER:
-      handle_wifi_sniffer_selection();
-      break;
-    case LAYER_ZIGBEE_SPOOFING:
-      handle_zigbee_spoofing_selection();
-      break;
-    case LAYER_ZIGBEE_SWITCH:
-      handle_zigbee_switch_selection();
+    case MENU_MATTER_APPS:
+    case MENU_ZIGBEE_LIGHT:
+    case MENU_SETTINGS_DISPLAY:
+    case MENU_SETTINGS_SOUND:
+    case MENU_SETTINGS_SYSTEM:
+      oled_screen_clear();
+      display_in_development_banner();
       break;
     default:
-      ESP_LOGE(TAG, "Invalid layer");
+      ESP_LOGW(TAG, "Unhandled menu: %s", menus_list[current_menu]);
       break;
   }
 
+  selected_item_history[current_menu] = selected_item;
   selected_item = 0;
   if (!app_state.in_app) {
-    display_menu();
+    menu_screens_display_menu();
   }
 }
 
@@ -572,230 +474,10 @@ void menu_screens_ingrement_selected_item() {
   selected_item = (selected_item == num_items - MAX_MENU_ITEMS_PER_SCREEN)
                       ? selected_item
                       : selected_item + 1;
-  display_menu();
+  menu_screens_display_menu();
 }
 
 void menu_screens_decrement_selected_item() {
   selected_item = (selected_item == 0) ? 0 : selected_item - 1;
-  display_menu();
-}
-
-void menu_screens_update_previous_layer() {
-  switch (current_layer) {
-    case LAYER_MAIN_MENU:
-    case LAYER_APPLICATIONS:
-    case LAYER_SETTINGS:
-    case LAYER_ABOUT:
-      previous_layer = LAYER_MAIN_MENU;
-      break;
-    case LAYER_WIFI_APPS:
-    case LAYER_BLUETOOTH_APPS:
-    case LAYER_ZIGBEE_APPS:
-    case LAYER_THREAD_APPS:
-    case LAYER_MATTER_APPS:
-    case LAYER_GPS:
-      previous_layer = LAYER_APPLICATIONS;
-      break;
-    case LAYER_ABOUT_VERSION:
-    case LAYER_ABOUT_LICENSE:
-    case LAYER_ABOUT_CREDITS:
-    case LAYER_ABOUT_LEGAL:
-      previous_layer = LAYER_ABOUT;
-      break;
-    case LAYER_SETTINGS_DISPLAY:
-    case LAYER_SETTINGS_SOUND:
-    case LAYER_SETTINGS_SYSTEM:
-      previous_layer = LAYER_SETTINGS;
-      break;
-    /* WiFi apps */
-    case LAYER_WIFI_SNIFFER:
-      previous_layer = LAYER_WIFI_APPS;
-      break;
-    /* WiFi sniffer apps */
-    case LAYER_WIFI_SNIFFER_START:
-    case LAYER_WIFI_SNIFFER_SETTINGS:
-      previous_layer = LAYER_WIFI_SNIFFER;
-      break;
-    /* Bluetooth apps */
-    case LAYER_BLUETOOTH_AIRTAGS_SCAN:
-      previous_layer = LAYER_BLUETOOTH_APPS;
-      break;
-    case LAYER_ZIGBEE_SPOOFING:
-      previous_layer = LAYER_ZIGBEE_APPS;
-      break;
-    case LAYER_ZIGBEE_SWITCH:
-    case LAYER_ZIGBEE_LIGHT:
-      previous_layer = LAYER_ZIGBEE_SPOOFING;
-      break;
-    /* GPS apps */
-    case LAYER_GPS_DATE_TIME:
-    case LAYER_GPS_LOCATION:
-      previous_layer = LAYER_GPS;
-      break;
-    default:
-      ESP_LOGE(TAG, "Unable to update previous layer, current layer: %d",
-               current_layer);
-      break;
-  }
-}
-
-void handle_main_selection() {
-  switch (selected_item) {
-    case MAIN_MENU_APPLICATIONS:
-      current_layer = LAYER_APPLICATIONS;
-      break;
-    case MAIN_MENU_SETTINGS:
-      current_layer = LAYER_SETTINGS;
-      break;
-    case MAIN_MENU_ABOUT:
-      current_layer = LAYER_ABOUT;
-      break;
-  }
-}
-
-void handle_applications_selection() {
-  switch (selected_item) {
-    case APPLICATIONS_MENU_WIFI:
-      current_layer = LAYER_WIFI_APPS;
-      break;
-    case APPLICATIONS_MENU_BLUETOOTH:
-      current_layer = LAYER_BLUETOOTH_APPS;
-      break;
-    case APPLICATIONS_MENU_ZIGBEE:
-      current_layer = LAYER_ZIGBEE_APPS;
-      break;
-    case APPLICATIONS_MENU_THREAD:
-      current_layer = LAYER_THREAD_APPS;
-      break;
-    case APPLICATIONS_MENU_MATTER:
-      current_layer = LAYER_MATTER_APPS;
-      display_clear();
-      display_in_development_banner();
-      break;
-    case APPLICATIONS_MENU_GPS:
-      current_layer = LAYER_GPS;
-      break;
-  }
-}
-
-void handle_settings_selection() {
-  switch (selected_item) {
-    case SETTINGS_MENU_DISPLAY:
-      current_layer = LAYER_SETTINGS_DISPLAY;
-      display_clear();
-      display_in_development_banner();
-      break;
-    case SETTINGS_MENU_SOUND:
-      current_layer = LAYER_SETTINGS_SOUND;
-      display_clear();
-      display_in_development_banner();
-      break;
-    case SETTINGS_MENU_SYSTEM:
-      current_layer = LAYER_SETTINGS_SYSTEM;
-      display_clear();
-      display_in_development_banner();
-      break;
-  }
-}
-
-void handle_about_selection() {
-  switch (selected_item) {
-    case ABOUT_MENU_VERSION:
-      current_layer = LAYER_ABOUT_VERSION;
-      break;
-    case ABOUT_MENU_LICENSE:
-      current_layer = LAYER_ABOUT_LICENSE;
-      break;
-    case ABOUT_MENU_CREDITS:
-      current_layer = LAYER_ABOUT_CREDITS;
-      break;
-    case ABOUT_MENU_LEGAL:
-      current_layer = LAYER_ABOUT_LEGAL;
-      break;
-  }
-}
-
-void handle_wifi_apps_selection() {
-  switch (selected_item) {
-    case WIFI_MENU_SNIFFER:
-      current_layer = LAYER_WIFI_SNIFFER;
-      break;
-  }
-}
-
-void handle_wifi_sniffer_selection() {
-  switch (selected_item) {
-    case WIFI_SNIFFER_START:
-      current_layer = LAYER_WIFI_SNIFFER_START;
-      display_clear();
-      wifi_sniffer_start();
-      break;
-    case WIFI_SNIFFER_SETTINGS:
-      current_layer = LAYER_WIFI_SNIFFER_SETTINGS;
-      break;
-    default:
-      ESP_LOGE(TAG, "Invalid item: %d", selected_item);
-      break;
-  }
-}
-
-void handle_bluetooth_apps_selection() {
-  switch (selected_item) {
-    case BLUETOOTH_MENU_AIRTAGS_SCAN:
-      current_layer = LAYER_BLUETOOTH_AIRTAGS_SCAN;
-      display_clear();
-      bluetooth_scanner_start();
-      break;
-  }
-}
-
-void handle_zigbee_apps_selection() {
-  switch (selected_item) {
-    case ZIGBEE_MENU_SPOOFING:
-      current_layer = LAYER_ZIGBEE_SPOOFING;
-      break;
-  }
-}
-
-void handle_zigbee_spoofing_selection() {
-  switch (selected_item) {
-    case ZIGBEE_SPOOFING_SWITCH:
-      current_layer = LAYER_ZIGBEE_SWITCH;
-      zigbee_switch_init();
-      break;
-    case ZIGBEE_SPOOFING_LIGHT:
-      current_layer = LAYER_ZIGBEE_LIGHT;
-      display_clear();
-      display_in_development_banner();
-      break;
-  }
-}
-
-void handle_zigbee_switch_selection() {
-  ESP_LOGI(TAG, "Selected item: %d", selected_item);
-  switch (selected_item) {
-    case ZIGBEE_SWITCH_TOGGLE:
-      current_layer = LAYER_ZIGBEE_SWITCH;
-      break;
-  }
-}
-
-void handle_thread_apps_selection() {
-  switch (selected_item) {
-    case THREAD_MENU_CLI:
-      current_layer = LAYER_THREAD_CLI;
-      openthread_init();
-      break;
-  }
-}
-
-void handle_gps_selection() {
-  switch (selected_item) {
-    case GPS_MENU_DATE_TIME:
-      current_layer = LAYER_GPS_DATE_TIME;
-      break;
-    case GPS_MENU_LOCATION:
-      current_layer = LAYER_GPS_LOCATION;
-      break;
-  }
+  menu_screens_display_menu();
 }

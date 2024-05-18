@@ -7,9 +7,9 @@
 #include "driver/spi_master.h"
 #include "esp_log.h"
 
-#include "sh1106.h"
+#include "oled_driver.h"
 
-#define TAG "SH1106"
+#define TAG "oled_driver_spi"
 
 #if CONFIG_SPI2_HOST
   #define HOST_ID SPI2_HOST
@@ -23,7 +23,7 @@ static const int SPI_Command_Mode = 0;
 static const int SPI_Data_Mode = 1;
 static const int SPI_Frequency = 1000000;  // 1MHz
 
-void spi_master_init(SH1106_t* dev,
+void spi_master_init(oled_driver_t* dev,
                      int16_t GPIO_MOSI,
                      int16_t GPIO_SCLK,
                      int16_t GPIO_CS,
@@ -94,21 +94,21 @@ bool spi_master_write_byte(spi_device_handle_t SPIHandle,
   return true;
 }
 
-bool spi_master_write_command(SH1106_t* dev, uint8_t Command) {
+bool spi_master_write_command(oled_driver_t* dev, uint8_t Command) {
   static uint8_t CommandByte = 0;
   CommandByte = Command;
   gpio_set_level(dev->_dc, SPI_Command_Mode);
   return spi_master_write_byte(dev->_SPIHandle, &CommandByte, 1);
 }
 
-bool spi_master_write_data(SH1106_t* dev,
+bool spi_master_write_data(oled_driver_t* dev,
                            const uint8_t* Data,
                            size_t DataLength) {
   gpio_set_level(dev->_dc, SPI_Data_Mode);
   return spi_master_write_byte(dev->_SPIHandle, Data, DataLength);
 }
 
-void spi_init(SH1106_t* dev, int width, int height) {
+void spi_init(oled_driver_t* dev, int width, int height) {
   dev->_width = width;
   dev->_height = height;
   dev->_pages = 8;
@@ -157,7 +157,7 @@ void spi_init(SH1106_t* dev, int width, int height) {
   spi_master_write_command(dev, OLED_CMD_DISPLAY_ON);       // AF
 }
 
-void spi_display_image(SH1106_t* dev,
+void spi_display_image(oled_driver_t* dev,
                        int page,
                        int seg,
                        uint8_t* images,
@@ -167,7 +167,11 @@ void spi_display_image(SH1106_t* dev,
   if (seg >= dev->_width)
     return;
 
-  int _seg = seg + CONFIG_OFFSETX;
+#ifdef CONFIG_SSD1306
+  int _seg = seg;
+#elif CONFIG_SH1106
+  int _seg = seg + 2;
+#endif
   uint8_t columLow = _seg & 0x0F;
   uint8_t columHigh = (_seg >> 4) & 0x0F;
 
@@ -186,7 +190,7 @@ void spi_display_image(SH1106_t* dev,
   spi_master_write_data(dev, images, width);
 }
 
-void spi_contrast(SH1106_t* dev, int contrast) {
+void spi_contrast(oled_driver_t* dev, int contrast) {
   int _contrast = contrast;
   if (contrast < 0x0)
     _contrast = 0;
@@ -197,7 +201,7 @@ void spi_contrast(SH1106_t* dev, int contrast) {
   spi_master_write_command(dev, _contrast);
 }
 
-void spi_hardware_scroll(SH1106_t* dev, sh1106_scroll_type_t scroll) {
+void spi_hardware_scroll(oled_driver_t* dev, oled_driver_scroll_type_t scroll) {
   if (scroll == SCROLL_RIGHT) {
     spi_master_write_command(dev, OLED_CMD_HORIZONTAL_RIGHT);  // 26
     spi_master_write_command(dev, 0x00);                       // Dummy byte

@@ -164,6 +164,7 @@ static void sniffer_task(void* parameters) {
     if (xQueueReceive(sniffer->work_queue, &packet_info,
                       pdMS_TO_TICKS(SNIFFER_PROCESS_PACKET_TIMEOUT_MS)) !=
         pdTRUE) {
+      // ESP_LOGW(TAG, "receive packet info failed");
       continue;
     }
     if (packet_capture(packet_info.payload, packet_info.length,

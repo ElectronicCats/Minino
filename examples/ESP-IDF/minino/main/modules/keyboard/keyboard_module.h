@@ -16,7 +16,11 @@
 
 #define BUTTON_ACTIVE_LEVEL 0
 
-static const char* button_events_table[] = {
+/**
+ * @brief Events for the available keyboard buttons events
+ *
+ */
+static const char* button_events_name[] = {
     "BUTTON_PRESS_DOWN",      "BUTTON_PRESS_UP",
     "BUTTON_PRESS_REPEAT",    "BUTTON_PRESS_REPEAT_DONE",
     "BUTTON_SINGLE_CLICK",    "BUTTON_DOUBLE_CLICK",
@@ -33,16 +37,16 @@ static const char* button_names[] = {
 };
 
 /**
- * @brief Layout of the available keyboard buttons names
+ * @brief Enum of the available keyboard buttons
  *
  */
-enum button_name {
+typedef enum {
   BUTTON_BOOT = 0,
   BUTTON_LEFT,
   BUTTON_RIGHT,
   BUTTON_UP,
   BUTTON_DOWN,
-};
+} keyboard_buttons_layout_t;
 
 /**
  * @brief Struct to hold the button state
@@ -62,4 +66,4 @@ typedef struct {
  *
  * @return void
  */
-void keyboard_init();
+void keyboard_module_begin();

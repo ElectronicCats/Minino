@@ -1,57 +1,43 @@
-#ifndef DISPLAY_H
-#define DISPLAY_H
+#pragma once
 
 #include "bluetooth_scanner.h"
 #include "buzzer.h"
 #include "cmd_sniffer.h"
-#include "keyboard.h"
-#include "screen_modules.h"
-#include "sh1106.h"
-#include "wifi_sniffer.h"
+#include "keyboard_module.h"
+#include "oled_driver.h"
+#include "screens_modules.h"
 
-#define INVERT    1
-#define NO_INVERT 0
-
-extern uint8_t selected_item;
-// extern screen_module_layer_t previous_layer;
-// extern screen_module_layer_t current_layer;
-extern int num_items;
+typedef void (*app_handler_t)(button_event_t button_pressed);
 
 /**
  * @brief Struct to hold the keyboard state in app
  */
 typedef struct {
   bool in_app;
-  void (*app_handler)(button_event_t button_pressed);
+  app_handler_t app_handler;
 } app_state_t;
 
-void menu_screens_init();
-void display_clear(void);
-void display_show(void);
-void display_text(const char* text, int x, int page, int invert);
-void display_clear_line(int x, int page, int invert);
-void display_bitmap(const uint8_t* bitmap,
-                    int x,
-                    int y,
-                    int width,
-                    int height,
-                    int invert);
-void display_selected_item_box();
-char** add_empty_strings(char** array, int length);
-char** remove_srolling_text_flag(char** items, int length);
-char** get_menu_items();
-void display_menu_items(char** items);
-void display_scrolling_text(char** text);
-void display_menu();
-void display_wifi_sniffer_animation_task(void* pvParameter);
-void display_wifi_sniffer_animation_start();
-void display_wifi_sniffer_animation_stop();
-void display_wifi_sniffer_cb(sniffer_runtime_t* sniffer);
-void display_bluetooth_scanner(bluetooth_scanner_record_t record);
-void display_thread_cli();
-void display_in_development_banner();
-void display_gps_init();
-void display_gps_deinit();
+/**
+ * @brief Enum with the screen module controls
+ */
+typedef enum {
+  SCREEN_IN_NAVIGATION = 0,
+  SCREEN_IN_APP,
+} screen_module_controls_type_t;
+
+/**
+ * @brief Initialize the menu screens
+ *
+ * @return void
+ */
+void menu_screens_begin();
+
+/**
+ * @brief Display the main menu
+ *
+ * @return void
+ */
+void menu_screens_display_menu();
 
 /**
  * @brief Get the app state
@@ -64,18 +50,18 @@ app_state_t menu_screens_get_app_state();
  * @brief Update the app state
  *
  * @param bool in_app
- * @param void app_handler function pointer
+ * @param app_handler_t app_handler
+ *
+ * @return void
  */
-void menu_screens_set_app_state(
-    bool in_app,
-    void (*app_handler)(button_event_t button_pressed));
+void menu_screens_set_app_state(bool in_app, app_handler_t app_handler);
 
 /**
- * @brief Get the current layer
+ * @brief Get the current menu
  *
- * @return screen_module_layer_t
+ * @return screen_module_menu_t
  */
-Layer screen_module_get_current_layer(void);
+screen_module_menu_t menu_screens_get_current_menu();
 
 /**
  * @brief Exit the submenu
@@ -105,11 +91,9 @@ void menu_screens_ingrement_selected_item();
  */
 void menu_screens_decrement_selected_item();
 
-/**
- * @brief Update the previous layer
- *
- * @return void
- */
-void menu_screens_update_previous_layer();
-
-#endif  // DISPLAY_H
+// TODO: Move to separate files
+void display_bluetooth_scanner(bluetooth_scanner_record_t record);
+void display_thread_cli();
+void display_in_development_banner();
+void display_gps_init();
+void display_gps_deinit();
