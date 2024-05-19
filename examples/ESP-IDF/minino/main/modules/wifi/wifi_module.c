@@ -11,6 +11,8 @@
 #include "wifi_controller.h"
 #include "wifi_scanner.h"
 
+static const char* TAG = "wifi_module";
+
 /**
  * @brief Enum with the wifi module states
  *
@@ -71,7 +73,7 @@ void wifi_module_exit() {
 }
 
 void wifi_module_deauth_begin() {
-  ESP_LOGI(TAG_WIFI_MODULE, "Initializing WiFi module");
+  ESP_LOGI(TAG, "Initializing WiFi module");
   menu_screens_set_app_state(true, wifi_module_keyboard_cb);
   current_wifi_state.state = WIFI_STATE_SCANNING;
   memset(&current_wifi_state.wifi_config, 0, sizeof(wifi_config_t));
@@ -95,19 +97,170 @@ void wifi_module_deauth_begin() {
 }
 
 void wifi_module_analizer_begin() {
-  ESP_LOGI(TAG_WIFI_MODULE, "Initializing WiFi analizer module");
+  ESP_LOGI(TAG, "Initializing WiFi analizer module");
   wifi_sniffer_register_cb(wifi_screens_module_display_sniffer_cb);
   wifi_sniffer_register_animation_cbs(wifi_screens_sniffer_animation_start,
                                       wifi_screens_sniffer_animation_stop);
+  wifi_sniffer_register_summary_cb(wifi_module_analizer_summary_cb);
   wifi_screens_module_create_sniffer_task();
   wifi_sniffer_begin();
+}
+
+void wifi_module_analizer_summary_cb(FILE* pcap_file) {
+  long size = pcap_cmd_get_file_size(pcap_file);
+  char* packet_payload = NULL;
+  // packet index (by bytes)
+  uint32_t index = 0;
+  pcap_file_header_t file_header;
+  size_t real_read =
+      fread(&file_header, sizeof(pcap_file_header_t), 1, pcap_file);
+  // ESP_RETURN_ON_FALSE(real_read == 1, ESP_FAIL, TAG,
+  //                     "read pcap file header failed");
+  index += sizeof(pcap_file_header_t);
+
+  // Get the header information
+  char* magic_number_str = malloc(16);
+  snprintf(magic_number_str, 16, " %" PRIx32, file_header.magic);
+  char* major_version_str = malloc(21);
+  sprintf(major_version_str, "Major Version: %d", file_header.major);
+  char* snaplen_str = malloc(21);
+  snprintf(snaplen_str, 16, "SnapLen: %" PRIu32, file_header.snaplen);
+  char* link_type_str = malloc(21);
+  snprintf(link_type_str, 16, "LinkType: %" PRIu32, file_header.link_type);
+
+  // Load header information
+  uint32_t summary_index = 2;  // Skip scroll text flag and Summary title
+  wifi_analizer_summary[summary_index++] = "Magic Number:";
+  wifi_analizer_summary[summary_index++] = magic_number_str;
+  wifi_analizer_summary[summary_index++] = major_version_str;
+  wifi_analizer_summary[summary_index++] = snaplen_str;
+  wifi_analizer_summary[summary_index++] = link_type_str;
+  wifi_analizer_summary[summary_index++] = "----------------";
+
+  uint32_t packet_num = 0;
+  pcap_packet_header_t packet_header;
+  while (index < size) {
+    real_read =
+        fread(&packet_header, sizeof(pcap_packet_header_t), 1, pcap_file);
+    // ESP_GOTO_ON_FALSE(real_read == 1, ESP_FAIL, err, TAG,
+    //                   "read pcap packet header failed");n
+
+    // Get the packet header information
+    char* packet_num_str = malloc(22);
+    snprintf(packet_num_str, 21, "Packet %" PRIu32 ":", packet_num);
+    char* timestamp_seconds_str = malloc(32);
+    snprintf(timestamp_seconds_str, 32, "Timestamp: %" PRIu32 "s",
+             packet_header.seconds);
+    char* capture_length_str = malloc(32);
+    snprintf(capture_length_str, 32, "Capture Len: %" PRIu32,
+             packet_header.capture_length);
+    char* packet_length_str = malloc(32);
+    snprintf(packet_length_str, 32, "Packet Len: %" PRIu32,
+             packet_header.packet_length);
+
+    // Load packet header information
+    wifi_analizer_summary[summary_index++] = packet_num_str;
+    wifi_analizer_summary[summary_index++] = timestamp_seconds_str;
+    wifi_analizer_summary[summary_index++] = capture_length_str;
+    wifi_analizer_summary[summary_index++] = packet_length_str;
+
+    size_t payload_length = packet_header.capture_length;
+    packet_payload = malloc(payload_length);
+    // ESP_GOTO_ON_FALSE(packet_payload, ESP_ERR_NO_MEM, err, TAG,
+    //                   "no mem to save packet payload");
+    real_read = fread(packet_payload, payload_length, 1, pcap_file);
+    // ESP_GOTO_ON_FALSE(real_read == 1, ESP_FAIL, err, TAG, "read payload
+    // error"); print packet information
+    if (file_header.link_type == PCAP_LINK_TYPE_802_11) {
+      // Check if the frame is a Beacon frame or Probe Response frame
+      uint8_t frame_type = (packet_payload[0] >> 2) & 0x03;
+      uint8_t frame_subtype = (packet_payload[0] >> 4) & 0x0F;
+      if ((frame_type == 0 && frame_subtype == 8) ||  // Beacon frame
+          (frame_type == 0 && frame_subtype == 5)) {  // Probe Response frame
+        // The BSSID is located in the Address 3 field
+        // fprintf(print_file, "BSSID: ");
+        // for (int j = 0; j < 5; j++) {
+        //   fprintf(print_file, "%2x ", packet_payload[16 + j]);
+        // }
+        // fprintf(print_file, "%2x\n", packet_payload[21]);
+        // // The SSID parameter set is located after the fixed parameters (36
+        // // bytes)
+        uint8_t ssid_length = packet_payload[37];
+        // fprintf(print_file, "SSID: ");
+        // for (int j = 0; j < ssid_length; j++) {
+        //   fprintf(print_file, "%c", packet_payload[38 + j]);
+        // }
+        // fprintf(print_file, "\n");
+        // // The DS Parameter Set, which contains the channel, is located after
+        // // the SSID
+        uint8_t supported_rates_length = packet_payload[38 + ssid_length + 1];
+        // fprintf(print_file, "Channel: %d\n",
+        //         packet_payload[38 + ssid_length + supported_rates_length +
+        //         4]);
+
+        char* ssid_str = malloc(32);
+        snprintf(ssid_str, 32, "%s", &packet_payload[38]);
+        char* channel_str = malloc(32);
+        snprintf(channel_str, 32, "Channel: %d",
+                 packet_payload[38 + ssid_length + supported_rates_length + 4]);
+        char* bssid_str = malloc(32);
+        char* bssid_str2 = malloc(32);
+        snprintf(bssid_str, 32, "BSSID: %2X:%2X:%2X", packet_payload[16],
+                 packet_payload[17], packet_payload[18]);
+        snprintf(bssid_str2, 32, "       %2X:%2X:%2X", packet_payload[19],
+                 packet_payload[20], packet_payload[21]);
+
+        wifi_analizer_summary[summary_index++] = "SSID:";
+        wifi_analizer_summary[summary_index++] = ssid_str;
+        wifi_analizer_summary[summary_index++] = channel_str;
+        wifi_analizer_summary[summary_index++] = bssid_str;
+        wifi_analizer_summary[summary_index++] = bssid_str2;
+      }
+      wifi_analizer_summary[summary_index++] = "----------------";
+      // Frame Control Field is coded as LSB first
+      // fprintf(print_file, "Frame Type: %2x\n", (packet_payload[0] >> 2) &
+      // 0x03); fprintf(print_file, "Frame Subtype: %2x\n",
+      //         (packet_payload[0] >> 4) & 0x0F);
+      // fprintf(print_file, "Destination: ");
+      // for (int j = 0; j < 5; j++) {
+      //   fprintf(print_file, "%2x ", packet_payload[4 + j]);
+      // }
+      // fprintf(print_file, "%2x\n", packet_payload[9]);
+      // fprintf(print_file, "Source: ");
+      // for (int j = 0; j < 5; j++) {
+      //   fprintf(print_file, "%2x ", packet_payload[10 + j]);
+      // }
+      // fprintf(print_file, "%2x\n", packet_payload[15]);
+
+      // fprintf(print_file,
+      //         "----------------------------------------------------------------"
+      //         "--------\n");
+    } else {
+      // fprintf(print_file, "Unknown link type:%" PRIu32 "\n",
+      //         file_header.link_type);
+      // fprintf(print_file,
+      //         "----------------------------------------------------------------"
+      //         "--------\n");
+    }
+    free(packet_payload);
+    packet_payload = NULL;
+    index += packet_header.capture_length + sizeof(pcap_packet_header_t);
+    packet_num++;
+  }
+  // fprintf(print_file, "Pcap packet Number: %" PRIu32 "\n", packet_num);
+  // fprintf(print_file,
+  //         "--------------------------------------------------------------------"
+  //         "----\n");
+  wifi_analizer_summary[summary_index++] = NULL;
+  if (packet_payload) {
+    free(packet_payload);
+  }
 }
 
 void wifi_module_keyboard_cb(button_event_t button_pressed) {
   uint8_t button_name = button_pressed >> 4;
   uint8_t button_event = button_pressed & 0x0F;
-  ESP_LOGI(TAG_WIFI_MODULE, "State: %s",
-           wifi_state_names[current_wifi_state.state]);
+  ESP_LOGI(TAG, "State: %s", wifi_state_names[current_wifi_state.state]);
 
   switch (current_wifi_state.state) {
     case WIFI_STATE_SCANNING: {

@@ -88,12 +88,14 @@ void oled_driver_display_text(oled_driver_t* dev,
                               bool invert) {
   if (page >= dev->_pages)
     return;
-  int c;
+  int _text_len = strlen(text);
+  if (_text_len > 16)
+    _text_len = 16;
 
   uint8_t seg = x;
   uint8_t image[8];
-  while ((c = *text++)) {
-    memcpy(image, font8x8_basic_tr[(uint8_t) c], 8);
+  for (uint8_t i = 0; i < _text_len; i++) {
+    memcpy(image, font8x8_basic_tr[(uint8_t) text[i]], 8);
     if (invert)
       oled_driver_invert(image, 8);
     if (dev->_flip)

@@ -179,35 +179,35 @@ static int next_menu_table[][6] = {
  * Usage: prev_menu_table[screen_module_menu_t]
  */
 static int prev_menu_table[] = {
-    MENU_MAIN,             // MENU_MAIN
-    MENU_MAIN,             // MENU_APPLICATIONS
-    MENU_MAIN,             // MENU_SETTINGS
-    MENU_MAIN,             // MENU_ABOUT
-    MENU_APPLICATIONS,     // MENU_WIFI_APPS
-    MENU_APPLICATIONS,     // MENU_BLUETOOTH_APPS
-    MENU_APPLICATIONS,     // MENU_ZIGBEE_APPS
-    MENU_APPLICATIONS,     // MENU_THREAD_APPS
-    MENU_APPLICATIONS,     // MENU_MATTER_APPS
-    MENU_APPLICATIONS,     // MENU_GPS
-    MENU_WIFI_APPS,        // MENU_WIFI_ANALIZER
-    MENU_WIFI_APPS,        // MENU_WIFI_DEAUTH
-    MENU_WIFI_ANALIZER,    // MENU_WIFI_ANALIZER_START
-    MENU_WIFI_ANALIZER,    // MENU_WIFI_ANALIZER_SETTINGS
-    MENU_WIFI_ANALIZER,    // MENU_WIFI_ANALIZER_SUMMARY
-    MENU_BLUETOOTH_APPS,   // MENU_BLUETOOTH_AIRTAGS_SCAN
-    MENU_ZIGBEE_APPS,      // MENU_ZIGBEE_SPOOFING
-    MENU_ZIGBEE_SPOOFING,  // MENU_ZIGBEE_SWITCH
-    MENU_ZIGBEE_SPOOFING,  // MENU_ZIGBEE_LIGHT
-    MENU_THREAD_APPS,      // MENU_THREAD_CLI
-    MENU_GPS,              // MENU_GPS_DATE_TIME
-    MENU_GPS,              // MENU_GPS_LOCATION
-    MENU_ABOUT,            // MENU_ABOUT_VERSION
-    MENU_ABOUT,            // MENU_ABOUT_LICENSE
-    MENU_ABOUT,            // MENU_ABOUT_CREDITS
-    MENU_ABOUT,            // MENU_ABOUT_LEGAL
-    MENU_SETTINGS,         // MENU_SETTINGS_DISPLAY
-    MENU_SETTINGS,         // MENU_SETTINGS_SOUND
-    MENU_SETTINGS,         // MENU_SETTINGS_SYSTEM
+    MENU_MAIN,                   // MENU_MAIN
+    MENU_MAIN,                   // MENU_APPLICATIONS
+    MENU_MAIN,                   // MENU_SETTINGS
+    MENU_MAIN,                   // MENU_ABOUT
+    MENU_APPLICATIONS,           // MENU_WIFI_APPS
+    MENU_APPLICATIONS,           // MENU_BLUETOOTH_APPS
+    MENU_APPLICATIONS,           // MENU_ZIGBEE_APPS
+    MENU_APPLICATIONS,           // MENU_THREAD_APPS
+    MENU_APPLICATIONS,           // MENU_MATTER_APPS
+    MENU_APPLICATIONS,           // MENU_GPS
+    MENU_WIFI_APPS,              // MENU_WIFI_ANALIZER
+    MENU_WIFI_APPS,              // MENU_WIFI_DEAUTH
+    MENU_WIFI_ANALIZER_SUMMARY,  // MENU_WIFI_ANALIZER_START
+    MENU_WIFI_ANALIZER,          // MENU_WIFI_ANALIZER_SETTINGS
+    MENU_WIFI_ANALIZER,          // MENU_WIFI_ANALIZER_SUMMARY
+    MENU_BLUETOOTH_APPS,         // MENU_BLUETOOTH_AIRTAGS_SCAN
+    MENU_ZIGBEE_APPS,            // MENU_ZIGBEE_SPOOFING
+    MENU_ZIGBEE_SPOOFING,        // MENU_ZIGBEE_SWITCH
+    MENU_ZIGBEE_SPOOFING,        // MENU_ZIGBEE_LIGHT
+    MENU_THREAD_APPS,            // MENU_THREAD_CLI
+    MENU_GPS,                    // MENU_GPS_DATE_TIME
+    MENU_GPS,                    // MENU_GPS_LOCATION
+    MENU_ABOUT,                  // MENU_ABOUT_VERSION
+    MENU_ABOUT,                  // MENU_ABOUT_LICENSE
+    MENU_ABOUT,                  // MENU_ABOUT_CREDITS
+    MENU_ABOUT,                  // MENU_ABOUT_LEGAL
+    MENU_SETTINGS,               // MENU_SETTINGS_DISPLAY
+    MENU_SETTINGS,               // MENU_SETTINGS_SOUND
+    MENU_SETTINGS,               // MENU_SETTINGS_SYSTEM
 };
 
 /**
@@ -307,7 +307,14 @@ static char* wifi_analizer_items[] = {
     NULL,
 };
 
-static char* wifi_sniffer_settings_items[] = {
+char* wifi_analizer_summary[] = {
+    VERTICAL_SCROLL_TEXT,
+    /***************/
+    "Summary",
+    NULL,
+};
+
+static char* wifi_analizer_settings_items[] = {
     "Channel",
     "Filter",
     NULL,
@@ -358,11 +365,11 @@ static char** menu_items[] = {
     empty_items,  // Matter
     gps_items,
     /* WiFi applications */
-    wifi_analizer_items,
-    empty_items,  // WiFi Deauth
-    empty_items,  // WiFi Analizer Start
-    empty_items,  // WiFi Analizer Settings
-    empty_items,  // WiFi Analizer Summary
+    wifi_analizer_items,    // WiFi Analizer
+    empty_items,            // WiFi Deauth
+    empty_items,            // WiFi Analizer Start
+    empty_items,            // WiFi Analizer Settings
+    wifi_analizer_summary,  // WiFi Analizer Summary
     /* Bluetooth applications */
     empty_items,  // Bluetooth Airtags scan
     /* Zigbee applications */

@@ -33,6 +33,8 @@ static const char* TAG = "cmd_pcap";
 #define SNIFFER_APPTRACE_RETRY              (10)
 #define TRACE_TIMER_FLUSH_INT_MS            (1000)
 
+summary_cb_t summary_cb = NULL;
+
 #if CONFIG_SNIFFER_PCAP_DESTINATION_MEMORY
 /**
  * @brief Pcap memory buffer Type Definition
@@ -63,47 +65,6 @@ typedef struct {
 
 static pcap_cmd_runtime_t pcap_cmd_rt = {0};
 
-/**
- * @brief Pcap File Header
- *
- */
-typedef struct {
-  uint32_t magic;     /*!< Magic Number */
-  uint16_t major;     /*!< Major Version */
-  uint16_t minor;     /*!< Minor Version */
-  uint32_t zone;      /*!< Time Zone Offset */
-  uint32_t sigfigs;   /*!< Timestamp Accuracy */
-  uint32_t snaplen;   /*!< Max Length to Capture */
-  uint32_t link_type; /*!< Link Layer Type */
-} pcap_file_header_t;
-
-/**
- * @brief Pcap Packet Header
- *
- */
-typedef struct {
-  uint32_t
-      seconds; /*!< Number of seconds since January 1st, 1970, 00:00:00 GMT */
-  uint32_t microseconds;   /*!< Number of microseconds when the packet was
-                              captured (offset from seconds) */
-  uint32_t capture_length; /*!< Number of bytes of captured data, no longer than
-                              packet_length */
-  uint32_t packet_length;  /*!< Actual length of current packet */
-} pcap_packet_header_t;
-
-/**
- * @brief Pcap Runtime Handle
- *
- */
-struct pcap_file_t {
-  FILE* file;                 /*!< File handle */
-  pcap_link_type_t link_type; /*!< Pcap Link Type */
-  unsigned int major_version; /*!< Pcap version: major */
-  unsigned int minor_version; /*!< Pcap version: minor */
-  unsigned int time_zone;     /*!< Pcap timezone code */
-  uint32_t endian_magic;      /*!< Magic value related to endian format */
-};
-
 #if CONFIG_SNIFFER_PCAP_DESTINATION_JTAG
 static int trace_writefun(void* cookie, const char* buf, int len) {
   return esp_apptrace_write(ESP_APPTRACE_DEST_TRAX, buf, len,
@@ -123,6 +84,10 @@ void pcap_flush_apptrace_timer_cb(TimerHandle_t pxTimer) {
   esp_apptrace_flush(ESP_APPTRACE_DEST_TRAX, pdMS_TO_TICKS(10));
 }
 #endif  // CONFIG_SNIFFER_PCAP_DESTINATION_JTAG
+
+void wifi_sniffer_register_summary_cb(summary_cb_t cb) {
+  summary_cb = cb;
+}
 
 static esp_err_t pcap_close(pcap_cmd_runtime_t* pcap) {
   esp_err_t ret = ESP_OK;
@@ -275,6 +240,7 @@ long pcap_cmd_get_file_size(FILE* file) {
 }
 
 esp_err_t pcap_cmd_print_summary(pcap_file_handle_t pcap, FILE* print_file) {
+  summary_cb(pcap->file);
   esp_err_t ret = ESP_OK;
   long size = pcap_cmd_get_file_size(pcap->file);
   char* packet_payload = NULL;
