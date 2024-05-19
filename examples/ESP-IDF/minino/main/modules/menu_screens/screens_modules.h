@@ -16,8 +16,8 @@
  *
  * Used to navigate through the different menus
  *
- * Modify this menu also requires to modify the `menu_list`, `next_menu_table`
- * and `prev_menu_table` arrays
+ * Modify this menu also requires to modify the `menu_list`, `next_menu_table`,
+ * `prev_menu_table` and `menu_items` arrays
  */
 typedef enum {
   MENU_MAIN = 0,
@@ -67,8 +67,9 @@ typedef enum {
  * @brief List of menus
  *
  * Used to get the menu name from the enum value
+ * following the order of the `screen_module_menu_t` enum
  *
- * Usage: menu_list[current_menu]
+ * Usage: menu_list[screen_module_menu_t]
  */
 static char* menu_list[] = {
     "MENU_MAIN", "MENU_APPLICATIONS", "MENU_SETTINGS", "MENU_ABOUT",
@@ -100,8 +101,9 @@ static char* menu_list[] = {
  * @brief List of menus
  *
  * Used to get the next menu to display when the user selects an option
+ * following the order of the `screen_module_menu_t` enum
  *
- * Usage: next_menu_table[current_menu][selected_item]
+ * Usage: next_menu_table[screen_module_menu_t][selected_item]
  */
 static int next_menu_table[][6] = {
     // MENU_MAIN
@@ -123,48 +125,48 @@ static int next_menu_table[][6] = {
     // MENU_THREAD_APPS
     {MENU_THREAD_CLI},
     // MENU_MATTER_APPS
-    {},
+    {MENU_MATTER_APPS},
     // MENU_GPS
     {MENU_GPS_DATE_TIME, MENU_GPS_LOCATION},
     // MENU_WIFI_ANALIZER
     {MENU_WIFI_ANALIZER_START, MENU_WIFI_ANALIZER_SETTINGS,
      MENU_WIFI_ANALIZER_SUMMARY},
     // MENU_WIFI_DEAUTH
-    {},
+    {MENU_WIFI_DEAUTH},
     // MENU_WIFI_ANALIZER_START
-    {},
+    {MENU_WIFI_ANALIZER_START},
     // MENU_WIFI_ANALIZER_SETTINGS
-    {},
+    {MENU_WIFI_ANALIZER_SETTINGS},
     // MENU_WIFI_ANALIZER_SUMMARY
-    {},
+    {MENU_WIFI_ANALIZER_SUMMARY},
     // MENU_BLUETOOTH_AIRTAGS_SCAN
-    {},
+    {MENU_BLUETOOTH_AIRTAGS_SCAN},
     // MENU_ZIGBEE_SPOOFING
     {MENU_ZIGBEE_SWITCH, MENU_ZIGBEE_LIGHT},
     // MENU_ZIGBEE_SWITCH
-    {},
+    {MENU_ZIGBEE_SWITCH},
     // MENU_ZIGBEE_LIGHT
-    {},
+    {MENU_ZIGBEE_LIGHT},
     // MENU_THREAD_CLI
-    {},
+    {MENU_THREAD_CLI},
     // MENU_GPS_DATE_TIME
-    {},
+    {MENU_GPS_DATE_TIME},
     // MENU_GPS_LOCATION
-    {},
+    {MENU_GPS_LOCATION},
     // MENU_ABOUT_VERSION
-    {},
+    {MENU_ABOUT_VERSION},
     // MENU_ABOUT_LICENSE
-    {},
+    {MENU_ABOUT_LICENSE},
     // MENU_ABOUT_CREDITS
-    {},
+    {MENU_ABOUT_CREDITS},
     // MENU_ABOUT_LEGAL
-    {},
+    {MENU_ABOUT_LEGAL},
     // MENU_SETTINGS_DISPLAY
-    {},
+    {MENU_SETTINGS_DISPLAY},
     // MENU_SETTINGS_SOUND
-    {},
+    {MENU_SETTINGS_SOUND},
     // MENU_SETTINGS_SYSTEM
-    {},
+    {MENU_SETTINGS_SYSTEM},
 };
 
 /**
@@ -174,7 +176,7 @@ static int next_menu_table[][6] = {
  * previous menu in `menu_screens_exit_submenu`. Add the previous menu
  * following the order of the `screen_module_menu_t` enum
  *
- * Usage: prev_menu_table[current_menu]
+ * Usage: prev_menu_table[screen_module_menu_t]
  */
 static int prev_menu_table[] = {
     MENU_MAIN,             // MENU_MAIN
@@ -213,7 +215,7 @@ static int prev_menu_table[] = {
  *
  * Used to keep track of the selected item in each menu
  *
- * Usage: selected_item_history[current_menu] = selected_item
+ * Usage: selected_item_history[screen_module_menu_t]
  */
 static int selected_item_history[MENU_COUNT] = {0};
 
@@ -341,7 +343,14 @@ static char* empty_items[] = {
     NULL,
 };
 
-// List of menus, it must be in the same order as the enum screen_module_menu_t
+/**
+ * @brief List of menu items
+ *
+ * Used to get the menu items from the menu enum value
+ * following the order of the `screen_module_menu_t` enum
+ *
+ * Usage: menu_items[screen_module_menu_t]
+ */
 static char** menu_items[] = {
     main_items, applications_items, settings_items, about_items,
     /* Applications */

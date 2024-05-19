@@ -473,11 +473,11 @@ void menu_screens_exit_submenu() {
 
 void menu_screens_enter_submenu() {
   ESP_LOGI(TAG, "Selected item: %d", selected_item);
-  current_menu = next_menu_table[current_menu][selected_item];
-  ESP_LOGI(TAG, "Previous: %s Current: %s", menu_list[previous_menu],
-           menu_list[current_menu]);
+  screen_module_menu_t next_menu = next_menu_table[current_menu][selected_item];
+  ESP_LOGI(TAG, "Previous: %s Current: %s Next: %s", menu_list[previous_menu],
+           menu_list[current_menu], menu_list[next_menu]);
 
-  switch (current_menu) {
+  switch (next_menu) {
     case MENU_WIFI_ANALIZER:
       wifi_module_analizer_begin();
       break;
@@ -509,8 +509,12 @@ void menu_screens_enter_submenu() {
       break;
   }
 
-  selected_item_history[current_menu] = selected_item;
-  selected_item = 0;
+  if (current_menu != next_menu) {
+    selected_item_history[next_menu] = selected_item;
+    selected_item = 0;
+  }
+  current_menu = next_menu;
+
   if (!app_state.in_app) {
     menu_screens_display_menu();
   }
