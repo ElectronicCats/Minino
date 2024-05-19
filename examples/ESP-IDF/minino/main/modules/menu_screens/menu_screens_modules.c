@@ -32,6 +32,59 @@ static void gps_event_handler(void* event_handler_arg,
                               int32_t event_id,
                               void* event_data);
 
+esp_err_t menu_screens_test_menu_list() {
+  ESP_LOGI(TAG, "Testing menus list size");
+  size_t menu_list_size = sizeof(menu_list) / sizeof(menu_list[0]);
+  if (menu_list_size != MENU_COUNT) {
+    ESP_LOGE(TAG, "menu_list size is not as screen_module_menu_t enum");
+    return ESP_FAIL;
+  }
+  ESP_LOGI(TAG, "Test passed");
+  return ESP_OK;
+}
+
+esp_err_t menu_screens_test_menu_next_menu_table() {
+  ESP_LOGI(TAG, "Testing next menu table size");
+  size_t next_menu_table_size =
+      sizeof(next_menu_table) / sizeof(next_menu_table[0]);
+  if (next_menu_table_size != MENU_COUNT) {
+    ESP_LOGE(TAG, "next_menu_table size is not as screen_module_menu_t enum");
+    return ESP_FAIL;
+  }
+  ESP_LOGI(TAG, "Test passed");
+  return ESP_OK;
+}
+
+esp_err_t menu_screens_test_prev_menu_table() {
+  ESP_LOGI(TAG, "Testing previous menu table size");
+  size_t prev_menu_table_size =
+      sizeof(prev_menu_table) / sizeof(prev_menu_table[0]);
+  if (prev_menu_table_size != MENU_COUNT) {
+    ESP_LOGE(TAG, "prev_menu_table size is not as screen_module_menu_t enum");
+    return ESP_FAIL;
+  }
+  ESP_LOGI(TAG, "Test passed");
+  return ESP_OK;
+}
+
+esp_err_t menu_screens_test_menu_items() {
+  ESP_LOGI(TAG, "Testing menu items size");
+  size_t menu_items_size = sizeof(menu_items) / sizeof(menu_items[0]);
+  if (menu_items_size != MENU_COUNT) {
+    ESP_LOGE(TAG, "menu_items size is not as screen_module_menu_t enum");
+    return ESP_FAIL;
+  }
+  ESP_LOGI(TAG, "Test passed");
+  return ESP_OK;
+}
+
+void menu_screens_run_tests() {
+  ESP_ERROR_CHECK(menu_screens_test_menu_list());
+  ESP_ERROR_CHECK(menu_screens_test_menu_next_menu_table());
+  ESP_ERROR_CHECK(menu_screens_test_prev_menu_table());
+  ESP_ERROR_CHECK(menu_screens_test_menu_items());
+}
+
 void menu_screens_begin() {
   selected_item = 0;
   previous_menu = MENU_MAIN;
@@ -40,6 +93,7 @@ void menu_screens_begin() {
   bluetooth_devices_count = 0;
   nmea_hdl = NULL;
 
+  menu_screens_run_tests();
   oled_screen_begin();
 
   // wifi_sniffer_register_cb(display_wifi_sniffer_cb);
@@ -140,7 +194,7 @@ char** get_menu_items() {
     return NULL;
   }
 
-  if (strcmp(submenu[0], SCROLLING_TEXT) == 0) {
+  if (strcmp(submenu[0], VERTICAL_SCROLL_TEXT) == 0) {
     return submenu;
   }
 
@@ -218,7 +272,7 @@ void menu_screens_display_menu() {
     return;
   }
 
-  if (strcmp(items[0], SCROLLING_TEXT) == 0) {
+  if (strcmp(items[0], VERTICAL_SCROLL_TEXT) == 0) {
     char** text = remove_srolling_text_flag(items, num_items);
     display_scrolling_text(text);
   } else {
@@ -391,8 +445,8 @@ screen_module_menu_t menu_screens_get_current_menu() {
 void menu_screens_exit_submenu() {
   ESP_LOGI(TAG, "Exiting submenu");
   previous_menu = prev_menu_table[current_menu];
-  ESP_LOGI(TAG, "Previous: %s Current: %s", menus_list[previous_menu],
-           menus_list[current_menu]);
+  ESP_LOGI(TAG, "Previous: %s Current: %s", menu_list[previous_menu],
+           menu_list[current_menu]);
 
   switch (current_menu) {
     case MENU_WIFI_ANALIZER_START:
@@ -419,9 +473,9 @@ void menu_screens_exit_submenu() {
 
 void menu_screens_enter_submenu() {
   ESP_LOGI(TAG, "Selected item: %d", selected_item);
-  current_menu = menu_next_menu_table[current_menu][selected_item];
-  ESP_LOGI(TAG, "Previous: %s Current: %s", menus_list[previous_menu],
-           menus_list[current_menu]);
+  current_menu = next_menu_table[current_menu][selected_item];
+  ESP_LOGI(TAG, "Previous: %s Current: %s", menu_list[previous_menu],
+           menu_list[current_menu]);
 
   switch (current_menu) {
     case MENU_WIFI_ANALIZER:
@@ -451,7 +505,7 @@ void menu_screens_enter_submenu() {
       display_in_development_banner();
       break;
     default:
-      ESP_LOGW(TAG, "Unhandled menu: %s", menus_list[current_menu]);
+      ESP_LOGI(TAG, "Unhandled menu: %s", menu_list[current_menu]);
       break;
   }
 

@@ -2,8 +2,23 @@
 
 #include <stddef.h>
 
-#define SCROLLING_TEXT "scrollable"
+/**
+ * @brief Scrolling text flag
+ *
+ * Used to identify if the text is scrollable
+ *
+ * Add this flag to the text to make it scrollable
+ */
+#define VERTICAL_SCROLL_TEXT "vertical_scroll_text"
 
+/**
+ * @brief Enum of menus
+ *
+ * Used to navigate through the different menus
+ *
+ * Modify this menu also requires to modify the `menu_list`, `next_menu_table`
+ * and `prev_menu_table` arrays
+ */
 typedef enum {
   MENU_MAIN = 0,
   MENU_APPLICATIONS,
@@ -22,6 +37,7 @@ typedef enum {
   /* WiFi analizer items */
   MENU_WIFI_ANALIZER_START,
   MENU_WIFI_ANALIZER_SETTINGS,
+  MENU_WIFI_ANALIZER_SUMMARY,
   /* Bluetooth applications */
   MENU_BLUETOOTH_AIRTAGS_SCAN,
   /* Zigbee applications */
@@ -47,7 +63,14 @@ typedef enum {
   MENU_COUNT,
 } screen_module_menu_t;
 
-static char* menus_list[MENU_COUNT] = {
+/**
+ * @brief List of menus
+ *
+ * Used to get the menu name from the enum value
+ *
+ * Usage: menu_list[current_menu]
+ */
+static char* menu_list[] = {
     "MENU_MAIN", "MENU_APPLICATIONS", "MENU_SETTINGS", "MENU_ABOUT",
     /* Applications */
     "MENU_WIFI_APPS", "MENU_BLUETOOTH_APPS", "MENU_ZIGBEE_APPS",
@@ -56,6 +79,7 @@ static char* menus_list[MENU_COUNT] = {
     "MENU_WIFI_ANALIZER", "MENU_WIFI_DEAUTH",
     /* WiFi analizer items */
     "MENU_WIFI_ANALIZER_START", "MENU_WIFI_ANALIZER_SETTINGS",
+    "MENU_WIFI_ANALIZER_SUMMARY",
     /* Bluetooth applications */
     "MENU_BLUETOOTH_AIRTAGS_SCAN",
     /* Zigbee applications */
@@ -73,10 +97,13 @@ static char* menus_list[MENU_COUNT] = {
 };
 
 /**
- * @brief List of menus [current_menu][selected_item]
+ * @brief List of menus
+ *
  * Used to get the next menu to display when the user selects an option
+ *
+ * Usage: next_menu_table[current_menu][selected_item]
  */
-static int menu_next_menu_table[MENU_COUNT][6] = {
+static int next_menu_table[][6] = {
     // MENU_MAIN
     {MENU_APPLICATIONS, MENU_SETTINGS, MENU_ABOUT},
     // MENU_APPLICATIONS
@@ -100,12 +127,15 @@ static int menu_next_menu_table[MENU_COUNT][6] = {
     // MENU_GPS
     {MENU_GPS_DATE_TIME, MENU_GPS_LOCATION},
     // MENU_WIFI_ANALIZER
-    {MENU_WIFI_ANALIZER_START, MENU_WIFI_ANALIZER_SETTINGS},
+    {MENU_WIFI_ANALIZER_START, MENU_WIFI_ANALIZER_SETTINGS,
+     MENU_WIFI_ANALIZER_SUMMARY},
     // MENU_WIFI_DEAUTH
     {},
     // MENU_WIFI_ANALIZER_START
     {},
     // MENU_WIFI_ANALIZER_SETTINGS
+    {},
+    // MENU_WIFI_ANALIZER_SUMMARY
     {},
     // MENU_BLUETOOTH_AIRTAGS_SCAN
     {},
@@ -138,11 +168,15 @@ static int menu_next_menu_table[MENU_COUNT][6] = {
 };
 
 /**
- * @brief List of menus [current_menu]
+ * @brief List of menus
+ *
  * Used to get the previous menu to display when the user returns to the
- * previous menu in `menu_screens_exit_submenu`
+ * previous menu in `menu_screens_exit_submenu`. Add the previous menu
+ * following the order of the `screen_module_menu_t` enum
+ *
+ * Usage: prev_menu_table[current_menu]
  */
-static int prev_menu_table[MENU_COUNT] = {
+static int prev_menu_table[] = {
     MENU_MAIN,             // MENU_MAIN
     MENU_MAIN,             // MENU_APPLICATIONS
     MENU_MAIN,             // MENU_SETTINGS
@@ -157,6 +191,7 @@ static int prev_menu_table[MENU_COUNT] = {
     MENU_WIFI_APPS,        // MENU_WIFI_DEAUTH
     MENU_WIFI_ANALIZER,    // MENU_WIFI_ANALIZER_START
     MENU_WIFI_ANALIZER,    // MENU_WIFI_ANALIZER_SETTINGS
+    MENU_WIFI_ANALIZER,    // MENU_WIFI_ANALIZER_SUMMARY
     MENU_BLUETOOTH_APPS,   // MENU_BLUETOOTH_AIRTAGS_SCAN
     MENU_ZIGBEE_APPS,      // MENU_ZIGBEE_SPOOFING
     MENU_ZIGBEE_SPOOFING,  // MENU_ZIGBEE_SWITCH
@@ -173,6 +208,13 @@ static int prev_menu_table[MENU_COUNT] = {
     MENU_SETTINGS,         // MENU_SETTINGS_SYSTEM
 };
 
+/**
+ * @brief History of selected items in each menu
+ *
+ * Used to keep track of the selected item in each menu
+ *
+ * Usage: selected_item_history[current_menu] = selected_item
+ */
 static int selected_item_history[MENU_COUNT] = {0};
 
 static char* main_items[] = {
@@ -198,7 +240,7 @@ static char* about_items[] = {
 };
 
 static char* version_text[] = {
-    SCROLLING_TEXT,
+    VERTICAL_SCROLL_TEXT,
     /***************/
     "",
     "",
@@ -209,7 +251,7 @@ static char* version_text[] = {
 };
 
 static char* license_text[] = {
-    SCROLLING_TEXT,
+    VERTICAL_SCROLL_TEXT,
     /***************/
     "",
     "",
@@ -219,7 +261,7 @@ static char* license_text[] = {
 };
 
 static char* credits_text[] = {
-    SCROLLING_TEXT,
+    VERTICAL_SCROLL_TEXT,
     /***************/
     "Developed by",
     "Electronic Cats",
@@ -231,7 +273,7 @@ static char* credits_text[] = {
 };
 
 static char* legal_text[] = {
-    SCROLLING_TEXT,
+    VERTICAL_SCROLL_TEXT,
     /***************/
     "The user",
     "assumes all",
@@ -300,7 +342,7 @@ static char* empty_items[] = {
 };
 
 // List of menus, it must be in the same order as the enum screen_module_menu_t
-static char** menu_items[MENU_COUNT] = {
+static char** menu_items[] = {
     main_items, applications_items, settings_items, about_items,
     /* Applications */
     wifi_items, bluetooth_items, zigbee_items, thread_items,
@@ -311,6 +353,7 @@ static char** menu_items[MENU_COUNT] = {
     empty_items,  // WiFi Deauth
     empty_items,  // WiFi Analizer Start
     empty_items,  // WiFi Analizer Settings
+    empty_items,  // WiFi Analizer Summary
     /* Bluetooth applications */
     empty_items,  // Bluetooth Airtags scan
     /* Zigbee applications */
