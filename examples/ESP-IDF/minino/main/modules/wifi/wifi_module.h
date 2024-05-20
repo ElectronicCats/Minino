@@ -34,6 +34,16 @@ void wifi_module_exit(void);
 void wifi_module_analizer_summary_cb(FILE* pcap_file);
 
 /**
+ * @brief Update the channel items array
+ *
+ * Set [x] to the current channel
+ * Set [ ] to the other channels
+ *
+ * @return void
+ */
+void wifi_module_update_channel_items_array();
+
+/**
  * @brief State machine for the wifi module
  *
  * @param button_pressed The button pressed

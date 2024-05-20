@@ -11,7 +11,7 @@
 #include "zigbee_switch.h"
 
 #define MAX_MENU_ITEMS_PER_SCREEN 3
-#define TIME_ZONE                 (+8)    // Beijing Time
+#define TIME_ZONE                 (-6)    // Beijing Time
 #define YEAR_BASE                 (2000)  // date in GPS starts from 2000
 
 static const char* TAG = "menu_screens_modules";
@@ -145,14 +145,14 @@ char** add_empty_strings(char** array, int length) {
 }
 
 /**
- * @brief Remove the scrolling text flag from the array
+ * @brief Remove the items flag
  *
  * @param items
  * @param length
  *
  * @return char**
  */
-char** remove_srolling_text_flag(char** items, int length) {
+char** remove_items_flag(char** items, int length) {
   char** newArray = malloc((length - 1) * sizeof(char*));
 
   for (int i = 0; i < length - 1; i++) {
@@ -164,6 +164,24 @@ char** remove_srolling_text_flag(char** items, int length) {
   num_items = length + 1;
 
   return newArray;
+}
+
+/**
+ * @brief Check if the current menu is vertical scroll
+ *
+ * @return bool
+ */
+bool is_menu_vertical_scroll() {
+  return strcmp(menu_items[current_menu][0], VERTICAL_SCROLL_TEXT) == 0;
+}
+
+/**
+ * @brief Check if the current menu is configuration
+ *
+ * @return bool
+ */
+bool is_menu_configuration() {
+  return strcmp(menu_items[current_menu][0], CONFIGURATION_MENU_ITEMS) == 0;
 }
 
 /**
@@ -186,7 +204,7 @@ char** get_menu_items() {
     return NULL;
   }
 
-  if (strcmp(submenu[0], VERTICAL_SCROLL_TEXT) == 0) {
+  if (is_menu_vertical_scroll() || is_menu_configuration()) {
     return submenu;
   }
 
@@ -251,8 +269,21 @@ void display_scrolling_text(char** text) {
   }
 }
 
+void display_configuration_items(char** items) {
+  uint8_t startIdx = (selected_item >= 7) ? selected_item - 6 : 0;
+  oled_screen_clear();
+
+  for (uint8_t i = startIdx; i < num_items - 2; i++) {
+    if (i == selected_item) {
+      oled_screen_display_text(items[i], 0, i - startIdx, OLED_DISPLAY_INVERT);
+    } else {
+      oled_screen_display_text(items[i], 0, i - startIdx, OLED_DISPLAY_NORMAL);
+    }
+  }
+}
+
 /**
- * @brief Display the menu or the scrolling text
+ * @brief Display the menu items
  *
  * @return void
  */
@@ -264,9 +295,12 @@ void menu_screens_display_menu() {
     return;
   }
 
-  if (strcmp(items[0], VERTICAL_SCROLL_TEXT) == 0) {
-    char** text = remove_srolling_text_flag(items, num_items);
+  if (is_menu_vertical_scroll()) {
+    char** text = remove_items_flag(items, num_items);
     display_scrolling_text(text);
+  } else if (is_menu_configuration()) {
+    char** new_items = remove_items_flag(items, num_items);
+    display_configuration_items(new_items);
   } else {
     display_menu_items(items);
   }
@@ -434,6 +468,27 @@ screen_module_menu_t menu_screens_get_current_menu() {
   return current_menu;
 }
 
+uint32_t menu_screens_get_menu_length(char* menu[]) {
+  uint32_t num_items = 0;
+  if (menu != NULL) {
+    while (menu[num_items] != NULL) {
+      num_items++;
+    }
+  }
+  return num_items;
+}
+
+uint32_t menu_screens_get_next_menu_length() {
+  uint32_t num_items = 0;
+  char** submenu = menu_items[current_menu];
+  if (submenu != NULL) {
+    while (submenu[num_items] != NULL) {
+      num_items++;
+    }
+  }
+  return num_items;
+}
+
 void menu_screens_exit_submenu() {
   ESP_LOGI(TAG, "Exiting submenu");
   previous_menu = prev_menu_table[current_menu];
@@ -473,12 +528,20 @@ void menu_screens_exit_submenu() {
 }
 
 void menu_screens_enter_submenu() {
+  screen_module_menu_t next_menu;
   ESP_LOGI(TAG, "Selected item: %d", selected_item);
-  if (strcmp(get_menu_items()[0], VERTICAL_SCROLL_TEXT) == 0) {
+
+  if (is_menu_vertical_scroll()) {
     selected_item = 0;
   }
 
-  screen_module_menu_t next_menu = next_menu_table[current_menu][selected_item];
+  if (is_menu_configuration()) {
+    // Don't update next menu
+    next_menu = next_menu_table[current_menu][0];
+  } else {
+    next_menu = next_menu_table[current_menu][selected_item];
+  }
+
   ESP_LOGI(TAG, "Previous: %s Current: %s", menu_list[current_menu],
            menu_list[next_menu]);
 
@@ -492,6 +555,10 @@ void menu_screens_enter_submenu() {
     case MENU_WIFI_ANALIZER_START:
       oled_screen_clear();
       wifi_sniffer_start();
+      break;
+    case MENU_WIFI_ANALIZER_CHANNEL:
+      wifi_sniffer_set_channel(selected_item + 1);
+      wifi_module_update_channel_items_array();
       break;
     case MENU_BLUETOOTH_AIRTAGS_SCAN:
       oled_screen_clear();

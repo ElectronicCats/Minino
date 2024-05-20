@@ -64,6 +64,15 @@ void menu_screens_set_app_state(bool in_app, app_handler_t app_handler);
 screen_module_menu_t menu_screens_get_current_menu();
 
 /**
+ * @brief Get the current menu length
+ *
+ * @param char* menu[] The menu
+ *
+ * @return uint32_t
+ */
+uint32_t menu_screens_get_menu_length(char* menu[]);
+
+/**
  * @brief Exit the submenu
  *
  * @return void
