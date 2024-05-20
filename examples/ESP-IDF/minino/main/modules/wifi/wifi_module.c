@@ -116,8 +116,6 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
   pcap_file_header_t file_header;
   size_t real_read =
       fread(&file_header, sizeof(pcap_file_header_t), 1, pcap_file);
-  // ESP_RETURN_ON_FALSE(real_read == 1, ESP_FAIL, TAG,
-  //                     "read pcap file header failed");
   if (real_read != 1) {
     ESP_LOGE(TAG, "read pcap file header failed");
     return;

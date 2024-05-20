@@ -16,7 +16,7 @@
 
 static const char* TAG = "menu_screens_modules";
 uint8_t selected_item;
-uint16_t num_items;
+uint32_t num_items;
 screen_module_menu_t previous_menu;
 screen_module_menu_t current_menu;
 uint8_t bluetooth_devices_count;
@@ -95,10 +95,6 @@ void menu_screens_begin() {
 
   menu_screens_run_tests();
   oled_screen_begin();
-
-  // wifi_sniffer_register_cb(display_wifi_sniffer_cb);
-  // wifi_sniffer_register_animation_cbs(display_wifi_sniffer_animation_start,
-  //                                     display_wifi_sniffer_animation_stop);
   bluetooth_scanner_register_cb(display_bluetooth_scanner);
 
   // Show logo
@@ -119,10 +115,6 @@ void menu_screens_begin() {
   }
 
   display_gps_init();
-  // xTaskCreate(&display_wifi_sniffer_animation_task,
-  //             "display_wifi_sniffer_animation_task", 2048, NULL, 15,
-  //             &wifi_sniffer_animation_task_handle);
-  // display_wifi_sniffer_animation_stop();
 }
 
 /**
@@ -482,9 +474,13 @@ void menu_screens_exit_submenu() {
 
 void menu_screens_enter_submenu() {
   ESP_LOGI(TAG, "Selected item: %d", selected_item);
+  if (strcmp(get_menu_items()[0], VERTICAL_SCROLL_TEXT) == 0) {
+    selected_item = 0;
+  }
+
   screen_module_menu_t next_menu = next_menu_table[current_menu][selected_item];
-  ESP_LOGI(TAG, "Previous: %s Current: %s Next: %s", menu_list[previous_menu],
-           menu_list[current_menu], menu_list[next_menu]);
+  ESP_LOGI(TAG, "Previous: %s Current: %s", menu_list[current_menu],
+           menu_list[next_menu]);
 
   switch (next_menu) {
     case MENU_WIFI_ANALIZER:
@@ -514,7 +510,7 @@ void menu_screens_enter_submenu() {
       display_in_development_banner();
       break;
     default:
-      ESP_LOGI(TAG, "Unhandled menu: %s", menu_list[current_menu]);
+      ESP_LOGI(TAG, "Unhandled menu: %s", menu_list[next_menu]);
       break;
   }
 

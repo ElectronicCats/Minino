@@ -37,6 +37,7 @@ typedef enum {
   /* WiFi analizer items */
   MENU_WIFI_ANALIZER_START,
   MENU_WIFI_ANALIZER_SETTINGS,
+  /* WiFi analizer start items */
   MENU_WIFI_ANALIZER_SUMMARY,
   /* Bluetooth applications */
   MENU_BLUETOOTH_AIRTAGS_SCAN,
