@@ -12,12 +12,12 @@
 #include "esp_openthread_lock.h"
 #include "esp_openthread_netif_glue.h"
 #include "esp_openthread_types.h"
-#include "esp_ot_config.h"
 #include "esp_vfs_eventfd.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "hal/uart_types.h"
 #include "nvs_flash.h"
+#include "open_thread_config.h"
 #include "openthread/dataset.h"
 #include "openthread/instance.h"
 #include "openthread/ip6.h"
@@ -28,7 +28,9 @@
 #include "openthread/udp.h"
 #include "sdkconfig.h"
 
-#include "esp_ot_cli.h"
+#include "oled_screen.h"
+#include "open_thread.h"
+#include "preferences.h"
 
 #if CONFIG_OPENTHREAD_FTD
   #include "openthread/dataset_ftd.h"
@@ -91,6 +93,11 @@ static size_t hex_string_to_binary(const char* hex_string,
   }
 
   return buf_size;
+}
+
+void ot_factory_reset() {
+  preferences_put_bool("thread_deinit", true);
+  otInstanceFactoryReset(esp_openthread_get_instance());
 }
 
 esp_err_t set_dataset() {
@@ -204,8 +211,11 @@ void on_udp_recieve(void* aContext,
                     const otMessageInfo* aMessageInfo) {
   otError error = OT_ERROR_NONE;
   printf("NUEVO MENSAJE\n");
+  oled_screen_clear();
+  oled_screen_display_text("New message...  ", 0, 0, OLED_DISPLAY_INVERT);
   char buf[1500];
   int length;
+  char ip[60];
 
   ESP_LOGI(TAG, "%d bytes from ",
            otMessageGetLength(aMessage) - otMessageGetOffset(aMessage));
@@ -213,18 +223,25 @@ void on_udp_recieve(void* aContext,
   char src_addr[OT_IP6_ADDRESS_STRING_SIZE];
   otIp6AddressToString(&aMessageInfo->mPeerAddr, src_addr, sizeof(src_addr));
   ESP_LOGI(TAG, "SRC: %s", src_addr);
+  oled_screen_display_text("SRC ADDRESS", 0, 4, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text(src_addr, 0, 5, OLED_DISPLAY_NORMAL);
   otIp6AddressToString(&aMessageInfo->mSockAddr, src_addr, sizeof(src_addr));
   ESP_LOGI(TAG, "DST: %s", src_addr);
 
   ESP_LOGI(TAG, "PORT: %d", aMessageInfo->mPeerPort);
+  sprintf(ip, "PORT: %d", aMessageInfo->mPeerPort);
+  oled_screen_display_text(ip, 0, 2, OLED_DISPLAY_NORMAL);
 
   length = otMessageRead(aMessage, otMessageGetOffset(aMessage), buf,
                          sizeof(buf) - 1);
   if (length >= 0) {
     buf[length] = '\0';
     printf("%s\n", buf);
-  } else
+    oled_screen_display_text(buf, 20, 7, OLED_DISPLAY_NORMAL);
+  } else {
     ESP_LOGE(TAG, "Error al leer el mensaje");
+    oled_screen_display_text("Error!!!", 25, 7, OLED_DISPLAY_NORMAL);
+  }
 }
 
 otError UDP_bind(uint16_t port) {
@@ -350,6 +367,6 @@ void openthread_init(void) {
   ESP_ERROR_CHECK(esp_event_loop_create_default());
   ESP_ERROR_CHECK(esp_netif_init());
   ESP_ERROR_CHECK(esp_vfs_eventfd_register(&eventfd_config));
-  xTaskCreate(ot_task_worker, "ot_cli_main", 1024 * 10, NULL, 10, NULL);
+  xTaskCreate(ot_task_worker, "open_thread_main", 1024 * 10, NULL, 10, NULL);
   xTaskCreate(udp_sender, "Sender", 1024 * 5, NULL, 10, &sender_task);
 }

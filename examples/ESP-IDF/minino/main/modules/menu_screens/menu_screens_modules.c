@@ -10,7 +10,7 @@
 #include "wifi_sniffer.h"
 #include "zigbee_switch.h"
 
-#include "esp_ot_cli.h"
+#include "open_thread.h"
 #include "radio_selector.h"
 
 #define MAX_MENU_ITEMS_PER_SCREEN 3
@@ -59,6 +59,9 @@ void menu_screens_begin() {
   } else if (preferences_get_bool("wifi_exit", false)) {
     current_menu = MENU_WIFI_APPS;
     preferences_put_bool("wifi_exit", false);
+  } else if (preferences_get_bool("thread_deinit", false)) {
+    current_menu = MENU_APPLICATIONS;
+    preferences_put_bool("thread_deinit", false);
   } else {
     buzzer_play();
     oled_screen_display_bitmap(epd_bitmap_logo_1, 0, 0, 128, 64,
@@ -270,18 +273,12 @@ void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
   oled_screen_display_text(rssi_str, 0, 5, OLED_DISPLAY_NORMAL);
 }
 
-void display_thread_cli() {
-  // thread_cli_start();
+void display_thread_broadcast() {
+  radio_selector_enable_thread();
+  openthread_init();
 
   oled_screen_clear();
-  oled_screen_display_text("Thread CLI      ", 0, 0, OLED_DISPLAY_INVERT);
-  oled_screen_display_text("Connect Minino", 0, 1, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("to a computer", 0, 2, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("via USB and use", 0, 3, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("screen command", 0, 4, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("(linux or mac)", 0, 5, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("or putty in", 0, 6, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("windows", 0, 7, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("Waiting messages...  ", 0, 0, OLED_DISPLAY_INVERT);
 }
 
 void display_in_development_banner() {
@@ -410,6 +407,9 @@ void menu_screens_exit_submenu() {
       }
       vTaskDelay(100 / portTICK_PERIOD_MS);  // Wait for the scanner to stop
       break;
+    case MENU_THREAD_APPS:
+      ot_factory_reset();
+      break;
     default:
       break;
   }
@@ -447,8 +447,7 @@ void menu_screens_enter_submenu() {
       break;
     case MENU_THREAD_BROADCAST:
     case MENU_THREAD_APPS:
-      radio_selector_enable_thread();
-      openthread_init();
+      display_thread_broadcast();
       break;
     case MENU_MATTER_APPS:
     case MENU_ZIGBEE_LIGHT:

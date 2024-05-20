@@ -93,7 +93,7 @@ void menu_screens_decrement_selected_item();
 
 // TODO: Move to separate files
 void display_bluetooth_scanner(bluetooth_scanner_record_t record);
-void display_thread_cli();
+void display_thread_broadcast();
 void display_in_development_banner();
 void display_gps_init();
 void display_gps_deinit();
