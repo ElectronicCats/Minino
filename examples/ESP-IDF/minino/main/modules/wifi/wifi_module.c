@@ -1,6 +1,7 @@
 
 #include "modules/wifi/wifi_module.h"
 #include "captive_portal.h"
+#include "esp_check.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "keyboard_module.h"
@@ -107,6 +108,7 @@ void wifi_module_analizer_begin() {
 }
 
 void wifi_module_analizer_summary_cb(FILE* pcap_file) {
+  esp_err_t ret = ESP_OK;
   long size = pcap_cmd_get_file_size(pcap_file);
   char* packet_payload = NULL;
   // packet index (by bytes)
@@ -116,6 +118,10 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
       fread(&file_header, sizeof(pcap_file_header_t), 1, pcap_file);
   // ESP_RETURN_ON_FALSE(real_read == 1, ESP_FAIL, TAG,
   //                     "read pcap file header failed");
+  if (real_read != 1) {
+    ESP_LOGE(TAG, "read pcap file header failed");
+    return;
+  }
   index += sizeof(pcap_file_header_t);
 
   // Get the header information
@@ -130,6 +136,7 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
 
   // Load header information
   uint32_t summary_index = 2;  // Skip scroll text flag and Summary title
+  wifi_analizer_summary[summary_index++] = "----------------";
   wifi_analizer_summary[summary_index++] = "Magic Number:";
   wifi_analizer_summary[summary_index++] = magic_number_str;
   wifi_analizer_summary[summary_index++] = major_version_str;
@@ -140,10 +147,13 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
   uint32_t packet_num = 0;
   pcap_packet_header_t packet_header;
   while (index < size) {
+    if (packet_num == 4) {
+      break;
+    }
     real_read =
         fread(&packet_header, sizeof(pcap_packet_header_t), 1, pcap_file);
-    // ESP_GOTO_ON_FALSE(real_read == 1, ESP_FAIL, err, TAG,
-    //                   "read pcap packet header failed");n
+    ESP_GOTO_ON_FALSE(real_read == 1, ESP_FAIL, err, TAG,
+                      "read pcap packet header failed");
 
     // Get the packet header information
     char* packet_num_str = malloc(22);
@@ -166,43 +176,26 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
 
     size_t payload_length = packet_header.capture_length;
     packet_payload = malloc(payload_length);
-    // ESP_GOTO_ON_FALSE(packet_payload, ESP_ERR_NO_MEM, err, TAG,
-    //                   "no mem to save packet payload");
+    ESP_GOTO_ON_FALSE(packet_payload, ESP_ERR_NO_MEM, err, TAG,
+                      "no mem to save packet payload");
     real_read = fread(packet_payload, payload_length, 1, pcap_file);
-    // ESP_GOTO_ON_FALSE(real_read == 1, ESP_FAIL, err, TAG, "read payload
-    // error"); print packet information
+    ESP_GOTO_ON_FALSE(real_read == 1, ESP_FAIL, err, TAG, "read payload error");
     if (file_header.link_type == PCAP_LINK_TYPE_802_11) {
       // Check if the frame is a Beacon frame or Probe Response frame
       uint8_t frame_type = (packet_payload[0] >> 2) & 0x03;
       uint8_t frame_subtype = (packet_payload[0] >> 4) & 0x0F;
       if ((frame_type == 0 && frame_subtype == 8) ||  // Beacon frame
           (frame_type == 0 && frame_subtype == 5)) {  // Probe Response frame
-        // The BSSID is located in the Address 3 field
-        // fprintf(print_file, "BSSID: ");
-        // for (int j = 0; j < 5; j++) {
-        //   fprintf(print_file, "%2x ", packet_payload[16 + j]);
-        // }
-        // fprintf(print_file, "%2x\n", packet_payload[21]);
-        // // The SSID parameter set is located after the fixed parameters (36
-        // // bytes)
         uint8_t ssid_length = packet_payload[37];
-        // fprintf(print_file, "SSID: ");
-        // for (int j = 0; j < ssid_length; j++) {
-        //   fprintf(print_file, "%c", packet_payload[38 + j]);
-        // }
-        // fprintf(print_file, "\n");
-        // // The DS Parameter Set, which contains the channel, is located after
-        // // the SSID
         uint8_t supported_rates_length = packet_payload[38 + ssid_length + 1];
-        // fprintf(print_file, "Channel: %d\n",
-        //         packet_payload[38 + ssid_length + supported_rates_length +
-        //         4]);
-
+        // The SSID parameter set is located after the fixed parameters (36
+        // bytes)
         char* ssid_str = malloc(32);
         snprintf(ssid_str, 32, "%s", &packet_payload[38]);
         char* channel_str = malloc(32);
         snprintf(channel_str, 32, "Channel: %d",
                  packet_payload[38 + ssid_length + supported_rates_length + 4]);
+        // The BSSID is located in the Address 3 field
         char* bssid_str = malloc(32);
         char* bssid_str2 = malloc(32);
         snprintf(bssid_str, 32, "BSSID: %2X:%2X:%2X", packet_payload[16],
@@ -216,45 +209,61 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
         wifi_analizer_summary[summary_index++] = bssid_str;
         wifi_analizer_summary[summary_index++] = bssid_str2;
       }
-      wifi_analizer_summary[summary_index++] = "----------------";
       // Frame Control Field is coded as LSB first
-      // fprintf(print_file, "Frame Type: %2x\n", (packet_payload[0] >> 2) &
-      // 0x03); fprintf(print_file, "Frame Subtype: %2x\n",
-      //         (packet_payload[0] >> 4) & 0x0F);
-      // fprintf(print_file, "Destination: ");
-      // for (int j = 0; j < 5; j++) {
-      //   fprintf(print_file, "%2x ", packet_payload[4 + j]);
-      // }
-      // fprintf(print_file, "%2x\n", packet_payload[9]);
-      // fprintf(print_file, "Source: ");
-      // for (int j = 0; j < 5; j++) {
-      //   fprintf(print_file, "%2x ", packet_payload[10 + j]);
-      // }
-      // fprintf(print_file, "%2x\n", packet_payload[15]);
+      char* frame_type_str = malloc(32);
+      snprintf(frame_type_str, 32, "Frame Type:%2x",
+               (packet_payload[0] >> 2) & 0x03);
+      char* frame_subtype_str = malloc(32);
+      snprintf(frame_subtype_str, 32, "Frame Subtype:%2x",
+               (packet_payload[0] >> 4) & 0x0F);
+      char* destination_str = malloc(32);
+      char* destination_str2 = malloc(32);
+      snprintf(destination_str, 32, "        %2X:%2X:%2X", packet_payload[4],
+               packet_payload[5], packet_payload[6]);
+      snprintf(destination_str2, 32, "        %2X:%2X:%2X", packet_payload[7],
+               packet_payload[8], packet_payload[9]);
+      char* source_str = malloc(32);
+      char* source_str2 = malloc(32);
+      snprintf(source_str, 32, "Source: %2X:%2X:%2X", packet_payload[10],
+               packet_payload[11], packet_payload[12]);
+      snprintf(source_str2, 32, "        %2X:%2X:%2X", packet_payload[13],
+               packet_payload[14], packet_payload[15]);
 
-      // fprintf(print_file,
-      //         "----------------------------------------------------------------"
-      //         "--------\n");
+      wifi_analizer_summary[summary_index++] = frame_type_str;
+      wifi_analizer_summary[summary_index++] = frame_subtype_str;
+      wifi_analizer_summary[summary_index++] = "Destination:";
+      wifi_analizer_summary[summary_index++] = destination_str;
+      wifi_analizer_summary[summary_index++] = destination_str2;
+      wifi_analizer_summary[summary_index++] = source_str;
+      wifi_analizer_summary[summary_index++] = source_str2;
+
+      wifi_analizer_summary[summary_index++] = "----------------";
     } else {
-      // fprintf(print_file, "Unknown link type:%" PRIu32 "\n",
-      //         file_header.link_type);
-      // fprintf(print_file,
-      //         "----------------------------------------------------------------"
-      //         "--------\n");
+      char* link_type_str = malloc(32);
+      snprintf(link_type_str, 32, "Link Type: %" PRIu32, file_header.link_type);
+      wifi_analizer_summary[summary_index++] = "Unknown link type";
+      wifi_analizer_summary[summary_index++] = link_type_str;
     }
     free(packet_payload);
     packet_payload = NULL;
     index += packet_header.capture_length + sizeof(pcap_packet_header_t);
     packet_num++;
   }
-  // fprintf(print_file, "Pcap packet Number: %" PRIu32 "\n", packet_num);
-  // fprintf(print_file,
-  //         "--------------------------------------------------------------------"
-  //         "----\n");
+  if (packet_num > 0) {
+    wifi_analizer_summary[summary_index++] = "Open the pcap";
+    wifi_analizer_summary[summary_index++] = "file in";
+    wifi_analizer_summary[summary_index++] = "Wireshark to se";
+    wifi_analizer_summary[summary_index++] = "more.";
+  } else {
+    wifi_analizer_summary[summary_index++] = "No packets found";
+  }
   wifi_analizer_summary[summary_index++] = NULL;
+  return;
+err:
   if (packet_payload) {
     free(packet_payload);
   }
+  wifi_analizer_summary[summary_index++] = NULL;
 }
 
 void wifi_module_keyboard_cb(button_event_t button_pressed) {

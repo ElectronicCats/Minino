@@ -455,6 +455,15 @@ void menu_screens_exit_submenu() {
     case MENU_WIFI_ANALIZER:
       wifi_sniffer_exit();
       break;
+    case MENU_WIFI_ANALIZER_SUMMARY:
+      wifi_analizer_summary[0] = VERTICAL_SCROLL_TEXT;
+      wifi_analizer_summary[1] = "Summary";
+      wifi_analizer_summary[2] = NULL;
+
+      wifi_analizer_items[0] = "Start";
+      wifi_analizer_items[1] = "Settings";
+      wifi_analizer_items[2] = NULL;
+      break;
     case MENU_BLUETOOTH_AIRTAGS_SCAN:
       if (bluetooth_scanner_is_active()) {
         bluetooth_scanner_stop();

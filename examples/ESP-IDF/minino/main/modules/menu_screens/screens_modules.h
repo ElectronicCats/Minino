@@ -71,7 +71,7 @@ typedef enum {
  *
  * Usage: menu_list[screen_module_menu_t]
  */
-static char* menu_list[] = {
+char* menu_list[] = {
     "MENU_MAIN", "MENU_APPLICATIONS", "MENU_SETTINGS", "MENU_ABOUT",
     /* Applications */
     "MENU_WIFI_APPS", "MENU_BLUETOOTH_APPS", "MENU_ZIGBEE_APPS",
@@ -105,7 +105,7 @@ static char* menu_list[] = {
  *
  * Usage: next_menu_table[screen_module_menu_t][selected_item]
  */
-static int next_menu_table[][6] = {
+int next_menu_table[][6] = {
     // MENU_MAIN
     {MENU_APPLICATIONS, MENU_SETTINGS, MENU_ABOUT},
     // MENU_APPLICATIONS
@@ -178,7 +178,7 @@ static int next_menu_table[][6] = {
  *
  * Usage: prev_menu_table[screen_module_menu_t]
  */
-static int prev_menu_table[] = {
+int prev_menu_table[] = {
     MENU_MAIN,                   // MENU_MAIN
     MENU_MAIN,                   // MENU_APPLICATIONS
     MENU_MAIN,                   // MENU_SETTINGS
@@ -217,31 +217,31 @@ static int prev_menu_table[] = {
  *
  * Usage: selected_item_history[screen_module_menu_t]
  */
-static int selected_item_history[MENU_COUNT] = {0};
+int selected_item_history[MENU_COUNT] = {0};
 
-static char* main_items[] = {
+char* main_items[] = {
     "Applications",
     "Settings",
     "About",
     NULL,
 };
 
-static char* applications_items[] = {
+char* applications_items[] = {
     "WiFi", "Bluetooth", "Zigbee", "Thread", "Matter", "GPS", NULL,
 };
 
-static char* settings_items[] = {
+char* settings_items[] = {
     "Display",
     "Sound",
     "System",
     NULL,
 };
 
-static char* about_items[] = {
+char* about_items[] = {
     "Version", "License", "Credits", "Legal", NULL,
 };
 
-static char* version_text[] = {
+char* version_text[] = {
     VERTICAL_SCROLL_TEXT,
     /***************/
     "",
@@ -252,7 +252,7 @@ static char* version_text[] = {
     NULL,
 };
 
-static char* license_text[] = {
+char* license_text[] = {
     VERTICAL_SCROLL_TEXT,
     /***************/
     "",
@@ -262,7 +262,7 @@ static char* license_text[] = {
     NULL,
 };
 
-static char* credits_text[] = {
+char* credits_text[] = {
     VERTICAL_SCROLL_TEXT,
     /***************/
     "Developed by",
@@ -274,7 +274,7 @@ static char* credits_text[] = {
     NULL,
 };
 
-static char* legal_text[] = {
+char* legal_text[] = {
     VERTICAL_SCROLL_TEXT,
     /***************/
     "The user",
@@ -295,13 +295,13 @@ static char* legal_text[] = {
     NULL,
 };
 
-static char* wifi_items[] = {
+char* wifi_items[] = {
     "Analizer",
     "Deauth",
     NULL,
 };
 
-static char* wifi_analizer_items[] = {
+char* wifi_analizer_items[] = {
     "Start",
     "Settings",
     NULL,
@@ -314,39 +314,39 @@ char* wifi_analizer_summary[] = {
     NULL,
 };
 
-static char* wifi_analizer_settings_items[] = {
+char* wifi_analizer_settings_items[] = {
     "Channel",
     "Filter",
     NULL,
 };
 
-static char* bluetooth_items[] = {
+char* bluetooth_items[] = {
     "Airtags scan",
     NULL,
 };
 
-static char* zigbee_items[] = {
+char* zigbee_items[] = {
     "Spoofing",
     NULL,
 };
 
-static char* zigbee_spoofing_items[] = {
+char* zigbee_spoofing_items[] = {
     "Switch",
     "Light",
     NULL,
 };
 
-static char* thread_items[] = {
+char* thread_items[] = {
     NULL,
 };
 
-static char* gps_items[] = {
+char* gps_items[] = {
     "Date & Time",
     "Location",
     NULL,
 };
 
-static char* empty_items[] = {
+char* empty_items[] = {
     NULL,
 };
 
@@ -358,7 +358,7 @@ static char* empty_items[] = {
  *
  * Usage: menu_items[screen_module_menu_t]
  */
-static char** menu_items[] = {
+char** menu_items[] = {
     main_items, applications_items, settings_items, about_items,
     /* Applications */
     wifi_items, bluetooth_items, zigbee_items, thread_items,

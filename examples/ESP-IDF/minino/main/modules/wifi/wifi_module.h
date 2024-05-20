@@ -4,8 +4,6 @@
 #include "keyboard_module.h"
 #include "menu_screens_modules.h"
 
-#define WIFI_MODULE_H
-
 /**
  * @brief Initialize the wifi module
  *
