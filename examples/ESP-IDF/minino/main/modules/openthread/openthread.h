@@ -1,3 +1,3 @@
 #pragma once
 void openthread_init();
-void ot_factory_reset();
+void openthread_factory_reset();

@@ -17,7 +17,6 @@
 #include "freertos/task.h"
 #include "hal/uart_types.h"
 #include "nvs_flash.h"
-#include "open_thread_config.h"
 #include "openthread/dataset.h"
 #include "openthread/instance.h"
 #include "openthread/ip6.h"
@@ -26,10 +25,11 @@
 #include "openthread/tasklet.h"
 #include "openthread/thread.h"
 #include "openthread/udp.h"
+#include "openthread_config.h"
 #include "sdkconfig.h"
 
 #include "oled_screen.h"
-#include "open_thread.h"
+#include "openthread.h"
 #include "preferences.h"
 
 #if CONFIG_OPENTHREAD_FTD
@@ -95,7 +95,7 @@ static size_t hex_string_to_binary(const char* hex_string,
   return buf_size;
 }
 
-void ot_factory_reset() {
+void openthread_factory_reset() {
   preferences_put_bool("thread_deinit", true);
   otInstanceFactoryReset(esp_openthread_get_instance());
 }
@@ -367,6 +367,6 @@ void openthread_init(void) {
   ESP_ERROR_CHECK(esp_event_loop_create_default());
   ESP_ERROR_CHECK(esp_netif_init());
   ESP_ERROR_CHECK(esp_vfs_eventfd_register(&eventfd_config));
-  xTaskCreate(ot_task_worker, "open_thread_main", 1024 * 10, NULL, 10, NULL);
+  xTaskCreate(ot_task_worker, "openthread_main", 1024 * 10, NULL, 10, NULL);
   xTaskCreate(udp_sender, "Sender", 1024 * 5, NULL, 10, &sender_task);
 }

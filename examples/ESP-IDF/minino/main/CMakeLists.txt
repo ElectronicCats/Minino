@@ -5,7 +5,7 @@ set(modules "modules/keyboard/keyboard_module.c"
             "modules/wifi/wifi_screens_module.c"
             "modules/zigbee/zigbee_switch.c"
             "modules/zigbee/zigbee_screens_module.c"
-            "modules/open_thread/open_thread.c")
+            "modules/openthread/openthread.c")
 
 set(drivers "drivers/oled_driver/oled_driver.c"
             "drivers/oled_driver/oled_driver_i2c.c"
@@ -22,6 +22,6 @@ idf_component_register(
                     "modules/menu_screens/"
                     "drivers/oled_driver/"
                     "modules/oled_screen/"
-                    "modules/open_thread/"
+                    "modules/openthread/"
                     "modules/wifi/"
                     "modules/zigbee/")

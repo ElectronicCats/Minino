@@ -5,7 +5,7 @@
 #include "keyboard_module.h"
 #include "leds.h"
 #include "menu_screens_modules.h"
-#include "open_thread.h"
+#include "openthread.h"
 #include "preferences.h"
 #include "sd_card.h"
 

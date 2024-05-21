@@ -10,11 +10,11 @@
 #include "wifi_sniffer.h"
 #include "zigbee_switch.h"
 
-#include "open_thread.h"
+#include "openthread.h"
 #include "radio_selector.h"
 
 #define MAX_MENU_ITEMS_PER_SCREEN 3
-#define TIME_ZONE                 (+8)    // Beijing Time
+#define TIME_ZONE                 (-6)    // Beijing Time
 #define YEAR_BASE                 (2000)  // date in GPS starts from 2000
 
 static const char* TAG = "menu_screens_modules";
@@ -408,7 +408,7 @@ void menu_screens_exit_submenu() {
       vTaskDelay(100 / portTICK_PERIOD_MS);  // Wait for the scanner to stop
       break;
     case MENU_THREAD_APPS:
-      ot_factory_reset();
+      openthread_factory_reset();
       break;
     default:
       break;
