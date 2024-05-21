@@ -167,12 +167,24 @@ char** remove_items_flag(char** items, int length) {
 }
 
 /**
+ * @brief Check if the current menu is empty
+ *
+ * @return bool
+ */
+bool is_menu_empty(screen_module_menu_t menu) {
+  return menu_items[menu][0] == NULL;
+}
+
+/**
  * @brief Check if the current menu is vertical scroll
  *
  * @return bool
  */
-bool is_menu_vertical_scroll() {
-  return strcmp(menu_items[current_menu][0], VERTICAL_SCROLL_TEXT) == 0;
+bool is_menu_vertical_scroll(screen_module_menu_t menu) {
+  if (is_menu_empty(menu)) {
+    return false;
+  }
+  return strcmp(menu_items[menu][0], VERTICAL_SCROLL_TEXT) == 0;
 }
 
 /**
@@ -180,8 +192,11 @@ bool is_menu_vertical_scroll() {
  *
  * @return bool
  */
-bool is_menu_configuration() {
-  return strcmp(menu_items[current_menu][0], CONFIGURATION_MENU_ITEMS) == 0;
+bool is_menu_configuration(screen_module_menu_t menu) {
+  if (is_menu_empty(menu)) {
+    return false;
+  }
+  return strcmp(menu_items[menu][0], CONFIGURATION_MENU_ITEMS) == 0;
 }
 
 /**
@@ -204,7 +219,8 @@ char** get_menu_items() {
     return NULL;
   }
 
-  if (is_menu_vertical_scroll() || is_menu_configuration()) {
+  if (is_menu_vertical_scroll(current_menu) ||
+      is_menu_configuration(current_menu)) {
     return submenu;
   }
 
@@ -295,10 +311,10 @@ void menu_screens_display_menu() {
     return;
   }
 
-  if (is_menu_vertical_scroll()) {
+  if (is_menu_vertical_scroll(current_menu)) {
     char** text = remove_items_flag(items, num_items);
     display_scrolling_text(text);
-  } else if (is_menu_configuration()) {
+  } else if (is_menu_configuration(current_menu)) {
     char** new_items = remove_items_flag(items, num_items);
     display_configuration_items(new_items);
   } else {
@@ -361,8 +377,12 @@ void display_thread_cli() {
   oled_screen_display_text("windows", 0, 7, OLED_DISPLAY_NORMAL);
 }
 
-void display_in_development_banner() {
+void menu_screens_display_in_development_banner() {
   oled_screen_display_text(" In development", 0, 3, OLED_DISPLAY_NORMAL);
+}
+
+void menu_screens_display_loading_banner() {
+  oled_screen_display_text("   Loading...", 0, 3, OLED_DISPLAY_NORMAL);
 }
 
 void display_gps_init() {
@@ -497,16 +517,17 @@ void menu_screens_exit_submenu() {
 
   switch (current_menu) {
     case MENU_WIFI_ANALIZER_START:
+      oled_screen_clear();
+      menu_screens_display_loading_banner();
       wifi_sniffer_stop();
       break;
     case MENU_WIFI_ANALIZER:
+      oled_screen_clear();
+      menu_screens_display_loading_banner();
       wifi_sniffer_exit();
       break;
     case MENU_WIFI_ANALIZER_SUMMARY:
-      wifi_analizer_summary[0] = VERTICAL_SCROLL_TEXT;
-      wifi_analizer_summary[1] = "Summary";
-      wifi_analizer_summary[2] = NULL;
-
+      // TODO: find a way to fix this without harcoding
       wifi_analizer_items[0] = "Start";
       wifi_analizer_items[1] = "Settings";
       wifi_analizer_items[2] = NULL;
@@ -528,16 +549,16 @@ void menu_screens_exit_submenu() {
 }
 
 void menu_screens_enter_submenu() {
-  screen_module_menu_t next_menu;
   ESP_LOGI(TAG, "Selected item: %d", selected_item);
+  screen_module_menu_t next_menu = MENU_MAIN;
+  bool update_configuration = false;
 
-  if (is_menu_vertical_scroll()) {
-    selected_item = 0;
-  }
-
-  if (is_menu_configuration()) {
-    // Don't update next menu
-    next_menu = next_menu_table[current_menu][0];
+  if (is_menu_empty(current_menu)) {
+    return;
+  } else if (is_menu_vertical_scroll(current_menu)) {
+    selected_item = 0;  // Avoid selecting invalid item
+  } else if (is_menu_configuration(current_menu)) {
+    next_menu = current_menu;
   } else {
     next_menu = next_menu_table[current_menu][selected_item];
   }
@@ -545,6 +566,12 @@ void menu_screens_enter_submenu() {
   ESP_LOGI(TAG, "Previous: %s Current: %s", menu_list[current_menu],
            menu_list[next_menu]);
 
+  // User is selecting a configuration item
+  if (is_menu_configuration(next_menu) && current_menu == next_menu) {
+    update_configuration = true;
+  }
+
+  // next_menu is the user selection
   switch (next_menu) {
     case MENU_WIFI_ANALIZER:
       wifi_module_analizer_begin();
@@ -557,7 +584,9 @@ void menu_screens_enter_submenu() {
       wifi_sniffer_start();
       break;
     case MENU_WIFI_ANALIZER_CHANNEL:
-      wifi_sniffer_set_channel(selected_item + 1);
+      if (update_configuration) {
+        wifi_sniffer_set_channel(selected_item + 1);
+      }
       wifi_module_update_channel_items_array();
       break;
     case MENU_BLUETOOTH_AIRTAGS_SCAN:
@@ -574,7 +603,7 @@ void menu_screens_enter_submenu() {
     case MENU_SETTINGS_SOUND:
     case MENU_SETTINGS_SYSTEM:
       oled_screen_clear();
-      display_in_development_banner();
+      menu_screens_display_in_development_banner();
       break;
     default:
       ESP_LOGI(TAG, "Unhandled menu: %s", menu_list[next_menu]);

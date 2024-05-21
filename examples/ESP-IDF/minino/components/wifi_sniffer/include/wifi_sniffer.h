@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdint.h>
+
 #include "cmd_pcap.h"
 #include "cmd_sniffer.h"
 

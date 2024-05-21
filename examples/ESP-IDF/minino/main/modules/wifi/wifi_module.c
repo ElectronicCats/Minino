@@ -251,7 +251,7 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
   if (packet_num > 0) {
     wifi_analizer_summary[summary_index++] = "Open the pcap";
     wifi_analizer_summary[summary_index++] = "file in";
-    wifi_analizer_summary[summary_index++] = "Wireshark to se";
+    wifi_analizer_summary[summary_index++] = "Wireshark to see";
     wifi_analizer_summary[summary_index++] = "more.";
   } else {
     wifi_analizer_summary[summary_index++] = "No packets found";
@@ -267,6 +267,7 @@ err:
 
 void wifi_module_update_channel_items_array() {
   uint8_t channel = wifi_sniffer_get_channel();
+  ESP_LOGE(TAG, "Channel: %d", channel);
   uint8_t i = 0;
   uint32_t menu_length =
       menu_screens_get_menu_length(wifi_analizer_channel_items);

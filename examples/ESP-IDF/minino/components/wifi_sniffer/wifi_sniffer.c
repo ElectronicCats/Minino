@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include "cmd_pcap.h"
 #include "cmd_sniffer.h"
 #include "esp_err.h"
@@ -22,13 +23,12 @@
 #include "sd_card.h"
 #include "sdkconfig.h"
 #include "wifi_controller.h"
+#include "wifi_sniffer.h"
 
 #if CONFIG_SNIFFER_STORE_HISTORY
 #endif
 
 static const char* TAG = "wifi_sniffer";
-
-uint8_t channel = 1;
 
 #if CONFIG_SNIFFER_STORE_HISTORY
 #endif
@@ -59,6 +59,8 @@ void wifi_sniffer_start() {
   do_pcap_cmd(pcap_argc, (char**) pcap_argv);
 
   char* channel_str = (char*) malloc(4);
+  uint8_t channel = wifi_sniffer_get_channel();
+  ESP_LOGE(TAG, "Channel: %d", channel);
   snprintf(channel_str, 4, "%d", channel);
   const char** sniffer_argv[] = {"sniffer",   "-i", "wlan",      "-c",
                                  channel_str, "-n", "2147483647"};
@@ -88,9 +90,9 @@ void wifi_sniffer_exit() {
 }
 
 uint8_t wifi_sniffer_get_channel() {
-  return channel;
+  return preferences_get_uint("wifi_channel", 1);
 }
 
 void wifi_sniffer_set_channel(uint8_t new_channel) {
-  channel = new_channel;
+  preferences_put_uint("wifi_channel", new_channel);
 }
