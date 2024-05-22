@@ -1,9 +1,11 @@
-set(modules "modules/keyboard/keyboard_module.c"
+set(modules "modules/led_events.c"
+            "modules/keyboard/keyboard_module.c"
             "modules/menu_screens/menu_screens_modules.c"
             "modules/oled_screen/oled_screen.c"
             "modules/wifi/wifi_module.c"
             "modules/wifi/wifi_screens_module.c"
             "modules/zigbee/zigbee_switch.c"
+            "modules/zigbee/zigbee_module.c"
             "modules/zigbee/zigbee_screens_module.c"
             "modules/openthread/openthread.c")
 
@@ -24,4 +26,5 @@ idf_component_register(
                     "modules/oled_screen/"
                     "modules/openthread/"
                     "modules/wifi/"
-                    "modules/zigbee/")
+                    "modules/zigbee/"
+                    "modules/")

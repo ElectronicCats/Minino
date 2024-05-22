@@ -8,6 +8,7 @@
 #include "string.h"
 #include "wifi_module.h"
 #include "wifi_sniffer.h"
+#include "zigbee_module.h"
 #include "zigbee_switch.h"
 
 #include "openthread.h"
@@ -419,6 +420,12 @@ void menu_screens_exit_submenu() {
   current_menu = previous_menu;
   menu_screens_display_menu();
 }
+void module_keyboard_update_state(
+    bool in_app,
+    void (*app_handler)(button_event_t button_pressed)) {
+  app_state.in_app = in_app;
+  app_state.app_handler = app_handler;
+}
 
 void menu_screens_enter_submenu() {
   ESP_LOGI(TAG, "Selected item: %d", selected_item);
@@ -446,9 +453,7 @@ void menu_screens_enter_submenu() {
       zigbee_switch_init();
       break;
     case MENU_ZIGBEE_SNIFFER:
-      // sniffer INIT
-      oled_screen_clear();
-      display_in_development_banner();
+      zigbee_module_begin(MENU_ZIGBEE_SNIFFER);
       break;
     case MENU_THREAD_BROADCAST:
     case MENU_THREAD_APPS:

@@ -10,6 +10,15 @@
 typedef void (*app_handler_t)(button_event_t button_pressed);
 
 /**
+ * @brief Structure to store the app screen state information
+ *
+ */
+typedef struct {
+  bool in_app;
+  int app_selected;
+} app_screen_state_information_t;
+
+/**
  * @brief Struct to hold the keyboard state in app
  */
 typedef struct {
@@ -97,3 +106,13 @@ void display_thread_broadcast();
 void display_in_development_banner();
 void display_gps_init();
 void display_gps_deinit();
+
+/**
+ * @brief Update the keyboard state
+ *
+ * @param bool in_app
+ * @param void app_handler function pointer
+ */
+void module_keyboard_update_state(
+    bool in_app,
+    void (*app_handler)(button_event_t button_pressed));
