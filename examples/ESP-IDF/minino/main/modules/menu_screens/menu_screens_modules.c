@@ -445,6 +445,11 @@ void menu_screens_enter_submenu() {
       radio_selector_disable_thread();
       zigbee_switch_init();
       break;
+    case MENU_ZIGBEE_SNIFFER:
+      // sniffer INIT
+      oled_screen_clear();
+      display_in_development_banner();
+      break;
     case MENU_THREAD_BROADCAST:
     case MENU_THREAD_APPS:
       display_thread_broadcast();

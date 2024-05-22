@@ -28,6 +28,7 @@ typedef enum {
   MENU_ZIGBEE_SPOOFING,
   MENU_ZIGBEE_SWITCH,
   MENU_ZIGBEE_LIGHT,
+  MENU_ZIGBEE_SNIFFER,
   /* Thread applications */
   MENU_THREAD_BROADCAST,
   /* GPS applications */
@@ -60,6 +61,7 @@ static char* menus_list[MENU_COUNT] = {
     "MENU_BLUETOOTH_AIRTAGS_SCAN",
     /* Zigbee applications */
     "MENU_ZIGBEE_SPOOFING", "MENU_ZIGBEE_SWITCH", "MENU_ZIGBEE_LIGHT",
+    "MENU_ZIGBEE_SNIFFER"
     /* Thread applications */
     "MENU_THREAD_BROADCAST",
     /* GPS applications */
@@ -92,7 +94,7 @@ static int menu_next_menu_table[MENU_COUNT][6] = {
     // MENU_BLUETOOTH_APPS
     {MENU_BLUETOOTH_AIRTAGS_SCAN},
     // MENU_ZIGBEE_APPS
-    {MENU_ZIGBEE_SPOOFING},
+    {MENU_ZIGBEE_SPOOFING, MENU_ZIGBEE_SNIFFER},
     // MENU_THREAD_APPS
     {MENU_THREAD_BROADCAST},
     // MENU_MATTER_APPS
@@ -161,6 +163,7 @@ static int prev_menu_table[MENU_COUNT] = {
     MENU_ZIGBEE_APPS,      // MENU_ZIGBEE_SPOOFING
     MENU_ZIGBEE_SPOOFING,  // MENU_ZIGBEE_SWITCH
     MENU_ZIGBEE_SPOOFING,  // MENU_ZIGBEE_LIGHT
+    MENU_ZIGBEE_APPS,      // MENU_ZIGBEE_SPOOFING
     MENU_THREAD_APPS,      // MENU_THREAD_BROADCAST
     MENU_GPS,              // MENU_GPS_DATE_TIME
     MENU_GPS,              // MENU_GPS_LOCATION
@@ -276,6 +279,7 @@ static char* bluetooth_items[] = {
 
 static char* zigbee_items[] = {
     "Spoofing",
+    "Sniffer",
     NULL,
 };
 
@@ -317,6 +321,7 @@ static char** menu_items[MENU_COUNT] = {
     zigbee_spoofing_items,
     empty_items,  // Zigbee Switch
     empty_items,  // Zigbee Light
+    empty_items,  // Zigbee Sniffer
     /* Thread applications */
     empty_items,  // Thread CLI
     /* GPS applications */
