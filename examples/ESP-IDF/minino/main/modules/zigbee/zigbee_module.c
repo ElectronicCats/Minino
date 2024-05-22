@@ -50,6 +50,10 @@ static void zigbee_module_app_selector() {
 static void zigbee_module_state_machine(button_event_t button_pressed) {
   uint8_t button_name = button_pressed >> 4;
   uint8_t button_event = button_pressed & 0x0F;
+  if (button_event != BUTTON_SINGLE_CLICK &&
+      button_event != BUTTON_LONG_PRESS_HOLD) {
+    return;
+  }
 
   ESP_LOGI(TAG_ZIGBEE_MODULE, "Zigbee engine state machine from team: %d %d",
            button_name, button_event);
@@ -70,17 +74,17 @@ static void zigbee_module_state_machine(button_event_t button_pressed) {
           break;
         case BUTTON_UP:
           ESP_LOGI(TAG_ZIGBEE_MODULE, "Button up pressed");
-          current_channel = (current_channel == IEEE_SNIFFER_CHANNEL_MIN)
-                                ? IEEE_SNIFFER_CHANNEL_MAX
-                                : (current_channel - 1);
+          current_channel = (current_channel == IEEE_SNIFFER_CHANNEL_MAX)
+                                ? IEEE_SNIFFER_CHANNEL_MIN
+                                : (current_channel + 1);
           ieee_sniffer_set_channel(current_channel);
           zigbee_screens_display_scanning_text(0, current_channel);
           break;
         case BUTTON_DOWN:
           ESP_LOGI(TAG_ZIGBEE_MODULE, "Button down pressed");
-          current_channel = (current_channel == IEEE_SNIFFER_CHANNEL_MAX)
-                                ? IEEE_SNIFFER_CHANNEL_MIN
-                                : (current_channel + 1);
+          current_channel = (current_channel == IEEE_SNIFFER_CHANNEL_MIN)
+                                ? IEEE_SNIFFER_CHANNEL_MAX
+                                : (current_channel - 1);
           ieee_sniffer_set_channel(current_channel);
           zigbee_screens_display_scanning_text(0, current_channel);
           break;
