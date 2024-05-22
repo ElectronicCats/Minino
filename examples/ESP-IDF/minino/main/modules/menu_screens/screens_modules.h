@@ -365,7 +365,7 @@ char* wifi_analizer_channel_items[] = {
 
 char* wifi_analizer_destination_items[] = {
     CONFIGURATION_MENU_ITEMS,
-    "[x] SD Card",
+    "[ ] SD Card",
     "[ ] Internal",
     NULL,
 };

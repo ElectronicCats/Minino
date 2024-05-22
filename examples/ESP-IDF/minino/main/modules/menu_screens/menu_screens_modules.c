@@ -385,6 +385,27 @@ void menu_screens_display_loading_banner() {
   oled_screen_display_text("   Loading...", 0, 3, OLED_DISPLAY_NORMAL);
 }
 
+void menu_screens_update_options(char* options[], uint8_t selected_option) {
+  uint8_t i = 0;
+  uint32_t menu_length = menu_screens_get_menu_length(options);
+
+  for (i = 1; i < menu_length; i++) {
+    char* prev_item = options[i];
+    // ESP_LOGI(TAG, "Prev item: %s", prev_item);
+    char* new_item = malloc(strlen(prev_item) + 5);
+    char* start_of_number = strchr(prev_item, ']') + 2;
+    if (i == selected_option) {
+      snprintf(new_item, strlen(prev_item) + 5, "[x] %s", start_of_number);
+      options[i] = new_item;
+    } else {
+      snprintf(new_item, strlen(prev_item) + 5, "[ ] %s", start_of_number);
+      options[i] = new_item;
+    }
+    // ESP_LOGI(TAG, "New item: %s", options[i]);
+  }
+  options[i] = NULL;
+}
+
 void display_gps_init() {
   /* NMEA parser configuration */
   nmea_parser_config_t config = NMEA_PARSER_CONFIG_DEFAULT();
@@ -587,7 +608,7 @@ void menu_screens_enter_submenu() {
       if (update_configuration) {
         wifi_sniffer_set_channel(selected_item + 1);
       }
-      wifi_module_update_channel_items_array();
+      wifi_module_update_channel_options();
       break;
     case MENU_BLUETOOTH_AIRTAGS_SCAN:
       oled_screen_clear();

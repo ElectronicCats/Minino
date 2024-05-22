@@ -104,7 +104,7 @@ void wifi_module_analizer_begin() {
                                       wifi_screens_sniffer_animation_stop);
   wifi_sniffer_register_summary_cb(wifi_module_analizer_summary_cb);
   wifi_screens_module_create_sniffer_task();
-  wifi_module_update_channel_items_array();
+  wifi_module_update_channel_options(wifi_analizer_channel_items);
   wifi_sniffer_begin();
 }
 
@@ -265,28 +265,9 @@ err:
   wifi_analizer_summary[summary_index++] = NULL;
 }
 
-void wifi_module_update_channel_items_array() {
-  uint8_t channel = wifi_sniffer_get_channel();
-  ESP_LOGE(TAG, "Channel: %d", channel);
-  uint8_t i = 0;
-  uint32_t menu_length =
-      menu_screens_get_menu_length(wifi_analizer_channel_items);
-
-  for (i = 1; i < menu_length; i++) {
-    char* prev_item = wifi_analizer_channel_items[i];
-    ESP_LOGW(TAG, "Prev item: %s", prev_item);
-    char* new_item = malloc(strlen(prev_item) + 5);
-    char* start_of_number = strchr(prev_item, ']') + 2;
-    if (i == channel) {
-      snprintf(new_item, strlen(prev_item) + 5, "[x] %s", start_of_number);
-      wifi_analizer_channel_items[i] = new_item;
-    } else {
-      snprintf(new_item, strlen(prev_item) + 5, "[ ] %s", start_of_number);
-      wifi_analizer_channel_items[i] = new_item;
-    }
-    ESP_LOGW(TAG, "New item: %s", wifi_analizer_channel_items[i]);
-  }
-  wifi_analizer_channel_items[i] = NULL;
+void wifi_module_update_channel_options() {
+  uint8_t selected_option = wifi_sniffer_get_channel();
+  menu_screens_update_options(wifi_analizer_channel_items, selected_option);
 }
 
 void wifi_module_keyboard_cb(button_event_t button_pressed) {

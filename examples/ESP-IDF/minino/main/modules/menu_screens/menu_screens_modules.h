@@ -114,6 +114,19 @@ void menu_screens_display_in_development_banner();
  */
 void menu_screens_display_loading_banner();
 
+/**
+ * @brief Update the items array
+ *
+ * Set [x] to the selected option
+ * Set [ ] to the other options
+ *
+ * @param char* options[] The options
+ * @param uint8_t selected_option The selected option
+ *
+ * @return void
+ */
+void menu_screens_update_options(char* options[], uint8_t selected_option);
+
 // TODO: Move to separate files
 void display_bluetooth_scanner(bluetooth_scanner_record_t record);
 void display_thread_cli();

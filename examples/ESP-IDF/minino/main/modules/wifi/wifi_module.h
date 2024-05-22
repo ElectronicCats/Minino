@@ -36,12 +36,9 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file);
 /**
  * @brief Update the channel items array
  *
- * Set [x] to the current channel
- * Set [ ] to the other channels
- *
  * @return void
  */
-void wifi_module_update_channel_items_array();
+void wifi_module_update_channel_options();
 
 /**
  * @brief State machine for the wifi module
