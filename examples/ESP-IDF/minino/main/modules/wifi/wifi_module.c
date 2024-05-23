@@ -270,6 +270,15 @@ void wifi_module_update_channel_options() {
   menu_screens_update_options(wifi_analizer_channel_items, selected_option);
 }
 
+void wifi_module_update_destination_options() {
+  uint8_t selected_option = 0;
+  if (wifi_sniffer_is_destination_internal()) {
+    selected_option = 1;
+  }
+  menu_screens_update_options(wifi_analizer_destination_items,
+                              selected_option + 1);
+}
+
 void wifi_module_keyboard_cb(button_event_t button_pressed) {
   uint8_t button_name = button_pressed >> 4;
   uint8_t button_event = button_pressed & 0x0F;

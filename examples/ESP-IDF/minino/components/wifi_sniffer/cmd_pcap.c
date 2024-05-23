@@ -24,6 +24,7 @@
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "sdkconfig.h"
+#include "wifi_sniffer.h"
 
 static const char* TAG = "cmd_pcap";
 
@@ -35,7 +36,6 @@ static const char* TAG = "cmd_pcap";
 
 summary_cb_t summary_cb = NULL;
 
-#if CONFIG_SNIFFER_PCAP_DESTINATION_MEMORY
 /**
  * @brief Pcap memory buffer Type Definition
  *
@@ -44,20 +44,15 @@ typedef struct {
   char* buffer;
   uint32_t buffer_size;
 } pcap_memory_buffer_t;
-#endif
 
 typedef struct {
   bool is_opened;
   bool is_writing;
   bool link_type_set;
-#if CONFIG_SNIFFER_PCAP_DESTINATION_SD
-  char filename[PCAP_FILE_NAME_MAX_LEN];
-#endif  // CONFIG_SNIFFER_PCAP_DESTINATION_SD
+  char filename[PCAP_FILE_NAME_MAX_LEN];  // To SD card
   pcap_file_handle_t pcap_handle;
   pcap_link_type_t link_type;
-#if CONFIG_SNIFFER_PCAP_DESTINATION_MEMORY
-  pcap_memory_buffer_t pcap_buffer;
-#endif  // CONFIG_SNIFFER_PCAP_DESTINATION_MEMORY
+  pcap_memory_buffer_t pcap_buffer;  // To internal memory
 #ifdef CONFIG_SNIFFER_PCAP_DESTINATION_JTAG
   TimerHandle_t trace_flush_timer; /*!< Timer handle for Trace buffer flush */
 #endif                             // CONFIG_SNIFFER_PCAP_DESTINATION_JTAG
@@ -117,18 +112,30 @@ static esp_err_t pcap_open(pcap_cmd_runtime_t* pcap) {
   esp_err_t ret = ESP_OK;
   /* Create file to write, binary format */
   FILE* fp = NULL;
-#if CONFIG_SNIFFER_PCAP_DESTINATION_JTAG
-  fp = funopen("trace", NULL, trace_writefun, NULL, trace_closefun);
-#elif CONFIG_SNIFFER_PCAP_DESTINATION_SD
-  fp = fopen(pcap->filename, "wb+");
-#elif CONFIG_SNIFFER_PCAP_DESTINATION_MEMORY
-  pcap->pcap_buffer.buffer = calloc(PCAP_MEMORY_BUFFER_SIZE, sizeof(char));
-  ESP_GOTO_ON_FALSE(pcap->pcap_buffer.buffer, ESP_ERR_NO_MEM, err, TAG,
-                    "pcap buffer calloc failed");
-  fp = fmemopen(pcap->pcap_buffer.buffer, PCAP_MEMORY_BUFFER_SIZE, "wb+");
-#else
-  #error "pcap file destination hasn't specified"
-#endif
+  // #if CONFIG_SNIFFER_PCAP_DESTINATION_JTAG
+  //   fp = funopen("trace", NULL, trace_writefun, NULL, trace_closefun);
+  // #elif CONFIG_SNIFFER_PCAP_DESTINATION_SD
+  //   fp = fopen(pcap->filename, "wb+");
+  // #elif CONFIG_SNIFFER_PCAP_DESTINATION_MEMORY
+  //   pcap->pcap_buffer.buffer = calloc(PCAP_MEMORY_BUFFER_SIZE, sizeof(char));
+  //   ESP_GOTO_ON_FALSE(pcap->pcap_buffer.buffer, ESP_ERR_NO_MEM, err, TAG,
+  //                     "pcap buffer calloc failed");
+  //   fp = fmemopen(pcap->pcap_buffer.buffer, PCAP_MEMORY_BUFFER_SIZE, "wb+");
+  // #else
+  //   #error "pcap file destination hasn't specified"
+  // #endif
+
+  if (wifi_sniffer_is_destination_sd()) {
+    fp = fopen(pcap->filename, "wb+");
+  } else if (wifi_sniffer_is_destination_internal()) {
+    pcap->pcap_buffer.buffer = calloc(PCAP_MEMORY_BUFFER_SIZE, sizeof(char));
+    ESP_GOTO_ON_FALSE(pcap->pcap_buffer.buffer, ESP_ERR_NO_MEM, err, TAG,
+                      "pcap buffer calloc failed");
+    fp = fmemopen(pcap->pcap_buffer.buffer, PCAP_MEMORY_BUFFER_SIZE, "wb+");
+  } else {
+    ESP_LOGE(TAG, "pcap file destination hasn't specified");
+  }
+
   ESP_GOTO_ON_FALSE(fp, ESP_FAIL, err, TAG, "open file failed");
   pcap_config_t pcap_config = {
       .fp = fp,
@@ -381,53 +388,56 @@ int do_pcap_cmd(int argc, char** argv) {
     return ret;
   }
 
-  #if CONFIG_SNIFFER_PCAP_DESTINATION_SD
-  /* set pcap file name: "-f" option */
-  int len =
-      snprintf(pcap_cmd_rt.filename, sizeof(pcap_cmd_rt.filename), "%s/%s.pcap",
-               CONFIG_SNIFFER_MOUNT_POINT, pcap_args.file->sval[0]);
-  if (len >= sizeof(pcap_cmd_rt.filename)) {
-    ESP_LOGW(TAG,
-             "pcap file name too long, try to enlarge memory in menuconfig");
-  }
-
-  /* Check if needs to be parsed and shown: "--summary" option */
-  if (pcap_args.summary->count) {
-    ESP_LOGI(TAG, "%s is to be parsed", pcap_cmd_rt.filename);
-    if (pcap_cmd_rt.is_opened) {
-      ESP_GOTO_ON_FALSE(!(pcap_cmd_rt.is_writing), ESP_FAIL, err, TAG,
-                        "still writing");
-      ESP_GOTO_ON_ERROR(pcap_cmd_print_summary(pcap_cmd_rt.pcap_handle, stdout),
-                        err, TAG, "pcap print summary failed");
-    } else {
-      FILE* fp;
-      fp = fopen(pcap_cmd_rt.filename, "rb");
-      ESP_GOTO_ON_FALSE(fp, ESP_FAIL, err, TAG, "open file failed");
-      pcap_config_t pcap_config = {
-          .fp = fp,
-          .major_version = PCAP_DEFAULT_VERSION_MAJOR,
-          .minor_version = PCAP_DEFAULT_VERSION_MINOR,
-          .time_zone = PCAP_DEFAULT_TIME_ZONE_GMT,
-      };
-      ESP_GOTO_ON_ERROR(
-          pcap_new_session(&pcap_config, &pcap_cmd_rt.pcap_handle), err, TAG,
-          "pcap init failed");
-      ESP_GOTO_ON_ERROR(pcap_cmd_print_summary(pcap_cmd_rt.pcap_handle, stdout),
-                        err, TAG, "pcap print summary failed");
-      ESP_GOTO_ON_ERROR(pcap_del_session(pcap_cmd_rt.pcap_handle), err, TAG,
-                        "stop pcap session failed");
+  if (wifi_sniffer_is_destination_sd()) {
+    /* set pcap file name: "-f" option */
+    int len = snprintf(pcap_cmd_rt.filename, sizeof(pcap_cmd_rt.filename),
+                       "%s/%s.pcap", CONFIG_SNIFFER_MOUNT_POINT,
+                       pcap_args.file->sval[0]);
+    if (len >= sizeof(pcap_cmd_rt.filename)) {
+      ESP_LOGW(TAG,
+               "pcap file name too long, try to enlarge memory in menuconfig");
     }
-  }
-  #endif  // CONFIG_SNIFFER_PCAP_DESTINATION_SD
 
-  #if CONFIG_SNIFFER_PCAP_DESTINATION_MEMORY
-  /* Check if needs to be parsed and shown: "--summary" option */
-  if (pcap_args.summary->count) {
-    ESP_LOGI(TAG, "Memory is to be parsed");
-    ESP_GOTO_ON_ERROR(pcap_cmd_print_summary(pcap_cmd_rt.pcap_handle, stdout),
-                      err, TAG, "pcap print summary failed");
+    /* Check if needs to be parsed and shown: "--summary" option */
+    if (pcap_args.summary->count) {
+      ESP_LOGI(TAG, "%s is to be parsed", pcap_cmd_rt.filename);
+      if (pcap_cmd_rt.is_opened) {
+        ESP_GOTO_ON_FALSE(!(pcap_cmd_rt.is_writing), ESP_FAIL, err, TAG,
+                          "still writing");
+        ESP_GOTO_ON_ERROR(
+            pcap_cmd_print_summary(pcap_cmd_rt.pcap_handle, stdout), err, TAG,
+            "pcap print summary failed");
+      } else {
+        FILE* fp;
+        fp = fopen(pcap_cmd_rt.filename, "rb");
+        ESP_GOTO_ON_FALSE(fp, ESP_FAIL, err, TAG, "open file failed");
+        pcap_config_t pcap_config = {
+            .fp = fp,
+            .major_version = PCAP_DEFAULT_VERSION_MAJOR,
+            .minor_version = PCAP_DEFAULT_VERSION_MINOR,
+            .time_zone = PCAP_DEFAULT_TIME_ZONE_GMT,
+        };
+        ESP_GOTO_ON_ERROR(
+            pcap_new_session(&pcap_config, &pcap_cmd_rt.pcap_handle), err, TAG,
+            "pcap init failed");
+        ESP_GOTO_ON_ERROR(
+            pcap_cmd_print_summary(pcap_cmd_rt.pcap_handle, stdout), err, TAG,
+            "pcap print summary failed");
+        ESP_GOTO_ON_ERROR(pcap_del_session(pcap_cmd_rt.pcap_handle), err, TAG,
+                          "stop pcap session failed");
+      }
+    }
+  } else if (wifi_sniffer_is_destination_internal()) {
+    /* Check if needs to be parsed and shown: "--summary" option */
+    if (pcap_args.summary->count) {
+      ESP_LOGI(TAG, "Memory is to be parsed");
+      ESP_GOTO_ON_ERROR(pcap_cmd_print_summary(pcap_cmd_rt.pcap_handle, stdout),
+                        err, TAG, "pcap print summary failed");
+    }
+  } else {
+    ESP_LOGE(TAG, "pcap file destination hasn't specified");
+    return ESP_FAIL;
   }
-  #endif  // CONFIG_SNIFFER_PCAP_DESTINATION_MEMORY
 
   if (pcap_args.open->count) {
     pcap_open(&pcap_cmd_rt);

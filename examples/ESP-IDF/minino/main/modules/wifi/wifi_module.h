@@ -41,6 +41,13 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file);
 void wifi_module_update_channel_options();
 
 /**
+ * @brief Update the destination items array
+ *
+ * @return void
+ */
+void wifi_module_update_destination_options();
+
+/**
  * @brief State machine for the wifi module
  *
  * @param button_pressed The button pressed

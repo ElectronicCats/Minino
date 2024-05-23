@@ -124,7 +124,7 @@ char* menu_list[] = {
  *
  * Usage: next_menu_table[screen_module_menu_t][selected_item]
  */
-int next_menu_table[][6] = {
+const int next_menu_table[][6] = {
     // MENU_MAIN
     {MENU_APPLICATIONS, MENU_SETTINGS, MENU_ABOUT},
     // MENU_APPLICATIONS
@@ -200,7 +200,7 @@ int next_menu_table[][6] = {
  *
  * Usage: prev_menu_table[screen_module_menu_t]
  */
-int prev_menu_table[] = {
+const int prev_menu_table[] = {
     MENU_MAIN,                    // MENU_MAIN
     MENU_MAIN,                    // MENU_APPLICATIONS
     MENU_MAIN,                    // MENU_SETTINGS

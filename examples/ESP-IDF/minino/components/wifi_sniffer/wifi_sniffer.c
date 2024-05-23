@@ -50,9 +50,9 @@ void wifi_sniffer_begin() {
 void wifi_sniffer_start() {
   ESP_LOGI(TAG, "Starting sniffer");
 
-#if CONFIG_SNIFFER_PCAP_DESTINATION_SD
-  sd_card_mount();
-#endif
+  if (wifi_sniffer_is_destination_sd()) {
+    sd_card_mount();
+  }
 
   const char** pcap_argv[] = {"pcap", "--open", "-f", "sniffer"};
   uint8_t pcap_argc = 4;
@@ -78,9 +78,9 @@ void wifi_sniffer_stop() {
   const char** close_argv[] = {"pcap", "--close", "-f", "sniffer"};
   uint8_t close_argc = 4;
   do_pcap_cmd(close_argc, (char**) close_argv);
-#if CONFIG_SNIFFER_PCAP_DESTINATION_SD
-  sd_card_unmount();
-#endif
+  if (wifi_sniffer_is_destination_sd()) {
+    sd_card_unmount();
+  }
   vTaskDelay(100 / portTICK_PERIOD_MS);
 }
 
@@ -95,4 +95,22 @@ uint8_t wifi_sniffer_get_channel() {
 
 void wifi_sniffer_set_channel(uint8_t new_channel) {
   preferences_put_uint("wifi_channel", new_channel);
+}
+
+bool wifi_sniffer_is_destination_sd() {
+  return preferences_get_bool("dest_sd", false);
+}
+
+bool wifi_sniffer_is_destination_internal() {
+  return !wifi_sniffer_is_destination_sd();
+}
+
+void wifi_sniffer_set_destination_sd() {
+  ESP_LOGI(TAG, "Setting destination to SD");
+  preferences_put_bool("dest_sd", true);
+}
+
+void wifi_sniffer_set_destination_internal() {
+  ESP_LOGI(TAG, "Setting destination to internal");
+  preferences_put_bool("dest_sd", false);
 }

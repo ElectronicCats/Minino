@@ -513,25 +513,25 @@ uint32_t menu_screens_get_menu_length(char* menu[]) {
   uint32_t num_items = 0;
   if (menu != NULL) {
     while (menu[num_items] != NULL) {
+      ESP_LOGI(TAG, "Item: %s", menu[num_items]);
       num_items++;
     }
   }
   return num_items;
 }
 
-uint32_t menu_screens_get_next_menu_length() {
-  uint32_t num_items = 0;
-  char** submenu = menu_items[current_menu];
-  if (submenu != NULL) {
-    while (submenu[num_items] != NULL) {
-      num_items++;
-    }
+void print_prev_menu_table() {
+  ESP_LOGI(TAG, "Printing previous menu table");
+  for (int i = 0; i < MENU_COUNT; i++) {
+    int menu = prev_menu_table[i];
+    ESP_LOGI(TAG, "Prev: %d", menu);
+    ESP_LOGI(TAG, "Prev: %s", menu_list[menu]);
   }
-  return num_items;
 }
 
 void menu_screens_exit_submenu() {
   ESP_LOGI(TAG, "Exiting submenu");
+  print_prev_menu_table();
   previous_menu = prev_menu_table[current_menu];
   ESP_LOGI(TAG, "Previous: %s Current: %s", menu_list[previous_menu],
            menu_list[current_menu]);
@@ -552,6 +552,8 @@ void menu_screens_exit_submenu() {
       wifi_analizer_items[0] = "Start";
       wifi_analizer_items[1] = "Settings";
       wifi_analizer_items[2] = NULL;
+      // previous_menu = MENU_WIFI_ANALIZER;
+      menu_screens_get_menu_length(wifi_analizer_items);
       break;
     case MENU_BLUETOOTH_AIRTAGS_SCAN:
       if (bluetooth_scanner_is_active()) {
@@ -609,6 +611,16 @@ void menu_screens_enter_submenu() {
         wifi_sniffer_set_channel(selected_item + 1);
       }
       wifi_module_update_channel_options();
+      break;
+    case MENU_WIFI_ANALIZER_DESTINATION:
+      if (update_configuration) {
+        if (selected_item == WIFI_SNIFFER_DESTINATION_SD) {
+          wifi_sniffer_set_destination_sd();
+        } else {
+          wifi_sniffer_set_destination_internal();
+        }
+      }
+      wifi_module_update_destination_options();
       break;
     case MENU_BLUETOOTH_AIRTAGS_SCAN:
       oled_screen_clear();
