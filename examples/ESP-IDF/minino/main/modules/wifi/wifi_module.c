@@ -248,6 +248,7 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
     index += packet_header.capture_length + sizeof(pcap_packet_header_t);
     packet_num++;
   }
+
   if (packet_num > 0) {
     wifi_analizer_summary[summary_index++] = "Open the pcap";
     wifi_analizer_summary[summary_index++] = "file in";
@@ -256,7 +257,11 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
   } else {
     wifi_analizer_summary[summary_index++] = "No packets found";
   }
+
   wifi_analizer_summary[summary_index++] = NULL;
+  if (packet_payload) {
+    free(packet_payload);
+  }
   return;
 err:
   if (packet_payload) {

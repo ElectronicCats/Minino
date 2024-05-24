@@ -87,7 +87,7 @@ typedef enum {
  *
  * Usage: menu_list[screen_module_menu_t]
  */
-char* menu_list[] = {
+const char* menu_list[] = {
     "MENU_MAIN", "MENU_APPLICATIONS", "MENU_SETTINGS", "MENU_ABOUT",
     /* Applications */
     "MENU_WIFI_APPS", "MENU_BLUETOOTH_APPS", "MENU_ZIGBEE_APPS",
@@ -325,13 +325,13 @@ char* wifi_items[] = {
     NULL,
 };
 
-char* wifi_analizer_items[] = {
+const char* wifi_analizer_items[] = {
     "Start",
     "Settings",
     NULL,
 };
 
-char* wifi_analizer_summary[] = {
+char* wifi_analizer_summary[120] = {
     VERTICAL_SCROLL_TEXT,
     /***************/
     "Summary",

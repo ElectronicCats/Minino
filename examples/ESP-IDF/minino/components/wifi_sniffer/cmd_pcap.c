@@ -248,6 +248,8 @@ long pcap_cmd_get_file_size(FILE* file) {
 
 esp_err_t pcap_cmd_print_summary(pcap_file_handle_t pcap, FILE* print_file) {
   summary_cb(pcap->file);
+  return ESP_OK;
+
   esp_err_t ret = ESP_OK;
   long size = pcap_cmd_get_file_size(pcap->file);
   char* packet_payload = NULL;

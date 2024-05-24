@@ -60,7 +60,6 @@ void wifi_sniffer_start() {
 
   char* channel_str = (char*) malloc(4);
   uint8_t channel = wifi_sniffer_get_channel();
-  ESP_LOGE(TAG, "Channel: %d", channel);
   snprintf(channel_str, 4, "%d", channel);
   const char** sniffer_argv[] = {"sniffer",   "-i", "wlan",      "-c",
                                  channel_str, "-n", "2147483647"};
