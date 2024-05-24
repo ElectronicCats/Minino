@@ -102,3 +102,35 @@ void oled_screen_draw_rect(int x, int y, int width, int height, bool invert) {
 void oled_screen_display_selected_item_box() {
   oled_driver_draw_custom_box(&dev);
 }
+
+void oled_screen_display_text_splited(char* p_text,
+                                      int* p_started_page,
+                                      int invert) {
+  if (strlen(p_text) > MAX_LINE_CHAR) {
+    char temp[50];
+    strncpy(temp, p_text, 50);
+
+    char* token = strtok(temp, " ");
+    char current_line[MAX_LINE_CHAR] = "";
+    while (token != NULL) {
+      if (strlen(current_line) + strlen(token) + 1 <= MAX_LINE_CHAR) {
+        if (strlen(current_line) > 0) {
+          strcat(current_line, " ");
+        }
+        strcat(current_line, token);
+      } else {
+        oled_screen_display_text(current_line, 0, *p_started_page, invert);
+        (*p_started_page)++;
+        strcpy(current_line, token);
+      }
+      token = strtok(NULL, " ");
+    }
+    if (strlen(current_line) > 0) {
+      oled_screen_display_text(current_line, 0, *p_started_page, invert);
+      (*p_started_page)++;
+    }
+  } else {
+    oled_screen_display_text(p_text, 0, *p_started_page, invert);
+    (*p_started_page)++;
+  }
+}

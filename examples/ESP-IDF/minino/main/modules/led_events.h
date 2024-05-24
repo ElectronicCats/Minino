@@ -4,7 +4,7 @@
 
 #define GPIO_LED_RED   2
 #define GPIO_LED_GREEN 3
-#define GPIO_LED_BLUE  10
+#define GPIO_LED_BLUE  11
 
 #define RED    0xFF0000
 #define GREEN  0x00FF00

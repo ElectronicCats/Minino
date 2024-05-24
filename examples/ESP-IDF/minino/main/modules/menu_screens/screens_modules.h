@@ -24,6 +24,8 @@ typedef enum {
   MENU_WIFI_ANALIZER_SETTINGS,
   /* Bluetooth applications */
   MENU_BLUETOOTH_AIRTAGS_SCAN,
+  MENU_BLUETOOTH_TRAKERS_SCAN,
+  MENU_BLUETOOTH_SPAM,
   /* Zigbee applications */
   MENU_ZIGBEE_SPOOFING,
   MENU_ZIGBEE_SWITCH,
@@ -58,7 +60,8 @@ static char* menus_list[MENU_COUNT] = {
     /* WiFi analizer items */
     "MENU_WIFI_ANALIZER_START", "MENU_WIFI_ANALIZER_SETTINGS",
     /* Bluetooth applications */
-    "MENU_BLUETOOTH_AIRTAGS_SCAN",
+    "MENU_BLUETOOTH_AIRTAGS_SCAN", "MENU_BLUETOOTH_TRAKERS_SCAN",
+    "MENU_BLUETOOTH_SPAM",
     /* Zigbee applications */
     "MENU_ZIGBEE_SPOOFING", "MENU_ZIGBEE_SWITCH", "MENU_ZIGBEE_LIGHT",
     "MENU_ZIGBEE_SNIFFER"
@@ -92,7 +95,8 @@ static int menu_next_menu_table[MENU_COUNT][6] = {
     // MENU_WIFI_APPS
     {MENU_WIFI_ANALIZER, MENU_WIFI_DEAUTH},
     // MENU_BLUETOOTH_APPS
-    {MENU_BLUETOOTH_AIRTAGS_SCAN},
+    {MENU_BLUETOOTH_AIRTAGS_SCAN, MENU_BLUETOOTH_TRAKERS_SCAN,
+     MENU_BLUETOOTH_SPAM},
     // MENU_ZIGBEE_APPS
     {MENU_ZIGBEE_SPOOFING, MENU_ZIGBEE_SNIFFER},
     // MENU_THREAD_APPS
@@ -110,6 +114,10 @@ static int menu_next_menu_table[MENU_COUNT][6] = {
     // MENU_WIFI_ANALIZER_SETTINGS
     {},
     // MENU_BLUETOOTH_AIRTAGS_SCAN
+    {},
+    // MENU_BLUETOOTH_TRAKERSS_SCAN
+    {},
+    // MENU_BLUETOOTH_SPAM
     {},
     // MENU_ZIGBEE_SPOOFING
     {MENU_ZIGBEE_SWITCH, MENU_ZIGBEE_LIGHT},
@@ -160,6 +168,8 @@ static int prev_menu_table[MENU_COUNT] = {
     MENU_WIFI_ANALIZER,    // MENU_WIFI_ANALIZER_START
     MENU_WIFI_ANALIZER,    // MENU_WIFI_ANALIZER_SETTINGS
     MENU_BLUETOOTH_APPS,   // MENU_BLUETOOTH_AIRTAGS_SCAN
+    MENU_BLUETOOTH_APPS,   // MENU_BLUETOOTH_TRAKERS_SCAN
+    MENU_BLUETOOTH_APPS,   // MENU_BLUETOOTH_SPAM
     MENU_ZIGBEE_APPS,      // MENU_ZIGBEE_SPOOFING
     MENU_ZIGBEE_SPOOFING,  // MENU_ZIGBEE_SWITCH
     MENU_ZIGBEE_SPOOFING,  // MENU_ZIGBEE_LIGHT
@@ -274,6 +284,8 @@ static char* wifi_sniffer_settings_items[] = {
 
 static char* bluetooth_items[] = {
     "Airtags scan",
+    "Trakers scan",
+    "Spam",
     NULL,
 };
 
@@ -317,6 +329,8 @@ static char** menu_items[MENU_COUNT] = {
     empty_items,  // WiFi Analizer Settings
     /* Bluetooth applications */
     empty_items,  // Bluetooth Airtags scan
+    empty_items,  // Bluetooth Trakers scan
+    empty_items,  // Bluetooth Spam
     /* Zigbee applications */
     zigbee_spoofing_items,
     empty_items,  // Zigbee Switch

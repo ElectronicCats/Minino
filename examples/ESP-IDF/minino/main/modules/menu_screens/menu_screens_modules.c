@@ -1,5 +1,6 @@
 #include "menu_screens_modules.h"
 #include "bitmaps.h"
+#include "ble_module.h"
 #include "esp_log.h"
 #include "gps.h"
 #include "leds.h"
@@ -447,6 +448,12 @@ void menu_screens_enter_submenu() {
     case MENU_BLUETOOTH_AIRTAGS_SCAN:
       oled_screen_clear();
       bluetooth_scanner_start();
+      break;
+    case MENU_BLUETOOTH_TRAKERS_SCAN:
+      ble_module_begin(MENU_BLUETOOTH_TRAKERS_SCAN);
+      break;
+    case MENU_BLUETOOTH_SPAM:
+      ble_module_begin(MENU_BLUETOOTH_SPAM);
       break;
     case MENU_ZIGBEE_SWITCH:
       radio_selector_disable_thread();
