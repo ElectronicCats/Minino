@@ -85,6 +85,21 @@ void menu_screens_run_tests() {
   ESP_ERROR_CHECK(menu_screens_test_menu_items());
 }
 
+void show_logo() {
+  if (preferences_get_bool("zigbee_deinit", false)) {
+    current_menu = MENU_ZIGBEE_SPOOFING;
+    preferences_put_bool("zigbee_deinit", false);
+  } else if (preferences_get_bool("wifi_exit", false)) {
+    current_menu = MENU_WIFI_APPS;
+    preferences_put_bool("wifi_exit", false);
+  } else {
+    buzzer_play();
+    oled_screen_display_bitmap(epd_bitmap_logo_1, 0, 0, 128, 64,
+                               OLED_DISPLAY_NORMAL);
+    buzzer_stop();
+  }
+}
+
 void menu_screens_begin() {
   selected_item = 0;
   previous_menu = MENU_MAIN;
@@ -99,21 +114,7 @@ void menu_screens_begin() {
 
   // Show logo
   oled_screen_clear();
-
-  if (preferences_get_bool("zigbee_deinit", false)) {
-    current_menu = MENU_ZIGBEE_SPOOFING;
-    preferences_put_bool("zigbee_deinit", false);
-  } else if (preferences_get_bool("wifi_exit", false)) {
-    current_menu = MENU_WIFI_APPS;
-    preferences_put_bool("wifi_exit", false);
-  } else {
-    buzzer_play();
-    oled_screen_display_bitmap(epd_bitmap_logo_1, 0, 0, 128, 64,
-                               OLED_DISPLAY_NORMAL);
-    buzzer_stop();
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-  }
-
+  show_logo();
   display_gps_init();
 }
 
@@ -559,9 +560,11 @@ void menu_screens_enter_submenu() {
   bool update_configuration = false;
 
   if (is_menu_empty(current_menu)) {
+    ESP_LOGW(TAG, "Empty menu");
     return;
   } else if (is_menu_vertical_scroll(current_menu)) {
     selected_item = 0;  // Avoid selecting invalid item
+    next_menu = current_menu;
   } else if (is_menu_configuration(current_menu)) {
     next_menu = current_menu;
   } else {
