@@ -23,9 +23,9 @@ void app_main(void) {
   start_time = esp_timer_get_time();
 
   leds_init();
+  leds_on();
   preferences_begin();
   sd_card_init();
-  buzzer_init();
   // bluetooth_scanner_init();
   menu_screens_begin();
   keyboard_module_begin();

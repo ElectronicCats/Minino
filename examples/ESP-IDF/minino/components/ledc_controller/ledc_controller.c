@@ -14,7 +14,7 @@ static const char* TAG = "LED_CONTROLLER";
 
 #define LEDC_TIMER     LEDC_TIMER_0
 #define LEDC_MODE      LEDC_LOW_SPEED_MODE
-#define LEDC_DUTY_RES  LEDC_TIMER_8_BIT  // Set duty resolution to 13 bits
+#define LEDC_DUTY_RES  LEDC_TIMER_8_BIT  // Set duty resolution to 8 bits
 #define LEDC_FREQUENCY (4000)  // Frequency in Hertz. Set frequency at 4 kHz
 
 // LED Effect State Enum
@@ -143,7 +143,7 @@ static esp_err_t set_duty(led_t* led, uint8_t duty) {
   return ESP_OK;
 }
 
-esp_err_t led_init(led_t* led_cfg) {
+esp_err_t led_controller_led_init(led_t* led_cfg) {
   esp_err_t ret = ESP_OK;
 
   if (!led_cfg) {
@@ -189,7 +189,7 @@ err:
   return ret;
 }
 
-led_t led_new(gpio_num_t pin, ledc_channel_t ch) {
+led_t led_controller_led_new(gpio_num_t pin, ledc_channel_t ch) {
   led_t led;
   led.pin = pin;
   led.channel = ch;
@@ -240,6 +240,7 @@ esp_err_t led_stop_blink_effect(led_t* led) {
     memset(&led_effects[i].blink_effect, 0, sizeof(led_blink_t));
     led_effects[i].effect_state = LED_EFFECT_NONE;
     ESP_LOGI(TAG, "Blink effect stopped for LED");
+    set_duty(led, 0);
     return ESP_OK;
   }
 
@@ -290,10 +291,10 @@ esp_err_t led_stop_breath_effect(led_t* led) {
 
     // Reset the breath effect data and effect state
     memset(&led_effects[i].breath_effect, 0, sizeof(led_breath_t));
-    set_duty(led, 0);
     led_effects[i].effect_state = LED_EFFECT_NONE;
 
     ESP_LOGI(TAG, "Breath effect stopped for LED");
+    set_duty(led, 0);
     return ESP_OK;
   }
 
@@ -381,7 +382,7 @@ static void blink_timer_callback(void* arg) {
   }
 }
 
-esp_err_t led_start_breath_effect(led_t* led, uint16_t duration_ms) {
+esp_err_t led_controller_start_breath_effect(led_t* led, uint16_t duration_ms) {
   if (!led) {
     ESP_LOGE(TAG, "Invalid LED pointer");
     return ESP_ERR_INVALID_ARG;
@@ -393,7 +394,7 @@ esp_err_t led_start_breath_effect(led_t* led, uint16_t duration_ms) {
     ESP_LOGE(TAG, "LED not found");
     return ESP_FAIL;
   }
-  led_stop_any_effect(led);
+  led_controller_stop_any_effect(led);
 
   if (led_effects[i].effect_state == LED_EFFECT_NONE) {
     // Create and start the precision timer for the breath effect
@@ -431,12 +432,12 @@ esp_err_t led_start_breath_effect(led_t* led, uint16_t duration_ms) {
   return ESP_FAIL;
 }
 
-esp_err_t led_start_blink_effect(led_t* led,
-                                 uint8_t duty,
-                                 uint8_t pulse_count,
-                                 uint32_t time_on,
-                                 uint32_t time_off,
-                                 uint32_t time_out) {
+esp_err_t led_controller_start_blink_effect(led_t* led,
+                                            uint8_t duty,
+                                            uint8_t pulse_count,
+                                            uint32_t time_on,
+                                            uint32_t time_off,
+                                            uint32_t time_out) {
   if (!led) {
     ESP_LOGE(TAG, "Invalid LED pointer");
     return ESP_ERR_INVALID_ARG;
@@ -499,7 +500,7 @@ esp_err_t led_start_blink_effect(led_t* led,
   return ESP_FAIL;
 }
 
-esp_err_t led_stop_any_effect(led_t* led) {
+esp_err_t led_controller_stop_any_effect(led_t* led) {
   if (!led) {
     ESP_LOGE(TAG, "Invalid LED pointer");
     return ESP_ERR_INVALID_ARG;
@@ -523,12 +524,13 @@ esp_err_t led_stop_any_effect(led_t* led) {
       led_stop_blink_effect(led);
       break;
     default:
+      set_duty(led, 0);
   }
   led_effects[index].effect_state = LED_EFFECT_NONE;
   return ESP_OK;
 }
 
-esp_err_t led_deinit(led_t* led_cfg) {
+esp_err_t led_controller_led_deinit(led_t* led_cfg) {
   if (!led_cfg) {
     return ESP_ERR_INVALID_ARG;
   }
@@ -557,15 +559,16 @@ esp_err_t led_deinit(led_t* led_cfg) {
   return ESP_FAIL;  // LED not found in the led_effects array
 }
 
-void led_on(led_t* led, uint8_t duty) {
-  set_duty(led, duty);
+void led_controller_led_on(led_t* led) {
+  led_controller_stop_any_effect(led);
+  set_duty(led, 255);
 }
 
-void led_off(led_t* led) {
-  led_stop_any_effect(led);
+void led_controller_led_off(led_t* led) {
+  led_controller_stop_any_effect(led);
 }
 
-void led_set_duty(led_t* led, uint8_t duty) {
-  led_stop_any_effect(led);
+void led_controller_set_duty(led_t* led, uint8_t duty) {
+  led_controller_stop_any_effect(led);
   set_duty(led, duty);
 }

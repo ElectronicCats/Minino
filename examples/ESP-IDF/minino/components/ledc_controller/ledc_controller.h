@@ -31,7 +31,7 @@ typedef struct {
  *     - ESP_FAIL if the LED is not found in the module's internal data
  * structure.
  */
-esp_err_t led_deinit(led_t* led_cfg);
+esp_err_t led_controller_led_deinit(led_t* led_cfg);
 
 /**
  * @brief Initialize the LEDC to control a LED.
@@ -48,7 +48,7 @@ esp_err_t led_deinit(led_t* led_cfg);
  * configuration data for the LED.
  * @return esp_err_t ESP_OK if successful, or an error code if not.
  */
-esp_err_t led_init(led_t* led_cfg);
+esp_err_t led_controller_led_init(led_t* led_cfg);
 
 /**
  * @brief Create and initialize a new LED instance.
@@ -58,7 +58,7 @@ esp_err_t led_init(led_t* led_cfg);
  *
  * @return The initialized LED instance.
  */
-led_t led_new(gpio_num_t pin, ledc_channel_t ch);
+led_t led_controller_led_new(gpio_num_t pin, ledc_channel_t ch);
 
 /**
  * @brief Starts the breath effect for the specified LED.
@@ -68,7 +68,7 @@ led_t led_new(gpio_num_t pin, ledc_channel_t ch);
  * @return esp_err_t ESP_OK if successful, or an error code if the breath effect
  * cannot be started.
  */
-esp_err_t led_start_breath_effect(led_t* led, uint16_t duration_ms);
+esp_err_t led_controller_start_breath_effect(led_t* led, uint16_t duration_ms);
 
 /**
  * @brief Start a blink effect for the specified LED.
@@ -97,12 +97,12 @@ esp_err_t led_start_breath_effect(led_t* led, uint16_t duration_ms);
  * maximum number of LED effects is reached.
  *     - Other error codes if there was an error starting the timer.
  */
-esp_err_t led_start_blink_effect(led_t* led,
-                                 uint8_t duty,
-                                 uint8_t pulse_count,
-                                 uint32_t time_on,
-                                 uint32_t time_off,
-                                 uint32_t time_out);
+esp_err_t led_controller_start_blink_effect(led_t* led,
+                                            uint8_t duty,
+                                            uint8_t pulse_count,
+                                            uint32_t time_on,
+                                            uint32_t time_off,
+                                            uint32_t time_out);
 
 /**
  * @brief Stops the active effect for a specific LED.
@@ -110,21 +110,20 @@ esp_err_t led_start_blink_effect(led_t* led,
  * @param led Pointer to the LED structure.
  * @return ESP_OK if the effect was successfully stopped, ESP_FAIL otherwise.
  */
-esp_err_t led_stop_any_effect(led_t* led);
+esp_err_t led_controller_stop_any_effect(led_t* led);
 
 /**
  * @brief Turns on the specified LED.
  *
  * @param led Pointer to the LED structure.
- * @param duty The 8-bit duty cycle value.
  */
-void led_on(led_t* led, uint8_t duty);
+void led_controller_led_on(led_t* led);
 
 /**
  * @brief Turns off the specified LED.
  * @param led Pointer to the LED structure.
  */
-void led_off(led_t* led);
+void led_controller_led_off(led_t* led);
 
 /**
  * @brief Sets the intensity of a LED
@@ -132,7 +131,7 @@ void led_off(led_t* led);
  * @param led Pointer to the LED structure.
  * @param duty The 8-bit duty cycle value.
  */
-void led_set_duty(led_t* led, uint8_t duty);
+void led_controller_set_duty(led_t* led, uint8_t duty);
 
 #ifdef __cplusplus
 }
