@@ -17,6 +17,7 @@
 #define PIN_NUM_CS   18
 
 static const char* TAG = "SD_CARD";
+bool sd_card_mounted = false;
 
 static struct {
   struct arg_str* device;
@@ -26,11 +27,6 @@ static struct {
 /** 'mount' command */
 int mount(int argc, char** argv) {
   esp_err_t ret;
-  ESP_LOGW(TAG, "argc: %d", argc);
-  // Print argv
-  for (int i = 0; i < argc; i++) {
-    ESP_LOGW(TAG, "argv[%d]: %s", i, argv[i]);
-  }
 
   int nerrors = arg_parse(argc, argv, (void**) &mount_args);
   if (nerrors != 0) {
@@ -138,13 +134,21 @@ void sd_card_init() {
 }
 
 void sd_card_mount() {
+  if (sd_card_mounted) {
+    ESP_LOGW(TAG, "SD card already mounted");
+    return;
+  }
+
   const char** mount_argv[] = {"mount", "sd"};
   uint8_t mount_argc = 2;
+  // TODO: return value form mount
+  sd_card_mounted = true;
   mount(mount_argc, (char**) mount_argv);
 }
 
 void sd_card_unmount() {
   const char** unmount_argv2[] = {"unmount", "sd"};
   uint8_t unmount_argc2 = 2;
+  sd_card_mounted = false;
   unmount(unmount_argc2, (char**) unmount_argv2);
 }

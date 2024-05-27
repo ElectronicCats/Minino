@@ -33,13 +33,6 @@ static const char* TAG = "wifi_sniffer";
 #if CONFIG_SNIFFER_STORE_HISTORY
 #endif
 
-void show_summary() {
-  const char** summary_argv[] = {"pcap", "--summary", "-f", "sniffer"};
-  uint8_t summary_argc = 4;
-  do_pcap_cmd(summary_argc, (char**) summary_argv);
-  vTaskDelay(1000 / portTICK_PERIOD_MS);
-}
-
 void wifi_sniffer_begin() {
   wifi_driver_init_null();
   register_sniffer_cmd();
@@ -71,8 +64,10 @@ void wifi_sniffer_stop() {
   const char** stop_argv[] = {"sniffer", "--stop"};
   uint8_t stop_argc = 2;
   do_sniffer_cmd(stop_argc, (char**) stop_argv);
-  vTaskDelay(500 / portTICK_PERIOD_MS);
-  show_summary();
+}
+
+void wifi_sniffer_close_file() {
+  // wifi_sniffer_stop();
 
   const char** close_argv[] = {"pcap", "--close", "-f", "sniffer"};
   uint8_t close_argc = 4;
@@ -80,12 +75,17 @@ void wifi_sniffer_stop() {
   if (wifi_sniffer_is_destination_sd()) {
     sd_card_unmount();
   }
-  vTaskDelay(100 / portTICK_PERIOD_MS);
 }
 
 void wifi_sniffer_exit() {
   preferences_put_bool("wifi_exit", true);
   esp_restart();
+}
+
+void wifi_sniffer_load_summary() {
+  const char** summary_argv[] = {"pcap", "--summary", "-f", "sniffer"};
+  uint8_t summary_argc = 4;
+  do_pcap_cmd(summary_argc, (char**) summary_argv);
 }
 
 uint8_t wifi_sniffer_get_channel() {

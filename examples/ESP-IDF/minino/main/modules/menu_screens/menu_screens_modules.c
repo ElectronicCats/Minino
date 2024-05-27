@@ -97,6 +97,7 @@ void show_logo() {
     oled_screen_display_bitmap(epd_bitmap_logo_1, 0, 0, 128, 64,
                                OLED_DISPLAY_NORMAL);
     buzzer_stop();
+    vTaskDelay(500 / portTICK_PERIOD_MS);
   }
 }
 
@@ -200,6 +201,13 @@ bool is_menu_configuration(screen_module_menu_t menu) {
   return strcmp(menu_items[menu][0], CONFIGURATION_MENU_ITEMS) == 0;
 }
 
+bool is_menu_question(screen_module_menu_t menu) {
+  if (is_menu_empty(menu)) {
+    return false;
+  }
+  return strcmp(menu_items[menu][0], QUESTION_MENU_ITEMS) == 0;
+}
+
 /**
  * @brief Get the menu items for the current menu
  *
@@ -221,7 +229,7 @@ char** get_menu_items() {
   }
 
   if (is_menu_vertical_scroll(current_menu) ||
-      is_menu_configuration(current_menu)) {
+      is_menu_configuration(current_menu) || is_menu_question(current_menu)) {
     return submenu;
   }
 
@@ -299,6 +307,20 @@ void display_configuration_items(char** items) {
   }
 }
 
+void display_question_items(char** items) {
+  oled_screen_clear();
+  uint8_t page_offset = 4;
+  for (uint8_t i = 0; i < num_items - 2; i++) {
+    if (i == selected_item) {
+      oled_screen_display_text_center(items[i], i + page_offset,
+                                      OLED_DISPLAY_INVERT);
+    } else {
+      oled_screen_display_text_center(items[i], i + page_offset,
+                                      OLED_DISPLAY_NORMAL);
+    }
+  }
+}
+
 /**
  * @brief Display the menu items
  *
@@ -318,6 +340,9 @@ void menu_screens_display_menu() {
   } else if (is_menu_configuration(current_menu)) {
     char** new_items = remove_items_flag(items, num_items);
     display_configuration_items(new_items);
+  } else if (is_menu_question(current_menu)) {
+    char** new_items = remove_items_flag(items, num_items);
+    display_question_items(new_items);
   } else {
     display_menu_items(items);
   }
@@ -528,10 +553,15 @@ void menu_screens_exit_submenu() {
            menu_list[current_menu]);
 
   switch (current_menu) {
-    case MENU_WIFI_ANALIZER_START:
-      oled_screen_clear();
-      menu_screens_display_loading_banner();
+    case MENU_WIFI_ANALIZER_RUN:
       wifi_sniffer_stop();
+      break;
+    case MENU_WIFI_ANALIZER_ASK_SUMMARY:
+      oled_screen_clear();
+      wifi_sniffer_start();
+      break;
+    case MENU_WIFI_ANALIZER_SUMMARY:
+      wifi_sniffer_close_file();
       break;
     case MENU_WIFI_ANALIZER:
       oled_screen_clear();
@@ -587,9 +617,12 @@ void menu_screens_enter_submenu() {
     case MENU_WIFI_DEAUTH:
       wifi_module_deauth_begin();
       break;
-    case MENU_WIFI_ANALIZER_START:
+    case MENU_WIFI_ANALIZER_RUN:
       oled_screen_clear();
       wifi_sniffer_start();
+      break;
+    case MENU_WIFI_ANALIZER_SUMMARY:
+      wifi_sniffer_load_summary();
       break;
     case MENU_WIFI_ANALIZER_CHANNEL:
       if (update_configuration) {

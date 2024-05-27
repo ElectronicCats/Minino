@@ -34,11 +34,25 @@ void wifi_sniffer_start();
 void wifi_sniffer_stop();
 
 /**
+ * @brief Close the pcap file
+ *
+ * @return void
+ */
+void wifi_sniffer_close_file();
+
+/**
  * @brief Exit the wifi sniffer
  *
  * @return void
  */
 void wifi_sniffer_exit();
+
+/**
+ * @brief Load the summary
+ *
+ * @return void
+ */
+void wifi_sniffer_load_summary();
 
 /**
  * @brief Get the channel

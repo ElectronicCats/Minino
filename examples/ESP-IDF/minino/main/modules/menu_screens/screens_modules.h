@@ -20,8 +20,7 @@
  */
 #define CONFIGURATION_MENU_ITEMS "configuration"
 
-#define CONFIGURATION_ITEM_SELECTED   "[x] "
-#define CONFIGURATION_ITEM_UNSELECTED "[ ] "
+#define QUESTION_MENU_ITEMS "question"
 
 /**
  * @brief Enum of menus
@@ -47,9 +46,10 @@ typedef enum {
   MENU_WIFI_ANALIZER,
   MENU_WIFI_DEAUTH,
   /* WiFi analizer items */
-  MENU_WIFI_ANALIZER_START,
+  MENU_WIFI_ANALIZER_RUN,
   MENU_WIFI_ANALIZER_SETTINGS,
   /* WiFi analizer start items */
+  MENU_WIFI_ANALIZER_ASK_SUMMARY,
   MENU_WIFI_ANALIZER_SUMMARY,
   /* WiFi analizer settings */
   MENU_WIFI_ANALIZER_CHANNEL,
@@ -95,9 +95,9 @@ const char* menu_list[] = {
     /* WiFi applications */
     "MENU_WIFI_ANALIZER", "MENU_WIFI_DEAUTH",
     /* WiFi analizer items */
-    "MENU_WIFI_ANALIZER_START", "MENU_WIFI_ANALIZER_SETTINGS",
+    "MENU_WIFI_ANALIZER_RUN", "MENU_WIFI_ANALIZER_SETTINGS",
     /* WiFi analizer start items */
-    "MENU_WIFI_ANALIZER_SUMMARY",
+    "MENU_WIFI_ANALIZER_ASK_SUMMARY", "MENU_WIFI_ANALIZER_SUMMARY",
     /* WiFi analizer settings */
     "MENU_WIFI_ANALIZER_CHANNEL", "MENU_WIFI_ANALIZER_DESTINATION",
     /* Bluetooth applications */
@@ -148,13 +148,15 @@ const int next_menu_table[][6] = {
     // MENU_GPS
     {MENU_GPS_DATE_TIME, MENU_GPS_LOCATION},
     // MENU_WIFI_ANALIZER
-    {MENU_WIFI_ANALIZER_START, MENU_WIFI_ANALIZER_SETTINGS},
+    {MENU_WIFI_ANALIZER_RUN, MENU_WIFI_ANALIZER_SETTINGS},
     // MENU_WIFI_DEAUTH
     {MENU_WIFI_DEAUTH},
-    // MENU_WIFI_ANALIZER_START
-    {MENU_WIFI_ANALIZER_START},
+    // MENU_WIFI_ANALIZER_RUN
+    {MENU_WIFI_ANALIZER_RUN},
     // MENU_WIFI_ANALIZER_SETTINGS
     {MENU_WIFI_ANALIZER_CHANNEL, MENU_WIFI_ANALIZER_DESTINATION},
+    // MENU_WIFI_ANALIZER_ASK_SUMMARY [0] -> Yes, [1] -> No
+    {MENU_WIFI_ANALIZER_SUMMARY, MENU_WIFI_ANALIZER},
     // MENU_WIFI_ANALIZER_SUMMARY
     {MENU_WIFI_ANALIZER_SUMMARY},
     // MENU_WIFI_ANALIZER_CHANNEL
@@ -201,37 +203,38 @@ const int next_menu_table[][6] = {
  * Usage: prev_menu_table[screen_module_menu_t]
  */
 const int prev_menu_table[] = {
-    MENU_MAIN,                    // MENU_MAIN
-    MENU_MAIN,                    // MENU_APPLICATIONS
-    MENU_MAIN,                    // MENU_SETTINGS
-    MENU_MAIN,                    // MENU_ABOUT
-    MENU_APPLICATIONS,            // MENU_WIFI_APPS
-    MENU_APPLICATIONS,            // MENU_BLUETOOTH_APPS
-    MENU_APPLICATIONS,            // MENU_ZIGBEE_APPS
-    MENU_APPLICATIONS,            // MENU_THREAD_APPS
-    MENU_APPLICATIONS,            // MENU_MATTER_APPS
-    MENU_APPLICATIONS,            // MENU_GPS
-    MENU_WIFI_APPS,               // MENU_WIFI_ANALIZER
-    MENU_WIFI_APPS,               // MENU_WIFI_DEAUTH
-    MENU_WIFI_ANALIZER_SUMMARY,   // MENU_WIFI_ANALIZER_START
-    MENU_WIFI_ANALIZER,           // MENU_WIFI_ANALIZER_SETTINGS
-    MENU_WIFI_ANALIZER,           // MENU_WIFI_ANALIZER_SUMMARY
-    MENU_WIFI_ANALIZER_SETTINGS,  // MENU_WIFI_ANALIZER_CHANNEL
-    MENU_WIFI_ANALIZER_SETTINGS,  // MENU_WIFI_ANALIZER_DESTINATION
-    MENU_BLUETOOTH_APPS,          // MENU_BLUETOOTH_AIRTAGS_SCAN
-    MENU_ZIGBEE_APPS,             // MENU_ZIGBEE_SPOOFING
-    MENU_ZIGBEE_SPOOFING,         // MENU_ZIGBEE_SWITCH
-    MENU_ZIGBEE_SPOOFING,         // MENU_ZIGBEE_LIGHT
-    MENU_THREAD_APPS,             // MENU_THREAD_CLI
-    MENU_GPS,                     // MENU_GPS_DATE_TIME
-    MENU_GPS,                     // MENU_GPS_LOCATION
-    MENU_ABOUT,                   // MENU_ABOUT_VERSION
-    MENU_ABOUT,                   // MENU_ABOUT_LICENSE
-    MENU_ABOUT,                   // MENU_ABOUT_CREDITS
-    MENU_ABOUT,                   // MENU_ABOUT_LEGAL
-    MENU_SETTINGS,                // MENU_SETTINGS_DISPLAY
-    MENU_SETTINGS,                // MENU_SETTINGS_SOUND
-    MENU_SETTINGS,                // MENU_SETTINGS_SYSTEM
+    MENU_MAIN,                       // MENU_MAIN
+    MENU_MAIN,                       // MENU_APPLICATIONS
+    MENU_MAIN,                       // MENU_SETTINGS
+    MENU_MAIN,                       // MENU_ABOUT
+    MENU_APPLICATIONS,               // MENU_WIFI_APPS
+    MENU_APPLICATIONS,               // MENU_BLUETOOTH_APPS
+    MENU_APPLICATIONS,               // MENU_ZIGBEE_APPS
+    MENU_APPLICATIONS,               // MENU_THREAD_APPS
+    MENU_APPLICATIONS,               // MENU_MATTER_APPS
+    MENU_APPLICATIONS,               // MENU_GPS
+    MENU_WIFI_APPS,                  // MENU_WIFI_ANALIZER
+    MENU_WIFI_APPS,                  // MENU_WIFI_DEAUTH
+    MENU_WIFI_ANALIZER_ASK_SUMMARY,  // MENU_WIFI_ANALIZER_RUN
+    MENU_WIFI_ANALIZER,              // MENU_WIFI_ANALIZER_SETTINGS
+    MENU_WIFI_ANALIZER_RUN,          // MENU_WIFI_ANALIZER_ASK_SUMMARY
+    MENU_WIFI_ANALIZER,              // MENU_WIFI_ANALIZER_SUMMARY
+    MENU_WIFI_ANALIZER_SETTINGS,     // MENU_WIFI_ANALIZER_CHANNEL
+    MENU_WIFI_ANALIZER_SETTINGS,     // MENU_WIFI_ANALIZER_DESTINATION
+    MENU_BLUETOOTH_APPS,             // MENU_BLUETOOTH_AIRTAGS_SCAN
+    MENU_ZIGBEE_APPS,                // MENU_ZIGBEE_SPOOFING
+    MENU_ZIGBEE_SPOOFING,            // MENU_ZIGBEE_SWITCH
+    MENU_ZIGBEE_SPOOFING,            // MENU_ZIGBEE_LIGHT
+    MENU_THREAD_APPS,                // MENU_THREAD_CLI
+    MENU_GPS,                        // MENU_GPS_DATE_TIME
+    MENU_GPS,                        // MENU_GPS_LOCATION
+    MENU_ABOUT,                      // MENU_ABOUT_VERSION
+    MENU_ABOUT,                      // MENU_ABOUT_LICENSE
+    MENU_ABOUT,                      // MENU_ABOUT_CREDITS
+    MENU_ABOUT,                      // MENU_ABOUT_LEGAL
+    MENU_SETTINGS,                   // MENU_SETTINGS_DISPLAY
+    MENU_SETTINGS,                   // MENU_SETTINGS_SOUND
+    MENU_SETTINGS,                   // MENU_SETTINGS_SYSTEM
 };
 
 /**
@@ -242,6 +245,13 @@ const int prev_menu_table[] = {
  * Usage: selected_item_history[screen_module_menu_t]
  */
 int selected_item_history[MENU_COUNT] = {0};
+
+char* yes_no_items[] = {
+    QUESTION_MENU_ITEMS,
+    "Yes",
+    "No",
+    NULL,
+};
 
 char* main_items[] = {
     "Applications",
@@ -419,6 +429,7 @@ char** menu_items[] = {
     empty_items,                      // WiFi Deauth
     empty_items,                      // WiFi Analizer Start
     wifi_analizer_settings_items,     // WiFi Analizer Settings
+    yes_no_items,                     // MENU_WIFI_ANALIZER_ASK_SUMMARY
     wifi_analizer_summary,            // WiFi Analizer Summary
     wifi_analizer_channel_items,      // WiFi Analizer Channel
     wifi_analizer_destination_items,  // WiFi Analizer Destination

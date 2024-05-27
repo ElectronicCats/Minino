@@ -13,6 +13,7 @@
 #include "wifi_scanner.h"
 
 static const char* TAG = "wifi_module";
+bool analizer_initialized = false;
 
 /**
  * @brief Enum with the wifi module states
@@ -98,6 +99,11 @@ void wifi_module_deauth_begin() {
 }
 
 void wifi_module_analizer_begin() {
+  if (analizer_initialized) {
+    ESP_LOGW(TAG, "WiFi analizer already initialized");
+    return;
+  }
+
   ESP_LOGI(TAG, "Initializing WiFi analizer module");
   wifi_sniffer_register_cb(wifi_screens_module_display_sniffer_cb);
   wifi_sniffer_register_animation_cbs(wifi_screens_sniffer_animation_start,
@@ -106,6 +112,7 @@ void wifi_module_analizer_begin() {
   wifi_screens_module_create_sniffer_task();
   wifi_module_update_channel_options(wifi_analizer_channel_items);
   wifi_sniffer_begin();
+  analizer_initialized = true;
 }
 
 void wifi_module_analizer_summary_cb(FILE* pcap_file) {
