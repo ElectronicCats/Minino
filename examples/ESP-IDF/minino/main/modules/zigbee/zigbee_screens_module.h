@@ -52,3 +52,8 @@ void zigbee_screens_module_no_devices_found();
  * @return void
  */
 void zigbee_screens_module_closing_network();
+
+/////////////////////////////////////////////////////////////////////////
+
+void zigbee_screens_display_scanning_animation(void);
+void zigbee_screens_display_scanning_text(int count, int channel);

@@ -1,7 +1,7 @@
 #include "buzzer.h"
 #include "driver/ledc.h"
 
-#define LEDC_TIMER     LEDC_TIMER_0
+#define LEDC_TIMER     LEDC_TIMER_1
 #define LEDC_MODE      LEDC_LOW_SPEED_MODE
 #define LEDC_OUTPUT_IO (GPIO_NUM_2)  // Define the output GPIO
 #define LEDC_CHANNEL   LEDC_CHANNEL_0

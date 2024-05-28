@@ -5,6 +5,7 @@
 #include "keyboard_module.h"
 #include "leds.h"
 #include "menu_screens_modules.h"
+#include "openthread.h"
 #include "preferences.h"
 #include "sd_card.h"
 
@@ -22,10 +23,10 @@ void app_main(void) {
   start_time = esp_timer_get_time();
 
   leds_init();
+  leds_on();
   preferences_begin();
   sd_card_init();
-  buzzer_init();
-  bluetooth_scanner_init();
+  // bluetooth_scanner_init();
   menu_screens_begin();
   keyboard_module_begin();
   menu_screens_display_menu();

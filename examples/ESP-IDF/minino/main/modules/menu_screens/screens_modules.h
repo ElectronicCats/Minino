@@ -56,12 +56,15 @@ typedef enum {
   MENU_WIFI_ANALIZER_DESTINATION,
   /* Bluetooth applications */
   MENU_BLUETOOTH_AIRTAGS_SCAN,
+  MENU_BLUETOOTH_TRAKERS_SCAN,
+  MENU_BLUETOOTH_SPAM,
   /* Zigbee applications */
   MENU_ZIGBEE_SPOOFING,
   MENU_ZIGBEE_SWITCH,
   MENU_ZIGBEE_LIGHT,
+  MENU_ZIGBEE_SNIFFER,
   /* Thread applications */
-  MENU_THREAD_CLI,
+  MENU_THREAD_BROADCAST,
   /* GPS applications */
   MENU_GPS_DATE_TIME,
   MENU_GPS_LOCATION,
@@ -101,11 +104,13 @@ const char* menu_list[] = {
     /* WiFi analizer settings */
     "MENU_WIFI_ANALIZER_CHANNEL", "MENU_WIFI_ANALIZER_DESTINATION",
     /* Bluetooth applications */
-    "MENU_BLUETOOTH_AIRTAGS_SCAN",
+    "MENU_BLUETOOTH_AIRTAGS_SCAN", "MENU_BLUETOOTH_TRAKERS_SCAN",
+    "MENU_BLUETOOTH_SPAM",
     /* Zigbee applications */
     "MENU_ZIGBEE_SPOOFING", "MENU_ZIGBEE_SWITCH", "MENU_ZIGBEE_LIGHT",
+    "MENU_ZIGBEE_SNIFFER"
     /* Thread applications */
-    "MENU_THREAD_CLI",
+    "MENU_THREAD_BROADCAST",
     /* GPS applications */
     "MENU_GPS_DATE_TIME", "MENU_GPS_LOCATION",
     /* About items */
@@ -138,11 +143,12 @@ const int next_menu_table[][6] = {
     // MENU_WIFI_APPS
     {MENU_WIFI_ANALIZER, MENU_WIFI_DEAUTH},
     // MENU_BLUETOOTH_APPS
-    {MENU_BLUETOOTH_AIRTAGS_SCAN},
+    {MENU_BLUETOOTH_AIRTAGS_SCAN, MENU_BLUETOOTH_TRAKERS_SCAN,
+     MENU_BLUETOOTH_SPAM},
     // MENU_ZIGBEE_APPS
-    {MENU_ZIGBEE_SPOOFING},
+    {MENU_ZIGBEE_SPOOFING, MENU_ZIGBEE_SNIFFER},
     // MENU_THREAD_APPS
-    {MENU_THREAD_CLI},
+    {MENU_THREAD_BROADCAST},
     // MENU_MATTER_APPS
     {MENU_MATTER_APPS},
     // MENU_GPS
@@ -164,15 +170,19 @@ const int next_menu_table[][6] = {
     // MENU_WIFI_ANALIZER_DESTINATION
     {MENU_WIFI_ANALIZER_DESTINATION},
     // MENU_BLUETOOTH_AIRTAGS_SCAN
-    {MENU_BLUETOOTH_AIRTAGS_SCAN},
+    {},
+    // MENU_BLUETOOTH_TRAKERSS_SCAN
+    {},
+    // MENU_BLUETOOTH_SPAM
+    {},
     // MENU_ZIGBEE_SPOOFING
     {MENU_ZIGBEE_SWITCH, MENU_ZIGBEE_LIGHT},
     // MENU_ZIGBEE_SWITCH
     {MENU_ZIGBEE_SWITCH},
     // MENU_ZIGBEE_LIGHT
-    {MENU_ZIGBEE_LIGHT},
-    // MENU_THREAD_CLI
-    {MENU_THREAD_CLI},
+    {},
+    // MENU_THREAD_BROADCAST
+    {},
     // MENU_GPS_DATE_TIME
     {MENU_GPS_DATE_TIME},
     // MENU_GPS_LOCATION
@@ -222,10 +232,13 @@ const int prev_menu_table[] = {
     MENU_WIFI_ANALIZER_SETTINGS,     // MENU_WIFI_ANALIZER_CHANNEL
     MENU_WIFI_ANALIZER_SETTINGS,     // MENU_WIFI_ANALIZER_DESTINATION
     MENU_BLUETOOTH_APPS,             // MENU_BLUETOOTH_AIRTAGS_SCAN
+    MENU_BLUETOOTH_APPS,             // MENU_BLUETOOTH_TRAKERS_SCAN
+    MENU_BLUETOOTH_APPS,             // MENU_BLUETOOTH_SPAM
     MENU_ZIGBEE_APPS,                // MENU_ZIGBEE_SPOOFING
     MENU_ZIGBEE_SPOOFING,            // MENU_ZIGBEE_SWITCH
     MENU_ZIGBEE_SPOOFING,            // MENU_ZIGBEE_LIGHT
-    MENU_THREAD_APPS,                // MENU_THREAD_CLI
+    MENU_ZIGBEE_APPS,                // MENU_ZIGBEE_SPOOFING
+    MENU_THREAD_APPS,                // MENU_THREAD_BROADCAST
     MENU_GPS,                        // MENU_GPS_DATE_TIME
     MENU_GPS,                        // MENU_GPS_LOCATION
     MENU_ABOUT,                      // MENU_ABOUT_VERSION
@@ -382,11 +395,14 @@ char* wifi_analizer_destination_items[] = {
 
 char* bluetooth_items[] = {
     "Airtags scan",
+    "Trakers scan",
+    "Spam",
     NULL,
 };
 
 char* zigbee_items[] = {
     "Spoofing",
+    "Sniffer",
     NULL,
 };
 
@@ -435,10 +451,13 @@ char** menu_items[] = {
     wifi_analizer_destination_items,  // WiFi Analizer Destination
     /* Bluetooth applications */
     empty_items,  // Bluetooth Airtags scan
+    empty_items,  // Bluetooth Trakers scan
+    empty_items,  // Bluetooth Spam
     /* Zigbee applications */
     zigbee_spoofing_items,
     empty_items,  // Zigbee Switch
     empty_items,  // Zigbee Light
+    empty_items,  // Zigbee Sniffer
     /* Thread applications */
     empty_items,  // Thread CLI
     /* GPS applications */

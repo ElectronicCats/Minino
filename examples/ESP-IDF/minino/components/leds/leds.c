@@ -1,109 +1,66 @@
 #include "leds.h"
 #include "driver/ledc.h"
+#include "ledc_controller.h"
 
-#define LEDC_TIMER     LEDC_TIMER_0
-#define LEDC_MODE      LEDC_LOW_SPEED_MODE
-#define LEFT_LED_IO    (GPIO_NUM_3)   // Define the output GPIO
-#define RIGHT_LED_IO   (GPIO_NUM_11)  // Define the output GPIO
-#define LEDC_CHANNEL   LEDC_CHANNEL_1
-#define LEDC_DUTY_RES  LEDC_TIMER_13_BIT  // Set duty resolution to 13 bits
-#define LEDC_DUTY      (4096)  // Set duty to 50%. (2 ** 13) * 50% = 4096
-#define LEDC_FREQUENCY (4000)  // Frequency in Hertz. Set frequency at 4 kHz
+#define LEFT_LED_IO       GPIO_NUM_3
+#define RIGHT_LED_IO      GPIO_NUM_11
+#define LEFT_LED_CHANNEL  LEDC_CHANNEL_1
+#define RIGHT_LED_CHANNEL LEDC_CHANNEL_2
+#define LEDC_TIMER        LEDC_TIMER_0
+
+led_t left_led, right_led;
 
 void leds_init() {
-  // Prepare and then apply the LEDC PWM timer configuration
-  ledc_timer_config_t ledc_timer = {
-      .speed_mode = LEDC_MODE,
-      .duty_resolution = LEDC_DUTY_RES,
-      .timer_num = LEDC_TIMER,
-      .freq_hz = LEDC_FREQUENCY,  // Set output frequency at 4 kHz
-      .clk_cfg = LEDC_AUTO_CLK};
-  ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
-
-  // Prepare and then apply the LEDC PWM channel configuration
-  ledc_channel_config_t ledc_channel = {.speed_mode = LEDC_MODE,
-                                        .channel = LEDC_CHANNEL,
-                                        .timer_sel = LEDC_TIMER,
-                                        .intr_type = LEDC_INTR_DISABLE,
-                                        .gpio_num = LEFT_LED_IO,
-                                        .duty = 0,  // Set duty to 0%
-                                        .hpoint = 0};
-  ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
-
-  ledc_channel.gpio_num = RIGHT_LED_IO;
-  ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
+  left_led = led_controller_led_new(LEFT_LED_IO, LEFT_LED_CHANNEL);
+  right_led = led_controller_led_new(RIGHT_LED_IO, RIGHT_LED_CHANNEL);
+  led_controller_led_init(&left_led);
+  led_controller_led_init(&right_led);
 }
 
 void leds_on() {
-  ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
-  ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+  led_controller_led_on(&left_led);
+  led_controller_led_on(&right_led);
 }
 
 void leds_off() {
-  ESP_ERROR_CHECK(ledc_timer_pause(LEDC_MODE, LEDC_TIMER));
-
-  ledc_channel_config_t ledc_channel = {.speed_mode = LEDC_MODE,
-                                        .channel = LEDC_CHANNEL,
-                                        .timer_sel = LEDC_TIMER,
-                                        .intr_type = LEDC_INTR_DISABLE,
-                                        .gpio_num = LEFT_LED_IO,
-                                        .duty = 0,  // Set duty to 0%
-                                        .hpoint = 0};
-  ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
-
-  ledc_channel.gpio_num = RIGHT_LED_IO;
-  ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
-
-  ESP_ERROR_CHECK(ledc_timer_resume(LEDC_MODE, LEDC_TIMER));
+  led_controller_led_off(&left_led);
+  led_controller_led_off(&right_led);
 }
 
-bool leds_set_brightness(uint8_t brightness) {
-  if (brightness > 100) {
-    return false;
-  }
-
-  ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, brightness * 32));
-  ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-
-  return true;
-}
-
-void led_right_on() {
-  ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
-  ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-}
-
-void led_right_off() {
-  ESP_ERROR_CHECK(ledc_timer_pause(LEDC_MODE, LEDC_TIMER));
-
-  ledc_channel_config_t ledc_channel = {.speed_mode = LEDC_MODE,
-                                        .channel = LEDC_CHANNEL,
-                                        .timer_sel = LEDC_TIMER,
-                                        .intr_type = LEDC_INTR_DISABLE,
-                                        .gpio_num = RIGHT_LED_IO,
-                                        .duty = 0,  // Set duty to 0%
-                                        .hpoint = 0};
-  ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
-
-  ESP_ERROR_CHECK(ledc_timer_resume(LEDC_MODE, LEDC_TIMER));
+void leds_set_brightness(uint8_t led, uint8_t brightness) {
+  led_controller_set_duty(led == LED_LEFT ? &left_led : &right_led, brightness);
 }
 
 void led_left_on() {
-  ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, LEDC_DUTY));
-  ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+  led_controller_led_on(&left_led);
 }
 
 void led_left_off() {
-  ESP_ERROR_CHECK(ledc_timer_pause(LEDC_MODE, LEDC_TIMER));
+  led_controller_led_off(&left_led);
+}
 
-  ledc_channel_config_t ledc_channel = {.speed_mode = LEDC_MODE,
-                                        .channel = LEDC_CHANNEL,
-                                        .timer_sel = LEDC_TIMER,
-                                        .intr_type = LEDC_INTR_DISABLE,
-                                        .gpio_num = LEFT_LED_IO,
-                                        .duty = 0,  // Set duty to 0%
-                                        .hpoint = 0};
-  ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
+void led_right_on() {
+  led_controller_led_on(&right_led);
+}
 
-  ESP_ERROR_CHECK(ledc_timer_resume(LEDC_MODE, LEDC_TIMER));
+void led_right_off() {
+  led_controller_led_off(&right_led);
+}
+
+void led_start_blink(uint8_t led,
+                     uint8_t duty,
+                     uint8_t pulse_count,
+                     uint32_t time_on,
+                     uint32_t time_off,
+                     uint32_t time_out) {
+  led_controller_start_blink_effect(led == LED_LEFT ? &left_led : &right_led,
+                                    duty, pulse_count, time_on, time_off,
+                                    time_out);
+}
+void led_start_breath(uint8_t led, uint16_t period_ms) {
+  led_controller_start_breath_effect(led == LED_LEFT ? &left_led : &right_led,
+                                     period_ms);
+}
+void led_stop(uint8_t led) {
+  led_controller_stop_any_effect(led == LED_LEFT ? &left_led : &right_led);
 }

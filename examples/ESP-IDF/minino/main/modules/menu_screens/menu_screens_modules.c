@@ -1,5 +1,6 @@
 #include "menu_screens_modules.h"
 #include "bitmaps.h"
+#include "ble_module.h"
 #include "esp_log.h"
 #include "gps.h"
 #include "leds.h"
@@ -8,7 +9,11 @@
 #include "string.h"
 #include "wifi_module.h"
 #include "wifi_sniffer.h"
+#include "zigbee_module.h"
 #include "zigbee_switch.h"
+
+#include "openthread.h"
+#include "radio_selector.h"
 
 #define MAX_MENU_ITEMS_PER_SCREEN 3
 #define TIME_ZONE                 (-6)    // Beijing Time
@@ -92,6 +97,9 @@ void show_logo() {
   } else if (preferences_get_bool("wifi_exit", false)) {
     current_menu = MENU_WIFI_APPS;
     preferences_put_bool("wifi_exit", false);
+  } else if (preferences_get_bool("thread_deinit", false)) {
+    current_menu = MENU_APPLICATIONS;
+    preferences_put_bool("thread_deinit", false);
   } else {
     buzzer_play();
     oled_screen_display_bitmap(epd_bitmap_logo_1, 0, 0, 128, 64,
@@ -389,18 +397,12 @@ void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
   oled_screen_display_text(rssi_str, 0, 5, OLED_DISPLAY_NORMAL);
 }
 
-void display_thread_cli() {
-  // thread_cli_start();
+void display_thread_broadcast() {
+  radio_selector_enable_thread();
+  openthread_init();
 
   oled_screen_clear();
-  oled_screen_display_text("Thread CLI      ", 0, 0, OLED_DISPLAY_INVERT);
-  oled_screen_display_text("Connect Minino", 0, 1, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("to a computer", 0, 2, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("via USB and use", 0, 3, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("screen command", 0, 4, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("(linux or mac)", 0, 5, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("or putty in", 0, 6, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("windows", 0, 7, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("Waiting messages...  ", 0, 0, OLED_DISPLAY_INVERT);
 }
 
 void menu_screens_display_in_development_banner() {
@@ -574,6 +576,9 @@ void menu_screens_exit_submenu() {
       }
       vTaskDelay(100 / portTICK_PERIOD_MS);  // Wait for the scanner to stop
       break;
+    case MENU_THREAD_APPS:
+      openthread_factory_reset();
+      break;
     default:
       break;
   }
@@ -582,6 +587,12 @@ void menu_screens_exit_submenu() {
   selected_item = selected_item_history[current_menu];
   current_menu = previous_menu;
   menu_screens_display_menu();
+}
+void module_keyboard_update_state(
+    bool in_app,
+    void (*app_handler)(button_event_t button_pressed)) {
+  app_state.in_app = in_app;
+  app_state.app_handler = app_handler;
 }
 
 void menu_screens_enter_submenu() {
@@ -644,10 +655,23 @@ void menu_screens_enter_submenu() {
       oled_screen_clear();
       bluetooth_scanner_start();
       break;
+    case MENU_BLUETOOTH_TRAKERS_SCAN:
+      ble_module_begin(MENU_BLUETOOTH_TRAKERS_SCAN);
+      break;
+    case MENU_BLUETOOTH_SPAM:
+      ble_module_begin(MENU_BLUETOOTH_SPAM);
+      break;
     case MENU_ZIGBEE_SWITCH:
+      radio_selector_disable_thread();
       zigbee_switch_init();
       break;
+    case MENU_ZIGBEE_SNIFFER:
+      zigbee_module_begin(MENU_ZIGBEE_SNIFFER);
+      break;
+    case MENU_THREAD_BROADCAST:
     case MENU_THREAD_APPS:
+      display_thread_broadcast();
+      break;
     case MENU_MATTER_APPS:
     case MENU_ZIGBEE_LIGHT:
     case MENU_SETTINGS_DISPLAY:
