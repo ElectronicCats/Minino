@@ -72,7 +72,7 @@ void menu_screens_begin() {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 
-  display_gps_init();
+  // display_gps_init();
   // xTaskCreate(&display_wifi_sniffer_animation_task,
   //             "display_wifi_sniffer_animation_task", 2048, NULL, 15,
   //             &wifi_sniffer_animation_task_handle);
