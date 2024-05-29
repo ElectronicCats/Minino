@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include "bluetooth_scanner.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "keyboard_module.h"

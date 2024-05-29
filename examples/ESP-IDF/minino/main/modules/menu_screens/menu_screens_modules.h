@@ -1,6 +1,5 @@
 #pragma once
 
-#include "bluetooth_scanner.h"
 #include "buzzer.h"
 #include "cmd_sniffer.h"
 #include "keyboard_module.h"
@@ -137,7 +136,6 @@ void menu_screens_display_loading_banner();
 void menu_screens_update_options(char* options[], uint8_t selected_option);
 
 // TODO: Move to separate files
-void display_bluetooth_scanner(bluetooth_scanner_record_t record);
 void display_thread_broadcast();
 void display_gps_init();
 void display_gps_deinit();

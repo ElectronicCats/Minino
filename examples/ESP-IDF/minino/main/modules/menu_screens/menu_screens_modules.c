@@ -119,7 +119,6 @@ void menu_screens_begin() {
 
   menu_screens_run_tests();
   oled_screen_begin();
-  bluetooth_scanner_register_cb(display_bluetooth_scanner);
 
   // Show logo
   oled_screen_clear();
@@ -356,47 +355,6 @@ void menu_screens_display_menu() {
   }
 }
 
-void display_bluetooth_scanner(bluetooth_scanner_record_t record) {
-  static bool airtag_detected = false;
-  oled_screen_display_text("Airtags Scanner", 0, 0, OLED_DISPLAY_INVERT);
-  uint8_t x = 0;
-  uint8_t y = 2;
-  oled_screen_clear_line(x, y, OLED_DISPLAY_NORMAL);
-
-  if (record.has_finished && !airtag_detected) {
-    oled_screen_display_text("    Scanning", 0, 3, OLED_DISPLAY_NORMAL);
-    oled_screen_display_text("    Finished", 0, 4, OLED_DISPLAY_NORMAL);
-    return;
-  }
-
-  if (!record.is_airtag) {
-    airtag_detected = false;
-    bluetooth_devices_count++;
-    char* device_count_str = (char*) malloc(16);
-    sprintf(device_count_str, "Devices=%d", record.count);
-    oled_screen_display_text(device_count_str, 0, 2, OLED_DISPLAY_NORMAL);
-    return;
-  }
-
-  airtag_detected = true;
-  char* name_str = (char*) malloc(50);
-  char* addr_str1 = (char*) malloc(14);
-  char* addr_str2 = (char*) malloc(14);
-  char* rssi_str = (char*) malloc(16);
-
-  sprintf(name_str, "%s", record.name);
-  sprintf(addr_str1, "MAC= %02X:%02X:%02X", record.mac[5], record.mac[4],
-          record.mac[3]);
-  sprintf(addr_str2, "     %02X:%02X:%02X", record.mac[2], record.mac[1],
-          record.mac[0]);
-  sprintf(rssi_str, "RSSI=%d", record.rssi);
-
-  oled_screen_display_text(name_str, 0, 2, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text(addr_str1, 0, 3, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text(addr_str2, 0, 4, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text(rssi_str, 0, 5, OLED_DISPLAY_NORMAL);
-}
-
 void display_thread_broadcast() {
   radio_selector_enable_thread();
   openthread_init();
@@ -570,12 +528,6 @@ void menu_screens_exit_submenu() {
       menu_screens_display_loading_banner();
       wifi_sniffer_exit();
       break;
-    case MENU_BLUETOOTH_AIRTAGS_SCAN:
-      if (bluetooth_scanner_is_active()) {
-        bluetooth_scanner_stop();
-      }
-      vTaskDelay(100 / portTICK_PERIOD_MS);  // Wait for the scanner to stop
-      break;
     case MENU_THREAD_APPS:
       openthread_factory_reset();
       break;
@@ -650,10 +602,6 @@ void menu_screens_enter_submenu() {
         }
       }
       wifi_module_update_destination_options();
-      break;
-    case MENU_BLUETOOTH_AIRTAGS_SCAN:
-      oled_screen_clear();
-      bluetooth_scanner_start();
       break;
     case MENU_BLUETOOTH_TRAKERS_SCAN:
       ble_module_begin(MENU_BLUETOOTH_TRAKERS_SCAN);
