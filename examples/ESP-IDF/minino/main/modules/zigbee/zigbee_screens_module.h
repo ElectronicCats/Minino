@@ -37,7 +37,7 @@ void zigbee_screens_module_creating_network_failed();
  *
  * @return void
  */
-void zigbee_screens_module_waiting_for_devices(uint8_t dots);
+void zigbee_screens_module_waiting_for_devices();
 
 /**
  * @brief Display "No devices found"
@@ -52,6 +52,8 @@ void zigbee_screens_module_no_devices_found();
  * @return void
  */
 void zigbee_screens_module_closing_network();
+
+void zigbee_screens_module_display_status(uint8_t status);
 
 /////////////////////////////////////////////////////////////////////////
 

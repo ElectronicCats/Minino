@@ -36,6 +36,19 @@
 #define ESP_ZB_DEFAULT_HOST_CONFIG() \
   { .host_connection_mode = ZB_HOST_CONNECTION_MODE_NONE, }
 
+typedef enum {
+  CREATING_NETWORK = 0,
+  CREATING_NETWORK_FAILED,
+  WAITING_FOR_DEVICES,
+  NO_DEVICES_FOUND,
+  LIGHT_RELASED,
+  CLOSING_NETWORK,
+  LIGHT_PRESSED
+
+} display_status_t;
+
+typedef void (*display_status_cb_t)(uint8_t);
+
 /**
  * @brief Zigbee switch initialization
  *
@@ -56,3 +69,6 @@ void zigbee_switch_deinit();
  * @return void
  */
 void zigbee_switch_toggle();
+
+void zigbee_switch_set_display_status_cb(display_status_cb_t cb);
+void zigbee_switch_remove_display_status_cb(display_status_cb_t cb);

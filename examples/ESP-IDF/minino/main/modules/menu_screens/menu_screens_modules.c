@@ -15,6 +15,8 @@
 #include "openthread.h"
 #include "radio_selector.h"
 
+#include "zigbee_screens_module.h"
+
 #define MAX_MENU_ITEMS_PER_SCREEN 3
 #define TIME_ZONE                 (-6)    // Beijing Time
 #define YEAR_BASE                 (2000)  // date in GPS starts from 2000
@@ -611,6 +613,7 @@ void menu_screens_enter_submenu() {
       break;
     case MENU_ZIGBEE_SWITCH:
       radio_selector_disable_thread();
+      zigbee_switch_set_display_status_cb(zigbee_screens_module_display_status);
       zigbee_switch_init();
       break;
     case MENU_ZIGBEE_SNIFFER:

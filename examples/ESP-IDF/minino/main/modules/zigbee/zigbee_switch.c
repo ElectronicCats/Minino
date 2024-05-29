@@ -40,12 +40,11 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "ha/esp_zigbee_ha_standard.h"
+#include "string.h"
+
 #include "keyboard_module.h"
-#include "menu_screens_modules.h"
 #include "oled_screen.h"
 #include "preferences.h"
-#include "screens_modules.h"
-#include "string.h"
 #include "zigbee_screens_module.h"
 
 typedef struct light_bulb_device_params_s {
@@ -76,6 +75,8 @@ TaskHandle_t network_failed_task_handle = NULL;
 TaskHandle_t wait_for_devices_task_handle = NULL;
 TaskHandle_t switch_state_machine_task_handle = NULL;
 TaskHandle_t network_open_task_handle = NULL;
+
+display_status_cb_t zigbee_switch_display_status_cb = NULL;
 
 static const char* TAG = "ESP_ZB_ON_OFF_SWITCH";
 
@@ -262,7 +263,7 @@ void network_failed_task(void* pvParameters) {
       // Wait for 2 seconds to check if the network creation failed
       vTaskDelay(2000 / portTICK_PERIOD_MS);
       if (switch_state == SWITCH_NETWORK_FAILED) {
-        zigbee_screens_module_creating_network_failed();
+        zigbee_switch_display_status_cb(CREATING_NETWORK_FAILED);
         vTaskDelete(NULL);
       }
     }
@@ -278,13 +279,11 @@ void network_failed_task(void* pvParameters) {
  * @return void
  */
 void wait_for_devices_task(void* pvParameters) {
-  uint8_t dots = 0;
   while (true) {
     if (switch_state != SWITCH_WAIT_FOR_DEVICES) {
       continue;
     }
-    dots = dots > 3 ? 0 : dots + 1;
-    zigbee_screens_module_waiting_for_devices(dots);
+    zigbee_switch_display_status_cb(WAITING_FOR_DEVICES);
     vTaskDelay(100 / portTICK_PERIOD_MS);
   }
 }
@@ -303,18 +302,16 @@ void switch_state_machine_task(void* pvParameters) {
 
       switch (switch_state) {
         case SWITCH_CREATE_NETWORK:
-          zigbee_screens_module_creating_network();
+          zigbee_switch_display_status_cb(CREATING_NETWORK);
           break;
         case SWITCH_WAIT_FOR_DEVICES:
           oled_screen_clear();
           break;
         case SWITCH_NO_DEVICES:
-          oled_screen_clear();
-          vTaskDelay(100 / portTICK_PERIOD_MS);
-          zigbee_screens_module_no_devices_found();
+          zigbee_switch_display_status_cb(NO_DEVICES_FOUND);
           break;
         case SWITCH_LIGHT_FOUND:
-          zigbee_screens_module_toggle_released();
+          zigbee_switch_display_status_cb(LIGHT_RELASED);
           break;
         default:
           break;
@@ -348,12 +345,12 @@ void switch_keyboard_cb(button_event_t button_pressed) {
       switch (button_event) {
         case BUTTON_PRESS_DOWN:
           if (switch_state == SWITCH_LIGHT_FOUND) {
-            zigbee_screens_module_toogle_pressed();
+            zigbee_switch_display_status_cb(LIGHT_PRESSED);
           }
           break;
         case BUTTON_PRESS_UP:
           if (switch_state == SWITCH_LIGHT_FOUND) {
-            zigbee_screens_module_toggle_released();
+            zigbee_switch_display_status_cb(LIGHT_RELASED);
             zigbee_switch_toggle();
           }
           break;
@@ -395,7 +392,14 @@ void zigbee_switch_init() {
 void zigbee_switch_deinit() {
   switch_state = SWITCH_EXIT;
   vTaskDelay(50 / portTICK_PERIOD_MS);
-  zigbee_screens_module_closing_network();
+  zigbee_switch_display_status_cb(CLOSING_NETWORK);
   preferences_put_bool("zigbee_deinit", true);
   esp_zb_factory_reset();
+}
+
+void zigbee_switch_set_display_status_cb(display_status_cb_t cb) {
+  zigbee_switch_display_status_cb = cb;
+}
+void zigbee_switch_remove_display_status_cb(display_status_cb_t cb) {
+  zigbee_switch_display_status_cb = NULL;
 }
