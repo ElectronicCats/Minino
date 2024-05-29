@@ -73,6 +73,15 @@ void menu_screens_set_app_state(bool in_app, app_handler_t app_handler);
 screen_module_menu_t menu_screens_get_current_menu();
 
 /**
+ * @brief Get the current menu length
+ *
+ * @param char* menu[] The menu
+ *
+ * @return uint32_t
+ */
+uint32_t menu_screens_get_menu_length(char* menu[]);
+
+/**
  * @brief Exit the submenu
  *
  * @return void
@@ -100,10 +109,36 @@ void menu_screens_ingrement_selected_item();
  */
 void menu_screens_decrement_selected_item();
 
+/**
+ * @brief Display `In development` banner
+ *
+ * @return void
+ */
+void menu_screens_display_in_development_banner();
+
+/**
+ * @brief Display `Loading...` banner
+ *
+ * @return void
+ */
+void menu_screens_display_loading_banner();
+
+/**
+ * @brief Update the items array
+ *
+ * Set [x] to the selected option
+ * Set [ ] to the other options
+ *
+ * @param char* options[] The options
+ * @param uint8_t selected_option The selected option
+ *
+ * @return void
+ */
+void menu_screens_update_options(char* options[], uint8_t selected_option);
+
 // TODO: Move to separate files
 void display_bluetooth_scanner(bluetooth_scanner_record_t record);
 void display_thread_broadcast();
-void display_in_development_banner();
 void display_gps_init();
 void display_gps_deinit();
 

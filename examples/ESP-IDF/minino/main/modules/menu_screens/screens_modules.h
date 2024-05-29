@@ -2,8 +2,34 @@
 
 #include <stddef.h>
 
-#define SCROLLING_TEXT "scrollable"
+/**
+ * @brief Scrolling text flag
+ *
+ * Used to identify if the text is scrollable
+ *
+ * Add this flag to the text to make it scrollable
+ */
+#define VERTICAL_SCROLL_TEXT "vertical_scroll_text"
 
+/**
+ * @brief Configuration menu items
+ *
+ * Used to identify the configuration menu items
+ *
+ * Add this flag to the menu item to make it a configuration item
+ */
+#define CONFIGURATION_MENU_ITEMS "configuration"
+
+#define QUESTION_MENU_ITEMS "question"
+
+/**
+ * @brief Enum of menus
+ *
+ * Used to navigate through the different menus
+ *
+ * Modify this menu also requires to modify the `menu_list`, `next_menu_table`,
+ * `prev_menu_table` and `menu_items` arrays
+ */
 typedef enum {
   MENU_MAIN = 0,
   MENU_APPLICATIONS,
@@ -20,8 +46,14 @@ typedef enum {
   MENU_WIFI_ANALIZER,
   MENU_WIFI_DEAUTH,
   /* WiFi analizer items */
-  MENU_WIFI_ANALIZER_START,
+  MENU_WIFI_ANALIZER_RUN,
   MENU_WIFI_ANALIZER_SETTINGS,
+  /* WiFi analizer start items */
+  MENU_WIFI_ANALIZER_ASK_SUMMARY,
+  MENU_WIFI_ANALIZER_SUMMARY,
+  /* WiFi analizer settings */
+  MENU_WIFI_ANALIZER_CHANNEL,
+  MENU_WIFI_ANALIZER_DESTINATION,
   /* Bluetooth applications */
   MENU_BLUETOOTH_AIRTAGS_SCAN,
   MENU_BLUETOOTH_TRAKERS_SCAN,
@@ -50,38 +82,61 @@ typedef enum {
   MENU_COUNT,
 } screen_module_menu_t;
 
-static char* menus_list[MENU_COUNT] = {
-    "MENU_MAIN", "MENU_APPLICATIONS", "MENU_SETTINGS", "MENU_ABOUT",
-    /* Applications */
-    "MENU_WIFI_APPS", "MENU_BLUETOOTH_APPS", "MENU_ZIGBEE_APPS",
-    "MENU_THREAD_APPS", "MENU_MATTER_APPS", "MENU_GPS",
-    /* WiFi applications */
-    "MENU_WIFI_ANALIZER", "MENU_WIFI_DEAUTH",
-    /* WiFi analizer items */
-    "MENU_WIFI_ANALIZER_START", "MENU_WIFI_ANALIZER_SETTINGS",
-    /* Bluetooth applications */
-    "MENU_BLUETOOTH_AIRTAGS_SCAN", "MENU_BLUETOOTH_TRAKERS_SCAN",
+/**
+ * @brief List of menus
+ *
+ * Used to get the menu name from the enum value
+ * following the order of the `screen_module_menu_t` enum
+ *
+ * Usage: menu_list[screen_module_menu_t]
+ */
+const char* menu_list[] = {
+    "MENU_MAIN",
+    "MENU_APPLICATIONS",
+    "MENU_SETTINGS",
+    "MENU_ABOUT",
+    "MENU_WIFI_APPS",
+    "MENU_BLUETOOTH_APPS",
+    "MENU_ZIGBEE_APPS",
+    "MENU_THREAD_APPS",
+    "MENU_MATTER_APPS",
+    "MENU_GPS",
+    "MENU_WIFI_ANALIZER",
+    "MENU_WIFI_DEAUTH",
+    "MENU_WIFI_ANALIZER_RUN",
+    "MENU_WIFI_ANALIZER_SETTINGS",
+    "MENU_WIFI_ANALIZER_ASK_SUMMARY",
+    "MENU_WIFI_ANALIZER_SUMMARY",
+    "MENU_WIFI_ANALIZER_CHANNEL",
+    "MENU_WIFI_ANALIZER_DESTINATION",
+    "MENU_BLUETOOTH_AIRTAGS_SCAN",
+    "MENU_BLUETOOTH_TRAKERS_SCAN",
     "MENU_BLUETOOTH_SPAM",
-    /* Zigbee applications */
-    "MENU_ZIGBEE_SPOOFING", "MENU_ZIGBEE_SWITCH", "MENU_ZIGBEE_LIGHT",
-    "MENU_ZIGBEE_SNIFFER"
-    /* Thread applications */
+    "MENU_ZIGBEE_SPOOFING",
+    "MENU_ZIGBEE_SWITCH",
+    "MENU_ZIGBEE_LIGHT",
+    "MENU_ZIGBEE_SNIFFER",
     "MENU_THREAD_BROADCAST",
-    /* GPS applications */
-    "MENU_GPS_DATE_TIME", "MENU_GPS_LOCATION",
-    /* About items */
-    "MENU_ABOUT_VERSION", "MENU_ABOUT_LICENSE", "MENU_ABOUT_CREDITS",
+    "MENU_GPS_DATE_TIME",
+    "MENU_GPS_LOCATION",
+    "MENU_ABOUT_VERSION",
+    "MENU_ABOUT_LICENSE",
+    "MENU_ABOUT_CREDITS",
     "MENU_ABOUT_LEGAL",
-    /* Settings items */
-    "MENU_SETTINGS_DISPLAY", "MENU_SETTINGS_SOUND", "MENU_SETTINGS_SYSTEM",
-    /* About submenus */
+    "MENU_SETTINGS_DISPLAY",
+    "MENU_SETTINGS_SOUND",
+    "MENU_SETTINGS_SYSTEM",
 };
 
 /**
- * @brief List of menus [current_menu][selected_item]
+ * @brief List of menus
+ *
  * Used to get the next menu to display when the user selects an option
+ * following the order of the `screen_module_menu_t` enum
+ *
+ * Usage: next_menu_table[screen_module_menu_t][selected_item]
  */
-static int menu_next_menu_table[MENU_COUNT][6] = {
+const int next_menu_table[][6] = {
     // MENU_MAIN
     {MENU_APPLICATIONS, MENU_SETTINGS, MENU_ABOUT},
     // MENU_APPLICATIONS
@@ -102,116 +157,148 @@ static int menu_next_menu_table[MENU_COUNT][6] = {
     // MENU_THREAD_APPS
     {MENU_THREAD_BROADCAST},
     // MENU_MATTER_APPS
-    {},
+    {MENU_MATTER_APPS},
     // MENU_GPS
     {MENU_GPS_DATE_TIME, MENU_GPS_LOCATION},
     // MENU_WIFI_ANALIZER
-    {MENU_WIFI_ANALIZER_START, MENU_WIFI_ANALIZER_SETTINGS},
+    {MENU_WIFI_ANALIZER_RUN, MENU_WIFI_ANALIZER_SETTINGS},
     // MENU_WIFI_DEAUTH
-    {},
-    // MENU_WIFI_ANALIZER_START
-    {},
+    {MENU_WIFI_DEAUTH},
+    // MENU_WIFI_ANALIZER_RUN
+    {MENU_WIFI_ANALIZER_RUN},
     // MENU_WIFI_ANALIZER_SETTINGS
-    {},
+    {MENU_WIFI_ANALIZER_CHANNEL, MENU_WIFI_ANALIZER_DESTINATION},
+    // MENU_WIFI_ANALIZER_ASK_SUMMARY [0] -> Yes, [1] -> No
+    {MENU_WIFI_ANALIZER_SUMMARY, MENU_WIFI_ANALIZER},
+    // MENU_WIFI_ANALIZER_SUMMARY
+    {MENU_WIFI_ANALIZER_SUMMARY},
+    // MENU_WIFI_ANALIZER_CHANNEL
+    {MENU_WIFI_ANALIZER_CHANNEL},
+    // MENU_WIFI_ANALIZER_DESTINATION
+    {MENU_WIFI_ANALIZER_DESTINATION},
     // MENU_BLUETOOTH_AIRTAGS_SCAN
-    {},
-    // MENU_BLUETOOTH_TRAKERSS_SCAN
-    {},
+    {MENU_BLUETOOTH_AIRTAGS_SCAN},
+    // MENU_BLUETOOTH_TRAKERS_SCAN
+    {MENU_BLUETOOTH_TRAKERS_SCAN},
     // MENU_BLUETOOTH_SPAM
-    {},
+    {MENU_BLUETOOTH_SPAM},
     // MENU_ZIGBEE_SPOOFING
     {MENU_ZIGBEE_SWITCH, MENU_ZIGBEE_LIGHT},
     // MENU_ZIGBEE_SWITCH
-    {},
+    {MENU_ZIGBEE_SWITCH},
     // MENU_ZIGBEE_LIGHT
-    {},
+    {MENU_ZIGBEE_LIGHT},
+    // MENU_ZIGBEE_SNIFFER
+    {MENU_ZIGBEE_SNIFFER},
     // MENU_THREAD_BROADCAST
-    {},
+    {MENU_THREAD_BROADCAST},
     // MENU_GPS_DATE_TIME
-    {},
+    {MENU_GPS_DATE_TIME},
     // MENU_GPS_LOCATION
-    {},
+    {MENU_GPS_LOCATION},
     // MENU_ABOUT_VERSION
-    {},
+    {MENU_ABOUT_VERSION},
     // MENU_ABOUT_LICENSE
-    {},
+    {MENU_ABOUT_LICENSE},
     // MENU_ABOUT_CREDITS
-    {},
+    {MENU_ABOUT_CREDITS},
     // MENU_ABOUT_LEGAL
-    {},
+    {MENU_ABOUT_LEGAL},
     // MENU_SETTINGS_DISPLAY
-    {},
+    {MENU_SETTINGS_DISPLAY},
     // MENU_SETTINGS_SOUND
-    {},
+    {MENU_SETTINGS_SOUND},
     // MENU_SETTINGS_SYSTEM
-    {},
+    {MENU_SETTINGS_SYSTEM},
 };
 
 /**
- * @brief List of menus [current_menu]
+ * @brief List of menus
+ *
  * Used to get the previous menu to display when the user returns to the
- * previous menu in `menu_screens_exit_submenu`
+ * previous menu in `menu_screens_exit_submenu`. Add the previous menu
+ * following the order of the `screen_module_menu_t` enum
+ *
+ * Usage: prev_menu_table[screen_module_menu_t]
  */
-static int prev_menu_table[MENU_COUNT] = {
-    MENU_MAIN,             // MENU_MAIN
-    MENU_MAIN,             // MENU_APPLICATIONS
-    MENU_MAIN,             // MENU_SETTINGS
-    MENU_MAIN,             // MENU_ABOUT
-    MENU_APPLICATIONS,     // MENU_WIFI_APPS
-    MENU_APPLICATIONS,     // MENU_BLUETOOTH_APPS
-    MENU_APPLICATIONS,     // MENU_ZIGBEE_APPS
-    MENU_APPLICATIONS,     // MENU_THREAD_APPS
-    MENU_APPLICATIONS,     // MENU_MATTER_APPS
-    MENU_APPLICATIONS,     // MENU_GPS
-    MENU_WIFI_APPS,        // MENU_WIFI_ANALIZER
-    MENU_WIFI_APPS,        // MENU_WIFI_DEAUTH
-    MENU_WIFI_ANALIZER,    // MENU_WIFI_ANALIZER_START
-    MENU_WIFI_ANALIZER,    // MENU_WIFI_ANALIZER_SETTINGS
-    MENU_BLUETOOTH_APPS,   // MENU_BLUETOOTH_AIRTAGS_SCAN
-    MENU_BLUETOOTH_APPS,   // MENU_BLUETOOTH_TRAKERS_SCAN
-    MENU_BLUETOOTH_APPS,   // MENU_BLUETOOTH_SPAM
-    MENU_ZIGBEE_APPS,      // MENU_ZIGBEE_SPOOFING
-    MENU_ZIGBEE_SPOOFING,  // MENU_ZIGBEE_SWITCH
-    MENU_ZIGBEE_SPOOFING,  // MENU_ZIGBEE_LIGHT
-    MENU_ZIGBEE_APPS,      // MENU_ZIGBEE_SPOOFING
-    MENU_THREAD_APPS,      // MENU_THREAD_BROADCAST
-    MENU_GPS,              // MENU_GPS_DATE_TIME
-    MENU_GPS,              // MENU_GPS_LOCATION
-    MENU_ABOUT,            // MENU_ABOUT_VERSION
-    MENU_ABOUT,            // MENU_ABOUT_LICENSE
-    MENU_ABOUT,            // MENU_ABOUT_CREDITS
-    MENU_ABOUT,            // MENU_ABOUT_LEGAL
-    MENU_SETTINGS,         // MENU_SETTINGS_DISPLAY
-    MENU_SETTINGS,         // MENU_SETTINGS_SOUND
-    MENU_SETTINGS,         // MENU_SETTINGS_SYSTEM
+const int prev_menu_table[] = {
+    MENU_MAIN,                       // MENU_MAIN
+    MENU_MAIN,                       // MENU_APPLICATIONS
+    MENU_MAIN,                       // MENU_SETTINGS
+    MENU_MAIN,                       // MENU_ABOUT
+    MENU_APPLICATIONS,               // MENU_WIFI_APPS
+    MENU_APPLICATIONS,               // MENU_BLUETOOTH_APPS
+    MENU_APPLICATIONS,               // MENU_ZIGBEE_APPS
+    MENU_APPLICATIONS,               // MENU_THREAD_APPS
+    MENU_APPLICATIONS,               // MENU_MATTER_APPS
+    MENU_APPLICATIONS,               // MENU_GPS
+    MENU_WIFI_APPS,                  // MENU_WIFI_ANALIZER
+    MENU_WIFI_APPS,                  // MENU_WIFI_DEAUTH
+    MENU_WIFI_ANALIZER_ASK_SUMMARY,  // MENU_WIFI_ANALIZER_RUN
+    MENU_WIFI_ANALIZER,              // MENU_WIFI_ANALIZER_SETTINGS
+    MENU_WIFI_ANALIZER_RUN,          // MENU_WIFI_ANALIZER_ASK_SUMMARY
+    MENU_WIFI_ANALIZER,              // MENU_WIFI_ANALIZER_SUMMARY
+    MENU_WIFI_ANALIZER_SETTINGS,     // MENU_WIFI_ANALIZER_CHANNEL
+    MENU_WIFI_ANALIZER_SETTINGS,     // MENU_WIFI_ANALIZER_DESTINATION
+    MENU_BLUETOOTH_APPS,             // MENU_BLUETOOTH_AIRTAGS_SCAN
+    MENU_BLUETOOTH_APPS,             // MENU_BLUETOOTH_TRAKERS_SCAN
+    MENU_BLUETOOTH_APPS,             // MENU_BLUETOOTH_SPAM
+    MENU_ZIGBEE_APPS,                // MENU_ZIGBEE_SPOOFING
+    MENU_ZIGBEE_SPOOFING,            // MENU_ZIGBEE_SWITCH
+    MENU_ZIGBEE_SPOOFING,            // MENU_ZIGBEE_LIGHT
+    MENU_ZIGBEE_APPS,                // MENU_ZIGBEE_SNIFFER
+    MENU_THREAD_APPS,                // MENU_THREAD_BROADCAST
+    MENU_GPS,                        // MENU_GPS_DATE_TIME
+    MENU_GPS,                        // MENU_GPS_LOCATION
+    MENU_ABOUT,                      // MENU_ABOUT_VERSION
+    MENU_ABOUT,                      // MENU_ABOUT_LICENSE
+    MENU_ABOUT,                      // MENU_ABOUT_CREDITS
+    MENU_ABOUT,                      // MENU_ABOUT_LEGAL
+    MENU_SETTINGS,                   // MENU_SETTINGS_DISPLAY
+    MENU_SETTINGS,                   // MENU_SETTINGS_SOUND
+    MENU_SETTINGS,                   // MENU_SETTINGS_SYSTEM
 };
 
-static int selected_item_history[MENU_COUNT] = {0};
+/**
+ * @brief History of selected items in each menu
+ *
+ * Used to keep track of the selected item in each menu
+ *
+ * Usage: selected_item_history[screen_module_menu_t]
+ */
+int selected_item_history[MENU_COUNT] = {0};
 
-static char* main_items[] = {
+char* yes_no_items[] = {
+    QUESTION_MENU_ITEMS,
+    "Yes",
+    "No",
+    NULL,
+};
+
+char* main_items[] = {
     "Applications",
     "Settings",
     "About",
     NULL,
 };
 
-static char* applications_items[] = {
+char* applications_items[] = {
     "WiFi", "Bluetooth", "Zigbee", "Thread", "Matter", "GPS", NULL,
 };
 
-static char* settings_items[] = {
+char* settings_items[] = {
     "Display",
     "Sound",
     "System",
     NULL,
 };
 
-static char* about_items[] = {
+char* about_items[] = {
     "Version", "License", "Credits", "Legal", NULL,
 };
 
-static char* version_text[] = {
-    SCROLLING_TEXT,
+char* version_text[] = {
+    VERTICAL_SCROLL_TEXT,
     /***************/
     "",
     "",
@@ -221,8 +308,8 @@ static char* version_text[] = {
     NULL,
 };
 
-static char* license_text[] = {
-    SCROLLING_TEXT,
+char* license_text[] = {
+    VERTICAL_SCROLL_TEXT,
     /***************/
     "",
     "",
@@ -231,8 +318,8 @@ static char* license_text[] = {
     NULL,
 };
 
-static char* credits_text[] = {
-    SCROLLING_TEXT,
+char* credits_text[] = {
+    VERTICAL_SCROLL_TEXT,
     /***************/
     "Developed by",
     "Electronic Cats",
@@ -243,8 +330,8 @@ static char* credits_text[] = {
     NULL,
 };
 
-static char* legal_text[] = {
-    SCROLLING_TEXT,
+char* legal_text[] = {
+    VERTICAL_SCROLL_TEXT,
     /***************/
     "The user",
     "assumes all",
@@ -264,69 +351,113 @@ static char* legal_text[] = {
     NULL,
 };
 
-static char* wifi_items[] = {
+char* wifi_items[] = {
     "Analizer",
     "Deauth",
     NULL,
 };
 
-static char* wifi_analizer_items[] = {
+const char* wifi_analizer_items[] = {
     "Start",
     "Settings",
     NULL,
 };
 
-static char* wifi_sniffer_settings_items[] = {
-    "Channel",
-    "Filter",
+char* wifi_analizer_summary[120] = {
+    VERTICAL_SCROLL_TEXT,
+    /***************/
+    "Summary",
     NULL,
 };
 
-static char* bluetooth_items[] = {
+char* wifi_analizer_settings_items[] = {
+    "Channel",
+    "Destination",
+    NULL,
+};
+
+char* wifi_analizer_channel_items[] = {
+    CONFIGURATION_MENU_ITEMS,
+    "[ ] 1",
+    "[ ] 2",
+    "[ ] 3",
+    "[ ] 4",
+    "[ ] 5",
+    "[ ] 6",
+    "[ ] 7",
+    "[ ] 8",
+    "[ ] 9",
+    "[ ] 10",
+    "[ ] 11",
+    "[ ] 12",
+    "[ ] 13",
+    "[ ] 14",
+    NULL,
+};
+
+char* wifi_analizer_destination_items[] = {
+    CONFIGURATION_MENU_ITEMS,
+    "[ ] SD Card",
+    "[ ] Internal",
+    NULL,
+};
+
+char* bluetooth_items[] = {
     "Airtags scan",
     "Trakers scan",
     "Spam",
     NULL,
 };
 
-static char* zigbee_items[] = {
+char* zigbee_items[] = {
     "Spoofing",
     "Sniffer",
     NULL,
 };
 
-static char* zigbee_spoofing_items[] = {
+char* zigbee_spoofing_items[] = {
     "Switch",
     "Light",
     NULL,
 };
 
-static char* thread_items[] = {
+char* thread_items[] = {
     NULL,
 };
 
-static char* gps_items[] = {
+char* gps_items[] = {
     "Date & Time",
     "Location",
     NULL,
 };
 
-static char* empty_items[] = {
+char* empty_items[] = {
     NULL,
 };
 
-// List of menus, it must be in the same order as the enum screen_module_menu_t
-static char** menu_items[MENU_COUNT] = {
+/**
+ * @brief List of menu items
+ *
+ * Used to get the menu items from the menu enum value
+ * following the order of the `screen_module_menu_t` enum
+ *
+ * Usage: menu_items[screen_module_menu_t]
+ */
+char** menu_items[] = {
     main_items, applications_items, settings_items, about_items,
     /* Applications */
     wifi_items, bluetooth_items, zigbee_items, thread_items,
     empty_items,  // Matter
     gps_items,
     /* WiFi applications */
-    wifi_analizer_items,
-    empty_items,  // WiFi Deauth
-    empty_items,  // WiFi Analizer Start
-    empty_items,  // WiFi Analizer Settings
+    wifi_analizer_items,              // WiFi Analizer
+    empty_items,                      // WiFi Deauth
+    empty_items,                      // WiFi Analizer Start
+    wifi_analizer_settings_items,     // WiFi Analizer Settings
+    yes_no_items,                     // MENU_WIFI_ANALIZER_ASK_SUMMARY
+    wifi_analizer_summary,            // WiFi Analizer Summary
+    wifi_analizer_channel_items,      // WiFi Analizer Channel
+    wifi_analizer_destination_items,  // WiFi Analizer Destination
     /* Bluetooth applications */
     empty_items,  // Bluetooth Airtags scan
     empty_items,  // Bluetooth Trakers scan
