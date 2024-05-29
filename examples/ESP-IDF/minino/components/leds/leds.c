@@ -4,8 +4,8 @@
 
 #define LEFT_LED_IO       GPIO_NUM_3
 #define RIGHT_LED_IO      GPIO_NUM_11
-#define LEFT_LED_CHANNEL  LEDC_CHANNEL_1
-#define RIGHT_LED_CHANNEL LEDC_CHANNEL_2
+#define LEFT_LED_CHANNEL  LEDC_CHANNEL_0
+#define RIGHT_LED_CHANNEL LEDC_CHANNEL_1
 #define LEDC_TIMER        LEDC_TIMER_0
 
 led_t left_led, right_led;

@@ -124,7 +124,7 @@ void menu_screens_begin() {
   // Show logo
   oled_screen_clear();
   show_logo();
-  display_gps_init();
+  // display_gps_init();
 }
 
 /**
