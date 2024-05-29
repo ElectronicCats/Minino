@@ -40,7 +40,7 @@ void oled_screen_display_show();
  *
  * @return void
  */
-void oled_screen_display_text(const char* text, int x, int page, bool invert);
+void oled_screen_display_text(char* text, int x, int page, bool invert);
 
 /**
  * @brief Display the text on the center of the OLED display

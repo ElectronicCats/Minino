@@ -49,12 +49,25 @@ void oled_screen_display_show() {
   oled_driver_show_buffer(&dev);
 }
 
-void oled_screen_display_text(const char* text, int x, int page, bool invert) {
+void oled_screen_display_text(char* text, int x, int page, bool invert) {
+  if (text == NULL) {
+    ESP_LOGE(TAG, "Text is NULL");
+    return;
+  }
   oled_driver_display_text(&dev, page, text, x, invert);
 }
 
 void oled_screen_display_text_center(char* text, int page, bool invert) {
+  ESP_LOGI(TAG, "Display text in the center");
+
+  if (text == NULL) {
+    ESP_LOGE(TAG, "Text is NULL");
+    return;
+  }
+
+  ESP_LOGI(TAG, "Text: %s", text);
   int text_length = strlen(text);
+  ESP_LOGI(TAG, "Text length: %d", text_length);
   if (text_length > MAX_LINE_CHAR) {
     ESP_LOGE(TAG, "Text too long to center");
     oled_screen_display_text(text, 0, page, invert);
@@ -64,6 +77,9 @@ void oled_screen_display_text_center(char* text, int page, bool invert) {
   uint8_t middle_x_coordinate = ((128 - text_length) / 2);
   uint8_t half_text_length_px = (text_length * 8 / 2);
   uint8_t x_offset = middle_x_coordinate - half_text_length_px;
+  ESP_LOGW(TAG, "Middle x coordinate: %d", middle_x_coordinate);
+  ESP_LOGW(TAG, "Half text length: %d", half_text_length_px);
+  ESP_LOGW(TAG, "X offset: %d", x_offset);
   oled_screen_display_text(text, x_offset, page, invert);
 }
 
