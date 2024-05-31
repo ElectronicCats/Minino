@@ -3,7 +3,6 @@
 #include "buzzer.h"
 #include "cmd_sniffer.h"
 #include "keyboard_module.h"
-#include "oled_driver.h"
 #include "screens_modules.h"
 
 typedef void (*app_handler_t)(button_event_t button_pressed);

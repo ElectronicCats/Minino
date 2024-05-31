@@ -79,6 +79,16 @@ void zigbee_screens_module_display_status(uint8_t status) {
 }
 
 ///////////////////////////////////////////////////////////////////////////
+void zigbee_screens_display_device_ad() {
+  oled_screen_clear(OLED_DISPLAY_NORMAL);
+  int index_page = 1;
+  oled_screen_display_text_splited("To view the data you need", &index_page,
+                                   OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_splited("connect the board and open", &index_page,
+                                   OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_splited("a serial terminal", &index_page,
+                                   OLED_DISPLAY_NORMAL);
+}
 
 void zigbee_screens_display_scanning_animation() {
   oled_screen_clear(OLED_DISPLAY_NORMAL);
