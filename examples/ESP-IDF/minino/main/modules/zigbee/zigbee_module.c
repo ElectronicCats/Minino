@@ -4,7 +4,10 @@
 #include "led_events.h"
 #include "menu_screens_modules.h"
 #include "oled_screen.h"
+#include "preferences.h"
+#include "radio_selector.h"
 #include "zigbee_screens_module.h"
+#include "zigbee_switch.h"
 
 app_screen_state_information_t app_screen_state_information = {
     .in_app = false,
@@ -29,7 +32,13 @@ void zigbee_module_begin(int app_selected) {
 
 void zigbee_module_app_selector() {
   switch (app_screen_state_information.app_selected) {
+    case MENU_ZIGBEE_SWITCH:
+      radio_selector_set_zigbee_switch();
+      zigbee_switch_set_display_status_cb(zigbee_screens_module_display_status);
+      zigbee_switch_init();
+      break;
     case MENU_ZIGBEE_SNIFFER:
+      radio_selector_set_zigbee_sniffer();
       zigbee_screens_display_device_ad();
       vTaskDelay(8000 / portTICK_PERIOD_MS);
       xTaskCreate(zigbee_screens_display_scanning_animation,
@@ -54,8 +63,38 @@ void zigbee_module_state_machine(button_event_t button_pressed) {
   ESP_LOGI(TAG_ZIGBEE_MODULE, "Zigbee engine state machine from team: %d %d",
            button_name, button_event);
   switch (app_screen_state_information.app_selected) {
+    case MENU_ZIGBEE_SWITCH:
+      ESP_LOGI(TAG_ZIGBEE_MODULE, "Zigbee Switch Entered");
+      switch (button_name) {
+        case BUTTON_RIGHT:
+          switch (button_event) {
+            case BUTTON_PRESS_DOWN:
+              if (zigbee_switch_is_light_connected()) {
+                zigbee_screens_module_toogle_pressed();
+              }
+              break;
+            case BUTTON_PRESS_UP:
+              if (zigbee_switch_is_light_connected()) {
+                zigbee_screens_module_toggle_released();
+                zigbee_switch_toggle();
+              }
+              break;
+          }
+          break;
+        case BUTTON_LEFT:
+          switch (button_event) {
+            case BUTTON_PRESS_DOWN:
+              preferences_put_bool("zigbee_deinit", true);
+              zigbee_switch_deinit();
+              break;
+          }
+          break;
+        default:
+          break;
+      }
+      break;
     case MENU_ZIGBEE_SNIFFER:
-      ESP_LOGI(TAG_ZIGBEE_MODULE, "Bluetooth scanner entered");
+      ESP_LOGI(TAG_ZIGBEE_MODULE, "Zigbee Sniffer Entered");
       switch (button_name) {
         case BUTTON_LEFT:
           if (button_event == BUTTON_LONG_PRESS_UP) {

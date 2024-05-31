@@ -612,12 +612,9 @@ void menu_screens_enter_submenu() {
       ble_module_begin(MENU_BLUETOOTH_SPAM);
       break;
     case MENU_ZIGBEE_SWITCH:
-      radio_selector_set_zigbee_switch();
-      zigbee_switch_set_display_status_cb(zigbee_screens_module_display_status);
-      zigbee_switch_init();
+      zigbee_module_begin(MENU_ZIGBEE_SWITCH);
       break;
     case MENU_ZIGBEE_SNIFFER:
-      radio_selector_set_zigbee_sniffer();
       zigbee_module_begin(MENU_ZIGBEE_SNIFFER);
       break;
     case MENU_THREAD_BROADCAST:
