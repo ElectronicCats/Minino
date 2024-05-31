@@ -501,6 +501,9 @@ esp_err_t esp_ieee802154_receive_handle_done(const uint8_t* frame);
 extern void esp_ieee802154_receive_done(
     uint8_t* frame,
     esp_ieee802154_frame_info_t* frame_info);
+extern void sniffer_esp_ieee802154_receive_done(
+    uint8_t* frame,
+    esp_ieee802154_frame_info_t* frame_info);
 
 extern void ot_esp_ieee802154_receive_done(
     uint8_t* frame,

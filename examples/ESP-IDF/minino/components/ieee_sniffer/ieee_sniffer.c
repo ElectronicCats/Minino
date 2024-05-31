@@ -22,8 +22,9 @@ static void debug_handler_task(void* pvParameters);
 static char addressing_mode[4][15] = {"None", "Reserved", "Short/16-bit",
                                       "Long/64-bit"};
 
-void esp_ieee802154_receive_done(uint8_t* frame,
-                                 esp_ieee802154_frame_info_t* frame_info) {
+void sniffer_esp_ieee802154_receive_done(
+    uint8_t* frame,
+    esp_ieee802154_frame_info_t* frame_info) {
   // ESP_EARLY_LOGI(TAG_IEEE_SNIFFER, "rx OK, received %d bytes", frame[0]);
   BaseType_t task;
   xQueueSendToBackFromISR(packet_rx_queue, frame, &task);

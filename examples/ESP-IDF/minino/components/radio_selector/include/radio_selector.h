@@ -1,11 +1,12 @@
 #pragma once
-#include <stdbool.h>
+#include <stdint.h>
 typedef enum {
-  RADIO_SELECT_THREAD,
   RADIO_SELECT_ZIGBEE_SWITCH,
-  RADIO_SELECT_ZIGBEE_SNIFFER
+  RADIO_SELECT_ZIGBEE_SNIFFER,
+  RADIO_SELECT_THREAD,
 } radio_select_options_t;
 
-void radio_selector_enable_thread();
-void radio_selector_disable_thread();
-bool radio_selector_is_thread_enabled();
+uint8_t radio_selector_get_selected_option();
+void radio_selector_set_zigbee_switch();
+void radio_selector_set_zigbee_sniffer();
+void radio_selector_set_thread();
