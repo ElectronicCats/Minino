@@ -3,7 +3,6 @@
 #include <unistd.h>
 
 #include "driver/uart.h"
-#include "esp_err.h"
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_netif.h"
@@ -17,20 +16,10 @@
 #include "freertos/task.h"
 #include "hal/uart_types.h"
 #include "nvs_flash.h"
-#include "openthread/dataset.h"
-#include "openthread/instance.h"
-#include "openthread/ip6.h"
-#include "openthread/logging.h"
-#include "openthread/message.h"
-#include "openthread/tasklet.h"
-#include "openthread/thread.h"
-#include "openthread/udp.h"
-#include "openthread_config.h"
 #include "sdkconfig.h"
 
-#include "oled_screen.h"
-#include "openthread.h"
-#include "preferences.h"
+#include "open_thread.h"
+#include "open_thread_config.h"
 
 #if CONFIG_OPENTHREAD_FTD
   #include "openthread/dataset_ftd.h"
@@ -47,9 +36,9 @@
 #define THREAD_NETWORK_MASTERKEY "00112233445566778899aabbccddeeff"
 #define THREAD_NETWORK_PSKC      "104810e2315100afd6bc9215a6bfac53"
 
-otUdpSocket mSocket;
 otIp6Address mAddr;
-TaskHandle_t sender_task;
+otOperationalDataset dataset;
+
 static esp_netif_t* init_openthread_netif(
     const esp_openthread_platform_config_t* config) {
   esp_netif_config_t cfg = ESP_NETIF_DEFAULT_OPENTHREAD();
@@ -95,15 +84,9 @@ static size_t hex_string_to_binary(const char* hex_string,
   return buf_size;
 }
 
-void openthread_factory_reset() {
-  preferences_put_bool("thread_deinit", true);
-  otInstanceFactoryReset(esp_openthread_get_instance());
-}
-
-esp_err_t set_dataset() {
+esp_err_t openthread_set_dataset(uint8_t channel, uint16_t panid) {
+  esp_openthread_lock_acquire(portMAX_DELAY);
   otInstance* instance = esp_openthread_get_instance();
-  printf("BUILDING DATSET\n");
-  otOperationalDataset dataset;
   size_t len = 0;
 #if CONFIG_OPENTHREAD_FTD
   otDatasetCreateNewNetwork(instance, &dataset);
@@ -117,9 +100,9 @@ esp_err_t set_dataset() {
   dataset.mComponents.mIsActiveTimestampPresent = true;
 
   // Channel, Pan ID, Network Name
-  dataset.mChannel = THREAD_CHANNEL;
+  dataset.mChannel = channel;
   dataset.mComponents.mIsChannelPresent = true;
-  dataset.mPanId = THREAD_PANID;
+  dataset.mPanId = panid;
   dataset.mComponents.mIsPanIdPresent = true;
   len = strlen(THREAD_NETWORK_NAME);
   assert(len <= OT_NETWORK_NAME_MAX_SIZE);
@@ -162,22 +145,10 @@ esp_err_t set_dataset() {
   if (otDatasetSetActive(instance, &dataset) != OT_ERROR_NONE)
     ESP_LOGE(TAG, "Failed to set OpenThread active dataset");
 
+  otIp6SetEnabled(instance, true);
+  otThreadSetEnabled(instance, true);
+  esp_openthread_lock_release();
   return ESP_OK;
-}
-
-esp_err_t thread_init(bool init) {
-  esp_err_t error;
-  otInstance* instance = esp_openthread_get_instance();
-
-  error = otIp6SetEnabled(instance, init);
-  error = otThreadSetEnabled(instance, init);
-
-  if (ERR)
-    ESP_LOGE("Thread Set Failed", "");
-  else
-    ESP_LOGI("Thread Set Success", "");
-
-  return error;
 }
 
 void print_otIp6Address(const otIp6Address* direccion) {
@@ -186,11 +157,43 @@ void print_otIp6Address(const otIp6Address* direccion) {
   printf("IP: %s\n", ip);
 }
 
+otIp6Address openthread_get_my_ipv6address() {
+  return mAddr;
+}
+
+void openthread_factory_reset() {
+  esp_openthread_lock_acquire(portMAX_DELAY);
+  otInstanceFactoryReset(esp_openthread_get_instance());
+}
+
+otError openthread_ipmaddr_subscribe(const char* address) {
+  esp_openthread_lock_acquire(portMAX_DELAY);
+  otInstance* instance = esp_openthread_get_instance();
+  otError error = OT_ERROR_NONE;
+  otIp6Address addr;
+  otIp6AddressFromString(address, &addr);
+  error = otIp6SubscribeMulticastAddress(instance, &addr);
+  esp_openthread_lock_release();
+  return error;
+}
+
+otError openthread_ipmaddr_unsubscribe(const char* address) {
+  esp_openthread_lock_acquire(portMAX_DELAY);
+  otInstance* instance = esp_openthread_get_instance();
+  otError error = OT_ERROR_NONE;
+  otIp6Address addr;
+  otIp6AddressFromString(address, &addr);
+  error = otIp6UnsubscribeMulticastAddress(instance, &addr);
+  esp_openthread_lock_release();
+  return error;
+}
+
 void print_data() {
+  esp_openthread_lock_acquire(portMAX_DELAY);
+  otInstance* instance = esp_openthread_get_instance();
   ESP_LOGI("INFO", "");
   otError error = OT_ERROR_NONE;
   otOperationalDatasetTlvs dataset;
-  otInstance* instance = esp_openthread_get_instance();
 
   const otNetifAddress* unicastAddrs = otIp6GetUnicastAddresses(instance);
   mAddr = unicastAddrs->mNext->mAddress;
@@ -204,119 +207,81 @@ void print_data() {
     printf("\n");
   } else
     ESP_LOGE("ERROR", "");
+  esp_openthread_lock_release();
 }
 
-void on_udp_recieve(void* aContext,
-                    otMessage* aMessage,
-                    const otMessageInfo* aMessageInfo) {
-  otError error = OT_ERROR_NONE;
-  printf("NUEVO MENSAJE\n");
-  oled_screen_clear();
-  oled_screen_display_text("New message...  ", 0, 0, OLED_DISPLAY_INVERT);
-  char buf[1500];
-  int length;
-  char ip[60];
-
-  ESP_LOGI(TAG, "%d bytes from ",
-           otMessageGetLength(aMessage) - otMessageGetOffset(aMessage));
-
-  char src_addr[OT_IP6_ADDRESS_STRING_SIZE];
-  otIp6AddressToString(&aMessageInfo->mPeerAddr, src_addr, sizeof(src_addr));
-  ESP_LOGI(TAG, "SRC: %s", src_addr);
-  oled_screen_display_text("SRC ADDRESS", 0, 4, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text(src_addr, 0, 5, OLED_DISPLAY_NORMAL);
-  otIp6AddressToString(&aMessageInfo->mSockAddr, src_addr, sizeof(src_addr));
-  ESP_LOGI(TAG, "DST: %s", src_addr);
-
-  ESP_LOGI(TAG, "PORT: %d", aMessageInfo->mPeerPort);
-  sprintf(ip, "PORT: %d", aMessageInfo->mPeerPort);
-  oled_screen_display_text(ip, 0, 2, OLED_DISPLAY_NORMAL);
-
-  length = otMessageRead(aMessage, otMessageGetOffset(aMessage), buf,
-                         sizeof(buf) - 1);
-  if (length >= 0) {
-    buf[length] = '\0';
-    printf("%s\n", buf);
-    oled_screen_display_text(buf, 20, 7, OLED_DISPLAY_NORMAL);
-  } else {
-    ESP_LOGE(TAG, "Error al leer el mensaje");
-    oled_screen_display_text("Error!!!", 25, 7, OLED_DISPLAY_NORMAL);
+otError openthread_udp_open(otUdpSocket* mSocket, otUdpReceive otUdp_cb) {
+  printf("udp open\n");
+  esp_openthread_lock_acquire(portMAX_DELAY);
+  otInstance* instance = esp_openthread_get_instance();
+  otError error;
+  if (otUdpIsOpen(instance, mSocket))
+    error = OT_ERROR_ALREADY;
+  else
+    error = otUdpOpen(instance, mSocket, otUdp_cb, NULL);
+  esp_openthread_lock_release();
+  if (ERR) {
+    printf("ERR");
   }
+  return error;
 }
 
-otError UDP_bind(uint16_t port) {
+otError openthread_udp_bind(otUdpSocket* mSocket, uint16_t port) {
+  printf("udp bind\n");
+  esp_openthread_lock_acquire(portMAX_DELAY);
+  otInstance* instance = esp_openthread_get_instance();
   otError error = OT_ERROR_NONE;
   otSockAddr sockaddr;
 
   memset(&sockaddr.mAddress, 0, sizeof(otIp6Address));
   sockaddr.mPort = port;
-  error = otUdpBind(esp_openthread_get_instance(), &mSocket, &sockaddr,
-                    OT_NETIF_THREAD);
-
-  return error;
-}
-
-otError UDP_open() {
-  ESP_LOGI(TAG, "Socket INIT");
-  otError error;
-
-  if (otUdpIsOpen(esp_openthread_get_instance(), &mSocket))
-    error = OT_ERROR_ALREADY;
-  else
-    error = otUdpOpen(esp_openthread_get_instance(), &mSocket, on_udp_recieve,
-                      NULL);
-  return error;
-}
-otError UDP_close() {
-  otError error = OT_ERROR_NONE;
-  error = otUdpClose(esp_openthread_get_instance(), &mSocket);
-  if (ERR)
-    ESP_LOGE("", "UDP CLOSE FAILED");
-  else
-    ESP_LOGI("", "UDP CLOSE OK");
-  return error;
-}
-
-otError UDP_send(const char* msg, const char* dst, uint16_t port) {
-  esp_openthread_lock_acquire(portMAX_DELAY);
-
-  otError error = OT_ERROR_NONE;
-  otMessage* message = NULL;
-  otMessageInfo messageInfo;
-  otMessageSettings messageSettings = {true, OT_MESSAGE_PRIORITY_NORMAL};
-
-  memset(&messageInfo, 0, sizeof(messageInfo));
-
-  otIp6AddressFromString(dst, &messageInfo.mPeerAddr);
-  print_otIp6Address(&messageInfo.mPeerAddr);
-  messageInfo.mPeerPort = port;
-  printf("PORT: %d\n", messageInfo.mPeerPort);
-
-  message = otUdpNewMessage(esp_openthread_get_instance(), &messageSettings);
-  if (message == NULL)
-    printf("ERR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-  size_t msg_len = strlen(msg);
-  otMessageAppend(message, msg, msg_len);
-
-  error =
-      otUdpSend(esp_openthread_get_instance(), &mSocket, message, &messageInfo);
-
-  if (ERR)
-    ESP_LOGE("Send ERR", "");
-  else
-    ESP_LOGI("Send OK", "");
+  error = otUdpBind(instance, mSocket, &sockaddr, OT_NETIF_THREAD);
   esp_openthread_lock_release();
   return error;
 }
 
-static void udp_sender() {
+otError openthread_udp_close(otUdpSocket* mSocket) {
+  esp_openthread_lock_acquire(portMAX_DELAY);
+  otInstance* instance = esp_openthread_get_instance();
   otError error = OT_ERROR_NONE;
-  while (true) {
-    vTaskDelay(3000 / portTICK_PERIOD_MS);
-    ESP_LOGI("SENDING...", "");
-    error = UDP_send("HOLAAAAAAAA", "ff02::1", 2222);
+  error = otUdpClose(instance, mSocket);
+  esp_openthread_lock_release();
+  return error;
+}
+
+otError openthread_udp_send(otUdpSocket* mSocket,
+                            const char* dst,
+                            uint16_t port,
+                            void* data,
+                            size_t data_size) {
+  esp_openthread_lock_acquire(portMAX_DELAY);
+  otInstance* instance = esp_openthread_get_instance();
+
+  otError error = OT_ERROR_NONE;
+  otMessage* message = NULL;
+  otMessageInfo messageInfo;
+  otMessageSettings messageSettings = {true, OT_MESSAGE_PRIORITY_HIGH};
+
+  memset(&messageInfo, 0, sizeof(messageInfo));
+
+  otIp6AddressFromString(dst, &messageInfo.mPeerAddr);
+  messageInfo.mPeerPort = port;
+
+  message = otUdpNewMessage(instance, &messageSettings);
+  if (message == NULL)
+    printf("ERR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+
+  uint8_t* payload = (uint8_t*) malloc(data_size);
+  if (!payload) {
+    ESP_LOGE(TAG, "Failed to allocate memory for data");
+    return error;
   }
-  printf("SENDER FINISHED\n");
+  memcpy(payload, data, data_size);
+  otMessageAppend(message, payload, data_size);
+
+  error = otUdpSend(instance, mSocket, message, &messageInfo);
+  esp_openthread_lock_release();
+  return error;
 }
 
 static void ot_task_worker() {
@@ -326,24 +291,15 @@ static void ot_task_worker() {
       .port_config = ESP_OPENTHREAD_DEFAULT_PORT_CONFIG(),
   };
 
-  // Initialize the OpenThread stack
   ESP_ERROR_CHECK(esp_openthread_init(&config));
-
-  // Initialize the esp_netif bindings
   esp_netif_t* openthread_netif;
   openthread_netif = init_openthread_netif(&config);
   esp_netif_set_default_netif(openthread_netif);
 
-  set_dataset(NULL);
-  thread_init(true);
-
+  openthread_set_dataset(THREAD_CHANNEL, THREAD_PANID);
   print_data();
-  UDP_open();
-  UDP_bind(2222);
 
   esp_openthread_launch_mainloop();
-  printf("LOOP FINISHED\n");
-  vTaskDelete(sender_task);
 
   // Clean up
   esp_openthread_netif_glue_deinit();
@@ -352,13 +308,12 @@ static void ot_task_worker() {
   esp_vfs_eventfd_unregister();
   vTaskDelete(NULL);
 }
-void open_thread_deinit() {
-  UDP_close();
-  thread_init(false);
+
+void openthread_deinit() {
   esp_openthread_deinit();
 }
 
-void openthread_init(void) {
+void openthread_init() {
   esp_vfs_eventfd_config_t eventfd_config = {
       .max_fds = 3,
   };
@@ -367,6 +322,5 @@ void openthread_init(void) {
   ESP_ERROR_CHECK(esp_event_loop_create_default());
   ESP_ERROR_CHECK(esp_netif_init());
   ESP_ERROR_CHECK(esp_vfs_eventfd_register(&eventfd_config));
-  xTaskCreate(ot_task_worker, "openthread_main", 1024 * 10, NULL, 10, NULL);
-  xTaskCreate(udp_sender, "Sender", 1024 * 5, NULL, 10, &sender_task);
+  xTaskCreate(ot_task_worker, "ot_cli_main", 1024 * 5, NULL, 10, NULL);
 }

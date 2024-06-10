@@ -6,7 +6,6 @@ set(modules "modules/led_events.c"
             "modules/wifi/wifi_screens_module.c"
             "modules/zigbee/zigbee_module.c"
             "modules/zigbee/zigbee_screens_module.c"
-            "modules/openthread/openthread.c"
             "modules/ble/ble_module.c"
             "modules/ble/ble_screens_module.c")
 
@@ -25,7 +24,6 @@ idf_component_register(
                     "modules/menu_screens/"
                     "drivers/oled_driver/"
                     "modules/oled_screen/"
-                    "modules/openthread/"
                     "modules/wifi/"
                     "modules/ble/"
                     "modules/zigbee/"

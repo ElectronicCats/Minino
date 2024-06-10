@@ -12,7 +12,7 @@
 #include "zigbee_module.h"
 #include "zigbee_switch.h"
 
-#include "openthread.h"
+#include "open_thread.h"
 #include "radio_selector.h"
 
 #include "zigbee_screens_module.h"
@@ -531,6 +531,7 @@ void menu_screens_exit_submenu() {
       wifi_sniffer_exit();
       break;
     case MENU_THREAD_APPS:
+      preferences_put_bool("thread_deinit", true);
       openthread_factory_reset();
       break;
     default:
