@@ -54,8 +54,12 @@ void oled_screen_display_text(const char* text, int x, int page, bool invert) {
 }
 
 void oled_screen_display_text_center(char* text, int page, bool invert) {
+  if (text == NULL) {
+    ESP_LOGE(TAG, "Text is NULL");
+    return;
+  }
   int text_length = strlen(text);
-  if (text_length > MAX_LINE_CHAR || true) {
+  if (text_length > MAX_LINE_CHAR) {
     ESP_LOGE(TAG, "Text too long to center");
     oled_screen_display_text(text, 0, page, invert);
     return;

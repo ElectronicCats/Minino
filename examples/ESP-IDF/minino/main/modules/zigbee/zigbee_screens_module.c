@@ -100,7 +100,6 @@ void zigbee_screens_display_scanning_animation() {
                                  OLED_DISPLAY_NORMAL);
       vTaskDelay(500 / portTICK_PERIOD_MS);
     }
-    vTaskDelay(500 / portTICK_PERIOD_MS);
   }
 }
 

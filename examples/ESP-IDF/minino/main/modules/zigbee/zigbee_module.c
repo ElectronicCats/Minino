@@ -41,9 +41,9 @@ void zigbee_module_app_selector() {
       radio_selector_set_zigbee_sniffer();
       zigbee_screens_display_device_ad();
       vTaskDelay(8000 / portTICK_PERIOD_MS);
-      xTaskCreate(zigbee_screens_display_scanning_animation,
-                  "zigbee_module_scanning", 4096, NULL, 5,
-                  &zigbee_task_display_animation);
+      // xTaskCreate(zigbee_screens_display_scanning_animation,
+      //             "zigbee_module_scanning", 4096, NULL, 5,
+      //             &zigbee_task_display_animation);
       ieee_sniffer_register_cb(zigbee_screens_display_scanning_text);
       xTaskCreate(ieee_sniffer_begin, "ieee_sniffer_task", 4096, NULL, 5,
                   &zigbee_task_sniffer);
