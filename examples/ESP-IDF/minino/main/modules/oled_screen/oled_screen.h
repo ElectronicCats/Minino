@@ -9,6 +9,12 @@
 #define OLED_DISPLAY_NORMAL false
 #define MAX_LINE_CHAR       17
 
+#ifdef CONFIG_RESOLUTION_128X64
+  #define MAX_PAGE 7  // 0 - 7
+#else                 // CONFIG_RESOLUTION_128X32
+  #define MAX_PAGE 3  // 0 - 3
+#endif
+
 /**
  * @brief Initialize the OLED driver display
  *

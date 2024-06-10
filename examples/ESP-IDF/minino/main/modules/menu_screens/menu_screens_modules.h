@@ -110,18 +110,13 @@ void menu_screens_ingrement_selected_item();
 void menu_screens_decrement_selected_item();
 
 /**
- * @brief Display `In development` banner
+ * @brief Display `text` banner
+ *
+ * @param char* text The text to display
  *
  * @return void
  */
-void menu_screens_display_in_development_banner();
-
-/**
- * @brief Display `Loading...` banner
- *
- * @return void
- */
-void menu_screens_display_loading_banner();
+void menu_screens_display_text_banner(char* text);
 
 /**
  * @brief Update the items array

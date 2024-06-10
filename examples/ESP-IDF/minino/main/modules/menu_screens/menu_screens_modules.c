@@ -257,24 +257,36 @@ char** get_menu_items() {
  * @return void
  */
 void display_menu_items(char** items) {
+#ifdef CONFIG_RESOLUTION_128X64
+  char* prefix = "  ";
+  uint8_t page = 1;
+  uint8_t page_increment = 2;
+#else  // CONFIG_RESOLUTION_128X32
+  char* prefix = "> ";
+  uint8_t page = 1;
+  uint8_t page_increment = 1;
+#endif
+
   oled_screen_clear();
-  int page = 1;
   for (int i = 0; i < 3; i++) {
-    char* text = (char*) malloc(20);
+    char* text = (char*) malloc(strlen(items[i + selected_item]) + 2);
     if (i == 0) {
       sprintf(text, " %s", items[i + selected_item]);
     } else if (i == 1) {
-      sprintf(text, "  %s", items[i + selected_item]);
+      // sprintf(text, "  %s", items[i + selected_item]);
+      sprintf(text, "%s%s", prefix, items[i + selected_item]);
     } else {
       sprintf(text, " %s", items[i + selected_item]);
     }
 
     oled_screen_display_text(text, 0, page, OLED_DISPLAY_NORMAL);
-    page += 2;
+    page += page_increment;
   }
 
+#ifdef CONFIG_RESOLUTION_128X64
   oled_screen_display_selected_item_box();
   oled_screen_display_show();
+#endif
 }
 
 /**
@@ -285,8 +297,11 @@ void display_menu_items(char** items) {
  * @return void
  */
 void display_scrolling_text(char** text) {
-  uint8_t startIdx = (selected_item >= 7) ? selected_item - 6 : 0;
-  selected_item = (num_items - 2 > 7 && selected_item < 6) ? 6 : selected_item;
+  uint8_t startIdx =
+      (selected_item >= MAX_PAGE) ? selected_item - (MAX_PAGE - 1) : 0;
+  selected_item = (num_items - 2 > MAX_PAGE && selected_item < (MAX_PAGE - 1))
+                      ? (MAX_PAGE - 1)
+                      : selected_item;
   oled_screen_clear();
   // ESP_LOGI(TAG, "num: %d", num_items - 2);
 
@@ -303,7 +318,8 @@ void display_scrolling_text(char** text) {
 }
 
 void display_configuration_items(char** items) {
-  uint8_t startIdx = (selected_item >= 7) ? selected_item - 6 : 0;
+  uint8_t startIdx =
+      (selected_item >= MAX_PAGE) ? selected_item - (MAX_PAGE - 1) : 0;
   oled_screen_clear();
 
   for (uint8_t i = startIdx; i < num_items - 2; i++) {
@@ -316,9 +332,25 @@ void display_configuration_items(char** items) {
 }
 
 void display_question_items(char** items) {
-  oled_screen_clear();
+#ifdef CONFIG_RESOLUTION_128X64
   uint8_t page_offset = 4;
-  for (uint8_t i = 0; i < num_items - 2; i++) {
+  uint8_t question_page = 1;
+#else  // CONFIG_RESOLUTION_128X32
+  uint8_t page_offset = 2;
+  uint8_t question_page = 0;
+#endif
+
+  oled_screen_clear();
+
+  char* question = items[2];
+  oled_screen_display_text_center(question, question_page, OLED_DISPLAY_NORMAL);
+
+  // There are only two possible answers
+  if (selected_item > 1) {
+    selected_item = 1;
+  }
+
+  for (uint8_t i = 0; i <= 1; i++) {
     if (i == selected_item) {
       oled_screen_display_text_center(items[i], i + page_offset,
                                       OLED_DISPLAY_INVERT);
@@ -405,12 +437,13 @@ void display_thread_broadcast() {
   oled_screen_display_text("Waiting messages...  ", 0, 0, OLED_DISPLAY_INVERT);
 }
 
-void menu_screens_display_in_development_banner() {
-  oled_screen_display_text(" In development", 0, 3, OLED_DISPLAY_NORMAL);
-}
-
-void menu_screens_display_loading_banner() {
-  oled_screen_display_text("   Loading...", 0, 3, OLED_DISPLAY_NORMAL);
+void menu_screens_display_text_banner(char* text) {
+#ifdef CONFIG_RESOLUTION_128X64
+  uint8_t page = 3;
+#else  // CONFIG_RESOLUTION_128X32
+  uint8_t page = 2;
+#endif
+  oled_screen_display_text_center(text, page, OLED_DISPLAY_NORMAL);
 }
 
 void menu_screens_update_options(char* options[], uint8_t selected_option) {
@@ -567,7 +600,7 @@ void menu_screens_exit_submenu() {
       break;
     case MENU_WIFI_ANALIZER:
       oled_screen_clear();
-      menu_screens_display_loading_banner();
+      menu_screens_display_text_banner("Exiting...");
       wifi_sniffer_exit();
       break;
     case MENU_BLUETOOTH_AIRTAGS_SCAN:
@@ -678,7 +711,7 @@ void menu_screens_enter_submenu() {
     case MENU_SETTINGS_SOUND:
     case MENU_SETTINGS_SYSTEM:
       oled_screen_clear();
-      menu_screens_display_in_development_banner();
+      menu_screens_display_text_banner("In development");
       break;
     default:
       ESP_LOGI(TAG, "Unhandled menu: %s", menu_list[next_menu]);

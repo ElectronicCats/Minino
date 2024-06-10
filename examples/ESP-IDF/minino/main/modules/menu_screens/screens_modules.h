@@ -268,13 +268,6 @@ const int prev_menu_table[] = {
  */
 int selected_item_history[MENU_COUNT] = {0};
 
-char* yes_no_items[] = {
-    QUESTION_MENU_ITEMS,
-    "Yes",
-    "No",
-    NULL,
-};
-
 char* main_items[] = {
     "Applications",
     "Settings",
@@ -376,6 +369,10 @@ char* wifi_analizer_settings_items[] = {
     NULL,
 };
 
+char* wifi_analizer_summary_question[] = {
+    QUESTION_MENU_ITEMS, "Yes", "No", "Show summary?", NULL,
+};
+
 char* wifi_analizer_channel_items[] = {
     CONFIGURATION_MENU_ITEMS,
     "[ ] 1",
@@ -454,7 +451,7 @@ char** menu_items[] = {
     empty_items,                      // WiFi Deauth
     empty_items,                      // WiFi Analizer Start
     wifi_analizer_settings_items,     // WiFi Analizer Settings
-    yes_no_items,                     // MENU_WIFI_ANALIZER_ASK_SUMMARY
+    wifi_analizer_summary_question,   // MENU_WIFI_ANALIZER_ASK_SUMMARY
     wifi_analizer_summary,            // WiFi Analizer Summary
     wifi_analizer_channel_items,      // WiFi Analizer Channel
     wifi_analizer_destination_items,  // WiFi Analizer Destination
