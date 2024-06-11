@@ -1,9 +1,9 @@
 #include "ble_module.h"
 #include "bt_spam.h"
 #include "esp_log.h"
+#include "led_events.h"
 #include "menu_screens_modules.h"
 #include "modules/ble/ble_screens_module.h"
-#include "modules/led_events.h"
 #include "oled_screen.h"
 #include "trackers_scanner.h"
 
@@ -38,7 +38,6 @@ static void ble_module_app_selector() {
   led_control_run_effect(led_control_ble_tracking);
   switch (app_screen_state_information.app_selected) {
     case MENU_BLUETOOTH_TRAKERS_SCAN:
-
       trackers_scanner_register_cb(ble_module_display_trackers_cb);
       ble_module_task_start_trackers_display_devices();
       trackers_scanner_start();

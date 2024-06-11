@@ -15,6 +15,7 @@
 #include "open_thread.h"
 #include "radio_selector.h"
 
+#include "open_thread_module.h"
 #include "zigbee_screens_module.h"
 
 #define MAX_MENU_ITEMS_PER_SCREEN 3
@@ -357,14 +358,6 @@ void menu_screens_display_menu() {
   }
 }
 
-void display_thread_broadcast() {
-  radio_selector_set_thread();
-  openthread_init();
-
-  oled_screen_clear();
-  oled_screen_display_text("Waiting messages...  ", 0, 0, OLED_DISPLAY_INVERT);
-}
-
 void menu_screens_display_in_development_banner() {
   oled_screen_display_text(" In development", 0, 3, OLED_DISPLAY_NORMAL);
 }
@@ -530,10 +523,6 @@ void menu_screens_exit_submenu() {
       menu_screens_display_loading_banner();
       wifi_sniffer_exit();
       break;
-    case MENU_THREAD_APPS:
-      preferences_put_bool("thread_deinit", true);
-      openthread_factory_reset();
-      break;
     default:
       break;
   }
@@ -620,7 +609,7 @@ void menu_screens_enter_submenu() {
       break;
     case MENU_THREAD_BROADCAST:
     case MENU_THREAD_APPS:
-      display_thread_broadcast();
+      open_thread_module_begin(MENU_THREAD_APPS);
       break;
     case MENU_MATTER_APPS:
     case MENU_ZIGBEE_LIGHT:
