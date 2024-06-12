@@ -94,10 +94,18 @@ static void ieee802154_receive_done(uint8_t* data,
   } else {
     // Otherwise, post it to the upper layer.
     frame_info->process = true;
-    if (radio_selector_is_thread_enabled()) {
-      ot_esp_ieee802154_receive_done(data, frame_info);
-    } else {
-      esp_ieee802154_receive_done(data, frame_info);
+    switch (radio_selector_get_selected_option()) {
+      case RADIO_SELECT_ZIGBEE_SWITCH:
+        esp_ieee802154_receive_done(data, frame_info);
+        break;
+      case RADIO_SELECT_ZIGBEE_SNIFFER:
+        sniffer_esp_ieee802154_receive_done(data, frame_info);
+        break;
+      case RADIO_SELECT_THREAD:
+        ot_esp_ieee802154_receive_done(data, frame_info);
+        break;
+      default:
+        break;
     }
   }
 }
@@ -109,21 +117,21 @@ static void ieee802154_transmit_done(
   if (ack && ack_frame_info) {
     if (s_rx_index == CONFIG_IEEE802154_RX_BUFFER_SIZE) {
       esp_rom_printf("receive buffer full, drop the current ack frame.\n");
-      if (radio_selector_is_thread_enabled()) {
+      if (radio_selector_get_selected_option()) {
         ot_esp_ieee802154_transmit_failed(frame, ESP_IEEE802154_TX_ERR_NO_ACK);
       } else {
         esp_ieee802154_transmit_failed(frame, ESP_IEEE802154_TX_ERR_NO_ACK);
       }
     } else {
       ack_frame_info->process = true;
-      if (radio_selector_is_thread_enabled()) {
+      if (radio_selector_get_selected_option()) {
         ot_esp_ieee802154_transmit_done(frame, ack, ack_frame_info);
       } else {
         esp_ieee802154_transmit_done(frame, ack, ack_frame_info);
       }
     }
   } else {
-    if (radio_selector_is_thread_enabled()) {
+    if (radio_selector_get_selected_option()) {
       ot_esp_ieee802154_transmit_done(frame, ack, ack_frame_info);
     } else {
       esp_ieee802154_transmit_done(frame, ack, ack_frame_info);
@@ -261,7 +269,7 @@ static bool stop_tx(void) {
     // rx is disabled.
     ieee802154_transmit_done(s_tx_frame, NULL, NULL);
   } else {
-    if (radio_selector_is_thread_enabled()) {
+    if (radio_selector_get_selected_option()) {
       ot_esp_ieee802154_transmit_failed(s_tx_frame,
                                         ESP_IEEE802154_TX_ERR_ABORT);
     } else {
@@ -303,7 +311,7 @@ static bool stop_rx_ack(void) {
     ieee802154_transmit_done(s_tx_frame, (uint8_t*) &s_rx_frame[s_rx_index],
                              &s_rx_frame_info[s_rx_index]);
   } else {
-    if (radio_selector_is_thread_enabled()) {
+    if (radio_selector_get_selected_option()) {
       ot_esp_ieee802154_transmit_failed(s_tx_frame,
                                         ESP_IEEE802154_TX_ERR_NO_ACK);
     } else {
@@ -411,7 +419,7 @@ static IRAM_ATTR void next_operation(void) {
 static void isr_handle_timer0_done(void) {
 #if !CONFIG_IEEE802154_TEST
   if (s_ieee802154_state == IEEE802154_STATE_RX_ACK) {
-    if (radio_selector_is_thread_enabled()) {
+    if (radio_selector_get_selected_option()) {
       ot_esp_ieee802154_transmit_failed(s_tx_frame,
                                         ESP_IEEE802154_TX_ERR_NO_ACK);
     } else {
@@ -598,7 +606,7 @@ static IRAM_ATTR void isr_handle_tx_abort(void) {
     case IEEE802154_TX_ABORT_BY_RX_ACK_TYPE_NOT_ACK:
     case IEEE802154_TX_ABORT_BY_RX_ACK_RESTART:
       IEEE802154_ASSERT(s_ieee802154_state == IEEE802154_STATE_RX_ACK);
-      if (radio_selector_is_thread_enabled()) {
+      if (radio_selector_get_selected_option()) {
         ot_esp_ieee802154_transmit_failed(s_tx_frame,
                                           ESP_IEEE802154_TX_ERR_INVALID_ACK);
       } else {
@@ -609,7 +617,7 @@ static IRAM_ATTR void isr_handle_tx_abort(void) {
     case IEEE802154_TX_ABORT_BY_RX_ACK_TIMEOUT:
       IEEE802154_ASSERT(s_ieee802154_state == IEEE802154_STATE_RX_ACK);
       ieee802154_ll_disable_events(IEEE802154_EVENT_TIMER0_OVERFLOW);
-      if (radio_selector_is_thread_enabled()) {
+      if (radio_selector_get_selected_option()) {
         ot_esp_ieee802154_transmit_failed(s_tx_frame,
                                           ESP_IEEE802154_TX_ERR_NO_ACK);
       } else {
@@ -625,7 +633,7 @@ static IRAM_ATTR void isr_handle_tx_abort(void) {
       IEEE802154_ASSERT(s_ieee802154_state == IEEE802154_STATE_TX ||
                         s_ieee802154_state == IEEE802154_STATE_TX_CCA);
       IEEE802154_TX_BREAK_COEX_NUMS_UPDATE();
-      if (radio_selector_is_thread_enabled()) {
+      if (radio_selector_get_selected_option()) {
         ot_esp_ieee802154_transmit_failed(s_tx_frame,
                                           ESP_IEEE802154_TX_ERR_COEXIST);
       } else {
@@ -637,7 +645,7 @@ static IRAM_ATTR void isr_handle_tx_abort(void) {
     case IEEE802154_TX_ABORT_BY_TX_SECURITY_ERROR:
       IEEE802154_ASSERT(s_ieee802154_state == IEEE802154_STATE_TX ||
                         s_ieee802154_state == IEEE802154_STATE_TX_CCA);
-      if (radio_selector_is_thread_enabled()) {
+      if (radio_selector_get_selected_option()) {
         ot_esp_ieee802154_transmit_failed(s_tx_frame,
                                           ESP_IEEE802154_TX_ERR_SECURITY);
       } else {
@@ -648,7 +656,7 @@ static IRAM_ATTR void isr_handle_tx_abort(void) {
       break;
     case IEEE802154_TX_ABORT_BY_CCA_FAILED:
       IEEE802154_ASSERT(s_ieee802154_state == IEEE802154_STATE_TX_CCA);
-      if (radio_selector_is_thread_enabled()) {
+      if (radio_selector_get_selected_option()) {
         ot_esp_ieee802154_transmit_failed(s_tx_frame,
                                           ESP_IEEE802154_TX_ERR_ABORT);
       } else {
@@ -658,7 +666,7 @@ static IRAM_ATTR void isr_handle_tx_abort(void) {
       break;
     case IEEE802154_TX_ABORT_BY_CCA_BUSY:
       IEEE802154_ASSERT(s_ieee802154_state == IEEE802154_STATE_TX_CCA);
-      if (radio_selector_is_thread_enabled()) {
+      if (radio_selector_get_selected_option()) {
         ot_esp_ieee802154_transmit_failed(s_tx_frame,
                                           ESP_IEEE802154_TX_ERR_CCA_BUSY);
       } else {
@@ -675,13 +683,13 @@ static IRAM_ATTR void isr_handle_tx_abort(void) {
 
 static IRAM_ATTR void isr_handle_ed_done(void) {
   if (s_ieee802154_state == IEEE802154_STATE_CCA) {
-    if (radio_selector_is_thread_enabled()) {
+    if (radio_selector_get_selected_option()) {
       ot_esp_ieee802154_cca_done(ieee802154_ll_is_cca_busy());
     } else {
       esp_ieee802154_cca_done(ieee802154_ll_is_cca_busy());
     }
   } else if (s_ieee802154_state == IEEE802154_STATE_ED) {
-    if (radio_selector_is_thread_enabled()) {
+    if (radio_selector_get_selected_option()) {
       ot_esp_ieee802154_energy_detect_done(ieee802154_ll_get_ed_rss());
     } else {
       esp_ieee802154_energy_detect_done(ieee802154_ll_get_ed_rss());
@@ -708,7 +716,7 @@ static void ieee802154_isr(void* arg) {
                       s_ieee802154_state == IEEE802154_STATE_TX_ENH_ACK);
 
     s_rx_frame_info[s_rx_index].timestamp = esp_timer_get_time();
-    if (radio_selector_is_thread_enabled()) {
+    if (radio_selector_get_selected_option()) {
       ot_esp_ieee802154_receive_sfd_done();
     } else {
       esp_ieee802154_receive_sfd_done();
@@ -723,7 +731,7 @@ static void ieee802154_isr(void* arg) {
                       s_ieee802154_state == IEEE802154_STATE_TEST_TX ||
                       s_ieee802154_state == IEEE802154_STATE_TX_ENH_ACK ||
                       s_ieee802154_state == IEEE802154_STATE_TX_ACK);
-    if (radio_selector_is_thread_enabled()) {
+    if (radio_selector_get_selected_option()) {
       ot_esp_ieee802154_transmit_sfd_done(s_tx_frame);
     } else {
       esp_ieee802154_transmit_sfd_done(s_tx_frame);

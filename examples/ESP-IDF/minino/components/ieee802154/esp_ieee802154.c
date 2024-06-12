@@ -312,6 +312,9 @@ esp_err_t esp_ieee802154_receive_handle_done(const uint8_t* frame) {
 __attribute__((weak)) void esp_ieee802154_receive_done(
     uint8_t* data,
     esp_ieee802154_frame_info_t* frame_info) {}
+__attribute__((weak)) void sniffer_esp_ieee802154_receive_done(
+    uint8_t* data,
+    esp_ieee802154_frame_info_t* frame_info) {}
 __attribute__((weak)) void ot_esp_ieee802154_receive_done(
     uint8_t* data,
     esp_ieee802154_frame_info_t* frame_info) {}

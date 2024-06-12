@@ -1,11 +1,10 @@
 #include <stdio.h>
-#include "bluetooth_scanner.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "keyboard_module.h"
 #include "leds.h"
 #include "menu_screens_modules.h"
-#include "openthread.h"
+#include "open_thread.h"
 #include "preferences.h"
 #include "sd_card.h"
 

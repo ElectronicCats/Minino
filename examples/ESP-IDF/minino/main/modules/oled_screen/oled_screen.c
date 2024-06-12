@@ -58,8 +58,6 @@ void oled_screen_display_text(char* text, int x, int page, bool invert) {
 }
 
 void oled_screen_display_text_center(char* text, int page, bool invert) {
-  ESP_LOGI(TAG, "Display text in the center");
-
   if (text == NULL) {
     ESP_LOGE(TAG, "Text is NULL");
     return;
