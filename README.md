@@ -1,14 +1,46 @@
-# Minino 
+# Minino
 
-Minino is a security tool that combines WiFi and BLE
+Minino is based on the [ESP32-C6](https://www.espressif.com/en/products/socs/esp32-c6) microcontroller, it combines WiFi, Bluetooth Low Energy (BLE), Zigbee and Thread protocols to create a powerful tool for security researchers and pentesters.
 
-## Examples
-In contains different examples to be used with supported Arduino-environment boards.
-- Run DuckyScript payloads on a Minino!
-- leds: detecting AirTag presence by flashing LEDs depending on signal strength
-- scan: continuous scanning to detect enabled and disabled AirTags 
-- sound: detecting enabled AirTags and connected to them to generated a register, if after 10 minutes the AirTags are nearby, Amini can force to play a sound
-- spoof: simulates an AirTag behavior for packaging advertising 
+## Applications
+
+Current working applications include:
+
+- [x] WiFi sniffer
+- [x] WiFi deauther
+- [x] BLE spammer
+- [x] BLE trackers scanner (AirTags, Tile, etc)
+- [x] Zigbee sniffer
+- [x] Zigbee spoofing (Switch End Device)
+- [x] Thread broadcast
+- [x] GPS tracker
+
+Coming soon:
+
+- [ ] Thread sniffer
+- [ ] Wireshark integration
+- [ ] Wardriving
+- [ ] Matter protocol support
+
+## UI overview
+
+Minino has a simple UI based on a 128x64 OLED display and 4 buttons. With the UP and DOWN buttons you can navigate through the options, with the LEFT you can go back and with the RIGHT you can select an option.
+
+![UI](./examples/ESP-IDF/minino/src/ui_overview.gif)
+
+> There are specific applications that doesn't follow the UI menu flow, just interact with them to see what they do.
+
+## Getting started
+
+### User guide
+
+Your Minino comes with a pre-installed firmware, just add the batteries or connect it to a USB power source and turn it on.
+
+See the [Wiki]() for more information about the applications and how to use them.
+
+### Developer guide
+
+Your Minino comes with a pre-installed firmware, but you can also build your own one using the [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html) framework.
 
 ## Thanks
 
@@ -30,4 +62,3 @@ Hardware released under an CERN Open Hardware Licence v1.2. See the LICENSE_HARD
 Electronic Cats is a registered trademark, please do not use if you sell these PCBs.
 
 Nov 29 2022
-
