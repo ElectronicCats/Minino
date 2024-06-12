@@ -38,9 +38,17 @@ Your Minino comes with a pre-installed firmware, just add the batteries or conne
 
 See the [Wiki]() for more information about the applications and how to use them.
 
+### Getting updates
+
+First check the current version of your firmware by going to `About > Version` in your Minino, then check the latest version in the [releases](). If there is a new version, continue with the steps below.
+
+To update your Minino firmware, follow these steps:
+
+TODO: Add instructions
+
 ### Developer guide
 
-Your Minino comes with a pre-installed firmware, but you can also build your own one using the [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html) framework.
+You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html) framework, just follow the instructions in this [link]().
 
 ## Thanks
 
