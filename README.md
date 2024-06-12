@@ -36,6 +36,8 @@ Minino has a simple UI based on a 128x64 OLED display and 4 buttons. With the UP
 
 Your Minino comes with a pre-installed firmware, just add the batteries or connect it to a USB power source and turn it on.
 
+> If Minino doesn't turn on, press the `RESET` button.
+
 See the [Wiki]() for more information about the applications and how to use them.
 
 ### Getting updates
