@@ -617,7 +617,7 @@
           "group_by": false,
           "label": "Proveedor",
           "name": "Proveedor",
-          "show": false
+          "show": true
         },
         {
           "group_by": false,

@@ -9121,7 +9121,7 @@
 		)
 		(uuid "16eaf34f-7bc6-47d2-b383-9caea8558a9f")
 	)
-	(label "DIO11"
+	(label "DIO10"
 		(at 111.125 80.772 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9253,7 +9253,7 @@
 		)
 		(uuid "51ec05fb-b2c8-46da-b572-d04f6c4809dd")
 	)
-	(label "DIO11"
+	(label "DIO10"
 		(at 30.226 55.88 0)
 		(fields_autoplaced yes)
 		(effects
@@ -9667,6 +9667,15 @@
 			)
 		)
 		(property "manf#" "B82496C3689J"
+			(at 54.61 140.462 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC#" "C49447"
 			(at 54.61 140.462 0)
 			(effects
 				(font
@@ -10449,7 +10458,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC#" "-"
+		(property "LCSC#" "C221660"
 			(at 133.985 179.07 0)
 			(effects
 				(font
@@ -10925,6 +10934,15 @@
 			)
 		)
 		(property "DNP" ""
+			(at 199.644 55.88 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC#" " C3195424"
 			(at 199.644 55.88 0)
 			(effects
 				(font
@@ -13454,7 +13472,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC#" "-"
+		(property "LCSC#" "C1972808"
 			(at 268.478 31.75 0)
 			(effects
 				(font
@@ -14559,7 +14577,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC#" ""
+		(property "LCSC#" "C556936"
 			(at 143.002 130.937 0)
 			(effects
 				(font
@@ -16187,6 +16205,24 @@
 			)
 		)
 		(property "provedor" "MOUSER"
+			(at 42.164 123.952 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC#" "C7426714"
+			(at 42.164 123.952 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Proveedor" "JLCPCB"
 			(at 42.164 123.952 0)
 			(effects
 				(font
