@@ -6457,10 +6457,6 @@
 		(uuid "67f56c89-85b6-4510-8717-acb610133c91")
 	)
 	(no_connect
-		(at 39.878 53.34)
-		(uuid "6dd649bc-a1e1-496c-8a90-5fa186788a80")
-	)
-	(no_connect
 		(at 123.444 130.048)
 		(uuid "707c48a3-3edf-4bc5-881c-4467844ebd19")
 	)
@@ -6499,6 +6495,16 @@
 			(type default)
 		)
 		(uuid "01e9f604-17bb-4f27-aacb-b1cbc5224a1c")
+	)
+	(wire
+		(pts
+			(xy 21.59 53.34) (xy 21.59 52.07)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "0492ab47-c06e-4cea-9bf5-3707a027a14c")
 	)
 	(wire
 		(pts
@@ -7672,6 +7678,16 @@
 	)
 	(wire
 		(pts
+			(xy 29.21 53.34) (xy 39.878 53.34)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "83442cd9-3b72-4f1d-b351-df6082476b25")
+	)
+	(wire
+		(pts
 			(xy 92.71 147.066) (xy 92.71 135.128)
 		)
 		(stroke
@@ -8009,6 +8025,16 @@
 			(type default)
 		)
 		(uuid "a1e81081-88f2-494b-9728-4faef60082e8")
+	)
+	(wire
+		(pts
+			(xy 24.13 53.34) (xy 21.59 53.34)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a3a8e68d-e452-4018-89dc-21efa02143c8")
 	)
 	(wire
 		(pts
@@ -12101,6 +12127,71 @@
 		)
 	)
 	(symbol
+		(lib_id "power:+3V3")
+		(at 21.59 52.07 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "4417f4fa-05ea-46aa-b3e8-20eb5023fe9c")
+		(property "Reference" "#PWR051"
+			(at 21.59 55.88 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+3V3"
+			(at 21.971 47.6758 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 21.59 52.07 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 21.59 52.07 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 21.59 52.07 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "7d5941ed-fb6d-4389-9974-62144de71be8")
+		)
+		(instances
+			(project "minino"
+				(path "/aed8b10b-62ba-47cf-bd6c-c207f8432caa"
+					(reference "#PWR051")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Switch:SW_Push")
 		(at 264.795 109.982 0)
 		(unit 1)
@@ -14040,7 +14131,7 @@
 		(dnp no)
 		(uuid "8a426242-2b7f-4dee-b32d-b84ba1258d02")
 		(property "Reference" "R12"
-			(at 270.2814 107.5944 0)
+			(at 276.606 106.426 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -14049,7 +14140,7 @@
 			)
 		)
 		(property "Value" "10K"
-			(at 270.2814 105.283 0)
+			(at 276.606 104.648 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16915,6 +17006,109 @@
 			(project "minino"
 				(path "/aed8b10b-62ba-47cf-bd6c-c207f8432caa"
 					(reference "Q2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R_Small")
+		(at 26.67 53.34 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "e673023a-9000-49d9-a90a-9c5612c114d7")
+		(property "Reference" "R2"
+			(at 24.003 52.324 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "3.3K"
+			(at 26.797 54.737 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
+			(at 26.67 53.34 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 26.67 53.34 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 26.67 53.34 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "manf#" "ERJ-3GEYJ332V "
+			(at 26.67 53.34 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC#" "C403480"
+			(at 26.67 53.34 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "provedor" ""
+			(at 26.67 53.34 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Proveedor" "JLCPCB"
+			(at 26.67 53.34 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "27524d06-d522-4bcf-a8d0-e33a955dc4b1")
+		)
+		(pin "2"
+			(uuid "113dca0b-6be2-41bf-a409-27849973bf4e")
+		)
+		(instances
+			(project "minino"
+				(path "/aed8b10b-62ba-47cf-bd6c-c207f8432caa"
+					(reference "R2")
 					(unit 1)
 				)
 			)
