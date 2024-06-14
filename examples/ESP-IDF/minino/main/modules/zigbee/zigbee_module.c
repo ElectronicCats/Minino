@@ -22,7 +22,8 @@ void zigbee_module_app_selector();
 void zigbee_module_state_machine(button_event_t button_pressed);
 
 void zigbee_module_begin(int app_selected) {
-  ESP_LOGI(TAG_ZIGBEE_MODULE, "Initializing ble module screen state machine");
+  ESP_LOGI(TAG_ZIGBEE_MODULE,
+           "Initializing zigbee module screen state machine");
   app_screen_state_information.app_selected = app_selected;
 
   menu_screens_set_app_state(true, zigbee_module_state_machine);
@@ -41,9 +42,9 @@ void zigbee_module_app_selector() {
       radio_selector_set_zigbee_sniffer();
       zigbee_screens_display_device_ad();
       vTaskDelay(8000 / portTICK_PERIOD_MS);
-      // xTaskCreate(zigbee_screens_display_scanning_animation,
-      //             "zigbee_module_scanning", 4096, NULL, 5,
-      //             &zigbee_task_display_animation);
+      xTaskCreate(zigbee_screens_display_scanning_animation,
+                  "zigbee_module_scanning", 4096, NULL, 5,
+                  &zigbee_task_display_animation);
       ieee_sniffer_register_cb(zigbee_screens_display_scanning_text);
       xTaskCreate(ieee_sniffer_begin, "ieee_sniffer_task", 4096, NULL, 5,
                   &zigbee_task_sniffer);
@@ -59,7 +60,6 @@ void zigbee_module_app_selector() {
 void zigbee_module_state_machine(button_event_t button_pressed) {
   uint8_t button_name = button_pressed >> 4;
   uint8_t button_event = button_pressed & 0x0F;
-
   ESP_LOGI(TAG_ZIGBEE_MODULE, "Zigbee engine state machine from team: %d %d",
            button_name, button_event);
   switch (app_screen_state_information.app_selected) {
@@ -97,35 +97,38 @@ void zigbee_module_state_machine(button_event_t button_pressed) {
       ESP_LOGI(TAG_ZIGBEE_MODULE, "Zigbee Sniffer Entered");
       switch (button_name) {
         case BUTTON_LEFT:
-          if (button_event == BUTTON_LONG_PRESS_UP) {
+          if (button_event == BUTTON_SINGLE_CLICK) {
             ESP_LOGI(TAG_ZIGBEE_MODULE, "Button left pressed");
-            vTaskSuspend(zigbee_task_display_animation);
+            vTaskDelete(zigbee_task_display_animation);
+            led_control_stop();
             ieee_sniffer_stop();
             vTaskDelete(zigbee_task_sniffer);
             menu_screens_set_app_state(false, NULL);
             menu_screens_exit_submenu();
-            break;
           }
-
           break;
         case BUTTON_RIGHT:
           ESP_LOGI(TAG_ZIGBEE_MODULE, "Button right pressed - Option selected");
           break;
         case BUTTON_UP:
           ESP_LOGI(TAG_ZIGBEE_MODULE, "Button up pressed");
-          current_channel = (current_channel == IEEE_SNIFFER_CHANNEL_MIN)
-                                ? IEEE_SNIFFER_CHANNEL_MAX
-                                : (current_channel - 1);
-          ieee_sniffer_set_channel(current_channel);
-          zigbee_screens_display_scanning_text(0, current_channel);
+          if (button_event == BUTTON_SINGLE_CLICK) {
+            current_channel = (current_channel == IEEE_SNIFFER_CHANNEL_MAX)
+                                  ? IEEE_SNIFFER_CHANNEL_MIN
+                                  : (current_channel + 1);
+            ieee_sniffer_set_channel(current_channel);
+            zigbee_screens_display_scanning_text(0, current_channel);
+          }
           break;
         case BUTTON_DOWN:
           ESP_LOGI(TAG_ZIGBEE_MODULE, "Button down pressed");
-          current_channel = (current_channel == IEEE_SNIFFER_CHANNEL_MAX)
-                                ? IEEE_SNIFFER_CHANNEL_MIN
-                                : (current_channel + 1);
-          ieee_sniffer_set_channel(current_channel);
-          zigbee_screens_display_scanning_text(0, current_channel);
+          if (button_event == BUTTON_SINGLE_CLICK) {
+            current_channel = (current_channel == IEEE_SNIFFER_CHANNEL_MIN)
+                                  ? IEEE_SNIFFER_CHANNEL_MAX
+                                  : (current_channel - 1);
+            ieee_sniffer_set_channel(current_channel);
+            zigbee_screens_display_scanning_text(0, current_channel);
+          }
           break;
         case BUTTON_BOOT:
         default:
