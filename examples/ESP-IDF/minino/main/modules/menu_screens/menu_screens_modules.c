@@ -2,25 +2,22 @@
 #include "bitmaps.h"
 #include "ble_module.h"
 #include "esp_log.h"
-#include "gps.h"
+#include "gps_module.h"
 #include "leds.h"
 #include "oled_screen.h"
+#include "open_thread.h"
 #include "preferences.h"
+#include "radio_selector.h"
 #include "string.h"
 #include "wifi_module.h"
 #include "wifi_sniffer.h"
 #include "zigbee_module.h"
 #include "zigbee_switch.h"
 
-#include "open_thread.h"
-#include "radio_selector.h"
-
 #include "open_thread_module.h"
 #include "zigbee_screens_module.h"
 
 #define MAX_MENU_ITEMS_PER_SCREEN 3
-#define TIME_ZONE                 (-6)    // Beijing Time
-#define YEAR_BASE                 (2000)  // date in GPS starts from 2000
 
 static const char* TAG = "menu_screens_modules";
 uint8_t selected_item;
@@ -28,17 +25,11 @@ uint32_t num_items;
 screen_module_menu_t previous_menu;
 screen_module_menu_t current_menu;
 uint8_t bluetooth_devices_count;
-nmea_parser_handle_t nmea_hdl;
 
 static app_state_t app_state = {
     .in_app = false,
     .app_handler = NULL,
 };
-
-static void gps_event_handler(void* event_handler_arg,
-                              esp_event_base_t event_base,
-                              int32_t event_id,
-                              void* event_data);
 
 esp_err_t menu_screens_test_menu_list() {
   ESP_LOGI(TAG, "Testing menus list size");
@@ -118,7 +109,6 @@ void menu_screens_begin() {
   current_menu = MENU_MAIN;
   num_items = 0;
   bluetooth_devices_count = 0;
-  nmea_hdl = NULL;
 
   menu_screens_run_tests();
   oled_screen_begin();
@@ -126,7 +116,6 @@ void menu_screens_begin() {
   // Show logo
   oled_screen_clear();
   show_logo();
-  // display_gps_init();
 }
 
 /**
@@ -411,96 +400,6 @@ void menu_screens_update_options(char* options[], uint8_t selected_option) {
   options[i] = NULL;
 }
 
-void display_gps_init() {
-  /* NMEA parser configuration */
-  nmea_parser_config_t config = NMEA_PARSER_CONFIG_DEFAULT();
-  /* init NMEA parser library */
-  nmea_hdl = gps_init(&config);
-  /* register event handler for NMEA parser library */
-  gps_add_handler(nmea_hdl, gps_event_handler, NULL);
-}
-
-void display_gps_deinit() {
-  /* unregister event handler */
-  gps_remove_handler(nmea_hdl, gps_event_handler);
-  /* deinit NMEA parser library */
-  gps_deinit(nmea_hdl);
-}
-
-/**
- * @brief GPS Event Handler
- *
- * @param event_handler_arg handler specific arguments
- * @param event_base event base, here is fixed to ESP_NMEA_EVENT
- * @param event_id event id
- * @param event_data event specific arguments
- */
-static void gps_event_handler(void* event_handler_arg,
-                              esp_event_base_t event_base,
-                              int32_t event_id,
-                              void* event_data) {
-  if (current_menu != MENU_GPS_DATE_TIME && current_menu != MENU_GPS_LOCATION) {
-    return;
-  }
-
-  gps_t* gps = NULL;
-  switch (event_id) {
-    case GPS_UPDATE:
-      gps = (gps_t*) event_data;
-      /* print information parsed from GPS statements */
-      ESP_LOGI(TAG,
-               "%d/%d/%d %d:%d:%d => \r\n"
-               "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
-               "\t\t\t\t\t\tlongitude = %.05f°E\r\n"
-               "\t\t\t\t\t\taltitude   = %.02fm\r\n"
-               "\t\t\t\t\t\tspeed      = %fm/s",
-               gps->date.year + YEAR_BASE, gps->date.month, gps->date.day,
-               gps->tim.hour + TIME_ZONE, gps->tim.minute, gps->tim.second,
-               gps->latitude, gps->longitude, gps->altitude, gps->speed);
-
-      if (current_menu == MENU_GPS_DATE_TIME) {
-        char* date_str = (char*) malloc(20);
-        char* time_str = (char*) malloc(20);
-
-        sprintf(date_str, "Date: %d/%d/%d", gps->date.year + YEAR_BASE,
-                gps->date.month, gps->date.day);
-        // TODO: fix time +24
-        sprintf(time_str, "Time: %d:%d:%d", gps->tim.hour + TIME_ZONE,
-                gps->tim.minute, gps->tim.second);
-
-        oled_screen_clear();
-        oled_screen_display_text("GPS Date/Time", 0, 0, OLED_DISPLAY_INVERT);
-        // TODO: refresh only the date and time
-        oled_screen_display_text(date_str, 0, 2, OLED_DISPLAY_NORMAL);
-        oled_screen_display_text(time_str, 0, 3, OLED_DISPLAY_NORMAL);
-      } else if (current_menu == MENU_GPS_LOCATION) {
-        char* latitude_str = (char*) malloc(22);
-        char* longitude_str = (char*) malloc(22);
-        char* altitude_str = (char*) malloc(22);
-        char* speed_str = (char*) malloc(22);
-
-        sprintf(latitude_str, "Latitude: %.05f°N", gps->latitude);
-        sprintf(longitude_str, "Longitude: %.05f°E", gps->longitude);
-        sprintf(altitude_str, "Altitude: %.02fm", gps->altitude);
-        sprintf(speed_str, "Speed: %fm/s", gps->speed);
-
-        oled_screen_clear();
-        oled_screen_display_text("GPS Location", 0, 0, OLED_DISPLAY_INVERT);
-        oled_screen_display_text(latitude_str, 0, 2, OLED_DISPLAY_NORMAL);
-        oled_screen_display_text(longitude_str, 0, 3, OLED_DISPLAY_NORMAL);
-        oled_screen_display_text(altitude_str, 0, 4, OLED_DISPLAY_NORMAL);
-        oled_screen_display_text(speed_str, 0, 5, OLED_DISPLAY_NORMAL);
-      }
-      break;
-    case GPS_UNKNOWN:
-      /* print unknown statements */
-      ESP_LOGW(TAG, "Unknown statement:%s", (char*) event_data);
-      break;
-    default:
-      break;
-  }
-}
-
 app_state_t menu_screens_get_app_state() {
   return app_state;
 }
@@ -546,6 +445,9 @@ void menu_screens_exit_submenu() {
       oled_screen_clear();
       menu_screens_display_text_banner("Exiting...");
       wifi_sniffer_exit();
+      break;
+    case MENU_GPS:
+      gps_module_exit();
       break;
     default:
       break;
@@ -636,6 +538,9 @@ void menu_screens_enter_submenu() {
     case MENU_SETTINGS_SYSTEM:
       oled_screen_clear();
       menu_screens_display_text_banner("In development");
+      break;
+    case MENU_GPS:
+      gps_module_begin();
       break;
     default:
       ESP_LOGI(TAG, "Unhandled menu: %s", menu_list[next_menu]);

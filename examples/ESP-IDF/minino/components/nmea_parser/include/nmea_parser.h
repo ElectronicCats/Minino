@@ -172,7 +172,8 @@ typedef enum {
  * @param config Configuration of NMEA Parser
  * @return nmea_parser_handle_t handle of NMEA parser
  */
-extern nmea_parser_handle_t gps_init(const nmea_parser_config_t* config);
+extern nmea_parser_handle_t nmea_parser_init(
+    const nmea_parser_config_t* config);
 
 /**
  * @brief Deinit NMEA Parser
@@ -180,7 +181,7 @@ extern nmea_parser_handle_t gps_init(const nmea_parser_config_t* config);
  * @param nmea_hdl handle of NMEA parser
  * @return esp_err_t ESP_OK on success, ESP_FAIL on error
  */
-extern esp_err_t gps_deinit(nmea_parser_handle_t nmea_hdl);
+extern esp_err_t nmea_parser_deinit(nmea_parser_handle_t nmea_hdl);
 
 /**
  * @brief Add user defined handler for NMEA parser
@@ -194,9 +195,9 @@ extern esp_err_t gps_deinit(nmea_parser_handle_t nmea_hdl);
  *  - ESP_ERR_INVALIG_ARG: Invalid combination of event base and event id
  *  - Others: Fail
  */
-extern esp_err_t gps_add_handler(nmea_parser_handle_t nmea_hdl,
-                                 esp_event_handler_t event_handler,
-                                 void* handler_args);
+extern esp_err_t nmea_parser_add_handler(nmea_parser_handle_t nmea_hdl,
+                                         esp_event_handler_t event_handler,
+                                         void* handler_args);
 
 /**
  * @brief Remove user defined handler for NMEA parser
@@ -208,8 +209,8 @@ extern esp_err_t gps_add_handler(nmea_parser_handle_t nmea_hdl,
  *  - ESP_ERR_INVALIG_ARG: Invalid combination of event base and event id
  *  - Others: Fail
  */
-extern esp_err_t gps_remove_handler(nmea_parser_handle_t nmea_hdl,
-                                    esp_event_handler_t event_handler);
+extern esp_err_t nmea_parser_remove_handler(nmea_parser_handle_t nmea_hdl,
+                                            esp_event_handler_t event_handler);
 
 #ifdef __cplusplus
 }

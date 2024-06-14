@@ -128,8 +128,3 @@ void menu_screens_display_text_banner(char* text);
  * @return void
  */
 void menu_screens_update_options(char* options[], uint8_t selected_option);
-
-// TODO: Move to separate files
-void display_thread_broadcast();
-void display_gps_init();
-void display_gps_deinit();

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "gps.h"
+#include "nmea_parser.h"
 #include <ctype.h>
 #include <math.h>
 #include <stdlib.h>
@@ -639,7 +639,7 @@ static void nmea_parser_task_entry(void* arg) {
  * @param config Configuration of NMEA Parser
  * @return nmea_parser_handle_t handle of nmea_parser
  */
-nmea_parser_handle_t gps_init(const nmea_parser_config_t* config) {
+nmea_parser_handle_t nmea_parser_init(const nmea_parser_config_t* config) {
   esp_gps_t* esp_gps = calloc(1, sizeof(esp_gps_t));
   if (!esp_gps) {
     ESP_LOGE(GPS_TAG, "calloc memory for esp_fps failed");
@@ -737,7 +737,7 @@ err_gps:
  * @param nmea_hdl handle of NMEA parser
  * @return esp_err_t ESP_OK on success,ESP_FAIL on error
  */
-esp_err_t gps_deinit(nmea_parser_handle_t nmea_hdl) {
+esp_err_t nmea_parser_deinit(nmea_parser_handle_t nmea_hdl) {
   esp_gps_t* esp_gps = (esp_gps_t*) nmea_hdl;
   vTaskDelete(esp_gps->tsk_hdl);
   esp_event_loop_delete(esp_gps->event_loop_hdl);
@@ -759,9 +759,9 @@ esp_err_t gps_deinit(nmea_parser_handle_t nmea_hdl) {
  *  - ESP_ERR_INVALIG_ARG: Invalid combination of event base and event id
  *  - Others: Fail
  */
-esp_err_t gps_add_handler(nmea_parser_handle_t nmea_hdl,
-                          esp_event_handler_t event_handler,
-                          void* handler_args) {
+esp_err_t nmea_parser_add_handler(nmea_parser_handle_t nmea_hdl,
+                                  esp_event_handler_t event_handler,
+                                  void* handler_args) {
   esp_gps_t* esp_gps = (esp_gps_t*) nmea_hdl;
   return esp_event_handler_register_with(esp_gps->event_loop_hdl,
                                          ESP_NMEA_EVENT, ESP_EVENT_ANY_ID,

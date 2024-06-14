@@ -25,7 +25,6 @@ void app_main(void) {
   leds_on();
   preferences_begin();
   sd_card_init();
-  // bluetooth_scanner_init();
   menu_screens_begin();
   keyboard_module_begin();
   menu_screens_display_menu();
@@ -34,5 +33,7 @@ void app_main(void) {
 
   end_time = esp_timer_get_time();
   float time = (float) (end_time - start_time) / 1000000;
-  printf("Total time taken: %2.2f seconds\n", time);
+  char* time_str = malloc(sizeof(time) + 1);
+  sprintf(time_str, "%2.2f", time);
+  ESP_LOGI(TAG, "Total time taken: %s seconds", time_str);
 }
