@@ -1,11 +1,15 @@
 #pragma once
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #include "buzzer.h"
 #include "cmd_sniffer.h"
 #include "keyboard_module.h"
 #include "screens_modules.h"
 
 typedef void (*app_handler_t)(button_event_t button_pressed);
+typedef void (*user_selection_cb_t)(screen_module_menu_t user_selection);
 
 /**
  * @brief Structure to store the app screen state information
@@ -64,6 +68,15 @@ app_state_t menu_screens_get_app_state();
 void menu_screens_set_app_state(bool in_app, app_handler_t app_handler);
 
 /**
+ * @brief Register the user selection callback
+ *
+ * @param user_selection_cb_t user_selection_cb The user selection callback
+ *
+ * @return void
+ */
+void menu_screens_register_user_selection_cb(user_selection_cb_t cb);
+
+/**
  * @brief Get the current menu
  *
  * @return screen_module_menu_t
@@ -80,6 +93,15 @@ screen_module_menu_t menu_screens_get_current_menu();
 uint32_t menu_screens_get_menu_length(char* menu[]);
 
 /**
+ * @brief Check if the given menu is configuration
+ *
+ * @param screen_module_menu_t user_selection The user selection
+ *
+ * @return bool
+ */
+bool menu_screens_is_configuration(screen_module_menu_t user_selection);
+
+/**
  * @brief Exit the submenu
  *
  * @return void
@@ -92,6 +114,13 @@ void menu_screens_exit_submenu();
  * @return void
  */
 void menu_screens_enter_submenu();
+
+/**
+ * @brief Get the selected item
+ *
+ * @return uint8_t
+ */
+uint8_t menu_screens_get_selected_item();
 
 /**
  * @brief Increment the selected item

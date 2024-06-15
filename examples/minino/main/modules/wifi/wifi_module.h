@@ -9,6 +9,13 @@
  *
  * @return void
  */
+void wifi_module_begin();
+
+/**
+ * @brief Initialize the wifi module
+ *
+ * @return void
+ */
 void wifi_module_deauth_begin();
 
 /**

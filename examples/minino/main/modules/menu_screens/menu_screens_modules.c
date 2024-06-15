@@ -31,7 +31,9 @@ static app_state_t app_state = {
     .app_handler = NULL,
 };
 
-esp_err_t menu_screens_test_menu_list() {
+static user_selection_cb_t user_selection_cb = NULL;
+
+esp_err_t test_menu_list() {
   ESP_LOGI(TAG, "Testing menus list size");
   size_t menu_list_size = sizeof(menu_list) / sizeof(menu_list[0]);
   if (menu_list_size != MENU_COUNT) {
@@ -42,7 +44,7 @@ esp_err_t menu_screens_test_menu_list() {
   return ESP_OK;
 }
 
-esp_err_t menu_screens_test_menu_next_menu_table() {
+esp_err_t test_menu_next_menu_table() {
   ESP_LOGI(TAG, "Testing next menu table size");
   size_t next_menu_table_size =
       sizeof(next_menu_table) / sizeof(next_menu_table[0]);
@@ -54,7 +56,7 @@ esp_err_t menu_screens_test_menu_next_menu_table() {
   return ESP_OK;
 }
 
-esp_err_t menu_screens_test_prev_menu_table() {
+esp_err_t test_prev_menu_table() {
   ESP_LOGI(TAG, "Testing previous menu table size");
   size_t prev_menu_table_size =
       sizeof(prev_menu_table) / sizeof(prev_menu_table[0]);
@@ -66,7 +68,7 @@ esp_err_t menu_screens_test_prev_menu_table() {
   return ESP_OK;
 }
 
-esp_err_t menu_screens_test_menu_items() {
+esp_err_t test_menu_items() {
   ESP_LOGI(TAG, "Testing menu items size");
   size_t menu_items_size = sizeof(menu_items) / sizeof(menu_items[0]);
   if (menu_items_size != MENU_COUNT) {
@@ -77,11 +79,11 @@ esp_err_t menu_screens_test_menu_items() {
   return ESP_OK;
 }
 
-void menu_screens_run_tests() {
-  ESP_ERROR_CHECK(menu_screens_test_menu_list());
-  ESP_ERROR_CHECK(menu_screens_test_menu_next_menu_table());
-  ESP_ERROR_CHECK(menu_screens_test_prev_menu_table());
-  ESP_ERROR_CHECK(menu_screens_test_menu_items());
+void run_tests() {
+  ESP_ERROR_CHECK(test_menu_list());
+  ESP_ERROR_CHECK(test_menu_next_menu_table());
+  ESP_ERROR_CHECK(test_prev_menu_table());
+  ESP_ERROR_CHECK(test_menu_items());
 }
 
 void show_logo() {
@@ -110,7 +112,7 @@ void menu_screens_begin() {
   num_items = 0;
   bluetooth_devices_count = 0;
 
-  menu_screens_run_tests();
+  run_tests();
   oled_screen_begin();
 
   // Show logo
@@ -379,27 +381,6 @@ void menu_screens_display_menu() {
   }
 }
 
-void menu_screens_update_options(char* options[], uint8_t selected_option) {
-  uint8_t i = 0;
-  uint32_t menu_length = menu_screens_get_menu_length(options);
-
-  for (i = 1; i < menu_length; i++) {
-    char* prev_item = options[i];
-    // ESP_LOGI(TAG, "Prev item: %s", prev_item);
-    char* new_item = malloc(strlen(prev_item) + 5);
-    char* start_of_number = strchr(prev_item, ']') + 2;
-    if (i == selected_option) {
-      snprintf(new_item, strlen(prev_item) + 5, "[x] %s", start_of_number);
-      options[i] = new_item;
-    } else {
-      snprintf(new_item, strlen(prev_item) + 5, "[ ] %s", start_of_number);
-      options[i] = new_item;
-    }
-    // ESP_LOGI(TAG, "New item: %s", options[i]);
-  }
-  options[i] = NULL;
-}
-
 app_state_t menu_screens_get_app_state() {
   return app_state;
 }
@@ -407,6 +388,11 @@ app_state_t menu_screens_get_app_state() {
 void menu_screens_set_app_state(bool in_app, app_handler_t app_handler) {
   app_state.in_app = in_app;
   app_state.app_handler = app_handler;
+}
+
+void menu_screens_register_user_selection_cb(user_selection_cb_t cb) {
+  user_selection_cb = cb;
+  ESP_LOGI(TAG, "User selection callback registered");
 }
 
 screen_module_menu_t menu_screens_get_current_menu() {
@@ -422,6 +408,14 @@ uint32_t menu_screens_get_menu_length(char* menu[]) {
     }
   }
   return num_items;
+}
+
+bool menu_screens_is_configuration(screen_module_menu_t menu) {
+  if (is_menu_configuration(menu) && current_menu == menu) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void menu_screens_exit_submenu() {
@@ -459,62 +453,45 @@ void menu_screens_exit_submenu() {
   menu_screens_display_menu();
 }
 
-void menu_screens_enter_submenu() {
-  ESP_LOGI(TAG, "Selected item: %d", selected_item);
-  screen_module_menu_t next_menu = MENU_MAIN;
-  bool update_configuration = false;
-
-  if (is_menu_empty(current_menu)) {
-    ESP_LOGW(TAG, "Empty menu");
+void handle_user_selection(screen_module_menu_t user_selection) {
+  if (user_selection_cb != NULL) {
+    user_selection_cb(user_selection);
     return;
-  } else if (is_menu_vertical_scroll(current_menu)) {
-    selected_item = 0;  // Avoid selecting invalid item
-    next_menu = current_menu;
-  } else if (is_menu_configuration(current_menu)) {
-    next_menu = current_menu;
-  } else {
-    next_menu = next_menu_table[current_menu][selected_item];
   }
 
-  ESP_LOGI(TAG, "Previous: %s Current: %s", menu_list[current_menu],
-           menu_list[next_menu]);
-
-  // User is selecting a configuration item
-  if (is_menu_configuration(next_menu) && current_menu == next_menu) {
-    update_configuration = true;
-  }
-
-  // next_menu is the user selection
-  switch (next_menu) {
-    case MENU_WIFI_ANALIZER:
-      wifi_module_analizer_begin();
+  switch (user_selection) {
+    case MENU_WIFI_APPS:
+      wifi_module_begin();
       break;
-    case MENU_WIFI_DEAUTH:
-      wifi_module_deauth_begin();
-      break;
-    case MENU_WIFI_ANALIZER_RUN:
-      oled_screen_clear();
-      wifi_sniffer_start();
-      break;
-    case MENU_WIFI_ANALIZER_SUMMARY:
-      wifi_sniffer_load_summary();
-      break;
-    case MENU_WIFI_ANALIZER_CHANNEL:
-      if (update_configuration) {
-        wifi_sniffer_set_channel(selected_item + 1);
-      }
-      wifi_module_update_channel_options();
-      break;
-    case MENU_WIFI_ANALIZER_DESTINATION:
-      if (update_configuration) {
-        if (selected_item == WIFI_SNIFFER_DESTINATION_SD) {
-          wifi_sniffer_set_destination_sd();
-        } else {
-          wifi_sniffer_set_destination_internal();
-        }
-      }
-      wifi_module_update_destination_options();
-      break;
+    // case MENU_WIFI_ANALIZER:
+    //   wifi_module_analizer_begin();
+    //   break;
+    // case MENU_WIFI_DEAUTH:
+    //   wifi_module_deauth_begin();
+    //   break;
+    // case MENU_WIFI_ANALIZER_RUN:
+    //   oled_screen_clear();
+    //   wifi_sniffer_start();
+    //   break;
+    // case MENU_WIFI_ANALIZER_SUMMARY:
+    //   wifi_sniffer_load_summary();
+    //   break;
+    // case MENU_WIFI_ANALIZER_CHANNEL:
+    //   if (menu_screens_is_configuration(user_selection)) {
+    //     wifi_sniffer_set_channel(selected_item + 1);
+    //   }
+    //   wifi_module_update_channel_options();
+    //   break;
+    // case MENU_WIFI_ANALIZER_DESTINATION:
+    //   if (menu_screens_is_configuration(user_selection)) {
+    //     if (selected_item == WIFI_SNIFFER_DESTINATION_SD) {
+    //       wifi_sniffer_set_destination_sd();
+    //     } else {
+    //       wifi_sniffer_set_destination_internal();
+    //     }
+    //   }
+    //   wifi_module_update_destination_options();
+    //   break;
     case MENU_BLUETOOTH_TRAKERS_SCAN:
       ble_module_begin(MENU_BLUETOOTH_TRAKERS_SCAN);
       break;
@@ -543,9 +520,37 @@ void menu_screens_enter_submenu() {
       gps_module_begin();
       break;
     default:
-      ESP_LOGI(TAG, "Unhandled menu: %s", menu_list[next_menu]);
+      ESP_LOGI(TAG, "Unhandled menu: %s", menu_list[user_selection]);
       break;
   }
+}
+
+void menu_screens_enter_submenu() {
+  ESP_LOGI(TAG, "Selected item: %d", selected_item);
+  screen_module_menu_t next_menu = MENU_MAIN;
+  // bool update_configuration = false;
+
+  if (is_menu_empty(current_menu)) {
+    ESP_LOGW(TAG, "Empty menu");
+    return;
+  } else if (is_menu_vertical_scroll(current_menu)) {
+    selected_item = 0;  // Avoid selecting invalid item
+    next_menu = current_menu;
+  } else if (is_menu_configuration(current_menu)) {
+    next_menu = current_menu;
+  } else {
+    next_menu = next_menu_table[current_menu][selected_item];
+  }
+
+  ESP_LOGI(TAG, "Previous: %s Current: %s", menu_list[current_menu],
+           menu_list[next_menu]);
+
+  // User is selecting a configuration item
+  // if (is_menu_configuration(next_menu) && current_menu == next_menu) {
+  //   update_configuration = true;
+  // }
+
+  handle_user_selection(next_menu);
 
   if (current_menu != next_menu) {
     selected_item_history[next_menu] = selected_item;
@@ -556,6 +561,10 @@ void menu_screens_enter_submenu() {
   if (!app_state.in_app) {
     menu_screens_display_menu();
   }
+}
+
+uint8_t menu_screens_get_selected_item() {
+  return selected_item;
 }
 
 void menu_screens_ingrement_selected_item() {
@@ -577,4 +586,25 @@ void menu_screens_display_text_banner(char* text) {
   uint8_t page = 2;
 #endif
   oled_screen_display_text_center(text, page, OLED_DISPLAY_NORMAL);
+}
+
+void menu_screens_update_options(char* options[], uint8_t selected_option) {
+  uint8_t i = 0;
+  uint32_t menu_length = menu_screens_get_menu_length(options);
+
+  for (i = 1; i < menu_length; i++) {
+    char* prev_item = options[i];
+    // ESP_LOGI(TAG, "Prev item: %s", prev_item);
+    char* new_item = malloc(strlen(prev_item) + 5);
+    char* start_of_number = strchr(prev_item, ']') + 2;
+    if (i == selected_option) {
+      snprintf(new_item, strlen(prev_item) + 5, "[x] %s", start_of_number);
+      options[i] = new_item;
+    } else {
+      snprintf(new_item, strlen(prev_item) + 5, "[ ] %s", start_of_number);
+      options[i] = new_item;
+    }
+    // ESP_LOGI(TAG, "New item: %s", options[i]);
+  }
+  options[i] = NULL;
 }

@@ -7,6 +7,7 @@
 #include "keyboard_module.h"
 #include "menu_screens_modules.h"
 #include "modules/wifi/wifi_screens_module.h"
+#include "oled_screen.h"
 #include "string.h"
 #include "wifi_attacks.h"
 #include "wifi_controller.h"
@@ -60,6 +61,48 @@ static void scanning_task(void* pvParameters) {
   wifi_screens_module_display_scanned_networks(
       ap_records->records, ap_records->count, current_option);
   vTaskDelete(NULL);
+}
+
+void handle_user_selection_cb(screen_module_menu_t user_selection) {
+  uint8_t selected_item = menu_screens_get_selected_item();
+
+  switch (user_selection) {
+    case MENU_WIFI_ANALIZER:
+      wifi_module_analizer_begin();
+      break;
+    case MENU_WIFI_DEAUTH:
+      wifi_module_deauth_begin();
+      break;
+    case MENU_WIFI_ANALIZER_RUN:
+      oled_screen_clear();
+      wifi_sniffer_start();
+      break;
+    case MENU_WIFI_ANALIZER_SUMMARY:
+      wifi_sniffer_load_summary();
+      break;
+    case MENU_WIFI_ANALIZER_CHANNEL:
+      if (menu_screens_is_configuration(user_selection)) {
+        wifi_sniffer_set_channel(selected_item + 1);
+      }
+      wifi_module_update_channel_options();
+      break;
+    case MENU_WIFI_ANALIZER_DESTINATION:
+      if (menu_screens_is_configuration(user_selection)) {
+        if (selected_item == WIFI_SNIFFER_DESTINATION_SD) {
+          wifi_sniffer_set_destination_sd();
+        } else {
+          wifi_sniffer_set_destination_internal();
+        }
+      }
+      wifi_module_update_destination_options();
+      break;
+    default:
+      break;
+  }
+}
+
+void wifi_module_begin() {
+  menu_screens_register_user_selection_cb(handle_user_selection_cb);
 }
 
 void wifi_module_exit() {
