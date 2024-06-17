@@ -12,7 +12,6 @@ void ble_screens_display_scanning_animation() {
                                  32, OLED_DISPLAY_NORMAL);
       vTaskDelay(500 / portTICK_PERIOD_MS);
     }
-    vTaskDelay(500 / portTICK_PERIOD_MS);
   }
 }
 

@@ -68,19 +68,22 @@ static void ble_module_state_machine(button_event_t button_pressed) {
       ESP_LOGI(TAG_BLE_MODULE, "Bluetooth scanner entered");
       switch (button_name) {
         case BUTTON_LEFT:
-          ESP_LOGI(TAG_BLE_MODULE, "Button left pressed");
-          if (is_modal_displaying) {
-            is_modal_displaying = false;
-            oled_screen_clear();
-            oled_screen_display_text_center("Trackers Scanner", 0,
-                                            OLED_DISPLAY_INVERT);
-            break;
-          }
 
-          ble_module_task_stop_trackers_display_devices();
-          trackers_scanner_stop();
-          menu_screens_set_app_state(false, NULL);
-          menu_screens_exit_submenu();
+          menu_screens_set_screen(prev_menu_table[MENU_BLUETOOTH_TRAKERS_SCAN]);
+          esp_restart();
+          // ESP_LOGI(TAG_BLE_MODULE, "Button left pressed");
+          // if (is_modal_displaying) {
+          //   is_modal_displaying = false;
+          //   oled_screen_clear();
+          //   oled_screen_display_text_center("Trackers Scanner", 0,
+          //                                   OLED_DISPLAY_INVERT);
+          //   break;
+          // }
+
+          // ble_module_task_stop_trackers_display_devices();
+          // trackers_scanner_stop();
+          // menu_screens_set_app_state(false, NULL);
+          // menu_screens_exit_submenu();
           // led_control_stop();
           break;
         case BUTTON_RIGHT:
@@ -112,6 +115,7 @@ static void ble_module_state_machine(button_event_t button_pressed) {
       switch (button_name) {
         case BUTTON_LEFT:
           // TODO: Fix this xD
+          menu_screens_set_screen(prev_menu_table[MENU_BLUETOOTH_SPAM]);
           esp_restart();
           // ESP_LOGI(TAG_BLE_MODULE, "Button left pressed");
           // vTaskSuspend(ble_task_display_animation);
