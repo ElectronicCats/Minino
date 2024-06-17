@@ -9,7 +9,8 @@
 #include "screens_modules.h"
 
 typedef void (*app_handler_t)(button_event_t button_pressed);
-typedef void (*user_selection_cb_t)(screen_module_menu_t user_selection);
+typedef void (*enter_submenu_cb_t)(screen_module_menu_t user_selection);
+typedef void (*exit_submenu_cb_t)();
 
 /**
  * @brief Structure to store the app screen state information
@@ -68,13 +69,37 @@ app_state_t menu_screens_get_app_state();
 void menu_screens_set_app_state(bool in_app, app_handler_t app_handler);
 
 /**
- * @brief Register the user selection callback
+ * @brief Register enter submenu callback
  *
- * @param user_selection_cb_t user_selection_cb The user selection callback
+ * @param enter_submenu_cb_t enter_submenu_cb The user selection callback
  *
  * @return void
  */
-void menu_screens_register_user_selection_cb(user_selection_cb_t cb);
+void menu_screens_register_enter_submenu_cb(enter_submenu_cb_t cb);
+
+/**
+ * @brief Register exit submenu callback
+ *
+ * @param exit_submenu_cb_t enter_submenu_cb The user selection callback
+ *
+ * @return void
+ */
+
+/**
+ * @brief Register exit submenu callback
+ *
+ * @param exit_submenu_cb_t cb The user selection callback
+ *
+ * @return void
+ */
+void menu_screens_register_exit_submenu_cb(exit_submenu_cb_t cb);
+
+/**
+ * @brief Unregister submenu callbacks
+ *
+ * @return void
+ */
+void menu_screens_unregister_submenu_cbs();
 
 /**
  * @brief Get the current menu

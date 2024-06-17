@@ -31,7 +31,8 @@ static app_state_t app_state = {
     .app_handler = NULL,
 };
 
-static user_selection_cb_t user_selection_cb = NULL;
+static enter_submenu_cb_t enter_submenu_cb = NULL;
+static exit_submenu_cb_t exit_submenu_cb = NULL;
 
 esp_err_t test_menu_list() {
   ESP_LOGI(TAG, "Testing menus list size");
@@ -390,9 +391,20 @@ void menu_screens_set_app_state(bool in_app, app_handler_t app_handler) {
   app_state.app_handler = app_handler;
 }
 
-void menu_screens_register_user_selection_cb(user_selection_cb_t cb) {
-  user_selection_cb = cb;
-  ESP_LOGI(TAG, "User selection callback registered");
+void menu_screens_register_enter_submenu_cb(enter_submenu_cb_t cb) {
+  enter_submenu_cb = cb;
+  ESP_LOGI(TAG, "Enter submenu callback registered");
+}
+
+void menu_screens_register_exit_submenu_cb(exit_submenu_cb_t cb) {
+  exit_submenu_cb = cb;
+  ESP_LOGI(TAG, "Exit submenu callback registered");
+}
+
+void menu_screens_unregister_submenu_cbs() {
+  enter_submenu_cb = NULL;
+  exit_submenu_cb = NULL;
+  ESP_LOGI(TAG, "Submenu callbacks unregistered");
 }
 
 screen_module_menu_t menu_screens_get_current_menu() {
@@ -424,22 +436,11 @@ void menu_screens_exit_submenu() {
   ESP_LOGI(TAG, "Previous: %s Current: %s", menu_list[previous_menu],
            menu_list[current_menu]);
 
+  if (exit_submenu_cb != NULL) {
+    exit_submenu_cb();
+  }
+
   switch (current_menu) {
-    case MENU_WIFI_ANALIZER_RUN:
-      wifi_sniffer_stop();
-      break;
-    case MENU_WIFI_ANALIZER_ASK_SUMMARY:
-      oled_screen_clear();
-      wifi_sniffer_start();
-      break;
-    case MENU_WIFI_ANALIZER_SUMMARY:
-      wifi_sniffer_close_file();
-      break;
-    case MENU_WIFI_ANALIZER:
-      oled_screen_clear();
-      menu_screens_display_text_banner("Exiting...");
-      wifi_sniffer_exit();
-      break;
     case MENU_GPS:
       gps_module_exit();
       break;
@@ -454,8 +455,8 @@ void menu_screens_exit_submenu() {
 }
 
 void handle_user_selection(screen_module_menu_t user_selection) {
-  if (user_selection_cb != NULL) {
-    user_selection_cb(user_selection);
+  if (enter_submenu_cb != NULL) {
+    enter_submenu_cb(user_selection);
     return;
   }
 
@@ -463,35 +464,6 @@ void handle_user_selection(screen_module_menu_t user_selection) {
     case MENU_WIFI_APPS:
       wifi_module_begin();
       break;
-    // case MENU_WIFI_ANALIZER:
-    //   wifi_module_analizer_begin();
-    //   break;
-    // case MENU_WIFI_DEAUTH:
-    //   wifi_module_deauth_begin();
-    //   break;
-    // case MENU_WIFI_ANALIZER_RUN:
-    //   oled_screen_clear();
-    //   wifi_sniffer_start();
-    //   break;
-    // case MENU_WIFI_ANALIZER_SUMMARY:
-    //   wifi_sniffer_load_summary();
-    //   break;
-    // case MENU_WIFI_ANALIZER_CHANNEL:
-    //   if (menu_screens_is_configuration(user_selection)) {
-    //     wifi_sniffer_set_channel(selected_item + 1);
-    //   }
-    //   wifi_module_update_channel_options();
-    //   break;
-    // case MENU_WIFI_ANALIZER_DESTINATION:
-    //   if (menu_screens_is_configuration(user_selection)) {
-    //     if (selected_item == WIFI_SNIFFER_DESTINATION_SD) {
-    //       wifi_sniffer_set_destination_sd();
-    //     } else {
-    //       wifi_sniffer_set_destination_internal();
-    //     }
-    //   }
-    //   wifi_module_update_destination_options();
-    //   break;
     case MENU_BLUETOOTH_TRAKERS_SCAN:
       ble_module_begin(MENU_BLUETOOTH_TRAKERS_SCAN);
       break;
@@ -528,7 +500,6 @@ void handle_user_selection(screen_module_menu_t user_selection) {
 void menu_screens_enter_submenu() {
   ESP_LOGI(TAG, "Selected item: %d", selected_item);
   screen_module_menu_t next_menu = MENU_MAIN;
-  // bool update_configuration = false;
 
   if (is_menu_empty(current_menu)) {
     ESP_LOGW(TAG, "Empty menu");
@@ -544,11 +515,6 @@ void menu_screens_enter_submenu() {
 
   ESP_LOGI(TAG, "Previous: %s Current: %s", menu_list[current_menu],
            menu_list[next_menu]);
-
-  // User is selecting a configuration item
-  // if (is_menu_configuration(next_menu) && current_menu == next_menu) {
-  //   update_configuration = true;
-  // }
 
   handle_user_selection(next_menu);
 
