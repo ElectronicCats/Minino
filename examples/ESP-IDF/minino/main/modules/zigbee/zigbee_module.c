@@ -84,7 +84,7 @@ void zigbee_module_state_machine(button_event_t button_pressed) {
         case BUTTON_LEFT:
           switch (button_event) {
             case BUTTON_PRESS_DOWN:
-              preferences_put_bool("zigbee_deinit", true);
+              menu_screens_set_screen(prev_menu_table[MENU_ZIGBEE_SWITCH]);
               zigbee_switch_deinit();
               break;
           }

@@ -129,6 +129,9 @@ void menu_screens_display_text_banner(char* text);
  */
 void menu_screens_update_options(char* options[], uint8_t selected_option);
 
+void menu_screens_set_main_menu();
+void menu_screens_set_screen(int screen_layer);
+
 // TODO: Move to separate files
 void display_thread_broadcast();
 void display_gps_init();

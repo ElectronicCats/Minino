@@ -19,6 +19,7 @@
 #include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "menu_screens_modules.h"
 #include "preferences.h"
 #include "sd_card.h"
 #include "sdkconfig.h"
@@ -78,7 +79,7 @@ void wifi_sniffer_close_file() {
 }
 
 void wifi_sniffer_exit() {
-  preferences_put_bool("wifi_exit", true);
+  menu_screens_set_screen(prev_menu_table[MENU_WIFI_ANALIZER]);
   esp_restart();
 }
 

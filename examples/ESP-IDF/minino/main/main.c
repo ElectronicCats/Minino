@@ -26,9 +26,8 @@ void app_main(void) {
   preferences_begin();
   sd_card_init();
   // bluetooth_scanner_init();
-  menu_screens_begin();
   keyboard_module_begin();
-  menu_screens_display_menu();
+  menu_screens_begin();
   reboot_counter();
   leds_off();
 

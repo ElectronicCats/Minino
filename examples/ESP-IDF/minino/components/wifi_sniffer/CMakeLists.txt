@@ -9,5 +9,5 @@ idf_component_register(SRCS "${component_srcs}"
                        "fatfs"
                        "wifi_controller"
                        "preferences"
-                       PRIV_REQUIRES "sd_card"
+                       PRIV_REQUIRES "sd_card" main
                        INCLUDE_DIRS "." "include")
