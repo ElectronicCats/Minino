@@ -14,12 +14,12 @@ Current working applications include:
 - [x] Zigbee spoofing (Switch End Device)
 - [x] Thread broadcast
 - [x] GPS tracker
+- [x] Wardriving
 
 Coming soon:
 
 - [ ] Thread sniffer
 - [ ] Wireshark integration
-- [ ] Wardriving
 - [ ] Matter protocol support
 
 ## UI overview
