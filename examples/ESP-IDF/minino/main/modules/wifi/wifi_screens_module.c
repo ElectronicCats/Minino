@@ -92,7 +92,7 @@ void wifi_screens_module_display_details_network(wifi_ap_record_t* ap_record,
   char* ssid = (char*) malloc(33);
   memset(ssid, 0, 33);
   sprintf(ssid, "%s", (char*) ap_record->ssid);
-  oled_screen_display_text_center(0, ssid, OLED_DISPLAY_INVERT);
+  oled_screen_display_text_center(ssid, 0, OLED_DISPLAY_INVERT);
 
   if (page == 0) {
     char* bssid = (char*) malloc(20);
