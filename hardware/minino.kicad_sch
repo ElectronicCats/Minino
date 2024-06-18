@@ -10667,7 +10667,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC#" "C2987386"
+		(property "LCSC#" "C393939"
 			(at 247.65 46.99 0)
 			(effects
 				(font
@@ -13427,7 +13427,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Fuse:Fuse_0805_2012Metric"
+		(property "Footprint" "Fuse:Fuse_0603_1608Metric"
 			(at 268.478 31.75 0)
 			(effects
 				(font
@@ -13454,7 +13454,7 @@
 				(hide yes)
 			)
 		)
-		(property "manf#" "MFU0805FF00500P100"
+		(property "manf#" "06D0750D"
 			(at 268.478 31.75 0)
 			(effects
 				(font
@@ -13463,7 +13463,7 @@
 				(hide yes)
 			)
 		)
-		(property "provedor" "MOUSER"
+		(property "provedor" "LCSC"
 			(at 268.478 31.75 0)
 			(effects
 				(font
@@ -13472,7 +13472,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC#" "C1972808"
+		(property "LCSC#" " C182438"
 			(at 268.478 31.75 0)
 			(effects
 				(font

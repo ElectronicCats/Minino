@@ -34,3 +34,9 @@ hardware/minino-backups/
 # Firmware binaries
 /**/build/
 /**/managed_components/
+
+# CPL file in csv
+minino-all-pos.csv
+
+# Gerber
+/**/MININO_GERBER
