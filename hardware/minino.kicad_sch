@@ -17215,7 +17215,7 @@
 				(hide yes)
 			)
 		)
-		(property "Datasheet" "https://www.lcsc.com/datasheet/lcsc_datasheet_2108301930_Yuandi-TF-01A_C2889258.pdf"
+		(property "Datasheet" "https://www.lcsc.com/datasheet/lcsc_datasheet_1912111437_SHOU-HAN-TF-PUSH_C393941.pdf"
 			(at 201.93 53.34 0)
 			(effects
 				(font
@@ -17233,7 +17233,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC#" "C2889258"
+		(property "LCSC#" " C393941"
 			(at 201.93 55.88 0)
 			(effects
 				(font
