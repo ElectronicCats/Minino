@@ -73,8 +73,14 @@ static void gps_event_handler(void* event_handler_arg,
           (int8_t) ((timeZoneValue - (float) hour_offset) * 60);
       ESP_LOGI(TAG, "Minute offset: %d", minute_offset);
 
-      uint8_t hour = gps->tim.hour + hour_offset;
-      hour = hour > 24 ? hour - 24 : hour;
+      uint8_t hour = gps->tim.hour;
+      if (hour_offset < 0 && hour < abs(hour_offset)) {
+        day--;
+        hour = 24 + hour_offset + hour;
+      } else {
+        hour += hour_offset;
+      }
+
       uint8_t minute = gps->tim.minute;
       if (minute_offset < 0 && minute < abs(minute_offset)) {
         hour--;
@@ -82,7 +88,7 @@ static void gps_event_handler(void* event_handler_arg,
       } else {
         minute += minute_offset;
       }
-      // minute = minute > 60 ? minute - 60 : minute;
+
       uint8_t second = gps->tim.second;
       second = second > 60 ? second - 60 : second;
 
