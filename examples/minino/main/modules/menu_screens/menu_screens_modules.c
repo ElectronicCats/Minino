@@ -6,16 +6,16 @@
 #include "leds.h"
 #include "oled_screen.h"
 #include "open_thread.h"
+#include "open_thread_module.h"
 #include "preferences.h"
 #include "radio_selector.h"
+#include "settings_module.h"
 #include "string.h"
 #include "wifi_module.h"
 #include "wifi_sniffer.h"
 #include "zigbee_module.h"
-#include "zigbee_switch.h"
-
-#include "open_thread_module.h"
 #include "zigbee_screens_module.h"
+#include "zigbee_switch.h"
 
 #define MAX_MENU_ITEMS_PER_SCREEN 3
 
@@ -438,14 +438,9 @@ void menu_screens_exit_submenu() {
 
   if (exit_submenu_cb != NULL) {
     exit_submenu_cb();
-  }
-
-  switch (current_menu) {
-    case MENU_GPS:
-      gps_module_exit();
-      break;
-    default:
-      break;
+    ESP_LOGI(TAG, "Custom exit submenu callback");
+  } else {
+    ESP_LOGI(TAG, "No custom exit submenu callback");
   }
 
   // TODO: Store selected item history into flash
@@ -461,6 +456,9 @@ void handle_user_selection(screen_module_menu_t user_selection) {
   }
 
   switch (user_selection) {
+    case MENU_SETTINGS:
+      settings_module_begin();
+      break;
     case MENU_WIFI_APPS:
       wifi_module_begin();
       break;
@@ -484,7 +482,6 @@ void handle_user_selection(screen_module_menu_t user_selection) {
     case MENU_ZIGBEE_LIGHT:
     case MENU_SETTINGS_DISPLAY:
     case MENU_SETTINGS_SOUND:
-    case MENU_SETTINGS_SYSTEM:
       oled_screen_clear();
       menu_screens_display_text_banner("In development");
       break;
@@ -555,15 +552,16 @@ void menu_screens_display_text_banner(char* text) {
 }
 
 void menu_screens_update_options(char* options[], uint8_t selected_option) {
-  uint8_t i = 0;
   uint32_t menu_length = menu_screens_get_menu_length(options);
+  uint8_t option = selected_option + 1;
+  uint8_t i = 0;
 
   for (i = 1; i < menu_length; i++) {
     char* prev_item = options[i];
     // ESP_LOGI(TAG, "Prev item: %s", prev_item);
     char* new_item = malloc(strlen(prev_item) + 5);
     char* start_of_number = strchr(prev_item, ']') + 2;
-    if (i == selected_option) {
+    if (i == option) {
       snprintf(new_item, strlen(prev_item) + 5, "[x] %s", start_of_number);
       options[i] = new_item;
     } else {

@@ -67,6 +67,7 @@ typedef enum {
   /* GPS applications */
   MENU_GPS_DATE_TIME,
   MENU_GPS_LOCATION,
+  MENU_GPS_HELP,
   /* About items */
   MENU_ABOUT_VERSION,
   MENU_ABOUT_LICENSE,
@@ -76,6 +77,7 @@ typedef enum {
   MENU_SETTINGS_DISPLAY,
   MENU_SETTINGS_SOUND,
   MENU_SETTINGS_SYSTEM,
+  MENU_SETTINGS_TIME_ZONE,
   /* About submenus */
   /* Menu count */
   MENU_COUNT,
@@ -117,6 +119,7 @@ const char* menu_list[] = {
     "MENU_THREAD_BROADCAST",
     "MENU_GPS_DATE_TIME",
     "MENU_GPS_LOCATION",
+    "MENU_GPS_HELP",
     "MENU_ABOUT_VERSION",
     "MENU_ABOUT_LICENSE",
     "MENU_ABOUT_CREDITS",
@@ -124,6 +127,7 @@ const char* menu_list[] = {
     "MENU_SETTINGS_DISPLAY",
     "MENU_SETTINGS_SOUND",
     "MENU_SETTINGS_SYSTEM",
+    "MENU_SETTINGS_TIME_ZONE",
 };
 
 /**
@@ -156,7 +160,7 @@ const int next_menu_table[][6] = {
     // MENU_MATTER_APPS
     {MENU_MATTER_APPS},
     // MENU_GPS
-    {MENU_GPS_DATE_TIME, MENU_GPS_LOCATION},
+    {MENU_GPS_DATE_TIME, MENU_GPS_LOCATION, MENU_GPS_HELP},
     // MENU_WIFI_ANALIZER
     {MENU_WIFI_ANALIZER_RUN, MENU_WIFI_ANALIZER_SETTINGS},
     // MENU_WIFI_DEAUTH
@@ -191,6 +195,8 @@ const int next_menu_table[][6] = {
     {MENU_GPS_DATE_TIME},
     // MENU_GPS_LOCATION
     {MENU_GPS_LOCATION},
+    // MENU_GPS_HELP
+    {MENU_GPS_HELP},
     // MENU_ABOUT_VERSION
     {MENU_ABOUT_VERSION},
     // MENU_ABOUT_LICENSE
@@ -204,7 +210,9 @@ const int next_menu_table[][6] = {
     // MENU_SETTINGS_SOUND
     {MENU_SETTINGS_SOUND},
     // MENU_SETTINGS_SYSTEM
-    {MENU_SETTINGS_SYSTEM},
+    {MENU_SETTINGS_TIME_ZONE},
+    // MENU_SETTINGS_TIME_ZONE
+    {MENU_SETTINGS_TIME_ZONE},
 };
 
 /**
@@ -244,6 +252,7 @@ const int prev_menu_table[] = {
     MENU_THREAD_APPS,                // MENU_THREAD_BROADCAST
     MENU_GPS,                        // MENU_GPS_DATE_TIME
     MENU_GPS,                        // MENU_GPS_LOCATION
+    MENU_GPS,                        // MENU_GPS_HELP
     MENU_ABOUT,                      // MENU_ABOUT_VERSION
     MENU_ABOUT,                      // MENU_ABOUT_LICENSE
     MENU_ABOUT,                      // MENU_ABOUT_CREDITS
@@ -251,6 +260,7 @@ const int prev_menu_table[] = {
     MENU_SETTINGS,                   // MENU_SETTINGS_DISPLAY
     MENU_SETTINGS,                   // MENU_SETTINGS_SOUND
     MENU_SETTINGS,                   // MENU_SETTINGS_SYSTEM
+    MENU_SETTINGS_SYSTEM,            // MENU_SETTINGS_TIME_ZONE
 };
 
 /**
@@ -418,6 +428,70 @@ char* thread_items[] = {
 char* gps_items[] = {
     "Date & Time",
     "Location",
+    "Help",
+    NULL,
+};
+
+char* gps_help[] = {
+    VERTICAL_SCROLL_TEXT,
+    /***************/
+    "Verify your",
+    "time zone if",
+    "the time is not",
+    "correct, go to",
+    "`Settings/",
+    "System/Time",
+    "zone` and",
+    "select the",
+    "correct one.",
+    NULL,
+};
+
+char* gps_time_zone_options[] = {
+    CONFIGURATION_MENU_ITEMS,
+    "[ ] UTC-12",
+    "[ ] UTC-11",
+    "[ ] UTC-10",
+    "[ ] UTC-9:30",
+    "[ ] UTC-9",
+    "[ ] UTC-8",
+    "[ ] UTC-7",
+    "[ ] UTC-6",
+    "[ ] UTC-5",
+    "[ ] UTC-4",
+    "[ ] UTC-3:30",
+    "[ ] UTC-3",
+    "[ ] UTC-2",
+    "[ ] UTC-1",
+    "[ ] UTC+0",
+    "[ ] UTC+1",
+    "[ ] UTC+2",
+    "[ ] UTC+3",
+    "[ ] UTC+3:30",
+    "[ ] UTC+4",
+    "[ ] UTC+4:30",
+    "[ ] UTC+5",
+    "[ ] UTC+5:30",
+    "[ ] UTC+5:45",
+    "[ ] UTC+6",
+    "[ ] UTC+6:30",
+    "[ ] UTC+7",
+    "[ ] UTC+8",
+    "[ ] UTC+8:45",
+    "[ ] UTC+9",
+    "[ ] UTC+9:30",
+    "[ ] UTC+10",
+    "[ ] UTC+10:30",
+    "[ ] UTC+11",
+    "[ ] UTC+12",
+    "[ ] UTC+12:45",
+    "[ ] UTC+13",
+    "[ ] UTC+14",
+    NULL,
+};
+
+char* system_settings_items[] = {
+    "Time zone",
     NULL,
 };
 
@@ -437,34 +511,36 @@ char** menu_items[] = {
     main_items, applications_items, settings_items, about_items,
     /* Applications */
     wifi_items, bluetooth_items, zigbee_items, thread_items,
-    empty_items,  // Matter
+    empty_items,  // MENU_MATTER_APPS
     gps_items,
     /* WiFi applications */
-    wifi_analizer_items,              // WiFi Analizer
-    empty_items,                      // WiFi Deauth
-    empty_items,                      // WiFi Analizer Start
-    wifi_analizer_settings_items,     // WiFi Analizer Settings
+    wifi_analizer_items,              // MENU_WIFI_ANALIZER
+    empty_items,                      // MENU_WIFI_DEAUTH
+    empty_items,                      // MENU_WIFI_ANALIZER_RUN
+    wifi_analizer_settings_items,     // MENU_WIFI_ANALIZER_SETTINGS
     wifi_analizer_summary_question,   // MENU_WIFI_ANALIZER_ASK_SUMMARY
-    wifi_analizer_summary,            // WiFi Analizer Summary
-    wifi_analizer_channel_items,      // WiFi Analizer Channel
-    wifi_analizer_destination_items,  // WiFi Analizer Destination
+    wifi_analizer_summary,            // MENU_WIFI_ANALIZER_SUMMARY
+    wifi_analizer_channel_items,      // MENU_WIFI_ANALIZER_CHANNEL
+    wifi_analizer_destination_items,  // MENU_WIFI_ANALIZER_DESTINATION
     /* Bluetooth applications */
-    empty_items,  // Bluetooth Trakers scan
-    empty_items,  // Bluetooth Spam
+    empty_items,  // MENU_BLUETOOTH_TRAKERS_SCAN
+    empty_items,  // MENU_BLUETOOTH_SPAM
     /* Zigbee applications */
     zigbee_spoofing_items,
-    empty_items,  // Zigbee Switch
-    empty_items,  // Zigbee Light
-    empty_items,  // Zigbee Sniffer
+    empty_items,  // MENU_ZIGBEE_SWITCH
+    empty_items,  // MENU_ZIGBEE_LIGHT
+    empty_items,  // MENU_ZIGBEE_SNIFFER
     /* Thread applications */
-    empty_items,  // Thread CLI
+    empty_items,  // MENU_THREAD_BROADCAST
     /* GPS applications */
-    empty_items,  // Date & Time
-    empty_items,  // Location
+    empty_items,  // MENU_GPS_DATE_TIME
+    empty_items,  // MENU_GPS_LOCATION
+    gps_help,     // MENU_GPS_HELP
     /* About */
     version_text, license_text, credits_text, legal_text,
     /* Settings items */
-    empty_items,  // Display
-    empty_items,  // Sound
-    empty_items,  // System
+    empty_items,            // MENU_SETTINGS_DISPLAY
+    empty_items,            // MENU_SETTINGS_SOUND
+    system_settings_items,  // MENU_SETTINGS_SYSTEM
+    gps_time_zone_options,  // MENU_SETTINGS_TIME_ZONE
 };

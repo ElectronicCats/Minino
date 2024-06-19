@@ -63,7 +63,7 @@ static void scanning_task(void* pvParameters) {
   vTaskDelete(NULL);
 }
 
-void exit_submenu_cb() {
+void wifi_module_exit_submenu_cb() {
   screen_module_menu_t current_menu = menu_screens_get_current_menu();
 
   switch (current_menu) {
@@ -90,7 +90,7 @@ void exit_submenu_cb() {
   }
 }
 
-void enter_submenu_cb(screen_module_menu_t user_selection) {
+void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
   uint8_t selected_item = menu_screens_get_selected_item();
 
   switch (user_selection) {
@@ -129,8 +129,8 @@ void enter_submenu_cb(screen_module_menu_t user_selection) {
 }
 
 void wifi_module_begin() {
-  menu_screens_register_enter_submenu_cb(enter_submenu_cb);
-  menu_screens_register_exit_submenu_cb(exit_submenu_cb);
+  menu_screens_register_enter_submenu_cb(wifi_module_enter_submenu_cb);
+  menu_screens_register_exit_submenu_cb(wifi_module_exit_submenu_cb);
 }
 
 void wifi_module_exit() {
@@ -181,7 +181,6 @@ void wifi_module_analizer_begin() {
                                       wifi_screens_sniffer_animation_stop);
   wifi_sniffer_register_summary_cb(wifi_module_analizer_summary_cb);
   wifi_screens_module_create_sniffer_task();
-  wifi_module_update_channel_options(wifi_analizer_channel_items);
   wifi_sniffer_begin();
   analizer_initialized = true;
 }
