@@ -7134,6 +7134,16 @@
 	)
 	(wire
 		(pts
+			(xy 278.13 62.23) (xy 278.13 63.5)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5657c05f-bcec-4b69-9ae7-df6a700d4b58")
+	)
+	(wire
+		(pts
 			(xy 183.007 139.954) (xy 187.579 139.954)
 		)
 		(stroke
@@ -7761,6 +7771,16 @@
 			(type default)
 		)
 		(uuid "931a67e9-ba46-4b97-ad7c-62445649e6f1")
+	)
+	(wire
+		(pts
+			(xy 278.13 55.88) (xy 278.13 57.15)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "94481572-71f8-4d5a-9c97-ec32945d6221")
 	)
 	(wire
 		(pts
@@ -9570,6 +9590,102 @@
 			(project "minino"
 				(path "/aed8b10b-62ba-47cf-bd6c-c207f8432caa"
 					(reference "L1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Small")
+		(at 278.13 59.69 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "021ef5a1-99f8-4c4c-b58e-45c531976010")
+		(property "Reference" "C16"
+			(at 273.939 58.039 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "10uF"
+			(at 272.415 61.722 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
+			(at 278.13 59.69 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~https://datasheet.lcsc.com/lcsc/1811021421_Samsung-Electro-Mechanics-CL10A106MP8NNNC_C85713.pdf"
+			(at 278.13 59.69 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 278.13 59.69 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "manf#" ""
+			(at 278.13 59.69 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "provedor" "LCSC"
+			(at 278.13 59.69 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC#" "C85713"
+			(at 278.13 59.69 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "871a904e-d2c8-4375-9a46-c4607d82f5a5")
+		)
+		(pin "2"
+			(uuid "8c1997f2-ca63-4e72-a591-c977435eb60c")
+		)
+		(instances
+			(project "minino"
+				(path "/aed8b10b-62ba-47cf-bd6c-c207f8432caa"
+					(reference "C16")
 					(unit 1)
 				)
 			)
@@ -11551,6 +11667,71 @@
 			(project "minino"
 				(path "/aed8b10b-62ba-47cf-bd6c-c207f8432caa"
 					(reference "#PWR043")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 278.13 63.5 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "3a1e3b7f-8948-4c4f-8e4e-09b8e1e70924")
+		(property "Reference" "#PWR010"
+			(at 278.13 69.85 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 278.257 67.8942 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 278.13 63.5 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 278.13 63.5 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 278.13 63.5 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "1b13458c-ee24-44fa-83fb-c488e526c9ce")
+		)
+		(instances
+			(project "minino"
+				(path "/aed8b10b-62ba-47cf-bd6c-c207f8432caa"
+					(reference "#PWR010")
 					(unit 1)
 				)
 			)
@@ -14224,6 +14405,71 @@
 		)
 	)
 	(symbol
+		(lib_id "power:VBUS")
+		(at 278.13 55.88 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "a1c3e5ca-3139-4f2b-a429-b349aa85b7f9")
+		(property "Reference" "#PWR07"
+			(at 278.13 59.69 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "VBUS"
+			(at 278.511 51.4858 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 278.13 55.88 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 278.13 55.88 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 278.13 55.88 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "b8c105a4-cb65-46db-9d8b-e0a2fda7b8f2")
+		)
+		(instances
+			(project "minino"
+				(path "/aed8b10b-62ba-47cf-bd6c-c207f8432caa"
+					(reference "#PWR07")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:GND")
 		(at 257.048 112.268 0)
 		(unit 1)
@@ -16565,7 +16811,6 @@
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "e625d3ef-78c4-4796-98a9-595a4de067eb")
 		(property "Reference" "Q2"
 			(at 158.496 139.8269 0)
@@ -16577,7 +16822,7 @@
 			)
 		)
 		(property "Value" "MMBT2222A"
-			(at 161.036 144.9069 0)
+			(at 164.592 146.05 0)
 			(effects
 				(font
 					(size 1.27 1.27)
