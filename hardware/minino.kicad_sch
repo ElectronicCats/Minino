@@ -14689,7 +14689,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC#" "C376836"
+		(property "LCSC#" "C1620"
 			(at 45.974 140.462 0)
 			(effects
 				(font
@@ -15098,6 +15098,15 @@
 			)
 		)
 		(property "provedor" "UNIT Electronics"
+			(at 28.194 139.573 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Proveedor" "UNIT T"
 			(at 28.194 139.573 0)
 			(effects
 				(font
