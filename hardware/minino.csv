@@ -3,7 +3,7 @@
 "Buzzer","BZ1","Footprint:Buzzer4x4","C556936","1","","","668-1489-1-ND"
 "470pF","C1","Capacitor_SMD:C_0603_1608Metric","C1620","1","","",""
 "1uF","C2","Capacitor_SMD:C_0603_1608Metric","C15849","1","","",""
-"10uF","C3,C4,C5,C6,C14","Capacitor_SMD:C_0603_1608Metric","C85713","5","","",""
+"10uF","C3,C4,C5,C6,C14,C16","Capacitor_SMD:C_0603_1608Metric","C85713","6","","",""
 ".1uF","C7,C8,C9,C10,C11,C12","Capacitor_SMD:C_0603_1608Metric","C478888","6","","",""
 "100nF","C13","Capacitor_SMD:C_0603_1608Metric","C149620","1","","LCSC",""
 "0.1uF","C15","Capacitor_SMD:C_0603_1608Metric","C478888","1","","",""
