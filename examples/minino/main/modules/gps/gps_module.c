@@ -99,7 +99,7 @@ static void gps_event_handler(void* event_handler_arg,
                               void* event_data) {
   screen_module_menu_t current_menu = menu_screens_get_current_menu();
 
-  if (current_menu != MENU_GPS_DATE_TIME && current_menu != MENU_GPS_LOCATION) {
+  if (current_menu == MENU_GPS) {
     return;
   }
 
@@ -122,13 +122,43 @@ static void gps_event_handler(void* event_handler_arg,
   }
 }
 
+void nmea_parser_begin() {
+  /* NMEA parser configuration */
+  nmea_parser_config_t config = NMEA_PARSER_CONFIG_DEFAULT();
+  /* init NMEA parser library */
+  nmea_hdl = nmea_parser_init(&config);
+  /* register event handler for NMEA parser library */
+  nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
+}
+
+void nmea_parser_exit() {
+  /* unregister event handler */
+  nmea_parser_remove_handler(nmea_hdl, gps_event_handler);
+  /* deinit NMEA parser library */
+  nmea_parser_deinit(nmea_hdl);
+}
+
 void gps_module_exit_submenu_cb() {
   screen_module_menu_t current_menu = menu_screens_get_current_menu();
 
   switch (current_menu) {
     case MENU_GPS:
-      gps_module_exit();
       menu_screens_unregister_submenu_cbs();
+      break;
+    case MENU_GPS_DATE_TIME:
+    case MENU_GPS_LOCATION:
+      nmea_parser_exit();
+      break;
+    default:
+      break;
+  }
+}
+
+void gps_module_enter_submenu_cb(screen_module_menu_t user_selection) {
+  switch (user_selection) {
+    case MENU_GPS_DATE_TIME:
+    case MENU_GPS_LOCATION:
+      nmea_parser_begin();
       break;
     default:
       break;
@@ -136,36 +166,12 @@ void gps_module_exit_submenu_cb() {
 }
 
 void gps_module_begin() {
-  /* NMEA parser configuration */
-  nmea_parser_config_t config = NMEA_PARSER_CONFIG_DEFAULT();
-  /* init NMEA parser library */
-  nmea_hdl = nmea_parser_init(&config);
-  /* register event handler for NMEA parser library */
-  nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
-
   menu_screens_register_exit_submenu_cb(gps_module_exit_submenu_cb);
-}
-
-void gps_module_exit() {
-  /* unregister event handler */
-  nmea_parser_remove_handler(nmea_hdl, gps_event_handler);
-  /* deinit NMEA parser library */
-  nmea_parser_deinit(nmea_hdl);
+  menu_screens_register_enter_submenu_cb(gps_module_enter_submenu_cb);
 }
 
 gps_t* gps_module_get_instance(void* event_data) {
-  // gpst_t* gps = (gps_t*) event_data;
   gps_t* gps = (gps_t*) event_data;
-  /* print information parsed from GPS statements */
-  // ESP_LOGI(TAG,
-  //          "%d/%d/%d %d:%d:%d => \r\n"
-  //          "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
-  //          "\t\t\t\t\t\tlongitude = %.05f°E\r\n"
-  //          "\t\t\t\t\t\taltitude   = %.02fm\r\n"
-  //          "\t\t\t\t\t\tspeed      = %fm/s",
-  //          gps->date.year + YEAR_BASE, gps->date.month, gps->date.day,
-  //          gps->tim.hour, gps->tim.minute, gps->tim.second, gps->latitude,
-  //          gps->longitude, gps->altitude, gps->speed);
 
   uint16_t year = gps->date.year + YEAR_BASE;
   uint8_t month = gps->date.month;
