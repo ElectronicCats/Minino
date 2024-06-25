@@ -3,7 +3,6 @@
 
 #include "gps_module.h"
 #include "menu_screens_modules.h"
-#include "nmea_parser.h"
 #include "oled_screen.h"
 #include "preferences.h"
 
@@ -26,6 +25,40 @@ const float TIME_ZONES[] = {-12.0, -11.0, -10.0, -9.5,  -9.0, -8.0, -7.0, -6.0,
                             6.0,   6.5,   7.0,   8.0,   8.75, 9.0,  9.5,  10.0,
                             10.5,  11.0,  12.0,  12.75, 13.0, 14.0};
 
+void update_date_and_time(gps_t* gps) {
+  // Update gps_date_time_items
+  char* date_str = (char*) malloc(20);
+  char* time_str = (char*) malloc(20);
+
+  sprintf(date_str, "Date: %d/%d/%d", gps->date.year, gps->date.month,
+          gps->date.day);
+  sprintf(time_str, "Time: %d:%d:%d", gps->tim.hour, gps->tim.minute,
+          gps->tim.second);
+
+  gps_date_time_items[3] = date_str;
+  gps_date_time_items[4] = time_str;
+}
+
+void update_location(gps_t* gps) {
+  // Update gps_location_items
+  char* latitude_str = (char*) malloc(22);
+  char* longitude_str = (char*) malloc(22);
+  char* altitude_str = (char*) malloc(22);
+  char* speed_str = (char*) malloc(22);
+
+  // TODO: add ° symbol
+  sprintf(latitude_str, "  %.05f N", gps->latitude);
+  sprintf(longitude_str, "  %.05f E", gps->longitude);
+  sprintf(altitude_str, "  %.04fm", gps->altitude);
+  sprintf(speed_str, "Speed: %.02fm/s", gps->speed);
+
+  gps_location_items[4] = latitude_str;
+  gps_location_items[6] = longitude_str;
+  gps_location_items[8] = altitude_str;
+  // gps_location_items[10] = speed_str;
+  // TODO: add speed menu
+}
+
 /**
  * @brief GPS Event Handler
  *
@@ -44,101 +77,15 @@ static void gps_event_handler(void* event_handler_arg,
     return;
   }
 
-  gps_t* gps = NULL;
+  // gps_t* gps = NULL;
   switch (event_id) {
     case GPS_UPDATE:
-      gps = (gps_t*) event_data;
-      /* print information parsed from GPS statements */
-      ESP_LOGI(TAG,
-               "%d/%d/%d %d:%d:%d => \r\n"
-               "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
-               "\t\t\t\t\t\tlongitude = %.05f°E\r\n"
-               "\t\t\t\t\t\taltitude   = %.02fm\r\n"
-               "\t\t\t\t\t\tspeed      = %fm/s",
-               gps->date.year + YEAR_BASE, gps->date.month, gps->date.day,
-               gps->tim.hour, gps->tim.minute, gps->tim.second, gps->latitude,
-               gps->longitude, gps->altitude, gps->speed);
+      /* update GPS information */
+      gps_t* gps = gps_module_get_instance(event_data);
 
-      uint16_t year = gps->date.year + YEAR_BASE;
-      uint8_t month = gps->date.month;
-      uint8_t day = gps->date.day;
-
-      uint8_t time_zone = gps_module_get_time_zone();
-      ESP_LOGI(TAG, "Time zone: %d", time_zone);
-      float timeZoneValue = TIME_ZONES[time_zone];
-      ESP_LOGI(TAG, "Time zone value: %f", timeZoneValue);
-      int8_t hour_offset = (int8_t) timeZoneValue;
-      ESP_LOGI(TAG, "Hour offset: %d", hour_offset);
-      int8_t minute_offset =
-          (int8_t) ((timeZoneValue - (float) hour_offset) * 60);
-      ESP_LOGI(TAG, "Minute offset: %d", minute_offset);
-
-      uint8_t hour = gps->tim.hour;
-      if (hour_offset < 0 && hour < abs(hour_offset)) {
-        day--;
-        hour = 24 + hour_offset + hour;
-      } else {
-        hour += hour_offset;
-      }
-
-      uint8_t minute = gps->tim.minute;
-      if (minute_offset < 0 && minute < abs(minute_offset)) {
-        hour--;
-        minute = 60 + minute_offset + minute;
-      } else {
-        minute += minute_offset;
-      }
-
-      uint8_t second = gps->tim.second;
-      second = second > 60 ? second - 60 : second;
-
-      ESP_LOGI(TAG, "Satellites in use: %d", gps->sats_in_use);
-      ESP_LOGI(TAG, "Satellites in view: %d", gps->sats_in_view);
-      ESP_LOGI(TAG,
-               "%d/%d/%d %d:%d:%d => \r\n"
-               "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
-               "\t\t\t\t\t\tlongitude = %.05f°E\r\n"
-               "\t\t\t\t\t\taltitude   = %.02fm\r\n"
-               "\t\t\t\t\t\tspeed      = %.02fm/s",
-               year, month, day, hour, minute, second, gps->latitude,
-               gps->longitude, gps->altitude, gps->speed);
-
-      if (current_menu == MENU_GPS_DATE_TIME) {
-        char* date_str = (char*) malloc(20);
-        char* time_str = (char*) malloc(20);
-
-        sprintf(date_str, "Date: %d/%d/%d", year, month, day);
-        // TODO: fix time +24
-        sprintf(time_str, "Time: %d:%d:%d", hour, minute, second);
-
-        oled_screen_clear();
-        oled_screen_display_text("GPS Date/Time", 0, 0, OLED_DISPLAY_INVERT);
-        // TODO: refresh only the date and time
-        oled_screen_display_text(date_str, 0, 2, OLED_DISPLAY_NORMAL);
-        oled_screen_display_text(time_str, 0, 3, OLED_DISPLAY_NORMAL);
-      } else if (current_menu == MENU_GPS_LOCATION) {
-        char* latitude_str = (char*) malloc(22);
-        char* longitude_str = (char*) malloc(22);
-        char* altitude_str = (char*) malloc(22);
-        char* speed_str = (char*) malloc(22);
-
-        // TODO: add ° symbol
-        sprintf(latitude_str, "  %.05fN", gps->latitude);
-        sprintf(longitude_str, "  %.05fE", gps->longitude);
-        sprintf(altitude_str, "Alt: %.02fm", gps->altitude);
-        sprintf(speed_str, "Speed: %.02fm/s", gps->speed);
-
-        oled_screen_clear();
-        oled_screen_display_text("GPS Location", 0, 0, OLED_DISPLAY_INVERT);
-        oled_screen_display_text("Latitude", 0, 2, OLED_DISPLAY_NORMAL);
-        oled_screen_display_text(latitude_str, 0, 3, OLED_DISPLAY_NORMAL);
-        oled_screen_display_text("Longitude", 0, 4, OLED_DISPLAY_NORMAL);
-        oled_screen_display_text(longitude_str, 0, 5, OLED_DISPLAY_NORMAL);
-        oled_screen_display_text(altitude_str, 0, 6, OLED_DISPLAY_NORMAL);
-
-        // TODO: add speed menu
-        // oled_screen_display_text(speed_str, 0, 5, OLED_DISPLAY_NORMAL);
-      }
+      update_date_and_time(gps);
+      update_location(gps);
+      menu_screens_display_menu();
       break;
     case GPS_UNKNOWN:
       /* print unknown statements */
@@ -178,6 +125,70 @@ void gps_module_exit() {
   nmea_parser_remove_handler(nmea_hdl, gps_event_handler);
   /* deinit NMEA parser library */
   nmea_parser_deinit(nmea_hdl);
+}
+
+gps_t* gps_module_get_instance(void* event_data) {
+  // gpst_t* gps = (gps_t*) event_data;
+  gps_t* gps = (gps_t*) event_data;
+  /* print information parsed from GPS statements */
+  // ESP_LOGI(TAG,
+  //          "%d/%d/%d %d:%d:%d => \r\n"
+  //          "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
+  //          "\t\t\t\t\t\tlongitude = %.05f°E\r\n"
+  //          "\t\t\t\t\t\taltitude   = %.02fm\r\n"
+  //          "\t\t\t\t\t\tspeed      = %fm/s",
+  //          gps->date.year + YEAR_BASE, gps->date.month, gps->date.day,
+  //          gps->tim.hour, gps->tim.minute, gps->tim.second, gps->latitude,
+  //          gps->longitude, gps->altitude, gps->speed);
+
+  uint16_t year = gps->date.year + YEAR_BASE;
+  uint8_t month = gps->date.month;
+  uint8_t day = gps->date.day;
+
+  uint8_t time_zone = gps_module_get_time_zone();
+  float timeZoneValue = TIME_ZONES[time_zone];
+  int8_t hour_offset = (int8_t) timeZoneValue;
+  int8_t minute_offset = (int8_t) ((timeZoneValue - (float) hour_offset) * 60);
+
+  uint8_t hour = gps->tim.hour;
+  if (hour_offset < 0 && hour < abs(hour_offset)) {
+    day--;
+    hour = 24 + hour_offset + hour;
+  } else {
+    hour += hour_offset;
+  }
+
+  uint8_t minute = gps->tim.minute;
+  if (minute_offset < 0 && minute < abs(minute_offset)) {
+    hour--;
+    minute = 60 + minute_offset + minute;
+  } else {
+    minute += minute_offset;
+  }
+
+  uint8_t second = gps->tim.second;
+  second = second > 60 ? second - 60 : second;
+
+  gps->tim.hour = hour;
+  gps->tim.minute = minute;
+  gps->tim.second = second;
+  gps->date.year = year;
+  gps->date.month = month;
+  gps->date.day = day;
+
+  ESP_LOGI(TAG, "Satellites in use: %d", gps->sats_in_use);
+  ESP_LOGI(TAG, "Satellites in view: %d", gps->sats_in_view);
+  ESP_LOGI(TAG,
+           "%d/%d/%d %d:%d:%d => \r\n"
+           "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
+           "\t\t\t\t\t\tlongitude = %.05f°E\r\n"
+           "\t\t\t\t\t\taltitude   = %.02fm\r\n"
+           "\t\t\t\t\t\tspeed      = %.02fm/s",
+           gps->date.year, gps->date.month, gps->date.day, gps->tim.hour,
+           gps->tim.minute, gps->tim.second, gps->latitude, gps->longitude,
+           gps->altitude, gps->speed);
+
+  return gps;
 }
 
 uint8_t gps_module_get_time_zone() {

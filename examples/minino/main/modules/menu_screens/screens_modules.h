@@ -432,6 +432,24 @@ char* gps_items[] = {
     NULL,
 };
 
+char* gps_date_time_items[] = {
+    VERTICAL_SCROLL_TEXT, "Signal:", "", "Date:", "Time:", NULL,
+};
+
+char* gps_location_items[] = {
+    VERTICAL_SCROLL_TEXT,
+    /***************/
+    "Signal:",
+    "",
+    "Latitude:",
+    "",
+    "Longitude:",
+    "",
+    "Altitude:",
+    "",
+    NULL,
+};
+
 char* gps_help[] = {
     VERTICAL_SCROLL_TEXT,
     /***************/
@@ -533,9 +551,9 @@ char** menu_items[] = {
     /* Thread applications */
     empty_items,  // MENU_THREAD_BROADCAST
     /* GPS applications */
-    empty_items,  // MENU_GPS_DATE_TIME
-    empty_items,  // MENU_GPS_LOCATION
-    gps_help,     // MENU_GPS_HELP
+    gps_date_time_items,  // MENU_GPS_DATE_TIME
+    gps_location_items,   // MENU_GPS_LOCATION
+    gps_help,             // MENU_GPS_HELP
     /* About */
     version_text, license_text, credits_text, legal_text,
     /* Settings items */
