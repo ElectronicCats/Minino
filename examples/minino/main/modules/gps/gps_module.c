@@ -46,7 +46,6 @@ char* get_signal_strength(gps_t* gps) {
 }
 
 void update_date_and_time(gps_t* gps) {
-  // Update gps_date_time_items
   char* signal_str = (char*) malloc(20);
   char* date_str = (char*) malloc(20);
   char* time_str = (char*) malloc(20);
@@ -63,7 +62,6 @@ void update_date_and_time(gps_t* gps) {
 }
 
 void update_location(gps_t* gps) {
-  // Update gps_location_items
   char* signal_str = (char*) malloc(20);
   char* latitude_str = (char*) malloc(22);
   char* longitude_str = (char*) malloc(22);
@@ -75,14 +73,22 @@ void update_location(gps_t* gps) {
   sprintf(latitude_str, "  %.05f N", gps->latitude);
   sprintf(longitude_str, "  %.05f E", gps->longitude);
   sprintf(altitude_str, "  %.04fm", gps->altitude);
-  sprintf(speed_str, "Speed: %.02fm/s", gps->speed);
 
   gps_location_items[1] = signal_str;
   gps_location_items[4] = latitude_str;
   gps_location_items[6] = longitude_str;
   gps_location_items[8] = altitude_str;
-  // gps_location_items[10] = speed_str;
-  // TODO: add speed menu
+}
+
+void update_speed(gps_t* gps) {
+  char* signal_str = (char*) malloc(20);
+  char* speed_str = (char*) malloc(22);
+
+  sprintf(signal_str, "Signal: %s", get_signal_strength(gps));
+  sprintf(speed_str, "Speed: %.02fm/s", gps->speed);
+
+  gps_speed_items[1] = signal_str;
+  gps_speed_items[3] = speed_str;
 }
 
 /**
@@ -103,7 +109,6 @@ static void gps_event_handler(void* event_handler_arg,
     return;
   }
 
-  // gps_t* gps = NULL;
   switch (event_id) {
     case GPS_UPDATE:
       /* update GPS information */
@@ -111,6 +116,7 @@ static void gps_event_handler(void* event_handler_arg,
 
       update_date_and_time(gps);
       update_location(gps);
+      update_speed(gps);
       menu_screens_display_menu();
       break;
     case GPS_UNKNOWN:
@@ -147,6 +153,7 @@ void gps_module_exit_submenu_cb() {
       break;
     case MENU_GPS_DATE_TIME:
     case MENU_GPS_LOCATION:
+    case MENU_GPS_SPEED:
       nmea_parser_exit();
       break;
     default:
@@ -158,6 +165,7 @@ void gps_module_enter_submenu_cb(screen_module_menu_t user_selection) {
   switch (user_selection) {
     case MENU_GPS_DATE_TIME:
     case MENU_GPS_LOCATION:
+    case MENU_GPS_SPEED:
       nmea_parser_begin();
       break;
     default:

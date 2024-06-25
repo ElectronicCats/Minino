@@ -20,6 +20,13 @@
  */
 #define CONFIGURATION_MENU_ITEMS "configuration"
 
+/**
+ * @brief Question menu items
+ *
+ * Used to identify the question menu items
+ *
+ * Add this flag to the menu item to make it a question item
+ */
 #define QUESTION_MENU_ITEMS "question"
 
 /**
@@ -67,6 +74,7 @@ typedef enum {
   /* GPS applications */
   MENU_GPS_DATE_TIME,
   MENU_GPS_LOCATION,
+  MENU_GPS_SPEED,
   MENU_GPS_HELP,
   /* About items */
   MENU_ABOUT_VERSION,
@@ -119,6 +127,7 @@ const char* menu_list[] = {
     "MENU_THREAD_BROADCAST",
     "MENU_GPS_DATE_TIME",
     "MENU_GPS_LOCATION",
+    "MENU_GPS_SPEED",
     "MENU_GPS_HELP",
     "MENU_ABOUT_VERSION",
     "MENU_ABOUT_LICENSE",
@@ -160,7 +169,7 @@ const int next_menu_table[][6] = {
     // MENU_MATTER_APPS
     {MENU_MATTER_APPS},
     // MENU_GPS
-    {MENU_GPS_DATE_TIME, MENU_GPS_LOCATION, MENU_GPS_HELP},
+    {MENU_GPS_DATE_TIME, MENU_GPS_LOCATION, MENU_GPS_SPEED, MENU_GPS_HELP},
     // MENU_WIFI_ANALIZER
     {MENU_WIFI_ANALIZER_RUN, MENU_WIFI_ANALIZER_SETTINGS},
     // MENU_WIFI_DEAUTH
@@ -195,6 +204,8 @@ const int next_menu_table[][6] = {
     {MENU_GPS_DATE_TIME},
     // MENU_GPS_LOCATION
     {MENU_GPS_LOCATION},
+    // MENU_GPS_SPEED
+    {MENU_GPS_SPEED},
     // MENU_GPS_HELP
     {MENU_GPS_HELP},
     // MENU_ABOUT_VERSION
@@ -252,6 +263,7 @@ const int prev_menu_table[] = {
     MENU_THREAD_APPS,                // MENU_THREAD_BROADCAST
     MENU_GPS,                        // MENU_GPS_DATE_TIME
     MENU_GPS,                        // MENU_GPS_LOCATION
+    MENU_GPS,                        // MENU_GPS_SPEED
     MENU_GPS,                        // MENU_GPS_HELP
     MENU_ABOUT,                      // MENU_ABOUT_VERSION
     MENU_ABOUT,                      // MENU_ABOUT_LICENSE
@@ -426,14 +438,17 @@ char* thread_items[] = {
 };
 
 char* gps_items[] = {
-    "Date & Time",
-    "Location",
-    "Help",
-    NULL,
+    "Date & Time", "Location", "Speed", "Help", NULL,
 };
 
 char* gps_date_time_items[] = {
-    VERTICAL_SCROLL_TEXT, "Signal:", "", "Date:", "Time:", NULL,
+    VERTICAL_SCROLL_TEXT,
+    /***************/
+    "Signal:",
+    "",
+    "Date:",
+    "Time:",
+    NULL,
 };
 
 char* gps_location_items[] = {
@@ -447,6 +462,15 @@ char* gps_location_items[] = {
     "",
     "Altitude:",
     "",
+    NULL,
+};
+
+char* gps_speed_items[] = {
+    VERTICAL_SCROLL_TEXT,
+    /***************/
+    "Signal:",
+    "",
+    "Speed:",
     NULL,
 };
 
@@ -553,6 +577,7 @@ char** menu_items[] = {
     /* GPS applications */
     gps_date_time_items,  // MENU_GPS_DATE_TIME
     gps_location_items,   // MENU_GPS_LOCATION
+    gps_speed_items,      // MENU_GPS_SPEED
     gps_help,             // MENU_GPS_HELP
     /* About */
     version_text, license_text, credits_text, legal_text,
