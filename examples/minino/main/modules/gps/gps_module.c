@@ -14,6 +14,12 @@ static const char* TAG = "gps_module";
 nmea_parser_handle_t nmea_hdl = NULL;
 
 /**
+ * @brief Signal strength levels based on the number of satellites in use
+ */
+const char* GPS_SIGNAL_STRENGTH[] = {"None", "Weak", "Moderate", "Strong",
+                                     "Very Strong"};
+
+/**
  * @brief Time zones in UTC
  *
  * @note Source: List of UTC offsets
@@ -25,33 +31,53 @@ const float TIME_ZONES[] = {-12.0, -11.0, -10.0, -9.5,  -9.0, -8.0, -7.0, -6.0,
                             6.0,   6.5,   7.0,   8.0,   8.75, 9.0,  9.5,  10.0,
                             10.5,  11.0,  12.0,  12.75, 13.0, 14.0};
 
+char* get_signal_strength(gps_t* gps) {
+  if (gps->sats_in_use == 0) {
+    return (char*) GPS_SIGNAL_STRENGTH[0];
+  } else if (gps->sats_in_use >= 1 && gps->sats_in_use <= 4) {
+    return (char*) GPS_SIGNAL_STRENGTH[1];
+  } else if (gps->sats_in_use >= 5 && gps->sats_in_use <= 8) {
+    return (char*) GPS_SIGNAL_STRENGTH[2];
+  } else if (gps->sats_in_use >= 9 && gps->sats_in_use <= 12) {
+    return (char*) GPS_SIGNAL_STRENGTH[3];
+  } else {
+    return (char*) GPS_SIGNAL_STRENGTH[4];
+  }
+}
+
 void update_date_and_time(gps_t* gps) {
   // Update gps_date_time_items
+  char* signal_str = (char*) malloc(20);
   char* date_str = (char*) malloc(20);
   char* time_str = (char*) malloc(20);
 
+  sprintf(signal_str, "Signal: %s", get_signal_strength(gps));
   sprintf(date_str, "Date: %d/%d/%d", gps->date.year, gps->date.month,
           gps->date.day);
   sprintf(time_str, "Time: %d:%d:%d", gps->tim.hour, gps->tim.minute,
           gps->tim.second);
 
+  gps_date_time_items[1] = signal_str;
   gps_date_time_items[3] = date_str;
   gps_date_time_items[4] = time_str;
 }
 
 void update_location(gps_t* gps) {
   // Update gps_location_items
+  char* signal_str = (char*) malloc(20);
   char* latitude_str = (char*) malloc(22);
   char* longitude_str = (char*) malloc(22);
   char* altitude_str = (char*) malloc(22);
   char* speed_str = (char*) malloc(22);
 
   // TODO: add ° symbol
+  sprintf(signal_str, "Signal: %s", get_signal_strength(gps));
   sprintf(latitude_str, "  %.05f N", gps->latitude);
   sprintf(longitude_str, "  %.05f E", gps->longitude);
   sprintf(altitude_str, "  %.04fm", gps->altitude);
   sprintf(speed_str, "Speed: %.02fm/s", gps->speed);
 
+  gps_location_items[1] = signal_str;
   gps_location_items[4] = latitude_str;
   gps_location_items[6] = longitude_str;
   gps_location_items[8] = altitude_str;
