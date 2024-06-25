@@ -17469,7 +17469,7 @@
 		)
 		(fp_arc
 			(start 5.168 -9.472)
-			(mid 5.659552 -9.609641)
+			(mid 5.659552 -9.609635)
 			(end 6.1679 -9.656)
 			(stroke
 				(width 0.127)
@@ -17480,7 +17480,7 @@
 		)
 		(fp_arc
 			(start 5.168 -9.472)
-			(mid 2.945408 -8.849733)
+			(mid 2.945408 -8.849734)
 			(end 0.6469 -8.64)
 			(stroke
 				(width 0.127)
@@ -20125,6 +20125,7 @@
 		(fp_text user "gge376"
 			(at 0 0 0)
 			(layer "Cmts.User")
+			(hide yes)
 			(uuid "10269dc8-fc75-4d09-b63c-20ca20bab418")
 			(effects
 				(font
