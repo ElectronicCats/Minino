@@ -9,5 +9,11 @@ repos:
     rev: v18.1.2  # Use the sha / tag you want to point at
     hooks:
     -   id: clang-format
-        types_or: [c]
+        types_or: [c++, c]
         args: ['--style=file']
+-   repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.2.0
+    hooks:
+    -   id: conventional-pre-commit
+        stages: [commit-msg]
+        args: []
