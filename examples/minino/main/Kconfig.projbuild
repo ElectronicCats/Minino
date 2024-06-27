@@ -1,3 +1,22 @@
+menu "General project"
+
+	choice BOARD_TYPE
+		prompt "Board type"
+		default BOARD_MININO
+		help
+			Select Board type.
+		config BOARD_MININO
+			bool "MININO"
+			help
+				MININO Board.
+		config BOARD_BADGE
+			bool "Badge"
+			help
+				Badge Board.
+	endchoice
+
+endmenu
+
 menu "OLED Screen Configuration"
 
 	config GPIO_RANGE_MAX
@@ -26,7 +45,8 @@ menu "OLED Screen Configuration"
 
 	choice DRIVER
 		prompt "Driver"
-		default SH1106
+		default SSD1306 if BOARD_BADGE
+		default SH1106 if BOARD_MININO
 		help
 			Select Driver.
 		config SSD1306
@@ -41,7 +61,8 @@ menu "OLED Screen Configuration"
 
 	choice RESOLUTION
 		prompt "Panel resolution"
-		default RESOLUTION_128X64
+		default RESOLUTION_128X32 if BOARD_BADGE
+		default RESOLUTION_128X64 if BOARD_MININO
 		help
 			Select Panel resolution.
 		config RESOLUTION_128X32
@@ -211,25 +232,28 @@ menu "KEYBOARD Configuration"
 	config GPIO_LEFT_BUTTON
 		int "GPIO LEFT Button Pin"
 		range 0 GPIO_RANGE_MAX
-		default 22 if IDF_TARGET_ESP32C6
+		default 1 if BOARD_BADGE
+		default 22 if BOARD_MININO
 		help
 			Select the GPIO pin number for the LEFT button.
 	config GPIO_RIGHT_BUTTON
 		int "GPIO RIGHT Button Pin"
 		range 0 GPIO_RANGE_MAX
-		default 1 if IDF_TARGET_ESP32C6
+		default 15 if BOARD_BADGE
+		default 1 if BOARD_MININO
 		help
 			Select the GPIO pin number for the RIGHT button.
 	config GPIO_UP_BUTTON
 		int "GPIO UP Button Pin"
 		range 0 GPIO_RANGE_MAX
-		default 15 if IDF_TARGET_ESP32C6
+		default 22 if BOARD_BADGE
+		default 15 if BOARD_MININO
 		help
 			Select the GPIO pin number for the UP button.
 	config GPIO_DOWN_BUTTON
 		int "GPIO DOWN Button Pin"
 		range 0 GPIO_RANGE_MAX
-		default 23 if IDF_TARGET_ESP32C6
+		default 23
 		help
 			Select the GPIO pin number for the DOWN button.
 endmenu
@@ -306,5 +330,4 @@ menu "Frequency Configuration"
         default 26 if EXAMPLE_MIN_CPU_FREQ_26M
         default 13 if EXAMPLE_MIN_CPU_FREQ_13M
         default 32 if EXAMPLE_MIN_CPU_FREQ_32M
-
 endmenu
