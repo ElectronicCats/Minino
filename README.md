@@ -19,15 +19,40 @@
 
 
 
+Minino is an original multiprotocol, and multiband board made for sniffing, communicating, and attacking IoT (Internet of Things) devices. It was designed as a mini Cat that integrates the powerful ESP32C6 and a GPS, microSD with OLED. This board is a mini swiss army knife for IoT security researchers, developers, and enthusiasts. 
 
-Minino is a multifunctional security tool capable of working with wireless technologies used in IoT. Featuring an ESP32-C6, Minino can interact with Wi-Fi, BLE Zigbee, Thread, Matter, and more, providing a wide range of applications.
+This board is a mini swiss army knife for IoT security researchers, developers, and enthusiasts. 
+Minino can operate in 3 different technologies:
+- BLE
+- WiFi
+- Zigbee
+- Thread
+- Matter
+- GPS
+
+## Features:
+- Wi-Fi Sniffer and deauthenticator
+- Bluetooth analyzing tools, Airtags scanner
+- Zigbee Sniffer (CLI)
+- Zigbee Spoofing
+- WarDriving wiht GPS.
+- Compatible with catnip of Catsniffer
+- Compatible with Wireshark
+- WarDriving
+- Sniffing mulitpprotocol
+- Support file .pcad in microSD
+- OpenSource
+- Open Hardware
+
+## Future Features
+- Thread CLI
+- Zigbee Sniffer and deauthenticator
+- Matter CLI
+- Save files in SD
 
 
-Key features includes Wi-Fi Sniffer and deauthenticator, Bluetooth analyzing tools, Airtags scanner, Zigbee Sniffer (CLI), Zigbee Spoofing, and GPS.
 
-
-Based on the project [Amini Project](https://github.com/Ocelot-Offensive-Security/Arsenal) ;Based on the project [USBNugget](https://github.com/HakCat-Tech/USB-Nugget).
-
+inspired by projects such as [Amini Project](https://github.com/Ocelot-Offensive-Security/Arsenal) and [USBNugget](https://github.com/HakCat-Tech/USB-Nugget).
 
 
 
