@@ -36,7 +36,7 @@ Minino can operate in 6 different technologies:
 - Zigbee Sniffer (CLI)
 - Zigbee Spoofing
 - WarDriving wiht GPS.
-- Compatible with catnip of Catsniffer
+- Compatible with Pycatsniffer of Catsniffer
 - Compatible with Wireshark
 - WarDriving
 - Sniffing mulitpprotocol
@@ -45,7 +45,7 @@ Minino can operate in 6 different technologies:
 - Open Hardware
 
 ## Future Features
-- Thread CLI
+- Thread Broadcast 
 - Zigbee Sniffer and deauthenticator
 - Matter CLI
 - Save files in SD
