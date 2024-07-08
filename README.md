@@ -43,6 +43,7 @@ Minino can operate in 6 different technologies:
 - Support file .pcad in microSD
 - OpenSource
 - Open Hardware
+- OTA Update
 
 ## Future Features
 - Thread Broadcast 
