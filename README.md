@@ -22,7 +22,7 @@
 Minino is an original multiprotocol, and multiband board made for sniffing, communicating, and attacking IoT (Internet of Things) devices. It was designed as a mini Cat that integrates the powerful ESP32C6 and a GPS, microSD with OLED. This board is a mini swiss army knife for IoT security researchers, developers, and enthusiasts. 
 
 This board is a mini swiss army knife for IoT security researchers, developers, and enthusiasts. 
-Minino can operate in 3 different technologies:
+Minino can operate in 6 different technologies:
 - BLE
 - WiFi
 - Zigbee
