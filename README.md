@@ -40,7 +40,7 @@ Minino can operate in 6 different technologies:
 - Compatible with Wireshark
 - WarDriving
 - Sniffing mulitpprotocol
-- Support file .pcad in microSD
+- Support file .pcap in microSD
 - OpenSource
 - Open Hardware
 - OTA Update
