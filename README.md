@@ -1,26 +1,47 @@
 # Minino
 
-Minino is based on the [ESP32-C6](https://www.espressif.com/en/products/socs/esp32-c6) microcontroller, it combines WiFi, Bluetooth Low Energy (BLE), Zigbee and Thread protocols to create a powerful tool for security researchers and pentesters.
+<p align="center">
+    <a href="https://github.com/ElectronicCats/Minino/wiki">
+        <img src="https://github.com/ElectronicCats/Minino/assets/107638696/ad4bffb2-d428-439c-b691-60add7cfb9af" height=500>
+    </a>
+</p>
 
-## Applications
+<p align=center>
+    <a href="https://electroniccats.com/store/minino/">
+        <img src="https://github.com/ElectronicCats/flipper-shields/assets/44976441/0c617467-052b-4ab1-a3b9-ba36e1f55a91" width="200" height="104" />
+    </a>
+    <a href="https://github.com/ElectronicCats/Minino/wiki">
+        <img src="https://github.com/ElectronicCats/flipper-shields/assets/44976441/6aa7f319-3256-442e-a00d-33c8126833ec" width="200" height="104" />
+    </a>
+</p>
 
-Current working applications include:
+Minino is an original multiprotocol, and multiband board made for sniffing, communicating, and attacking IoT (Internet of Things) devices. It was designed as a mini Cat that integrates the powerful ESP32C6 and a GPS, microSD with OLED.  This board is a mini Swiss army knife for IoT security researchers, developers, and enthusiasts.
 
-- [x] WiFi sniffer
-- [x] WiFi deauther
-- [x] BLE spammer
-- [x] BLE trackers scanner (AirTags, Tile, etc)
-- [x] Zigbee sniffer
-- [x] Zigbee spoofing (Switch End Device)
-- [x] Thread broadcast
-- [x] GPS tracker
-- [x] Wardriving
+Minino can operate in 6 different technologies:
+- BLE (Airtags scanner and SPAM)
+- Wi-Fi (Sniffer and deauthenticator)
+- Zigbee (Sniffer over CLI and Spoofing)
+- Thread
+- Matter
+- GPS (WarDriving)
 
-Coming soon:
+## Features
+- Compatible with Pycatsniffer of Catsniffer
+- Compatible with Wireshark
+- WarDriving
+- Sniffing multiprotocol
+- Support file .pcap in microSD
+- OpenSource
+- Open Hardware
+- OTA Updates
 
-- [ ] Thread sniffer
-- [ ] Wireshark integration
-- [ ] Matter protocol support
+### Future Features
+- Thread Broadcast
+- Zigbee Sniffer and deauthenticator
+- Matter CLI
+- Save files in SD
+
+Inspired by projects such as [Amini Project](https://github.com/Ocelot-Offensive-Security/Arsenal) and [USBNugget](https://github.com/HakCat-Tech/USB-Nugget).
 
 ## UI overview
 
@@ -38,11 +59,11 @@ Your Minino comes with a pre-installed firmware, just add the batteries or conne
 
 > If Minino doesn't turn on, press the `RESET` button.
 
-See the [Wiki]() for more information about the applications and how to use them.
+See the [Wiki](https://github.com/ElectronicCats/Minino/wiki) for more information about the applications and how to use them.
 
 ### Getting updates
 
-First check the current version of your firmware by going to `About > Version` in your Minino, then check the latest version in the [releases](). If there is a new version, continue with the steps below.
+First check the current version of your firmware by going to `About > Version` in your Minino, then check the latest version in the [releases](https://github.com/ElectronicCats/Minino/releases). If there is a new version, continue with the steps below.
 
 To update your Minino firmware, follow these steps:
 
@@ -50,16 +71,25 @@ TODO: Add instructions
 
 ### Developer guide
 
-You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html) framework, just follow the instructions in this [link]().
+You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html) framework, just follow the instructions in this [link](/examples/minino/README.md).
 
-## Thanks
+## How to contribute <img src="https://electroniccats.com/wp-content/uploads/2018/01/fav.png" height="35"><img src="https://raw.githubusercontent.com/gist/ManulMax/2d20af60d709805c55fd784ca7cba4b9/raw/bcfeac7604f674ace63623106eb8bb8471d844a6/github.gif" height="30">
 
-Based in the project [Amini Project](https://github.com/Ocelot-Offensive-Security/Arsenal)
-Based in the project [USBNugget](https://github.com/HakCat-Tech/USB-Nugget)
+Contributions are welcome!
+
+Please read the document [**Contribution Manual**](https://github.com/ElectronicCats/electroniccats-cla/blob/main/electroniccats-contribution-manual.md) which will show you how to contribute your changes to the project.
+
+✨ Thanks to all our [contributors](https://github.com/ElectronicCats/Minino/graphs/contributors)! ✨
+
+See [**_Electronic Cats CLA_**](https://github.com/ElectronicCats/electroniccats-cla/blob/main/electroniccats-cla.md) for more information.
+
+See the [**community code of conduct**](https://github.com/ElectronicCats/electroniccats-cla/blob/main/electroniccats-community-code-of-conduct.md) for a vision of the community we want to build and what we expect from it.
 
 ## License
 
-![OpenSourceLicense](https://github.com/ElectronicCats/AjoloteBoard/raw/master/OpenSourceLicense.png)
+<a href="https://github.com/ElectronicCats">
+    <img src="https://github.com/ElectronicCats/AjoloteBoard/raw/master/OpenSourceLicense.png" height="200" />
+</a>
 
 Electronic Cats invests time and resources providing this open source design, please support Electronic Cats and open-source hardware by purchasing products from Electronic Cats!
 

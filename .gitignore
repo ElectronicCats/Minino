@@ -40,3 +40,9 @@ hardware/minino-backups/
 /**/sdkconfig
 /**/sdkconfig.old
 /**/dependencies.lock
+
+# CPL file in csv
+minino-all-pos.csv
+
+# Gerber
+/**/MININO_GERBER
