@@ -26,7 +26,7 @@ Coming soon:
 
 Minino has a simple UI based on a 128x64 OLED display and 4 buttons. With the UP and DOWN buttons you can navigate through the options, with the LEFT you can go back and with the RIGHT you can select an option.
 
-![UI](./examples/ESP-IDF/minino/src/ui_overview.gif)
+![UI](./examples/minino/resources/ui_overview.gif)
 
 > There are specific applications that doesn't follow the UI menu flow, just interact with them to see what they do.
 
