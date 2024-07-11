@@ -1,0 +1,92 @@
+/* Reset y estilos generales */
+body {
+    background-color: #f1f1f1;
+    font-family: Helvetica, Arial, sans-serif;
+    color: #333;
+    margin: 0;
+    padding: 0;
+    line-height: 1.6;
+}
+
+h1 {
+    text-align: center;
+    margin: 20px 0;
+    color: #1d3557;
+}
+
+h2, h3, h4 {
+    color: #1d3557;
+}
+
+#OTA {
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+
+#latest_firmware_label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+#latest_firmware {
+    margin-bottom: 20px;
+}
+
+input[type="file"] {
+    display: none;
+}
+
+.buttons {
+    text-align: center;
+    margin-top: 20px;
+}
+
+input[type="button"] {
+    font-size: 14px;
+    border: 0;
+    line-height: 2;
+    padding: 8px 20px;
+    text-align: center;
+    color: #fff;
+    border-radius: 5px;
+    background-color: #4caf50;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+input[type="button"]:hover {
+    background-color: #45a049;
+}
+
+#file_info {
+    margin-top: 20px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#ota_update_status {
+    font-weight: bold;
+    text-align: center;
+    margin-top: 20px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 20px 0;
+}
+
+/* Estilos para los iconos de gato */
+.cat-icon {
+    font-size: 24px;
+    vertical-align: middle;
+    margin-right: 5px;
+}

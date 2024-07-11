@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <script src='jquery-3.3.1.min.js'></script>
+    <link rel="stylesheet" href="app.css">
+    <script async src="app.js"></script>
+    <title>MININO</title>
+</head>
+<body>
+    <header>
+        <h1><span class="cat-icon">&#128568;</span> MININO Firmware Update</h1>
+    </header>
+
+    <div id="OTA">
+        <label id="latest_firmware_label">Latest Firmware:</label>
+        <div id="latest_firmware"></div>
+        <input type="file" id="selected_file" accept=".bin" onchange="getFileInfo()" />
+        <div class="buttons">
+            <input type="button" value="Select Firmware" onclick="document.getElementById('selected_file').click();" />
+            <input type="button" value="Update Firmware" onclick="updateFirmware()" />
+        </div>
+        <div id="file_info"></div>
+        <div id="ota_update_status"></div>
+    </div>
+
+    <hr>
+
+    <script src="script.js"></script>
+</body>
+</html>
