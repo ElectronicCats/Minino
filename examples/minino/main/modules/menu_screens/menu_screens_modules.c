@@ -88,6 +88,7 @@ void run_tests() {
 }
 
 void show_logo() {
+  // buzzer_set_freq(50);
   buzzer_play();
   oled_screen_display_bitmap(epd_bitmap_logo_1, 0, 0, 128, 64,
                              OLED_DISPLAY_NORMAL);
