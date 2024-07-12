@@ -17,23 +17,11 @@ void reboot_counter() {
   preferences_put_int("reboot_counter", counter);
 }
 
-void buzzer_test() {
-  buzzer_begin(GPIO_NUM_2);
-  buzzer_set_freq(4000);
-  buzzer_play();
-  vTaskDelay(1000 / portTICK_PERIOD_MS);
-  // buzzer_stop();
-  buzzer_set_freq(2000);
-  buzzer_play();
-  vTaskDelay(1000 / portTICK_PERIOD_MS);
-  buzzer_stop();
-}
-
 void app_main(void) {
   uint64_t start_time, end_time;
   start_time = esp_timer_get_time();
-  buzzer_test();
 
+  buzzer_begin(GPIO_NUM_2);
   leds_init();
   leds_on();
   preferences_begin();

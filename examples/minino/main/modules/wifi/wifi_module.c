@@ -15,6 +15,7 @@
 
 static const char* TAG = "wifi_module";
 bool analizer_initialized = false;
+const uint32_t SOUND_DURATION = 100;
 
 /**
  * @brief Enum with the wifi module states
@@ -109,12 +110,14 @@ void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
       break;
     case MENU_WIFI_ANALIZER_CHANNEL:
       if (menu_screens_is_configuration(user_selection)) {
-        wifi_sniffer_set_channel(selected_item + 1);
+        buzzer_play_for(SOUND_DURATION);
+        wifi_sniffer_set_channel(selected_item);
       }
       wifi_module_update_channel_options();
       break;
     case MENU_WIFI_ANALIZER_DESTINATION:
       if (menu_screens_is_configuration(user_selection)) {
+        buzzer_play_for(SOUND_DURATION);
         if (selected_item == WIFI_SNIFFER_DESTINATION_SD) {
           wifi_sniffer_set_destination_sd();
         } else {
@@ -357,8 +360,7 @@ void wifi_module_update_destination_options() {
   if (wifi_sniffer_is_destination_internal()) {
     selected_option = 1;
   }
-  menu_screens_update_options(wifi_analizer_destination_items,
-                              selected_option + 1);
+  menu_screens_update_options(wifi_analizer_destination_items, selected_option);
 }
 
 void wifi_module_keyboard_cb(button_event_t button_pressed) {

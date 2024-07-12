@@ -1,5 +1,4 @@
-#ifndef BUZZER_H
-#define BUZZER_H
+#pragma once
 
 /**
  * @brief Initialize the buzzer
@@ -16,7 +15,7 @@ void buzzer_begin(uint8_t pin);
  * @param freq The frequency of the buzzer
  * @return void
  */
-void buzzer_set_freq(uint8_t freq);
+void buzzer_set_freq(uint32_t freq);
 
 /**
  * @brief Set the duty cycle of the buzzer
@@ -36,10 +35,18 @@ void buzzer_set_duty(uint32_t duty);
 void buzzer_play();
 
 /**
+ * @brief Play the buzzer for a specific duration.
+ * Does not require `buzzer_stop`
+ *
+ * @param duration The duration of the buzzer
+ *
+ * @return void
+ */
+void buzzer_play_for(uint32_t duration);
+
+/**
  * @brief Stop the buzzer
  *
  * @return void
  */
 void buzzer_stop();
-
-#endif  // BUZZER_H
