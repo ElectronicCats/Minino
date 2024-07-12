@@ -81,6 +81,7 @@ typedef enum {
   MENU_ABOUT_LICENSE,
   MENU_ABOUT_CREDITS,
   MENU_ABOUT_LEGAL,
+  MENU_ABOUT_UPDATE,
   /* Settings items */
   MENU_SETTINGS_DISPLAY,
   MENU_SETTINGS_SOUND,
@@ -133,6 +134,7 @@ const char* menu_list[] = {
     "MENU_ABOUT_LICENSE",
     "MENU_ABOUT_CREDITS",
     "MENU_ABOUT_LEGAL",
+    "MENU_ABOUT_UPDATE",
     "MENU_SETTINGS_DISPLAY",
     "MENU_SETTINGS_SOUND",
     "MENU_SETTINGS_SYSTEM",
@@ -157,7 +159,7 @@ const int next_menu_table[][6] = {
     {MENU_SETTINGS_DISPLAY, MENU_SETTINGS_SOUND, MENU_SETTINGS_SYSTEM},
     // MENU_ABOUT
     {MENU_ABOUT_VERSION, MENU_ABOUT_LICENSE, MENU_ABOUT_CREDITS,
-     MENU_ABOUT_LEGAL},
+     MENU_ABOUT_LEGAL, MENU_ABOUT_UPDATE},
     // MENU_WIFI_APPS
     {MENU_WIFI_ANALIZER, MENU_WIFI_DEAUTH},
     // MENU_BLUETOOTH_APPS
@@ -216,6 +218,8 @@ const int next_menu_table[][6] = {
     {MENU_ABOUT_CREDITS},
     // MENU_ABOUT_LEGAL
     {MENU_ABOUT_LEGAL},
+    // MENU_ABOUT_UPDATE
+    {MENU_ABOUT_UPDATE},
     // MENU_SETTINGS_DISPLAY
     {MENU_SETTINGS_DISPLAY},
     // MENU_SETTINGS_SOUND
@@ -269,6 +273,7 @@ const int prev_menu_table[] = {
     MENU_ABOUT,                      // MENU_ABOUT_LICENSE
     MENU_ABOUT,                      // MENU_ABOUT_CREDITS
     MENU_ABOUT,                      // MENU_ABOUT_LEGAL
+    MENU_ABOUT,                      // MENU_ABOUT_UPDATE
     MENU_SETTINGS,                   // MENU_SETTINGS_DISPLAY
     MENU_SETTINGS,                   // MENU_SETTINGS_SOUND
     MENU_SETTINGS,                   // MENU_SETTINGS_SYSTEM
@@ -303,7 +308,7 @@ char* settings_items[] = {
 };
 
 char* about_items[] = {
-    "Version", "License", "Credits", "Legal", NULL,
+    "Version", "License", "Credits", "Legal", "Update", NULL,
 };
 
 char* version_text[] = {
@@ -314,6 +319,20 @@ char* version_text[] = {
     "",
     " Minino v1.3.0",
     "     BETA",
+    NULL,
+};
+
+char* update_text[] = {
+    VERTICAL_SCROLL_TEXT,
+    /***************/
+    "**-Connect to-**",
+    "",
+    "SSID: ESP32_AP",
+    "Pass: 12345678",
+    "",
+    "Then open ",
+    "192.168.0.1",
+    "in your browser",
     NULL,
 };
 
@@ -580,7 +599,7 @@ char** menu_items[] = {
     gps_speed_items,      // MENU_GPS_SPEED
     gps_help,             // MENU_GPS_HELP
     /* About */
-    version_text, license_text, credits_text, legal_text,
+    version_text, license_text, credits_text, legal_text, update_text,
     /* Settings items */
     empty_items,            // MENU_SETTINGS_DISPLAY
     empty_items,            // MENU_SETTINGS_SOUND

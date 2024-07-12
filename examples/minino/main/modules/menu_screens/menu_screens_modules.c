@@ -1,4 +1,5 @@
 #include "menu_screens_modules.h"
+#include "OTA.h"
 #include "bitmaps.h"
 #include "ble_module.h"
 #include "esp_log.h"
@@ -498,6 +499,10 @@ void handle_user_selection(screen_module_menu_t user_selection) {
       break;
     case MENU_GPS:
       gps_module_begin();
+      break;
+    case MENU_ABOUT_UPDATE:
+      menu_screens_register_exit_submenu_cb(esp_restart);
+      OTA_init();
       break;
     default:
       ESP_LOGI(TAG, "Unhandled menu: %s", menu_list[user_selection]);

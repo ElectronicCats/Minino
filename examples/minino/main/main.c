@@ -8,8 +8,6 @@
 #include "preferences.h"
 #include "sd_card.h"
 
-#include "OTA.h"
-
 static const char* TAG = "main";
 
 void reboot_counter() {
@@ -20,22 +18,21 @@ void reboot_counter() {
 }
 
 void app_main(void) {
-  OTA_init();
-  // uint64_t start_time, end_time;
-  // start_time = esp_timer_get_time();
+  uint64_t start_time, end_time;
+  start_time = esp_timer_get_time();
 
-  // leds_init();
-  // leds_on();
-  // preferences_begin();
-  // sd_card_init();
-  // keyboard_module_begin();
-  // menu_screens_begin();
-  // reboot_counter();
-  // leds_off();
+  leds_init();
+  leds_on();
+  preferences_begin();
+  sd_card_init();
+  keyboard_module_begin();
+  menu_screens_begin();
+  reboot_counter();
+  leds_off();
 
-  // end_time = esp_timer_get_time();
-  // float time = (float) (end_time - start_time) / 1000000;
-  // char* time_str = malloc(sizeof(time) + 1);
-  // sprintf(time_str, "%2.2f", time);
-  // ESP_LOGI(TAG, "Total time taken: %s seconds", time_str);
+  end_time = esp_timer_get_time();
+  float time = (float) (end_time - start_time) / 1000000;
+  char* time_str = malloc(sizeof(time) + 1);
+  sprintf(time_str, "%2.2f", time);
+  ESP_LOGI(TAG, "Total time taken: %s seconds", time_str);
 }
