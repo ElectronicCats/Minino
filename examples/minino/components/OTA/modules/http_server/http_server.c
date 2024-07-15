@@ -13,6 +13,8 @@
 #include "http_server.h"
 #include "wifi_ap.h"
 
+#include "OTA.h"
+
 // Macros
 #define HTTP_SERVER_MAX_URI_HANDLERS     (20u)
 #define HTTP_SERVER_RECEIVE_WAIT_TIMEOUT (10u)  // in seconds
@@ -61,6 +63,7 @@ static esp_err_t http_server_app_js_handler(httpd_req_t* req);
 static esp_err_t http_server_favicon_handler(httpd_req_t* req);
 static esp_err_t http_server_ota_update_handler(httpd_req_t* req);
 static esp_err_t http_server_ota_status_handler(httpd_req_t* req);
+static esp_err_t http_server_ota_progress_handler(httpd_req_t* req);
 static esp_err_t http_server_sensor_value_handler(httpd_req_t* req);
 static void http_server_fw_update_reset_timer(void);
 
@@ -224,6 +227,11 @@ static httpd_handle_t http_server_configure(void) {
                               .method = HTTP_POST,
                               .handler = http_server_ota_status_handler,
                               .user_ctx = NULL};
+    httpd_uri_t ota_progress = {.uri = "/OTAprogress",
+                                .method = HTTP_POST,
+                                .handler = http_server_ota_progress_handler,
+                                .user_ctx = NULL};
+    httpd_register_uri_handler(http_server_handle, &ota_progress);
 
     // Register Query Handler
     httpd_register_uri_handler(http_server_handle, &jquery_js);
@@ -360,6 +368,7 @@ static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
   int recv_len = 0;
   bool is_req_body_started = false;
   bool flash_successful = false;
+  is_ota_running = true;
 
   // get the next OTA app partition which should be written with a new firmware
   const esp_partition_t* update_partition =
@@ -508,6 +517,30 @@ static esp_err_t http_server_ota_status_handler(httpd_req_t* req) {
   httpd_resp_set_type(req, "application/json");
   httpd_resp_send(req, ota_JSON, strlen(ota_JSON));
 
+  return ESP_OK;
+}
+
+static esp_err_t http_server_ota_progress_handler(httpd_req_t* req) {
+  char buf[10];
+  int ret, remaining = req->content_len;
+  while (remaining > 0) {
+    if ((ret = httpd_req_recv(req, buf, MIN(remaining, sizeof(buf)))) <= 0) {
+      if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
+        continue;
+      }
+      return ESP_FAIL;
+    }
+    remaining -= ret;
+  }
+
+  ESP_LOGI(TAG, "OTA Progress: %.*s", req->content_len, buf);
+
+  uint8_t ota_progress = 0;
+  sscanf(buf, "%hhu", &ota_progress);
+  if (ota_show_event_cb != NULL) {
+    ota_show_event_cb(OTA_SHOW_PROGRESS_EVENT, &ota_progress);
+  }
+  httpd_resp_send(req, NULL, 0);
   return ESP_OK;
 }
 

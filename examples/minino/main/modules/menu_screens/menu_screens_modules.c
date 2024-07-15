@@ -8,6 +8,7 @@
 #include "oled_screen.h"
 #include "open_thread.h"
 #include "open_thread_module.h"
+#include "ota_module.h"
 #include "preferences.h"
 #include "radio_selector.h"
 #include "settings_module.h"
@@ -501,8 +502,7 @@ void handle_user_selection(screen_module_menu_t user_selection) {
       gps_module_begin();
       break;
     case MENU_ABOUT_UPDATE:
-      menu_screens_register_exit_submenu_cb(esp_restart);
-      OTA_init();
+      ota_module_init();
       break;
     default:
       ESP_LOGI(TAG, "Unhandled menu: %s", menu_list[user_selection]);

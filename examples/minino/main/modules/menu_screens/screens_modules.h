@@ -322,20 +322,6 @@ char* version_text[] = {
     NULL,
 };
 
-char* update_text[] = {
-    VERTICAL_SCROLL_TEXT,
-    /***************/
-    "**-Connect to-**",
-    "",
-    "SSID: minino_ap",
-    "Pass: Cats1234",
-    "",
-    "Then open ",
-    "192.168.0.1",
-    "in your browser",
-    NULL,
-};
-
 char* license_text[] = {
     VERTICAL_SCROLL_TEXT,
     /***************/
@@ -599,7 +585,7 @@ char** menu_items[] = {
     gps_speed_items,      // MENU_GPS_SPEED
     gps_help,             // MENU_GPS_HELP
     /* About */
-    version_text, license_text, credits_text, legal_text, update_text,
+    version_text, license_text, credits_text, legal_text, empty_items,
     /* Settings items */
     empty_items,            // MENU_SETTINGS_DISPLAY
     empty_items,            // MENU_SETTINGS_SOUND
