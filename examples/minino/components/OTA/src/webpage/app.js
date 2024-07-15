@@ -44,12 +44,6 @@ function updateProgress(oEvent) {
     if (oEvent.lengthComputable) {
         var percentComplete = Math.round((oEvent.loaded / oEvent.total) * 100);
         document.getElementById("ota_update_status").innerHTML = "Uploading... " + percentComplete + "%";
-
-        // Envía el progreso al servidor
-        var xhrProgress = new XMLHttpRequest();
-        xhrProgress.open('POST', "/OTAprogress", true); // Ruta del endpoint para el progreso
-        xhrProgress.setRequestHeader("Content-Type", "application/json");
-        xhrProgress.send(JSON.stringify({ "progress": percentComplete }));
     } else {
         document.getElementById("ota_update_status").innerHTML = "Uploading... Please wait.";
     }

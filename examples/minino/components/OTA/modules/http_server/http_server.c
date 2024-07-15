@@ -63,7 +63,6 @@ static esp_err_t http_server_app_js_handler(httpd_req_t* req);
 static esp_err_t http_server_favicon_handler(httpd_req_t* req);
 static esp_err_t http_server_ota_update_handler(httpd_req_t* req);
 static esp_err_t http_server_ota_status_handler(httpd_req_t* req);
-static esp_err_t http_server_ota_progress_handler(httpd_req_t* req);
 static esp_err_t http_server_sensor_value_handler(httpd_req_t* req);
 static void http_server_fw_update_reset_timer(void);
 
@@ -227,11 +226,6 @@ static httpd_handle_t http_server_configure(void) {
                               .method = HTTP_POST,
                               .handler = http_server_ota_status_handler,
                               .user_ctx = NULL};
-    httpd_uri_t ota_progress = {.uri = "/OTAprogress",
-                                .method = HTTP_POST,
-                                .handler = http_server_ota_progress_handler,
-                                .user_ctx = NULL};
-    httpd_register_uri_handler(http_server_handle, &ota_progress);
 
     // Register Query Handler
     httpd_register_uri_handler(http_server_handle, &jquery_js);
@@ -414,6 +408,12 @@ static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
     }
     ESP_LOGI(TAG, "http_server_ota_update_handler: OTA RX: %d of %d",
              content_received, content_len);
+    uint8_t ota_progress = (content_received * 100) / content_len;
+
+    if (ota_show_event_cb != NULL) {
+      ota_show_event_cb(OTA_SHOW_PROGRESS_EVENT, &ota_progress);
+    }
+    printf("Progress: %d", ota_progress);
 
     // We are here which means that "recv_len" is positive, now we have to check
     // if this is the first data we are receiving or not, If so, it will have
@@ -517,30 +517,6 @@ static esp_err_t http_server_ota_status_handler(httpd_req_t* req) {
   httpd_resp_set_type(req, "application/json");
   httpd_resp_send(req, ota_JSON, strlen(ota_JSON));
 
-  return ESP_OK;
-}
-
-static esp_err_t http_server_ota_progress_handler(httpd_req_t* req) {
-  char buf[10];
-  int ret, remaining = req->content_len;
-  while (remaining > 0) {
-    if ((ret = httpd_req_recv(req, buf, MIN(remaining, sizeof(buf)))) <= 0) {
-      if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
-        continue;
-      }
-      return ESP_FAIL;
-    }
-    remaining -= ret;
-  }
-
-  ESP_LOGI(TAG, "OTA Progress: %.*s", req->content_len, buf);
-
-  uint8_t ota_progress = 0;
-  sscanf(buf, "%hhu", &ota_progress);
-  if (ota_show_event_cb != NULL) {
-    ota_show_event_cb(OTA_SHOW_PROGRESS_EVENT, &ota_progress);
-  }
-  httpd_resp_send(req, NULL, 0);
   return ESP_OK;
 }
 
