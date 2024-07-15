@@ -327,8 +327,8 @@ char* update_text[] = {
     /***************/
     "**-Connect to-**",
     "",
-    "SSID: ESP32_AP",
-    "Pass: 12345678",
+    "SSID: minino_ap",
+    "Pass: Cats1234",
     "",
     "Then open ",
     "192.168.0.1",

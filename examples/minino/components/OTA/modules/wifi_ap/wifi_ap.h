@@ -12,11 +12,11 @@
 
 // Macros
 // WiFi Application Settings
-#define WIFI_AP_SSID            "ESP32_AP"  // Access Point Names
-#define WIFI_AP_PASSWORD        "12345678"  // Access Point Password
-#define WIFI_AP_CHANNEL         1           // Access Point Channels
-#define WIFI_AP_SSID_HIDDEN     0           // Access Point Visibility
-#define WIFI_AP_MAX_CONNECTIONS 5           // Access Point Max Clients
+#define WIFI_AP_SSID            "minino_ap"  // Access Point Names
+#define WIFI_AP_PASSWORD        "Cats1234"   // Access Point Password
+#define WIFI_AP_CHANNEL         1            // Access Point Channels
+#define WIFI_AP_SSID_HIDDEN     0            // Access Point Visibility
+#define WIFI_AP_MAX_CONNECTIONS 5            // Access Point Max Clients
 #define WIFI_AP_BEACON_INTERVAL \
   100  // Access Point Beacon Interval set to 100ms as recommended
 #define WIFI_AP_IP            "192.168.0.1"  // Default IP
