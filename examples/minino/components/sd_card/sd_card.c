@@ -1,5 +1,6 @@
 #include "sd_card.h"
 
+#include <dirent.h>
 #include <string.h>
 #include "argtable3/argtable3.h"
 #include "driver/sdmmc_host.h"
@@ -23,6 +24,25 @@ static struct {
   struct arg_str* device;
   struct arg_end* end;
 } mount_args;
+
+void print_files_in_sd() {
+  if (!sd_card_mounted) {
+    ESP_LOGE(TAG, "SD card not mounted");
+    return;
+  }
+
+  DIR* dir;
+  struct dirent* ent;
+  if ((dir = opendir(MOUNT_POINT)) != NULL) {
+    while ((ent = readdir(dir)) != NULL) {
+      ESP_LOGI(TAG, "%s", ent->d_name);
+    }
+    closedir(dir);
+  } else {
+    ESP_LOGE(TAG, "Could not open directory");
+    return;
+  }
+}
 
 /** 'mount' command */
 int mount(int argc, char** argv) {
@@ -144,6 +164,7 @@ void sd_card_mount() {
   // TODO: return value form mount
   sd_card_mounted = true;
   mount(mount_argc, (char**) mount_argv);
+  print_files_in_sd();
 }
 
 void sd_card_unmount() {
@@ -151,4 +172,23 @@ void sd_card_unmount() {
   uint8_t unmount_argc2 = 2;
   sd_card_mounted = false;
   unmount(unmount_argc2, (char**) unmount_argv2);
+}
+
+bool sd_card_is_mounted() {
+  return sd_card_mounted;
+}
+
+esp_err_t sd_card_create_file(const char* path) {
+  uint32_t path_len = strlen(path);
+  char full_path[path_len + 1 + strlen(MOUNT_POINT)];
+  sprintf(full_path, "%s/%s", MOUNT_POINT, path);
+
+  FILE* f = fopen(full_path, "w");
+  if (f == NULL) {
+    ESP_LOGE(TAG, "Failed to open file for writing");
+    return ESP_FAIL;
+  }
+
+  fclose(f);
+  return ESP_OK;
 }

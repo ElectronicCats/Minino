@@ -1,8 +1,10 @@
-#ifndef SD_CARD_H
-#define SD_CARD_H
+#pragma once
+
+#include <stdbool.h>
+#include "esp_err.h"
 
 void sd_card_init();
 void sd_card_mount();
 void sd_card_unmount();
-
-#endif  // SD_CARD_H
+bool sd_card_is_mounted();
+esp_err_t sd_card_create_file(const char* path);

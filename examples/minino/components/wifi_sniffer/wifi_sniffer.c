@@ -46,6 +46,7 @@ void wifi_sniffer_start() {
 
   if (wifi_sniffer_is_destination_sd()) {
     sd_card_mount();
+    sd_card_create_file("hola.txt");
   }
 
   const char** pcap_argv[] = {"pcap", "--open", "-f", "sniffer"};
