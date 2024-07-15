@@ -12,7 +12,6 @@
 #include "wifi_attacks.h"
 #include "wifi_controller.h"
 #include "wifi_scanner.h"
-
 static const char* TAG = "wifi_module";
 bool analizer_initialized = false;
 const uint32_t SOUND_DURATION = 100;
@@ -82,9 +81,12 @@ void wifi_module_exit_submenu_cb() {
       wifi_sniffer_close_file();
       break;
     case MENU_WIFI_ANALIZER:
-      oled_screen_clear();
-      menu_screens_display_text_banner("Exiting...");
-      wifi_sniffer_exit();
+      screen_module_set_screen(MENU_WIFI_ANALIZER);
+      esp_restart();
+      break;
+      // case MENU_WIFI_DOS:
+      //   screen_module_set_screen(MENU_WIFI_DOS);
+      //   esp_restart();
       break;
     default:
       break;
@@ -137,15 +139,17 @@ void wifi_module_begin() {
 }
 
 void wifi_module_exit() {
-  menu_screens_set_app_state(SCREEN_IN_NAVIGATION, NULL);
-  wifi_driver_ap_stop();
-  if (task_display_scanning != NULL) {
-    vTaskDelete(task_display_scanning);
-  }
-  if (task_display_attacking) {
-    vTaskDelete(task_display_attacking);
-  }
-  menu_screens_exit_submenu();
+  screen_module_set_screen(MENU_WIFI_DEAUTH);
+  esp_restart();
+  // menu_screens_set_app_state(SCREEN_IN_NAVIGATION, NULL);
+  // wifi_driver_ap_stop();
+  // if (task_display_scanning != NULL) {
+  //   vTaskDelete(task_display_scanning);
+  // }
+  // if (task_display_attacking) {
+  //   vTaskDelete(task_display_attacking);
+  // }
+  // menu_screens_exit_submenu();
 }
 
 void wifi_module_deauth_begin() {

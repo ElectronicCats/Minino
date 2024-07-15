@@ -45,22 +45,6 @@ typedef enum {
 void menu_screens_begin();
 
 /**
- * @brief Set the main menu
- *
- * @return void
- */
-void menu_screens_set_main_menu();
-
-/**
- * @brief Set the screen layer
- *
- * @param int screen_layer The screen layer
- *
- * @return void
- */
-void menu_screens_set_menu(int menu);
-
-/**
  * @brief Display the main menu
  *
  * @return void
@@ -198,3 +182,13 @@ void menu_screens_display_text_banner(char* text);
  * @return void
  */
 void menu_screens_update_options(char* options[], uint8_t selected_option);
+
+/**
+ * @brief Saves the previous menu of the current menu in flash before software
+ * reset
+ *
+ * @param current_menu current menu
+ *
+ * @return void
+ */
+void screen_module_set_screen(int current_menu);

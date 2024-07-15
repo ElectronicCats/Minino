@@ -84,7 +84,7 @@ void zigbee_module_state_machine(button_event_t button_pressed) {
         case BUTTON_LEFT:
           switch (button_event) {
             case BUTTON_PRESS_DOWN:
-              menu_screens_set_menu(prev_menu_table[MENU_ZIGBEE_SWITCH]);
+              screen_module_set_screen(MENU_ZIGBEE_SWITCH);
               zigbee_switch_deinit();
               break;
           }
@@ -98,13 +98,15 @@ void zigbee_module_state_machine(button_event_t button_pressed) {
       switch (button_name) {
         case BUTTON_LEFT:
           if (button_event == BUTTON_SINGLE_CLICK) {
-            ESP_LOGI(TAG_ZIGBEE_MODULE, "Button left pressed");
-            vTaskDelete(zigbee_task_display_animation);
-            led_control_stop();
-            ieee_sniffer_stop();
-            vTaskDelete(zigbee_task_sniffer);
-            menu_screens_set_app_state(false, NULL);
-            menu_screens_exit_submenu();
+            // ESP_LOGI(TAG_ZIGBEE_MODULE, "Button left pressed");
+            // vTaskDelete(zigbee_task_display_animation);
+            // led_control_stop();
+            // ieee_sniffer_stop();
+            // vTaskDelete(zigbee_task_sniffer);
+            // menu_screens_set_app_state(false, NULL);
+            // menu_screens_exit_submenu();
+            screen_module_set_screen(MENU_ZIGBEE_SNIFFER);
+            esp_restart();
           }
           break;
         case BUTTON_RIGHT:

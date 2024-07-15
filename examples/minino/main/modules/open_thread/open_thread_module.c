@@ -51,7 +51,7 @@ static void open_thread_module_state_machine(button_event_t button_pressed) {
     case MENU_THREAD_APPS:
       switch (button_name) {
         case BUTTON_LEFT:
-          menu_screens_set_menu(prev_menu_table[MENU_THREAD_APPS]);
+          screen_module_set_screen(MENU_THREAD_APPS);
           esp_restart();
           break;
         case BUTTON_RIGHT:
