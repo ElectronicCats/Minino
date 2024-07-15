@@ -13,6 +13,7 @@ set(EXTRA_COMPONENT_DIRS components/sd_card)
 set(EXTRA_COMPONENT_DIRS components/preferences)
 set(EXTRA_COMPONENT_DIRS components/ieee802154)
 set(EXTRA_COMPONENT_DIRS components/openthread)
+set(EXTRA_COMPONENT_DIRS components/thread_broadcast)
 set(EXTRA_COMPONENT_DIRS components/wifi_captive)
 set(EXTRA_COMPONENT_DIRS components/radio_selector)
 
