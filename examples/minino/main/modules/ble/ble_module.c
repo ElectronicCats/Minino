@@ -68,6 +68,7 @@ static void ble_module_state_machine(button_event_t button_pressed) {
       ESP_LOGI(TAG_BLE_MODULE, "Bluetooth scanner entered");
       switch (button_name) {
         case BUTTON_LEFT:
+          led_control_stop();
           screen_module_set_screen(MENU_BLUETOOTH_TRAKERS_SCAN);
           esp_restart();
           // ESP_LOGI(TAG_BLE_MODULE, "Button left pressed");
@@ -114,6 +115,7 @@ static void ble_module_state_machine(button_event_t button_pressed) {
       switch (button_name) {
         case BUTTON_LEFT:
           // TODO: Fix this xD
+          led_control_stop();
           screen_module_set_screen(MENU_BLUETOOTH_SPAM);
           esp_restart();
           // ESP_LOGI(TAG_BLE_MODULE, "Button left pressed");

@@ -105,6 +105,7 @@ void zigbee_module_state_machine(button_event_t button_pressed) {
             // vTaskDelete(zigbee_task_sniffer);
             // menu_screens_set_app_state(false, NULL);
             // menu_screens_exit_submenu();
+            led_control_stop();
             screen_module_set_screen(MENU_ZIGBEE_SNIFFER);
             esp_restart();
           }

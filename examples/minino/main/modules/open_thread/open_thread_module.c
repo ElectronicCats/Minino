@@ -30,6 +30,7 @@ void open_thread_module_begin(int app_selected) {
 static void open_thread_module_app_selector() {
   switch (app_screen_state_information.app_selected) {
     case MENU_THREAD_APPS:
+      led_control_run_effect(led_control_ble_tracking);
       open_thread_screens_display_broadcast_mode();
       break;
     default:
@@ -51,6 +52,7 @@ static void open_thread_module_state_machine(button_event_t button_pressed) {
     case MENU_THREAD_APPS:
       switch (button_name) {
         case BUTTON_LEFT:
+          led_control_stop();
           screen_module_set_screen(MENU_THREAD_APPS);
           esp_restart();
           break;
