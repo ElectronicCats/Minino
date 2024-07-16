@@ -44,13 +44,28 @@ static void show_update_status(uint8_t* progress) {
                              OLED_DISPLAY_NORMAL);
 }
 
+static void show_result_status(bool* flash_successful) {
+  oled_screen_clear();
+  if (*flash_successful) {
+    oled_screen_display_text("   SUCCESS!!!   ", 0, 3, OLED_DISPLAY_INVERT);
+    oled_screen_display_text("Rebooting System", 0, 5, OLED_DISPLAY_NORMAL);
+  } else {
+    oled_screen_display_text("    ERROR!!!    ", 0, 1, OLED_DISPLAY_INVERT);
+    oled_screen_display_text(" Something was  ", 0, 3, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text("     wrong      ", 0, 4, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text("   Try again    ", 0, 6, OLED_DISPLAY_NORMAL);
+  }
+}
 void ota_module_screens_show_event(ota_show_events_t event, void* context) {
   switch (event) {
+    case OTA_SHOW_START_EVENT:
+      show_start_status();
+      break;
     case OTA_SHOW_PROGRESS_EVENT:
       show_update_status(context);
       break;
-    case OTA_SHOW_START_EVENT:
-      show_start_status();
+    case OTA_SHOW_RESULT_EVENT:
+      show_result_status(context);
     default:
       break;
   }

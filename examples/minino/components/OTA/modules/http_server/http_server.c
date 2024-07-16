@@ -364,9 +364,7 @@ static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
   bool flash_successful = false;
 
   is_ota_running = true;
-  if (ota_show_event_cb != NULL) {
-    ota_show_event_cb(OTA_SHOW_START_EVENT, NULL);
-  }
+  OTA_call_show_event_cb(OTA_SHOW_START_EVENT, NULL);
 
   // get the next OTA app partition which should be written with a new firmware
   const esp_partition_t* update_partition =
@@ -408,16 +406,14 @@ static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
       // If there is some other error apart from Timeout, then exit with fail
       ESP_LOGI(TAG, "http_server_ota_update_handler: OTA Other Error, %d",
                recv_len);
+      OTA_call_show_event_cb(OTA_SHOW_RESULT_EVENT, &flash_successful);
       return ESP_FAIL;
     }
     ESP_LOGI(TAG, "http_server_ota_update_handler: OTA RX: %d of %d",
              content_received, content_len);
     uint8_t ota_progress = (content_received * 100) / content_len;
 
-    if (ota_show_event_cb != NULL) {
-      ota_show_event_cb(OTA_SHOW_PROGRESS_EVENT, &ota_progress);
-    }
-    printf("Progress: %d", ota_progress);
+    OTA_call_show_event_cb(OTA_SHOW_PROGRESS_EVENT, &ota_progress);
 
     // We are here which means that "recv_len" is positive, now we have to check
     // if this is the first data we are receiving or not, If so, it will have
@@ -447,6 +443,7 @@ static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
         ESP_LOGI(TAG,
                  "http_server_ota_update_handler: Error with OTA Begin, "
                  "Canceling OTA");
+        OTA_call_show_event_cb(OTA_SHOW_RESULT_EVENT, &flash_successful);
         return ESP_FAIL;
       } else {
         ESP_LOGI(TAG,
@@ -500,6 +497,7 @@ static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
   } else {
     http_server_monitor_send_msg(HTTP_MSG_WIFI_OTA_UPDATE_FAILED);
   }
+  OTA_call_show_event_cb(OTA_SHOW_RESULT_EVENT, &flash_successful);
   return ESP_OK;
 }
 
