@@ -8,7 +8,7 @@
  *
  * @return void
  */
-void sd_card_init();
+void sd_card_begin();
 
 /**
  * Mount the SD card.

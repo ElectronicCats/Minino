@@ -11,7 +11,8 @@ set(modules "modules/led_events/led_events.c"
             "modules/ble/ble_screens_module.c"
             "modules/open_thread/open_thread_module.c"
             "modules/open_thread/open_thread_screens_module.c"
-            "modules/gps/gps_module.c")
+            "modules/gps/gps_module.c"
+            "modules/wardriving/wardriving_module.c")
 
 set(drivers "drivers/oled_driver/oled_driver.c"
             "drivers/oled_driver/oled_driver_i2c.c"
@@ -34,7 +35,8 @@ idf_component_register(
                     "modules/zigbee/"
                     "modules/led_events"
                     "modules/open_thread"
-                    "modules/gps")
+                    "modules/gps"
+                    "modules/wardriving")
 
 # # Append all directories to INCLUDE_DIRS
 

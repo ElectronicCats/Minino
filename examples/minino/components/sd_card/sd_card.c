@@ -147,7 +147,7 @@ void register_unmount(void) {
   mount_args.end = arg_end(1);
 }
 
-void sd_card_init() {
+void sd_card_begin() {
   register_mount();
   register_unmount();
 }
@@ -222,10 +222,10 @@ esp_err_t sd_card_read_file(const char* path) {
   fclose(file);
 
   // strip newline
-  char* pos = strchr(line, '\n');
-  if (pos) {
-    *pos = '\0';
-  }
+  // char* pos = strchr(line, '\n');
+  // if (pos) {
+  //   *pos = '\0';
+  // }
   ESP_LOGI(TAG, "Read from file: '%s'", line);
 
   return ESP_OK;
