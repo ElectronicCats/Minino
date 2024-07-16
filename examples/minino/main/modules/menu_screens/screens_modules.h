@@ -52,6 +52,7 @@ typedef enum {
   /* WiFi applications */
   MENU_WIFI_ANALIZER,
   MENU_WIFI_DEAUTH,
+  MENU_WIFI_DOS,
   /* WiFi analizer items */
   MENU_WIFI_ANALIZER_RUN,
   MENU_WIFI_ANALIZER_SETTINGS,
@@ -112,6 +113,7 @@ const char* menu_list[] = {
     "MENU_GPS",
     "MENU_WIFI_ANALIZER",
     "MENU_WIFI_DEAUTH",
+    "MENU_WIFI_DOS",
     "MENU_WIFI_ANALIZER_RUN",
     "MENU_WIFI_ANALIZER_SETTINGS",
     "MENU_WIFI_ANALIZER_ASK_SUMMARY",
@@ -159,7 +161,7 @@ const int next_menu_table[][6] = {
     {MENU_ABOUT_VERSION, MENU_ABOUT_LICENSE, MENU_ABOUT_CREDITS,
      MENU_ABOUT_LEGAL},
     // MENU_WIFI_APPS
-    {MENU_WIFI_ANALIZER, MENU_WIFI_DEAUTH},
+    {MENU_WIFI_ANALIZER, MENU_WIFI_DEAUTH, MENU_WIFI_DOS},
     // MENU_BLUETOOTH_APPS
     {MENU_BLUETOOTH_TRAKERS_SCAN, MENU_BLUETOOTH_SPAM},
     // MENU_ZIGBEE_APPS
@@ -174,6 +176,8 @@ const int next_menu_table[][6] = {
     {MENU_WIFI_ANALIZER_RUN, MENU_WIFI_ANALIZER_SETTINGS},
     // MENU_WIFI_DEAUTH
     {MENU_WIFI_DEAUTH},
+    // MENU_WIFI_DOS
+    {MENU_WIFI_DOS},
     // MENU_WIFI_ANALIZER_RUN
     {MENU_WIFI_ANALIZER_RUN},
     // MENU_WIFI_ANALIZER_SETTINGS
@@ -248,6 +252,7 @@ const int prev_menu_table[] = {
     MENU_APPLICATIONS,               // MENU_GPS
     MENU_WIFI_APPS,                  // MENU_WIFI_ANALIZER
     MENU_WIFI_APPS,                  // MENU_WIFI_DEAUTH
+    MENU_WIFI_APPS,                  // MENU_WIFI_DOS
     MENU_WIFI_ANALIZER_ASK_SUMMARY,  // MENU_WIFI_ANALIZER_RUN
     MENU_WIFI_ANALIZER,              // MENU_WIFI_ANALIZER_SETTINGS
     MENU_WIFI_ANALIZER_RUN,          // MENU_WIFI_ANALIZER_ASK_SUMMARY
@@ -363,6 +368,7 @@ char* legal_text[] = {
 char* wifi_items[] = {
     "Analizer",
     "Deauth",
+    "DoS",
     NULL,
 };
 
@@ -558,6 +564,7 @@ char** menu_items[] = {
     /* WiFi applications */
     wifi_analizer_items,              // MENU_WIFI_ANALIZER
     empty_items,                      // MENU_WIFI_DEAUTH
+    empty_items,                      // MENU_WIFI_DOS
     empty_items,                      // MENU_WIFI_ANALIZER_RUN
     wifi_analizer_settings_items,     // MENU_WIFI_ANALIZER_SETTINGS
     wifi_analizer_summary_question,   // MENU_WIFI_ANALIZER_ASK_SUMMARY
