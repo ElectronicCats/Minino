@@ -46,7 +46,16 @@ void wifi_sniffer_start() {
 
   if (wifi_sniffer_is_destination_sd()) {
     sd_card_mount();
-    sd_card_create_file("hola.txt");
+    sd_card_create_file("test.csv");
+    // sd_card_write_file("test.csv", "hola, adios, test\n, adios, hola");
+    sd_card_write_file(
+        "test.csv",
+        "WigleWifi-1.6,appRelease=2.86,model=2201123G,release=14,device=cupid,"
+        "display=UKQ1.230917.001 "
+        "release-keys,board=taro,brand=Xiaomi,star=Sol,body=3,subBody=0"
+        "MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,"
+        "CurrentLongitude,AltitudeMeters,AccuracyMeters,RCOIs,MfgrId,Type");
+    sd_card_read_file("test.csv");
   }
 
   const char** pcap_argv[] = {"pcap", "--open", "-f", "sniffer"};
