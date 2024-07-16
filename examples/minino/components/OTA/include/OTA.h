@@ -2,7 +2,10 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-typedef enum { OTA_SHOW_PROGRESS_EVENT } ota_show_events_t;
+typedef enum {
+  OTA_SHOW_PROGRESS_EVENT,
+  OTA_SHOW_START_EVENT
+} ota_show_events_t;
 
 typedef void (*ota_show_event_cb_t)(uint8_t, void*);
 ota_show_event_cb_t ota_show_event_cb = NULL;

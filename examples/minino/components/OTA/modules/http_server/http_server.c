@@ -362,7 +362,11 @@ static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
   int recv_len = 0;
   bool is_req_body_started = false;
   bool flash_successful = false;
+
   is_ota_running = true;
+  if (ota_show_event_cb != NULL) {
+    ota_show_event_cb(OTA_SHOW_START_EVENT, NULL);
+  }
 
   // get the next OTA app partition which should be written with a new firmware
   const esp_partition_t* update_partition =
