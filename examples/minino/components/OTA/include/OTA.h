@@ -2,6 +2,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#define CURRENT_FW_VERSION "V1.1.0.1"
+
 typedef enum {
   OTA_SHOW_PROGRESS_EVENT,
   OTA_SHOW_START_EVENT,

@@ -512,9 +512,9 @@ static esp_err_t http_server_ota_status_handler(httpd_req_t* req) {
   char ota_JSON[100];
   ESP_LOGI(TAG, "OTA Status Requested");
   sprintf(ota_JSON,
-          "{\"ota_update_status\":%d,\"compile_time\":\"%s\",\"compile_date\":"
+          "{\"ota_update_status\":%d,\"current_fw_version\":"
           "\"%s\"}",
-          fw_update_status, __TIME__, __DATE__);
+          fw_update_status, CURRENT_FW_VERSION);
 
   httpd_resp_set_type(req, "application/json");
   httpd_resp_send(req, ota_JSON, strlen(ota_JSON));
@@ -534,7 +534,7 @@ static void http_server_fw_update_reset_timer(void) {
     // Give the web page a chance to receive an acknowledge back and initialize
     // the timer
     ESP_ERROR_CHECK(esp_timer_create(&fw_update_reset_args, &fw_update_reset));
-    ESP_ERROR_CHECK(esp_timer_start_once(fw_update_reset, 8 * 1000 * 1000));
+    ESP_ERROR_CHECK(esp_timer_start_once(fw_update_reset, 3 * 1000 * 1000));
   } else {
     ESP_LOGI(TAG, "http_server_fw_update_reset_timer: FW Update unsuccessful");
   }

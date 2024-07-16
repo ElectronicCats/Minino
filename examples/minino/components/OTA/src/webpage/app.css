@@ -10,12 +10,12 @@ body {
 
 h1 {
     text-align: center;
-    margin: 20px 0;
-    color: #1d3557;
+    margin: 10px 0;
+    color: #000000;
 }
 
 h2, h3, h4 {
-    color: #1d3557;
+    color: #000000;
 }
 
 #OTA {
@@ -28,14 +28,20 @@ h2, h3, h4 {
     transition: transform 0.3s ease;
 }
 
-#latest_firmware_label {
-    display: block;
+#select_minino_bin_label {
     font-weight: bold;
-    margin-bottom: 10px;
+    margin-bottom: 100px;
 }
 
+#OTA {
+    text-align: center;
+    color: #000000;
+}
+
+
 #latest_firmware {
-    margin-bottom: 20px;
+    margin-top: 20px;
+    margin-bottom: 2px;
 }
 
 input[type="file"] {
@@ -44,24 +50,25 @@ input[type="file"] {
 
 .buttons {
     text-align: center;
-    margin-top: 20px;
+    margin-top: 2px;
 }
 
 input[type="button"] {
     font-size: 14px;
+    font-weight: bold;
     border: 0;
     line-height: 2;
     padding: 8px 20px;
     text-align: center;
     color: #fff;
     border-radius: 5px;
-    background-color: #4caf50;
+    background-color: #019c06;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
 
 input[type="button"]:hover {
-    background-color: #45a049;
+    background-color: #123f15;
 }
 
 #file_info {
