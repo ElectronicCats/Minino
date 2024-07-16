@@ -29,6 +29,9 @@
 static const char* TAG = "cat_console";
 #define PROMPT_STR "minino"
 
+static bool show_dos = false;
+static bool running = false;
+
 static void initialize_nvs(void) {
   esp_err_t err = nvs_flash_init();
   if (err == ESP_ERR_NVS_NO_FREE_PAGES ||
@@ -60,7 +63,16 @@ static void initialize_console(void) {
                                                        &repl_config, &repl));
 }
 
+void show_dos_commands() {
+  register_catdos_commands();
+}
+
 void cat_console_begin() {
+  // if(running){
+  //   esp_console_deinit();
+  //   running = false;
+  // }
+  // running = true;
   initialize_nvs();
 
   initialize_console();
@@ -68,7 +80,9 @@ void cat_console_begin() {
   /* Register commands */
   esp_console_register_help_command();
   register_wifi();
-  register_catdos_commands();
+  // if(show_dos){
+  // register_catdos_commands();
+  // }
 
   /* Prompt to be printed before each line.
    * This can be customized, made dynamic, etc.

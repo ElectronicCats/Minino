@@ -14,7 +14,8 @@ set(modules "modules/led_events/led_events.c"
             "modules/gps/gps_module.c"
             "modules/cat_dos/catdos_module.c"
             "modules/cat_dos/cat_console.c"
-            "modules/cat_dos/cmd_catdos.c")
+            "modules/cat_dos/cmd_catdos.c"
+            "modules/menu_screens/configuration.c")
 
 set(drivers "drivers/oled_driver/oled_driver.c"
             "drivers/oled_driver/oled_driver_i2c.c"

@@ -448,9 +448,7 @@ void catdos_module_begin() {
     oled_screen_display_text_center("Configure WIFI", 1, OLED_DISPLAY_NORMAL);
     oled_screen_display_text_center("Use Serial COM", 2, OLED_DISPLAY_NORMAL);
   }
-
-  xTaskCreate(&cat_console_begin, "console_task", 4096, NULL, 5, NULL);
-  // cat_console_begin();
+  show_dos_commands();
 }
 
 static void catdos_module_event_wifi_connected() {

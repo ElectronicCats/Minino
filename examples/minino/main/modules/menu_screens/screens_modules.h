@@ -87,6 +87,7 @@ typedef enum {
   MENU_SETTINGS_SOUND,
   MENU_SETTINGS_SYSTEM,
   MENU_SETTINGS_TIME_ZONE,
+  MENU_SETTINGS_WIFI,
   /* About submenus */
   /* Menu count */
   MENU_COUNT,
@@ -139,6 +140,7 @@ const char* menu_list[] = {
     "MENU_SETTINGS_SOUND",
     "MENU_SETTINGS_SYSTEM",
     "MENU_SETTINGS_TIME_ZONE",
+    "MENU_SETTINGS_WIFI",
 };
 
 /**
@@ -228,6 +230,8 @@ const int next_menu_table[][6] = {
     {MENU_SETTINGS_TIME_ZONE},
     // MENU_SETTINGS_TIME_ZONE
     {MENU_SETTINGS_TIME_ZONE},
+    // MENU_SETTINGS_WIFI
+    {MENU_SETTINGS_WIFI},
 };
 
 /**
@@ -278,6 +282,7 @@ const int prev_menu_table[] = {
     MENU_SETTINGS,                   // MENU_SETTINGS_SOUND
     MENU_SETTINGS,                   // MENU_SETTINGS_SYSTEM
     MENU_SETTINGS_SYSTEM,            // MENU_SETTINGS_TIME_ZONE
+    MENU_SETTINGS_WIFI,              // MENU_SETTINGS_WIFI
 };
 
 /**
@@ -301,10 +306,7 @@ char* applications_items[] = {
 };
 
 char* settings_items[] = {
-    "Display",
-    "Sound",
-    "System",
-    NULL,
+    "Display", "Sound", "System", "WiFi", NULL,
 };
 
 char* about_items[] = {
@@ -593,4 +595,5 @@ char** menu_items[] = {
     empty_items,            // MENU_SETTINGS_SOUND
     system_settings_items,  // MENU_SETTINGS_SYSTEM
     gps_time_zone_options,  // MENU_SETTINGS_TIME_ZONE
+    empty_items,            // MENU_SETTINGS_WIFI
 };
