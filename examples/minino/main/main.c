@@ -23,7 +23,6 @@ void app_main(void) {
 
   buzzer_begin(GPIO_NUM_2);
   leds_init();
-  leds_on();
   preferences_begin();
   sd_card_init();
   keyboard_module_begin();

@@ -1,14 +1,20 @@
 #include <string.h>
 #include "oled_screen.h"
 
-void open_thread_screens_display_broadcast_mode() {
-  oled_screen_clear();
-  oled_screen_display_text_center("BroadCast Mode", 0, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("Channel 11", 3, OLED_DISPLAY_NORMAL);
+void open_thread_screens_display_broadcast_mode(uint8_t ch) {
+  oled_screen_display_text(" BroadCast Mode ", 0, 0, OLED_DISPLAY_NORMAL);
+  char* str = (char*) malloc(18);
+  sprintf(str, "  Channel %d    ", ch);
+  oled_screen_display_text(str, 0, 7, OLED_DISPLAY_NORMAL);
+  free(str);
 }
 
-void open_thread_screens_show_new_message(void* msg) {
-  const char* str = (const char*) msg;
-  oled_screen_display_text_center("New Message", 7, OLED_DISPLAY_INVERT);
-  oled_screen_display_text_center(msg, 8, OLED_DISPLAY_NORMAL);
+void open_thread_screens_show_new_message(char* msg) {
+  oled_screen_clear_line(0, 2, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("   New Message  ", 0, 2, OLED_DISPLAY_INVERT);
+  char* str = (char*) malloc(18);
+  sprintf(str, " Counter: %s    ", msg);
+  oled_screen_clear_line(0, 4, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text(str, 0, 4, OLED_DISPLAY_NORMAL);
+  free(str);
 }
