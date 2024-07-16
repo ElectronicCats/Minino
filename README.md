@@ -35,11 +35,47 @@ Minino can operate in 6 different technologies:
 - Open Hardware
 - OTA Updates
 
-### Future Features
-- Thread Broadcast 
-- Zigbee Sniffer and deauthenticator
-- Matter CLI
-- Save files in SD
+### TODO Features
+
+`[] Features coming soon [x] Working features`
+
+### WIFI
+- [x] Wardriving
+- [x] WiFi sniffer
+- [x] WiFi deauther
+- [x] DOS Attack
+- [x] Analizer -> Save PCAPS in SD or flash
+- [ ] Wireshark integration
+### BLE
+- [x] BLE sniffer
+- [x] BLE spammer
+- [ ] BLE spoffing
+- [x] BLE trackers scanner (AirTags, Tile, etc)
+- [ ] Wireshark integration
+### Zigbee
+- [x] Zigbee sniffer
+- [x] Zigbee spoofing (Switch End Device)
+- [ ] Wardriving
+- [x] Wireshark integration
+
+### Thread
+- [ ] Thread sniffer
+- [x] Thread broadcast
+- [x] GPS tracker
+- [ ] Wardriving
+- [ ] Wireshark integration
+
+### Matter
+- [ ] Matter protocol support
+- [ ] Matter CLI
+
+### Tools
+- [x] OTA Firmware Update
+- [x] GPS
+- [x] SD
+- [ ] I2C Scanner
+- [ ] UART2
+
 
 Inspired by projects such as [Amini Project](https://github.com/Ocelot-Offensive-Security/Arsenal) and [USBNugget](https://github.com/HakCat-Tech/USB-Nugget).
 
