@@ -33,12 +33,13 @@ static void show_start_status() {
   oled_screen_display_text("Please dont turn", 0, 2, OLED_DISPLAY_NORMAL);
   oled_screen_display_text("off the device  ", 0, 3, OLED_DISPLAY_NORMAL);
   oled_screen_clear_line(0, 4, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("Now: v1.1.0.0", 0, 5, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("New: v1.1.0.1", 0, 6, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("Now: v1.1.0.0   ", 0, 5, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("New: v1.1.0.1   ", 0, 6, OLED_DISPLAY_NORMAL);
   oled_screen_clear_line(0, 7, OLED_DISPLAY_NORMAL);
 }
 
 static void show_update_status(uint8_t* progress) {
+  printf("OTA PROGRESS: %d\n", *progress);
   update_bar(*progress);
   oled_screen_display_bitmap(bar_bitmap, 0, 56, BAR_WIDTH, BAR_HEIGHT,
                              OLED_DISPLAY_NORMAL);
@@ -47,9 +48,11 @@ static void show_update_status(uint8_t* progress) {
 static void show_result_status(bool* flash_successful) {
   oled_screen_clear();
   if (*flash_successful) {
+    printf("OTA SUCCESS\n");
     oled_screen_display_text("   SUCCESS!!!   ", 0, 3, OLED_DISPLAY_INVERT);
     oled_screen_display_text("Rebooting System", 0, 5, OLED_DISPLAY_NORMAL);
   } else {
+    printf("OTA FAIL\n");
     oled_screen_display_text("    ERROR!!!    ", 0, 1, OLED_DISPLAY_INVERT);
     oled_screen_display_text(" Something was  ", 0, 3, OLED_DISPLAY_NORMAL);
     oled_screen_display_text("     wrong      ", 0, 4, OLED_DISPLAY_NORMAL);

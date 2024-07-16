@@ -13,6 +13,9 @@ void OTA_set_show_event_cb(ota_show_event_cb_t* cb) {
 }
 
 void OTA_call_show_event_cb(uint8_t event, void* context) {
+  if (event == OTA_SHOW_RESULT_EVENT) {
+    is_ota_running = false;
+  }
   if (ota_show_event_cb != NULL) {
     ota_show_event_cb(event, context);
   }
