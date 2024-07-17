@@ -158,7 +158,8 @@ const int next_menu_table[][6] = {
     {MENU_WIFI_APPS, MENU_BLUETOOTH_APPS, MENU_ZIGBEE_APPS, MENU_THREAD_APPS,
      MENU_MATTER_APPS, MENU_GPS},
     // MENU_SETTINGS
-    {MENU_SETTINGS_DISPLAY, MENU_SETTINGS_SOUND, MENU_SETTINGS_SYSTEM},
+    {MENU_SETTINGS_DISPLAY, MENU_SETTINGS_SOUND, MENU_SETTINGS_SYSTEM,
+     MENU_SETTINGS_WIFI},
     // MENU_ABOUT
     {MENU_ABOUT_VERSION, MENU_ABOUT_LICENSE, MENU_ABOUT_CREDITS,
      MENU_ABOUT_LEGAL},
@@ -282,7 +283,7 @@ const int prev_menu_table[] = {
     MENU_SETTINGS,                   // MENU_SETTINGS_SOUND
     MENU_SETTINGS,                   // MENU_SETTINGS_SYSTEM
     MENU_SETTINGS_SYSTEM,            // MENU_SETTINGS_TIME_ZONE
-    MENU_SETTINGS_WIFI,              // MENU_SETTINGS_WIFI
+    MENU_SETTINGS,                   // MENU_SETTINGS_WIFI
 };
 
 /**
@@ -542,7 +543,6 @@ char* gps_time_zone_options[] = {
 
 char* system_settings_items[] = {
     "Time zone",
-    "WIFI",
     NULL,
 };
 

@@ -16,7 +16,7 @@ void settings_module_exit_submenu_cb() {
 
   switch (current_menu) {
     case MENU_SETTINGS:
-    case MENU_SETTINGS_WIFI:
+      // case MENU_SETTINGS_WIFI:
       settings_module_exit();
       break;
     default:
