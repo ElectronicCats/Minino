@@ -128,10 +128,12 @@ static void event_handler(void* arg,
                           int32_t event_id,
                           void* event_data) {
   if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+    preferences_put_bool("wifi_connected", false);
     esp_wifi_connect();
     xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
   } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
     xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
+    preferences_put_bool("wifi_connected", true);
     if (callback_connection) {
       callback_connection();
     }
@@ -175,6 +177,9 @@ static bool wifi_join(const char* ssid, const char* pass, int timeout_ms) {
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
   esp_wifi_connect();
+
+  preferences_put_string("ssid", ssid);
+  preferences_put_string("passwd", pass);
 
   int bits = xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, pdFALSE,
                                  pdTRUE, timeout_ms / portTICK_PERIOD_MS);

@@ -32,6 +32,19 @@
 #define WEB_PATH   "/"
 
 static const char* CATDOS_TAG = "catdos_module";
+static int selected_item = 0;
+static int total_items = 0;
+static int max_items = 6;
+
+static TaskHandle_t task_atack = NULL;
+
+static enum {
+  CATDOS_STATE_CONFIG_WIFI,
+  CATDOS_STATE_CONFIG_TARGET,
+  CATDOS_STATE_ATTACK,
+} catdos_state_e;
+
+static int catdos_state = CATDOS_STATE_CONFIG_WIFI;
 
 app_screen_state_information_t app_screen_state_information = {
     .in_app = false,
@@ -48,6 +61,8 @@ static char catdos_module_get_request_url();
 static bool catdos_module_is_connection();
 static void catdos_module_state_machine(button_event_t button_pressed);
 static void catdos_module_display_attack_animation();
+static void catdos_module_display_wifi();
+static void catdos_module_show_target();
 
 static void catdos_module_display_attack_animation() {
   oled_screen_clear(OLED_DISPLAY_NORMAL);
@@ -364,10 +379,15 @@ static void http_get_task(void* pvParameters) {
     close(s);
   }
   running_attack = false;
+  if (task_atack) {
+    vTaskSuspend(task_atack);
+    vTaskDelete(task_atack);
+  }
 }
 
 void catdos_module_send_attack() {
-  xTaskCreate(&http_get_task, "http_get_task", 4096, NULL, 5, NULL);
+  ESP_LOGI(CATDOS_TAG, "Sending attack");
+  xTaskCreate(&http_get_task, "http_get_task", 4096, NULL, 5, &task_atack);
 
   pthread_attr_t attr;
   pthread_t thread1, thread2, thread3, thread4, thread5, thread6, thread7,
@@ -418,127 +438,202 @@ void catdos_module_begin() {
   menu_screens_set_app_state(true, catdos_module_state_machine);
 
   oled_screen_clear(OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("CATDOS", 0, OLED_DISPLAY_NORMAL);
-  bool is_configured = catdos_module_is_config_wifi();
-  if (is_configured) {
-    char host[32];
-    char port[32];
-    char endpoint[32];
-    esp_err_t err = preferences_get_string("host", host, 32);
-    if (err != ESP_OK) {
-      ESP_LOGE(CATDOS_TAG, "Error getting host");
-      return;
-    }
-    err = preferences_get_string("port", port, 32);
-    if (err != ESP_OK) {
-      ESP_LOGE(CATDOS_TAG, "Error getting port");
-      return;
-    }
-    err = preferences_get_string("endpoint", endpoint, 32);
-    if (err != ESP_OK) {
-      ESP_LOGE(CATDOS_TAG, "Error getting endpoint");
-      return;
-    }
-    char port_ep[64];
-    sprintf(port_ep, "%s %s", port, endpoint);
-    oled_screen_display_text_center(host, 1, OLED_DISPLAY_NORMAL);
-    oled_screen_display_text_center(port_ep, 2, OLED_DISPLAY_NORMAL);
-    oled_screen_display_text_center("> Send attack", 3, OLED_DISPLAY_INVERT);
-  } else {
-    oled_screen_display_text_center("Configure WIFI", 1, OLED_DISPLAY_NORMAL);
-    oled_screen_display_text_center("Use Serial COM", 2, OLED_DISPLAY_NORMAL);
-  }
-  show_dos_commands();
-}
-
-static void catdos_module_event_wifi_connected() {
-  oled_screen_clear(OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("WIFI", 1, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("Connected", 2, OLED_DISPLAY_NORMAL);
-
-  bool is_target_configured = catdos_module_is_config_target();
-  if (!is_target_configured) {
-    catdos_module_display_target_configure();
-    return;
-  }
-  catdos_module_display_target_configured();
-
-  bool is_connected = catdos_module_is_connection();
-  if (!is_connected) {
-    oled_screen_clear(OLED_DISPLAY_NORMAL);
-    oled_screen_display_text_center("Error Connection", 2, OLED_DISPLAY_NORMAL);
-    return;
-  }
-  oled_screen_display_text_center("Attacking", 2, OLED_DISPLAY_INVERT);
-  oled_screen_display_text_center("Target", 2, OLED_DISPLAY_INVERT);
-
+  oled_screen_display_text_center("THIS APP STILL", 0, OLED_DISPLAY_INVERT);
+  oled_screen_display_text_center("IN BETA", 1, OLED_DISPLAY_INVERT);
   vTaskDelay(2000 / portTICK_PERIOD_MS);
+  oled_screen_clear(OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("CATDOS", 0, OLED_DISPLAY_NORMAL);
+  show_dos_commands();
 
-  catdos_module_display_attack_animation();
-  catdos_module_send_attack();
+  bool wifi_connection = preferences_get_bool("wifi_connected", false);
+
+  if (wifi_connection) {
+    oled_screen_display_text_center("WIFI Connection", 1, OLED_DISPLAY_NORMAL);
+    catdos_state = CATDOS_STATE_CONFIG_TARGET;
+  } else {
+    catdos_state = CATDOS_STATE_CONFIG_WIFI;
+    int total_items = preferences_get_int("count_ap", 0);
+    if (total_items == 0) {
+      oled_screen_display_text_center("No WIFI", 1, OLED_DISPLAY_NORMAL);
+      oled_screen_display_text_center("Add WiFi", 2, OLED_DISPLAY_NORMAL);
+      oled_screen_display_text_center("From console", 3, OLED_DISPLAY_NORMAL);
+      return;
+    }
+    catdos_module_display_wifi();
+  }
 }
 
-static void catdos_module_display_wifi_not_connected() {
-  oled_screen_clear(OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("Error WIFI", 1, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("Connection", 2, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("Use serial", 3, OLED_DISPLAY_NORMAL);
+static void catdos_module_display_wifi() {
+  oled_screen_clear();
+  oled_screen_display_text_center("Selected WIFI", 0, OLED_DISPLAY_NORMAL);
+
+  for (int i = selected_item; i < max_items + selected_item; i++) {
+    char wifi_ap[100];
+    char wifi_ssid[100];
+    sprintf(wifi_ap, "wifi%d", i);
+    esp_err_t err = preferences_get_string(wifi_ap, wifi_ssid, 100);
+    if (err != ESP_OK) {
+      ESP_LOGW(__func__, "Error getting AP %d", i);
+      return;
+    }
+    char wifi_text[120];
+    if (strlen(wifi_ssid) > 16) {
+      wifi_ssid[16] = '\0';
+    }
+    if (i == selected_item) {
+      sprintf(wifi_text, "[>] %s", wifi_ssid);
+    } else {
+      sprintf(wifi_text, "[] %s", wifi_ssid);
+    }
+    int page = (i + 1) - selected_item;
+    oled_screen_display_text(
+        wifi_text, 0, page,
+        (selected_item == i) ? OLED_DISPLAY_INVERT : OLED_DISPLAY_NORMAL);
+  }
+}
+
+static void catdos_module_cb_connection() {
+  oled_screen_clear();
+  oled_screen_display_text_center("WIFI", 0, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("Connected", 1, OLED_DISPLAY_NORMAL);
+  vTaskDelay(2000 / portTICK_PERIOD_MS);
+  bool is_target = catdos_module_is_config_target();
+  if (is_target) {
+    catdos_state = CATDOS_STATE_ATTACK;
+    catdos_module_show_target();
+  } else {
+    oled_screen_clear();
+    oled_screen_display_text_center("Configure", 1, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text_center("Target", 2, OLED_DISPLAY_NORMAL);
+    catdos_state = CATDOS_STATE_CONFIG_TARGET;
+  }
+}
+
+static void catdos_module_show_target() {
+  oled_screen_clear();
+  char host[32];
+  char port[32];
+  char endpoint[32];
+  esp_err_t err = preferences_get_string("host", host, 32);
+  if (err != ESP_OK) {
+    ESP_LOGE(CATDOS_TAG, "Error getting host");
+    return;
+  }
+  err = preferences_get_string("port", port, 32);
+  if (err != ESP_OK) {
+    ESP_LOGE(CATDOS_TAG, "Error getting port");
+    return;
+  }
+  err = preferences_get_string("endpoint", endpoint, 32);
+  if (err != ESP_OK) {
+    ESP_LOGE(CATDOS_TAG, "Error getting endpoint");
+    return;
+  }
+  oled_screen_display_text_center("Target", 0, OLED_DISPLAY_INVERT);
+  oled_screen_display_text_center("Host", 1, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center(host, 2, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("Port", 3, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center(port, 4, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("Endpoint", 5, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center(endpoint, 6, OLED_DISPLAY_NORMAL);
 }
 
 static void catdos_module_connect_wifi() {
-  oled_screen_clear(OLED_DISPLAY_NORMAL);
-  char ssid[32];
-  esp_err_t err = preferences_get_string("ssid", ssid, 32);
+  oled_screen_clear();
+  oled_screen_display_text_center("Connecting", 0, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("to WIFI", 1, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("Please wait", 2, OLED_DISPLAY_NORMAL);
+  char wifi_ap[100];
+  char wifi_ssid[100];
+  sprintf(wifi_ap, "wifi%d", selected_item);
+  esp_err_t err = preferences_get_string(wifi_ap, wifi_ssid, 100);
   if (err != ESP_OK) {
-    ESP_LOGE(CATDOS_TAG, "Error getting ssid");
-    oled_screen_clear(OLED_DISPLAY_NORMAL);
-    oled_screen_display_text_center("Error getting", 2, OLED_DISPLAY_NORMAL);
-    oled_screen_display_text_center("SSID", 3, OLED_DISPLAY_NORMAL);
+    ESP_LOGW(__func__, "Error getting AP %d", selected_item);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    oled_screen_clear();
+    oled_screen_display_text_center("Error", 0, OLED_DISPLAY_NORMAL);
+    catdos_module_display_wifi();
     return;
   }
-  oled_screen_display_text_center("Conneting", 2, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center(ssid, 3, OLED_DISPLAY_NORMAL);
-  char passwd[32];
-  err = preferences_get_string("passwd", passwd, 32);
+  char wifi_passwd[100];
+  err = preferences_get_string(wifi_ssid, wifi_passwd, 100);
   if (err != ESP_OK) {
-    ESP_LOGE(CATDOS_TAG, "Error getting passwd");
-    oled_screen_clear(OLED_DISPLAY_NORMAL);
-    oled_screen_display_text_center("Error getting", 2, OLED_DISPLAY_NORMAL);
-    oled_screen_display_text_center("PASSWD", 3, OLED_DISPLAY_NORMAL);
+    ESP_LOGW(__func__, "Error getting password for AP %s", wifi_ssid);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    oled_screen_clear();
+    oled_screen_display_text_center("Error", 0, OLED_DISPLAY_NORMAL);
+    catdos_module_display_wifi();
     return;
   }
-
-  connect_wifi(ssid, passwd, catdos_module_event_wifi_connected);
+  ESP_LOGI(CATDOS_TAG, "Connecting to %s", wifi_ssid);
+  connect_wifi(wifi_ssid, wifi_passwd, catdos_module_cb_connection);
 }
 
 static void catdos_module_state_machine(button_event_t button_pressed) {
   uint8_t button_name = button_pressed >> 4;
   uint8_t button_event = button_pressed & 0x0F;
-  switch (button_name) {
-    case BUTTON_RIGHT:
-      switch (button_event) {
-        case BUTTON_PRESS_DOWN:
-          catdos_module_connect_wifi();
-
-          bool is_target_configured = catdos_module_is_config_target();
-          if (!is_target_configured) {
-            catdos_module_display_target_configure();
-            break;
-          }
+  ESP_LOGI(CATDOS_TAG, "Button: %d STATE: %d", button_name, catdos_state);
+  if (button_event != BUTTON_SINGLE_CLICK) {
+    return;
+  }
+  switch (catdos_state) {
+    case CATDOS_STATE_CONFIG_WIFI: {
+      switch (button_name) {
+        case BUTTON_LEFT:
+          menu_screens_set_app_state(false, NULL);
+          menu_screens_exit_submenu();
           break;
+        case BUTTON_RIGHT:
+          ESP_LOGI(CATDOS_TAG, "Selected item: %d", selected_item);
+          catdos_module_connect_wifi();
+          break;
+        case BUTTON_UP:
+          selected_item =
+              (selected_item == 0) ? total_items - 1 : selected_item - 1;
+          catdos_module_display_wifi();
+          break;
+        case BUTTON_DOWN:
+          selected_item =
+              (selected_item == total_items - 1) ? 0 : selected_item + 1;
+          catdos_module_display_wifi();
+          break;
+        case BUTTON_BOOT:
         default:
           break;
       }
       break;
-    case BUTTON_LEFT:
-      switch (button_event) {
-        case BUTTON_LONG_PRESS_HOLD:
-          ESP_LOGI(CATDOS_TAG, "Button left pressed");
-          menu_screens_set_app_state(false, NULL);
-          menu_screens_exit_submenu();
+    }
+    case CATDOS_STATE_CONFIG_TARGET: {
+      switch (button_name) {
+        case BUTTON_LEFT:
+          catdos_state = CATDOS_STATE_CONFIG_WIFI;
+          break;
+        case BUTTON_RIGHT:
+        case BUTTON_UP:
+        case BUTTON_DOWN:
+        case BUTTON_BOOT:
+        default:
           break;
       }
       break;
+    }
+    case CATDOS_STATE_ATTACK: {
+      switch (button_name) {
+        case BUTTON_LEFT:
+          menu_screens_set_app_state(false, NULL);
+          menu_screens_exit_submenu();
+          break;
+        case BUTTON_RIGHT:
+          catdos_module_send_attack();
+          break;
+        case BUTTON_UP:
+        case BUTTON_DOWN:
+        case BUTTON_BOOT:
+        default:
+          break;
+      }
+      break;
+    }
     default:
       break;
   }

@@ -36,5 +36,7 @@ void app_main(void) {
   char* time_str = malloc(sizeof(time) + 1);
   sprintf(time_str, "%2.2f", time);
   ESP_LOGI(TAG, "Total time taken: %s seconds", time_str);
+
+  preferences_put_bool("wifi_connected", false);
   cat_console_begin();
 }
