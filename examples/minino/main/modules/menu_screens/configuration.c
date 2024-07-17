@@ -70,7 +70,11 @@ static void config_module_app_selector() {
     case MENU_SETTINGS_WIFI:
       int count = preferences_get_int("count_ap", 0);
       if (count == 0) {
-        printf("No saved APs\n");
+        oled_screen_display_text_center("No saved APs", 0, OLED_DISPLAY_NORMAL);
+        oled_screen_display_text_center("Add new AP", 1, OLED_DISPLAY_NORMAL);
+        oled_screen_display_text_center("From our serial", 2,
+                                        OLED_DISPLAY_NORMAL);
+        oled_screen_display_text_center("Console", 3, OLED_DISPLAY_NORMAL);
         return;
       }
       total_items = count;
