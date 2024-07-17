@@ -26,7 +26,6 @@ void app_main(void) {
 
   buzzer_begin(BUZZER_PIN);
   leds_init();
-  leds_on();
   preferences_begin();
   sd_card_begin();
   wardriving_begin();

@@ -79,7 +79,7 @@ void wifi_sniffer_close_file() {
 }
 
 void wifi_sniffer_exit() {
-  menu_screens_set_menu(prev_menu_table[MENU_WIFI_ANALIZER]);
+  screen_module_set_screen(MENU_WIFI_ANALIZER);
   esp_restart();
 }
 
