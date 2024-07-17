@@ -2,6 +2,7 @@
 #include "OTA.h"
 #include "bitmaps.h"
 #include "ble_module.h"
+#include "configuration.h"
 #include "esp_log.h"
 #include "gps_module.h"
 #include "leds.h"
@@ -35,6 +36,8 @@ static app_state_t app_state = {
 
 static enter_submenu_cb_t enter_submenu_cb = NULL;
 static exit_submenu_cb_t exit_submenu_cb = NULL;
+
+void handle_user_selection(screen_module_menu_t user_selection);
 
 esp_err_t test_menu_list() {
   ESP_LOGI(TAG, "Testing menus list size");
@@ -90,12 +93,39 @@ void run_tests() {
 }
 
 void show_logo() {
+  // buzzer_set_freq(50);
+  leds_on();
   buzzer_play();
   vTaskDelay(500 / portTICK_PERIOD_MS);
   oled_screen_display_bitmap(epd_bitmap_logo_1, 0, 0, 128, 64,
                              OLED_DISPLAY_NORMAL);
   buzzer_stop();
   vTaskDelay(500 / portTICK_PERIOD_MS);
+}
+
+void screen_module_set_screen(int current_menu) {
+  preferences_put_int("MENUNUMBER", prev_menu_table[current_menu]);
+  oled_screen_clear();
+  menu_screens_display_text_banner("Exiting...");
+}
+
+void screen_module_get_screen() {
+  current_menu = preferences_get_int("MENUNUMBER", MENU_MAIN);
+  handle_user_selection(current_menu);
+
+  // Update number of items
+  if (current_menu == MENU_MAIN) {
+    char** submenu = menu_items[current_menu];
+    if (submenu != NULL) {
+      while (submenu[num_items] != NULL) {
+        num_items++;
+      }
+    }
+    show_logo();
+  } else {
+    preferences_put_int("MENUNUMBER", MENU_MAIN);
+    menu_screens_display_menu();
+  }
 }
 
 void menu_screens_begin() {
@@ -107,32 +137,8 @@ void menu_screens_begin() {
 
   run_tests();
   oled_screen_begin();
-
-  // Show logo
   oled_screen_clear();
-  int last_menu = preferences_get_int("MENU", 99);
-  if (last_menu == 99) {
-    menu_screens_set_main_menu();
-    show_logo();
-  } else {
-    menu_screens_set_menu(last_menu);
-    preferences_put_int("MENU", 99);
-  }
-  menu_screens_display_menu();
-}
-
-void menu_screens_set_main_menu() {
-  previous_menu = MENU_MAIN;
-  current_menu = MENU_MAIN;
-  num_items = 0;
-  preferences_put_int("MENU", 99);
-}
-
-void menu_screens_set_menu(int menu) {
-  previous_menu = menu;
-  current_menu = menu;
-  num_items = 0;
-  preferences_put_int("MENU", current_menu);
+  screen_module_get_screen();
 }
 
 /**
@@ -470,6 +476,9 @@ void handle_user_selection(screen_module_menu_t user_selection) {
   }
 
   switch (user_selection) {
+    case MENU_SETTINGS_WIFI:
+      config_module_begin(MENU_SETTINGS_WIFI);
+      break;
     case MENU_SETTINGS:
       settings_module_begin();
       break;

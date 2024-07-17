@@ -7,6 +7,8 @@
 #include "open_thread_screens_module.h"
 #include "preferences.h"
 #include "radio_selector.h"
+#include "thread_broadcast.h"
+uint8_t channel = 15;
 
 static app_screen_state_information_t app_screen_state_information = {
     .in_app = false,
@@ -30,7 +32,11 @@ void open_thread_module_begin(int app_selected) {
 static void open_thread_module_app_selector() {
   switch (app_screen_state_information.app_selected) {
     case MENU_THREAD_APPS:
-      open_thread_screens_display_broadcast_mode();
+      led_control_run_effect(led_control_zigbee_scanning);
+      open_thread_screens_display_broadcast_mode(channel);
+      thread_broadcast_set_on_msg_recieve_cb(
+          open_thread_screens_show_new_message);
+      thread_broadcast_init();
       break;
     default:
       break;
@@ -40,8 +46,8 @@ static void open_thread_module_app_selector() {
 static void open_thread_module_state_machine(button_event_t button_pressed) {
   uint8_t button_name = button_pressed >> 4;
   uint8_t button_event = button_pressed & 0x0F;
-  if (button_event != BUTTON_SINGLE_CLICK &&
-      button_event != BUTTON_LONG_PRESS_HOLD) {
+  if (button_event != BUTTON_SINGLE_CLICK) {
+    printf("return\n");
     return;
   }
 
@@ -51,12 +57,23 @@ static void open_thread_module_state_machine(button_event_t button_pressed) {
     case MENU_THREAD_APPS:
       switch (button_name) {
         case BUTTON_LEFT:
-          menu_screens_set_menu(prev_menu_table[MENU_THREAD_APPS]);
+          led_control_stop();
+          screen_module_set_screen(MENU_THREAD_APPS);
           esp_restart();
           break;
         case BUTTON_RIGHT:
         case BUTTON_UP:
+          printf("channel++\n");
+          channel = ++channel > 26 ? 11 : channel;
+          openthread_set_dataset(channel, 0x1234);
+          open_thread_screens_display_broadcast_mode(channel);
+          break;
         case BUTTON_DOWN:
+          printf("channel--\n");
+          channel = --channel < 11 ? 26 : channel;
+          openthread_set_dataset(channel, 0x1234);
+          open_thread_screens_display_broadcast_mode(channel);
+          break;
         case BUTTON_BOOT:
         default:
           break;

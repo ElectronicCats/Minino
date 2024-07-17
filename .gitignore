@@ -35,6 +35,9 @@ hardware/minino-backups/
 # Firmware binaries
 /**/build/
 /**/managed_components/
+/**/build_files/
+/**/build_files.tgz
+/**/build_files.zip
 
 # IDF sdkconfig
 /**/sdkconfig

@@ -1,20 +1,26 @@
 
 #include "modules/wifi/wifi_module.h"
 #include "captive_portal.h"
+#include "catdos_module.h"
 #include "esp_check.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "keyboard_module.h"
+#include "string.h"
+
+#include "captive_portal.h"
+#include "led_events.h"
 #include "menu_screens_modules.h"
+#include "modules/wifi/wifi_module.h"
 #include "modules/wifi/wifi_screens_module.h"
 #include "oled_screen.h"
-#include "string.h"
 #include "wifi_attacks.h"
 #include "wifi_controller.h"
 #include "wifi_scanner.h"
 
 static const char* TAG = "wifi_module";
 bool analizer_initialized = false;
+const uint32_t SOUND_DURATION = 100;
 
 /**
  * @brief Enum with the wifi module states
@@ -72,18 +78,23 @@ void wifi_module_exit_submenu_cb() {
       break;
     case MENU_WIFI_ANALIZER_RUN:
       wifi_sniffer_stop();
+      led_control_stop();
       break;
     case MENU_WIFI_ANALIZER_ASK_SUMMARY:
       oled_screen_clear();
       wifi_sniffer_start();
+      led_control_run_effect(led_control_zigbee_scanning);
       break;
     case MENU_WIFI_ANALIZER_SUMMARY:
       wifi_sniffer_close_file();
       break;
     case MENU_WIFI_ANALIZER:
-      oled_screen_clear();
-      menu_screens_display_text_banner("Exiting...");
-      wifi_sniffer_exit();
+      screen_module_set_screen(MENU_WIFI_ANALIZER);
+      esp_restart();
+      break;
+      // case MENU_WIFI_DOS:
+      //   screen_module_set_screen(MENU_WIFI_DOS);
+      //   esp_restart();
       break;
     default:
       break;
@@ -100,21 +111,28 @@ void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
     case MENU_WIFI_DEAUTH:
       wifi_module_deauth_begin();
       break;
+    case MENU_WIFI_DOS:
+      oled_screen_clear();
+      catdos_module_begin();
+      break;
     case MENU_WIFI_ANALIZER_RUN:
       oled_screen_clear();
       wifi_sniffer_start();
+      led_control_run_effect(led_control_zigbee_scanning);
       break;
     case MENU_WIFI_ANALIZER_SUMMARY:
       wifi_sniffer_load_summary();
       break;
     case MENU_WIFI_ANALIZER_CHANNEL:
       if (menu_screens_is_configuration(user_selection)) {
+        buzzer_play_for(SOUND_DURATION);
         wifi_sniffer_set_channel(selected_item + 1);
       }
       wifi_module_update_channel_options();
       break;
     case MENU_WIFI_ANALIZER_DESTINATION:
       if (menu_screens_is_configuration(user_selection)) {
+        buzzer_play_for(SOUND_DURATION);
         if (selected_item == WIFI_SNIFFER_DESTINATION_SD) {
           wifi_sniffer_set_destination_sd();
         } else {
@@ -134,15 +152,17 @@ void wifi_module_begin() {
 }
 
 void wifi_module_exit() {
-  menu_screens_set_app_state(SCREEN_IN_NAVIGATION, NULL);
-  wifi_driver_ap_stop();
-  if (task_display_scanning != NULL) {
-    vTaskDelete(task_display_scanning);
-  }
-  if (task_display_attacking) {
-    vTaskDelete(task_display_attacking);
-  }
-  menu_screens_exit_submenu();
+  screen_module_set_screen(MENU_WIFI_DEAUTH);
+  esp_restart();
+  // menu_screens_set_app_state(SCREEN_IN_NAVIGATION, NULL);
+  // wifi_driver_ap_stop();
+  // if (task_display_scanning != NULL) {
+  //   vTaskDelete(task_display_scanning);
+  // }
+  // if (task_display_attacking) {
+  //   vTaskDelete(task_display_attacking);
+  // }
+  // menu_screens_exit_submenu();
 }
 
 void wifi_module_deauth_begin() {
@@ -349,6 +369,7 @@ err:
 
 void wifi_module_update_channel_options() {
   uint8_t selected_option = wifi_sniffer_get_channel();
+  selected_option--;
   menu_screens_update_options(wifi_analizer_channel_items, selected_option);
 }
 
@@ -357,8 +378,7 @@ void wifi_module_update_destination_options() {
   if (wifi_sniffer_is_destination_internal()) {
     selected_option = 1;
   }
-  menu_screens_update_options(wifi_analizer_destination_items,
-                              selected_option + 1);
+  menu_screens_update_options(wifi_analizer_destination_items, selected_option);
 }
 
 void wifi_module_keyboard_cb(button_event_t button_pressed) {

@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "cat_console.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "keyboard_module.h"
@@ -7,6 +8,9 @@
 #include "open_thread.h"
 #include "preferences.h"
 #include "sd_card.h"
+#include "wardriving_module.h"
+
+#define BUZZER_PIN GPIO_NUM_2
 
 static const char* TAG = "main";
 
@@ -21,10 +25,10 @@ void app_main(void) {
   uint64_t start_time, end_time;
   start_time = esp_timer_get_time();
 
+  buzzer_begin(BUZZER_PIN);
   leds_init();
-  leds_on();
   preferences_begin();
-  sd_card_init();
+  sd_card_begin();
   keyboard_module_begin();
   menu_screens_begin();
   reboot_counter();
@@ -35,4 +39,7 @@ void app_main(void) {
   char* time_str = malloc(sizeof(time) + 1);
   sprintf(time_str, "%2.2f", time);
   ESP_LOGI(TAG, "Total time taken: %s seconds", time_str);
+
+  preferences_put_bool("wifi_connected", false);
+  cat_console_begin();
 }

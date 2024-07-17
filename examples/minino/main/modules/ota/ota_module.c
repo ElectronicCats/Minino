@@ -14,7 +14,7 @@ void ota_module_init() {
 }
 
 void ota_module_deinit() {
-  menu_screens_set_menu(MENU_ABOUT_UPDATE);
+  menu_screens_exit_submenu();
   esp_restart();
 }
 
