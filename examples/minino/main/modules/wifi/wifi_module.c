@@ -6,10 +6,14 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "keyboard_module.h"
+#include "string.h"
+
+#include "captive_portal.h"
+#include "led_events.h"
 #include "menu_screens_modules.h"
+#include "modules/wifi/wifi_module.h"
 #include "modules/wifi/wifi_screens_module.h"
 #include "oled_screen.h"
-#include "string.h"
 #include "wifi_attacks.h"
 #include "wifi_controller.h"
 #include "wifi_scanner.h"
@@ -74,10 +78,12 @@ void wifi_module_exit_submenu_cb() {
       break;
     case MENU_WIFI_ANALIZER_RUN:
       wifi_sniffer_stop();
+      led_control_stop();
       break;
     case MENU_WIFI_ANALIZER_ASK_SUMMARY:
       oled_screen_clear();
       wifi_sniffer_start();
+      led_control_run_effect(led_control_zigbee_scanning);
       break;
     case MENU_WIFI_ANALIZER_SUMMARY:
       wifi_sniffer_close_file();
@@ -112,6 +118,7 @@ void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
     case MENU_WIFI_ANALIZER_RUN:
       oled_screen_clear();
       wifi_sniffer_start();
+      led_control_run_effect(led_control_zigbee_scanning);
       break;
     case MENU_WIFI_ANALIZER_SUMMARY:
       wifi_sniffer_load_summary();
@@ -119,7 +126,7 @@ void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
     case MENU_WIFI_ANALIZER_CHANNEL:
       if (menu_screens_is_configuration(user_selection)) {
         buzzer_play_for(SOUND_DURATION);
-        wifi_sniffer_set_channel(selected_item);
+        wifi_sniffer_set_channel(selected_item + 1);
       }
       wifi_module_update_channel_options();
       break;
@@ -362,6 +369,7 @@ err:
 
 void wifi_module_update_channel_options() {
   uint8_t selected_option = wifi_sniffer_get_channel();
+  selected_option--;
   menu_screens_update_options(wifi_analizer_channel_items, selected_option);
 }
 

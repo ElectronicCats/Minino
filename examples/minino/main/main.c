@@ -8,6 +8,9 @@
 #include "open_thread.h"
 #include "preferences.h"
 #include "sd_card.h"
+#include "wardriving_module.h"
+
+#define BUZZER_PIN GPIO_NUM_2
 
 static const char* TAG = "main";
 
@@ -22,10 +25,10 @@ void app_main(void) {
   uint64_t start_time, end_time;
   start_time = esp_timer_get_time();
 
-  buzzer_begin(GPIO_NUM_2);
+  buzzer_begin(BUZZER_PIN);
   leds_init();
   preferences_begin();
-  sd_card_init();
+  sd_card_begin();
   keyboard_module_begin();
   menu_screens_begin();
   reboot_counter();

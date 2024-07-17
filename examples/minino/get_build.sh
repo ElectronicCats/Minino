@@ -19,7 +19,7 @@ cp build/bootloader/bootloader.bin build_files/bootloader/
 
 # Compress build_files and delete directory
 echo "Compressing build_files..."
-tar -czvf build_files.tgz build_files
+zip -r build_files.zip build_files
 rm -rf build_files/
 
 echo "Done!"
