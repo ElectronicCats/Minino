@@ -12,6 +12,10 @@ set(modules "modules/led_events/led_events.c"
             "modules/open_thread/open_thread_module.c"
             "modules/open_thread/open_thread_screens_module.c"
             "modules/gps/gps_module.c"
+            "modules/cat_dos/catdos_module.c"
+            "modules/cat_dos/cat_console.c"
+            "modules/cat_dos/cmd_catdos.c"
+            "modules/menu_screens/configuration.c"
             "modules/gps/wardriving/wardriving_module.c")
 
 set(drivers "drivers/oled_driver/oled_driver.c"
@@ -36,6 +40,7 @@ idf_component_register(
                     "modules/led_events"
                     "modules/open_thread"
                     "modules/gps"
+                    "modules/cat_dos/"
                     "modules/gps/wardriving")
 
 # # Append all directories to INCLUDE_DIRS

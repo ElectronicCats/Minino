@@ -58,7 +58,7 @@ static void button_event_cb(void* arg, void* data) {
   const char* button_name_str = button_names[button_name];
   const char* button_event_str = button_events_name[button_event];
 
-  ESP_LOGI(TAG, "Button: %s, Event: %s", button_name_str, button_event_str);
+  // ESP_LOGI(TAG, "Button: %s, Event: %s", button_name_str, button_event_str);
 
   // If we have an app with a custom handler, we call it
   app_state = menu_screens_get_app_state();

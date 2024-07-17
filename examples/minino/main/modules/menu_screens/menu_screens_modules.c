@@ -1,6 +1,7 @@
 #include "menu_screens_modules.h"
 #include "bitmaps.h"
 #include "ble_module.h"
+#include "configuration.h"
 #include "esp_log.h"
 #include "gps_module.h"
 #include "leds.h"
@@ -472,6 +473,9 @@ void handle_user_selection(screen_module_menu_t user_selection) {
   }
 
   switch (user_selection) {
+    case MENU_SETTINGS_WIFI:
+      config_module_begin(MENU_SETTINGS_WIFI);
+      break;
     case MENU_SETTINGS:
       settings_module_begin();
       break;
