@@ -34,6 +34,8 @@ static app_state_t app_state = {
 static enter_submenu_cb_t enter_submenu_cb = NULL;
 static exit_submenu_cb_t exit_submenu_cb = NULL;
 
+void handle_user_selection(screen_module_menu_t user_selection);
+
 esp_err_t test_menu_list() {
   ESP_LOGI(TAG, "Testing menus list size");
   size_t menu_list_size = sizeof(menu_list) / sizeof(menu_list[0]);
@@ -87,12 +89,6 @@ void run_tests() {
   ESP_ERROR_CHECK(test_menu_items());
 }
 
-void screen_module_set_screen(int current_menu) {
-  preferences_put_int("MENUNUMBER", prev_menu_table[current_menu]);
-  oled_screen_clear();
-  menu_screens_display_text_banner("Exiting...");
-}
-
 void show_logo() {
   // buzzer_set_freq(50);
   leds_on();
@@ -103,8 +99,17 @@ void show_logo() {
   vTaskDelay(500 / portTICK_PERIOD_MS);
 }
 
+void screen_module_set_screen(int current_menu) {
+  preferences_put_int("MENUNUMBER", prev_menu_table[current_menu]);
+  oled_screen_clear();
+  menu_screens_display_text_banner("Exiting...");
+}
+
 void screen_module_get_screen() {
   current_menu = preferences_get_int("MENUNUMBER", MENU_MAIN);
+  handle_user_selection(current_menu);
+
+  // Update number of items
   if (current_menu == MENU_MAIN) {
     char** submenu = menu_items[current_menu];
     if (submenu != NULL) {
