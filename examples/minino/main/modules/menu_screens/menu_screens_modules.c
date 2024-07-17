@@ -468,6 +468,9 @@ void handle_user_selection(screen_module_menu_t user_selection) {
   }
 
   switch (user_selection) {
+    case MENU_SETTINGS_WIFI:
+      config_module_begin(MENU_SETTINGS_WIFI);
+      break;
     case MENU_SETTINGS:
       settings_module_begin();
       break;
@@ -496,9 +499,6 @@ void handle_user_selection(screen_module_menu_t user_selection) {
     case MENU_SETTINGS_SOUND:
       oled_screen_clear();
       menu_screens_display_text_banner("In development");
-      break;
-    case MENU_SETTINGS_WIFI:
-      config_module_begin(MENU_SETTINGS_WIFI);
       break;
     case MENU_GPS:
       gps_module_begin();

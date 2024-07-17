@@ -542,6 +542,7 @@ char* gps_time_zone_options[] = {
 
 char* system_settings_items[] = {
     "Time zone",
+    "WIFI",
     NULL,
 };
 
