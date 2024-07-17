@@ -13,7 +13,7 @@ void sd_card_begin();
 /**
  * Mount the SD card.
  *
- * @return void
+ * @return esp_err_t
  */
 esp_err_t sd_card_mount();
 

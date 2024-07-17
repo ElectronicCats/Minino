@@ -217,16 +217,18 @@ esp_err_t sd_card_read_file(const char* path) {
     ESP_LOGE(TAG, "Failed to open file for reading");
     return ESP_FAIL;
   }
-  char line[MAX_CHAR_SIZE];
-  fgets(line, sizeof(line), file);
-  fclose(file);
 
-  // strip newline
-  // char* pos = strchr(line, '\n');
-  // if (pos) {
-  //   *pos = '\0';
-  // }
-  ESP_LOGI(TAG, "Read from file: '%s'", line);
+  char line[MAX_CHAR_SIZE];
+  ESP_LOGI(TAG, "Read from file:");
+  while (fgets(line, sizeof(line), file) != NULL) {
+    // strip newline
+    char* pos = strchr(line, '\n');
+    if (pos) {
+      *pos = '\0';
+    }
+    ESP_LOGI(TAG, "'%s'", line);
+  }
+  fclose(file);
 
   return ESP_OK;
 }
