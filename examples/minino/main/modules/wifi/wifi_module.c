@@ -117,7 +117,7 @@ void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
     case MENU_WIFI_ANALIZER_CHANNEL:
       if (menu_screens_is_configuration(user_selection)) {
         buzzer_play_for(SOUND_DURATION);
-        wifi_sniffer_set_channel(selected_item);
+        wifi_sniffer_set_channel(selected_item + 1);
       }
       wifi_module_update_channel_options();
       break;
@@ -360,6 +360,7 @@ err:
 
 void wifi_module_update_channel_options() {
   uint8_t selected_option = wifi_sniffer_get_channel();
+  selected_option--;
   menu_screens_update_options(wifi_analizer_channel_items, selected_option);
 }
 
