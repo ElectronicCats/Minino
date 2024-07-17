@@ -82,6 +82,7 @@ typedef enum {
   MENU_ABOUT_LICENSE,
   MENU_ABOUT_CREDITS,
   MENU_ABOUT_LEGAL,
+  MENU_ABOUT_UPDATE,
   /* Settings items */
   MENU_SETTINGS_DISPLAY,
   MENU_SETTINGS_SOUND,
@@ -136,6 +137,7 @@ const char* menu_list[] = {
     "MENU_ABOUT_LICENSE",
     "MENU_ABOUT_CREDITS",
     "MENU_ABOUT_LEGAL",
+    "MENU_ABOUT_UPDATE",
     "MENU_SETTINGS_DISPLAY",
     "MENU_SETTINGS_SOUND",
     "MENU_SETTINGS_SYSTEM",
@@ -162,7 +164,7 @@ const int next_menu_table[][6] = {
      MENU_SETTINGS_WIFI},
     // MENU_ABOUT
     {MENU_ABOUT_VERSION, MENU_ABOUT_LICENSE, MENU_ABOUT_CREDITS,
-     MENU_ABOUT_LEGAL},
+     MENU_ABOUT_LEGAL, MENU_ABOUT_UPDATE},
     // MENU_WIFI_APPS
     {MENU_WIFI_ANALIZER, MENU_WIFI_DEAUTH, MENU_WIFI_DOS},
     // MENU_BLUETOOTH_APPS
@@ -223,6 +225,8 @@ const int next_menu_table[][6] = {
     {MENU_ABOUT_CREDITS},
     // MENU_ABOUT_LEGAL
     {MENU_ABOUT_LEGAL},
+    // MENU_ABOUT_UPDATE
+    {MENU_ABOUT_UPDATE},
     // MENU_SETTINGS_DISPLAY
     {MENU_SETTINGS_DISPLAY},
     // MENU_SETTINGS_SOUND
@@ -279,6 +283,7 @@ const int prev_menu_table[] = {
     MENU_ABOUT,                      // MENU_ABOUT_LICENSE
     MENU_ABOUT,                      // MENU_ABOUT_CREDITS
     MENU_ABOUT,                      // MENU_ABOUT_LEGAL
+    MENU_ABOUT,                      // MENU_ABOUT_UPDATE
     MENU_SETTINGS,                   // MENU_SETTINGS_DISPLAY
     MENU_SETTINGS,                   // MENU_SETTINGS_SOUND
     MENU_SETTINGS,                   // MENU_SETTINGS_SYSTEM
@@ -311,7 +316,7 @@ char* settings_items[] = {
 };
 
 char* about_items[] = {
-    "Version", "License", "Credits", "Legal", NULL,
+    "Version", "License", "Credits", "Legal", "Update", NULL,
 };
 
 char* version_text[] = {
@@ -590,7 +595,7 @@ char** menu_items[] = {
     gps_speed_items,      // MENU_GPS_SPEED
     gps_help,             // MENU_GPS_HELP
     /* About */
-    version_text, license_text, credits_text, legal_text,
+    version_text, license_text, credits_text, legal_text, empty_items,
     /* Settings items */
     empty_items,            // MENU_SETTINGS_DISPLAY
     empty_items,            // MENU_SETTINGS_SOUND

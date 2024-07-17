@@ -1,4 +1,5 @@
 #include "menu_screens_modules.h"
+#include "OTA.h"
 #include "bitmaps.h"
 #include "ble_module.h"
 #include "configuration.h"
@@ -8,6 +9,7 @@
 #include "oled_screen.h"
 #include "open_thread.h"
 #include "open_thread_module.h"
+#include "ota_module.h"
 #include "preferences.h"
 #include "radio_selector.h"
 #include "settings_module.h"
@@ -94,6 +96,7 @@ void show_logo() {
   // buzzer_set_freq(50);
   leds_on();
   buzzer_play();
+  vTaskDelay(500 / portTICK_PERIOD_MS);
   oled_screen_display_bitmap(epd_bitmap_logo_1, 0, 0, 128, 64,
                              OLED_DISPLAY_NORMAL);
   buzzer_stop();
@@ -507,6 +510,9 @@ void handle_user_selection(screen_module_menu_t user_selection) {
       break;
     case MENU_GPS:
       gps_module_begin();
+      break;
+    case MENU_ABOUT_UPDATE:
+      ota_module_init();
       break;
     default:
       ESP_LOGI(TAG, "Unhandled menu: %s", menu_list[user_selection]);
