@@ -79,3 +79,15 @@ CONFIG_ZB_ENABLED=y
 CONFIG_ZB_ZCZR=y
 # end of Zboss
 # end of Component config
+
+#
+# Log output
+#
+CONFIG_LOG_MASTER_LEVEL=y
+# end of Log output
+
+#
+# ESP Console
+#
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG_ENABLED=y
