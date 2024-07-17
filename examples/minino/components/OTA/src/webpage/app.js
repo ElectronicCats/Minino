@@ -3,6 +3,8 @@ $(document).ready(function()
   getUpdateStatus();
 });
 
+let firmware_succcess = false;
+
 // Función para obtener información del archivo seleccionado
 function getFileInfo() {
     var fileInput = document.getElementById("selected_file");
@@ -63,10 +65,16 @@ function getUpdateStatus() {
             var response = JSON.parse(xhr.responseText);
             document.getElementById("latest_firmware").innerHTML = "Current Firmware Version: " + response.current_fw_version;
 
+            if(firmware_succcess){
+                return;
+            }
+
             if (response.ota_update_status === 1) {
                 window.alert('Firmware Update Success, rebooting system...');
+                firmware_succcess = true;
             } else if (response.ota_update_status === -1) {
                 window.alert('Something was wrong, please try again');
+                firmware_succcess = false;
             }
         }
     };

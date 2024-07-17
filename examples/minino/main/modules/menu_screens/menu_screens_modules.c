@@ -91,6 +91,7 @@ void run_tests() {
 
 void show_logo() {
   buzzer_play();
+  vTaskDelay(500 / portTICK_PERIOD_MS);
   oled_screen_display_bitmap(epd_bitmap_logo_1, 0, 0, 128, 64,
                              OLED_DISPLAY_NORMAL);
   buzzer_stop();
