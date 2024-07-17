@@ -2,6 +2,7 @@
 
 #include "gps_module.h"
 #include "menu_screens_modules.h"
+#include "oled_screen.h"
 #include "settings_module.h"
 
 static const char* TAG = "settings_module";
@@ -27,6 +28,11 @@ void settings_module_enter_submenu_cb(screen_module_menu_t user_selection) {
   uint8_t selected_item = menu_screens_get_selected_item();
 
   switch (user_selection) {
+    case MENU_SETTINGS_DISPLAY:
+    case MENU_SETTINGS_SOUND:
+      oled_screen_clear();
+      menu_screens_display_text_banner("In development");
+      break;
     case MENU_SETTINGS_TIME_ZONE:
       if (menu_screens_is_configuration(user_selection)) {
         gps_module_set_time_zone(selected_item);
