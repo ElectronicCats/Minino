@@ -55,12 +55,14 @@ typedef enum {
   /* WiFi analizer items */
   MENU_WIFI_ANALIZER_RUN,
   MENU_WIFI_ANALIZER_SETTINGS,
+  MENU_WIFI_ANALIZER_HELP,
   /* WiFi analizer start items */
   MENU_WIFI_ANALIZER_ASK_SUMMARY,
   MENU_WIFI_ANALIZER_SUMMARY,
   /* WiFi analizer settings */
   MENU_WIFI_ANALIZER_CHANNEL,
   MENU_WIFI_ANALIZER_DESTINATION,
+  MENU_WIFI_ANALIZER_SD_EREASE_WARNING,
   /* Bluetooth applications */
   MENU_BLUETOOTH_TRAKERS_SCAN,
   MENU_BLUETOOTH_SPAM,
@@ -115,10 +117,12 @@ const char* menu_list[] = {
     "MENU_WIFI_DEAUTH",
     "MENU_WIFI_ANALIZER_RUN",
     "MENU_WIFI_ANALIZER_SETTINGS",
+    "MENU_WIFI_ANALIZER_HELP",
     "MENU_WIFI_ANALIZER_ASK_SUMMARY",
     "MENU_WIFI_ANALIZER_SUMMARY",
     "MENU_WIFI_ANALIZER_CHANNEL",
     "MENU_WIFI_ANALIZER_DESTINATION",
+    "MENU_WIFI_ANALIZER_SD_EREASE_WARNING",
     "MENU_BLUETOOTH_TRAKERS_SCAN",
     "MENU_BLUETOOTH_SPAM",
     "MENU_ZIGBEE_SPOOFING",
@@ -174,13 +178,16 @@ const int next_menu_table[][6] = {
     {MENU_GPS_WARDRIVING, MENU_GPS_DATE_TIME, MENU_GPS_LOCATION, MENU_GPS_SPEED,
      MENU_GPS_HELP},
     // MENU_WIFI_ANALIZER
-    {MENU_WIFI_ANALIZER_RUN, MENU_WIFI_ANALIZER_SETTINGS},
+    {MENU_WIFI_ANALIZER_RUN, MENU_WIFI_ANALIZER_SETTINGS,
+     MENU_WIFI_ANALIZER_HELP},
     // MENU_WIFI_DEAUTH
     {MENU_WIFI_DEAUTH},
     // MENU_WIFI_ANALIZER_RUN
     {MENU_WIFI_ANALIZER_RUN},
     // MENU_WIFI_ANALIZER_SETTINGS
     {MENU_WIFI_ANALIZER_CHANNEL, MENU_WIFI_ANALIZER_DESTINATION},
+    // MENU_WIFI_ANALIZER_HELP
+    {MENU_WIFI_ANALIZER_HELP},
     // MENU_WIFI_ANALIZER_ASK_SUMMARY [0] -> Yes, [1] -> No
     {MENU_WIFI_ANALIZER_SUMMARY, MENU_WIFI_ANALIZER},
     // MENU_WIFI_ANALIZER_SUMMARY
@@ -189,6 +196,8 @@ const int next_menu_table[][6] = {
     {MENU_WIFI_ANALIZER_CHANNEL},
     // MENU_WIFI_ANALIZER_DESTINATION
     {MENU_WIFI_ANALIZER_DESTINATION},
+    // MENU_WIFI_ANALIZER_SD_EREASE_WARNING
+    {MENU_WIFI_ANALIZER_SD_EREASE_WARNING},
     // MENU_BLUETOOTH_TRAKERS_SCAN
     {MENU_BLUETOOTH_TRAKERS_SCAN},
     // MENU_BLUETOOTH_SPAM
@@ -241,44 +250,46 @@ const int next_menu_table[][6] = {
  * Usage: prev_menu_table[screen_module_menu_t]
  */
 const int prev_menu_table[] = {
-    MENU_MAIN,                       // MENU_MAIN
-    MENU_MAIN,                       // MENU_APPLICATIONS
-    MENU_MAIN,                       // MENU_SETTINGS
-    MENU_MAIN,                       // MENU_ABOUT
-    MENU_APPLICATIONS,               // MENU_WIFI_APPS
-    MENU_APPLICATIONS,               // MENU_BLUETOOTH_APPS
-    MENU_APPLICATIONS,               // MENU_ZIGBEE_APPS
-    MENU_APPLICATIONS,               // MENU_THREAD_APPS
-    MENU_APPLICATIONS,               // MENU_MATTER_APPS
-    MENU_APPLICATIONS,               // MENU_GPS
-    MENU_WIFI_APPS,                  // MENU_WIFI_ANALIZER
-    MENU_WIFI_APPS,                  // MENU_WIFI_DEAUTH
-    MENU_WIFI_ANALIZER_ASK_SUMMARY,  // MENU_WIFI_ANALIZER_RUN
-    MENU_WIFI_ANALIZER,              // MENU_WIFI_ANALIZER_SETTINGS
-    MENU_WIFI_ANALIZER_RUN,          // MENU_WIFI_ANALIZER_ASK_SUMMARY
-    MENU_WIFI_ANALIZER,              // MENU_WIFI_ANALIZER_SUMMARY
-    MENU_WIFI_ANALIZER_SETTINGS,     // MENU_WIFI_ANALIZER_CHANNEL
-    MENU_WIFI_ANALIZER_SETTINGS,     // MENU_WIFI_ANALIZER_DESTINATION
-    MENU_BLUETOOTH_APPS,             // MENU_BLUETOOTH_TRAKERS_SCAN
-    MENU_BLUETOOTH_APPS,             // MENU_BLUETOOTH_SPAM
-    MENU_ZIGBEE_APPS,                // MENU_ZIGBEE_SPOOFING
-    MENU_ZIGBEE_SPOOFING,            // MENU_ZIGBEE_SWITCH
-    MENU_ZIGBEE_SPOOFING,            // MENU_ZIGBEE_LIGHT
-    MENU_ZIGBEE_APPS,                // MENU_ZIGBEE_SNIFFER
-    MENU_THREAD_APPS,                // MENU_THREAD_BROADCAST
-    MENU_GPS,                        // MENU_GPS_WARDRIVING
-    MENU_GPS,                        // MENU_GPS_DATE_TIME
-    MENU_GPS,                        // MENU_GPS_LOCATION
-    MENU_GPS,                        // MENU_GPS_SPEED
-    MENU_GPS,                        // MENU_GPS_HELP
-    MENU_ABOUT,                      // MENU_ABOUT_VERSION
-    MENU_ABOUT,                      // MENU_ABOUT_LICENSE
-    MENU_ABOUT,                      // MENU_ABOUT_CREDITS
-    MENU_ABOUT,                      // MENU_ABOUT_LEGAL
-    MENU_SETTINGS,                   // MENU_SETTINGS_DISPLAY
-    MENU_SETTINGS,                   // MENU_SETTINGS_SOUND
-    MENU_SETTINGS,                   // MENU_SETTINGS_SYSTEM
-    MENU_SETTINGS_SYSTEM,            // MENU_SETTINGS_TIME_ZONE
+    MENU_MAIN,                             // MENU_MAIN
+    MENU_MAIN,                             // MENU_APPLICATIONS
+    MENU_MAIN,                             // MENU_SETTINGS
+    MENU_MAIN,                             // MENU_ABOUT
+    MENU_APPLICATIONS,                     // MENU_WIFI_APPS
+    MENU_APPLICATIONS,                     // MENU_BLUETOOTH_APPS
+    MENU_APPLICATIONS,                     // MENU_ZIGBEE_APPS
+    MENU_APPLICATIONS,                     // MENU_THREAD_APPS
+    MENU_APPLICATIONS,                     // MENU_MATTER_APPS
+    MENU_APPLICATIONS,                     // MENU_GPS
+    MENU_WIFI_APPS,                        // MENU_WIFI_ANALIZER
+    MENU_WIFI_APPS,                        // MENU_WIFI_DEAUTH
+    MENU_WIFI_ANALIZER_ASK_SUMMARY,        // MENU_WIFI_ANALIZER_RUN
+    MENU_WIFI_ANALIZER,                    // MENU_WIFI_ANALIZER_SETTINGS
+    MENU_WIFI_ANALIZER,                    // MENU_WIFI_ANALIZER_HELP
+    MENU_WIFI_ANALIZER_RUN,                // MENU_WIFI_ANALIZER_ASK_SUMMARY
+    MENU_WIFI_ANALIZER,                    // MENU_WIFI_ANALIZER_SUMMARY
+    MENU_WIFI_ANALIZER_SETTINGS,           // MENU_WIFI_ANALIZER_CHANNEL
+    MENU_WIFI_ANALIZER_SD_EREASE_WARNING,  // MENU_WIFI_ANALIZER_DESTINATION
+    MENU_WIFI_ANALIZER_SETTINGS,  // MENU_WIFI_ANALIZER_SD_EREASE_WARNING
+    MENU_BLUETOOTH_APPS,          // MENU_BLUETOOTH_TRAKERS_SCAN
+    MENU_BLUETOOTH_APPS,          // MENU_BLUETOOTH_SPAM
+    MENU_ZIGBEE_APPS,             // MENU_ZIGBEE_SPOOFING
+    MENU_ZIGBEE_SPOOFING,         // MENU_ZIGBEE_SWITCH
+    MENU_ZIGBEE_SPOOFING,         // MENU_ZIGBEE_LIGHT
+    MENU_ZIGBEE_APPS,             // MENU_ZIGBEE_SNIFFER
+    MENU_THREAD_APPS,             // MENU_THREAD_BROADCAST
+    MENU_GPS,                     // MENU_GPS_WARDRIVING
+    MENU_GPS,                     // MENU_GPS_DATE_TIME
+    MENU_GPS,                     // MENU_GPS_LOCATION
+    MENU_GPS,                     // MENU_GPS_SPEED
+    MENU_GPS,                     // MENU_GPS_HELP
+    MENU_ABOUT,                   // MENU_ABOUT_VERSION
+    MENU_ABOUT,                   // MENU_ABOUT_LICENSE
+    MENU_ABOUT,                   // MENU_ABOUT_CREDITS
+    MENU_ABOUT,                   // MENU_ABOUT_LEGAL
+    MENU_SETTINGS,                // MENU_SETTINGS_DISPLAY
+    MENU_SETTINGS,                // MENU_SETTINGS_SOUND
+    MENU_SETTINGS,                // MENU_SETTINGS_SYSTEM
+    MENU_SETTINGS_SYSTEM,         // MENU_SETTINGS_TIME_ZONE
 };
 
 /**
@@ -375,6 +386,7 @@ char* wifi_items[] = {
 const char* wifi_analizer_items[] = {
     "Start",
     "Settings",
+    "Help",
     NULL,
 };
 
@@ -388,6 +400,51 @@ char* wifi_analizer_summary[120] = {
 char* wifi_analizer_settings_items[] = {
     "Channel",
     "Destination",
+    NULL,
+};
+
+char* wifi_analizer_help[] = {
+    VERTICAL_SCROLL_TEXT,
+    /***************/
+    "This tool",
+    "allows you to",
+    "analyze the",
+    "WiFi networks",
+    "around you.",
+    "",
+    "You can select",
+    "the channel and",
+    "the destination",
+    "to save the",
+    "results.",
+    NULL,
+};
+
+char* wifi_analizer_sd_warning[] = {
+    VERTICAL_SCROLL_TEXT,
+    /***************/
+    "Warning",
+    "",
+    "The SD card",
+    "is not",
+    "available.",
+    "",
+    "Please insert",
+    "an SD card",
+    "to save the",
+    "results.",
+    NULL,
+};
+
+char* wifi_analizer_sd_erease_warning[] = {
+    VERTICAL_SCROLL_TEXT,
+    /***************/
+    "WARNING",
+    "Your SD card",
+    "data may be",
+    "erased if you",
+    "start the",
+    "WiFi analizer",
     NULL,
 };
 
@@ -566,10 +623,12 @@ char** menu_items[] = {
     empty_items,                      // MENU_WIFI_DEAUTH
     empty_items,                      // MENU_WIFI_ANALIZER_RUN
     wifi_analizer_settings_items,     // MENU_WIFI_ANALIZER_SETTINGS
+    wifi_analizer_help,               // MENU_WIFI_ANALIZER_HELP
     wifi_analizer_summary_question,   // MENU_WIFI_ANALIZER_ASK_SUMMARY
     wifi_analizer_summary,            // MENU_WIFI_ANALIZER_SUMMARY
     wifi_analizer_channel_items,      // MENU_WIFI_ANALIZER_CHANNEL
     wifi_analizer_destination_items,  // MENU_WIFI_ANALIZER_DESTINATION
+    wifi_analizer_sd_erease_warning,  // MENU_WIFI_ANALIZER_SD_EREASE_WARNING
     /* Bluetooth applications */
     empty_items,  // MENU_BLUETOOTH_TRAKERS_SCAN
     empty_items,  // MENU_BLUETOOTH_SPAM
