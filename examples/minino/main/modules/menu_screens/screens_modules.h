@@ -73,6 +73,7 @@ typedef enum {
   /* Thread applications */
   MENU_THREAD_BROADCAST,
   /* GPS applications */
+  MENU_GPS_WARDRIVING,
   MENU_GPS_DATE_TIME,
   MENU_GPS_LOCATION,
   MENU_GPS_SPEED,
@@ -129,6 +130,7 @@ const char* menu_list[] = {
     "MENU_ZIGBEE_LIGHT",
     "MENU_ZIGBEE_SNIFFER",
     "MENU_THREAD_BROADCAST",
+    "MENU_GPS_WARDRIVING",
     "MENU_GPS_DATE_TIME",
     "MENU_GPS_LOCATION",
     "MENU_GPS_SPEED",
@@ -176,7 +178,8 @@ const int next_menu_table[][6] = {
     // MENU_MATTER_APPS
     {MENU_MATTER_APPS},
     // MENU_GPS
-    {MENU_GPS_DATE_TIME, MENU_GPS_LOCATION, MENU_GPS_SPEED, MENU_GPS_HELP},
+    {MENU_GPS_WARDRIVING, MENU_GPS_DATE_TIME, MENU_GPS_LOCATION, MENU_GPS_SPEED,
+     MENU_GPS_HELP},
     // MENU_WIFI_ANALIZER
     {MENU_WIFI_ANALIZER_RUN, MENU_WIFI_ANALIZER_SETTINGS},
     // MENU_WIFI_DEAUTH
@@ -209,6 +212,8 @@ const int next_menu_table[][6] = {
     {MENU_ZIGBEE_SNIFFER},
     // MENU_THREAD_BROADCAST
     {MENU_THREAD_BROADCAST},
+    // MENU_GPS_WARDRIVING
+    {MENU_GPS_WARDRIVING},
     // MENU_GPS_DATE_TIME
     {MENU_GPS_DATE_TIME},
     // MENU_GPS_LOCATION
@@ -275,6 +280,7 @@ const int prev_menu_table[] = {
     MENU_ZIGBEE_SPOOFING,            // MENU_ZIGBEE_LIGHT
     MENU_ZIGBEE_APPS,                // MENU_ZIGBEE_SNIFFER
     MENU_THREAD_APPS,                // MENU_THREAD_BROADCAST
+    MENU_GPS,                        // MENU_GPS_WARDRIVING
     MENU_GPS,                        // MENU_GPS_DATE_TIME
     MENU_GPS,                        // MENU_GPS_LOCATION
     MENU_GPS,                        // MENU_GPS_SPEED
@@ -325,7 +331,7 @@ char* version_text[] = {
     "",
     "",
     "",
-    " Minino v1.3.0",
+    " Minino v" CONFIG_PROJECT_VERSION,
     "     BETA",
     NULL,
 };
@@ -452,7 +458,7 @@ char* thread_items[] = {
 };
 
 char* gps_items[] = {
-    "Date & Time", "Location", "Speed", "Help", NULL,
+    "Wardrive", "Date & Time", "Location", "Speed", "Help", NULL,
 };
 
 char* gps_date_time_items[] = {
@@ -590,6 +596,7 @@ char** menu_items[] = {
     /* Thread applications */
     empty_items,  // MENU_THREAD_BROADCAST
     /* GPS applications */
+    empty_items,          // MENU_GPS_WARDRIVING
     gps_date_time_items,  // MENU_GPS_DATE_TIME
     gps_location_items,   // MENU_GPS_LOCATION
     gps_speed_items,      // MENU_GPS_SPEED

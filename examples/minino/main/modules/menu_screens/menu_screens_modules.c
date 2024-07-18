@@ -112,8 +112,12 @@ void show_logo() {
   buzzer_play();
   oled_screen_display_bitmap(epd_bitmap_logo_1, 0, 0, 128, 64,
                              OLED_DISPLAY_NORMAL);
-  buzzer_stop();
+  char* version = malloc(20);
+  sprintf(version, "v%s BETA", CONFIG_PROJECT_VERSION);
+  oled_screen_display_text_center(version, 6, OLED_DISPLAY_INVERT);
+  free(version);
   vTaskDelay(500 / portTICK_PERIOD_MS);
+  buzzer_stop();
 }
 
 void screen_module_set_screen(int current_menu) {

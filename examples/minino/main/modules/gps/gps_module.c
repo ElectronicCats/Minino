@@ -163,6 +163,10 @@ void gps_module_exit_submenu_cb() {
 
 void gps_module_enter_submenu_cb(screen_module_menu_t user_selection) {
   switch (user_selection) {
+    case MENU_GPS_WARDRIVING:
+      oled_screen_clear();
+      menu_screens_display_text_banner("In development");
+      break;
     case MENU_GPS_DATE_TIME:
     case MENU_GPS_LOCATION:
     case MENU_GPS_SPEED:
