@@ -52,7 +52,7 @@ int mount(int argc, char** argv) {
   int nerrors = arg_parse(argc, argv, (void**) &mount_args);
   if (nerrors != 0) {
     arg_print_errors(stderr, mount_args.end, argv[0]);
-    return 1;
+    return ESP_ERR_INVALID_ARG;
   }
   /* mount sd card */
   if (!strncmp(mount_args.device->sval[0], "sd", 2)) {
@@ -78,7 +78,7 @@ int mount(int argc, char** argv) {
     ret = spi_bus_initialize(host.slot, &bus_cfg, SPI_DMA_CH_AUTO);
     if (ret != ESP_OK) {
       ESP_LOGE(TAG, "Failed to initialize bus.");
-      return 1;
+      return ESP_ERR_NO_MEM;
     }
 
     // This initializes the slot without card detect (CD) and write protect (WP)
@@ -97,6 +97,7 @@ int mount(int argc, char** argv) {
                  "Failed to mount filesystem. "
                  "If you want the card to be formatted, set "
                  "format_if_mount_failed = true.");
+        return ESP_ERR_NOT_SUPPORTED;
       } else {
         ESP_LOGE(TAG,
                  "Failed to initialize the card (%s). "
@@ -104,13 +105,13 @@ int mount(int argc, char** argv) {
                  esp_err_to_name(ret));
         // Free the bus after mounting failed
         spi_bus_free(host.slot);
+        return ESP_ERR_NOT_FOUND;
       }
-      return 1;
     }
     /* print card info if mount successfully */
     sdmmc_card_print_info(stdout, card);
   }
-  return 0;
+  return ESP_OK;
 }
 
 void register_mount(void) {
@@ -124,14 +125,14 @@ esp_err_t unmount(int argc, char** argv) {
 
   if (!_sd_card_mounted) {
     ESP_LOGE(TAG, "SD card not mounted");
-    return ESP_FAIL;
+    return ESP_ERR_NOT_ALLOWED;
   }
 
   sdmmc_host_t host = SDSPI_HOST_DEFAULT();
   int nerrors = arg_parse(argc, argv, (void**) &mount_args);
   if (nerrors != 0) {
     arg_print_errors(stderr, mount_args.end, argv[0]);
-    return ESP_FAIL;
+    return ESP_ERR_INVALID_ARG;
   }
   /* unmount sd card */
   if (!strncmp(mount_args.device->sval[0], "sd", 2)) {
@@ -165,7 +166,7 @@ esp_err_t sd_card_mount() {
   esp_err_t err = ESP_OK;
   if (_sd_card_mounted) {
     ESP_LOGW(TAG, "SD card already mounted");
-    return err;
+    return ESP_ERR_NOT_ALLOWED;
   }
 
   const char** mount_argv[] = {"mount", "sd"};

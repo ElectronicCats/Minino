@@ -66,6 +66,46 @@ static void scanning_task(void* pvParameters) {
   vTaskDelete(NULL);
 }
 
+void wifi_module_init_sniffer() {
+  oled_screen_clear();
+  if (wifi_sniffer_is_destination_sd()) {
+    switch (sd_card_mount()) {
+      case ESP_OK:
+        ESP_LOGI(TAG, "SD card mounted");
+        break;
+      case ESP_ERR_NOT_SUPPORTED:
+        ESP_LOGI(TAG, "SD card not supported");
+        oled_screen_display_text_center("SD card not", 0, OLED_DISPLAY_NORMAL);
+        oled_screen_display_text_center("supported", 1, OLED_DISPLAY_NORMAL);
+        oled_screen_display_text_center("Switching to", 3, OLED_DISPLAY_NORMAL);
+        oled_screen_display_text_center("internal storage", 4,
+                                        OLED_DISPLAY_NORMAL);
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        oled_screen_clear();
+        wifi_sniffer_set_destination_internal();
+        // TODO: add an option to format the SD card
+        break;
+      default:
+        ESP_LOGE(TAG, "SD card mount failed: reason: %s",
+                 esp_err_to_name(ESP_FAIL));
+      case ESP_ERR_NOT_FOUND:
+        ESP_LOGW(TAG, "SD card not found");
+        oled_screen_display_text_center("SD card ", 0, OLED_DISPLAY_NORMAL);
+        oled_screen_display_text_center("not found", 1, OLED_DISPLAY_NORMAL);
+        oled_screen_display_text_center("Switching to", 3, OLED_DISPLAY_NORMAL);
+        oled_screen_display_text_center("internal storage", 4,
+                                        OLED_DISPLAY_NORMAL);
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        oled_screen_clear();
+        wifi_sniffer_set_destination_internal();
+        break;
+    }
+  }
+
+  wifi_sniffer_start();
+  led_control_run_effect(led_control_zigbee_scanning);
+}
+
 void wifi_module_exit_submenu_cb() {
   screen_module_menu_t current_menu = menu_screens_get_current_menu();
 
@@ -120,9 +160,7 @@ void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
       wifi_module_deauth_begin();
       break;
     case MENU_WIFI_ANALIZER_RUN:
-      oled_screen_clear();
-      wifi_sniffer_start();
-      led_control_run_effect(led_control_zigbee_scanning);
+      wifi_module_init_sniffer();
       break;
     case MENU_WIFI_ANALIZER_SUMMARY:
       wifi_sniffer_load_summary();
@@ -158,15 +196,6 @@ void wifi_module_begin() {
 void wifi_module_exit() {
   screen_module_set_screen(MENU_WIFI_DEAUTH);
   esp_restart();
-  // menu_screens_set_app_state(SCREEN_IN_NAVIGATION, NULL);
-  // wifi_driver_ap_stop();
-  // if (task_display_scanning != NULL) {
-  //   vTaskDelete(task_display_scanning);
-  // }
-  // if (task_display_attacking) {
-  //   vTaskDelete(task_display_attacking);
-  // }
-  // menu_screens_exit_submenu();
 }
 
 void wifi_module_deauth_begin() {
