@@ -318,7 +318,7 @@ char* version_text[] = {
     "",
     "",
     "",
-    " Minino v1.3.0",
+    " Minino v" CONFIG_PROJECT_VERSION,
     "     BETA",
     NULL,
 };

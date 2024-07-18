@@ -15,6 +15,12 @@ menu "General project"
 				Badge Board.
 	endchoice
 
+	config PROJECT_VERSION
+		string "Project version"
+		default "1.0.2.0"
+		help
+			Project version.
+
 endmenu
 
 menu "OLED Screen Configuration"

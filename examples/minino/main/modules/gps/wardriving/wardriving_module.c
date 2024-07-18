@@ -2,7 +2,7 @@
 #include "sd_card.h"
 
 #define FORMAT_VERSION "WigleWifi-1.6"
-#define APP_VERSION    "1.1.0.0"
+#define APP_VERSION    CONFIG_PROJECT_VERSION
 #define MODEL          "MININO"
 #define RELEASE        APP_VERSION
 #define DEVICE         "MININO"
