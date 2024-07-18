@@ -1,4 +1,5 @@
 #include "esp_check.h"
+#include "esp_err.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "keyboard_module.h"
@@ -10,6 +11,7 @@
 #include "modules/wifi/wifi_module.h"
 #include "modules/wifi/wifi_screens_module.h"
 #include "oled_screen.h"
+#include "sd_card.h"
 #include "wifi_attacks.h"
 #include "wifi_controller.h"
 #include "wifi_scanner.h"
@@ -86,6 +88,17 @@ void wifi_module_exit_submenu_cb() {
     case MENU_WIFI_ANALIZER:
       screen_module_set_screen(MENU_WIFI_ANALIZER);
       esp_restart();
+      break;
+    case MENU_WIFI_ANALIZER_DESTINATION:
+      if (wifi_sniffer_is_destination_sd()) {
+        // Verify if the SD card is inserted
+        if (sd_card_mount() == ESP_OK) {
+          vTaskDelay(100 / portTICK_PERIOD_MS);
+          sd_card_unmount();
+        } else {
+          wifi_sniffer_set_destination_internal();
+        }
+      }
       break;
       // case MENU_WIFI_DOS:
       //   screen_module_set_screen(MENU_WIFI_DOS);

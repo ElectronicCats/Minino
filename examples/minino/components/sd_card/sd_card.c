@@ -102,6 +102,8 @@ int mount(int argc, char** argv) {
                  "Failed to initialize the card (%s). "
                  "Make sure SD card lines have pull-up resistors in place.",
                  esp_err_to_name(ret));
+        // Free the bus after mounting failed
+        spi_bus_free(host.slot);
       }
       return 1;
     }
@@ -117,28 +119,35 @@ void register_mount(void) {
   mount_args.end = arg_end(1);
 }
 
-int unmount(int argc, char** argv) {
+esp_err_t unmount(int argc, char** argv) {
   esp_err_t ret;
+
+  if (!_sd_card_mounted) {
+    ESP_LOGE(TAG, "SD card not mounted");
+    return ESP_FAIL;
+  }
+
   sdmmc_host_t host = SDSPI_HOST_DEFAULT();
   int nerrors = arg_parse(argc, argv, (void**) &mount_args);
   if (nerrors != 0) {
     arg_print_errors(stderr, mount_args.end, argv[0]);
-    return 1;
+    return ESP_FAIL;
   }
   /* unmount sd card */
   if (!strncmp(mount_args.device->sval[0], "sd", 2)) {
     if (esp_vfs_fat_sdmmc_unmount() != ESP_OK) {
       ESP_LOGE(TAG, "Card unmount failed");
-      return -1;
+      return ESP_FAIL;
     }
-    ESP_LOGI(TAG, "Card unmounted");
     ret = spi_bus_free(host.slot);
     if (ret != ESP_OK) {
       ESP_LOGE(TAG, "Failed to deinitialize bus.");
-      return 1;
+      return ESP_FAIL;
     }
   }
-  return 0;
+
+  ESP_LOGI(TAG, "Card unmounted");
+  return ESP_OK;
 }
 
 void register_unmount(void) {
@@ -171,11 +180,15 @@ esp_err_t sd_card_mount() {
   return err;
 }
 
-void sd_card_unmount() {
+esp_err_t sd_card_unmount() {
   const char** unmount_argv2[] = {"unmount", "sd"};
   uint8_t unmount_argc2 = 2;
-  _sd_card_mounted = false;
-  unmount(unmount_argc2, (char**) unmount_argv2);
+
+  esp_err_t err = unmount(unmount_argc2, (char**) unmount_argv2);
+  if (err == ESP_OK) {
+    _sd_card_mounted = false;
+  }
+  return err;
 }
 
 bool sd_card_is_mounted() {

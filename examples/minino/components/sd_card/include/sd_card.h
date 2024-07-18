@@ -20,9 +20,9 @@ esp_err_t sd_card_mount();
 /**
  * Unmount the SD card.
  *
- * @return void
+ * @return esp_err_t
  */
-void sd_card_unmount();
+esp_err_t sd_card_unmount();
 
 /**
  * Check if the SD card is mounted.

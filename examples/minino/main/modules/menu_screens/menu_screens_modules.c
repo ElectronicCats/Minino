@@ -454,9 +454,6 @@ void menu_screens_exit_submenu() {
 
   if (exit_submenu_cb != NULL) {
     exit_submenu_cb();
-    ESP_LOGI(TAG, "Custom exit submenu callback");
-  } else {
-    ESP_LOGI(TAG, "No custom exit submenu callback");
   }
 
   // TODO: Store selected item history into flash
