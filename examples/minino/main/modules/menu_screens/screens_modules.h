@@ -52,6 +52,7 @@ typedef enum {
   /* WiFi applications */
   MENU_WIFI_ANALIZER,
   MENU_WIFI_DEAUTH,
+  MENU_WIFI_DOS,
   /* WiFi analizer items */
   MENU_WIFI_ANALIZER_RUN,
   MENU_WIFI_ANALIZER_SETTINGS,
@@ -82,11 +83,13 @@ typedef enum {
   MENU_ABOUT_LICENSE,
   MENU_ABOUT_CREDITS,
   MENU_ABOUT_LEGAL,
+  MENU_ABOUT_UPDATE,
   /* Settings items */
   MENU_SETTINGS_DISPLAY,
   MENU_SETTINGS_SOUND,
   MENU_SETTINGS_SYSTEM,
   MENU_SETTINGS_TIME_ZONE,
+  MENU_SETTINGS_WIFI,
   /* About submenus */
   /* Menu count */
   MENU_COUNT,
@@ -113,6 +116,7 @@ const char* menu_list[] = {
     "MENU_GPS",
     "MENU_WIFI_ANALIZER",
     "MENU_WIFI_DEAUTH",
+    "MENU_WIFI_DOS",
     "MENU_WIFI_ANALIZER_RUN",
     "MENU_WIFI_ANALIZER_SETTINGS",
     "MENU_WIFI_ANALIZER_ASK_SUMMARY",
@@ -135,10 +139,12 @@ const char* menu_list[] = {
     "MENU_ABOUT_LICENSE",
     "MENU_ABOUT_CREDITS",
     "MENU_ABOUT_LEGAL",
+    "MENU_ABOUT_UPDATE",
     "MENU_SETTINGS_DISPLAY",
     "MENU_SETTINGS_SOUND",
     "MENU_SETTINGS_SYSTEM",
     "MENU_SETTINGS_TIME_ZONE",
+    "MENU_SETTINGS_WIFI",
 };
 
 /**
@@ -156,12 +162,13 @@ const int next_menu_table[][6] = {
     {MENU_WIFI_APPS, MENU_BLUETOOTH_APPS, MENU_ZIGBEE_APPS, MENU_THREAD_APPS,
      MENU_MATTER_APPS, MENU_GPS},
     // MENU_SETTINGS
-    {MENU_SETTINGS_DISPLAY, MENU_SETTINGS_SOUND, MENU_SETTINGS_SYSTEM},
+    {MENU_SETTINGS_DISPLAY, MENU_SETTINGS_SOUND, MENU_SETTINGS_SYSTEM,
+     MENU_SETTINGS_WIFI},
     // MENU_ABOUT
     {MENU_ABOUT_VERSION, MENU_ABOUT_LICENSE, MENU_ABOUT_CREDITS,
-     MENU_ABOUT_LEGAL},
+     MENU_ABOUT_LEGAL, MENU_ABOUT_UPDATE},
     // MENU_WIFI_APPS
-    {MENU_WIFI_ANALIZER, MENU_WIFI_DEAUTH},
+    {MENU_WIFI_ANALIZER, MENU_WIFI_DEAUTH, MENU_WIFI_DOS},
     // MENU_BLUETOOTH_APPS
     {MENU_BLUETOOTH_TRAKERS_SCAN, MENU_BLUETOOTH_SPAM},
     // MENU_ZIGBEE_APPS
@@ -177,6 +184,8 @@ const int next_menu_table[][6] = {
     {MENU_WIFI_ANALIZER_RUN, MENU_WIFI_ANALIZER_SETTINGS},
     // MENU_WIFI_DEAUTH
     {MENU_WIFI_DEAUTH},
+    // MENU_WIFI_DOS
+    {MENU_WIFI_DOS},
     // MENU_WIFI_ANALIZER_RUN
     {MENU_WIFI_ANALIZER_RUN},
     // MENU_WIFI_ANALIZER_SETTINGS
@@ -221,6 +230,8 @@ const int next_menu_table[][6] = {
     {MENU_ABOUT_CREDITS},
     // MENU_ABOUT_LEGAL
     {MENU_ABOUT_LEGAL},
+    // MENU_ABOUT_UPDATE
+    {MENU_ABOUT_UPDATE},
     // MENU_SETTINGS_DISPLAY
     {MENU_SETTINGS_DISPLAY},
     // MENU_SETTINGS_SOUND
@@ -229,6 +240,8 @@ const int next_menu_table[][6] = {
     {MENU_SETTINGS_TIME_ZONE},
     // MENU_SETTINGS_TIME_ZONE
     {MENU_SETTINGS_TIME_ZONE},
+    // MENU_SETTINGS_WIFI
+    {MENU_SETTINGS_WIFI},
 };
 
 /**
@@ -253,6 +266,7 @@ const int prev_menu_table[] = {
     MENU_APPLICATIONS,               // MENU_GPS
     MENU_WIFI_APPS,                  // MENU_WIFI_ANALIZER
     MENU_WIFI_APPS,                  // MENU_WIFI_DEAUTH
+    MENU_WIFI_APPS,                  // MENU_WIFI_DOS
     MENU_WIFI_ANALIZER_ASK_SUMMARY,  // MENU_WIFI_ANALIZER_RUN
     MENU_WIFI_ANALIZER,              // MENU_WIFI_ANALIZER_SETTINGS
     MENU_WIFI_ANALIZER_RUN,          // MENU_WIFI_ANALIZER_ASK_SUMMARY
@@ -275,10 +289,12 @@ const int prev_menu_table[] = {
     MENU_ABOUT,                      // MENU_ABOUT_LICENSE
     MENU_ABOUT,                      // MENU_ABOUT_CREDITS
     MENU_ABOUT,                      // MENU_ABOUT_LEGAL
+    MENU_ABOUT,                      // MENU_ABOUT_UPDATE
     MENU_SETTINGS,                   // MENU_SETTINGS_DISPLAY
     MENU_SETTINGS,                   // MENU_SETTINGS_SOUND
     MENU_SETTINGS,                   // MENU_SETTINGS_SYSTEM
     MENU_SETTINGS_SYSTEM,            // MENU_SETTINGS_TIME_ZONE
+    MENU_SETTINGS,                   // MENU_SETTINGS_WIFI
 };
 
 /**
@@ -302,14 +318,11 @@ char* applications_items[] = {
 };
 
 char* settings_items[] = {
-    "Display",
-    "Sound",
-    "System",
-    NULL,
+    "Display", "Sound", "System", "WiFi", NULL,
 };
 
 char* about_items[] = {
-    "Version", "License", "Credits", "Legal", NULL,
+    "Version", "License", "Credits", "Legal", "Update", NULL,
 };
 
 char* version_text[] = {
@@ -369,6 +382,7 @@ char* legal_text[] = {
 char* wifi_items[] = {
     "Analizer",
     "Deauth",
+    "DoS",
     NULL,
 };
 
@@ -564,6 +578,7 @@ char** menu_items[] = {
     /* WiFi applications */
     wifi_analizer_items,              // MENU_WIFI_ANALIZER
     empty_items,                      // MENU_WIFI_DEAUTH
+    empty_items,                      // MENU_WIFI_DOS
     empty_items,                      // MENU_WIFI_ANALIZER_RUN
     wifi_analizer_settings_items,     // MENU_WIFI_ANALIZER_SETTINGS
     wifi_analizer_summary_question,   // MENU_WIFI_ANALIZER_ASK_SUMMARY
@@ -587,10 +602,11 @@ char** menu_items[] = {
     gps_speed_items,      // MENU_GPS_SPEED
     gps_help,             // MENU_GPS_HELP
     /* About */
-    version_text, license_text, credits_text, legal_text,
+    version_text, license_text, credits_text, legal_text, empty_items,
     /* Settings items */
     empty_items,            // MENU_SETTINGS_DISPLAY
     empty_items,            // MENU_SETTINGS_SOUND
     system_settings_items,  // MENU_SETTINGS_SYSTEM
     gps_time_zone_options,  // MENU_SETTINGS_TIME_ZONE
+    empty_items,            // MENU_SETTINGS_WIFI
 };
