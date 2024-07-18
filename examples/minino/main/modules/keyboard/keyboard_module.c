@@ -1,6 +1,7 @@
 #include "keyboard_module.h"
 #include "esp_log.h"
 #include "menu_screens_modules.h"
+#include "preferences.h"
 
 static const char* TAG = "keyboard";
 
@@ -77,6 +78,11 @@ static void button_event_cb(void* arg, void* data) {
       break;
     case BUTTON_RIGHT:
       if (button_event == BUTTON_SINGLE_CLICK) {
+        if (preferences_get_int("logo_show", 1) == 1) {
+          preferences_put_int("logo_show", 0);
+          menu_screens_decrement_selected_item();
+          break;
+        }
         menu_screens_enter_submenu();
       }
       break;

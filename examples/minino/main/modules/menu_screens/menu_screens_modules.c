@@ -96,9 +96,20 @@ void show_logo() {
   // buzzer_set_freq(50);
   leds_on();
   buzzer_play();
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  buzzer_stop();
   oled_screen_display_text_center("Still under", 2, OLED_DISPLAY_NORMAL);
   oled_screen_display_text_center("DEVELOPMENT", 3, OLED_DISPLAY_NORMAL);
-  vTaskDelay(3000 / portTICK_PERIOD_MS);
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  buzzer_play();
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  buzzer_stop();
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  buzzer_play();
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  buzzer_stop();
+  vTaskDelay(2000 / portTICK_PERIOD_MS);
+  buzzer_play();
   oled_screen_display_bitmap(epd_bitmap_logo_1, 0, 0, 128, 64,
                              OLED_DISPLAY_NORMAL);
   buzzer_stop();
