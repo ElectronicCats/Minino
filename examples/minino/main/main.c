@@ -30,9 +30,6 @@ void app_main(void) {
   leds_init();
   preferences_begin();
   sd_card_begin();
-  sd_card_mount();
-  wifi_ap_init();
-  web_file_browser_init();
   keyboard_module_begin();
   menu_screens_begin();
   reboot_counter();

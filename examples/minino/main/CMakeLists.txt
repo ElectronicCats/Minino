@@ -13,7 +13,8 @@ set(modules "modules/led_events/led_events.c"
             "modules/open_thread/open_thread_screens_module.c"
             "modules/gps/gps_module.c"
             "modules/gps/wardriving/wardriving_module.c"
-            "modules/web_file_browser/http_server/web_file_browser.c")
+            "modules/web_file_browser/http_server/web_file_browser.c"
+            "modules/web_file_browser/web_file_browser_module.c")
 
 set(drivers "drivers/oled_driver/oled_driver.c"
             "drivers/oled_driver/oled_driver_i2c.c"
@@ -39,7 +40,8 @@ idf_component_register(
                     "modules/open_thread"
                     "modules/gps"
                     "modules/gps/wardriving"
-                    "modules/web_file_browser/http_server")
+                    "modules/web_file_browser/http_server"
+                    "modules/web_file_browser")
 
 # # Append all directories to INCLUDE_DIRS
 
