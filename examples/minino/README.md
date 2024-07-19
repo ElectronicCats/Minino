@@ -12,6 +12,10 @@ You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/p
   - [Full build process](#full-build-process)
   - [Cleaning the project](#cleaning-the-project)
 - [Create a release](#create-a-release)
+- [Development process](#development-process)
+  - [Add a new menu](#add-a-new-menu)
+    - [Menus structure](#menus-structure)
+    - [Steps to add a new menu](#steps-to-add-a-new-menu)
 
 ## Prerequisites
 
@@ -163,6 +167,8 @@ graph TD
   B --> A
   C --> B
 ```
+
+#### Steps to add a new menu
 
 1. The first step is to add an enum value in `screen_module_menu_t`, it can be anywhere, but it's recommended to place it near to it's parent to make it easier to find. In this case, we will add it after `MENU_GPS`.
 
