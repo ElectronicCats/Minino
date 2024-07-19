@@ -8,6 +8,8 @@
 #include "preferences.h"
 #include "sd_card.h"
 #include "wardriving_module.h"
+#include "web_file_browser.h"
+#include "wifi_ap.h"
 
 #define BUZZER_PIN GPIO_NUM_2
 
@@ -28,6 +30,9 @@ void app_main(void) {
   leds_init();
   preferences_begin();
   sd_card_begin();
+  sd_card_mount();
+  wifi_ap_init();
+  web_file_browser_init();
   keyboard_module_begin();
   menu_screens_begin();
   reboot_counter();

@@ -12,7 +12,8 @@ set(modules "modules/led_events/led_events.c"
             "modules/open_thread/open_thread_module.c"
             "modules/open_thread/open_thread_screens_module.c"
             "modules/gps/gps_module.c"
-            "modules/gps/wardriving/wardriving_module.c")
+            "modules/gps/wardriving/wardriving_module.c"
+            "modules/web_file_browser/http_server/web_file_browser.c")
 
 set(drivers "drivers/oled_driver/oled_driver.c"
             "drivers/oled_driver/oled_driver_i2c.c"
@@ -23,6 +24,7 @@ idf_component_register(
                     "main.c"
                     "${modules}"
                     "${drivers}"
+                    EMBED_FILES modules/web_file_browser/http_server/header.html
                     INCLUDE_DIRS
                     "."
                     "modules/keyboard/"
@@ -36,7 +38,8 @@ idf_component_register(
                     "modules/led_events"
                     "modules/open_thread"
                     "modules/gps"
-                    "modules/gps/wardriving")
+                    "modules/gps/wardriving"
+                    "modules/web_file_browser/http_server")
 
 # # Append all directories to INCLUDE_DIRS
 
