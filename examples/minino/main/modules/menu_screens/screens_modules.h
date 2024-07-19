@@ -2,6 +2,8 @@
 
 #include <stddef.h>
 
+#define MAX_NUM_ITEMS 8  // Can be increased if needed
+
 /**
  * @brief Scrolling text flag
  *
@@ -91,7 +93,7 @@ typedef enum {
   MENU_SETTINGS_TIME_ZONE,
   /* About submenus */
   /* Menu count */
-  MENU_COUNT,
+  MENU_COUNT,  // Keep this at the end
 } screen_module_menu_t;
 
 /**
@@ -153,7 +155,7 @@ const char* menu_list[] = {
  *
  * Usage: next_menu_table[screen_module_menu_t][selected_item]
  */
-const int next_menu_table[][6] = {
+const int next_menu_table[][MAX_NUM_ITEMS] = {
     // MENU_MAIN
     {MENU_APPLICATIONS, MENU_SETTINGS, MENU_ABOUT},
     // MENU_APPLICATIONS
@@ -250,6 +252,8 @@ const int next_menu_table[][6] = {
  * Usage: prev_menu_table[screen_module_menu_t]
  */
 const int prev_menu_table[] = {
+    // PREVIOUS_MENU,                // CURRENT_MENU
+    /*****************************************************************/
     MENU_MAIN,                       // MENU_MAIN
     MENU_MAIN,                       // MENU_APPLICATIONS
     MENU_MAIN,                       // MENU_SETTINGS
@@ -613,12 +617,16 @@ char* empty_items[] = {
  * Usage: menu_items[screen_module_menu_t]
  */
 char** menu_items[] = {
-    main_items, applications_items, settings_items, about_items,
-    /* Applications */
-    wifi_items, bluetooth_items, zigbee_items, thread_items,
-    empty_items,  // MENU_MATTER_APPS
-    gps_items,
-    /* WiFi applications */
+    main_items,                       // MENU_MAIN
+    applications_items,               // MENU_APPLICATIONS
+    settings_items,                   // MENU_SETTINGS
+    about_items,                      // MENU_ABOUT
+    wifi_items,                       // MENU_WIFI_APPS
+    bluetooth_items,                  // MENU_BLUETOOTH_APPS
+    zigbee_items,                     // MENU_ZIGBEE_APPS
+    thread_items,                     // MENU_THREAD_APPS
+    empty_items,                      // MENU_MATTER_APPS
+    gps_items,                        // MENU_GPS
     wifi_analizer_items,              // MENU_WIFI_ANALIZER
     empty_items,                      // MENU_WIFI_DEAUTH
     empty_items,                      // MENU_WIFI_ANALIZER_RUN
@@ -629,27 +637,24 @@ char** menu_items[] = {
     wifi_analizer_channel_items,      // MENU_WIFI_ANALIZER_CHANNEL
     wifi_analizer_destination_items,  // MENU_WIFI_ANALIZER_DESTINATION
     wifi_analizer_sd_erease_warning,  // MENU_WIFI_ANALIZER_SD_EREASE_WARNING
-    /* Bluetooth applications */
-    empty_items,  // MENU_BLUETOOTH_TRAKERS_SCAN
-    empty_items,  // MENU_BLUETOOTH_SPAM
-    /* Zigbee applications */
-    zigbee_spoofing_items,
-    empty_items,  // MENU_ZIGBEE_SWITCH
-    empty_items,  // MENU_ZIGBEE_LIGHT
-    empty_items,  // MENU_ZIGBEE_SNIFFER
-    /* Thread applications */
-    empty_items,  // MENU_THREAD_BROADCAST
-    /* GPS applications */
-    empty_items,          // MENU_GPS_WARDRIVING
-    gps_date_time_items,  // MENU_GPS_DATE_TIME
-    gps_location_items,   // MENU_GPS_LOCATION
-    gps_speed_items,      // MENU_GPS_SPEED
-    gps_help,             // MENU_GPS_HELP
-    /* About */
-    version_text, license_text, credits_text, legal_text,
-    /* Settings items */
-    empty_items,            // MENU_SETTINGS_DISPLAY
-    empty_items,            // MENU_SETTINGS_SOUND
-    system_settings_items,  // MENU_SETTINGS_SYSTEM
-    gps_time_zone_options,  // MENU_SETTINGS_TIME_ZONE
+    empty_items,                      // MENU_BLUETOOTH_TRAKERS_SCAN
+    empty_items,                      // MENU_BLUETOOTH_SPAM
+    zigbee_spoofing_items,            // MENU_ZIGBEE_SPOOFING
+    empty_items,                      // MENU_ZIGBEE_SWITCH
+    empty_items,                      // MENU_ZIGBEE_LIGHT
+    empty_items,                      // MENU_ZIGBEE_SNIFFER
+    empty_items,                      // MENU_THREAD_BROADCAST
+    empty_items,                      // MENU_GPS_WARDRIVING
+    gps_date_time_items,              // MENU_GPS_DATE_TIME
+    gps_location_items,               // MENU_GPS_LOCATION
+    gps_speed_items,                  // MENU_GPS_SPEED
+    gps_help,                         // MENU_GPS_HELP
+    version_text,                     // MENU_ABOUT_VERSION
+    license_text,                     // MENU_ABOUT_LICENSE
+    credits_text,                     // MENU_ABOUT_CREDITS
+    legal_text,                       // MENU_ABOUT_LEGAL
+    empty_items,                      // MENU_SETTINGS_DISPLAY
+    empty_items,                      // MENU_SETTINGS_SOUND
+    system_settings_items,            // MENU_SETTINGS_SYSTEM
+    gps_time_zone_options,            // MENU_SETTINGS_TIME_ZONE
 };
