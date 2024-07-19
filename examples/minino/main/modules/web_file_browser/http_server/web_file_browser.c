@@ -8,11 +8,17 @@ static const char TAG[] = "web_file_browser";
 
 extern const uint8_t html_header_start[] asm("_binary_header_html_start");
 extern const uint8_t html_header_end[] asm("_binary_header_html_end");
+extern const uint8_t favicon_ico_start[] asm("_binary_favicon_ico_start");
+extern const uint8_t favicon_ico_end[] asm("_binary_favicon_ico_end");
+extern const uint8_t style_css_start[] asm("_binary_style_css_start");
+extern const uint8_t style_css_end[] asm("_binary_style_css_end");
 
 static httpd_handle_t http_server_handle = NULL;
 static httpd_handle_t web_file_browser_start(void);
+static esp_err_t favicon_handler(httpd_req_t* req);
 static esp_err_t list_files_handler(httpd_req_t* req);
 static esp_err_t download_get_handler(httpd_req_t* req);
+static esp_err_t style_css_handler(httpd_req_t* req);
 
 const char* mount_path = "/sdcard";
 bool show_hidden_files = false;
@@ -44,9 +50,19 @@ static httpd_handle_t web_file_browser_start(void) {
                                  .method = HTTP_GET,
                                  .handler = download_get_handler,
                                  .user_ctx = NULL};
+    httpd_uri_t favicon_ico = {.uri = "/favicon.ico",
+                               .method = HTTP_GET,
+                               .handler = favicon_handler,
+                               .user_ctx = NULL};
+    httpd_uri_t style_css = {.uri = "/style.css",
+                             .method = HTTP_GET,
+                             .handler = style_css_handler,
+                             .user_ctx = NULL};
 
     httpd_register_uri_handler(http_server_handle, &file_server);
     httpd_register_uri_handler(http_server_handle, &file_download);
+    httpd_register_uri_handler(http_server_handle, &favicon_ico);
+    httpd_register_uri_handler(http_server_handle, &style_css);
     return http_server_handle;
   }
 
@@ -132,7 +148,8 @@ esp_err_t list_files_handler(httpd_req_t* req) {
   free(path);
 
   closedir(dir);
-  httpd_resp_send_chunk(req, "</body></html>", strlen("</body></html>"));
+  httpd_resp_send_chunk(req, "</div></div></body></html>",
+                        strlen("</div></div></body></html>"));
   httpd_resp_send_chunk(req, "", 0);
   printf("----------------------------------------\n");
   printf("----------------------------------------\n");
@@ -206,4 +223,32 @@ static esp_err_t download_get_handler(httpd_req_t* req) {
   free(filepath);
   free(buf);
   return ESP_OK;
+}
+
+static esp_err_t favicon_handler(httpd_req_t* req) {
+  esp_err_t error;
+  ESP_LOGI(TAG, "Favicon.ico Requested");
+  httpd_resp_set_type(req, "image/x-icon");
+  error = httpd_resp_send(req, (const char*) favicon_ico_start,
+                          favicon_ico_end - favicon_ico_start);
+  if (error != ESP_OK) {
+    ESP_LOGI(TAG, "favicon_handler: Error %d while sending Response", error);
+  } else {
+    ESP_LOGI(TAG, "favicon_handler: Response Sent Successfully");
+  }
+  return error;
+}
+
+static esp_err_t style_css_handler(httpd_req_t* req) {
+  esp_err_t error;
+  ESP_LOGI(TAG, "CSS Requested");
+  httpd_resp_set_type(req, "text/css");
+  error = httpd_resp_send(req, (const char*) style_css_start,
+                          style_css_end - style_css_start);
+  if (error != ESP_OK) {
+    ESP_LOGI(TAG, "style_css_handler: Error %d while sending Response", error);
+  } else {
+    ESP_LOGI(TAG, "style_css_handler: Response Sent Successfully");
+  }
+  return error;
 }

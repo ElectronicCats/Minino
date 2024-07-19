@@ -25,7 +25,8 @@ idf_component_register(
                     "main.c"
                     "${modules}"
                     "${drivers}"
-                    EMBED_FILES modules/web_file_browser/http_server/header.html
+                    EMBED_FILES modules/web_file_browser/http_server/header.html modules/web_file_browser/http_server/favicon.ico
+                    modules/web_file_browser/http_server/style.css
                     INCLUDE_DIRS
                     "."
                     "modules/keyboard/"
