@@ -49,6 +49,7 @@ typedef enum {
   MENU_THREAD_APPS,
   MENU_MATTER_APPS,
   MENU_GPS,
+  MENU_WEB_SD_BROWSER,
   /* WiFi applications */
   MENU_WIFI_ANALIZER,
   MENU_WIFI_DEAUTH,
@@ -113,6 +114,7 @@ const char* menu_list[] = {
     "MENU_THREAD_APPS",
     "MENU_MATTER_APPS",
     "MENU_GPS",
+    "MENU_WEB_SD_BROWSER",
     "MENU_WIFI_ANALIZER",
     "MENU_WIFI_DEAUTH",
     "MENU_WIFI_ANALIZER_RUN",
@@ -153,12 +155,12 @@ const char* menu_list[] = {
  *
  * Usage: next_menu_table[screen_module_menu_t][selected_item]
  */
-const int next_menu_table[][6] = {
+const int next_menu_table[][7] = {
     // MENU_MAIN
     {MENU_APPLICATIONS, MENU_SETTINGS, MENU_ABOUT},
     // MENU_APPLICATIONS
     {MENU_WIFI_APPS, MENU_BLUETOOTH_APPS, MENU_ZIGBEE_APPS, MENU_THREAD_APPS,
-     MENU_MATTER_APPS, MENU_GPS},
+     MENU_MATTER_APPS, MENU_GPS, MENU_WEB_SD_BROWSER},
     // MENU_SETTINGS
     {MENU_SETTINGS_DISPLAY, MENU_SETTINGS_SOUND, MENU_SETTINGS_SYSTEM},
     // MENU_ABOUT
@@ -177,6 +179,8 @@ const int next_menu_table[][6] = {
     // MENU_GPS
     {MENU_GPS_WARDRIVING, MENU_GPS_DATE_TIME, MENU_GPS_LOCATION, MENU_GPS_SPEED,
      MENU_GPS_HELP},
+    // MENU_WEB_SD_BROWSER
+    {MENU_WEB_SD_BROWSER},
     // MENU_WIFI_ANALIZER
     {MENU_WIFI_ANALIZER_RUN, MENU_WIFI_ANALIZER_SETTINGS,
      MENU_WIFI_ANALIZER_HELP},
@@ -260,6 +264,7 @@ const int prev_menu_table[] = {
     MENU_APPLICATIONS,               // MENU_THREAD_APPS
     MENU_APPLICATIONS,               // MENU_MATTER_APPS
     MENU_APPLICATIONS,               // MENU_GPS
+    MENU_APPLICATIONS,               // MENU_WEB_SD_BROWSER
     MENU_WIFI_APPS,                  // MENU_WIFI_ANALIZER
     MENU_WIFI_APPS,                  // MENU_WIFI_DEAUTH
     MENU_WIFI_ANALIZER_ASK_SUMMARY,  // MENU_WIFI_ANALIZER_RUN
@@ -309,7 +314,8 @@ char* main_items[] = {
 };
 
 char* applications_items[] = {
-    "WiFi", "Bluetooth", "Zigbee", "Thread", "Matter", "GPS", NULL,
+    "WiFi",   "Bluetooth", "Zigbee",       "Thread",
+    "Matter", "GPS",       "W SD Browser", NULL,
 };
 
 char* settings_items[] = {
@@ -618,6 +624,7 @@ char** menu_items[] = {
     wifi_items, bluetooth_items, zigbee_items, thread_items,
     empty_items,  // MENU_MATTER_APPS
     gps_items,
+    empty_items,  // MENU_WEB_SD_BROWSER
     /* WiFi applications */
     wifi_analizer_items,              // MENU_WIFI_ANALIZER
     empty_items,                      // MENU_WIFI_DEAUTH
