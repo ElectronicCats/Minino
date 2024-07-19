@@ -93,7 +93,9 @@ void show_logo() {
   // buzzer_set_freq(50);
   leds_on();
   buzzer_play();
-  oled_screen_display_bitmap(epd_bitmap_logo_1, 0, 0, 128, 64,
+  // oled_screen_display_bitmap(epd_bitmap_minino_text_logo, 0, 0, 128, 64,
+  //                            OLED_DISPLAY_NORMAL);
+  oled_screen_display_bitmap(epd_bitmap_face_logo, 46, 16, 32, 32,
                              OLED_DISPLAY_NORMAL);
   buzzer_stop();
   vTaskDelay(500 / portTICK_PERIOD_MS);
