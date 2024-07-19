@@ -5,6 +5,7 @@
 #include "oled_screen.h"
 #include "sd_card.h"
 #include "web_file_browser.h"
+#include "web_file_browser_screens.h"
 #include "wifi_ap.h"
 
 static void web_file_browser_input_cb(button_event_t button_pressed);
@@ -15,8 +16,8 @@ void web_file_browser_module_init() {
   menu_screens_set_app_state(true, web_file_browser_input_cb);
   if (sd_card_mount() == ESP_OK) {
     wifi_ap_init();
+    web_file_browser_set_show_event_cb(web_file_browse_show_event_handler);
     web_file_browser_init();
-    oled_screen_display_text("  Server Online ", 0, 3, OLED_DISPLAY_NORMAL);
   } else {
     oled_screen_display_text("     SD Card    ", 0, 3, OLED_DISPLAY_NORMAL);
     oled_screen_display_text("  Mount Failed  ", 0, 4, OLED_DISPLAY_NORMAL);

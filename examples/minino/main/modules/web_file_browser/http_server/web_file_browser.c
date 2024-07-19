@@ -1,8 +1,8 @@
+#include "web_file_browser.h"
+
 #include <dirent.h>
 #include "esp_http_server.h"
 #include "esp_log.h"
-
-#include "web_file_browser.h"
 
 static const char TAG[] = "web_file_browser";
 
@@ -23,18 +23,30 @@ static esp_err_t style_css_handler(httpd_req_t* req);
 const char* mount_path = "/sdcard";
 bool show_hidden_files = false;
 
+static void web_file_browser_show_event(uint8_t event, void* context) {
+  if (wfb_show_event_cb != NULL) {
+    wfb_show_event_cb(event, context);
+  }
+}
+
 void web_file_browser_init() {
   if (http_server_handle == NULL) {
     http_server_handle = web_file_browser_start();
+  } else {
+    web_file_browser_show_event(WEB_FILE_BROWSER_ALREADY_EV, NULL);
   }
 }
 
 void web_file_browser_stop() {
   if (http_server_handle) {
     httpd_stop(http_server_handle);
-    ESP_LOGI(TAG, "HTTP Server Stop");
     http_server_handle = NULL;
   }
+  web_file_browser_show_event(WEB_FILE_BROWSER_STOP_EV, NULL);
+}
+
+void web_file_browser_set_show_event_cb(web_file_browser_show_event_cb_t cb) {
+  wfb_show_event_cb = cb;
 }
 
 static httpd_handle_t web_file_browser_start(void) {
@@ -63,10 +75,11 @@ static httpd_handle_t web_file_browser_start(void) {
     httpd_register_uri_handler(http_server_handle, &file_download);
     httpd_register_uri_handler(http_server_handle, &favicon_ico);
     httpd_register_uri_handler(http_server_handle, &style_css);
+    web_file_browser_show_event(WEB_FILE_BROWSER_READY_EV, NULL);
     return http_server_handle;
   }
 
-  ESP_LOGE(TAG, "Error Starting Server");
+  web_file_browser_show_event(WEB_FILE_BROWSER_ERROR_EV, NULL);
   return NULL;
 }
 
@@ -203,16 +216,27 @@ static esp_err_t download_get_handler(httpd_req_t* req) {
 
   char buffer[1024];
   size_t read_bytes;
+
+  fseek(file, 0, SEEK_END);
+  size_t file_size = ftell(file);
+  size_t loaded_size = 0;
+  rewind(file);
+  web_file_browser_show_event(WEB_FILE_BROWSER_TRANSFER_INIT_EV, file_name);
   do {
     read_bytes = fread(buffer, 1, sizeof(buffer), file);
     if (read_bytes > 0) {
       if (httpd_resp_send_chunk(req, buffer, read_bytes) != ESP_OK) {
+        web_file_browser_show_event(WEB_FILE_BROWSER_TRANSFERING_FILE_RESULT_EV,
+                                    false);
         free(content_disposition_header);
         fclose(file);
         free(filepath);
         free(buf);
         return ESP_FAIL;
       }
+      loaded_size += read_bytes;
+      uint8_t state = (loaded_size * 100) / file_size;
+      web_file_browser_show_event(WEB_FILE_BROWSER_TRANSFER_STATE_EV, &state);
     }
   } while (read_bytes > 0);
 
@@ -222,6 +246,8 @@ static esp_err_t download_get_handler(httpd_req_t* req) {
   free(content_disposition_header);
   free(filepath);
   free(buf);
+  web_file_browser_show_event(WEB_FILE_BROWSER_TRANSFERING_FILE_RESULT_EV,
+                              true);
   return ESP_OK;
 }
 

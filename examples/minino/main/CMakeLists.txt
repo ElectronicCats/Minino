@@ -14,7 +14,8 @@ set(modules "modules/led_events/led_events.c"
             "modules/gps/gps_module.c"
             "modules/gps/wardriving/wardriving_module.c"
             "modules/web_file_browser/http_server/web_file_browser.c"
-            "modules/web_file_browser/web_file_browser_module.c")
+            "modules/web_file_browser/web_file_browser_module.c"
+            "modules/web_file_browser/web_file_browser_screens.c")
 
 set(drivers "drivers/oled_driver/oled_driver.c"
             "drivers/oled_driver/oled_driver_i2c.c"
