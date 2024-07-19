@@ -28,7 +28,7 @@ git clone git@github.com:ElectronicCats/Minino.git
 2. Change to the firmware directory:
 
 ```bash
-cd Minino/firmware/badge
+cd Minino/examples/minino
 ```
 
 3. Set the IDF_PATH environment variable:
@@ -94,3 +94,29 @@ If you you have dependencies issues or want to clean the project, run the follow
 ```bash
 make clean
 ```
+
+## Create a release
+
+To create a release, you need to update the firmware version in the `menuconfig`. To do this, run:
+
+```bash
+idf.py menuconfig
+```
+
+Navigate to `General project` -> `Firmware version` and update the version number.
+
+Get the build files:
+
+```bash
+./get_build.sh
+```
+
+If you can't run the script, make sure it has the correct permissions:
+
+```bash
+chmod +x get_build.sh
+```
+
+> **Note:** On Windows, you can run the script using Git Bash.
+
+The build files will be in the `build_files.zip` file. Now you can create a release on GitHub and attach the `build_files.zip` file.

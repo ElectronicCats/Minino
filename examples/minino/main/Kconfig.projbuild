@@ -16,10 +16,10 @@ menu "General project"
 	endchoice
 
 	config PROJECT_VERSION
-		string "Project version"
+		string "Firmware version"
 		default "1.0.2.0"
 		help
-			Project version.
+			Firmware version.
 
 endmenu
 
