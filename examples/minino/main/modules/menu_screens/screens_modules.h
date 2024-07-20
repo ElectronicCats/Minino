@@ -81,17 +81,19 @@ typedef enum {
   MENU_GPS_LOCATION,
   MENU_GPS_SPEED,
   MENU_GPS_HELP,
-  /* About items */
+  /* Wardriving submenus */
+  MENU_GPS_WARDRIVING_START,
+  MENU_GPS_WARDRIVING_HELP,
+  /* About submenus */
   MENU_ABOUT_VERSION,
   MENU_ABOUT_LICENSE,
   MENU_ABOUT_CREDITS,
   MENU_ABOUT_LEGAL,
-  /* Settings items */
+  /* Settings submenus */
   MENU_SETTINGS_DISPLAY,
   MENU_SETTINGS_SOUND,
   MENU_SETTINGS_SYSTEM,
   MENU_SETTINGS_TIME_ZONE,
-  /* About submenus */
   /* Menu count */
   MENU_COUNT,  // Keep this at the end
 } screen_module_menu_t;
@@ -137,6 +139,8 @@ const char* menu_list[] = {
     "MENU_GPS_LOCATION",
     "MENU_GPS_SPEED",
     "MENU_GPS_HELP",
+    "MENU_GPS_WARDRIVING_START",
+    "MENU_GPS_WARDRIVING_HELP",
     "MENU_ABOUT_VERSION",
     "MENU_ABOUT_LICENSE",
     "MENU_ABOUT_CREDITS",
@@ -215,7 +219,7 @@ const int next_menu_table[][MAX_NUM_ITEMS] = {
     // MENU_THREAD_BROADCAST
     {MENU_THREAD_BROADCAST},
     // MENU_GPS_WARDRIVING
-    {MENU_GPS_WARDRIVING},
+    {MENU_GPS_WARDRIVING_START, MENU_GPS_WARDRIVING_HELP},
     // MENU_GPS_DATE_TIME
     {MENU_GPS_DATE_TIME},
     // MENU_GPS_LOCATION
@@ -224,6 +228,10 @@ const int next_menu_table[][MAX_NUM_ITEMS] = {
     {MENU_GPS_SPEED},
     // MENU_GPS_HELP
     {MENU_GPS_HELP},
+    // MENU_GPS_WARDRIVING_START
+    {MENU_GPS_WARDRIVING_START},
+    // MENU_GPS_WARDRIVING_HELP
+    {MENU_GPS_WARDRIVING_HELP},
     // MENU_ABOUT_VERSION
     {MENU_ABOUT_VERSION},
     // MENU_ABOUT_LICENSE
@@ -285,7 +293,9 @@ const int prev_menu_table[] = {
     MENU_GPS,                        // MENU_GPS_DATE_TIME
     MENU_GPS,                        // MENU_GPS_LOCATION
     MENU_GPS,                        // MENU_GPS_SPEED
-    MENU_GPS,                        // MENU_GPS_HELP
+    MENU_GPS,                        //
+    MENU_GPS_WARDRIVING,             // MENU_GPS_WARDRIVING_START
+    MENU_GPS_WARDRIVING,             // MENU_GPS_WARDRIVING_HELP
     MENU_ABOUT,                      // MENU_ABOUT_VERSION
     MENU_ABOUT,                      // MENU_ABOUT_LICENSE
     MENU_ABOUT,                      // MENU_ABOUT_CREDITS
@@ -556,6 +566,31 @@ char* gps_help[] = {
     NULL,
 };
 
+char* wardriving_items[] = {
+    "Start",
+    "Help",
+    NULL,
+};
+
+char* wardriving_help[] = {
+    VERTICAL_SCROLL_TEXT,
+    /***************/
+    "This tool",
+    "allows you to",
+    "scan for WiFi",
+    "networks and",
+    "save the",
+    "results in a",
+    "CSV file.",
+    "",
+    "You can start",
+    "the scan and",
+    "select the",
+    "destination to",
+    "save the file.",
+    NULL,
+};
+
 char* gps_time_zone_options[] = {
     CONFIGURATION_MENU_ITEMS,
     "[ ] UTC-12",
@@ -644,11 +679,13 @@ char** menu_items[] = {
     empty_items,                      // MENU_ZIGBEE_LIGHT
     empty_items,                      // MENU_ZIGBEE_SNIFFER
     empty_items,                      // MENU_THREAD_BROADCAST
-    empty_items,                      // MENU_GPS_WARDRIVING
+    wardriving_items,                 // MENU_GPS_WARDRIVING
     gps_date_time_items,              // MENU_GPS_DATE_TIME
     gps_location_items,               // MENU_GPS_LOCATION
     gps_speed_items,                  // MENU_GPS_SPEED
     gps_help,                         // MENU_GPS_HELP
+    empty_items,                      // MENU_GPS_WARDRIVING_START
+    wardriving_help,                  // MENU_GPS_WARDRIVING_HELP
     version_text,                     // MENU_ABOUT_VERSION
     license_text,                     // MENU_ABOUT_LICENSE
     credits_text,                     // MENU_ABOUT_CREDITS

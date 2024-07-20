@@ -69,9 +69,13 @@ static void scanning_task(void* pvParameters) {
 void wifi_module_init_sniffer() {
   oled_screen_clear();
   if (wifi_sniffer_is_destination_sd()) {
-    switch (sd_card_mount()) {
+    esp_err_t err = sd_card_mount();
+    switch (err) {
       case ESP_OK:
         ESP_LOGI(TAG, "SD card mounted");
+        break;
+      case ESP_ERR_ALREADY_MOUNTED:
+        ESP_LOGI(TAG, "SD card already mounted");
         break;
       case ESP_ERR_NOT_SUPPORTED:
         ESP_LOGI(TAG, "SD card not supported");
@@ -86,8 +90,7 @@ void wifi_module_init_sniffer() {
         // TODO: add an option to format the SD card
         break;
       default:
-        ESP_LOGE(TAG, "SD card mount failed: reason: %s",
-                 esp_err_to_name(ESP_FAIL));
+        ESP_LOGE(TAG, "SD card mount failed: reason: %s", esp_err_to_name(err));
       case ESP_ERR_NOT_FOUND:
         ESP_LOGW(TAG, "SD card not found");
         oled_screen_display_text_center("SD card ", 0, OLED_DISPLAY_NORMAL);
@@ -132,6 +135,7 @@ void wifi_module_exit_submenu_cb() {
     case MENU_WIFI_ANALIZER_DESTINATION:
       if (wifi_sniffer_is_destination_sd()) {
         // Verify if the SD card is inserted
+        sd_card_unmount();
         if (sd_card_mount() == ESP_OK) {
           vTaskDelay(100 / portTICK_PERIOD_MS);
           sd_card_unmount();

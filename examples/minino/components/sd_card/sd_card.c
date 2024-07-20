@@ -28,7 +28,7 @@ static struct {
 
 void print_files_in_sd() {
   if (!_sd_card_mounted) {
-    ESP_LOGE(TAG, "SD card not mounted");
+    ESP_LOGW(TAG, "SD card not mounted");
     return;
   }
 
@@ -105,7 +105,7 @@ int mount(int argc, char** argv) {
                  esp_err_to_name(ret));
         // Free the bus after mounting failed
         spi_bus_free(host.slot);
-        return ESP_ERR_NOT_FOUND;
+        return ESP_ERR_NOT_MOUNTED;
       }
     }
     /* print card info if mount successfully */
@@ -124,7 +124,7 @@ esp_err_t unmount(int argc, char** argv) {
   esp_err_t ret;
 
   if (!_sd_card_mounted) {
-    ESP_LOGE(TAG, "SD card not mounted");
+    ESP_LOGW(TAG, "SD card not mounted");
     return ESP_ERR_NOT_ALLOWED;
   }
 
@@ -166,7 +166,7 @@ esp_err_t sd_card_mount() {
   esp_err_t err = ESP_OK;
   if (_sd_card_mounted) {
     ESP_LOGW(TAG, "SD card already mounted");
-    return ESP_ERR_NOT_ALLOWED;
+    return ESP_ERR_ALREADY_MOUNTED;
   }
 
   const char** mount_argv[] = {"mount", "sd"};
@@ -206,7 +206,7 @@ esp_err_t sd_card_create_file(const char* path) {
   if (file != NULL) {
     ESP_LOGE(TAG, "File already exists");
     fclose(file);
-    return ESP_ERR_NOT_ALLOWED;
+    return ESP_ERR_FILE_EXISTS;
   }
 
   fclose(file);
