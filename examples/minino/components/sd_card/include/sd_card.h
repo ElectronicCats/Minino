@@ -6,7 +6,6 @@
 #define ESP_ERR_ALREADY_MOUNTED   ESP_ERR_NOT_ALLOWED
 #define ESP_ERR_NOT_MOUNTED       ESP_ERR_NOT_FOUND
 #define ESP_ERR_FILE_EXISTS       ESP_ERR_NOT_ALLOWED
-#define ESP_ERR_FILE_NOT_FOUND    ESP_ERR_NOT_FOUND
 #define ESP_ERR_FILE_OPEN_FAILED  ESP_FAIL
 #define ESP_ERR_FILE_WRITE_FAILED ESP_FAIL
 
@@ -57,6 +56,7 @@ bool sd_card_is_mounted();
  *
  * @return esp_err_t
  *
+ * @note return ESP_ERR_NOT_MOUNTED if the SD card is not mounted.
  * @note return ESP_ERR_FILE_EXISTS if the file already exists.
  * @note return ESP_FAIL if the operation failed.
  * @note return ESP_OK if the operation was successful.
@@ -82,5 +82,7 @@ esp_err_t sd_card_read_file(const char* path);
  * @param data The data to write to the file.
  *
  * @return esp_err_t
+ *
+ * @note return ESP_ERR_NOT_FOUND if the file does not exist.
  */
 esp_err_t sd_card_write_file(const char* path, char* data);

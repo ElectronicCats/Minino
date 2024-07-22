@@ -178,19 +178,21 @@ char* get_auth_mode(int authmode) {
   }
 }
 
+uint16_t get_frequency(uint8_t primary) {
+  return 2412 + 5 * (primary - 1);
+}
+
 void scan_task(void* pvParameters) {
   wifi_driver_init_sta();
-  wifi_scanner_module_scan();
   while (true) {
     // Scan for WiFi networks
-    // ...
+    wifi_scanner_module_scan();
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
   }
 }
 
 void wardriving_begin() {
   sd_card_mount();
-  // sd_card_write_file("test.csv", csv_header);
-  // sd_card_read_file("test.csv");
   wifi_driver_init_sta();
   wifi_scanner_module_scan();
 
@@ -208,10 +210,13 @@ void wardriving_begin() {
 
   // Append records to csv file
   for (int i = 0; i < ap_records->count; i++) {
-    sprintf(csv_line, "%s,%s,%s\n",
+    sprintf(csv_line, "%s,%s,%s,%s,%d,%u,%d\n",
             get_mac_address(ap_records->records[i].bssid),
             ap_records->records[i].ssid,
-            get_auth_mode(ap_records->records[i].authmode));
+            get_auth_mode(ap_records->records[i].authmode),
+            "2021-09-01T00:00:00Z", ap_records->records[i].primary,
+            get_frequency(ap_records->records[i].primary),
+            ap_records->records[i].rssi);
 
     ESP_LOGI(TAG, "CSV Line: %s", csv_line);
     strcat(csv_file, csv_line);

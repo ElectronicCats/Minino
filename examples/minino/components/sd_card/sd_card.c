@@ -28,7 +28,7 @@ static struct {
 
 void print_files_in_sd() {
   if (!_sd_card_mounted) {
-    ESP_LOGW(TAG, "SD card not mounted");
+    ESP_LOGE(TAG, "SD card not mounted");
     return;
   }
 
@@ -124,7 +124,7 @@ esp_err_t unmount(int argc, char** argv) {
   esp_err_t ret;
 
   if (!_sd_card_mounted) {
-    ESP_LOGW(TAG, "SD card not mounted");
+    ESP_LOGE(TAG, "SD card not mounted");
     return ESP_ERR_NOT_ALLOWED;
   }
 
@@ -197,6 +197,11 @@ bool sd_card_is_mounted() {
 }
 
 esp_err_t sd_card_create_file(const char* path) {
+  if (!_sd_card_mounted) {
+    ESP_LOGE(TAG, "SD card not mounted");
+    return ESP_FAIL;
+  }
+
   uint8_t path_len = strlen(path);
   char full_path[path_len + 1 + strlen(MOUNT_POINT)];
   sprintf(full_path, "%s/%s", MOUNT_POINT, path);
@@ -221,6 +226,11 @@ esp_err_t sd_card_create_file(const char* path) {
 }
 
 esp_err_t sd_card_read_file(const char* path) {
+  if (!_sd_card_mounted) {
+    ESP_LOGE(TAG, "SD card not mounted");
+    return ESP_FAIL;
+  }
+
   uint8_t path_len = strlen(path);
   char full_path[path_len + 1 + strlen(MOUNT_POINT)];
   sprintf(full_path, "%s/%s", MOUNT_POINT, path);
@@ -248,6 +258,11 @@ esp_err_t sd_card_read_file(const char* path) {
 }
 
 esp_err_t sd_card_write_file(const char* path, char* data) {
+  if (!_sd_card_mounted) {
+    ESP_LOGE(TAG, "SD card not mounted");
+    return ESP_FAIL;
+  }
+
   uint8_t path_len = strlen(path);
   char full_path[path_len + 1 + strlen(MOUNT_POINT)];
   sprintf(full_path, "%s/%s", MOUNT_POINT, path);
