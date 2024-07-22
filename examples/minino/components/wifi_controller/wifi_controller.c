@@ -8,7 +8,15 @@ static uint8_t default_ap_mac[6];
 static esp_err_t err;
 
 wifi_config_t wifi_driver_access_point_begin() {
-  ESP_ERROR_CHECK(esp_event_loop_create_default());
+  esp_err_t err;
+  err = esp_event_loop_create_default();
+  if (err == ESP_ERR_INVALID_STATE) {
+    ESP_LOGI(TAG_WIFI_DRIVER, "Event loop already created");
+  } else if (err != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_DRIVER, "Error creating event loop: %s",
+             esp_err_to_name(err));
+    esp_restart();
+  }
 
   wifi_config_t wifi_manager_config = {
       .ap = {.ssid = WIFI_MANAGER_AP_SSID,

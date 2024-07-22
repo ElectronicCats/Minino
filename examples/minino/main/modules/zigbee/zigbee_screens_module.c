@@ -82,18 +82,18 @@ void zigbee_screens_module_display_status(uint8_t status) {
 void zigbee_screens_display_device_ad() {
   oled_screen_clear(OLED_DISPLAY_NORMAL);
   int index_page = 1;
-  oled_screen_display_text_splited("To view the data you need", &index_page,
+  oled_screen_display_text_splited("Use our", &index_page, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_splited("PyCatSniffer", &index_page,
                                    OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_splited("connect the board and open", &index_page,
+  oled_screen_display_text_splited("to communicate with", &index_page,
                                    OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_splited("a serial terminal", &index_page,
+  oled_screen_display_text_splited("Wireshark", &index_page,
                                    OLED_DISPLAY_NORMAL);
 }
 
 void zigbee_screens_display_scanning_animation() {
   oled_screen_clear(OLED_DISPLAY_NORMAL);
   oled_screen_display_text_center("ZIGBEE SNIFFER", 0, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("Channel: ", 6, OLED_DISPLAY_INVERT);
   while (true) {
     for (int i = 0; i < zigbee_bitmap_allArray_LEN; i++) {
       oled_screen_display_bitmap(zigbee_bitmap_allArray[i], 0, 16, 128, 32,
@@ -103,15 +103,10 @@ void zigbee_screens_display_scanning_animation() {
   }
 }
 
-void zigbee_screens_display_scanning_text(int count, int channel) {
+void zigbee_screens_display_scanning_text(int count) {
   oled_screen_clear_line(0, 6, OLED_DISPLAY_NORMAL);
-  oled_screen_clear_line(0, 7, OLED_DISPLAY_NORMAL);
   char* packets_count = (char*) malloc(17);
-  char* channel_text = (char*) malloc(17);
   sprintf(packets_count, "Packets: %d", count);
-  sprintf(channel_text, "Channel: %d", channel);
-  oled_screen_display_text_center(channel_text, 6, OLED_DISPLAY_INVERT);
-  oled_screen_display_text_center(packets_count, 7, OLED_DISPLAY_INVERT);
+  oled_screen_display_text_center(packets_count, 6, OLED_DISPLAY_INVERT);
   free(packets_count);
-  free(channel_text);
 }

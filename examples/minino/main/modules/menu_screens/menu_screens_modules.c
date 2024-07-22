@@ -1,12 +1,15 @@
 #include "menu_screens_modules.h"
+#include "OTA.h"
 #include "bitmaps.h"
 #include "ble_module.h"
+#include "configuration.h"
 #include "esp_log.h"
 #include "gps_module.h"
 #include "leds.h"
 #include "oled_screen.h"
 #include "open_thread.h"
 #include "open_thread_module.h"
+#include "ota_module.h"
 #include "preferences.h"
 #include "radio_selector.h"
 #include "settings_module.h"
@@ -93,12 +96,28 @@ void show_logo() {
   // buzzer_set_freq(50);
   leds_on();
   buzzer_play();
-  // oled_screen_display_bitmap(epd_bitmap_minino_text_logo, 0, 0, 128, 64,
-  //                            OLED_DISPLAY_NORMAL);
-  oled_screen_display_bitmap(epd_bitmap_face_logo, 46, 16, 32, 32,
-                             OLED_DISPLAY_NORMAL);
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  buzzer_stop();
+  oled_screen_display_text_center("Still under", 2, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("DEVELOPMENT", 3, OLED_DISPLAY_NORMAL);
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  buzzer_play();
+  vTaskDelay(500 / portTICK_PERIOD_MS);
   buzzer_stop();
   vTaskDelay(500 / portTICK_PERIOD_MS);
+  buzzer_play();
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  buzzer_stop();
+  vTaskDelay(2000 / portTICK_PERIOD_MS);
+  buzzer_play();
+  oled_screen_display_bitmap(epd_bitmap_face_logo, 46, 16, 32, 32,
+                             OLED_DISPLAY_NORMAL);
+  char* version = malloc(20);
+  sprintf(version, "v%s BETA", CONFIG_PROJECT_VERSION);
+  oled_screen_display_text_center(version, 6, OLED_DISPLAY_INVERT);
+  free(version);
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  buzzer_stop();
 }
 
 void screen_module_set_screen(int current_menu) {
@@ -471,6 +490,9 @@ void handle_user_selection(screen_module_menu_t user_selection) {
   }
 
   switch (user_selection) {
+    case MENU_SETTINGS_WIFI:
+      config_module_begin(MENU_SETTINGS_WIFI);
+      break;
     case MENU_SETTINGS:
       settings_module_begin();
       break;
@@ -502,6 +524,9 @@ void handle_user_selection(screen_module_menu_t user_selection) {
       break;
     case MENU_GPS:
       gps_module_begin();
+      break;
+    case MENU_ABOUT_UPDATE:
+      ota_module_init();
       break;
     default:
       ESP_LOGI(TAG, "Unhandled menu: %s", menu_list[user_selection]);

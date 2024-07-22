@@ -18,4 +18,8 @@ set(EXTRA_COMPONENT_DIRS components/wifi_captive)
 set(EXTRA_COMPONENT_DIRS components/radio_selector)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+set(PROJECT_VERSION_MAJOR(0))
+set(PROJECT_VERSION_MINOR(1))
+set(PROJECT_VERSION_PATCH(0))
+set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 project(minino)
