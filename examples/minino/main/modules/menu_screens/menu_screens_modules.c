@@ -14,6 +14,7 @@
 #include "radio_selector.h"
 #include "settings_module.h"
 #include "string.h"
+#include "web_file_browser_module.h"
 #include "wifi_module.h"
 #include "wifi_sniffer.h"
 #include "zigbee_module.h"
@@ -94,6 +95,7 @@ void run_tests() {
 
 void show_logo() {
   // buzzer_set_freq(50);
+  oled_screen_clear();
   leds_on();
   buzzer_play();
   vTaskDelay(500 / portTICK_PERIOD_MS);
@@ -110,7 +112,7 @@ void show_logo() {
   buzzer_stop();
   vTaskDelay(2000 / portTICK_PERIOD_MS);
   buzzer_play();
-  oled_screen_display_bitmap(epd_bitmap_logo_1, 0, 0, 128, 64,
+  oled_screen_display_bitmap(epd_bitmap_face_logo, 46, 16, 32, 32,
                              OLED_DISPLAY_NORMAL);
   char* version = malloc(20);
   sprintf(version, "v%s BETA", CONFIG_PROJECT_VERSION);
@@ -475,9 +477,6 @@ void menu_screens_exit_submenu() {
 
   if (exit_submenu_cb != NULL) {
     exit_submenu_cb();
-    ESP_LOGI(TAG, "Custom exit submenu callback");
-  } else {
-    ESP_LOGI(TAG, "No custom exit submenu callback");
   }
 
   // TODO: Store selected item history into flash
@@ -493,6 +492,9 @@ void handle_user_selection(screen_module_menu_t user_selection) {
   }
 
   switch (user_selection) {
+    case MENU_WEB_SD_BROWSER:
+      web_file_browser_module_init();
+      break;
     case MENU_SETTINGS_WIFI:
       config_module_begin(MENU_SETTINGS_WIFI);
       break;

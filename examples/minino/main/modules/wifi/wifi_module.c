@@ -3,6 +3,7 @@
 #include "captive_portal.h"
 #include "catdos_module.h"
 #include "esp_check.h"
+#include "esp_err.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "keyboard_module.h"
@@ -14,6 +15,7 @@
 #include "modules/wifi/wifi_module.h"
 #include "modules/wifi/wifi_screens_module.h"
 #include "oled_screen.h"
+#include "sd_card.h"
 #include "wifi_attacks.h"
 #include "wifi_controller.h"
 #include "wifi_scanner.h"
@@ -69,6 +71,49 @@ static void scanning_task(void* pvParameters) {
   vTaskDelete(NULL);
 }
 
+void wifi_module_init_sniffer() {
+  oled_screen_clear();
+  if (wifi_sniffer_is_destination_sd()) {
+    esp_err_t err = sd_card_mount();
+    switch (err) {
+      case ESP_OK:
+        ESP_LOGI(TAG, "SD card mounted");
+        break;
+      case ESP_ERR_ALREADY_MOUNTED:
+        ESP_LOGI(TAG, "SD card already mounted");
+        break;
+      case ESP_ERR_NOT_SUPPORTED:
+        ESP_LOGI(TAG, "SD card not supported");
+        oled_screen_display_text_center("SD card not", 0, OLED_DISPLAY_NORMAL);
+        oled_screen_display_text_center("supported", 1, OLED_DISPLAY_NORMAL);
+        oled_screen_display_text_center("Switching to", 3, OLED_DISPLAY_NORMAL);
+        oled_screen_display_text_center("internal storage", 4,
+                                        OLED_DISPLAY_NORMAL);
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        oled_screen_clear();
+        wifi_sniffer_set_destination_internal();
+        // TODO: add an option to format the SD card
+        break;
+      default:
+        ESP_LOGE(TAG, "SD card mount failed: reason: %s", esp_err_to_name(err));
+      case ESP_ERR_NOT_FOUND:
+        ESP_LOGW(TAG, "SD card not found");
+        oled_screen_display_text_center("SD card ", 0, OLED_DISPLAY_NORMAL);
+        oled_screen_display_text_center("not found", 1, OLED_DISPLAY_NORMAL);
+        oled_screen_display_text_center("Switching to", 3, OLED_DISPLAY_NORMAL);
+        oled_screen_display_text_center("internal storage", 4,
+                                        OLED_DISPLAY_NORMAL);
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        oled_screen_clear();
+        wifi_sniffer_set_destination_internal();
+        break;
+    }
+  }
+
+  wifi_sniffer_start();
+  led_control_run_effect(led_control_zigbee_scanning);
+}
+
 void wifi_module_exit_submenu_cb() {
   screen_module_menu_t current_menu = menu_screens_get_current_menu();
 
@@ -91,6 +136,18 @@ void wifi_module_exit_submenu_cb() {
     case MENU_WIFI_ANALIZER:
       screen_module_set_screen(MENU_WIFI_ANALIZER);
       esp_restart();
+      break;
+    case MENU_WIFI_ANALIZER_DESTINATION:
+      if (wifi_sniffer_is_destination_sd()) {
+        // Verify if the SD card is inserted
+        sd_card_unmount();
+        if (sd_card_mount() == ESP_OK) {
+          vTaskDelay(100 / portTICK_PERIOD_MS);
+          sd_card_unmount();
+        } else {
+          wifi_sniffer_set_destination_internal();
+        }
+      }
       break;
       // case MENU_WIFI_DOS:
       //   screen_module_set_screen(MENU_WIFI_DOS);
@@ -116,9 +173,7 @@ void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
       catdos_module_begin();
       break;
     case MENU_WIFI_ANALIZER_RUN:
-      oled_screen_clear();
-      wifi_sniffer_start();
-      led_control_run_effect(led_control_zigbee_scanning);
+      wifi_module_init_sniffer();
       break;
     case MENU_WIFI_ANALIZER_SUMMARY:
       wifi_sniffer_load_summary();
@@ -154,15 +209,6 @@ void wifi_module_begin() {
 void wifi_module_exit() {
   screen_module_set_screen(MENU_WIFI_DEAUTH);
   esp_restart();
-  // menu_screens_set_app_state(SCREEN_IN_NAVIGATION, NULL);
-  // wifi_driver_ap_stop();
-  // if (task_display_scanning != NULL) {
-  //   vTaskDelete(task_display_scanning);
-  // }
-  // if (task_display_attacking) {
-  //   vTaskDelete(task_display_attacking);
-  // }
-  // menu_screens_exit_submenu();
 }
 
 void wifi_module_deauth_begin() {

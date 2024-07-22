@@ -23,6 +23,13 @@ const char* csv_header = FORMAT_VERSION
     "MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,"
     "CurrentLongitude,AltitudeMeters,AccuracyMeters,RCOIs,MfgrId,Type";
 
+void scan_task(void* pvParameters) {
+  while (true) {
+    // Scan for WiFi networks
+    // ...
+  }
+}
+
 void wardriving_begin() {
   sd_card_mount();
   sd_card_write_file("test.csv", csv_header);

@@ -3,6 +3,13 @@
 #include <stdbool.h>
 #include "esp_err.h"
 
+#define ESP_ERR_ALREADY_MOUNTED   ESP_ERR_NOT_ALLOWED
+#define ESP_ERR_NOT_MOUNTED       ESP_ERR_NOT_FOUND
+#define ESP_ERR_FILE_EXISTS       ESP_ERR_NOT_ALLOWED
+#define ESP_ERR_FILE_NOT_FOUND    ESP_ERR_NOT_FOUND
+#define ESP_ERR_FILE_OPEN_FAILED  ESP_FAIL
+#define ESP_ERR_FILE_WRITE_FAILED ESP_FAIL
+
 /**
  * Initialize the SD card.
  *
@@ -14,15 +21,27 @@ void sd_card_begin();
  * Mount the SD card.
  *
  * @return esp_err_t
+ *
+ * @note return ESP_ERR_NOT_FOUND if the SD card is not found.
+ * @note return ESP_ERR_ALREADY_MOUNTED if the SD card is already mounted.
+ * @note return ESP_ERR_NO_MEM if failed to initialize the spi bus.
+ * @note return ESP_ERR_NOT_SUPPORTED if the SD card is not formatted with FAT.
+ * @note return ESP_ERR_INVALID_ARG if the arguments are invalid.
+ * @note return ESP_FAIL if the operation failed.
+ * @note return ESP_OK if the operation was successful.
  */
 esp_err_t sd_card_mount();
 
 /**
  * Unmount the SD card.
  *
- * @return void
+ * @return esp_err_t
+ *
+ * @note return ESP_ERR_NOT_MOUNTED if the SD card is not mounted.
+ * @note return ESP_FAIL if the operation failed.
+ * @note return ESP_OK if the operation was successful.
  */
-void sd_card_unmount();
+esp_err_t sd_card_unmount();
 
 /**
  * Check if the SD card is mounted.
@@ -38,7 +57,9 @@ bool sd_card_is_mounted();
  *
  * @return esp_err_t
  *
- * @note return ESP_ERR_NOT_ALLOWED if the file already exists.
+ * @note return ESP_ERR_FILE_EXISTS if the file already exists.
+ * @note return ESP_FAIL if the operation failed.
+ * @note return ESP_OK if the operation was successful.
  */
 esp_err_t sd_card_create_file(const char* path);
 
