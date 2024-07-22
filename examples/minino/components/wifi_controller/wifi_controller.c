@@ -70,6 +70,25 @@ void wifi_driver_init_apsta(void) {
   wifi_driver_initialized = true;
 }
 
+void wifi_driver_init_sta(void) {
+  ESP_ERROR_CHECK(esp_netif_init());
+  ESP_ERROR_CHECK(esp_event_loop_create_default());
+  esp_netif_t* sta_netif = esp_netif_create_default_wifi_sta();
+  assert(sta_netif);
+
+  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+  // uint16_t number = DEFAULT_SCAN_LIST_SIZE;
+  // wifi_ap_record_t ap_info[DEFAULT_SCAN_LIST_SIZE];
+  // uint16_t ap_count = 0;
+  // memset(ap_info, 0, sizeof(ap_info));
+
+  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+  ESP_ERROR_CHECK(esp_wifi_start());
+  wifi_driver_initialized = true;
+}
+
 void wifi_driver_init_null(void) {
   ESP_ERROR_CHECK(esp_event_loop_create_default());
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
