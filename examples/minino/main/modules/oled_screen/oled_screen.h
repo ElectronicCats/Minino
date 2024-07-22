@@ -129,3 +129,5 @@ void oled_screen_display_selected_item_box();
 void oled_screen_display_text_splited(char* p_text,
                                       int* p_started_page,
                                       int invert);
+
+void oled_screen_display_loading_bar(uint8_t value, uint8_t page);

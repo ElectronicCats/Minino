@@ -14,6 +14,7 @@
 #include "radio_selector.h"
 #include "settings_module.h"
 #include "string.h"
+#include "web_file_browser_module.h"
 #include "wifi_module.h"
 #include "wifi_sniffer.h"
 #include "zigbee_module.h"
@@ -491,6 +492,9 @@ void handle_user_selection(screen_module_menu_t user_selection) {
   }
 
   switch (user_selection) {
+    case MENU_WEB_SD_BROWSER:
+      web_file_browser_module_init();
+      break;
     case MENU_SETTINGS_WIFI:
       config_module_begin(MENU_SETTINGS_WIFI);
       break;

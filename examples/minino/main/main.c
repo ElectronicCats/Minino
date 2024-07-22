@@ -9,6 +9,8 @@
 #include "preferences.h"
 #include "sd_card.h"
 #include "wardriving_module.h"
+#include "web_file_browser.h"
+#include "wifi_app.h"
 
 #define BUZZER_PIN GPIO_NUM_2
 

@@ -264,3 +264,14 @@ esp_err_t sd_card_write_file(const char* path, char* data) {
 
   return ESP_OK;
 }
+
+size_t sd_card_get_file_size(FILE* file) {
+  if (file == NULL) {
+    return 0;
+  }
+  long current_ptr = ftell(file);
+  fseek(file, 0, SEEK_END);
+  size_t file_size = ftell(file);
+  fseek(file, 0, current_ptr);
+  return file_size;
+}
