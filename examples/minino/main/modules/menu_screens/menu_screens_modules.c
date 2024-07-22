@@ -94,6 +94,7 @@ void run_tests() {
 
 void show_logo() {
   // buzzer_set_freq(50);
+  oled_screen_clear();
   leds_on();
   buzzer_play();
   vTaskDelay(500 / portTICK_PERIOD_MS);

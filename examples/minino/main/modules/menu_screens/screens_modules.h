@@ -687,6 +687,7 @@ char** menu_items[] = {
     wifi_analizer_summary,            // MENU_WIFI_ANALIZER_SUMMARY
     wifi_analizer_channel_items,      // MENU_WIFI_ANALIZER_CHANNEL
     wifi_analizer_destination_items,  // MENU_WIFI_ANALIZER_DESTINATION
+    wifi_analizer_sd_erease_warning,  // MENU_WIFI_ANALIZER_SD_EREASE_WARNING
     /* Bluetooth applications */
     empty_items,  // MENU_BLUETOOTH_TRAKERS_SCAN
     empty_items,  // MENU_BLUETOOTH_SPAM
@@ -698,11 +699,13 @@ char** menu_items[] = {
     /* Thread applications */
     empty_items,  // MENU_THREAD_BROADCAST
     /* GPS applications */
-    empty_items,          // MENU_GPS_WARDRIVING
+    wardriving_items,     // MENU_GPS_WARDRIVING
     gps_date_time_items,  // MENU_GPS_DATE_TIME
     gps_location_items,   // MENU_GPS_LOCATION
     gps_speed_items,      // MENU_GPS_SPEED
     gps_help,             // MENU_GPS_HELP
+    empty_items,          // MENU_GPS_WARDRIVING_START
+    wardriving_help,      // MENU_GPS_WARDRIVING_HELP
     /* About */
     version_text, license_text, credits_text, legal_text, empty_items,
     /* Settings items */
@@ -711,7 +714,4 @@ char** menu_items[] = {
     system_settings_items,  // MENU_SETTINGS_SYSTEM
     gps_time_zone_options,  // MENU_SETTINGS_TIME_ZONE
     empty_items,            // MENU_SETTINGS_WIFI
-    wardriving_items,       // MENU_GPS_WARDRIVING
-    wardriving_help,        // MENU_GPS_WARDRIVING_HELP
-    empty_items,            // MENU_GPS_WARDRIVING_START
 };
