@@ -79,11 +79,6 @@ void wifi_driver_init_sta(void) {
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-  // uint16_t number = DEFAULT_SCAN_LIST_SIZE;
-  // wifi_ap_record_t ap_info[DEFAULT_SCAN_LIST_SIZE];
-  // uint16_t ap_count = 0;
-  // memset(ap_info, 0, sizeof(ap_info));
-
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
   ESP_ERROR_CHECK(esp_wifi_start());
   wifi_driver_initialized = true;

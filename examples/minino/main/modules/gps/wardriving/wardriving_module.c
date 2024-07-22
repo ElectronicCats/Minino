@@ -19,7 +19,7 @@
 #define BODY           "3"
 #define SUB_BODY       "0"
 
-#define MAC_ADDRESS_FORMAT "%02X:%02X:%02X:%02X:%02X:%02X"
+#define MAC_ADDRESS_FORMAT "%02x:%02x:%02x:%02x:%02x:%02x"
 
 const char* TAG = "wardriving";
 
@@ -147,6 +147,37 @@ char* get_mac_address(uint8_t* mac) {
   return mac_address;
 }
 
+char* get_auth_mode(int authmode) {
+  switch (authmode) {
+    case WIFI_AUTH_OPEN:
+      return "OPEN";
+    case WIFI_AUTH_WEP:
+      return "WEP";
+    case WIFI_AUTH_WPA_PSK:
+      return "WPA_PSK";
+    case WIFI_AUTH_WPA2_PSK:
+      return "WPA2_PSK";
+    case WIFI_AUTH_WPA_WPA2_PSK:
+      return "WPA_WPA2_PSK";
+    case WIFI_AUTH_WPA2_ENTERPRISE:
+      return "WPA2_ENTERPRISE";
+    case WIFI_AUTH_WPA3_PSK:
+      return "WPA3_PSK";
+    case WIFI_AUTH_WPA2_WPA3_PSK:
+      return "WPA2_WPA3_PSK";
+    case WIFI_AUTH_WAPI_PSK:
+      return "WAPI_PSK";
+    case WIFI_AUTH_OWE:
+      return "OWE";
+    case WIFI_AUTH_WPA3_ENT_192:
+      return "WPA3_ENT_SUITE_B_192_BIT";
+    case WIFI_AUTH_DPP:
+      return "DPP";
+    default:
+      return "Uncategorized";
+  }
+}
+
 void scan_task(void* pvParameters) {
   wifi_driver_init_sta();
   wifi_scanner_module_scan();
@@ -177,14 +208,10 @@ void wardriving_begin() {
 
   // Append records to csv file
   for (int i = 0; i < ap_records->count; i++) {
-    sprintf(csv_line, "%s,%s,\n", get_mac_address(ap_records->records[i].bssid),
-            ap_records->records[i].ssid);
-    // csv_line, "%s,%s,%d,%d,%d,%d,%d,%f,%f,%d,%d,%d,%d,%d",
-    // ap_records->records[i].bssid, ap_records->records[i].ssid,
-    // ap_records->records[i].authmode,
-    // ap_records->records[i].timestamp, ap_records->records[i].primary,
-    // ap_records->records[i].frequency, ap_records->records[i].rssi,
-    // 0.0, 0.0, 0, 0, 0, 0, 0);
+    sprintf(csv_line, "%s,%s,%s\n",
+            get_mac_address(ap_records->records[i].bssid),
+            ap_records->records[i].ssid,
+            get_auth_mode(ap_records->records[i].authmode));
 
     ESP_LOGI(TAG, "CSV Line: %s", csv_line);
     strcat(csv_file, csv_line);
