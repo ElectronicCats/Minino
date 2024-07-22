@@ -6,6 +6,7 @@
 #include "wifi_controller.h"
 #include "wifi_scanner.h"
 
+#define FILE_NAME      "test.csv"
 #define FORMAT_VERSION "WigleWifi-1.6"
 #define APP_VERSION    CONFIG_PROJECT_VERSION
 #define MODEL          "MININO"
@@ -17,6 +18,8 @@
 #define STAR           "Sol"
 #define BODY           "3"
 #define SUB_BODY       "0"
+
+#define MAC_ADDRESS_FORMAT "%02X:%02X:%02X:%02X:%02X:%02X"
 
 const char* TAG = "wardriving";
 
@@ -137,6 +140,13 @@ static void print_cipher_type(int pairwise_cipher, int group_cipher) {
   }
 }
 
+char* get_mac_address(uint8_t* mac) {
+  char* mac_address = malloc(18);
+  sprintf(mac_address, MAC_ADDRESS_FORMAT, mac[0], mac[1], mac[2], mac[3],
+          mac[4], mac[5]);
+  return mac_address;
+}
+
 void scan_task(void* pvParameters) {
   wifi_driver_init_sta();
   wifi_scanner_module_scan();
@@ -148,8 +158,8 @@ void scan_task(void* pvParameters) {
 
 void wardriving_begin() {
   sd_card_mount();
-  sd_card_write_file("test.csv", csv_header);
-  sd_card_read_file("test.csv");
+  // sd_card_write_file("test.csv", csv_header);
+  // sd_card_read_file("test.csv");
   wifi_driver_init_sta();
   wifi_scanner_module_scan();
 
@@ -158,6 +168,30 @@ void wardriving_begin() {
   // uint16_t ap_count = 0;
   // memset(ap_info, 0, sizeof(ap_info));
   wifi_scanner_ap_records_t* ap_records = wifi_scanner_get_ap_records();
+
+  char* csv_line = malloc(1024);
+  char* csv_file = malloc(1024);
+
+  // Append header to csv file
+  sprintf(csv_file, "%s\n", csv_header);
+
+  // Append records to csv file
+  for (int i = 0; i < ap_records->count; i++) {
+    sprintf(csv_line, "%s,%s,\n", get_mac_address(ap_records->records[i].bssid),
+            ap_records->records[i].ssid);
+    // csv_line, "%s,%s,%d,%d,%d,%d,%d,%f,%f,%d,%d,%d,%d,%d",
+    // ap_records->records[i].bssid, ap_records->records[i].ssid,
+    // ap_records->records[i].authmode,
+    // ap_records->records[i].timestamp, ap_records->records[i].primary,
+    // ap_records->records[i].frequency, ap_records->records[i].rssi,
+    // 0.0, 0.0, 0, 0, 0, 0, 0);
+
+    ESP_LOGI(TAG, "CSV Line: %s", csv_line);
+    strcat(csv_file, csv_line);
+  }
+  sd_card_write_file(FILE_NAME, csv_file);
+  free(csv_line);
+  free(csv_file);
 
   for (int i = 0; i < ap_records->count; i++) {
     ESP_LOGI(TAG, "SSID \t\t%s", ap_records->records[i].ssid);
@@ -170,5 +204,6 @@ void wardriving_begin() {
     ESP_LOGI(TAG, "Channel \t\t%d", ap_records->records[i].primary);
   }
 
+  sd_card_read_file(FILE_NAME);
   sd_card_unmount();
 }
