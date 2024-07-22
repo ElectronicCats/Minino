@@ -1,3 +1,7 @@
+
+#include "modules/wifi/wifi_module.h"
+#include "captive_portal.h"
+#include "catdos_module.h"
 #include "esp_check.h"
 #include "esp_err.h"
 #include "esp_log.h"
@@ -15,6 +19,7 @@
 #include "wifi_attacks.h"
 #include "wifi_controller.h"
 #include "wifi_scanner.h"
+
 static const char* TAG = "wifi_module";
 bool analizer_initialized = false;
 const uint32_t SOUND_DURATION = 100;
@@ -162,6 +167,10 @@ void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
       break;
     case MENU_WIFI_DEAUTH:
       wifi_module_deauth_begin();
+      break;
+    case MENU_WIFI_DOS:
+      oled_screen_clear();
+      catdos_module_begin();
       break;
     case MENU_WIFI_ANALIZER_RUN:
       wifi_module_init_sniffer();

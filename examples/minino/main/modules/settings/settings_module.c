@@ -1,5 +1,6 @@
+#include "settings_module.h"
+#include "configuration.h"
 #include "esp_log.h"
-
 #include "gps_module.h"
 #include "menu_screens_modules.h"
 #include "oled_screen.h"
@@ -17,6 +18,7 @@ void settings_module_exit_submenu_cb() {
 
   switch (current_menu) {
     case MENU_SETTINGS:
+      // case MENU_SETTINGS_WIFI:
       settings_module_exit();
       break;
     default:
@@ -26,7 +28,7 @@ void settings_module_exit_submenu_cb() {
 
 void settings_module_enter_submenu_cb(screen_module_menu_t user_selection) {
   uint8_t selected_item = menu_screens_get_selected_item();
-
+  ESP_LOGI(TAG, "Selected item: %d", selected_item);
   switch (user_selection) {
     case MENU_SETTINGS_DISPLAY:
     case MENU_SETTINGS_SOUND:
@@ -38,6 +40,9 @@ void settings_module_enter_submenu_cb(screen_module_menu_t user_selection) {
         gps_module_set_time_zone(selected_item);
       }
       update_time_zone_options();
+      break;
+    case MENU_SETTINGS_WIFI:
+      config_module_begin(MENU_SETTINGS_WIFI);
       break;
     default:
       break;
