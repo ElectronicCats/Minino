@@ -2,8 +2,8 @@
 
 #include "esp_netif.h"
 
-#define WIFI_AP_SSID            "WEB_FILE_BROWSER"  // MAX 32
-#define WIFI_AP_PASSWORD        "aaaaaaaa"          // MAX 64
+#define WIFI_AP_SSID            "MININO_AP"  // MAX 32
+#define WIFI_AP_PASSWORD        "Cats1234"   // MAX 64
 #define WIFI_AP_CHANNEL         1
 #define WIFI_AP_SSID_HIDDEN     0
 #define WIFI_AP_MAX_CONNECTIONS 5
