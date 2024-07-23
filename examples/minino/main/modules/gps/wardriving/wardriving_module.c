@@ -1,5 +1,8 @@
 #include <string.h>
 #include "esp_log.h"
+#include "esp_timer.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #include "gps_module.h"
 #include "sd_card.h"
@@ -22,7 +25,11 @@
 
 #define MAC_ADDRESS_FORMAT "%02x:%02x:%02x:%02x:%02x:%02x"
 
+#define WIFI_SCAN_INTERVAL_SEC 5
+
 const char* TAG = "wardriving";
+TaskHandle_t wardriving_module_scan_task_handle = NULL;
+gps_t* gps = NULL;
 
 const char* csv_header = FORMAT_VERSION
     ",appRelease=" APP_VERSION ",model=" MODEL ",release=" RELEASE
@@ -179,29 +186,73 @@ char* get_auth_mode(int authmode) {
   }
 }
 
+char* get_full_date_time(gps_t* gps) {
+  char* date_time = malloc(sizeof(char) * 30);
+  sprintf(date_time, "%d-%d-%d %d:%d:%d", gps->date.year, gps->date.month,
+          gps->date.day, gps->tim.hour, gps->tim.minute, gps->tim.second);
+  return date_time;
+}
+
 uint16_t get_frequency(uint8_t primary) {
   return 2412 + 5 * (primary - 1);
 }
 
-void scan_task(void* pvParameters) {
+void wardriving_module_scan_task(void* pvParameters) {
   wifi_driver_init_sta();
   while (true) {
-    // Scan for WiFi networks
     wifi_scanner_module_scan();
     vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+    if (gps == NULL) {
+      continue;
+    }
+
+    ESP_LOGI(TAG, "Satellites in use: %d", gps->sats_in_use);
+    // if (gps->sats_in_use == 0) {
+    //   continue;
+    // }
+
+    wifi_scanner_ap_records_t* ap_records = wifi_scanner_get_ap_records();
+    char* csv_line = malloc(1024);
+    char* csv_file = malloc(1024);
+
+    // Append header to csv file
+    sprintf(csv_file, "%s\n", csv_header);
+
+    // Append records to csv file
+    for (int i = 0; i < ap_records->count; i++) {
+      sprintf(csv_line, "%s,%s,%s,%s,%d,%u,%d\n",
+              get_mac_address(ap_records->records[i].bssid),
+              ap_records->records[i].ssid,
+              get_auth_mode(ap_records->records[i].authmode),
+              // "2021-09-01T00:00:00Z",
+              get_full_date_time(gps), ap_records->records[i].primary,
+              get_frequency(ap_records->records[i].primary),
+              ap_records->records[i].rssi);
+
+      ESP_LOGI(TAG, "CSV Line: %s", csv_line);
+      strcat(csv_file, csv_line);
+    }
+    sd_card_write_file(FILE_NAME, csv_file);
+    sd_card_read_file(FILE_NAME);
   }
 }
 
+/**
+ * @brief Callback function for GPS events
+ *
+ * @param event_data
+ *
+ * @note This function is called every time a GPS event is triggered, its
+ * ussually every second.
+ */
 void wardriving_gps_event_handler_cb(void* event_data) {
-  gps_t* gps = gps_module_get_instance(event_data);
+  static uint32_t counter = 0;
+  counter++;
+  gps = gps_module_get_instance(event_data);
+
   ESP_LOGI(TAG, "Date: %d/%d/%d", gps->date.year, gps->date.month,
            gps->date.day);
-  ESP_LOGI(TAG, "Time: %d:%d:%d", gps->tim.hour, gps->tim.minute,
-           gps->tim.second);
-  ESP_LOGI(TAG, "Satellites in use: %d", gps->sats_in_use);
-  ESP_LOGI(TAG, "Latitude: %f", gps->latitude);
-  ESP_LOGI(TAG, "Longitude: %f", gps->longitude);
-  ESP_LOGI(TAG, "Altitude: %f", gps->altitude);
 }
 
 void wardriving_begin() {
@@ -210,15 +261,14 @@ void wardriving_begin() {
 #endif
 
   sd_card_mount();
-  wifi_driver_init_sta();
-  wifi_scanner_module_scan();
+  // wifi_driver_init_sta();
+  // wifi_scanner_module_scan();
+  xTaskCreate(wardriving_module_scan_task, "wardriving_module_scan_task", 4096,
+              NULL, 5, &wardriving_module_scan_task_handle);
   gps_module_register_cb(wardriving_gps_event_handler_cb);
   gps_module_start_read();
+  return;
 
-  uint16_t number = DEFAULT_SCAN_LIST_SIZE;
-  // wifi_ap_record_t ap_info[DEFAULT_SCAN_LIST_SIZE];
-  // uint16_t ap_count = 0;
-  // memset(ap_info, 0, sizeof(ap_info));
   wifi_scanner_ap_records_t* ap_records = wifi_scanner_get_ap_records();
 
   char* csv_line = malloc(1024);
