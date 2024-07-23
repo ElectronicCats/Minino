@@ -1,6 +1,7 @@
 #include <string.h>
 #include "esp_log.h"
 
+#include "gps_module.h"
 #include "sd_card.h"
 #include "wardriving_module.h"
 #include "wifi_controller.h"
@@ -191,6 +192,18 @@ void scan_task(void* pvParameters) {
   }
 }
 
+void wardriving_gps_event_handler_cb(void* event_data) {
+  gps_t* gps = gps_module_get_instance(event_data);
+  ESP_LOGI(TAG, "Date: %d/%d/%d", gps->date.year, gps->date.month,
+           gps->date.day);
+  ESP_LOGI(TAG, "Time: %d:%d:%d", gps->tim.hour, gps->tim.minute,
+           gps->tim.second);
+  ESP_LOGI(TAG, "Satellites in use: %d", gps->sats_in_use);
+  ESP_LOGI(TAG, "Latitude: %f", gps->latitude);
+  ESP_LOGI(TAG, "Longitude: %f", gps->longitude);
+  ESP_LOGI(TAG, "Altitude: %f", gps->altitude);
+}
+
 void wardriving_begin() {
 #if !defined(CONFIG_WARDRIVING_MODULE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
@@ -199,6 +212,8 @@ void wardriving_begin() {
   sd_card_mount();
   wifi_driver_init_sta();
   wifi_scanner_module_scan();
+  gps_module_register_cb(wardriving_gps_event_handler_cb);
+  gps_module_start_read();
 
   uint16_t number = DEFAULT_SCAN_LIST_SIZE;
   // wifi_ap_record_t ap_info[DEFAULT_SCAN_LIST_SIZE];

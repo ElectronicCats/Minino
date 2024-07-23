@@ -12,6 +12,7 @@
 static const char* TAG = "gps_module";
 
 nmea_parser_handle_t nmea_hdl = NULL;
+gps_event_callback_t gps_event_callback = NULL;
 
 /**
  * @brief Signal strength levels based on the number of satellites in use
@@ -111,6 +112,10 @@ static void gps_event_handler(void* event_handler_arg,
 
   switch (event_id) {
     case GPS_UPDATE:
+      if (gps_event_callback != NULL) {
+        gps_event_callback(event_data);
+        return;
+      }
       /* update GPS information */
       gps_t* gps = gps_module_get_instance(event_data);
 
@@ -128,7 +133,11 @@ static void gps_event_handler(void* event_handler_arg,
   }
 }
 
-void nmea_parser_begin() {
+void gps_module_start_read() {
+#if !defined(CONFIG_GPS_MODULE_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   /* NMEA parser configuration */
   nmea_parser_config_t config = NMEA_PARSER_CONFIG_DEFAULT();
   /* init NMEA parser library */
@@ -137,7 +146,7 @@ void nmea_parser_begin() {
   nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
 }
 
-void nmea_parser_exit() {
+void gps_module_stop_read() {
   /* unregister event handler */
   nmea_parser_remove_handler(nmea_hdl, gps_event_handler);
   /* deinit NMEA parser library */
@@ -154,7 +163,7 @@ void gps_module_exit_submenu_cb() {
     case MENU_GPS_DATE_TIME:
     case MENU_GPS_LOCATION:
     case MENU_GPS_SPEED:
-      nmea_parser_exit();
+      gps_module_stop_read();
       break;
     default:
       break;
@@ -170,7 +179,7 @@ void gps_module_enter_submenu_cb(screen_module_menu_t user_selection) {
     case MENU_GPS_DATE_TIME:
     case MENU_GPS_LOCATION:
     case MENU_GPS_SPEED:
-      nmea_parser_begin();
+      gps_module_start_read();
       break;
     default:
       break;
@@ -245,4 +254,13 @@ uint8_t gps_module_get_time_zone() {
 
 void gps_module_set_time_zone(uint8_t time_zone) {
   preferences_put_uint("time_zone", time_zone);
+}
+
+void gps_module_register_cb(gps_event_callback_t callback) {
+  gps_module_remove_cb();
+  gps_event_callback = callback;
+}
+
+void gps_module_remove_cb() {
+  gps_event_callback = NULL;
 }
