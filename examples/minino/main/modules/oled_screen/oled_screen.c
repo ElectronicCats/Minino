@@ -1,13 +1,19 @@
 #include <string.h>
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "freertos/task.h"
+
 #include "bitmaps.h"
 #include "esp_log.h"
 #include "oled_screen.h"
 
 static const char* TAG = "OLED_DRIVER";
 oled_driver_t dev;
+SemaphoreHandle_t oled_mutex;
 
 void oled_screen_begin() {
+  oled_mutex = xSemaphoreCreateMutex();
 #if CONFIG_I2C_INTERFACE
   ESP_LOGI(TAG, "INTERFACE is i2c");
   ESP_LOGI(TAG, "CONFIG_SDA_GPIO=%d", CONFIG_SDA_GPIO);
@@ -42,11 +48,15 @@ void oled_screen_begin() {
 }
 
 void oled_screen_clear() {
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
   oled_driver_clear_screen(&dev, OLED_DISPLAY_NORMAL);
+  xSemaphoreGive(oled_mutex);
 }
 
 void oled_screen_display_show() {
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
   oled_driver_show_buffer(&dev);
+  xSemaphoreGive(oled_mutex);
 }
 
 void oled_screen_display_text(char* text, int x, int page, bool invert) {
@@ -54,7 +64,9 @@ void oled_screen_display_text(char* text, int x, int page, bool invert) {
     ESP_LOGE(TAG, "Text is NULL");
     return;
   }
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
   oled_driver_display_text(&dev, page, text, x, invert);
+  xSemaphoreGive(oled_mutex);
 }
 
 void oled_screen_display_text_center(char* text, int page, bool invert) {
@@ -63,9 +75,9 @@ void oled_screen_display_text_center(char* text, int page, bool invert) {
     return;
   }
 
-  ESP_LOGI(TAG, "Text: %s", text);
+  // ESP_LOGI(TAG, "Text: %s", text);
   int text_length = strlen(text);
-  ESP_LOGI(TAG, "Text length: %d", text_length);
+  // ESP_LOGI(TAG, "Text length: %d", text_length);
   if (text_length > MAX_LINE_CHAR) {
     ESP_LOGE(TAG, "Text too long to center");
     oled_screen_display_text(text, 0, page, invert);
@@ -75,16 +87,18 @@ void oled_screen_display_text_center(char* text, int page, bool invert) {
   uint8_t middle_x_coordinate = ((128 - text_length) / 2);
   uint8_t half_text_length_px = (text_length * 8 / 2);
   uint8_t x_offset = middle_x_coordinate - half_text_length_px;
-  ESP_LOGW(TAG, "Middle x coordinate: %d", middle_x_coordinate);
-  ESP_LOGW(TAG, "Half text length: %d", half_text_length_px);
-  ESP_LOGW(TAG, "X offset: %d", x_offset);
+  // ESP_LOGW(TAG, "Middle x coordinate: %d", middle_x_coordinate);
+  // ESP_LOGW(TAG, "Half text length: %d", half_text_length_px);
+  // ESP_LOGW(TAG, "X offset: %d", x_offset);
   oled_screen_display_text(text, x_offset, page, invert);
 }
 
 void oled_screen_clear_line(int x, int page, bool invert) {
   // oled_driver_clear_line(&dev, x, page, invert);
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
   oled_driver_bitmaps(&dev, x, page * 8, epd_bitmap_clear_line, 128 - x, 8,
                       invert);
+  xSemaphoreGive(oled_mutex);
 }
 
 void oled_screen_display_bitmap(const uint8_t* bitmap,
@@ -93,20 +107,28 @@ void oled_screen_display_bitmap(const uint8_t* bitmap,
                                 int width,
                                 int height,
                                 bool invert) {
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
   oled_driver_bitmaps(&dev, x, y, bitmap, width, height, invert);
+  xSemaphoreGive(oled_mutex);
 }
 
 void oled_screen_draw_pixel(int x, int y, bool invert) {
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
   oled_driver_draw_pixel(&dev, x, y, invert);
+  xSemaphoreGive(oled_mutex);
 }
 
 void oled_screen_draw_rect(int x, int y, int width, int height, bool invert) {
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
   oled_driver_draw_rect(&dev, x, y, width, height, invert);
+  xSemaphoreGive(oled_mutex);
 }
 
 /// @brief Display a box around the selected item
 void oled_screen_display_selected_item_box() {
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
   oled_driver_draw_custom_box(&dev);
+  xSemaphoreGive(oled_mutex);
 }
 
 void oled_screen_display_text_splited(char* p_text,
@@ -139,4 +161,17 @@ void oled_screen_display_text_splited(char* p_text,
     oled_screen_display_text(p_text, 0, *p_started_page, invert);
     (*p_started_page)++;
   }
+}
+
+void oled_screen_display_loading_bar(uint8_t value, uint8_t page) {
+  uint8_t bar_bitmap[8][16];
+  uint8_t active_cols = (uint32_t) value * 128 / 100;
+  memset(bar_bitmap, 0, sizeof(bar_bitmap));
+  for (int y = 0; y < 8; y++) {
+    for (int x = 0; x < active_cols; x++) {
+      bar_bitmap[y][x / 8] |= (1 << (7 - (x % 8)));
+    }
+  }
+  oled_screen_display_bitmap(bar_bitmap, 0, page * 8, 128, 8,
+                             OLED_DISPLAY_NORMAL);
 }

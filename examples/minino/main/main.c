@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "cat_console.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "keyboard_module.h"
@@ -8,6 +9,8 @@
 #include "preferences.h"
 #include "sd_card.h"
 #include "wardriving_module.h"
+#include "web_file_browser.h"
+#include "wifi_app.h"
 
 #define BUZZER_PIN GPIO_NUM_2
 
@@ -39,4 +42,8 @@ void app_main(void) {
   char* time_str = malloc(sizeof(time) + 1);
   sprintf(time_str, "%2.2f", time);
   ESP_LOGI(TAG, "Total time taken: %s seconds", time_str);
+
+  preferences_put_bool("wifi_connected", false);
+  preferences_put_int("logo_show", 1);
+  cat_console_begin();
 }
