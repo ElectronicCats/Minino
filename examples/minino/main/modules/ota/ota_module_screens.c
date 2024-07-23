@@ -33,8 +33,10 @@ static void show_start_status() {
   oled_screen_display_text("Please dont turn", 0, 2, OLED_DISPLAY_NORMAL);
   oled_screen_display_text("off the device  ", 0, 3, OLED_DISPLAY_NORMAL);
   oled_screen_clear_line(0, 4, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("Now: v1.1.0.0   ", 0, 5, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("New: v1.1.0.1   ", 0, 6, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("Now: " CONFIG_PROJECT_VERSION, 0, 5,
+                           OLED_DISPLAY_NORMAL);
+  // TODO: Change to the new version
+  oled_screen_display_text("New: vx.x.x.x   ", 0, 6, OLED_DISPLAY_NORMAL);
   oled_screen_clear_line(0, 7, OLED_DISPLAY_NORMAL);
 }
 
