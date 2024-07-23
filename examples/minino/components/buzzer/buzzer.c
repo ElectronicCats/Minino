@@ -1,5 +1,4 @@
 #include "driver/ledc.h"
-#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "math.h"
@@ -66,8 +65,7 @@ void buzzer_play() {
 }
 
 void buzzer_play_for_task(void* duration) {
-  uint32_t dur = *(uint32_t*) duration;  // Playing buzzer for 1107362024 ms
-  printf("Playing buzzer for %ld ms\n", dur);
+  uint32_t dur = *(uint32_t*) duration;
   buzzer_play();
   vTaskDelay(*(uint32_t*) duration / portTICK_PERIOD_MS);
   buzzer_stop();
@@ -75,7 +73,6 @@ void buzzer_play_for_task(void* duration) {
 }
 
 void buzzer_play_for(uint32_t duration) {
-  printf("Playing buzzer for %ld ms\n", duration);  // Playing buzzer for 100 ms
   uint32_t* duration_ptr = malloc(sizeof(uint32_t));
   *duration_ptr = duration;
   xTaskCreate(buzzer_play_for_task, "buzzer_play_for_task", 2048, duration_ptr,

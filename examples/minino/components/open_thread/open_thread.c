@@ -314,6 +314,10 @@ void openthread_deinit() {
 }
 
 void openthread_init() {
+#if !defined(CONFIG_OPEN_THREAD_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   esp_vfs_eventfd_config_t eventfd_config = {
       .max_fds = 3,
   };

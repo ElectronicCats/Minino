@@ -450,6 +450,10 @@ err:
 #endif  // CONFIG_SNIFFER_PCAP_DESTINATION_JTAG
 
 void register_pcap_cmd(void) {
+#if !defined(CONFIG_CMD_PCAP_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
 #if !CONFIG_SNIFFER_PCAP_DESTINATION_JTAG
   pcap_args.summary = arg_lit0(
       NULL, "summary", "option to parse and show the summary of .pcap file");

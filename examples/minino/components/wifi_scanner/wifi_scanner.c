@@ -10,6 +10,10 @@
 static wifi_scanner_ap_records_t ap_records;
 
 void wifi_scanner_module_scan() {
+#if !defined(CONFIG_WIFI_SCANNER_DEBUG)
+  esp_log_level_set(TAG_WIFI_SCANNER_MODULE, ESP_LOG_NONE);
+#endif
+
   ap_records.count = CONFIG_SCAN_MAX_AP;
   ESP_ERROR_CHECK(esp_wifi_start());
   ESP_ERROR_CHECK(esp_wifi_scan_start(NULL, true));

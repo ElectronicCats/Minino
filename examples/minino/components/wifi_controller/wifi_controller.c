@@ -8,6 +8,10 @@ static uint8_t default_ap_mac[6];
 static esp_err_t err;
 
 wifi_config_t wifi_driver_access_point_begin() {
+#if !defined(CONFIG_WIFI_CONTROLLER_DEBUG)
+  esp_log_level_set(TAG_WIFI_DRIVER, ESP_LOG_NONE);
+#endif
+
   esp_err_t err;
   err = esp_event_loop_create_default();
   if (err == ESP_ERR_INVALID_STATE) {

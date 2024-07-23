@@ -158,6 +158,9 @@ void register_unmount(void) {
 }
 
 void sd_card_begin() {
+#if !defined(CONFIG_SD_CARD_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
   register_mount();
   register_unmount();
 }

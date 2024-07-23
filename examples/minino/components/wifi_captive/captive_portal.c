@@ -183,6 +183,10 @@ void captive_portal_begin() {
 }
 
 void captive_portal_set_config(wifi_config_t* config) {
+#if !defined(CONFIG_CAPTIVE_PORTAL_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   ESP_LOGI(TAG, "ESP_WIFI_MODE_AP %s", config->ap.ssid);
   wifi_config = *config;
   ESP_LOGI(TAG, "ESP_WIFI_MODE_AP %s", (char*) wifi_config.ap.ssid);
@@ -200,5 +204,9 @@ void captive_portal_stop() {
 }
 
 void captive_portal_register_cb(captive_portal_handler_cb callback) {
+#if !defined(CONFIG_CAPTIVE_PORTAL_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   handler_captive_portal_cb = callback;
 }

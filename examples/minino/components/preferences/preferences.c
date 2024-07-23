@@ -33,6 +33,10 @@ esp_err_t _commit() {
 }
 
 esp_err_t preferences_begin() {
+#if !defined(CONFIG_PREFERENCES_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   // Initialize NVS
   _return_err = nvs_flash_init();
   if (_return_err == ESP_ERR_NVS_NO_FREE_PAGES ||

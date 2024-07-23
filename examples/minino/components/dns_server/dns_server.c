@@ -280,6 +280,10 @@ void dns_server_task(void* pvParameters) {
 }
 
 dns_server_handle_t start_dns_server(dns_server_config_t* config) {
+#if !defined(CONFIG_DNS_SERVER_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   dns_server_handle_t handle =
       calloc(1, sizeof(struct dns_server_handle) +
                     config->num_of_entries * sizeof(dns_entry_pair_t));

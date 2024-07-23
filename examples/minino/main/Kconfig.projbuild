@@ -121,6 +121,130 @@ menu "General project"
 
 	endmenu
 
+	menu "Components debug configuration"
+
+		config BT_GATTC_DEBUG
+			bool "BT GATTC debug"
+			default false
+			help
+				Enable BT GATTC debug.
+
+		config BT_GATTS_DEBUG
+			bool "BT GATTS debug"
+			default false
+			help
+				Enable BT GATTS debug.
+
+		config BT_SPAM_APP_DEBUG
+			bool "BT Spam app debug"
+			default false
+			help
+				Enable BT Spam app debug.
+
+		config CMD_WIFI_DEBUG
+			bool "CMD WiFi debug"
+			default false
+			help
+				Enable CMD WiFi debug.
+
+		config DNS_SERVER_DEBUG
+			bool "DNS Server debug"
+			default false
+			help
+				Enable DNS Server debug.
+
+		config IEEE_SNIFFER_DEBUG
+			bool "IEEE Sniffer debug"
+			default false
+			help
+				Enable IEEE Sniffer debug.
+
+		config LEDC_CONTROLLER_DEBUG
+			bool "LEDC Controller debug"
+			default false
+			help
+				Enable LEDC Controller debug.
+
+		config NMEA_PARSER_DEBUG
+			bool "NMEA Parser debug"
+			default false
+			help
+				Enable NMEA Parser debug.
+
+		config OPEN_THREAD_DEBUG
+			bool "Open Thread debug"
+			default false
+			help
+				Enable Open Thread debug.
+
+		config PREFERENCES_DEBUG
+			bool "Preferences debug"
+			default false
+			help
+				Enable Preferences debug.
+
+		config SD_CARD_DEBUG
+			bool "SD Card debug"
+			default false
+			help
+				Enable SD Card debug.
+
+		config TRACKERS_SCANNER_DEBUG
+			bool "Trackers Scanner debug"
+			default false
+			help
+				Enable Trackers Scanner debug.
+
+		config WIFI_ATTACKS_DEBUG
+			bool "WiFi Attacks debug"
+			default false
+			help
+				Enable WiFi Attacks debug.
+
+		config CAPTIVE_PORTAL_DEBUG
+			bool "Captive Portal debug"
+			default false
+			help
+				Enable Captive Portal debug.
+
+		config WIFI_CONTROLLER_DEBUG
+			bool "WiFi Controller debug"
+			default false
+			help
+				Enable WiFi Controller debug.
+
+		config WIFI_SCANNER_DEBUG
+			bool "WiFi Scanner debug"
+			default false
+			help
+				Enable WiFi Scanner debug.
+
+		config CMD_PCAP_DEBUG
+			bool "CMD PCAP debug"
+			default false
+			help
+				Enable CMD PCAP debug.
+
+		config CMD_SNIFFER_DEBUG
+			bool "CMD Sniffer debug"
+			default false
+			help
+				Enable CMD Sniffer debug.
+
+		config WIFI_SNIFFER_DEBUG
+			bool "WiFi Sniffer debug"
+			default false
+			help
+				Enable WiFi Sniffer debug.
+
+		config ZIGBEE_SWITCH_DEBUG
+			bool "Zigbee Switch debug"
+			default false
+			help
+				Enable Zigbee Switch debug.
+
+	endmenu
+
 endmenu
 
 menu "OLED Screen Configuration"

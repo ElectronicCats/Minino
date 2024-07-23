@@ -405,6 +405,10 @@ int do_sniffer_cmd(int argc, char** argv) {
 }
 
 void register_sniffer_cmd(void) {
+#if !defined(CONFIG_CMD_SNIFFER_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   sniffer_args.number = arg_int0("n", "number", "<num>",
                                  "the number of the packets to be captured");
   sniffer_args.interface = arg_str0("i", "interface", "<wlan|eth0|eth1|...>",

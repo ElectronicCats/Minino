@@ -29,6 +29,8 @@
 #define JOIN_TIMEOUT_MS (5000)
 #define MAXIMUM_RETRY   (3)
 
+static const char* TAG = "cmd_wifi";
+
 static EventGroupHandle_t wifi_event_group;
 const int CONNECTED_BIT = BIT0;
 static app_callback callback_connection;
@@ -231,6 +233,10 @@ bool is_wifi_connected() {
 }
 
 void register_wifi(void) {
+#if !defined(CONFIG_CMD_WIFI_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   join_args.timeout =
       arg_int0(NULL, "timeout", "<t>", "Connection timeout, ms");
   join_args.ssid = arg_str1(NULL, NULL, "<ssid>", "SSID of AP");
@@ -269,6 +275,4 @@ void register_wifi(void) {
   ESP_ERROR_CHECK(esp_console_cmd_register(&save_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&show_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&delete_cmd));
-
-  esp_log_level_set("wifi", ESP_LOG_NONE);
 }
