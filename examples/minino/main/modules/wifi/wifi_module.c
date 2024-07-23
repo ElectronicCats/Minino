@@ -202,6 +202,9 @@ void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
 }
 
 void wifi_module_begin() {
+#if !defined(CONFIG_WIFI_MODULE_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
   menu_screens_register_enter_submenu_cb(wifi_module_enter_submenu_cb);
   menu_screens_register_exit_submenu_cb(wifi_module_exit_submenu_cb);
 }

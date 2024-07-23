@@ -21,6 +21,106 @@ menu "General project"
 		help
 			Firmware version.
 
+	menu "Modules debug configuration"
+
+		config MAIN_DEBUG
+			bool "Main debug"
+			default false
+			help
+				Enable Main debug.
+
+		config CONFIGURATION_DEBUG
+			bool "Configuration debug"
+			default false
+			help
+				Enable Configuration debug.
+
+		config BLE_MODULE_DEBUG
+			bool "BLE module debug"
+			default false
+			help
+				Enable BLE module debug.
+
+		config CAT_CONSOLE_DEBUG
+			bool "Cat console debug"
+			default false
+			help
+				Enable Cat console debug.
+
+		config CATDOS_MODULE_DEBUG
+			bool "Cat DOS module debug"
+			default false
+			help
+				Enable Cat DOS module debug.
+
+		config GPS_MODULE_DEBUG
+			bool "GPS module debug"
+			default false
+			help
+				Enable GPS module debug.
+
+		config KEYBOARD_DEBUG
+			bool "Keyboard debug"
+			default false
+			help
+				Enable Keyboard debug.
+
+		config MENU_SCREENS_DEBUG
+			bool "Menu screens module debug"
+			default false
+			help
+				Enable Menu screens module debug.
+
+		config OLED_DRIVER_DEBUG
+			bool "OLED driver debug"
+			default false
+			help
+				Enable OLED driver debug.
+
+		config OLED_MODULE_DEBUG
+			bool "OLED module debug"
+			default false
+			help
+				Enable OLED module debug.
+
+		config OPEN_THREAD_MODULE_DEBUG
+			bool "OpenThread module debug"
+			default false
+			help
+				Enable OpenThread module debug.
+
+		config SETTINGS_MODULE_DEBUG
+			bool "Settings module debug"
+			default false
+			help
+				Enable Settings module debug.
+
+		config WARDRIVING_MODULE_DEBUG
+			bool "Wardriving module debug"
+			default false
+			help
+				Enable Wardriving module debug.
+
+		config WEB_FILE_BROWSER_DEBUG
+			bool "Web file browser debug"
+			default false
+			help
+				Enable Web file browser debug.
+
+		config WIFI_MODULE_DEBUG
+			bool "WiFi module debug"
+			default false
+			help
+				Enable WiFi module debug.
+
+		config ZIGBEE_MODULE_DEBUG
+			bool "Zigbee module debug"
+			default false
+			help
+				Enable Zigbee module debug.
+
+	endmenu
+
 endmenu
 
 menu "OLED Screen Configuration"
@@ -220,6 +320,7 @@ menu "OLED Screen Configuration"
 endmenu
 
 menu "KEYBOARD Configuration"
+
 	config GPIO_RANGE_MAX
 		int
 		default 33 if IDF_TARGET_ESP32

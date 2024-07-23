@@ -434,6 +434,9 @@ void catdos_module_send_attack() {
 }
 
 void catdos_module_begin() {
+#if !defined(CONFIG_CATDOS_MODULE_DEBUG)
+  esp_log_level_set(CATDOS_TAG, ESP_LOG_NONE);
+#endif
   // ESP_ERROR_CHECK(esp_event_loop_create_default());
   menu_screens_set_app_state(true, catdos_module_state_machine);
 

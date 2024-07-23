@@ -24,6 +24,9 @@ void reboot_counter() {
 }
 
 void app_main(void) {
+#if !defined(CONFIG_MAIN_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
   uint64_t start_time, end_time;
   start_time = esp_timer_get_time();
 
@@ -31,7 +34,7 @@ void app_main(void) {
   leds_init();
   preferences_begin();
   sd_card_begin();
-  wardriving_begin();
+  // wardriving_begin();
   keyboard_module_begin();
   menu_screens_begin();
   reboot_counter();

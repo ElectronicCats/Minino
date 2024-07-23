@@ -59,7 +59,7 @@ static void button_event_cb(void* arg, void* data) {
   const char* button_name_str = button_names[button_name];
   const char* button_event_str = button_events_name[button_event];
 
-  // ESP_LOGI(TAG, "Button: %s, Event: %s", button_name_str, button_event_str);
+  ESP_LOGI(TAG, "Button: %s, Event: %s", button_name_str, button_event_str);
 
   // If we have an app with a custom handler, we call it
   app_state = menu_screens_get_app_state();
@@ -100,7 +100,10 @@ static void button_event_cb(void* arg, void* data) {
 }
 
 void keyboard_module_begin() {
-  // button_init(BOOT_BUTTON_PIN, BOOT_BUTTON_MASK);
+#if !defined(CONFIG_KEYBOARD_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+  button_init(BOOT_BUTTON_PIN, BOOT_BUTTON_MASK);
   button_init(LEFT_BUTTON_PIN, LEFT_BUTTON_MASK);
   button_init(RIGHT_BUTTON_PIN, RIGHT_BUTTON_MASK);
   button_init(UP_BUTTON_PIN, UP_BUTTON_MASK);

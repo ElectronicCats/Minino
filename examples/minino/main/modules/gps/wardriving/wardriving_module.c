@@ -192,6 +192,10 @@ void scan_task(void* pvParameters) {
 }
 
 void wardriving_begin() {
+#if !defined(CONFIG_WARDRIVING_MODULE_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   sd_card_mount();
   wifi_driver_init_sta();
   wifi_scanner_module_scan();

@@ -19,6 +19,10 @@ static void open_thread_module_app_selector();
 static void open_thread_module_state_machine(button_event_t button_pressed);
 
 void open_thread_module_begin(int app_selected) {
+#if !defined(CONFIG_OPEN_THREAD_MODULE_DEBUG)
+  esp_log_level_set(TAG_OT_MODULE, ESP_LOG_NONE);
+#endif
+
   radio_selector_set_thread();
   ESP_LOGI(TAG_OT_MODULE,
            "Initializing OpenThread module screen state machine");

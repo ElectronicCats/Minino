@@ -30,6 +30,10 @@ static void web_file_browser_show_event(uint8_t event, void* context) {
 }
 
 void web_file_browser_init() {
+#if !defined(CONFIG_WEB_FILE_BROWSER_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   if (http_server_handle == NULL) {
     http_server_handle = web_file_browser_start();
   } else {

@@ -98,26 +98,8 @@ void show_logo() {
   oled_screen_clear();
   leds_on();
   buzzer_play();
-  vTaskDelay(500 / portTICK_PERIOD_MS);
-  buzzer_stop();
-  oled_screen_display_text_center("Still under", 2, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("DEVELOPMENT", 3, OLED_DISPLAY_NORMAL);
-  vTaskDelay(500 / portTICK_PERIOD_MS);
-  buzzer_play();
-  vTaskDelay(500 / portTICK_PERIOD_MS);
-  buzzer_stop();
-  vTaskDelay(500 / portTICK_PERIOD_MS);
-  buzzer_play();
-  vTaskDelay(500 / portTICK_PERIOD_MS);
-  buzzer_stop();
-  vTaskDelay(2000 / portTICK_PERIOD_MS);
-  buzzer_play();
   oled_screen_display_bitmap(epd_bitmap_face_logo, 46, 16, 32, 32,
                              OLED_DISPLAY_NORMAL);
-  char* version = malloc(20);
-  sprintf(version, "v%s BETA", CONFIG_PROJECT_VERSION);
-  oled_screen_display_text_center(version, 6, OLED_DISPLAY_INVERT);
-  free(version);
   vTaskDelay(500 / portTICK_PERIOD_MS);
   buzzer_stop();
 }
@@ -148,6 +130,10 @@ void screen_module_get_screen() {
 }
 
 void menu_screens_begin() {
+#if !defined(CONFIG_MENU_SCREENS_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   selected_item = 0;
   previous_menu = MENU_MAIN;
   current_menu = MENU_MAIN;
@@ -200,9 +186,9 @@ char** remove_items_flag(char** items, int length) {
 
   for (int i = 0; i < length - 1; i++) {
     newArray[i] = strdup(items[i + 1]);
-    // ESP_LOGI(TAG, "Item: %s", newArray[i]);
+    ESP_LOGI(TAG, "Item: %s", newArray[i]);
   }
-  // ESP_LOGI(TAG, "Number of items: %d", length - 1);
+  ESP_LOGI(TAG, "Number of items: %d", length - 1);
 
   num_items = length + 1;
 
@@ -259,11 +245,11 @@ char** get_menu_items() {
   char** submenu = menu_items[current_menu];
   if (submenu != NULL) {
     while (submenu[num_items] != NULL) {
-      // ESP_LOGI(TAG, "Item: %s", submenu[num_items]);
+      ESP_LOGI(TAG, "Item: %s", submenu[num_items]);
       num_items++;
     }
   }
-  // ESP_LOGI(TAG, "Number of items: %d", num_items);
+  ESP_LOGI(TAG, "Number of items: %" PRIu32, num_items);
 
   if (num_items == 0) {
     return NULL;
@@ -336,10 +322,10 @@ void display_scrolling_text(char** text) {
                       ? (MAX_PAGE - 1)
                       : selected_item;
   oled_screen_clear();
-  // ESP_LOGI(TAG, "num: %d", num_items - 2);
+  ESP_LOGI(TAG, "num: %" PRIu32, num_items - 2);
 
   for (uint8_t i = startIdx; i < num_items - 2; i++) {
-    // ESP_LOGI(TAG, "Text[%d]: %s", i, text[i]);
+    ESP_LOGI(TAG, "Text[%d]: %s", i, text[i]);
     if (i == selected_item) {
       oled_screen_display_text(
           text[i], 0, i - startIdx,
@@ -603,7 +589,7 @@ void menu_screens_update_options(char* options[], uint8_t selected_option) {
 
   for (i = 1; i < menu_length; i++) {
     char* prev_item = options[i];
-    // ESP_LOGI(TAG, "Prev item: %s", prev_item);
+    ESP_LOGI(TAG, "Prev item: %s", prev_item);
     char* new_item = malloc(strlen(prev_item) + 5);
     char* start_of_number = strchr(prev_item, ']') + 2;
     if (i == option) {
@@ -613,7 +599,7 @@ void menu_screens_update_options(char* options[], uint8_t selected_option) {
       snprintf(new_item, strlen(prev_item) + 5, "[ ] %s", start_of_number);
       options[i] = new_item;
     }
-    // ESP_LOGI(TAG, "New item: %s", options[i]);
+    ESP_LOGI(TAG, "New item: %s", options[i]);
   }
   options[i] = NULL;
 }

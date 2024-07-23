@@ -57,6 +57,10 @@ static void config_module_wifi_display_list() {
 }
 
 void config_module_begin(int app_selected) {
+#if !defined(CONFIG_CONFIGURATION_DEBUG)
+  esp_log_level_set(TAG_CONFIG_MODULE, ESP_LOG_NONE);
+#endif
+
   ESP_LOGI(TAG_CONFIG_MODULE, "Initializing ble module screen state machine");
   app_screen_state_information.app_selected = app_selected;
 

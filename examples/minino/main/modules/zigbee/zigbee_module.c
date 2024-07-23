@@ -35,6 +35,10 @@ static void zigbee_module_display_records_cb(uint8_t* packet,
 }
 
 void zigbee_module_begin(int app_selected) {
+#if !defined(CONFIG_ZIGBEE_MODULE_DEBUG)
+  esp_log_level_set(TAG_ZIGBEE_MODULE, ESP_LOG_NONE);
+#endif
+
   ESP_LOGI(TAG_ZIGBEE_MODULE,
            "Initializing zigbee module screen state machine");
   app_screen_state_information.app_selected = app_selected;

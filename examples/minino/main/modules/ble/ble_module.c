@@ -26,6 +26,10 @@ static void ble_module_task_start_trackers_display_devices();
 static void ble_module_task_stop_trackers_display_devices();
 
 void ble_module_begin(int app_selected) {
+#if !defined(CONFIG_BLE_MODULE_DEBUG)
+  esp_log_level_set(TAG_BLE_MODULE, ESP_LOG_NONE);
+#endif
+
   ESP_LOGI(TAG_BLE_MODULE, "Initializing ble module screen state machine");
   app_screen_state_information.app_selected = app_selected;
 
