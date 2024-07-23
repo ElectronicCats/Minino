@@ -114,7 +114,7 @@ void wifi_module_init_sniffer() {
   led_control_run_effect(led_control_zigbee_scanning);
 }
 
-void wifi_module_exit_submenu_cb() {
+void open_thread_module_exit_submenu_cb() {
   screen_module_menu_t current_menu = menu_screens_get_current_menu();
 
   switch (current_menu) {
@@ -206,7 +206,7 @@ void wifi_module_begin() {
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
   menu_screens_register_enter_submenu_cb(wifi_module_enter_submenu_cb);
-  menu_screens_register_exit_submenu_cb(wifi_module_exit_submenu_cb);
+  menu_screens_register_exit_submenu_cb(open_thread_module_exit_submenu_cb);
 }
 
 void wifi_module_exit() {

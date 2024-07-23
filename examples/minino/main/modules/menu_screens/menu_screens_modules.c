@@ -503,8 +503,13 @@ void handle_user_selection(screen_module_menu_t user_selection) {
       zigbee_module_begin(MENU_ZIGBEE_SNIFFER);
       break;
     case MENU_THREAD_BROADCAST:
-    case MENU_THREAD_APPS:
-      open_thread_module_begin(MENU_THREAD_APPS);
+      open_thread_module_begin(MENU_THREAD_BROADCAST);
+      break;
+    case MENU_THREAD_SNIFFER:
+      open_thread_module_begin(MENU_THREAD_SNIFFER);
+      break;
+    case MENU_THREAD_SNIFFER_RUN:
+      open_thread_module_begin(MENU_THREAD_SNIFFER_RUN);
       break;
     case MENU_MATTER_APPS:
     case MENU_ZIGBEE_LIGHT:
