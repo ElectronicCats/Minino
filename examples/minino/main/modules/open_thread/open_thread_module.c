@@ -77,7 +77,7 @@ static void thread_broadcast_input(button_event_t button_pressed) {
   switch (button_name) {
     case BUTTON_LEFT:
       led_control_stop();
-      screen_module_set_screen(MENU_THREAD_APPS);
+      screen_module_set_screen(MENU_THREAD_BROADCAST);
       esp_restart();
       break;
     case BUTTON_RIGHT:
@@ -106,10 +106,10 @@ static void thread_sniffer_input(button_event_t button_pressed) {
   }
   switch (button_name) {
     case BUTTON_LEFT:
-      menu_screens_set_app_state(false, NULL);
       thread_sniffer_stop();
       led_control_stop();
       menu_screens_exit_submenu();
+      menu_screens_set_app_state(false, NULL);
       break;
     case BUTTON_RIGHT:
       break;
