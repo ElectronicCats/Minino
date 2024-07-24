@@ -3,6 +3,7 @@
 #include "keyboard_module.h"
 #include "menu_screens_modules.h"
 #include "oled_screen.h"
+#include "preferences.h"
 #include "sd_card.h"
 #include "web_file_browser.h"
 #include "web_file_browser_screens.h"
@@ -15,7 +16,11 @@ void web_file_browser_module_init() {
   oled_screen_clear();
   menu_screens_set_app_state(true, web_file_browser_input_cb);
   if (sd_card_mount() == ESP_OK) {
-    wifi_ap_init();
+    bool wifi_connected = preferences_get_bool("wifi_connected", false);
+    if (!wifi_connected) {
+      wifi_ap_init();
+    }
+    // wifi_ap_init();
     web_file_browser_set_show_event_cb(web_file_browse_show_event_handler);
     web_file_browser_init();
   } else {

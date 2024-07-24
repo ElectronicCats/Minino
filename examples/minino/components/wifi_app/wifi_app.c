@@ -22,7 +22,12 @@ void wifi_ap_init(void) {
   ESP_ERROR_CHECK(ret);
   esp_log_level_set("wifi", ESP_LOG_NONE);
 
-  ESP_ERROR_CHECK(esp_event_loop_create_default());
+  ret = esp_event_loop_create_default();
+  if (ret != ESP_OK) {
+    ESP_LOGE(__func__, "Error creating event loop");
+    return;
+  }
+
   ESP_ERROR_CHECK(esp_netif_init());
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));

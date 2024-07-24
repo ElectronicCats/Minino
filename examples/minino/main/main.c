@@ -48,5 +48,5 @@ void app_main(void) {
 
   preferences_put_bool("wifi_connected", false);
   preferences_put_int("logo_show", 1);
-  cat_console_begin();
+  // cat_console_begin();
 }
