@@ -24,6 +24,20 @@
 #define SUB_BODY       "0"
 
 #define MAC_ADDRESS_FORMAT "%02x:%02x:%02x:%02x:%02x:%02x"
+#define CSV_MAC_FORMAT     "%s"
+#define CSV_SSID_FORMAT    "%s"
+#define CSV_AUTH_MODE      "%s"
+#define CSV_FIRST_SEEN     "%s"
+#define CSV_CHANNEL        "%d"
+#define CSV_FREQUENCY      "%u"
+#define CSV_RSSI           "%d"
+#define CSV_CURRENT_LAT    "%f"
+#define CSV_CURRENT_LON    "%f"
+#define CSV_ALTITUDE       "%f"
+#define CSV_ACCURACY       "%f"
+#define CSV_RCOIS          "%s"
+#define CSV_MFGRID         "%s"
+#define CSV_TYPE           "%s"
 
 #define WIFI_SCAN_INTERVAL_SEC 5
 
@@ -207,10 +221,11 @@ void wardriving_module_scan_task(void* pvParameters) {
       continue;
     }
 
-    ESP_LOGI(TAG, "Satellites in use: %d", gps->sats_in_use);
-    // if (gps->sats_in_use == 0) {
-    //   continue;
-    // }
+    ESP_LOGI(TAG, "Satellites in use: %d, valid: %s", gps->sats_in_use,
+             gps->valid ? "true" : "false");
+    if (gps->sats_in_use == 0) {
+      continue;
+    }
 
     wifi_scanner_ap_records_t* ap_records = wifi_scanner_get_ap_records();
     char* csv_line = malloc(1024);
@@ -221,14 +236,42 @@ void wardriving_module_scan_task(void* pvParameters) {
 
     // Append records to csv file
     for (int i = 0; i < ap_records->count; i++) {
-      sprintf(csv_line, "%s,%s,%s,%s,%d,%u,%d\n",
-              get_mac_address(ap_records->records[i].bssid),
+      char* mac_address_str = get_mac_address(ap_records->records[i].bssid);
+      char* auth_mode_str = get_auth_mode(ap_records->records[i].authmode);
+      char* full_date_time = get_full_date_time(gps);
+
+      sprintf(csv_line, "%s,%s,%s,%s,%d,%u,%d,%f,%f,%f,%f,%s,%s,%s\n",
+              /* MAC */
+              mac_address_str,
+              /* SSID */
               ap_records->records[i].ssid,
-              get_auth_mode(ap_records->records[i].authmode),
-              // "2021-09-01T00:00:00Z",
-              get_full_date_time(gps), ap_records->records[i].primary,
+              /* AuthMode */
+              auth_mode_str,
+              /* FirstSeen */
+              full_date_time,
+              /* Channel */
+              ap_records->records[i].primary,
+              /* Frequency */
               get_frequency(ap_records->records[i].primary),
-              ap_records->records[i].rssi);
+              /* RSSI */
+              ap_records->records[i].rssi,
+              /* CurrentLatitude */
+              gps->latitude,
+              /* CurrentLongitude */
+              gps->longitude,
+              /* AltitudeMeters */
+              gps->altitude,
+              /* AccuracyMeters */
+              0.0,
+              /* RCOIs */
+              "",
+              /* MfgrId */
+              "",
+              /* Type */
+              "WIFI");
+
+      free(mac_address_str);
+      free(full_date_time);
 
       ESP_LOGI(TAG, "CSV Line: %s", csv_line);
       strcat(csv_file, csv_line);
@@ -251,8 +294,9 @@ void wardriving_gps_event_handler_cb(void* event_data) {
   counter++;
   gps = gps_module_get_instance(event_data);
 
-  ESP_LOGI(TAG, "Date: %d/%d/%d", gps->date.year, gps->date.month,
-           gps->date.day);
+  ESP_LOGI(TAG, "Date: %d/%d/%d Time: %d:%d:%d", gps->date.year,
+           gps->date.month, gps->date.day, gps->tim.hour, gps->tim.minute,
+           gps->tim.second);
 }
 
 void wardriving_begin() {
