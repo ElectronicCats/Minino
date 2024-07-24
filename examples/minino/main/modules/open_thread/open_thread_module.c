@@ -11,28 +11,25 @@
 #include "thread_sniffer.h"
 uint8_t channel = 15;
 
-static app_screen_state_information_t app_screen_state_information = {
-    .in_app = false,
-    .app_selected = 0,
-};
-
-static void open_thread_module_app_selector();
 static void thread_broadcast_input(button_event_t button_pressed);
 static void thread_sniffer_input(button_event_t button_pressed);
-void open_thread_module_exit_submenu_cb();
+static void open_thread_module_exit_submenu_cb();
+static void open_thread_module_enter_submenu_cb(
+    screen_module_menu_t user_selection);
 
-void open_thread_module_begin(int app_selected) {
+void open_thread_module_begin() {
 #if !defined(CONFIG_OPEN_THREAD_MODULE_DEBUG)
   esp_log_level_set(TAG_OT_MODULE, ESP_LOG_NONE);
 #endif
   radio_selector_set_thread();
-  app_screen_state_information.app_selected = app_selected;
-  open_thread_module_app_selector();
+  menu_screens_register_enter_submenu_cb(open_thread_module_enter_submenu_cb);
+  menu_screens_register_exit_submenu_cb(open_thread_module_exit_submenu_cb);
 };
 
-static void open_thread_module_app_selector() {
+static void open_thread_module_enter_submenu_cb(
+    screen_module_menu_t user_selection) {
   oled_screen_clear();
-  switch (app_screen_state_information.app_selected) {
+  switch (user_selection) {
     case MENU_THREAD_BROADCAST:
       menu_screens_set_app_state(true, thread_broadcast_input);
       led_control_run_effect(led_control_zigbee_scanning);
@@ -42,13 +39,12 @@ static void open_thread_module_app_selector() {
       thread_broadcast_init();
       break;
     case MENU_THREAD_SNIFFER:
-      menu_screens_register_exit_submenu_cb(open_thread_module_exit_submenu_cb);
       thread_sniffer_init();
+      thread_sniffer_set_on_link_pcap_cb(NULL);
       break;
     case MENU_THREAD_SNIFFER_RUN:
       menu_screens_set_app_state(true, thread_sniffer_input);
       led_control_run_effect(led_control_zigbee_scanning);
-      // SET CB
       thread_sniffer_run();
       break;
     default:
@@ -56,9 +52,12 @@ static void open_thread_module_app_selector() {
   }
 }
 
-void open_thread_module_exit_submenu_cb() {
+static void open_thread_module_exit_submenu_cb() {
   screen_module_menu_t current_menu = menu_screens_get_current_menu();
   switch (current_menu) {
+    case MENU_THREAD_APPS:
+      menu_screens_unregister_submenu_cbs();
+      break;
     case MENU_THREAD_SNIFFER:
       screen_module_set_screen(MENU_THREAD_SNIFFER);
       esp_restart();

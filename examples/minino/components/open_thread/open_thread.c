@@ -284,7 +284,7 @@ otError openthread_udp_send(otUdpSocket* mSocket,
   return error;
 }
 
-otError openthread_enable_promiscous_mode(void* promiscuous_cb) {
+otError openthread_enable_promiscous_mode(otLinkPcapCallback promiscuous_cb) {
   esp_openthread_lock_acquire(portMAX_DELAY);
   otInstance* instance = esp_openthread_get_instance();
   otError error = OT_ERROR_NONE;

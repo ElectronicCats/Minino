@@ -1,3 +1,5 @@
+#include "thread_sniffer.h"
+
 #include <stdbool.h>
 #include <stdio.h>
 #include "esp_check.h"
@@ -5,7 +7,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#include "open_thread.h"
 #include "pcap.h"
 #include "sd_card.h"
 
@@ -32,6 +33,8 @@ typedef struct {
 } thread_pcap_handler_t;
 
 thread_pcap_handler_t thread_pcap = {0};
+
+otLinkPcapCallback on_link_pcap_cb = NULL;
 
 esp_err_t pcap_start();
 esp_err_t pcap_stop();
@@ -110,7 +113,9 @@ err:
 }
 
 void on_pcap_receive(const otRadioFrame* aFrame, bool aIsTx) {
-  // CALLBACK
+  if (on_link_pcap_cb != NULL) {
+    on_link_pcap_cb(aFrame, aIsTx, NULL);
+  }
   pcap_capture(aFrame->mPsdu, aFrame->mLength,
                aFrame->mInfo.mRxInfo.mTimestamp / 1000000U,
                aFrame->mInfo.mRxInfo.mTimestamp % 1000000u);
@@ -126,4 +131,8 @@ esp_err_t pcap_capture(void* payload,
     return ESP_FAIL;
   }
   return ESP_OK;
+}
+
+void thread_sniffer_set_on_link_pcap_cb(otLinkPcapCallback cb) {
+  on_link_pcap_cb = cb;
 }
