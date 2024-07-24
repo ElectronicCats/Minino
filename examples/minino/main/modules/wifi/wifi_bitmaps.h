@@ -337,4 +337,10 @@ static const unsigned char epd_bitmap_wifi_loading_4[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
+static const unsigned char* epd_bitmap_wifi_loading[4] = {
+    epd_bitmap_wifi_loading_1,
+    epd_bitmap_wifi_loading_2,
+    epd_bitmap_wifi_loading_3,
+    epd_bitmap_wifi_loading_4,
+};
 #endif  // WIFI_BITMAPS_H

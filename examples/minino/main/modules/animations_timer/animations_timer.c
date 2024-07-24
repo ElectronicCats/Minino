@@ -9,13 +9,12 @@ esp_timer_handle_t animations_timer_handle = NULL;
 void (*animations_timer_cb)(void) = NULL;
 
 static void periodic_animations_timer_callback() {
-  printf("Timer periódico activado\n");
   if (animations_timer_cb != NULL) {
     animations_timer_cb();
   }
 }
 
-void animations_timer_run(void* animation_cb, uint64_t period_us) {
+void animations_timer_run(void* animation_cb, uint32_t period_ms) {
   const esp_timer_create_args_t animations_timer_args = {
       .callback = &periodic_animations_timer_callback,
       .arg = NULL,
@@ -23,7 +22,7 @@ void animations_timer_run(void* animation_cb, uint64_t period_us) {
 
   esp_timer_create(&animations_timer_args, &animations_timer_handle);
   animations_timer_cb = animation_cb;
-  esp_timer_start_periodic(animations_timer_handle, period_us);
+  esp_timer_start_periodic(animations_timer_handle, period_ms * 1000);
 }
 
 void animations_timer_stop() {
