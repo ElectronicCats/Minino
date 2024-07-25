@@ -9,6 +9,7 @@
 #include "radio_selector.h"
 #include "thread_broadcast.h"
 #include "thread_sniffer.h"
+#include "thread_sniffer_screens.h"
 uint8_t channel = 15;
 
 static void thread_broadcast_input(button_event_t button_pressed);
@@ -39,8 +40,8 @@ static void open_thread_module_enter_submenu_cb(
       thread_broadcast_init();
       break;
     case MENU_THREAD_SNIFFER:
+      thread_sniffer_set_show_event_cb(thread_sniffer_show_event_handler);
       thread_sniffer_init();
-      thread_sniffer_set_on_link_pcap_cb(NULL);
       break;
     case MENU_THREAD_SNIFFER_RUN:
       menu_screens_set_app_state(true, thread_sniffer_input);

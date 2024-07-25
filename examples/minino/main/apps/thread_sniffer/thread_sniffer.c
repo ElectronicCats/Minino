@@ -5,6 +5,7 @@
 #include "esp_check.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/queue.h"
 #include "freertos/task.h"
 
 #include "pcap.h"
@@ -14,6 +15,9 @@
 
 #define PCAP_FILE_NAME_MAX_LEN  32
 #define PCAP_MEMORY_BUFFER_SIZE 4096
+
+#define THREAD_SNIFFER_QUEUE_SIZE                32
+#define THREAD_SNIFFER_PROCESS_PACKET_TIMEOUT_MS 100
 
 #define TAG "thread_sniffer"
 
@@ -32,35 +36,50 @@ typedef struct {
   pcap_memory_buffer_t pcap_buffer;
 } thread_pcap_handler_t;
 
+typedef struct {
+  void* payload;
+  uint32_t length;
+  uint32_t seconds;
+  uint32_t microseconds;
+} sniffer_packet_info_t;
+
 thread_pcap_handler_t thread_pcap = {0};
+thread_sniffer_show_event_cb_t thread_sniffer_show_event_cb = NULL;
+static QueueHandle_t packet_rx_queue = NULL;
 
-otLinkPcapCallback on_link_pcap_cb = NULL;
-
-esp_err_t pcap_start();
-esp_err_t pcap_stop();
-esp_err_t pcap_capture(void* payload,
-                       uint32_t length,
-                       uint32_t seconds,
-                       uint32_t microseconds);
+static esp_err_t pcap_start();
+static esp_err_t pcap_stop();
+static esp_err_t pcap_capture(void* payload,
+                              uint32_t length,
+                              uint32_t seconds,
+                              uint32_t microseconds);
 
 void on_pcap_receive(const otRadioFrame* aFrame, bool aIsTx);
+static void thread_sniffer_show_event(thread_sniffer_events_t event,
+                                      void* context);
+static void debug_handler_task();
 
 void thread_sniffer_init() {
   openthread_init();
   esp_log_level_set("OPENTHREAD", ESP_LOG_NONE);
+  packet_rx_queue =
+      xQueueCreate(THREAD_SNIFFER_QUEUE_SIZE, sizeof(sniffer_packet_info_t));
+  xTaskCreate(debug_handler_task, "debug_handler_task", 8192, NULL, 20, NULL);
 }
 void thread_sniffer_run() {
   pcap_start();
   printf("START SESSION\n");
+  thread_sniffer_show_event(THREAD_SNIFFER_START_EV, NULL);
   openthread_enable_promiscous_mode(&on_pcap_receive);
 }
 void thread_sniffer_stop() {
   printf("STOP SESSION\n");
   pcap_stop();
+  thread_sniffer_show_event(THREAD_SNIFFER_STOP_EV, NULL);
   openthread_disable_promiscous_mode();
 }
 
-esp_err_t pcap_start() {
+static esp_err_t pcap_start() {
   esp_err_t ret = ESP_OK;
   FILE* fp = NULL;
   if (sd_card_mount() == ESP_OK) {
@@ -88,6 +107,8 @@ esp_err_t pcap_start() {
       err, TAG, "Write header failed");
   thread_pcap.is_writing = true;
   ESP_LOGI(TAG, "open file successfully");
+
+  // show destination
   return ret;
 
 err:
@@ -95,10 +116,11 @@ err:
     fclose(fp);
   }
   thread_pcap.is_opened = false;
+  // show error
   return ret;
 }
 
-esp_err_t pcap_stop() {
+static esp_err_t pcap_stop() {
   esp_err_t ret = ESP_OK;
   ESP_GOTO_ON_FALSE(thread_pcap.is_opened, ESP_ERR_INVALID_STATE, err, TAG,
                     ".pcap file is already closed");
@@ -109,30 +131,47 @@ esp_err_t pcap_stop() {
   thread_pcap.link_type_set = false;
   thread_pcap.pcap_handle = NULL;
 err:
+  // show err
   return ret;
 }
 
 void on_pcap_receive(const otRadioFrame* aFrame, bool aIsTx) {
-  if (on_link_pcap_cb != NULL) {
-    on_link_pcap_cb(aFrame, aIsTx, NULL);
-  }
-  pcap_capture(aFrame->mPsdu, aFrame->mLength,
-               aFrame->mInfo.mRxInfo.mTimestamp / 1000000U,
-               aFrame->mInfo.mRxInfo.mTimestamp % 1000000u);
+  BaseType_t task;
+  xQueueSendToBackFromISR(packet_rx_queue, aFrame, &task);
 }
 
-esp_err_t pcap_capture(void* payload,
-                       uint32_t length,
-                       uint32_t seconds,
-                       uint32_t microseconds) {
+static esp_err_t pcap_capture(void* payload,
+                              uint32_t length,
+                              uint32_t seconds,
+                              uint32_t microseconds) {
   if (pcap_capture_packet(thread_pcap.pcap_handle, payload, length, seconds,
                           microseconds) != ESP_OK) {
     printf("PCAP CAPTURE FAILED\n");
     return ESP_FAIL;
   }
+  // show packet
   return ESP_OK;
 }
 
-void thread_sniffer_set_on_link_pcap_cb(otLinkPcapCallback cb) {
-  on_link_pcap_cb = cb;
+static void debug_handler_task() {
+  otRadioFrame packet;
+  while (xQueueReceive(packet_rx_queue, &packet, portMAX_DELAY) != pdFALSE) {
+    // thread_sniffer_show_event_cb(THREAD_SNIFFER_NEW_PACKET_EV,NULL);
+    pcap_capture(packet.mPsdu, packet.mLength,
+                 packet.mInfo.mRxInfo.mTimestamp / 1000000u,
+                 packet.mInfo.mRxInfo.mTimestamp % 1000000u);
+  }
+  ESP_LOGE("debug_handler_task", "Terminated");
+  vTaskDelete(NULL);
+}
+
+void thread_sniffer_set_show_event_cb(thread_sniffer_show_event_cb_t cb) {
+  thread_sniffer_show_event_cb = cb;
+}
+
+static void thread_sniffer_show_event(thread_sniffer_events_t event,
+                                      void* context) {
+  if (thread_sniffer_show_event_cb != NULL) {
+    thread_sniffer_show_event_cb(event, context);
+  }
 }
