@@ -14,8 +14,15 @@ void wifi_scanner_module_scan() {
   esp_log_level_set(TAG_WIFI_SCANNER_MODULE, ESP_LOG_NONE);
 #endif
 
+  esp_err_t err = esp_event_loop_create_default();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to create event loop: %s",
+             esp_err_to_name(err));
+  }
+
   ap_records.count = CONFIG_SCAN_MAX_AP;
   ESP_ERROR_CHECK(esp_wifi_start());
+  ESP_ERROR_CHECK(esp_wifi_clear_ap_list());
   ESP_ERROR_CHECK(esp_wifi_scan_start(NULL, true));
   ESP_LOGI(TAG_WIFI_SCANNER_MODULE, "Max AP number ap_info can hold = %u",
            ap_records.count);

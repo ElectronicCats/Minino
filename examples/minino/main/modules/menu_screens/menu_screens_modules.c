@@ -30,6 +30,9 @@ screen_module_menu_t previous_menu;
 screen_module_menu_t current_menu;
 uint8_t bluetooth_devices_count;
 
+static TaskHandle_t screen_saver_task = NULL;
+static bool screen_saver_running = false;
+
 static app_state_t app_state = {
     .in_app = false,
     .app_handler = NULL,
@@ -93,13 +96,61 @@ void run_tests() {
   ESP_ERROR_CHECK(test_menu_items());
 }
 
+static void show_splash_screen() {
+  screen_saver_running = true;
+  int start_x_position = 32;
+  int start_y_position = 16;
+  int x_direction = 1;
+  int y_direction = 1;
+
+  while (screen_saver_running) {
+    oled_screen_display_bitmap(epd_bitmap_minino_text_logo, start_x_position,
+                               start_y_position, 64, 32, OLED_DISPLAY_NORMAL);
+
+    start_x_position += x_direction;
+    start_y_position += y_direction;
+
+    if (start_x_position <= 0 || start_x_position >= 62) {
+      x_direction = -x_direction;
+    }
+    if (start_y_position <= 0 || start_y_position >= 32) {
+      y_direction = -y_direction;
+    }
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+
+  vTaskDelete(NULL);
+}
+
+void run_screen_saver() {
+  xTaskCreate(show_splash_screen, "show_splash_screen", 4096, NULL, 5,
+              &screen_saver_task);
+}
+
+void start_screen_saver() {
+  if (screen_saver_task == NULL) {
+    run_screen_saver();
+  } else {
+    screen_saver_running = true;
+    vTaskResume(screen_saver_task);
+  }
+}
+
+void stop_screen_saver() {
+  if (screen_saver_task != NULL) {
+    screen_saver_running = false;
+    // vTaskSuspend(screen_saver_task);
+  }
+}
+
 void show_logo() {
   // buzzer_set_freq(50);
   oled_screen_clear();
   leds_on();
   buzzer_play();
-  oled_screen_display_bitmap(epd_bitmap_face_logo, 46, 16, 32, 32,
-                             OLED_DISPLAY_NORMAL);
+  // oled_screen_display_bitmap(epd_bitmap_face_logo, 46, 16, 32, 32,
+  //                            OLED_DISPLAY_NORMAL);
+  run_screen_saver();
   vTaskDelay(500 / portTICK_PERIOD_MS);
   buzzer_stop();
 }
@@ -122,8 +173,10 @@ void screen_module_get_screen() {
         num_items++;
       }
     }
+    preferences_put_int("logo_show", 1);
     show_logo();
   } else {
+    preferences_put_int("logo_show", 0);
     preferences_put_int("MENUNUMBER", MENU_MAIN);
     menu_screens_display_menu();
   }

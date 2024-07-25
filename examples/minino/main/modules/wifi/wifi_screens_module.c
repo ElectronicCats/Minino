@@ -1,5 +1,6 @@
 #include "wifi_screens_module.h"
 #include <string.h>
+#include "animations_timer.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "modules/wifi/wifi_bitmaps.h"
@@ -210,8 +211,6 @@ void wifi_screens_module_display_sniffer_cb(sniffer_runtime_t* sniffer) {
     sprintf(packets_str, "%ld", sniffer->sniffed_packets);
     sprintf(channel_str, "%ld", sniffer->channel);
 
-    oled_screen_clear_line(64, 1, OLED_DISPLAY_NORMAL);
-
     uint8_t x_offset = 66;
     oled_screen_display_text("Packets", x_offset, 0, OLED_DISPLAY_INVERT);
     oled_screen_display_text(packets_str, x_offset, 1, OLED_DISPLAY_INVERT);
@@ -222,34 +221,17 @@ void wifi_screens_module_display_sniffer_cb(sniffer_runtime_t* sniffer) {
   }
 }
 
-void wifi_screens_display_sniffer_animation_task(void* pvParameter) {
-  while (true) {
-    oled_screen_display_bitmap(epd_bitmap_wifi_loading_1, 0, 0, 64, 64,
-                               OLED_DISPLAY_NORMAL);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-    oled_screen_display_bitmap(epd_bitmap_wifi_loading_2, 0, 0, 64, 64,
-                               OLED_DISPLAY_NORMAL);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-    oled_screen_display_bitmap(epd_bitmap_wifi_loading_3, 0, 0, 64, 64,
-                               OLED_DISPLAY_NORMAL);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-    oled_screen_display_bitmap(epd_bitmap_wifi_loading_4, 0, 0, 64, 64,
-                               OLED_DISPLAY_NORMAL);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-  }
-}
-
-void wifi_screens_module_create_sniffer_task() {
-  xTaskCreate(&wifi_screens_display_sniffer_animation_task,
-              "wifi_screens_display_sniffer_animation_task", 2048, NULL, 15,
-              &wifi_sniffer_animation_task_handle);
-  wifi_screens_sniffer_animation_stop();
+void wifi_screens_display_sniffer_animation_task() {
+  static uint8_t idx = 0;
+  oled_screen_display_bitmap(epd_bitmap_wifi_loading[idx], 0, 0, 64, 64,
+                             OLED_DISPLAY_NORMAL);
+  idx = ++idx > 3 ? 0 : idx;
 }
 
 void wifi_screens_sniffer_animation_start() {
-  vTaskResume(wifi_sniffer_animation_task_handle);
+  animations_timer_run(&wifi_screens_display_sniffer_animation_task, 100);
 }
 
 void wifi_screens_sniffer_animation_stop() {
-  vTaskSuspend(wifi_sniffer_animation_task_handle);
+  animations_timer_stop();
 }
