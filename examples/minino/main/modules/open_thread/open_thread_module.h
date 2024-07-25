@@ -5,4 +5,4 @@
  *
  * @param app_selected The selected app
  */
-void open_thread_module_begin(int app_selected);
+void open_thread_module_begin();

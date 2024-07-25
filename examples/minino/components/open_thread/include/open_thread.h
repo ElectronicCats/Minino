@@ -33,4 +33,7 @@ otError openthread_ipmaddr_subscribe(const char* address);
 
 otError openthread_ipmaddr_unsubscribe(const char* address);
 
+otError openthread_enable_promiscous_mode();
+otError openthread_disable_promiscous_mode();
+
 void openthread_factory_reset();

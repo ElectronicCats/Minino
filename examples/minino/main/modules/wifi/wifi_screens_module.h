@@ -85,7 +85,7 @@ void wifi_screens_module_display_sniffer_cb(sniffer_runtime_t* sniffer);
  *
  * @return void
  */
-void wifi_screens_display_sniffer_animation_task(void* pvParameter);
+void wifi_screens_display_sniffer_animation_task();
 
 /**
  * @brief Create the wifi sniffer task

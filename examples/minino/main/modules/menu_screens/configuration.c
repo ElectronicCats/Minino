@@ -110,29 +110,6 @@ static void config_module_state_machine(button_event_t button_pressed) {
           break;
         case BUTTON_RIGHT:
           ESP_LOGI(TAG_CONFIG_MODULE, "Selected item: %d", selected_item);
-          char wifi_ap[100];
-          char wifi_ssid[100];
-          sprintf(wifi_ap, "wifi%d", selected_item);
-          esp_err_t err = preferences_get_string(wifi_ap, wifi_ssid, 100);
-          if (err != ESP_OK) {
-            ESP_LOGW(__func__, "Error getting AP");
-            return;
-          }
-          ESP_LOGI(TAG_CONFIG_MODULE, "Selected AP: %s", wifi_ssid);
-          char wifi_password[100];
-          esp_err_t err_pass =
-              preferences_get_string(wifi_ssid, wifi_password, 100);
-          if (err_pass != ESP_OK) {
-            ESP_LOGW(__func__, "Error getting AP password");
-            return;
-          }
-          int connection = connect_wifi(wifi_ssid, wifi_password, NULL);
-          if (connection == 0) {
-            ESP_LOGI(TAG_CONFIG_MODULE, "Connected to AP: %s", wifi_ssid);
-          } else {
-            ESP_LOGW(TAG_CONFIG_MODULE, "Error connecting to AP: %s",
-                     wifi_ssid);
-          }
           break;
         case BUTTON_UP:
           selected_item =
