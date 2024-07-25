@@ -21,7 +21,7 @@ static TaskHandle_t zigbee_task_display_animation = NULL;
 static TaskHandle_t zigbee_task_sniffer = NULL;
 
 static void zigbee_module_app_selector();
-static void zigbee_module_state_machine(button_event_t button_pressed);
+static void zigbee_module_state_machine(button_event_state_t button_pressed);
 
 static void zigbee_module_display_records_cb(uint8_t* packet,
                                              uint8_t packet_length) {
@@ -72,17 +72,13 @@ void zigbee_module_app_selector() {
   }
 }
 
-void zigbee_module_state_machine(button_event_t button_pressed) {
-  uint8_t button_name = button_pressed >> 4;
-  uint8_t button_event = button_pressed & 0x0F;
-  ESP_LOGI(TAG_ZIGBEE_MODULE, "Zigbee engine state machine from team: %d %d",
-           button_name, button_event);
+void zigbee_module_state_machine(button_event_state_t button_pressed) {
   switch (app_screen_state_information.app_selected) {
     case MENU_ZIGBEE_SWITCH:
       ESP_LOGI(TAG_ZIGBEE_MODULE, "Zigbee Switch Entered");
-      switch (button_name) {
+      switch (button_pressed.button_pressed) {
         case BUTTON_RIGHT:
-          switch (button_event) {
+          switch (button_pressed.button_event) {
             case BUTTON_PRESS_DOWN:
               if (zigbee_switch_is_light_connected()) {
                 zigbee_screens_module_toogle_pressed();
@@ -97,7 +93,7 @@ void zigbee_module_state_machine(button_event_t button_pressed) {
           }
           break;
         case BUTTON_LEFT:
-          switch (button_event) {
+          switch (button_pressed.button_event) {
             case BUTTON_PRESS_DOWN:
               screen_module_set_screen(MENU_ZIGBEE_SWITCH);
               zigbee_switch_deinit();
@@ -110,9 +106,9 @@ void zigbee_module_state_machine(button_event_t button_pressed) {
       break;
     case MENU_ZIGBEE_SNIFFER:
       ESP_LOGI(TAG_ZIGBEE_MODULE, "Zigbee Sniffer Entered");
-      switch (button_name) {
+      switch (button_pressed.button_pressed) {
         case BUTTON_LEFT:
-          if (button_event == BUTTON_SINGLE_CLICK) {
+          if (button_pressed.button_event == BUTTON_SINGLE_CLICK) {
             led_control_stop();
             screen_module_set_screen(MENU_ZIGBEE_SNIFFER);
             esp_restart();
@@ -123,7 +119,7 @@ void zigbee_module_state_machine(button_event_t button_pressed) {
           break;
         case BUTTON_UP:
           ESP_LOGI(TAG_ZIGBEE_MODULE, "Button up pressed");
-          if (button_event == BUTTON_SINGLE_CLICK) {
+          if (button_pressed.button_event == BUTTON_SINGLE_CLICK) {
             current_channel = (current_channel == IEEE_SNIFFER_CHANNEL_MAX)
                                   ? IEEE_SNIFFER_CHANNEL_MIN
                                   : (current_channel + 1);
@@ -133,7 +129,7 @@ void zigbee_module_state_machine(button_event_t button_pressed) {
           break;
         case BUTTON_DOWN:
           ESP_LOGI(TAG_ZIGBEE_MODULE, "Button down pressed");
-          if (button_event == BUTTON_SINGLE_CLICK) {
+          if (button_pressed.button_event == BUTTON_SINGLE_CLICK) {
             current_channel = (current_channel == IEEE_SNIFFER_CHANNEL_MIN)
                                   ? IEEE_SNIFFER_CHANNEL_MAX
                                   : (current_channel - 1);

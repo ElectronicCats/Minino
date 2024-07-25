@@ -173,8 +173,10 @@ void screen_module_get_screen() {
         num_items++;
       }
     }
+    preferences_put_int("logo_show", 1);
     show_logo();
   } else {
+    preferences_put_int("logo_show", 0);
     preferences_put_int("MENUNUMBER", MENU_MAIN);
     menu_screens_display_menu();
   }
@@ -553,9 +555,8 @@ void handle_user_selection(screen_module_menu_t user_selection) {
     case MENU_ZIGBEE_SNIFFER:
       zigbee_module_begin(MENU_ZIGBEE_SNIFFER);
       break;
-    case MENU_THREAD_BROADCAST:
     case MENU_THREAD_APPS:
-      open_thread_module_begin(MENU_THREAD_APPS);
+      open_thread_module_begin();
       break;
     case MENU_MATTER_APPS:
     case MENU_ZIGBEE_LIGHT:

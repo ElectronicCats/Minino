@@ -71,7 +71,7 @@ static void deauth_run_scan_task() {
 
 static void deauth_handle_attacks() {
   wifi_attacks_module_stop();
-  switch (current_item) {
+  switch (menu_stadistics.attack) {
     case BROADCAST:
     case ROGUE_AP:
     case COMBINED:
@@ -244,8 +244,9 @@ static void deauth_module_cb_event_attacks(
     case BUTTON_RIGHT:
       menu_stadistics.attack = current_item;
       menu_screens_set_app_state(true, deauth_module_cb_event);
-      deauth_display_menu(current_item, menu_stadistics);
+
       current_item = 0;
+      deauth_display_menu(current_item, menu_stadistics);
       break;
     case BUTTON_LEFT:
       current_item = 0;

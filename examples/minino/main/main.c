@@ -48,8 +48,5 @@ void app_main(void) {
   ESP_LOGI(TAG, "Total time taken: %s seconds", time_str);
 
   preferences_put_bool("wifi_connected", false);
-  preferences_put_int("logo_show", 1);
   cat_console_begin();
-
-  deauth_module_begin();
 }

@@ -77,6 +77,9 @@ typedef enum {
   MENU_ZIGBEE_SNIFFER,
   /* Thread applications */
   MENU_THREAD_BROADCAST,
+  MENU_THREAD_SNIFFER,
+  /* Thread Sniffer App*/
+  MENU_THREAD_SNIFFER_RUN,
   /* GPS applications */
   MENU_GPS_WARDRIVING,
   MENU_GPS_DATE_TIME,
@@ -141,6 +144,8 @@ const char* menu_list[] = {
     "MENU_ZIGBEE_LIGHT",
     "MENU_ZIGBEE_SNIFFER",
     "MENU_THREAD_BROADCAST",
+    "MENU_THREAD_SNIFFER",
+    "MENU_THREAD_SNIFFER_RUN",
     "MENU_GPS_WARDRIVING",
     "MENU_GPS_DATE_TIME",
     "MENU_GPS_LOCATION",
@@ -187,7 +192,7 @@ const int next_menu_table[][MAX_NUM_ITEMS] = {
     // MENU_ZIGBEE_APPS
     {MENU_ZIGBEE_SPOOFING, MENU_ZIGBEE_SNIFFER},
     // MENU_THREAD_APPS
-    {MENU_THREAD_BROADCAST},
+    {MENU_THREAD_BROADCAST, MENU_THREAD_SNIFFER},
     // MENU_MATTER_APPS
     {MENU_MATTER_APPS},
     // MENU_GPS
@@ -232,6 +237,10 @@ const int next_menu_table[][MAX_NUM_ITEMS] = {
     {MENU_ZIGBEE_SNIFFER},
     // MENU_THREAD_BROADCAST
     {MENU_THREAD_BROADCAST},
+    // MENU_THREAD_SNIFFER
+    {MENU_THREAD_SNIFFER_RUN},
+    // MENU_THREAD_SNIFFER_RUN
+    {MENU_THREAD_SNIFFER_RUN},
     // MENU_GPS_WARDRIVING
     {MENU_GPS_WARDRIVING_START, MENU_GPS_WARDRIVING_HELP},
     // MENU_GPS_DATE_TIME
@@ -309,6 +318,8 @@ const int prev_menu_table[] = {
     MENU_ZIGBEE_SPOOFING,            // MENU_ZIGBEE_LIGHT
     MENU_ZIGBEE_APPS,                // MENU_ZIGBEE_SNIFFER
     MENU_THREAD_APPS,                // MENU_THREAD_BROADCAST
+    MENU_THREAD_APPS,                // MENU_THREAD_SNIFFER
+    MENU_THREAD_SNIFFER,             // MENU_THREAD_SNIFFER_RUN
     MENU_GPS,                        // MENU_GPS_WARDRIVING
     MENU_GPS,                        // MENU_GPS_DATE_TIME
     MENU_GPS,                        // MENU_GPS_LOCATION
@@ -532,6 +543,13 @@ char* zigbee_spoofing_items[] = {
 };
 
 char* thread_items[] = {
+    "Broadcast",
+    "Sniffer",
+    NULL,
+};
+
+char* thread_sniffer_items[] = {
+    "Run",
     NULL,
 };
 
@@ -704,7 +722,10 @@ char** menu_items[] = {
     empty_items,  // MENU_ZIGBEE_LIGHT
     empty_items,  // MENU_ZIGBEE_SNIFFER
     /* Thread applications */
-    empty_items,  // MENU_THREAD_BROADCAST
+    empty_items,           // MENU_THREAD_BROADCAST
+    thread_sniffer_items,  // MENU_THREAD_SNIFFER
+    /* Thread Sniffer*/
+    empty_items,
     /* GPS applications */
     wardriving_items,     // MENU_GPS_WARDRIVING
     gps_date_time_items,  // MENU_GPS_DATE_TIME

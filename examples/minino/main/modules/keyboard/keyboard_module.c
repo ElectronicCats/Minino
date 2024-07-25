@@ -80,10 +80,10 @@ static void button_event_cb(void* arg, void* data) {
       break;
     case BUTTON_RIGHT:
       if (button_event == BUTTON_PRESS_DOWN) {
-        if (preferences_get_int("logo_show", 1) == 1) {
+        int is_main = preferences_get_int("MENUNUMBER", MENU_MAIN);
+        if (preferences_get_int("logo_show", 1) == 1 && is_main == MENU_MAIN) {
           preferences_put_int("logo_show", 0);
           menu_screens_decrement_selected_item();
-
           break;
         }
         menu_screens_enter_submenu();

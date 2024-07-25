@@ -667,6 +667,7 @@ void wifi_module_keyboard_cb(button_event_t button_pressed) {
           int count_attacks = wifi_attacks_get_attack_count();
           wifi_screens_module_display_attack_selector(
               WIFI_ATTACKS_LIST, count_attacks, current_option);
+          break;
         }
         case BUTTON_RIGHT:
           if (button_event != BUTTON_SINGLE_CLICK) {
