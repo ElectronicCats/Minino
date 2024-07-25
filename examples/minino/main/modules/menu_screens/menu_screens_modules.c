@@ -112,6 +112,7 @@ void show_logo() {
   buzzer_stop();
   vTaskDelay(2000 / portTICK_PERIOD_MS);
   buzzer_play();
+  oled_screen_clear();
   oled_screen_display_bitmap(epd_bitmap_face_logo, 46, 16, 32, 32,
                              OLED_DISPLAY_NORMAL);
   char* version = malloc(20);
