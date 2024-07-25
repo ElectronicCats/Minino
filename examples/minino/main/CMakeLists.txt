@@ -23,7 +23,9 @@ set(modules "modules/led_events/led_events.c"
             "modules/web_file_browser/http_server/web_file_browser.c"
             "modules/web_file_browser/web_file_browser_module.c"
             "modules/web_file_browser/web_file_browser_screens.c"
-            "modules/animations_timer/animations_timer.c")
+            "modules/animations_timer/animations_timer.c"
+            "apps/wifi/deauth/deauth_screens.c"
+            "apps/wifi/deauth/deauth_module.c")
 
 set(drivers "drivers/oled_driver/oled_driver.c"
             "drivers/oled_driver/oled_driver_i2c.c"
@@ -54,6 +56,7 @@ idf_component_register(
                     "modules/cat_dos/"
                     "modules/gps/wardriving"
                     "modules/gps"
+                    "apps/wifi/deauth"
                     "modules/animations_timer/")
 
 # # Append all directories to INCLUDE_DIRS

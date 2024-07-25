@@ -98,19 +98,19 @@ void run_tests() {
 
 static void show_splash_screen() {
   screen_saver_running = true;
-  int start_x_position = 46;
+  int start_x_position = 32;
   int start_y_position = 16;
   int x_direction = 1;
   int y_direction = 1;
 
   while (screen_saver_running) {
-    oled_screen_display_bitmap(epd_bitmap_face_logo, start_x_position,
-                               start_y_position, 32, 32, OLED_DISPLAY_NORMAL);
+    oled_screen_display_bitmap(epd_bitmap_minino_text_logo, start_x_position,
+                               start_y_position, 64, 32, OLED_DISPLAY_NORMAL);
 
     start_x_position += x_direction;
     start_y_position += y_direction;
 
-    if (start_x_position <= 0 || start_x_position >= 94) {
+    if (start_x_position <= 0 || start_x_position >= 62) {
       x_direction = -x_direction;
     }
     if (start_y_position <= 0 || start_y_position >= 32) {

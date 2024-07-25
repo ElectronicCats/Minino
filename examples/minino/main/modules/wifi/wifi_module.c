@@ -9,6 +9,7 @@
 #include "keyboard_module.h"
 #include "string.h"
 
+#include "apps/wifi/deauth/include/deauth_module.h"
 #include "captive_portal.h"
 #include "led_events.h"
 #include "menu_screens_modules.h"
@@ -166,7 +167,8 @@ void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
       wifi_module_analizer_begin();
       break;
     case MENU_WIFI_DEAUTH:
-      wifi_module_deauth_begin();
+      deauth_module_begin();
+      // wifi_module_deauth_begin();
       break;
     case MENU_WIFI_DOS:
       oled_screen_clear();

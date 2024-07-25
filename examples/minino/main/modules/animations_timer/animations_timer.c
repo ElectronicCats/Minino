@@ -5,8 +5,9 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-esp_timer_handle_t animations_timer_handle = NULL;
-void (*animations_timer_cb)(void) = NULL;
+static esp_timer_handle_t animations_timer_handle = NULL;
+static void (*animations_timer_cb)(void) = NULL;
+static void periodic_animations_timer_callback();
 
 static void periodic_animations_timer_callback() {
   if (animations_timer_cb != NULL) {

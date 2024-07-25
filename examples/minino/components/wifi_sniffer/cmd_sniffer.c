@@ -197,6 +197,7 @@ static void sniffer_task(void* parameters) {
 static esp_err_t sniffer_stop(sniffer_runtime_t* sniffer) {
   sniffer->sniffed_packets = 0;
   if (sniffer_animation_stop_cb) {
+    printf("sniffer_animation_stop_cb\n");
     sniffer_animation_stop_cb();
   }
   esp_err_t ret = ESP_OK;
@@ -218,18 +219,23 @@ static esp_err_t sniffer_stop(sniffer_runtime_t* sniffer) {
       break;
   }
   ESP_LOGI(TAG, "stop promiscuous ok");
+  printf("sniffer->packets_to_sniff\n");
 
   /* stop sniffer local task */
   sniffer->is_running = false;
   /* wait for task over */
   if (sniffer->packets_to_sniff != 0) {
+    printf("sniffer->packets_to_sniff: %ld \n", sniffer->packets_to_sniff);
     xSemaphoreTake(sniffer->sem_task_over, portMAX_DELAY);
   }
+  printf("sniffer->xSemaphoreTake\n");
 
   vSemaphoreDelete(sniffer->sem_task_over);
+  printf("sniffer->vSemaphoreDelete\n");
   sniffer->sem_task_over = NULL;
   /* make sure to free all resources in the left items */
   UBaseType_t left_items = uxQueueMessagesWaiting(sniffer->work_queue);
+  printf("sniffer->uxQueueMessagesWaiting\n");
 
   sniffer_packet_info_t packet_info;
   while (left_items--) {
@@ -237,11 +243,14 @@ static esp_err_t sniffer_stop(sniffer_runtime_t* sniffer) {
                   pdMS_TO_TICKS(SNIFFER_PROCESS_PACKET_TIMEOUT_MS));
     free(packet_info.payload);
   }
+  printf("sniffer->packet_info\n");
   vQueueDelete(sniffer->work_queue);
+  printf("sniffer->vQueueDelete\n");
   sniffer->work_queue = NULL;
 
   /* stop pcap session */
   sniff_packet_stop();
+  printf("sniffer->sniff_packet_stop\n");
 err:
   return ret;
 }

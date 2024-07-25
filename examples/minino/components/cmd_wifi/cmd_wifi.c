@@ -36,6 +36,7 @@ const int CONNECTED_BIT = BIT0;
 static app_callback callback_connection;
 static bool save_credentials = false;
 static int connect(int argc, char** argv);
+static bool wifi_join(const char* ssid, const char* pass, int timeout_ms);
 
 /** Arguments used by 'join' function */
 static struct {
@@ -55,30 +56,46 @@ static struct {
   struct arg_end* end;
 } connect_args;
 
-static void cmd_wifi_connect_index(int argc, char** argv) {
+static int cmd_wifi_connect_index(int argc, char** argv) {
   int nerrors = arg_parse(argc, argv, (void**) &connect_args);
   if (nerrors != 0) {
     arg_print_errors(stderr, connect_args.end, argv[0]);
     ESP_LOGW(__func__, "Error parsing arguments");
-    return;
+    return 1;
   }
+  int count = preferences_get_int("count_ap", 0);
   int index = atoi(connect_args.index->sval[0]);
+  if (index > count) {
+    ESP_LOGW(__func__, "Index out of range");
+    return 1;
+  }
   char wifi_ap[100];
   char wifi_ssid[100];
   sprintf(wifi_ap, "wifi%d", index);
   esp_err_t err = preferences_get_string(wifi_ap, wifi_ssid, 100);
   if (err != ESP_OK) {
     ESP_LOGW(__func__, "Error getting AP");
-    return;
+    return 1;
   }
   char wifi_pass[100];
   err = preferences_get_string(wifi_ssid, wifi_pass, 100);
   if (err != ESP_OK) {
     ESP_LOGW(__func__, "Error getting AP");
-    return;
+    return 1;
   }
-  ESP_LOGI(__func__, "Connecting to '%s %s'", wifi_ssid, wifi_pass);
-  connect_wifi(wifi_ssid, wifi_pass, NULL);
+
+  join_args.ssid->sval[0] = wifi_ssid;
+  join_args.password->sval[0] = wifi_pass;
+  join_args.timeout->ival[0] = JOIN_TIMEOUT_MS;
+
+  printf("ssid: %s\n", join_args.ssid->sval[0]);
+  printf("password: %s\n", join_args.password->sval[0]);
+  const char** sniffer_argv[] = {"join", join_args.ssid->sval[0],
+                                 join_args.password->sval[0]};
+  uint8_t sniffer_argc = 3;
+  connect(sniffer_argc, (char**) sniffer_argv);
+  connect(sniffer_argc, (char**) sniffer_argv);
+  return 0;
 }
 
 static void cmd_wifi_save_credentials(int argc, char** argv) {
