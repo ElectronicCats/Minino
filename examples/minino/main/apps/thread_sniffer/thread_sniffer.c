@@ -46,6 +46,7 @@ typedef struct {
 thread_pcap_handler_t thread_pcap = {0};
 thread_sniffer_show_event_cb_t thread_sniffer_show_event_cb = NULL;
 static QueueHandle_t packet_rx_queue = NULL;
+static uint32_t packets_count = 0;
 
 static esp_err_t pcap_start();
 static esp_err_t pcap_stop();
@@ -69,7 +70,9 @@ void thread_sniffer_init() {
 void thread_sniffer_run() {
   pcap_start();
   printf("START SESSION\n");
+  packets_count = 0;
   thread_sniffer_show_event(THREAD_SNIFFER_START_EV, NULL);
+  thread_sniffer_show_event_cb(THREAD_SNIFFER_NEW_PACKET_EV, packets_count);
   openthread_enable_promiscous_mode(&on_pcap_receive);
 }
 void thread_sniffer_stop() {
@@ -82,8 +85,10 @@ void thread_sniffer_stop() {
 static esp_err_t pcap_start() {
   esp_err_t ret = ESP_OK;
   FILE* fp = NULL;
+  bool save_in_sd = false;
   if (sd_card_mount() == ESP_OK) {
     fp = fopen("/sdcard/thread.pcap", "w");
+    save_in_sd = true;
   } else {
     thread_pcap.pcap_buffer.buffer =
         calloc(PCAP_MEMORY_BUFFER_SIZE, sizeof(char));
@@ -108,7 +113,7 @@ static esp_err_t pcap_start() {
   thread_pcap.is_writing = true;
   ESP_LOGI(TAG, "open file successfully");
 
-  // show destination
+  thread_sniffer_show_event(THREAD_SNIFFER_DESTINATION_EV, &save_in_sd);
   return ret;
 
 err:
@@ -156,7 +161,8 @@ static esp_err_t pcap_capture(void* payload,
 static void debug_handler_task() {
   otRadioFrame packet;
   while (xQueueReceive(packet_rx_queue, &packet, portMAX_DELAY) != pdFALSE) {
-    // thread_sniffer_show_event_cb(THREAD_SNIFFER_NEW_PACKET_EV,NULL);
+    packets_count++;
+    thread_sniffer_show_event_cb(THREAD_SNIFFER_NEW_PACKET_EV, packets_count);
     pcap_capture(packet.mPsdu, packet.mLength,
                  packet.mInfo.mRxInfo.mTimestamp / 1000000u,
                  packet.mInfo.mRxInfo.mTimestamp % 1000000u);
