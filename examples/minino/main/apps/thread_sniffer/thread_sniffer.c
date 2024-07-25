@@ -86,7 +86,8 @@ static esp_err_t pcap_start() {
   esp_err_t ret = ESP_OK;
   FILE* fp = NULL;
   bool save_in_sd = false;
-  if (sd_card_mount() == ESP_OK) {
+  ret = sd_card_mount();
+  if (ret == ESP_OK || ret == ESP_ERR_ALREADY_MOUNTED) {
     fp = fopen("/sdcard/thread.pcap", "w");
     save_in_sd = true;
   } else {
@@ -158,6 +159,21 @@ static esp_err_t pcap_capture(void* payload,
   return ESP_OK;
 }
 
+static void thread_packet_debug(const otRadioFrame* aFrame) {
+  otLogHexDumpInfo info;
+
+  info.mDataBytes = aFrame->mPsdu;
+  info.mDataLength = aFrame->mLength;
+  info.mTitle = "New Packet";
+  info.mIterator = 0;
+
+  printf("\n");
+
+  while (otLogGenerateNextHexDumpLine(&info) == OT_ERROR_NONE) {
+    printf("%s\n", info.mLine);
+  }
+}
+
 static void debug_handler_task() {
   otRadioFrame packet;
   while (xQueueReceive(packet_rx_queue, &packet, portMAX_DELAY) != pdFALSE) {
@@ -166,6 +182,7 @@ static void debug_handler_task() {
     pcap_capture(packet.mPsdu, packet.mLength,
                  packet.mInfo.mRxInfo.mTimestamp / 1000000u,
                  packet.mInfo.mRxInfo.mTimestamp % 1000000u);
+    thread_packet_debug(&packet);
   }
   ESP_LOGE("debug_handler_task", "Terminated");
   vTaskDelete(NULL);
