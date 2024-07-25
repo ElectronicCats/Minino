@@ -34,7 +34,6 @@ void app_main(void) {
   leds_init();
   preferences_begin();
   sd_card_begin();
-  wardriving_begin();
   keyboard_module_begin();
   menu_screens_begin();
   reboot_counter();

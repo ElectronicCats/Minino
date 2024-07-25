@@ -5,6 +5,7 @@
 #include "menu_screens_modules.h"
 #include "oled_screen.h"
 #include "preferences.h"
+#include "wardriving_module.h"
 
 // #define TIME_ZONE (+3)    // Mexico City time zone
 #define YEAR_BASE (2000)  // date in GPS starts from 2000
@@ -17,8 +18,7 @@ gps_event_callback_t gps_event_callback = NULL;
 /**
  * @brief Signal strength levels based on the number of satellites in use
  */
-const char* GPS_SIGNAL_STRENGTH[] = {"None", "Weak", "Moderate", "Strong",
-                                     "Very Strong"};
+const char* GPS_SIGNAL_STRENGTH[] = {"None", "Weak", "Moderate", "Strong"};
 
 /**
  * @brief Time zones in UTC
@@ -39,8 +39,6 @@ char* get_signal_strength(gps_t* gps) {
     return (char*) GPS_SIGNAL_STRENGTH[1];
   } else if (gps->sats_in_use >= 5 && gps->sats_in_use <= 8) {
     return (char*) GPS_SIGNAL_STRENGTH[2];
-  } else if (gps->sats_in_use >= 9 && gps->sats_in_use <= 12) {
-    return (char*) GPS_SIGNAL_STRENGTH[3];
   } else {
     return (char*) GPS_SIGNAL_STRENGTH[4];
   }
@@ -173,8 +171,7 @@ void gps_module_exit_submenu_cb() {
 void gps_module_enter_submenu_cb(screen_module_menu_t user_selection) {
   switch (user_selection) {
     case MENU_GPS_WARDRIVING:
-      oled_screen_clear();
-      menu_screens_display_text_banner("In development");
+      wardriving_module_begin();
       break;
     case MENU_GPS_DATE_TIME:
     case MENU_GPS_LOCATION:

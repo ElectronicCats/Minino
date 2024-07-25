@@ -5,4 +5,4 @@
  *
  * @return void
  */
-void wardriving_begin();
+void wardriving_module_begin();

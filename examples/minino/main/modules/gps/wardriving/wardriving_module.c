@@ -5,8 +5,10 @@
 #include "freertos/task.h"
 
 #include "gps_module.h"
+#include "menu_screens_modules.h"
 #include "sd_card.h"
 #include "wardriving_module.h"
+#include "wardriving_screens_module.h"
 #include "wifi_controller.h"
 #include "wifi_scanner.h"
 
@@ -203,11 +205,13 @@ uint16_t get_frequency(uint8_t primary) {
 void wardriving_module_scan_task(void* pvParameters) {
   wifi_driver_init_sta();
   uint16_t csv_lines = 2;  // Two header lines
+  uint16_t wifi_scanned_packets = 0;
   char* csv_file = malloc(CSV_FILE_SIZE);
   sprintf(csv_file, "%s\n", csv_header);  // Append header to csv file
 
   while (true) {
     wifi_scanner_module_scan();
+    wardriving_screens_module_scanning(wifi_scanned_packets, "0");
     vTaskDelay(5000 / portTICK_PERIOD_MS);
 
     if (gps == NULL) {
@@ -226,6 +230,7 @@ void wardriving_module_scan_task(void* pvParameters) {
     // Append records to csv file
     for (int i = 0; i < ap_records->count; i++) {
       csv_lines++;
+      wifi_scanned_packets++;
       char* mac_address_str = get_mac_address(ap_records->records[i].bssid);
       char* auth_mode_str = get_auth_mode(ap_records->records[i].authmode);
       char* full_date_time = get_full_date_time(gps);
@@ -286,18 +291,51 @@ void wardriving_gps_event_handler_cb(void* event_data) {
   gps = gps_module_get_instance(event_data);
 }
 
-void wardriving_begin() {
+void wardriving_module_exit_submenu_cb() {
+  screen_module_menu_t current_menu = menu_screens_get_current_menu();
+
+  switch (current_menu) {
+    case MENU_GPS_WARDRIVING:
+      if (wardriving_module_scan_task_handle != NULL) {
+        vTaskDelete(wardriving_module_scan_task_handle);
+        wardriving_module_scan_task_handle = NULL;
+      }
+      break;
+    case MENU_GPS_WARDRIVING_START:
+      gps_module_stop_read();
+      vTaskSuspend(wardriving_module_scan_task_handle);
+      break;
+    default:
+      break;
+  }
+}
+
+void wardriving_module_enter_submenu_cb(screen_module_menu_t user_selection) {
+  switch (user_selection) {
+    case MENU_GPS_WARDRIVING_START:
+      wardriving_screens_module_loading_text();
+      gps_module_start_read();
+      vTaskResume(wardriving_module_scan_task_handle);
+      break;
+    default:
+      break;
+  }
+}
+
+void wardriving_module_begin() {
 #if !defined(CONFIG_WARDRIVING_MODULE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
+  ESP_LOGI(TAG, "Wardriving module begin");
+  menu_screens_register_enter_submenu_cb(wardriving_module_enter_submenu_cb);
+  menu_screens_register_exit_submenu_cb(wardriving_module_exit_submenu_cb);
 
   sd_card_mount();
-  // wifi_driver_init_sta();
-  // wifi_scanner_module_scan();
   xTaskCreate(wardriving_module_scan_task, "wardriving_module_scan_task", 4096,
               NULL, 5, &wardriving_module_scan_task_handle);
+  vTaskSuspend(wardriving_module_scan_task_handle);
   gps_module_register_cb(wardriving_gps_event_handler_cb);
-  gps_module_start_read();
+  // gps_module_start_read();
   return;
 
   // wifi_scanner_ap_records_t* ap_records = wifi_scanner_get_ap_records();

@@ -17,9 +17,9 @@ set(modules "modules/led_events/led_events.c"
             "modules/cat_dos/cat_console.c"
             "modules/cat_dos/cmd_catdos.c"
             "modules/menu_screens/configuration.c"
-            "modules/gps/wardriving/wardriving_module.c"
             "modules/gps/gps_module.c"
             "modules/gps/wardriving/wardriving_module.c"
+            "modules/gps/wardriving/wardriving_screens_module.c"
             "modules/web_file_browser/http_server/web_file_browser.c"
             "modules/web_file_browser/web_file_browser_module.c"
             "modules/web_file_browser/web_file_browser_screens.c")
@@ -51,8 +51,8 @@ idf_component_register(
                     "modules/web_file_browser"
                     "modules/ota"
                     "modules/cat_dos/"
-                    "modules/gps/wardriving"
-                    "modules/gps")
+                    "modules/gps"
+                    "modules/gps/wardriving")
 
 # # Append all directories to INCLUDE_DIRS
 
