@@ -23,6 +23,7 @@ set(modules "modules/led_events/led_events.c"
             "modules/web_file_browser/http_server/web_file_browser.c"
             "modules/web_file_browser/web_file_browser_module.c"
             "modules/web_file_browser/web_file_browser_screens.c"
+            "modules/animations_task/animations_task.c"
             "apps/thread_sniffer/thread_sniffer.c"
             "apps/thread_sniffer/thread_sniffer_screens.c")
 
@@ -39,6 +40,7 @@ idf_component_register(
                     modules/web_file_browser/http_server/style.css
                     INCLUDE_DIRS
                     "."
+                    "modules/animations_task"
                     "modules/keyboard/"
                     "modules/menu_screens/"
                     "drivers/oled_driver/"

@@ -462,7 +462,6 @@ void menu_screens_exit_submenu() {
            menu_list[current_menu]);
 
   if (exit_submenu_cb != NULL) {
-    printf("CB\n");
     exit_submenu_cb();
   }
 

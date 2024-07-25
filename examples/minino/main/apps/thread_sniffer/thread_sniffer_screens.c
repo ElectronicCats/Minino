@@ -1,27 +1,24 @@
 #include "thread_sniffer_screens.h"
 
+#include "animations_task.h"
 #include "oled_screen.h"
+#include "thread_sniffer_bitmaps.h"
 
 static void thread_sniffer_scanning_animation() {
-  // animation
-}
-
-static void thread_sniffer_start_scanning_animation() {
-  // start animation
-}
-
-static void thread_sniffer_stop_scanning_animation() {
-  // stop animation
+  static uint8_t frame = 0;
+  oled_screen_display_bitmap(thread_sniffer_bitmap_arr[frame], 0, 0, 32, 32,
+                             OLED_DISPLAY_NORMAL);
+  frame = ++frame > 3 ? 0 : frame;
 }
 
 void thread_sniffer_show_event_handler(thread_sniffer_events_t event,
                                        void* context) {
   switch (event) {
     case THREAD_SNIFFER_START_EV:
-      thread_sniffer_start_scanning_animation();
+      animations_task_run(thread_sniffer_scanning_animation, 100, NULL);
       break;
     case THREAD_SNIFFER_STOP_EV:
-      thread_sniffer_stop_scanning_animation();
+      animations_task_stop();
       break;
     case THREAD_SNIFFER_ERROR_EV:
       // thread_sniffer_show_error(context);
