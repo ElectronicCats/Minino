@@ -40,7 +40,7 @@ char* get_signal_strength(gps_t* gps) {
   } else if (gps->sats_in_use >= 5 && gps->sats_in_use <= 8) {
     return (char*) GPS_SIGNAL_STRENGTH[2];
   } else {
-    return (char*) GPS_SIGNAL_STRENGTH[4];
+    return (char*) GPS_SIGNAL_STRENGTH[3];
   }
 }
 
@@ -131,11 +131,12 @@ static void gps_event_handler(void* event_handler_arg,
   }
 }
 
-void gps_module_start_read() {
+void gps_module_start_scan() {
 #if !defined(CONFIG_GPS_MODULE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
 
+  ESP_LOGI(TAG, "Start reading GPS");
   /* NMEA parser configuration */
   nmea_parser_config_t config = NMEA_PARSER_CONFIG_DEFAULT();
   /* init NMEA parser library */
@@ -145,6 +146,7 @@ void gps_module_start_read() {
 }
 
 void gps_module_stop_read() {
+  ESP_LOGI(TAG, "Stop reading GPS");
   /* unregister event handler */
   nmea_parser_remove_handler(nmea_hdl, gps_event_handler);
   /* deinit NMEA parser library */
@@ -155,6 +157,12 @@ void gps_module_exit_submenu_cb() {
   screen_module_menu_t current_menu = menu_screens_get_current_menu();
 
   switch (current_menu) {
+    // case MENU_GPS_WARDRIVING:
+    //   wardriving_module_end();
+    //   break;
+    case MENU_GPS_WARDRIVING_START:
+      wardriving_module_stop_scan();
+      break;
     case MENU_GPS:
       menu_screens_unregister_submenu_cbs();
       break;
@@ -170,13 +178,16 @@ void gps_module_exit_submenu_cb() {
 
 void gps_module_enter_submenu_cb(screen_module_menu_t user_selection) {
   switch (user_selection) {
-    case MENU_GPS_WARDRIVING:
-      wardriving_module_begin();
+    // case MENU_GPS_WARDRIVING:
+    //   wardriving_module_begin();
+    //   break;
+    case MENU_GPS_WARDRIVING_START:
+      wardriving_module_start_scan();
       break;
     case MENU_GPS_DATE_TIME:
     case MENU_GPS_LOCATION:
     case MENU_GPS_SPEED:
-      gps_module_start_read();
+      gps_module_start_scan();
       break;
     default:
       break;

@@ -21,7 +21,7 @@ void gps_module_begin();
  * but in that case, you need to register the event handler manually using
  * `gps_module_register_cb`.
  */
-void gps_module_start_read();
+void gps_module_start_scan();
 
 /**
  * @brief Stop reading the GPS module

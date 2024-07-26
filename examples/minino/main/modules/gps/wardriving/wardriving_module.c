@@ -291,89 +291,26 @@ void wardriving_gps_event_handler_cb(void* event_data) {
   gps = gps_module_get_instance(event_data);
 }
 
-void wardriving_module_exit_submenu_cb() {
-  screen_module_menu_t current_menu = menu_screens_get_current_menu();
-
-  switch (current_menu) {
-    case MENU_GPS_WARDRIVING:
-      if (wardriving_module_scan_task_handle != NULL) {
-        vTaskDelete(wardriving_module_scan_task_handle);
-        wardriving_module_scan_task_handle = NULL;
-      }
-      break;
-    case MENU_GPS_WARDRIVING_START:
-      gps_module_stop_read();
-      vTaskSuspend(wardriving_module_scan_task_handle);
-      break;
-    default:
-      break;
-  }
-}
-
-void wardriving_module_enter_submenu_cb(screen_module_menu_t user_selection) {
-  switch (user_selection) {
-    case MENU_GPS_WARDRIVING_START:
-      wardriving_screens_module_loading_text();
-      gps_module_start_read();
-      vTaskResume(wardriving_module_scan_task_handle);
-      break;
-    default:
-      break;
-  }
-}
-
-void wardriving_module_begin() {
+void wardriving_module_start_scan() {
 #if !defined(CONFIG_WARDRIVING_MODULE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
-  ESP_LOGI(TAG, "Wardriving module begin");
-  menu_screens_register_enter_submenu_cb(wardriving_module_enter_submenu_cb);
-  menu_screens_register_exit_submenu_cb(wardriving_module_exit_submenu_cb);
+  ESP_LOGI(TAG, "Start scan");
 
   sd_card_mount();
   xTaskCreate(wardriving_module_scan_task, "wardriving_module_scan_task", 4096,
               NULL, 5, &wardriving_module_scan_task_handle);
-  vTaskSuspend(wardriving_module_scan_task_handle);
   gps_module_register_cb(wardriving_gps_event_handler_cb);
-  // gps_module_start_read();
-  return;
+  wardriving_screens_module_loading_text();
+  gps_module_start_scan();
+}
 
-  // wifi_scanner_ap_records_t* ap_records = wifi_scanner_get_ap_records();
-
-  // char* csv_line = malloc(1024);
-  // char* csv_file = malloc(1024);
-
-  // // Append header to csv file
-  // sprintf(csv_file, "%s\n", csv_header);
-
-  // // Append records to csv file
-  // for (int i = 0; i < ap_records->count; i++) {
-  //   sprintf(csv_line, "%s,%s,%s,%s,%d,%u,%d\n",
-  //           get_mac_address(ap_records->records[i].bssid),
-  //           ap_records->records[i].ssid,
-  //           get_auth_mode(ap_records->records[i].authmode),
-  //           "2021-09-01T00:00:00Z", ap_records->records[i].primary,
-  //           get_frequency(ap_records->records[i].primary),
-  //           ap_records->records[i].rssi);
-
-  //   ESP_LOGI(TAG, "CSV Line: %s", csv_line);
-  //   strcat(csv_file, csv_line);
-  // }
-  // sd_card_write_file(FILE_NAME, csv_file);
-  // free(csv_line);
-  // free(csv_file);
-
-  // for (int i = 0; i < ap_records->count; i++) {
-  //   ESP_LOGI(TAG, "SSID \t\t%s", ap_records->records[i].ssid);
-  //   ESP_LOGI(TAG, "RSSI \t\t%d", ap_records->records[i].rssi);
-  //   print_auth_mode(ap_records->records[i].authmode);
-  //   if (ap_records->records[i].authmode != WIFI_AUTH_WEP) {
-  //     print_cipher_type(ap_records->records[i].pairwise_cipher,
-  //                       ap_records->records[i].group_cipher);
-  //   }
-  //   ESP_LOGI(TAG, "Channel \t\t%d", ap_records->records[i].primary);
-  // }
-
-  sd_card_read_file(FILE_NAME);
-  sd_card_unmount();
+void wardriving_module_stop_scan() {
+  ESP_LOGI(TAG, "Stop scan");
+  gps_module_stop_read();
+  if (wardriving_module_scan_task_handle != NULL) {
+    vTaskDelete(wardriving_module_scan_task_handle);
+    wardriving_module_scan_task_handle = NULL;
+    ESP_LOGI(TAG, "Task deleted");
+  }
 }
