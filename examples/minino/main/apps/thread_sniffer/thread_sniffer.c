@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 #include "esp_check.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
@@ -20,6 +21,23 @@
 #define THREAD_SNIFFER_PROCESS_PACKET_TIMEOUT_MS 100
 
 #define TAG "thread_sniffer"
+
+#define GOTO_ON_ERROR(x, goto_tag, err_tag) \
+  do {                                      \
+    if (unlikely((x) != ESP_OK)) {          \
+      ret = x;                              \
+      strcpy(err_str, err_tag);             \
+      goto goto_tag;                        \
+    }                                       \
+  } while (0)
+
+#define GOTO_ON_FALSE(a, goto_tag, err_tag) \
+  do {                                      \
+    if (unlikely(!(a))) {                   \
+      strcpy(err_str, err_tag);             \
+      goto goto_tag;                        \
+    }                                       \
+  } while (0)
 
 typedef struct {
   char* buffer;
@@ -84,8 +102,10 @@ void thread_sniffer_stop() {
 
 static esp_err_t pcap_start() {
   esp_err_t ret = ESP_OK;
+  char* err_str = malloc(30);
   FILE* fp = NULL;
   bool save_in_sd = false;
+  // GOTO_ON_ERROR(sd_card_mount(),fatal_err,"SD IS ALREADY MOUNTED");
   ret = sd_card_mount();
   if (ret == ESP_OK || ret == ESP_ERR_ALREADY_MOUNTED) {
     fp = fopen("/sdcard/thread.pcap", "w");
@@ -93,51 +113,51 @@ static esp_err_t pcap_start() {
   } else {
     thread_pcap.pcap_buffer.buffer =
         calloc(PCAP_MEMORY_BUFFER_SIZE, sizeof(char));
-    ESP_GOTO_ON_FALSE(thread_pcap.pcap_buffer.buffer, ESP_ERR_NO_MEM, err, TAG,
-                      "pcap buffer calloc failed");
+    GOTO_ON_FALSE(thread_pcap.pcap_buffer.buffer, fatal_err,
+                  "pcap buffer calloc failed");
     fp = fmemopen(thread_pcap.pcap_buffer.buffer, PCAP_MEMORY_BUFFER_SIZE,
                   "wb+");
   }
-  ESP_GOTO_ON_FALSE(fp, ESP_FAIL, err, TAG, "open file failed");
+  GOTO_ON_FALSE(fp, fatal_err, "open file failed");
   pcap_config_t pcap_cfg = {
       .fp = fp,
       .major_version = PCAP_DEFAULT_VERSION_MAJOR,
       .minor_version = PCAP_DEFAULT_VERSION_MINOR,
       .time_zone = PCAP_DEFAULT_TIME_ZONE_GMT,
   };
-  ESP_GOTO_ON_ERROR(pcap_new_session(&pcap_cfg, &thread_pcap.pcap_handle), err,
-                    TAG, "pcap init failed");
+  GOTO_ON_ERROR(pcap_new_session(&pcap_cfg, &thread_pcap.pcap_handle),
+                fatal_err, "pcap init failed");
   thread_pcap.is_opened = true;
-  ESP_GOTO_ON_ERROR(
+  GOTO_ON_ERROR(
       pcap_write_header(thread_pcap.pcap_handle, THREAD_SNIFFER_PCAP_LINKTYPE),
-      err, TAG, "Write header failed");
+      fatal_err, "Write header failed");
   thread_pcap.is_writing = true;
-  ESP_LOGI(TAG, "open file successfully");
 
   thread_sniffer_show_event(THREAD_SNIFFER_DESTINATION_EV, &save_in_sd);
-  return ret;
-
-err:
+  free(err_str);
+  return ESP_OK;
+fatal_err:
   if (fp) {
     fclose(fp);
   }
   thread_pcap.is_opened = false;
-  // show error
+  thread_sniffer_show_event_cb(THREAD_SNIFFER_FATAL_ERROR_EV, err_str);
   return ret;
 }
 
 static esp_err_t pcap_stop() {
   esp_err_t ret = ESP_OK;
-  ESP_GOTO_ON_FALSE(thread_pcap.is_opened, ESP_ERR_INVALID_STATE, err, TAG,
-                    ".pcap file is already closed");
-  ESP_GOTO_ON_ERROR(pcap_del_session(thread_pcap.pcap_handle), err, TAG,
-                    "stop pcap session failed");
+  char* err_str = malloc(30);
+  GOTO_ON_ERROR(pcap_del_session(thread_pcap.pcap_handle), fatal_err,
+                "stop pcap session failed");
   thread_pcap.is_opened = false;
   thread_pcap.is_writing = false;
   thread_pcap.link_type_set = false;
   thread_pcap.pcap_handle = NULL;
-err:
-  // show err
+  free(err_str);
+  return ESP_OK;
+fatal_err:
+  thread_sniffer_show_event(THREAD_SNIFFER_FATAL_ERROR_EV, err_str);
   return ret;
 }
 
@@ -155,7 +175,6 @@ static esp_err_t pcap_capture(void* payload,
     printf("PCAP CAPTURE FAILED\n");
     return ESP_FAIL;
   }
-  // show packet
   return ESP_OK;
 }
 

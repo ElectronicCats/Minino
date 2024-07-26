@@ -1,7 +1,11 @@
 #include "thread_sniffer_screens.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 #include "animations_task.h"
 #include "oled_screen.h"
+#include "open_thread_module.h"
 #include "thread_sniffer_bitmaps.h"
 
 static void thread_sniffer_scanning_animation() {
@@ -25,6 +29,19 @@ static void thread_sniffer_show_new_packet(uint32_t packets_count) {
   free(str);
 }
 
+static void thread_sniffer_show_fatal_error(const char* error) {
+  int page = 2;
+  oled_screen_clear();
+  oled_screen_display_text_center("Fatal Error", 0, OLED_DISPLAY_INVERT);
+  if (error == NULL) {
+    goto exit;
+  }
+  oled_screen_display_text_splited(error, &page, OLED_DISPLAY_NORMAL);
+exit:
+  vTaskDelay(pdMS_TO_TICKS(4000));
+  open_thread_module_exit();
+}
+
 void thread_sniffer_show_event_handler(thread_sniffer_events_t event,
                                        void* context) {
   switch (event) {
@@ -34,8 +51,8 @@ void thread_sniffer_show_event_handler(thread_sniffer_events_t event,
     case THREAD_SNIFFER_STOP_EV:
       animations_task_stop();
       break;
-    case THREAD_SNIFFER_ERROR_EV:
-      // thread_sniffer_show_error(context);
+    case THREAD_SNIFFER_FATAL_ERROR_EV:
+      thread_sniffer_show_fatal_error(context);
       break;
     case THREAD_SNIFFER_DESTINATION_EV:
       thread_sniffer_show_destination(context);
