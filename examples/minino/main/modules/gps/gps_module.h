@@ -2,6 +2,9 @@
 
 #include "nmea_parser.h"
 
+#define GPS_ACCURACY \
+  1.5  // According to the ZHONGKEWEI ATGM336H-6N-74 datasheet
+
 // Callback
 typedef void (*gps_event_callback_t)(gps_t* gps);
 
