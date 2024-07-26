@@ -3,7 +3,7 @@
 #include "nmea_parser.h"
 
 // Callback
-typedef void (*gps_event_callback_t)(void* event_data);
+typedef void (*gps_event_callback_t)(gps_t* gps);
 
 /**
  * @brief Initialize the GPS module
@@ -29,6 +29,15 @@ void gps_module_start_scan();
  * @return void
  */
 void gps_module_stop_read();
+
+/**
+ * @brief Get the signal strength
+ *
+ * @param gps The GPS module instance
+ *
+ * @return const char*
+ */
+char* gps_module_get_signal_strength(gps_t* gps);
 
 /**
  * @brief Get the GPS module instance

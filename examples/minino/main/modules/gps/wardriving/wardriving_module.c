@@ -33,7 +33,7 @@
 
 const char* TAG = "wardriving";
 TaskHandle_t wardriving_module_scan_task_handle = NULL;
-gps_t* gps = NULL;
+gps_t* _gps = NULL;
 bool gps_valid = false;
 
 const char* csv_header = FORMAT_VERSION
@@ -191,10 +191,10 @@ char* get_auth_mode(int authmode) {
   }
 }
 
-char* get_full_date_time(gps_t* gps) {
+char* get_full_date_time(gps_t* _gps) {
   char* date_time = malloc(sizeof(char) * 30);
-  sprintf(date_time, "%d-%d-%d %d:%d:%d", gps->date.year, gps->date.month,
-          gps->date.day, gps->tim.hour, gps->tim.minute, gps->tim.second);
+  sprintf(date_time, "%d-%d-%d %d:%d:%d", _gps->date.year, _gps->date.month,
+          _gps->date.day, _gps->tim.hour, _gps->tim.minute, _gps->tim.second);
   return date_time;
 }
 
@@ -211,17 +211,28 @@ void wardriving_module_scan_task(void* pvParameters) {
 
   while (true) {
     wifi_scanner_module_scan();
-    wardriving_screens_module_scanning(wifi_scanned_packets, "0");
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
 
-    if (gps == NULL) {
+    if (_gps == NULL) {
+      ESP_LOGE(TAG, "GPS is NULL");
       continue;
     }
 
-    ESP_LOGI(TAG, "Satellites in use: %d, valid: %s", gps->sats_in_use,
-             gps->valid ? "true" : "false");
-    if (gps->sats_in_use == 0) {
-      // continue;
+    ESP_LOGW(TAG,
+             "Satellites in use: %d, signal: %s \r\n"
+             "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
+             "\t\t\t\t\t\tlongitude = %.05f°E\r\n",
+             _gps->sats_in_use, gps_module_get_signal_strength(_gps),
+             _gps->latitude, _gps->longitude);
+    wardriving_screens_module_scanning(wifi_scanned_packets,
+                                       gps_module_get_signal_strength(_gps));
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+    if (_gps->sats_in_use == 0) {
+      continue;
+    } else {
+      ESP_LOGI(TAG, "Signal: %s", gps_module_get_signal_strength(_gps));
+      ESP_LOGI(TAG, "Latitude: %f, Longitude: %f, Altitude: %f", _gps->latitude,
+               _gps->longitude, _gps->altitude);
     }
 
     wifi_scanner_ap_records_t* ap_records = wifi_scanner_get_ap_records();
@@ -233,7 +244,7 @@ void wardriving_module_scan_task(void* pvParameters) {
       wifi_scanned_packets++;
       char* mac_address_str = get_mac_address(ap_records->records[i].bssid);
       char* auth_mode_str = get_auth_mode(ap_records->records[i].authmode);
-      char* full_date_time = get_full_date_time(gps);
+      char* full_date_time = get_full_date_time(_gps);
 
       sprintf(csv_line, "%s,%s,%s,%s,%d,%u,%d,%f,%f,%f,%f,%s,%s,%s\n",
               /* MAC */
@@ -251,11 +262,11 @@ void wardriving_module_scan_task(void* pvParameters) {
               /* RSSI */
               ap_records->records[i].rssi,
               /* CurrentLatitude */
-              gps->latitude,
+              _gps->latitude,
               /* CurrentLongitude */
-              gps->longitude,
+              _gps->longitude,
               /* AltitudeMeters */
-              gps->altitude,
+              _gps->altitude,
               /* AccuracyMeters */
               0.0,
               /* RCOIs */
@@ -268,8 +279,8 @@ void wardriving_module_scan_task(void* pvParameters) {
       free(mac_address_str);
       free(full_date_time);
 
-      ESP_LOGI(TAG, "CSV Line: %s", csv_line);
-      ESP_LOGI(TAG, "Line size %d bytes", strlen(csv_line));
+      // ESP_LOGI(TAG, "CSV Line: %s", csv_line);
+      // ESP_LOGI(TAG, "Line size %d bytes", strlen(csv_line));
       strcat(csv_file, csv_line);
     }
     ESP_LOGW(TAG, "File size %d bytes, lines: %u", strlen(csv_file), csv_lines);
@@ -286,9 +297,17 @@ void wardriving_module_scan_task(void* pvParameters) {
  * @note This function is called every time a GPS event is triggered, its
  * ussually every second.
  */
-void wardriving_gps_event_handler_cb(void* event_data) {
-  // Update gps data to use it in the scan task
-  gps = gps_module_get_instance(event_data);
+void wardriving_gps_event_handler_cb(gps_t gps) {
+  // _gps = gps_module_get_instance(event_data);
+  // Update _gps data to use it in the scan task
+  _gps = &gps;
+
+  ESP_LOGI(TAG,
+           "Satellites in use: %d, signal: %s \r\n"
+           "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
+           "\t\t\t\t\t\tlongitude = %.05f°E\r\n",
+           _gps->sats_in_use, gps_module_get_signal_strength(_gps),
+           _gps->latitude, _gps->longitude);
 }
 
 void wardriving_module_start_scan() {

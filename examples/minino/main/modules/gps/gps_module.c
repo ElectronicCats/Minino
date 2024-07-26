@@ -32,24 +32,12 @@ const float TIME_ZONES[] = {-12.0, -11.0, -10.0, -9.5,  -9.0, -8.0, -7.0, -6.0,
                             6.0,   6.5,   7.0,   8.0,   8.75, 9.0,  9.5,  10.0,
                             10.5,  11.0,  12.0,  12.75, 13.0, 14.0};
 
-char* get_signal_strength(gps_t* gps) {
-  if (gps->sats_in_use == 0) {
-    return (char*) GPS_SIGNAL_STRENGTH[0];
-  } else if (gps->sats_in_use >= 1 && gps->sats_in_use <= 4) {
-    return (char*) GPS_SIGNAL_STRENGTH[1];
-  } else if (gps->sats_in_use >= 5 && gps->sats_in_use <= 8) {
-    return (char*) GPS_SIGNAL_STRENGTH[2];
-  } else {
-    return (char*) GPS_SIGNAL_STRENGTH[3];
-  }
-}
-
 void update_date_and_time(gps_t* gps) {
   char* signal_str = (char*) malloc(20);
   char* date_str = (char*) malloc(20);
   char* time_str = (char*) malloc(20);
 
-  sprintf(signal_str, "Signal: %s", get_signal_strength(gps));
+  sprintf(signal_str, "Signal: %s", gps_module_get_signal_strength(gps));
   sprintf(date_str, "Date: %d/%d/%d", gps->date.year, gps->date.month,
           gps->date.day);
   sprintf(time_str, "Time: %d:%d:%d", gps->tim.hour, gps->tim.minute,
@@ -68,7 +56,7 @@ void update_location(gps_t* gps) {
   char* speed_str = (char*) malloc(22);
 
   // TODO: add ° symbol
-  sprintf(signal_str, "Signal: %s", get_signal_strength(gps));
+  sprintf(signal_str, "Signal: %s", gps_module_get_signal_strength(gps));
   sprintf(latitude_str, "  %.05f N", gps->latitude);
   sprintf(longitude_str, "  %.05f E", gps->longitude);
   sprintf(altitude_str, "  %.04fm", gps->altitude);
@@ -83,7 +71,7 @@ void update_speed(gps_t* gps) {
   char* signal_str = (char*) malloc(20);
   char* speed_str = (char*) malloc(22);
 
-  sprintf(signal_str, "Signal: %s", get_signal_strength(gps));
+  sprintf(signal_str, "Signal: %s", gps_module_get_signal_strength(gps));
   sprintf(speed_str, "Speed: %.02fm/s", gps->speed);
 
   gps_speed_items[1] = signal_str;
@@ -110,12 +98,13 @@ static void gps_event_handler(void* event_handler_arg,
 
   switch (event_id) {
     case GPS_UPDATE:
-      if (gps_event_callback != NULL) {
-        gps_event_callback(event_data);
-        return;
-      }
       /* update GPS information */
       gps_t* gps = gps_module_get_instance(event_data);
+
+      if (gps_event_callback != NULL) {
+        gps_event_callback(gps);
+        return;
+      }
 
       update_date_and_time(gps);
       update_location(gps);
@@ -151,6 +140,18 @@ void gps_module_stop_read() {
   nmea_parser_remove_handler(nmea_hdl, gps_event_handler);
   /* deinit NMEA parser library */
   nmea_parser_deinit(nmea_hdl);
+}
+
+char* gps_module_get_signal_strength(gps_t* gps) {
+  if (gps->sats_in_use == 0) {
+    return (char*) GPS_SIGNAL_STRENGTH[0];
+  } else if (gps->sats_in_use >= 1 && gps->sats_in_use <= 4) {
+    return (char*) GPS_SIGNAL_STRENGTH[1];
+  } else if (gps->sats_in_use >= 5 && gps->sats_in_use <= 8) {
+    return (char*) GPS_SIGNAL_STRENGTH[2];
+  } else {
+    return (char*) GPS_SIGNAL_STRENGTH[3];
+  }
 }
 
 void gps_module_exit_submenu_cb() {
@@ -240,17 +241,19 @@ gps_t* gps_module_get_instance(void* event_data) {
   gps->date.month = month;
   gps->date.day = day;
 
-  ESP_LOGI(TAG, "Satellites in use: %d", gps->sats_in_use);
-  ESP_LOGI(TAG, "Satellites in view: %d", gps->sats_in_view);
   ESP_LOGI(TAG,
            "%d/%d/%d %d:%d:%d => \r\n"
+           "\t\t\t\t\t\tSats in use: %d\r\n"
+           "\t\t\t\t\t\tSats in view: %d\r\n"
+           "\t\t\t\t\t\tValid: %s\r\n"
            "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
            "\t\t\t\t\t\tlongitude = %.05f°E\r\n"
            "\t\t\t\t\t\taltitude   = %.02fm\r\n"
            "\t\t\t\t\t\tspeed      = %.02fm/s",
            gps->date.year, gps->date.month, gps->date.day, gps->tim.hour,
-           gps->tim.minute, gps->tim.second, gps->latitude, gps->longitude,
-           gps->altitude, gps->speed);
+           gps->tim.minute, gps->tim.second, gps->sats_in_use,
+           gps->sats_in_view, gps->valid ? "true" : "false", gps->latitude,
+           gps->longitude, gps->altitude, gps->speed);
 
   return gps;
 }
