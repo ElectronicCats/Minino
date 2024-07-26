@@ -34,6 +34,8 @@ static void thread_sniffer_show_fatal_error(const char* error) {
   oled_screen_clear();
   oled_screen_display_text_center("Fatal Error", 0, OLED_DISPLAY_INVERT);
   if (error == NULL) {
+    oled_screen_display_text_splited("Error pointer is NULL", &page,
+                                     OLED_DISPLAY_NORMAL);
     goto exit;
   }
   oled_screen_display_text_splited(error, &page, OLED_DISPLAY_NORMAL);

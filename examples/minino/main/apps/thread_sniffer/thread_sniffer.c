@@ -22,23 +22,6 @@
 
 #define TAG "thread_sniffer"
 
-#define GOTO_ON_ERROR(x, goto_tag, err_tag) \
-  do {                                      \
-    if (unlikely((x) != ESP_OK)) {          \
-      ret = x;                              \
-      strcpy(err_str, err_tag);             \
-      goto goto_tag;                        \
-    }                                       \
-  } while (0)
-
-#define GOTO_ON_FALSE(a, goto_tag, err_tag) \
-  do {                                      \
-    if (unlikely(!(a))) {                   \
-      strcpy(err_str, err_tag);             \
-      goto goto_tag;                        \
-    }                                       \
-  } while (0)
-
 typedef struct {
   char* buffer;
   uint32_t buffer_size;
@@ -85,6 +68,7 @@ void thread_sniffer_init() {
       xQueueCreate(THREAD_SNIFFER_QUEUE_SIZE, sizeof(sniffer_packet_info_t));
   xTaskCreate(debug_handler_task, "debug_handler_task", 8192, NULL, 20, NULL);
 }
+
 void thread_sniffer_run() {
   pcap_start();
   printf("START SESSION\n");
@@ -93,6 +77,7 @@ void thread_sniffer_run() {
   thread_sniffer_show_event_cb(THREAD_SNIFFER_NEW_PACKET_EV, packets_count);
   openthread_enable_promiscous_mode(&on_pcap_receive);
 }
+
 void thread_sniffer_stop() {
   printf("STOP SESSION\n");
   pcap_stop();
@@ -100,12 +85,22 @@ void thread_sniffer_stop() {
   openthread_disable_promiscous_mode();
 }
 
+static void chek_for_fatal_error(esp_err_t err, const char* err_tag) {
+  if (err != ESP_OK) {
+    thread_sniffer_show_event_cb(THREAD_SNIFFER_FATAL_ERROR_EV, err_tag);
+  }
+}
+static void chek_for_fatal_false(bool ok, const char* err_tag) {
+  if (!ok) {
+    thread_sniffer_show_event_cb(THREAD_SNIFFER_FATAL_ERROR_EV, err_tag);
+  }
+}
+
 static esp_err_t pcap_start() {
   esp_err_t ret = ESP_OK;
   char* err_str = malloc(30);
   FILE* fp = NULL;
   bool save_in_sd = false;
-  // GOTO_ON_ERROR(sd_card_mount(),fatal_err,"SD IS ALREADY MOUNTED");
   ret = sd_card_mount();
   if (ret == ESP_OK || ret == ESP_ERR_ALREADY_MOUNTED) {
     fp = fopen("/sdcard/thread.pcap", "w");
@@ -113,52 +108,48 @@ static esp_err_t pcap_start() {
   } else {
     thread_pcap.pcap_buffer.buffer =
         calloc(PCAP_MEMORY_BUFFER_SIZE, sizeof(char));
-    GOTO_ON_FALSE(thread_pcap.pcap_buffer.buffer, fatal_err,
-                  "pcap buffer calloc failed");
+    chek_for_fatal_false(thread_pcap.pcap_buffer.buffer,
+                         "pcap buffer calloc failed");
     fp = fmemopen(thread_pcap.pcap_buffer.buffer, PCAP_MEMORY_BUFFER_SIZE,
                   "wb+");
   }
-  GOTO_ON_FALSE(fp, fatal_err, "open file failed");
+  chek_for_fatal_false(fp, "open file failed");
   pcap_config_t pcap_cfg = {
       .fp = fp,
       .major_version = PCAP_DEFAULT_VERSION_MAJOR,
       .minor_version = PCAP_DEFAULT_VERSION_MINOR,
       .time_zone = PCAP_DEFAULT_TIME_ZONE_GMT,
   };
-  GOTO_ON_ERROR(pcap_new_session(&pcap_cfg, &thread_pcap.pcap_handle),
-                fatal_err, "pcap init failed");
+  chek_for_fatal_error(pcap_new_session(&pcap_cfg, &thread_pcap.pcap_handle),
+                       "pcap init failed");
   thread_pcap.is_opened = true;
-  GOTO_ON_ERROR(
+  chek_for_fatal_error(
       pcap_write_header(thread_pcap.pcap_handle, THREAD_SNIFFER_PCAP_LINKTYPE),
-      fatal_err, "Write header failed");
+      "Write header failed");
   thread_pcap.is_writing = true;
 
   thread_sniffer_show_event(THREAD_SNIFFER_DESTINATION_EV, &save_in_sd);
   free(err_str);
   return ESP_OK;
-fatal_err:
+  // err:
   if (fp) {
     fclose(fp);
   }
   thread_pcap.is_opened = false;
-  thread_sniffer_show_event_cb(THREAD_SNIFFER_FATAL_ERROR_EV, err_str);
   return ret;
 }
 
 static esp_err_t pcap_stop() {
   esp_err_t ret = ESP_OK;
   char* err_str = malloc(30);
-  GOTO_ON_ERROR(pcap_del_session(thread_pcap.pcap_handle), fatal_err,
-                "stop pcap session failed");
+  chek_for_fatal_error(pcap_del_session(thread_pcap.pcap_handle),
+                       "stop pcap session failed");
   thread_pcap.is_opened = false;
   thread_pcap.is_writing = false;
   thread_pcap.link_type_set = false;
   thread_pcap.pcap_handle = NULL;
   free(err_str);
   return ESP_OK;
-fatal_err:
-  thread_sniffer_show_event(THREAD_SNIFFER_FATAL_ERROR_EV, err_str);
-  return ret;
 }
 
 void on_pcap_receive(const otRadioFrame* aFrame, bool aIsTx) {
