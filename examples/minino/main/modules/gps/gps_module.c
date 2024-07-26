@@ -265,10 +265,10 @@ void gps_module_set_time_zone(uint8_t time_zone) {
 }
 
 void gps_module_register_cb(gps_event_callback_t callback) {
-  gps_module_remove_cb();
+  gps_module_unregister_cb();
   gps_event_callback = callback;
 }
 
-void gps_module_remove_cb() {
+void gps_module_unregister_cb() {
   gps_event_callback = NULL;
 }

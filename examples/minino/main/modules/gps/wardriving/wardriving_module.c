@@ -308,9 +308,14 @@ void wardriving_module_start_scan() {
 void wardriving_module_stop_scan() {
   ESP_LOGI(TAG, "Stop scan");
   gps_module_stop_read();
+  gps_module_unregister_cb();
+  wifi_driver_deinit();
+  sd_card_unmount();
   if (wardriving_module_scan_task_handle != NULL) {
     vTaskDelete(wardriving_module_scan_task_handle);
     wardriving_module_scan_task_handle = NULL;
     ESP_LOGI(TAG, "Task deleted");
+  } else {
+    ESP_LOGW(TAG, "Task deleted?");
   }
 }

@@ -69,4 +69,4 @@ void gps_module_register_cb(gps_event_callback_t callback);
  *
  * @return void
  */
-void gps_module_remove_cb();
+void gps_module_unregister_cb();
