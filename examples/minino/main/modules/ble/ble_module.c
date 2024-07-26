@@ -21,7 +21,7 @@ static TaskHandle_t ble_task_display_records = NULL;
 static TaskHandle_t ble_task_display_animation = NULL;
 
 static void ble_module_app_selector();
-static void ble_module_state_machine(button_event_state_t button_pressed);
+static void ble_module_state_machine(uint8_t button_name, uint8_t button_event);
 static void ble_module_display_trackers_cb(tracker_profile_t record);
 static void ble_module_task_start_trackers_display_devices();
 static void ble_module_task_stop_trackers_display_devices();
@@ -59,15 +59,16 @@ static void ble_module_app_selector() {
       break;
   }
 }
-static void ble_module_state_machine(button_event_state_t button_pressed) {
-  if (button_pressed.button_event != BUTTON_SINGLE_CLICK &&
-      button_pressed.button_event != BUTTON_LONG_PRESS_HOLD) {
+static void ble_module_state_machine(uint8_t button_name,
+                                     uint8_t button_event) {
+  if (button_event != BUTTON_SINGLE_CLICK &&
+      button_event != BUTTON_LONG_PRESS_HOLD) {
     return;
   }
   switch (app_screen_state_information.app_selected) {
     case MENU_BLUETOOTH_TRAKERS_SCAN:
       ESP_LOGI(TAG_BLE_MODULE, "Bluetooth scanner entered");
-      switch (button_pressed.button_pressed) {
+      switch (button_name) {
         case BUTTON_LEFT:
           led_control_stop();
           menu_screens_set_app_state(false, NULL);
@@ -101,7 +102,7 @@ static void ble_module_state_machine(button_event_state_t button_pressed) {
       }
       break;
     case MENU_BLUETOOTH_SPAM:
-      switch (button_pressed.button_pressed) {
+      switch (button_name) {
         case BUTTON_LEFT:
           led_control_stop();
           menu_screens_set_app_state(false, NULL);

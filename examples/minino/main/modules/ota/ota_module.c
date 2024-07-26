@@ -4,7 +4,7 @@
 #include "menu_screens_modules.h"
 #include "ota_module_screens.h"
 
-static void ota_module_input(button_event_t button_pressed);
+static void ota_module_input(uint8_t button_name, uint8_t button_event);
 
 void ota_module_init() {
   OTA_set_show_event_cb(ota_module_screens_show_event);
@@ -18,9 +18,7 @@ void ota_module_deinit() {
   esp_restart();
 }
 
-static void ota_module_input(button_event_t button_pressed) {
-  uint8_t button_name = button_pressed >> 4;
-  uint8_t button_event = button_pressed & 0x0F;
+static void ota_module_input(uint8_t button_name, uint8_t button_event) {
   if (button_event != BUTTON_SINGLE_CLICK || is_ota_running) {
     return;
   }

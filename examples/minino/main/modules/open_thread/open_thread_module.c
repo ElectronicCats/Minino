@@ -12,8 +12,8 @@
 #include "thread_sniffer_screens.h"
 uint8_t channel = 15;
 
-static void thread_broadcast_input(button_event_state_t button_pressed);
-static void thread_sniffer_input(button_event_state_t button_pressed);
+static void thread_broadcast_input(uint8_t button_name, uint8_t button_event);
+static void thread_sniffer_input(uint8_t button_name, uint8_t button_event);
 static void open_thread_module_exit_submenu_cb();
 static void open_thread_module_enter_submenu_cb(
     screen_module_menu_t user_selection);
@@ -72,11 +72,11 @@ static void open_thread_module_exit_submenu_cb() {
   }
 }
 
-static void thread_broadcast_input(button_event_state_t button_pressed) {
-  if (button_pressed.button_event != BUTTON_SINGLE_CLICK) {
+static void thread_broadcast_input(uint8_t button_name, uint8_t button_event) {
+  if (button_event != BUTTON_SINGLE_CLICK) {
     return;
   }
-  switch (button_pressed.button_pressed) {
+  switch (button_name) {
     case BUTTON_LEFT:
       led_control_stop();
       screen_module_set_screen(MENU_THREAD_BROADCAST);
@@ -100,11 +100,11 @@ static void thread_broadcast_input(button_event_state_t button_pressed) {
   }
 }
 
-static void thread_sniffer_input(button_event_state_t button_pressed) {
-  if (button_pressed.button_event != BUTTON_SINGLE_CLICK) {
+static void thread_sniffer_input(uint8_t button_name, uint8_t button_event) {
+  if (button_event != BUTTON_SINGLE_CLICK) {
     return;
   }
-  switch (button_pressed.button_pressed) {
+  switch (button_name) {
     case BUTTON_LEFT:
       thread_sniffer_stop();
       led_control_stop();

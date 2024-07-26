@@ -431,9 +431,7 @@ void wifi_module_update_destination_options() {
   menu_screens_update_options(wifi_analizer_destination_items, selected_option);
 }
 
-void wifi_module_keyboard_cb(button_event_t button_pressed) {
-  uint8_t button_name = button_pressed >> 4;
-  uint8_t button_event = button_pressed & 0x0F;
+void wifi_module_keyboard_cb(uint8_t button_name, uint8_t button_event) {
   ESP_LOGI(TAG, "State: %s", wifi_state_names[current_wifi_state.state]);
 
   switch (current_wifi_state.state) {

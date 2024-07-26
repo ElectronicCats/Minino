@@ -34,13 +34,15 @@ static scanned_ap_records_t* ap_records;
 static uint16_t current_item = 0;
 static menu_stadistics_t menu_stadistics;
 
-static void deauth_module_cb_event(button_event_state_t button_pressed);
-static void deauth_module_cb_event_select_ap(
-    button_event_state_t button_pressed);
-static void deauth_module_cb_event_attacks(button_event_state_t button_pressed);
-static void deauth_module_cb_event_run(button_event_state_t button_pressed);
-static void deauth_module_cb_event_captive_portal(
-    button_event_state_t button_pressed);
+static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event);
+static void deauth_module_cb_event_select_ap(uint8_t button_name,
+                                             uint8_t button_event);
+static void deauth_module_cb_event_attacks(uint8_t button_name,
+                                           uint8_t button_event);
+static void deauth_module_cb_event_run(uint8_t button_name,
+                                       uint8_t button_event);
+static void deauth_module_cb_event_captive_portal(uint8_t button_name,
+                                                  uint8_t button_event);
 
 static void scanning_task(void* pvParameters);
 static void deauth_run_scan_task();
@@ -115,15 +117,15 @@ void deauth_module_begin() {
   menu_stadistics.attack = 99;
 }
 
-static void deauth_module_cb_event(button_event_state_t button_pressed) {
-  if (button_pressed.button_event != BUTTON_PRESS_DOWN) {
+static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event) {
+  if (button_event != BUTTON_PRESS_DOWN) {
     return;
   }
   if (current_wifi_state.state == DEAUTH_STATE_IDLE) {
     return;
   }
 
-  switch (button_pressed.button_pressed) {
+  switch (button_name) {
     case BUTTON_UP:
       deauth_decrement_item();
       if (current_item < 0) {
@@ -189,12 +191,12 @@ static void deauth_module_cb_event(button_event_state_t button_pressed) {
   }
 }
 
-static void deauth_module_cb_event_select_ap(
-    button_event_state_t button_pressed) {
-  if (button_pressed.button_event != BUTTON_PRESS_DOWN) {
+static void deauth_module_cb_event_select_ap(uint8_t button_name,
+                                             uint8_t button_event) {
+  if (button_event != BUTTON_PRESS_DOWN) {
     return;
   }
-  switch (button_pressed.button_pressed) {
+  switch (button_name) {
     case BUTTON_UP:
       deauth_decrement_item();
       if (current_item < 0) {
@@ -227,12 +229,12 @@ static void deauth_module_cb_event_select_ap(
   }
 }
 
-static void deauth_module_cb_event_attacks(
-    button_event_state_t button_pressed) {
-  if (button_pressed.button_event != BUTTON_PRESS_DOWN) {
+static void deauth_module_cb_event_attacks(uint8_t button_name,
+                                           uint8_t button_event) {
+  if (button_event != BUTTON_PRESS_DOWN) {
     return;
   }
-  switch (button_pressed.button_pressed) {
+  switch (button_name) {
     case BUTTON_UP:
       deauth_decrement_item();
       deauth_display_attacks(current_item, menu_stadistics);
@@ -258,11 +260,12 @@ static void deauth_module_cb_event_attacks(
   }
 }
 
-static void deauth_module_cb_event_run(button_event_state_t button_pressed) {
-  if (button_pressed.button_event != BUTTON_PRESS_DOWN) {
+static void deauth_module_cb_event_run(uint8_t button_name,
+                                       uint8_t button_event) {
+  if (button_event != BUTTON_PRESS_DOWN) {
     return;
   }
-  switch (button_pressed.button_pressed) {
+  switch (button_name) {
     case BUTTON_LEFT:
       current_item = 0;
       wifi_attacks_module_stop();
@@ -278,13 +281,13 @@ static void deauth_module_cb_event_run(button_event_state_t button_pressed) {
   }
 }
 
-static void deauth_module_cb_event_captive_portal(
-    button_event_state_t button_pressed) {
-  if (button_pressed.button_event != BUTTON_PRESS_DOWN) {
+static void deauth_module_cb_event_captive_portal(uint8_t button_name,
+                                                  uint8_t button_event) {
+  if (button_event != BUTTON_PRESS_DOWN) {
     return;
   }
   ESP_LOGI("asdsad", "Event");
-  switch (button_pressed.button_pressed) {
+  switch (button_name) {
     case BUTTON_UP:
       deauth_decrement_item();
       if (current_item < 0) {

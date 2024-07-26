@@ -59,4 +59,4 @@ void wifi_module_update_destination_options();
  *
  * @param button_pressed The button pressed
  */
-void wifi_module_keyboard_cb(button_event_t button_pressed);
+void wifi_module_keyboard_cb(uint8_t button_name, uint8_t button_event);

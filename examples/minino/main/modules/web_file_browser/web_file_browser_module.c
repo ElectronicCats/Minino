@@ -9,7 +9,8 @@
 #include "web_file_browser_screens.h"
 #include "wifi_app.h"
 
-static void web_file_browser_input_cb(button_event_t button_pressed);
+static void web_file_browser_input_cb(uint8_t button_name,
+                                      uint8_t button_event);
 static void web_file_browser_module_exit();
 
 void web_file_browser_module_init() {
@@ -34,9 +35,8 @@ void web_file_browser_module_exit() {
   screen_module_set_screen(MENU_WEB_SD_BROWSER);
   esp_restart();
 }
-static void web_file_browser_input_cb(button_event_t button_pressed) {
-  uint8_t button_name = button_pressed >> 4;
-  uint8_t button_event = button_pressed & 0x0F;
+static void web_file_browser_input_cb(uint8_t button_name,
+                                      uint8_t button_event) {
   if (button_event != BUTTON_SINGLE_CLICK) {
     return;
   }
