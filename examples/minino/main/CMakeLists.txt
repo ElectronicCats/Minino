@@ -24,7 +24,6 @@ set(modules "modules/led_events/led_events.c"
             "modules/web_file_browser/web_file_browser_module.c"
             "modules/web_file_browser/web_file_browser_screens.c"
             "modules/animations_task/animations_task.c"
-            "modules/animations_timer/animations_timer.c"
             "apps/thread_sniffer/thread_sniffer.c"
             "apps/thread_sniffer/thread_sniffer_screens.c"
             "apps/wifi/deauth/deauth_module.c"
@@ -44,7 +43,6 @@ idf_component_register(
                     INCLUDE_DIRS
                     "."
                     "modules/animations_task"
-                    "modules/animations_timer"
                     "modules/keyboard/"
                     "modules/menu_screens/"
                     "drivers/oled_driver/"
@@ -62,7 +60,6 @@ idf_component_register(
                     "modules/gps/wardriving"
                     "modules/gps"
                     "apps/thread_sniffer"
-                    "modules/animations_timer"
                     "apps/wifi/deauth")
 
 # # Append all directories to INCLUDE_DIRS

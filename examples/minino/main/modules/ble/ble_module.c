@@ -1,5 +1,5 @@
 #include "ble_module.h"
-#include "animations_timer.h"
+#include "animations_task.h"
 #include "bt_spam.h"
 #include "esp_log.h"
 #include "led_events.h"
@@ -51,7 +51,7 @@ static void ble_module_app_selector() {
       // xTaskCreate(ble_screens_display_scanning_animation,
       // "ble_module_scanning",
       //             4096, NULL, 5, &ble_task_display_animation);
-      animations_timer_run(ble_screens_display_scanning_animation, 300);
+      animations_task_run(ble_screens_display_scanning_animation, 100, NULL);
       bt_spam_register_cb(ble_screens_display_scanning_text);
       bt_spam_app_main();
       break;
@@ -72,7 +72,6 @@ static void ble_module_state_machine(uint8_t button_name,
         case BUTTON_LEFT:
           led_control_stop();
           menu_screens_set_app_state(false, NULL);
-          animations_timer_stop();
           menu_screens_exit_submenu();
           esp_restart();
           break;
@@ -106,7 +105,7 @@ static void ble_module_state_machine(uint8_t button_name,
         case BUTTON_LEFT:
           led_control_stop();
           menu_screens_set_app_state(false, NULL);
-          animations_timer_stop();
+          animations_task_stop();
           menu_screens_exit_submenu();
           esp_restart();
           break;
