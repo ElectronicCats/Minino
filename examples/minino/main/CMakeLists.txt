@@ -22,7 +22,12 @@ set(modules "modules/led_events/led_events.c"
             "modules/gps/wardriving/wardriving_screens_module.c"
             "modules/web_file_browser/http_server/web_file_browser.c"
             "modules/web_file_browser/web_file_browser_module.c"
-            "modules/web_file_browser/web_file_browser_screens.c")
+            "modules/web_file_browser/web_file_browser_screens.c"
+            "modules/animations_task/animations_task.c"
+            "apps/thread_sniffer/thread_sniffer.c"
+            "apps/thread_sniffer/thread_sniffer_screens.c"
+            "apps/wifi/deauth/deauth_module.c"
+            "apps/wifi/deauth/deauth_screens.c")
 
 set(drivers "drivers/oled_driver/oled_driver.c"
             "drivers/oled_driver/oled_driver_i2c.c"
@@ -37,6 +42,7 @@ idf_component_register(
                     modules/web_file_browser/http_server/style.css
                     INCLUDE_DIRS
                     "."
+                    "modules/animations_task"
                     "modules/keyboard/"
                     "modules/menu_screens/"
                     "drivers/oled_driver/"
@@ -52,7 +58,9 @@ idf_component_register(
                     "modules/ota"
                     "modules/cat_dos/"
                     "modules/gps"
-                    "modules/gps/wardriving")
+                    "modules/gps/wardriving"
+                    "apps/thread_sniffer"
+                    "apps/wifi/deauth")
 
 # # Append all directories to INCLUDE_DIRS
 

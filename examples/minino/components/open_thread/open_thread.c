@@ -284,6 +284,37 @@ otError openthread_udp_send(otUdpSocket* mSocket,
   return error;
 }
 
+otError openthread_enable_promiscous_mode(otLinkPcapCallback promiscuous_cb) {
+  esp_openthread_lock_acquire(portMAX_DELAY);
+  otInstance* instance = esp_openthread_get_instance();
+  otError error = OT_ERROR_NONE;
+  otIp6SetEnabled(instance, false);
+  otThreadSetEnabled(instance, false);
+  error = otLinkSetPromiscuous(instance, true);
+  if (ERR) {
+    printf("ERR\n");
+    return error;
+  }
+  otLinkSetPcapCallback(instance, promiscuous_cb, NULL);
+  otIp6SetEnabled(instance, true);
+  otThreadSetEnabled(instance, true);
+  esp_openthread_lock_release();
+  return error;
+}
+otError openthread_disable_promiscous_mode() {
+  esp_openthread_lock_acquire(portMAX_DELAY);
+  otInstance* instance = esp_openthread_get_instance();
+  otError error = OT_ERROR_NONE;
+  otIp6SetEnabled(instance, false);
+  otThreadSetEnabled(instance, false);
+  otLinkSetPcapCallback(instance, NULL, NULL);
+  error = otLinkSetPromiscuous(instance, false);
+  otIp6SetEnabled(instance, true);
+  otThreadSetEnabled(instance, true);
+  esp_openthread_lock_release();
+  return error;
+}
+
 static void ot_task_worker() {
   esp_openthread_platform_config_t config = {
       .radio_config = ESP_OPENTHREAD_DEFAULT_RADIO_CONFIG(),

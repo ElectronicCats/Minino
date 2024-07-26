@@ -7,7 +7,7 @@
 
 #define OLED_DISPLAY_INVERT true
 #define OLED_DISPLAY_NORMAL false
-#define MAX_LINE_CHAR       17
+#define MAX_LINE_CHAR       18
 
 #ifdef CONFIG_RESOLUTION_128X64
   #define MAX_PAGE 7  // 0 - 7

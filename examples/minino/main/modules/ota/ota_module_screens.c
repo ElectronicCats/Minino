@@ -41,10 +41,10 @@ static void show_start_status() {
 }
 
 static void show_update_status(uint8_t* progress) {
-  printf("OTA PROGRESS: %d\n", *progress);
-  update_bar(*progress);
-  oled_screen_display_bitmap(bar_bitmap, 0, 56, BAR_WIDTH, BAR_HEIGHT,
-                             OLED_DISPLAY_NORMAL);
+  char* str = (char*) malloc(20);
+  sprintf(str, "%d%%", *progress);
+  oled_screen_display_text_center(str, 7, OLED_DISPLAY_INVERT);
+  free(str);
 }
 
 static void show_result_status(bool* flash_successful) {
