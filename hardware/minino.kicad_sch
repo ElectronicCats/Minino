@@ -9149,7 +9149,7 @@
 		)
 		(uuid "51ec05fb-b2c8-46da-b572-d04f6c4809dd")
 	)
-	(label "DIO10"
+	(label "IO10"
 		(at 30.226 55.88 0)
 		(fields_autoplaced yes)
 		(effects
@@ -14681,7 +14681,7 @@
 				)
 			)
 		)
-		(property "Value" "AP2112K-3.3"
+		(property "Value" "XC6220B331MR-G"
 			(at 157.48 175.2346 0)
 			(effects
 				(font
@@ -14716,7 +14716,7 @@
 				(hide yes)
 			)
 		)
-		(property "manf#" "AP7365-33WG-7"
+		(property "manf#" "XC6220B331MR-G "
 			(at 157.48 181.61 0)
 			(effects
 				(font
@@ -14734,7 +14734,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC#" "C150742"
+		(property "LCSC#" "C86534"
 			(at 157.48 181.61 0)
 			(effects
 				(font
