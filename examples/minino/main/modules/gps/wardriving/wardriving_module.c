@@ -35,7 +35,15 @@
 #define DISPLAY_REFRESH_RATE_SEC  3
 #define WRITE_FILE_REFRESH_RATE   5
 
+typedef enum {
+  WARDRIVING_MODULE_STATE_VERIFYING_SD_CARD = 0,
+  WARDRIVING_MODULE_STATE_SCANNING,
+  WARDRIVING_MODULE_STATE_STOPPED
+} wardriving_module_state_t;
+
 const char* TAG = "wardriving";
+wardriving_module_state_t wardriving_module_state =
+    WARDRIVING_MODULE_STATE_STOPPED;
 TaskHandle_t wardriving_module_scan_task_handle = NULL;
 uint16_t csv_lines;
 uint16_t wifi_scanned_packets;
@@ -199,17 +207,34 @@ void wardriving_gps_event_handler_cb(gps_t* gps) {
   wardriving_module_save_to_file(gps);
 }
 
-void wardriving_module_start_scan() {
+esp_err_t wardriving_module_verify_sd_card() {
+  ESP_LOGI(TAG, "Verifying SD card");
+  wardriving_module_state = WARDRIVING_MODULE_STATE_VERIFYING_SD_CARD;
+  esp_err_t err = sd_card_mount();
+  if (err != ESP_OK) {
+    wardriving_screens_module_no_sd_card();
+  }
+  return err;
+}
+
+void wardriving_module_begin() {
 #if !defined(CONFIG_WARDRIVING_MODULE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
-  ESP_LOGI(TAG, "Start scan");
+  ESP_LOGI(TAG, "Wardriving module begin");
   csv_lines = 2;  // Two header lines
   wifi_scanned_packets = 0;
   csv_file = malloc(CSV_FILE_SIZE);
   sprintf(csv_file, "%s\n", csv_header);  // Append header to csv file
+}
 
-  sd_card_mount();
+void wardriving_module_start_scan() {
+  if (wardriving_module_verify_sd_card() != ESP_OK) {
+    return;
+  }
+
+  ESP_LOGI(TAG, "Start scan");
+  wardriving_module_state = WARDRIVING_MODULE_STATE_SCANNING;
   xTaskCreate(wardriving_module_scan_task, "wardriving_module_scan_task", 4096,
               NULL, 5, &wardriving_module_scan_task_handle);
   gps_module_register_cb(wardriving_gps_event_handler_cb);
@@ -218,7 +243,12 @@ void wardriving_module_start_scan() {
 }
 
 void wardriving_module_stop_scan() {
+  if (wardriving_module_state == WARDRIVING_MODULE_STATE_VERIFYING_SD_CARD) {
+    return;
+  }
+
   ESP_LOGI(TAG, "Stop scan");
+  wardriving_module_state = WARDRIVING_MODULE_STATE_STOPPED;
   gps_module_stop_read();
   gps_module_unregister_cb();
   wifi_driver_deinit();

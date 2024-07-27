@@ -179,9 +179,9 @@ void gps_module_exit_submenu_cb() {
 
 void gps_module_enter_submenu_cb(screen_module_menu_t user_selection) {
   switch (user_selection) {
-    // case MENU_GPS_WARDRIVING:
-    //   wardriving_module_begin();
-    //   break;
+    case MENU_GPS_WARDRIVING:
+      wardriving_module_begin();
+      break;
     case MENU_GPS_WARDRIVING_START:
       wardriving_module_start_scan();
       break;

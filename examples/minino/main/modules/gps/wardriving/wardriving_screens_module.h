@@ -1,7 +1,7 @@
 #pragma once
 
 /**
- * @brief Function to show the wardriving scanning screen
+ * @brief Display the scanning screen
  *
  * @param packets Number of packets received
  * @param signal Signal strength
@@ -11,8 +11,15 @@
 void wardriving_screens_module_scanning(uint32_t packets, char* signal);
 
 /**
- * @brief Function to show the wardriving loading text screen
+ * @brief Display the loading text screen
  *
  * @return void
  */
 void wardriving_screens_module_loading_text();
+
+/**
+ * @brief Display the no SD card screen
+ *
+ * @return void
+ */
+void wardriving_screens_module_no_sd_card();

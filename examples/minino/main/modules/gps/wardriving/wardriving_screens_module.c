@@ -18,3 +18,10 @@ void wardriving_screens_module_loading_text() {
   oled_screen_clear();
   oled_screen_display_text_center("Loading...", 3, OLED_DISPLAY_NORMAL);
 }
+
+void wardriving_screens_module_no_sd_card() {
+  oled_screen_clear();
+  oled_screen_display_text_center("No SD Card", 2, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("detected!", 3, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("Ok", 5, OLED_DISPLAY_INVERT);
+}

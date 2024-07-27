@@ -1,6 +1,20 @@
 #pragma once
 
 /**
+ * @brief Initialize the wardriving module
+ *
+ * @return void
+ */
+void wardriving_module_begin();
+
+/**
+ * End the wardriving module
+ *
+ * @return void
+ */
+void wardriving_module_end();
+
+/**
  * Start scanning
  *
  * @return void
