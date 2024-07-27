@@ -20,7 +20,7 @@ static esp_err_t list_files_handler(httpd_req_t* req);
 static esp_err_t download_get_handler(httpd_req_t* req);
 static esp_err_t style_css_handler(httpd_req_t* req);
 
-const char* mount_path = "/sdcard";
+const char* mount_path = "/internal";
 bool show_hidden_files = false;
 
 static void web_file_browser_show_event(uint8_t event, void* context) {

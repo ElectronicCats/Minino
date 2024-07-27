@@ -167,17 +167,13 @@ void sd_card_begin() {
 
 esp_err_t sd_card_mount() {
   esp_err_t err = ESP_OK;
-  if (_sd_card_mounted) {
-    ESP_LOGW(TAG, "SD card already mounted");
-    return ESP_ERR_ALREADY_MOUNTED;
-  }
-
   const char** mount_argv[] = {"mount", "sd"};
   uint8_t mount_argc = 2;
 
   err = mount(mount_argc, (char**) mount_argv);
-  if (err == ESP_OK) {
+  if (err == ESP_OK || err == ESP_ERR_ALREADY_MOUNTED) {
     _sd_card_mounted = true;
+    return ESP_OK;
   } else {
     ESP_LOGE(TAG, "Failed to mount SD card");
   }
