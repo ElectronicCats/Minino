@@ -12,7 +12,8 @@
 #include "wifi_controller.h"
 #include "wifi_scanner.h"
 
-#define FILE_NAME      "test.csv"
+#define DIR_NAME       "Wardriving"
+#define FILE_NAME      DIR_NAME "/Minino.csv"
 #define FORMAT_VERSION "WigleWifi-1.6"
 #define APP_VERSION    CONFIG_PROJECT_VERSION
 #define MODEL          "MININO"
@@ -25,12 +26,14 @@
 #define BODY           "3"
 #define SUB_BODY       "0"
 
-#define MAC_ADDRESS_FORMAT       "%02x:%02x:%02x:%02x:%02x:%02x"
-#define MAX_CSV_LINES            100
-#define CSV_LINE_SIZE            200  // Got it from real time tests
-#define CSV_FILE_SIZE            CSV_LINE_SIZE* MAX_CSV_LINES
-#define DISPLAY_REFRESH_RATE_SEC 5
-#define WRITE_FILE_REFRESH_RATE  5
+#define MAC_ADDRESS_FORMAT "%02x:%02x:%02x:%02x:%02x:%02x"
+#define MAX_CSV_LINES      100
+#define CSV_LINE_SIZE      200  // Got it from real time tests
+#define CSV_FILE_SIZE      CSV_LINE_SIZE* MAX_CSV_LINES
+
+#define WIFI_SCAN_REFRESH_RATE_MS 5000
+#define DISPLAY_REFRESH_RATE_SEC  3
+#define WRITE_FILE_REFRESH_RATE   5
 
 const char* TAG = "wardriving";
 TaskHandle_t wardriving_module_scan_task_handle = NULL;
@@ -45,115 +48,6 @@ const char* csv_header = FORMAT_VERSION
     "\n"
     "MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,"
     "CurrentLongitude,AltitudeMeters,AccuracyMeters,RCOIs,MfgrId,Type";
-
-static void print_auth_mode(int authmode) {
-  switch (authmode) {
-    case WIFI_AUTH_OPEN:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_OPEN");
-      break;
-    case WIFI_AUTH_OWE:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_OWE");
-      break;
-    case WIFI_AUTH_WEP:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WEP");
-      break;
-    case WIFI_AUTH_WPA_PSK:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA_PSK");
-      break;
-    case WIFI_AUTH_WPA2_PSK:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA2_PSK");
-      break;
-    case WIFI_AUTH_WPA_WPA2_PSK:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA_WPA2_PSK");
-      break;
-    case WIFI_AUTH_ENTERPRISE:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_ENTERPRISE");
-      break;
-    case WIFI_AUTH_WPA3_PSK:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA3_PSK");
-      break;
-    case WIFI_AUTH_WPA2_WPA3_PSK:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA2_WPA3_PSK");
-      break;
-    case WIFI_AUTH_WPA3_ENT_192:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA3_ENT_192");
-      break;
-    default:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_UNKNOWN");
-      break;
-  }
-}
-
-static void print_cipher_type(int pairwise_cipher, int group_cipher) {
-  switch (pairwise_cipher) {
-    case WIFI_CIPHER_TYPE_NONE:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_NONE");
-      break;
-    case WIFI_CIPHER_TYPE_WEP40:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_WEP40");
-      break;
-    case WIFI_CIPHER_TYPE_WEP104:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_WEP104");
-      break;
-    case WIFI_CIPHER_TYPE_TKIP:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_TKIP");
-      break;
-    case WIFI_CIPHER_TYPE_CCMP:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_CCMP");
-      break;
-    case WIFI_CIPHER_TYPE_TKIP_CCMP:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_TKIP_CCMP");
-      break;
-    case WIFI_CIPHER_TYPE_AES_CMAC128:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_AES_CMAC128");
-      break;
-    case WIFI_CIPHER_TYPE_SMS4:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_SMS4");
-      break;
-    case WIFI_CIPHER_TYPE_GCMP:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_GCMP");
-      break;
-    case WIFI_CIPHER_TYPE_GCMP256:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_GCMP256");
-      break;
-    default:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_UNKNOWN");
-      break;
-  }
-
-  switch (group_cipher) {
-    case WIFI_CIPHER_TYPE_NONE:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_NONE");
-      break;
-    case WIFI_CIPHER_TYPE_WEP40:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_WEP40");
-      break;
-    case WIFI_CIPHER_TYPE_WEP104:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_WEP104");
-      break;
-    case WIFI_CIPHER_TYPE_TKIP:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_TKIP");
-      break;
-    case WIFI_CIPHER_TYPE_CCMP:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_CCMP");
-      break;
-    case WIFI_CIPHER_TYPE_TKIP_CCMP:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_TKIP_CCMP");
-      break;
-    case WIFI_CIPHER_TYPE_SMS4:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_SMS4");
-      break;
-    case WIFI_CIPHER_TYPE_GCMP:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_GCMP");
-      break;
-    case WIFI_CIPHER_TYPE_GCMP256:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_GCMP256");
-      break;
-    default:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_UNKNOWN");
-      break;
-  }
-}
 
 char* get_mac_address(uint8_t* mac) {
   char* mac_address = malloc(18);
@@ -209,44 +103,15 @@ void wardriving_module_scan_task(void* pvParameters) {
 
   while (true) {
     wifi_scanner_module_scan();
-    // wardriving_screens_module_scanning(wifi_scanned_packets,
-    //                                    gps_module_get_signal_strength(gps));
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
+    vTaskDelay(WIFI_SCAN_REFRESH_RATE_MS / portTICK_PERIOD_MS);
   }
 }
 
-/**
- * @brief Callback function for GPS events
- *
- * @param event_data
- *
- * @note This function is called every time a GPS event is triggered, its
- * ussually every second.
- */
-void wardriving_gps_event_handler_cb(gps_t* gps) {
-  static uint32_t counter = 0;
-  counter++;
+void wardriving_module_save_to_file(gps_t* gps) {
+  esp_err_t err = sd_card_create_dir(DIR_NAME);
 
-  ESP_LOGI(TAG,
-           "Satellites in use: %d, signal: %s \r\n"
-           "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
-           "\t\t\t\t\t\tlongitude = %.05f°E\r\n",
-           gps->sats_in_use, gps_module_get_signal_strength(gps), gps->latitude,
-           gps->longitude);
-
-  if (counter % DISPLAY_REFRESH_RATE_SEC == 0 || counter == 1) {
-    wardriving_screens_module_scanning(wifi_scanned_packets,
-                                       gps_module_get_signal_strength(gps));
-  }
-
-  uint64_t start_time, end_time;
-  start_time = esp_timer_get_time();
-
-  if (gps->sats_in_use == 0) {
-    return;
-  }
-
-  if (counter % WRITE_FILE_REFRESH_RATE != 0) {
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to create directory");
     return;
   }
 
@@ -298,14 +163,40 @@ void wardriving_gps_event_handler_cb(gps_t* gps) {
     // ESP_LOGI(TAG, "Line size %d bytes", strlen(csv_line));
     strcat(csv_file, csv_line);
   }
-  ESP_LOGW(TAG, "File size %d bytes, lines: %u", strlen(csv_file), csv_lines);
+  ESP_LOGI(TAG, "File size %d bytes, scanned packets: %u", strlen(csv_file),
+           wifi_scanned_packets);
   sd_card_write_file(FILE_NAME, csv_file);
+}
 
-  end_time = esp_timer_get_time();
-  float time = (float) (end_time - start_time) / 1000000;
-  char* time_str = malloc(sizeof(time) + 1);
-  sprintf(time_str, "%2.2f", time);
-  ESP_LOGI(TAG, "Total time taken: %s seconds", time_str);
+/**
+ * @brief Callback function for GPS events
+ *
+ * @param event_data
+ *
+ * @note This function is called every time a GPS event is triggered, its
+ * ussually every second.
+ */
+void wardriving_gps_event_handler_cb(gps_t* gps) {
+  static uint32_t counter = 0;
+  counter++;
+
+  ESP_LOGI(TAG,
+           "Satellites in use: %d, signal: %s \r\n"
+           "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
+           "\t\t\t\t\t\tlongitude = %.05f°E\r\n",
+           gps->sats_in_use, gps_module_get_signal_strength(gps), gps->latitude,
+           gps->longitude);
+
+  if (counter % DISPLAY_REFRESH_RATE_SEC == 0 || counter == 1) {
+    wardriving_screens_module_scanning(wifi_scanned_packets,
+                                       gps_module_get_signal_strength(gps));
+  }
+
+  if (counter % WRITE_FILE_REFRESH_RATE != 0 && gps->sats_in_use == 0) {
+    return;
+  }
+
+  wardriving_module_save_to_file(gps);
 }
 
 void wardriving_module_start_scan() {
@@ -337,7 +228,5 @@ void wardriving_module_stop_scan() {
     vTaskDelete(wardriving_module_scan_task_handle);
     wardriving_module_scan_task_handle = NULL;
     ESP_LOGI(TAG, "Task deleted");
-  } else {
-    ESP_LOGW(TAG, "Task deleted?");
   }
 }

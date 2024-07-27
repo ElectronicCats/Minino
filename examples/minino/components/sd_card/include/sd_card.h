@@ -50,6 +50,20 @@ esp_err_t sd_card_unmount();
 bool sd_card_is_mounted();
 
 /**
+ * @brief Create a directory in the SD card.
+ *
+ * @param dir_name The name of the directory to create.
+ *
+ * @return esp_err_t
+ *
+ * @note return ESP_ERR_NOT_MOUNTED if the SD card is not mounted.
+ * @note return ESP_OK if the operation was successful or the directory already
+ * exists.
+ * @note return ESP_FAIL if the operation failed.
+ */
+esp_err_t sd_card_create_dir(const char* dir_name);
+
+/**
  * Create a file in the SD card.
  *
  * @param path The path of the file to create.
