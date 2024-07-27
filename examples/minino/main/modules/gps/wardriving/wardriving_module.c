@@ -27,6 +27,7 @@
 #define SUB_BODY       "0"
 
 #define MAC_ADDRESS_FORMAT "%02x:%02x:%02x:%02x:%02x:%02x"
+#define EMPTY_MAC_ADDRESS  "00:00:00:00:00:00"
 #define MAX_CSV_LINES      100
 #define CSV_LINE_SIZE      200  // Got it from real time tests
 #define CSV_FILE_SIZE      CSV_LINE_SIZE* MAX_CSV_LINES
@@ -136,6 +137,13 @@ void wardriving_module_save_to_file(gps_t* gps) {
     char* auth_mode_str = get_auth_mode(ap_records->records[i].authmode);
     char* full_date_time = get_full_date_time(gps);
 
+    if (strcmp(mac_address_str, EMPTY_MAC_ADDRESS) == 0) {
+      ESP_LOGW(TAG, "Empty MAC address found, skipping");
+      free(mac_address_str);
+      free(full_date_time);
+      continue;
+    }
+
     sprintf(csv_line, "%s,%s,%s,%s,%d,%u,%d,%f,%f,%f,%f,%s,%s,%s\n",
             /* MAC */
             mac_address_str,
@@ -169,7 +177,7 @@ void wardriving_module_save_to_file(gps_t* gps) {
     free(mac_address_str);
     free(full_date_time);
 
-    // ESP_LOGI(TAG, "CSV Line: %s", csv_line);
+    ESP_LOGI(TAG, "CSV Line: %s", csv_line);
     // ESP_LOGI(TAG, "Line size %d bytes", strlen(csv_line));
     strcat(csv_file, csv_line);
   }
