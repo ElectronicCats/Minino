@@ -23,3 +23,10 @@ void wardriving_screens_module_loading_text();
  * @return void
  */
 void wardriving_screens_module_no_sd_card();
+
+/**
+ * @brief Display the no GPS signal screen
+ *
+ * @return void
+ */
+void wardriving_screens_module_no_gps_signal();

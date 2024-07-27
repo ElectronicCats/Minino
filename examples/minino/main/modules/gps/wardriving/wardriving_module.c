@@ -37,6 +37,7 @@
 
 typedef enum {
   WARDRIVING_MODULE_STATE_VERIFYING_SD_CARD = 0,
+  WARDRIVING_MODULE_STATE_VERIFYING_GPS,
   WARDRIVING_MODULE_STATE_SCANNING,
   WARDRIVING_MODULE_STATE_STOPPED
 } wardriving_module_state_t;
@@ -48,6 +49,7 @@ TaskHandle_t wardriving_module_scan_task_handle = NULL;
 uint16_t csv_lines;
 uint16_t wifi_scanned_packets;
 char* csv_file = NULL;
+bool gps_signal = false;
 
 const char* csv_header = FORMAT_VERSION
     ",appRelease=" APP_VERSION ",model=" MODEL ",release=" RELEASE
@@ -195,16 +197,19 @@ void wardriving_gps_event_handler_cb(gps_t* gps) {
            gps->sats_in_use, gps_module_get_signal_strength(gps), gps->latitude,
            gps->longitude);
 
+  if (gps->sats_in_use == 0) {
+    wardriving_screens_module_no_gps_signal();
+    return;
+  }
+
   if (counter % DISPLAY_REFRESH_RATE_SEC == 0 || counter == 1) {
     wardriving_screens_module_scanning(wifi_scanned_packets,
                                        gps_module_get_signal_strength(gps));
   }
 
-  if (counter % WRITE_FILE_REFRESH_RATE != 0 && gps->sats_in_use == 0) {
-    return;
+  if (counter % WRITE_FILE_REFRESH_RATE == 0) {
+    wardriving_module_save_to_file(gps);
   }
-
-  wardriving_module_save_to_file(gps);
 }
 
 esp_err_t wardriving_module_verify_sd_card() {
@@ -215,6 +220,13 @@ esp_err_t wardriving_module_verify_sd_card() {
     wardriving_screens_module_no_sd_card();
   }
   return err;
+}
+
+esp_err_t wardriving_module_verify_gps() {
+  ESP_LOGI(TAG, "Verifying GPS");
+  wardriving_module_state = WARDRIVING_MODULE_STATE_VERIFYING_GPS;
+  gps_module_begin();
+  return ESP_OK;
 }
 
 void wardriving_module_begin() {
