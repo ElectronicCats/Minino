@@ -100,3 +100,14 @@ esp_err_t sd_card_read_file(const char* path);
  * @note return ESP_ERR_NOT_FOUND if the file does not exist.
  */
 esp_err_t sd_card_write_file(const char* path, char* data);
+
+/**
+ * Get the files in a directory.
+ *
+ * @param dir_name The name of the directory to get the files from.
+ * @param files The array to store the file names.
+ * @param count The number of files in the directory.
+ *
+ * @return esp_err_t
+ */
+esp_err_t sd_card_get_files(const char* dir_name, char* files[], int* count);

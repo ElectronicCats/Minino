@@ -158,9 +158,9 @@ void gps_module_exit_submenu_cb() {
   screen_module_menu_t current_menu = menu_screens_get_current_menu();
 
   switch (current_menu) {
-    // case MENU_GPS_WARDRIVING:
-    //   wardriving_module_end();
-    //   break;
+    case MENU_GPS_WARDRIVING:
+      wardriving_module_end();
+      break;
     case MENU_GPS_WARDRIVING_START:
       wardriving_module_stop_scan();
       break;

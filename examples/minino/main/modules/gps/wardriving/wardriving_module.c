@@ -13,7 +13,7 @@
 #include "wifi_scanner.h"
 
 #define DIR_NAME       "Wardriving"
-#define FILE_NAME      DIR_NAME "/Minino.csv"
+#define FILE_NAME      DIR_NAME "/Minino"
 #define FORMAT_VERSION "WigleWifi-1.6"
 #define APP_VERSION    CONFIG_PROJECT_VERSION
 #define MODEL          "MININO"
@@ -31,6 +31,7 @@
 #define MAX_CSV_LINES      100
 #define CSV_LINE_SIZE      200  // Got it from real time tests
 #define CSV_FILE_SIZE      CSV_LINE_SIZE* MAX_CSV_LINES
+#define CSV_HEADER_LINES   2  // Check `csv_header` variable
 
 #define WIFI_SCAN_REFRESH_RATE_MS 5000
 #define DISPLAY_REFRESH_RATE_SEC  3
@@ -49,8 +50,8 @@ wardriving_module_state_t wardriving_module_state =
 TaskHandle_t wardriving_module_scan_task_handle = NULL;
 uint16_t csv_lines;
 uint16_t wifi_scanned_packets;
-char* csv_file = NULL;
-bool gps_signal = false;
+char* csv_file_name = NULL;
+char* csv_file_buffer = NULL;
 
 const char* csv_header = FORMAT_VERSION
     ",appRelease=" APP_VERSION ",model=" MODEL ",release=" RELEASE
@@ -118,6 +119,30 @@ void wardriving_module_scan_task(void* pvParameters) {
   }
 }
 
+void list_files() {
+  ESP_LOGI(TAG, "Listing files");
+  // int count = 0;
+  // char* files[1000];
+  // sd_card_get_files(DIR_NAME, files, &count);
+  // for (int i = 0; i < count; i++) {
+  //   ESP_LOGI(TAG, "File: %s", files[i]);
+  // }
+
+  // for (int i = 0; i < count; i++) {
+  //   free(files[i]);
+  // }
+}
+
+/**
+ * @brief Save the scanned AP records to a CSV file
+ *
+ * @param gps The GPS module instance
+ *
+ * @note This function is called every WRITE_FILE_REFRESH_RATE seconds to save
+ * the scanned AP records to a CSV file in the SD card.
+ *
+ * @return void
+ */
 void wardriving_module_save_to_file(gps_t* gps) {
   esp_err_t err = sd_card_create_dir(DIR_NAME);
 
@@ -127,7 +152,7 @@ void wardriving_module_save_to_file(gps_t* gps) {
   }
 
   wifi_scanner_ap_records_t* ap_records = wifi_scanner_get_ap_records();
-  char* csv_line = malloc(CSV_LINE_SIZE);
+  char* csv_line_buffer = malloc(CSV_LINE_SIZE);
 
   // Append records to csv file buffer
   for (int i = 0; i < ap_records->count; i++) {
@@ -137,14 +162,39 @@ void wardriving_module_save_to_file(gps_t* gps) {
     char* auth_mode_str = get_auth_mode(ap_records->records[i].authmode);
     char* full_date_time = get_full_date_time(gps);
 
+    // +1 because there is a csv_lines++ before this
+    if (csv_lines == CSV_HEADER_LINES + 1) {
+      sprintf(csv_file_name, "%s_%s.csv", FILE_NAME, full_date_time);
+      // Replace " " by "_" and ":" by "-"
+      for (int i = 0; i < strlen(csv_file_name); i++) {
+        if (csv_file_name[i] == ' ') {
+          csv_file_name[i] = '_';
+        }
+        if (csv_file_name[i] == ':') {
+          csv_file_name[i] = '-';
+        }
+      }
+    }
+
+    if (csv_lines >= MAX_CSV_LINES) {
+      ESP_LOGW(TAG, "Max CSV lines reached, writing to file");
+      sd_card_write_file(csv_file_name, csv_file_buffer);
+      list_files();
+      csv_lines = CSV_HEADER_LINES;
+      free(csv_file_buffer);
+      csv_file_buffer = malloc(CSV_FILE_SIZE);
+      sprintf(csv_file_buffer, "%s\n",
+              csv_header);  // Append header to csv file
+    }
+
     if (strcmp(mac_address_str, EMPTY_MAC_ADDRESS) == 0) {
-      ESP_LOGW(TAG, "Empty MAC address found, skipping");
+      // ESP_LOGW(TAG, "Empty MAC address found, skipping");
       free(mac_address_str);
       free(full_date_time);
       continue;
     }
 
-    sprintf(csv_line, "%s,%s,%s,%s,%d,%u,%d,%f,%f,%f,%f,%s,%s,%s\n",
+    sprintf(csv_line_buffer, "%s,%s,%s,%s,%d,%u,%d,%f,%f,%f,%f,%s,%s,%s\n",
             /* MAC */
             mac_address_str,
             /* SSID */
@@ -177,13 +227,14 @@ void wardriving_module_save_to_file(gps_t* gps) {
     free(mac_address_str);
     free(full_date_time);
 
-    ESP_LOGI(TAG, "CSV Line: %s", csv_line);
-    // ESP_LOGI(TAG, "Line size %d bytes", strlen(csv_line));
-    strcat(csv_file, csv_line);
+    // ESP_LOGI(TAG, "CSV Line: %s", csv_line_buffer);
+    // ESP_LOGI(TAG, "Line size %d bytes", strlen(csv_line_buffer));
+    strcat(csv_file_buffer, csv_line_buffer);
   }
-  ESP_LOGI(TAG, "File size %d bytes, scanned packets: %u", strlen(csv_file),
-           wifi_scanned_packets);
-  sd_card_write_file(FILE_NAME, csv_file);
+  free(csv_line_buffer);
+  ESP_LOGI(TAG, "File size %d bytes, scanned packets: %u",
+           strlen(csv_file_buffer), wifi_scanned_packets);
+  sd_card_write_file(csv_file_name, csv_file_buffer);
 }
 
 /**
@@ -191,19 +242,19 @@ void wardriving_module_save_to_file(gps_t* gps) {
  *
  * @param event_data
  *
- * @note This function is called every time a GPS event is triggered, its
- * ussually every second.
+ * @note This function is called every time a GPS event is triggered, by default
+ * is 1Hz (1 second) according to the ATGM336H-6N-74 datasheet.
  */
 void wardriving_gps_event_handler_cb(gps_t* gps) {
   static uint32_t counter = 0;
   counter++;
 
-  ESP_LOGI(TAG,
-           "Satellites in use: %d, signal: %s \r\n"
-           "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
-           "\t\t\t\t\t\tlongitude = %.05f°E\r\n",
-           gps->sats_in_use, gps_module_get_signal_strength(gps), gps->latitude,
-           gps->longitude);
+  // ESP_LOGI(TAG,
+  //          "Satellites in use: %d, signal: %s \r\n"
+  //          "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
+  //          "\t\t\t\t\t\tlongitude = %.05f°E\r\n",
+  //          gps->sats_in_use, gps_module_get_signal_strength(gps),
+  //          gps->latitude, gps->longitude);
 
   if (gps->sats_in_use == 0) {
     wardriving_screens_module_no_gps_signal();
@@ -230,22 +281,23 @@ esp_err_t wardriving_module_verify_sd_card() {
   return err;
 }
 
-esp_err_t wardriving_module_verify_gps() {
-  ESP_LOGI(TAG, "Verifying GPS");
-  wardriving_module_state = WARDRIVING_MODULE_STATE_VERIFYING_GPS;
-  gps_module_begin();
-  return ESP_OK;
-}
-
 void wardriving_module_begin() {
 #if !defined(CONFIG_WARDRIVING_MODULE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
   ESP_LOGI(TAG, "Wardriving module begin");
-  csv_lines = 2;  // Two header lines
+  csv_lines = CSV_HEADER_LINES;
   wifi_scanned_packets = 0;
-  csv_file = malloc(CSV_FILE_SIZE);
-  sprintf(csv_file, "%s\n", csv_header);  // Append header to csv file
+  csv_file_buffer = malloc(CSV_FILE_SIZE);
+  csv_file_name = malloc(strlen(FILE_NAME) + 30);
+  sprintf(csv_file_name, "%s.csv", FILE_NAME);
+  sprintf(csv_file_buffer, "%s\n", csv_header);  // Append header to csv file
+}
+
+void wardriving_module_end() {
+  ESP_LOGI(TAG, "Wardriving module end");
+  free(csv_file_buffer);
+  free(csv_file_name);
 }
 
 void wardriving_module_start_scan() {
@@ -272,7 +324,7 @@ void wardriving_module_stop_scan() {
   gps_module_stop_read();
   gps_module_unregister_cb();
   wifi_driver_deinit();
-  sd_card_read_file(FILE_NAME);
+  sd_card_read_file(csv_file_name);
   sd_card_unmount();
   if (wardriving_module_scan_task_handle != NULL) {
     vTaskDelete(wardriving_module_scan_task_handle);
