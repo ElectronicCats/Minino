@@ -324,31 +324,6 @@ esp_err_t sd_card_write_file(const char* path, char* data) {
   return ESP_OK;
 }
 
-esp_err_t sd_card_get_files(const char* dir_name, char* files[], int* count) {
-  if (!_sd_card_mounted) {
-    ESP_LOGE(TAG, "SD card not mounted");
-    return ESP_FAIL;
-  }
-
-  print_files_in_sd();
-  return ESP_OK;
-
-  DIR* dir;
-  struct dirent* ent;
-  if ((dir = opendir(dir_name)) != NULL) {
-    while ((ent = readdir(dir)) != NULL) {
-      files[*count] = ent->d_name;
-      (*count)++;
-    }
-    closedir(dir);
-  } else {
-    ESP_LOGE(TAG, "Could not open directory");
-    return ESP_FAIL;
-  }
-
-  return ESP_OK;
-}
-
 size_t sd_card_get_file_size(FILE* file) {
   if (file == NULL) {
     return 0;

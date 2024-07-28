@@ -119,20 +119,6 @@ void wardriving_module_scan_task(void* pvParameters) {
   }
 }
 
-void list_files() {
-  ESP_LOGI(TAG, "Listing files");
-  // int count = 0;
-  // char* files[1000];
-  // sd_card_get_files(DIR_NAME, files, &count);
-  // for (int i = 0; i < count; i++) {
-  //   ESP_LOGI(TAG, "File: %s", files[i]);
-  // }
-
-  // for (int i = 0; i < count; i++) {
-  //   free(files[i]);
-  // }
-}
-
 /**
  * @brief Save the scanned AP records to a CSV file
  *
@@ -179,7 +165,6 @@ void wardriving_module_save_to_file(gps_t* gps) {
     if (csv_lines >= MAX_CSV_LINES) {
       ESP_LOGW(TAG, "Max CSV lines reached, writing to file");
       sd_card_write_file(csv_file_name, csv_file_buffer);
-      list_files();
       csv_lines = CSV_HEADER_LINES;
       free(csv_file_buffer);
       csv_file_buffer = malloc(CSV_FILE_SIZE);
@@ -249,12 +234,12 @@ void wardriving_gps_event_handler_cb(gps_t* gps) {
   static uint32_t counter = 0;
   counter++;
 
-  // ESP_LOGI(TAG,
-  //          "Satellites in use: %d, signal: %s \r\n"
-  //          "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
-  //          "\t\t\t\t\t\tlongitude = %.05f°E\r\n",
-  //          gps->sats_in_use, gps_module_get_signal_strength(gps),
-  //          gps->latitude, gps->longitude);
+  ESP_LOGI(TAG,
+           "Satellites in use: %d, signal: %s \r\n"
+           "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
+           "\t\t\t\t\t\tlongitude = %.05f°E\r\n",
+           gps->sats_in_use, gps_module_get_signal_strength(gps), gps->latitude,
+           gps->longitude);
 
   if (gps->sats_in_use == 0) {
     wardriving_screens_module_no_gps_signal();
