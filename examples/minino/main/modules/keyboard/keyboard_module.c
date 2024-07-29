@@ -61,12 +61,10 @@ static void button_event_cb(void* arg, void* data) {
   ESP_LOGI(TAG, "Button: %s, Event: %s", button_name_str, button_event_str);
 
   stop_screen_saver();
-  button_event_state_t button_evt_cb = {.button_pressed = button_name,
-                                        .button_event = button_event};
   // If we have an app with a custom handler, we call it
   app_state = menu_screens_get_app_state();
   if (app_state.in_app) {
-    app_state.app_handler(button_evt_cb);
+    app_state.app_handler(button_name, button_event);
     return;
   }
 

@@ -7,7 +7,7 @@
 
 #define OLED_DISPLAY_INVERT true
 #define OLED_DISPLAY_NORMAL false
-#define MAX_LINE_CHAR       18
+#define MAX_LINE_CHAR       16  // 16 * 8 = 128 -> width of the screen
 
 #ifdef CONFIG_RESOLUTION_128X64
   #define MAX_PAGE 7  // 0 - 7

@@ -59,7 +59,8 @@ static void catdos_module_display_target_configure();
 static void catdos_module_display_wifi_configured();
 static char catdos_module_get_request_url();
 static bool catdos_module_is_connection();
-static void catdos_module_state_machine(button_event_t button_pressed);
+static void catdos_module_state_machine(uint8_t button_name,
+                                        uint8_t button_event);
 static void catdos_module_display_attack_animation();
 static void catdos_module_display_wifi();
 static void catdos_module_show_target();
@@ -572,9 +573,8 @@ static void catdos_module_connect_wifi() {
   connect_wifi(wifi_ssid, wifi_passwd, catdos_module_cb_connection);
 }
 
-static void catdos_module_state_machine(button_event_t button_pressed) {
-  uint8_t button_name = button_pressed >> 4;
-  uint8_t button_event = button_pressed & 0x0F;
+static void catdos_module_state_machine(uint8_t button_name,
+                                        uint8_t button_event) {
   ESP_LOGI(CATDOS_TAG, "Button: %d STATE: %d", button_name, catdos_state);
   if (button_event != BUTTON_SINGLE_CLICK) {
     return;

@@ -192,7 +192,7 @@ int8_t preferences_get_char(const char* key, int8_t default_value) {
   int8_t value;
   _return_err = nvs_get_i8(_nvs_handler, key, &value);
   if (_return_err == ESP_ERR_NVS_NOT_FOUND) {
-    ESP_LOGI(TAG, "The value is not initialized yet!");
+    ESP_LOGW(TAG, "The value '%s' is not initialized yet!", key);
     return default_value;
   }
 
@@ -205,7 +205,7 @@ uint8_t preferences_get_uchar(const char* key, uint8_t default_value) {
   uint8_t value;
   _return_err = nvs_get_u8(_nvs_handler, key, &value);
   if (_return_err == ESP_ERR_NVS_NOT_FOUND) {
-    ESP_LOGI(TAG, "The value is not initialized yet!");
+    ESP_LOGW(TAG, "The value '%s' is not initialized yet!", key);
     return default_value;
   }
 
@@ -218,7 +218,7 @@ int16_t preferences_get_short(const char* key, int16_t default_value) {
   int16_t value;
   _return_err = nvs_get_i16(_nvs_handler, key, &value);
   if (_return_err == ESP_ERR_NVS_NOT_FOUND) {
-    ESP_LOGI(TAG, "The value is not initialized yet!");
+    ESP_LOGW(TAG, "The value '%s' is not initialized yet!", key);
     return default_value;
   }
 
@@ -231,7 +231,7 @@ uint16_t preferences_get_ushort(const char* key, uint16_t default_value) {
   uint16_t value;
   _return_err = nvs_get_u16(_nvs_handler, key, &value);
   if (_return_err == ESP_ERR_NVS_NOT_FOUND) {
-    ESP_LOGI(TAG, "The value is not initialized yet!");
+    ESP_LOGW(TAG, "The value '%s' is not initialized yet!", key);
     return default_value;
   }
 
@@ -244,7 +244,7 @@ int32_t preferences_get_int(const char* key, int32_t default_value) {
   int32_t value;
   _return_err = nvs_get_i32(_nvs_handler, key, &value);
   if (_return_err == ESP_ERR_NVS_NOT_FOUND) {
-    ESP_LOGI(TAG, "The value is not initialized yet!");
+    ESP_LOGW(TAG, "The value '%s' is not initialized yet!", key);
     return default_value;
   }
 
@@ -257,7 +257,7 @@ uint32_t preferences_get_uint(const char* key, uint32_t default_value) {
   uint32_t value;
   _return_err = nvs_get_u32(_nvs_handler, key, &value);
   if (_return_err == ESP_ERR_NVS_NOT_FOUND) {
-    ESP_LOGI(TAG, "The value is not initialized yet!");
+    ESP_LOGW(TAG, "The value '%s' is not initialized yet!", key);
     return default_value;
   }
 
@@ -270,7 +270,7 @@ int32_t preferences_get_long(const char* key, int32_t default_value) {
   int32_t value;
   _return_err = nvs_get_i32(_nvs_handler, key, &value);
   if (_return_err == ESP_ERR_NVS_NOT_FOUND) {
-    ESP_LOGI(TAG, "The value is not initialized yet!");
+    ESP_LOGW(TAG, "The value '%s' is not initialized yet!", key);
     return default_value;
   }
 
@@ -283,7 +283,7 @@ uint32_t preferences_get_ulong(const char* key, uint32_t default_value) {
   uint32_t value;
   _return_err = nvs_get_u32(_nvs_handler, key, &value);
   if (_return_err == ESP_ERR_NVS_NOT_FOUND) {
-    ESP_LOGI(TAG, "The value is not initialized yet!");
+    ESP_LOGW(TAG, "The value '%s' is not initialized yet!", key);
     return default_value;
   }
 
@@ -296,7 +296,7 @@ int64_t preferences_get_long64(const char* key, int64_t default_value) {
   int64_t value;
   _return_err = nvs_get_i64(_nvs_handler, key, &value);
   if (_return_err == ESP_ERR_NVS_NOT_FOUND) {
-    ESP_LOGI(TAG, "The value is not initialized yet!");
+    ESP_LOGW(TAG, "The value '%s' is not initialized yet!", key);
     return default_value;
   }
 
@@ -309,7 +309,7 @@ uint64_t preferences_get_ulong64(const char* key, uint64_t default_value) {
   uint64_t value;
   _return_err = nvs_get_u64(_nvs_handler, key, &value);
   if (_return_err == ESP_ERR_NVS_NOT_FOUND) {
-    ESP_LOGI(TAG, "The value is not initialized yet!");
+    ESP_LOGW(TAG, "The value '%s' is not initialized yet!", key);
     return default_value;
   }
 
@@ -342,7 +342,7 @@ esp_err_t preferences_get_string(const char* key,
   _return_err = nvs_get_str(_nvs_handler, key, NULL, &length);
 
   if (_return_err == ESP_ERR_NVS_NOT_FOUND) {
-    ESP_LOGI(TAG, "The value is not initialized yet!");
+    ESP_LOGW(TAG, "The value '%s' is not initialized yet!", key);
     return ESP_ERR_NVS_NOT_FOUND;
   }
 
@@ -361,7 +361,7 @@ size_t preferences_get_bytes_length(const char* key) {
   size_t length;
   _return_err = nvs_get_blob(_nvs_handler, key, NULL, &length);
   if (_return_err == ESP_ERR_NVS_NOT_FOUND) {
-    ESP_LOGI(TAG, "The value is not initialized yet!");
+    ESP_LOGW(TAG, "The value '%s' is not initialized yet!", key);
     return 0;
   }
 
@@ -373,7 +373,7 @@ esp_err_t preferences_get_bytes(const char* key, void* buffer, size_t length) {
 
   _return_err = nvs_get_blob(_nvs_handler, key, buffer, &length);
   if (_return_err == ESP_ERR_NVS_NOT_FOUND) {
-    ESP_LOGI(TAG, "The value is not initialized yet!");
+    ESP_LOGW(TAG, "The value '%s' is not initialized yet!", key);
     return ESP_ERR_NVS_NOT_FOUND;
   }
 

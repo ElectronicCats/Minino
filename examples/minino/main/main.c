@@ -3,6 +3,7 @@
 #include "cat_console.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "flash_fs.h"
 #include "keyboard_module.h"
 #include "leds.h"
 #include "menu_screens_modules.h"
@@ -35,7 +36,6 @@ void app_main(void) {
   leds_init();
   preferences_begin();
   sd_card_begin();
-  // wardriving_begin();
   keyboard_module_begin();
   menu_screens_begin();
   reboot_counter();

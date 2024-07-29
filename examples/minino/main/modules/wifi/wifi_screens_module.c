@@ -1,6 +1,6 @@
 #include "wifi_screens_module.h"
 #include <string.h>
-#include "animations_timer.h"
+#include "animations_task.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "modules/wifi/wifi_bitmaps.h"
@@ -229,9 +229,9 @@ void wifi_screens_display_sniffer_animation_task() {
 }
 
 void wifi_screens_sniffer_animation_start() {
-  animations_timer_run(&wifi_screens_display_sniffer_animation_task, 100);
+  animations_task_run(&wifi_screens_display_sniffer_animation_task, 100, NULL);
 }
 
 void wifi_screens_sniffer_animation_stop() {
-  animations_timer_stop();
+  animations_task_stop();
 }

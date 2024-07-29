@@ -1,12 +1,19 @@
 #include <string.h>
 #include "esp_log.h"
+#include "esp_timer.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
+#include "gps_module.h"
+#include "menu_screens_modules.h"
 #include "sd_card.h"
 #include "wardriving_module.h"
+#include "wardriving_screens_module.h"
 #include "wifi_controller.h"
 #include "wifi_scanner.h"
 
-#define FILE_NAME      "test.csv"
+#define DIR_NAME       "Wardriving"
+#define FILE_NAME      DIR_NAME "/Minino"
 #define FORMAT_VERSION "WigleWifi-1.6"
 #define APP_VERSION    CONFIG_PROJECT_VERSION
 #define MODEL          "MININO"
@@ -20,8 +27,31 @@
 #define SUB_BODY       "0"
 
 #define MAC_ADDRESS_FORMAT "%02x:%02x:%02x:%02x:%02x:%02x"
+#define EMPTY_MAC_ADDRESS  "00:00:00:00:00:00"
+#define MAX_CSV_LINES      100
+#define CSV_LINE_SIZE      200  // Got it from real time tests
+#define CSV_FILE_SIZE      CSV_LINE_SIZE* MAX_CSV_LINES
+#define CSV_HEADER_LINES   2  // Check `csv_header` variable
+
+#define WIFI_SCAN_REFRESH_RATE_MS 5000
+#define DISPLAY_REFRESH_RATE_SEC  3
+#define WRITE_FILE_REFRESH_RATE   5
+
+typedef enum {
+  WARDRIVING_MODULE_STATE_VERIFYING_SD_CARD = 0,
+  WARDRIVING_MODULE_STATE_VERIFYING_GPS,
+  WARDRIVING_MODULE_STATE_SCANNING,
+  WARDRIVING_MODULE_STATE_STOPPED
+} wardriving_module_state_t;
 
 const char* TAG = "wardriving";
+wardriving_module_state_t wardriving_module_state =
+    WARDRIVING_MODULE_STATE_STOPPED;
+TaskHandle_t wardriving_module_scan_task_handle = NULL;
+uint16_t csv_lines;
+uint16_t wifi_scanned_packets;
+char* csv_file_name = NULL;
+char* csv_file_buffer = NULL;
 
 const char* csv_header = FORMAT_VERSION
     ",appRelease=" APP_VERSION ",model=" MODEL ",release=" RELEASE
@@ -30,115 +60,6 @@ const char* csv_header = FORMAT_VERSION
     "\n"
     "MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,"
     "CurrentLongitude,AltitudeMeters,AccuracyMeters,RCOIs,MfgrId,Type";
-
-static void print_auth_mode(int authmode) {
-  switch (authmode) {
-    case WIFI_AUTH_OPEN:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_OPEN");
-      break;
-    case WIFI_AUTH_OWE:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_OWE");
-      break;
-    case WIFI_AUTH_WEP:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WEP");
-      break;
-    case WIFI_AUTH_WPA_PSK:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA_PSK");
-      break;
-    case WIFI_AUTH_WPA2_PSK:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA2_PSK");
-      break;
-    case WIFI_AUTH_WPA_WPA2_PSK:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA_WPA2_PSK");
-      break;
-    case WIFI_AUTH_ENTERPRISE:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_ENTERPRISE");
-      break;
-    case WIFI_AUTH_WPA3_PSK:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA3_PSK");
-      break;
-    case WIFI_AUTH_WPA2_WPA3_PSK:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA2_WPA3_PSK");
-      break;
-    case WIFI_AUTH_WPA3_ENT_192:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_WPA3_ENT_192");
-      break;
-    default:
-      ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_UNKNOWN");
-      break;
-  }
-}
-
-static void print_cipher_type(int pairwise_cipher, int group_cipher) {
-  switch (pairwise_cipher) {
-    case WIFI_CIPHER_TYPE_NONE:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_NONE");
-      break;
-    case WIFI_CIPHER_TYPE_WEP40:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_WEP40");
-      break;
-    case WIFI_CIPHER_TYPE_WEP104:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_WEP104");
-      break;
-    case WIFI_CIPHER_TYPE_TKIP:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_TKIP");
-      break;
-    case WIFI_CIPHER_TYPE_CCMP:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_CCMP");
-      break;
-    case WIFI_CIPHER_TYPE_TKIP_CCMP:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_TKIP_CCMP");
-      break;
-    case WIFI_CIPHER_TYPE_AES_CMAC128:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_AES_CMAC128");
-      break;
-    case WIFI_CIPHER_TYPE_SMS4:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_SMS4");
-      break;
-    case WIFI_CIPHER_TYPE_GCMP:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_GCMP");
-      break;
-    case WIFI_CIPHER_TYPE_GCMP256:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_GCMP256");
-      break;
-    default:
-      ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_UNKNOWN");
-      break;
-  }
-
-  switch (group_cipher) {
-    case WIFI_CIPHER_TYPE_NONE:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_NONE");
-      break;
-    case WIFI_CIPHER_TYPE_WEP40:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_WEP40");
-      break;
-    case WIFI_CIPHER_TYPE_WEP104:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_WEP104");
-      break;
-    case WIFI_CIPHER_TYPE_TKIP:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_TKIP");
-      break;
-    case WIFI_CIPHER_TYPE_CCMP:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_CCMP");
-      break;
-    case WIFI_CIPHER_TYPE_TKIP_CCMP:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_TKIP_CCMP");
-      break;
-    case WIFI_CIPHER_TYPE_SMS4:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_SMS4");
-      break;
-    case WIFI_CIPHER_TYPE_GCMP:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_GCMP");
-      break;
-    case WIFI_CIPHER_TYPE_GCMP256:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_GCMP256");
-      break;
-    default:
-      ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_UNKNOWN");
-      break;
-  }
-}
 
 char* get_mac_address(uint8_t* mac) {
   char* mac_address = malloc(18);
@@ -178,68 +99,221 @@ char* get_auth_mode(int authmode) {
   }
 }
 
+char* get_full_date_time(gps_t* gps) {
+  char* date_time = malloc(sizeof(char) * 30);
+  sprintf(date_time, "%d-%d-%d %d:%d:%d", gps->date.year, gps->date.month,
+          gps->date.day, gps->tim.hour, gps->tim.minute, gps->tim.second);
+  return date_time;
+}
+
 uint16_t get_frequency(uint8_t primary) {
   return 2412 + 5 * (primary - 1);
 }
 
-void scan_task(void* pvParameters) {
+void wardriving_module_scan_task(void* pvParameters) {
   wifi_driver_init_sta();
+
   while (true) {
-    // Scan for WiFi networks
     wifi_scanner_module_scan();
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
+    vTaskDelay(WIFI_SCAN_REFRESH_RATE_MS / portTICK_PERIOD_MS);
   }
 }
 
-void wardriving_begin() {
+/**
+ * @brief Save the scanned AP records to a CSV file
+ *
+ * @param gps The GPS module instance
+ *
+ * @note This function is called every WRITE_FILE_REFRESH_RATE seconds to save
+ * the scanned AP records to a CSV file in the SD card.
+ *
+ * @return void
+ */
+void wardriving_module_save_to_file(gps_t* gps) {
+  esp_err_t err = sd_card_create_dir(DIR_NAME);
+
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to create directory");
+    return;
+  }
+
+  wifi_scanner_ap_records_t* ap_records = wifi_scanner_get_ap_records();
+  char* csv_line_buffer = malloc(CSV_LINE_SIZE);
+
+  // Append records to csv file buffer
+  for (int i = 0; i < ap_records->count; i++) {
+    csv_lines++;
+    wifi_scanned_packets++;
+    char* mac_address_str = get_mac_address(ap_records->records[i].bssid);
+    char* auth_mode_str = get_auth_mode(ap_records->records[i].authmode);
+    char* full_date_time = get_full_date_time(gps);
+
+    // +1 because there is a csv_lines++ before this
+    if (csv_lines == CSV_HEADER_LINES + 1) {
+      sprintf(csv_file_name, "%s_%s.csv", FILE_NAME, full_date_time);
+      // Replace " " by "_" and ":" by "-"
+      for (int i = 0; i < strlen(csv_file_name); i++) {
+        if (csv_file_name[i] == ' ') {
+          csv_file_name[i] = '_';
+        }
+        if (csv_file_name[i] == ':') {
+          csv_file_name[i] = '-';
+        }
+      }
+    }
+
+    if (csv_lines >= MAX_CSV_LINES) {
+      ESP_LOGW(TAG, "Max CSV lines reached, writing to file");
+      sd_card_write_file(csv_file_name, csv_file_buffer);
+      csv_lines = CSV_HEADER_LINES;
+      free(csv_file_buffer);
+      csv_file_buffer = malloc(CSV_FILE_SIZE);
+      sprintf(csv_file_buffer, "%s\n",
+              csv_header);  // Append header to csv file
+    }
+
+    if (strcmp(mac_address_str, EMPTY_MAC_ADDRESS) == 0) {
+      // ESP_LOGW(TAG, "Empty MAC address found, skipping");
+      free(mac_address_str);
+      free(full_date_time);
+      continue;
+    }
+
+    sprintf(csv_line_buffer, "%s,%s,%s,%s,%d,%u,%d,%f,%f,%f,%f,%s,%s,%s\n",
+            /* MAC */
+            mac_address_str,
+            /* SSID */
+            ap_records->records[i].ssid,
+            /* AuthMode */
+            auth_mode_str,
+            /* FirstSeen */
+            full_date_time,
+            /* Channel */
+            ap_records->records[i].primary,
+            /* Frequency */
+            get_frequency(ap_records->records[i].primary),
+            /* RSSI */
+            ap_records->records[i].rssi,
+            /* CurrentLatitude */
+            gps->latitude,
+            /* CurrentLongitude */
+            gps->longitude,
+            /* AltitudeMeters */
+            gps->altitude,
+            /* AccuracyMeters */
+            GPS_ACCURACY,
+            /* RCOIs */
+            "",
+            /* MfgrId */
+            "",
+            /* Type */
+            "WIFI");
+
+    free(mac_address_str);
+    free(full_date_time);
+
+    // ESP_LOGI(TAG, "CSV Line: %s", csv_line_buffer);
+    // ESP_LOGI(TAG, "Line size %d bytes", strlen(csv_line_buffer));
+    strcat(csv_file_buffer, csv_line_buffer);
+  }
+  free(csv_line_buffer);
+  ESP_LOGI(TAG, "File size %d bytes, scanned packets: %u",
+           strlen(csv_file_buffer), wifi_scanned_packets);
+  sd_card_write_file(csv_file_name, csv_file_buffer);
+}
+
+/**
+ * @brief Callback function for GPS events
+ *
+ * @param event_data
+ *
+ * @note This function is called every time a GPS event is triggered, by default
+ * is 1Hz (1 second) according to the ATGM336H-6N-74 datasheet.
+ */
+void wardriving_gps_event_handler_cb(gps_t* gps) {
+  static uint32_t counter = 0;
+  counter++;
+
+  ESP_LOGI(TAG,
+           "Satellites in use: %d, signal: %s \r\n"
+           "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
+           "\t\t\t\t\t\tlongitude = %.05f°E\r\n",
+           gps->sats_in_use, gps_module_get_signal_strength(gps), gps->latitude,
+           gps->longitude);
+
+  if (gps->sats_in_use == 0) {
+    wardriving_screens_module_no_gps_signal();
+    return;
+  }
+
+  if (counter % DISPLAY_REFRESH_RATE_SEC == 0 || counter == 1) {
+    wardriving_screens_module_scanning(wifi_scanned_packets,
+                                       gps_module_get_signal_strength(gps));
+  }
+
+  if (counter % WRITE_FILE_REFRESH_RATE == 0) {
+    wardriving_module_save_to_file(gps);
+  }
+}
+
+esp_err_t wardriving_module_verify_sd_card() {
+  ESP_LOGI(TAG, "Verifying SD card");
+  wardriving_module_state = WARDRIVING_MODULE_STATE_VERIFYING_SD_CARD;
+  esp_err_t err = sd_card_mount();
+  if (err != ESP_OK) {
+    wardriving_screens_module_no_sd_card();
+  }
+  return err;
+}
+
+void wardriving_module_begin() {
 #if !defined(CONFIG_WARDRIVING_MODULE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
+  ESP_LOGI(TAG, "Wardriving module begin");
+  csv_lines = CSV_HEADER_LINES;
+  wifi_scanned_packets = 0;
+  csv_file_buffer = malloc(CSV_FILE_SIZE);
+  csv_file_name = malloc(strlen(FILE_NAME) + 30);
+  sprintf(csv_file_name, "%s.csv", FILE_NAME);
+  sprintf(csv_file_buffer, "%s\n", csv_header);  // Append header to csv file
+}
 
-  sd_card_mount();
-  wifi_driver_init_sta();
-  wifi_scanner_module_scan();
+void wardriving_module_end() {
+  ESP_LOGI(TAG, "Wardriving module end");
+  free(csv_file_buffer);
+  free(csv_file_name);
+}
 
-  uint16_t number = DEFAULT_SCAN_LIST_SIZE;
-  // wifi_ap_record_t ap_info[DEFAULT_SCAN_LIST_SIZE];
-  // uint16_t ap_count = 0;
-  // memset(ap_info, 0, sizeof(ap_info));
-  wifi_scanner_ap_records_t* ap_records = wifi_scanner_get_ap_records();
-
-  char* csv_line = malloc(1024);
-  char* csv_file = malloc(1024);
-
-  // Append header to csv file
-  sprintf(csv_file, "%s\n", csv_header);
-
-  // Append records to csv file
-  for (int i = 0; i < ap_records->count; i++) {
-    sprintf(csv_line, "%s,%s,%s,%s,%d,%u,%d\n",
-            get_mac_address(ap_records->records[i].bssid),
-            ap_records->records[i].ssid,
-            get_auth_mode(ap_records->records[i].authmode),
-            "2021-09-01T00:00:00Z", ap_records->records[i].primary,
-            get_frequency(ap_records->records[i].primary),
-            ap_records->records[i].rssi);
-
-    ESP_LOGI(TAG, "CSV Line: %s", csv_line);
-    strcat(csv_file, csv_line);
-  }
-  sd_card_write_file(FILE_NAME, csv_file);
-  free(csv_line);
-  free(csv_file);
-
-  for (int i = 0; i < ap_records->count; i++) {
-    ESP_LOGI(TAG, "SSID \t\t%s", ap_records->records[i].ssid);
-    ESP_LOGI(TAG, "RSSI \t\t%d", ap_records->records[i].rssi);
-    print_auth_mode(ap_records->records[i].authmode);
-    if (ap_records->records[i].authmode != WIFI_AUTH_WEP) {
-      print_cipher_type(ap_records->records[i].pairwise_cipher,
-                        ap_records->records[i].group_cipher);
-    }
-    ESP_LOGI(TAG, "Channel \t\t%d", ap_records->records[i].primary);
+void wardriving_module_start_scan() {
+  if (wardriving_module_verify_sd_card() != ESP_OK) {
+    return;
   }
 
-  sd_card_read_file(FILE_NAME);
+  ESP_LOGI(TAG, "Start scan");
+  wardriving_module_state = WARDRIVING_MODULE_STATE_SCANNING;
+  xTaskCreate(wardriving_module_scan_task, "wardriving_module_scan_task", 4096,
+              NULL, 5, &wardriving_module_scan_task_handle);
+  gps_module_register_cb(wardriving_gps_event_handler_cb);
+  wardriving_screens_module_loading_text();
+  gps_module_start_scan();
+}
+
+void wardriving_module_stop_scan() {
+  if (wardriving_module_state == WARDRIVING_MODULE_STATE_VERIFYING_SD_CARD) {
+    return;
+  }
+
+  ESP_LOGI(TAG, "Stop scan");
+  wardriving_module_state = WARDRIVING_MODULE_STATE_STOPPED;
+  gps_module_stop_read();
+  gps_module_unregister_cb();
+  wifi_driver_deinit();
+  sd_card_read_file(csv_file_name);
   sd_card_unmount();
+  if (wardriving_module_scan_task_handle != NULL) {
+    vTaskDelete(wardriving_module_scan_task_handle);
+    wardriving_module_scan_task_handle = NULL;
+    ESP_LOGI(TAG, "Task deleted");
+  }
 }

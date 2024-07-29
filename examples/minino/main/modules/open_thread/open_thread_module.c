@@ -12,8 +12,8 @@
 #include "thread_sniffer_screens.h"
 uint8_t channel = 15;
 
-static void thread_broadcast_input(button_event_t button_pressed);
-static void thread_sniffer_input(button_event_t button_pressed);
+static void thread_broadcast_input(uint8_t button_name, uint8_t button_event);
+static void thread_sniffer_input(uint8_t button_name, uint8_t button_event);
 static void open_thread_module_exit_submenu_cb();
 static void open_thread_module_enter_submenu_cb(
     screen_module_menu_t user_selection);
@@ -25,7 +25,12 @@ void open_thread_module_begin() {
   radio_selector_set_thread();
   menu_screens_register_enter_submenu_cb(open_thread_module_enter_submenu_cb);
   menu_screens_register_exit_submenu_cb(open_thread_module_exit_submenu_cb);
-};
+}
+
+void open_thread_module_exit() {
+  screen_module_set_screen(MENU_THREAD_SNIFFER);
+  esp_restart();
+}
 
 static void open_thread_module_enter_submenu_cb(
     screen_module_menu_t user_selection) {
@@ -60,17 +65,14 @@ static void open_thread_module_exit_submenu_cb() {
       menu_screens_unregister_submenu_cbs();
       break;
     case MENU_THREAD_SNIFFER:
-      screen_module_set_screen(MENU_THREAD_SNIFFER);
-      esp_restart();
+      open_thread_module_exit();
       break;
     default:
       break;
   }
 }
 
-static void thread_broadcast_input(button_event_t button_pressed) {
-  uint8_t button_name = button_pressed >> 4;
-  uint8_t button_event = button_pressed & 0x0F;
+static void thread_broadcast_input(uint8_t button_name, uint8_t button_event) {
   if (button_event != BUTTON_SINGLE_CLICK) {
     return;
   }
@@ -98,9 +100,7 @@ static void thread_broadcast_input(button_event_t button_pressed) {
   }
 }
 
-static void thread_sniffer_input(button_event_t button_pressed) {
-  uint8_t button_name = button_pressed >> 4;
-  uint8_t button_event = button_pressed & 0x0F;
+static void thread_sniffer_input(uint8_t button_name, uint8_t button_event) {
   if (button_event != BUTTON_SINGLE_CLICK) {
     return;
   }

@@ -239,9 +239,9 @@ char** remove_items_flag(char** items, int length) {
 
   for (int i = 0; i < length - 1; i++) {
     newArray[i] = strdup(items[i + 1]);
-    ESP_LOGI(TAG, "Item: %s", newArray[i]);
+    // ESP_LOGI(TAG, "Item: %s", newArray[i]);
   }
-  ESP_LOGI(TAG, "Number of items: %d", length - 1);
+  // ESP_LOGI(TAG, "Number of items: %d", length - 1);
 
   num_items = length + 1;
 
@@ -378,7 +378,7 @@ void display_scrolling_text(char** text) {
   ESP_LOGI(TAG, "num: %" PRIu32, num_items - 2);
 
   for (uint8_t i = startIdx; i < num_items - 2; i++) {
-    ESP_LOGI(TAG, "Text[%d]: %s", i, text[i]);
+    // ESP_LOGI(TAG, "Text[%d]: %s", i, text[i]);
     if (i == selected_item) {
       oled_screen_display_text(
           text[i], 0, i - startIdx,
@@ -493,7 +493,7 @@ uint32_t menu_screens_get_menu_length(char* menu[]) {
   uint32_t num_items = 0;
   if (menu != NULL) {
     while (menu[num_items] != NULL) {
-      ESP_LOGI(TAG, "Item: %s", menu[num_items]);
+      // ESP_LOGI(TAG, "Item: %s", menu[num_items]);
       num_items++;
     }
   }

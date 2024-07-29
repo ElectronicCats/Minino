@@ -83,8 +83,13 @@ void wifi_driver_init_apsta(void) {
 }
 
 void wifi_driver_init_sta(void) {
-  ESP_ERROR_CHECK(esp_netif_init());
-  esp_err_t err = esp_event_loop_create_default();
+  esp_err_t err = esp_netif_init();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_DRIVER, "Error initializing netif: %s",
+             esp_err_to_name(err));
+    esp_restart();
+  }
+  err = esp_event_loop_create_default();
   if (err == ESP_ERR_INVALID_STATE) {
     ESP_LOGI(TAG_WIFI_DRIVER, "Event loop already created");
   } else if (err != ESP_OK) {
@@ -92,8 +97,14 @@ void wifi_driver_init_sta(void) {
              esp_err_to_name(err));
     esp_restart();
   }
-  esp_netif_t* sta_netif = esp_netif_create_default_wifi_sta();
-  assert(sta_netif);
+
+  // This shouldn't be a definitive solution, but works for now
+  static bool run_once = false;
+  if (!run_once) {
+    run_once = true;
+    esp_netif_t* sta_netif = esp_netif_create_default_wifi_sta();
+    assert(sta_netif);
+  }
 
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -117,6 +128,12 @@ void wifi_driver_init_null(void) {
   ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
   wifi_driver_initialized = true;
+}
+
+void wifi_driver_deinit() {
+  ESP_ERROR_CHECK(esp_wifi_stop());
+  ESP_ERROR_CHECK(esp_wifi_deinit());
+  wifi_driver_initialized = false;
 }
 
 void wifi_driver_sta_disconnect() {
