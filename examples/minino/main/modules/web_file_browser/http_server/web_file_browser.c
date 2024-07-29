@@ -1,8 +1,11 @@
 #include "web_file_browser.h"
 
 #include <dirent.h>
-#include "esp_http_server.h"
+#include <sys/stat.h>
 #include "esp_log.h"
+
+#include "esp_http_server.h"
+#include "files_ops.h"
 #include "flash_fs.h"
 #include "sd_card.h"
 
@@ -184,10 +187,12 @@ esp_err_t list_files_handler(httpd_req_t* req) {
     if (ent->d_name[0] == '.' && !show_hidden_files) {
       continue;
     }
-    size_t filepath_len = 500;
+    size_t filepath_len = strlen(path) + strlen(ent->d_name) + 2;
+    ;
     char* filepath = (char*) malloc(filepath_len);
     snprintf(filepath, filepath_len, "%s/%s", path, ent->d_name);
 
+    char* size_str = files_ops_format_size(files_ops_get_file_size_2(filepath));
     if (ent->d_type == DT_DIR) {
       httpd_resp_sendstr_chunk(
           req, "<span class=\"folder\">&#128193;</span> <a href=\"/list?path=");
@@ -202,9 +207,12 @@ esp_err_t list_files_handler(httpd_req_t* req) {
       httpd_resp_sendstr_chunk(req, filepath);
       httpd_resp_sendstr_chunk(req, "\">");
       httpd_resp_sendstr_chunk(req, ent->d_name);
-      httpd_resp_sendstr_chunk(req, "</a><br>");
+      httpd_resp_sendstr_chunk(req, "</a> (");
+      httpd_resp_sendstr_chunk(req, size_str);
+      httpd_resp_sendstr_chunk(req, ")<br>");
     }
     free(filepath);
+    free(size_str);
     printf("%s/%s\n", path, ent->d_name);
   }
   free(query_str);
