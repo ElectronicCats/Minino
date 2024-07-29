@@ -538,7 +538,7 @@
       "plot": "MININO_GERBER/",
       "pos_files": "./",
       "specctra_dsn": "",
-      "step": "",
+      "step": "minino.step",
       "svg": "",
       "vrml": ""
     },
