@@ -60,7 +60,8 @@ Minino can operate in 6 different technologies:
 - [x] DOS Attack
 - [x] Analizer -> Save PCAPS in SD or flash
 - [ ] Wireshark integration
-### BLE
+### Bluetooth Classic / BLE
+- [ ] Wardriving
 - [x] BLE sniffer
 - [x] BLE spammer
 - [ ] BLE spoffing
@@ -115,12 +116,22 @@ See the [Wiki](https://github.com/ElectronicCats/Minino/wiki) for more informati
 
 First check the current version of your firmware by going to `About > Version` in your Minino, then check the latest version in the [releases](https://github.com/ElectronicCats/Minino/releases). If there is a new version, continue with the steps below.
 
+TODO: move this to the wiki
+
 - [OTA update](#ota-update)
 - [Manual update](#manual-update)
 
 #### OTA update
 
-TODO: Add OTA update instructions.
+1. Download the latest firmware from the [releases](https://github.com/ElectronicCats/Minino/releases), make sure to download the one that has the `build_files.zip` file.
+
+2. Extract the `build_files.zip` file.
+
+3. In your Minino go to `About > Update`.
+
+4. Connect your device to the WiFi access point created by your Minino. The SSID should be `Minino`, and the password should be `Cats1234`.
+
+5. Once connected, open a web browser and go to `192.168.0.1`. Select the `minino.bin` file from the extracted folder and then click `Update Firmware`.
 
 #### Manual update
 
