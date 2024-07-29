@@ -76,7 +76,7 @@ void oled_screen_display_text(char* text, int x, int page, bool invert) {
 
   uint8_t _x = x + (strlen(text) * 8) > 128 ? 0 : x;
   if (_x != x) {
-    ESP_LOGW(TAG, "Text is too long for the screen, x offset: %d", _x);
+    ESP_LOGW(TAG, "Text %s is too long for the screen, x offset: %d", text, _x);
   }
 
   xSemaphoreTake(oled_mutex, portMAX_DELAY);
