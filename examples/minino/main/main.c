@@ -1,7 +1,9 @@
 #include <stdio.h>
+#include "apps/wifi/deauth/include/deauth_module.h"
 #include "cat_console.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "flash_fs.h"
 #include "keyboard_module.h"
 #include "leds.h"
 #include "menu_screens_modules.h"
@@ -24,6 +26,9 @@ void reboot_counter() {
 }
 
 void app_main(void) {
+#if !defined(CONFIG_MAIN_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
   uint64_t start_time, end_time;
   start_time = esp_timer_get_time();
 
@@ -43,6 +48,5 @@ void app_main(void) {
   ESP_LOGI(TAG, "Total time taken: %s seconds", time_str);
 
   preferences_put_bool("wifi_connected", false);
-  preferences_put_int("logo_show", 1);
   cat_console_begin();
 }

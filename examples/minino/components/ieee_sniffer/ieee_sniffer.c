@@ -52,6 +52,10 @@ void ieee_sniffer_set_channel(int channel) {
 }
 
 void ieee_sniffer_begin(void) {
+#if !defined(CONFIG_IEEE_SNIFFER_DEBUG)
+  esp_log_level_set(TAG_IEEE_SNIFFER, ESP_LOG_NONE);
+#endif
+
   packet_rx_queue = xQueueCreate(8, 257);
   xTaskCreate(debug_handler_task, "debug_handler_task", 8192, NULL, 20, NULL);
 

@@ -510,6 +510,10 @@ static void gatts_event_handler(esp_gatts_cb_event_t event,
 }
 
 void bt_gatts_task_begin(void) {
+#if !defined(CONFIG_BT_GATTS_DEBUG)
+  esp_log_level_set(TAG_BT_GATTS, ESP_LOG_NONE);
+#endif
+
   esp_err_t ret;
 
   ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));

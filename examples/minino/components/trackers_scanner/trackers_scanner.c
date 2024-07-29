@@ -23,6 +23,10 @@ static void handle_bt_gapc_events(esp_gap_ble_cb_event_t event_type,
                                   esp_ble_gap_cb_param_t* param);
 
 void trackers_scanner_start() {
+#if !defined(CONFIG_TRACKERS_SCANNER_DEBUG)
+  esp_log_level_set(TAG_BLE_CLIENT_MODULE, ESP_LOG_NONE);
+#endif
+
   gattc_scan_params_t scan_params = {
       .remote_filter_service_uuid =
           bt_gattc_set_default_ble_filter_service_uuid(),

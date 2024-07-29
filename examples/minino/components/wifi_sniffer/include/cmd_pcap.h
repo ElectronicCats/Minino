@@ -68,6 +68,7 @@ void wifi_sniffer_register_summary_cb(summary_cb_t cb);
  * @brief Get the file size
  *
  * @param file file pointer
+ *
  * @return long
  */
 long pcap_cmd_get_file_size(FILE* file);

@@ -13,6 +13,10 @@ oled_driver_t dev;
 SemaphoreHandle_t oled_mutex;
 
 void oled_screen_begin() {
+#if !defined(CONFIG_OLED_MODULE_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   oled_mutex = xSemaphoreCreateMutex();
 #if CONFIG_I2C_INTERFACE
   ESP_LOGI(TAG, "INTERFACE is i2c");
@@ -64,8 +68,19 @@ void oled_screen_display_text(char* text, int x, int page, bool invert) {
     ESP_LOGE(TAG, "Text is NULL");
     return;
   }
+
+  if (strlen(text) > MAX_LINE_CHAR) {
+    ESP_LOGE(TAG, "%s is too long for the screen", text);
+    return;
+  }
+
+  uint8_t _x = x + (strlen(text) * 8) >= 128 ? 0 : x;
+  if (_x != x) {
+    ESP_LOGW(TAG, "Text is too long for the screen, x offset: %d", _x);
+  }
+
   xSemaphoreTake(oled_mutex, portMAX_DELAY);
-  oled_driver_display_text(&dev, page, text, x, invert);
+  oled_driver_display_text(&dev, page, text, _x, invert);
   xSemaphoreGive(oled_mutex);
 }
 
@@ -75,21 +90,16 @@ void oled_screen_display_text_center(char* text, int page, bool invert) {
     return;
   }
 
-  // ESP_LOGI(TAG, "Text: %s", text);
   int text_length = strlen(text);
-  // ESP_LOGI(TAG, "Text length: %d", text_length);
   if (text_length > MAX_LINE_CHAR) {
     ESP_LOGE(TAG, "Text too long to center");
     oled_screen_display_text(text, 0, page, invert);
     return;
   }
 
-  uint8_t middle_x_coordinate = ((128 - text_length) / 2);
+  uint8_t middle_x_coordinate = 128 / 2;
   uint8_t half_text_length_px = (text_length * 8 / 2);
   uint8_t x_offset = middle_x_coordinate - half_text_length_px;
-  // ESP_LOGW(TAG, "Middle x coordinate: %d", middle_x_coordinate);
-  // ESP_LOGW(TAG, "Half text length: %d", half_text_length_px);
-  // ESP_LOGW(TAG, "X offset: %d", x_offset);
   oled_screen_display_text(text, x_offset, page, invert);
 }
 

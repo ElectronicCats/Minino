@@ -1,12 +1,29 @@
 #include "web_file_browser_screens.h"
+#include "esp_wifi.h"
 #include "oled_screen.h"
+#include "preferences.h"
 
 static void show_ready() {
   oled_screen_clear();
-  oled_screen_display_text("SSID: MININO_AP", 0, 0, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("PASS: Cats1234", 0, 1, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("SERVER:", 0, 2, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("-> 192.168.0.1", 0, 3, OLED_DISPLAY_NORMAL);
+  bool is_connected = preferences_get_bool("wifi_connected", false);
+  if (is_connected) {
+    wifi_config_t wifi_config;
+    esp_wifi_get_config(ESP_IF_WIFI_STA, &wifi_config);
+    oled_screen_display_text("SSID:", 0, 0, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text((char*) wifi_config.sta.ssid, 0, 1,
+                             OLED_DISPLAY_NORMAL);
+    oled_screen_display_text("SERVER:", 0, 2, OLED_DISPLAY_NORMAL);
+    esp_netif_ip_info_t ip6_info;
+    esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"),
+                          &ip6_info);
+    printf("IP address: " IPSTR "\n", IP2STR(&ip6_info.ip));
+
+  } else {
+    oled_screen_display_text("SSID: MININO_AP", 0, 0, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text("PASS: Cats1234", 0, 1, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text("SERVER:", 0, 2, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text("-> 192.168.0.1", 0, 3, OLED_DISPLAY_NORMAL);
+  }
 }
 
 static void show_error() {

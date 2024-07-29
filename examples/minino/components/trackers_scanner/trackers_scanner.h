@@ -47,12 +47,6 @@ typedef struct {
 typedef void (*bluetooth_traker_scanner_cb_t)(tracker_profile_t record);
 
 /**
- * @brief Initialize the bluetooth scanner
- *
- */
-void trackers_scanner_init();
-
-/**
  * @brief Register the callback to handle the bluetooth scanner
  *
  * @param cb The callback to handle the bluetooth scanner

@@ -18,7 +18,28 @@
 #define PIN_NUM_CLK   21
 #define PIN_NUM_CS    18
 
-static const char* TAG = "SD_CARD";
+const char* f_result_to_name[] = {"FR_OK",
+                                  "FR_DISK_ERR",
+                                  "FR_INT_ERR",
+                                  "FR_NOT_READY",
+                                  "FR_NO_FILE",
+                                  "FR_NO_PATH",
+                                  "FR_INVALID_NAME",
+                                  "FR_DENIED",
+                                  "FR_EXIST",
+                                  "FR_INVALID_OBJECT",
+                                  "FR_WRITE_PROTECTED",
+                                  "FR_INVALID_DRIVE",
+                                  "FR_NOT_ENABLED",
+                                  "FR_NO_FILESYSTEM",
+                                  "FR_MKFS_ABORTED",
+                                  "FR_TIMEOUT",
+                                  "FR_LOCKED",
+                                  "FR_NOT_ENOUGH_CORE",
+                                  "FR_TOO_MANY_OPEN_FILES",
+                                  "FR_INVALID_PARAMETER"};
+
+static const char* TAG = "sd_card";
 bool _sd_card_mounted = false;
 
 static struct {
@@ -28,7 +49,7 @@ static struct {
 
 void print_files_in_sd() {
   if (!_sd_card_mounted) {
-    ESP_LOGW(TAG, "SD card not mounted");
+    ESP_LOGE(TAG, "SD card not mounted");
     return;
   }
 
@@ -124,7 +145,7 @@ esp_err_t unmount(int argc, char** argv) {
   esp_err_t ret;
 
   if (!_sd_card_mounted) {
-    ESP_LOGW(TAG, "SD card not mounted");
+    ESP_LOGE(TAG, "SD card not mounted");
     return ESP_ERR_NOT_ALLOWED;
   }
 
@@ -158,6 +179,9 @@ void register_unmount(void) {
 }
 
 void sd_card_begin() {
+#if !defined(CONFIG_SD_CARD_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
   register_mount();
   register_unmount();
 }
@@ -166,7 +190,7 @@ esp_err_t sd_card_mount() {
   esp_err_t err = ESP_OK;
   if (_sd_card_mounted) {
     ESP_LOGW(TAG, "SD card already mounted");
-    return ESP_ERR_ALREADY_MOUNTED;
+    return err;
   }
 
   const char** mount_argv[] = {"mount", "sd"};
@@ -175,6 +199,7 @@ esp_err_t sd_card_mount() {
   err = mount(mount_argc, (char**) mount_argv);
   if (err == ESP_OK) {
     _sd_card_mounted = true;
+    return err;
   } else {
     ESP_LOGE(TAG, "Failed to mount SD card");
   }
@@ -196,7 +221,32 @@ bool sd_card_is_mounted() {
   return _sd_card_mounted;
 }
 
+esp_err_t sd_card_create_dir(const char* dir_name) {
+  if (!_sd_card_mounted) {
+    ESP_LOGE(TAG, "SD card not mounted");
+    return ESP_ERR_NOT_MOUNTED;
+  }
+
+  FRESULT res = f_mkdir(dir_name);
+  if (res == FR_OK) {
+    ESP_LOGI(TAG, "Directory created");
+    return ESP_OK;
+  } else if (res == FR_EXIST) {
+    ESP_LOGW(TAG, "Directory already exists");
+    return ESP_OK;
+  } else {
+    ESP_LOGE(TAG, "Failed to create directory, reason: %s",
+             f_result_to_name[res]);
+    return ESP_FAIL;
+  }
+}
+
 esp_err_t sd_card_create_file(const char* path) {
+  if (!_sd_card_mounted) {
+    ESP_LOGE(TAG, "SD card not mounted");
+    return ESP_FAIL;
+  }
+
   uint8_t path_len = strlen(path);
   char full_path[path_len + 1 + strlen(MOUNT_POINT)];
   sprintf(full_path, "%s/%s", MOUNT_POINT, path);
@@ -221,6 +271,11 @@ esp_err_t sd_card_create_file(const char* path) {
 }
 
 esp_err_t sd_card_read_file(const char* path) {
+  if (!_sd_card_mounted) {
+    ESP_LOGE(TAG, "SD card not mounted");
+    return ESP_FAIL;
+  }
+
   uint8_t path_len = strlen(path);
   char full_path[path_len + 1 + strlen(MOUNT_POINT)];
   sprintf(full_path, "%s/%s", MOUNT_POINT, path);
@@ -248,6 +303,11 @@ esp_err_t sd_card_read_file(const char* path) {
 }
 
 esp_err_t sd_card_write_file(const char* path, char* data) {
+  if (!_sd_card_mounted) {
+    ESP_LOGE(TAG, "SD card not mounted");
+    return ESP_FAIL;
+  }
+
   uint8_t path_len = strlen(path);
   char full_path[path_len + 1 + strlen(MOUNT_POINT)];
   sprintf(full_path, "%s/%s", MOUNT_POINT, path);

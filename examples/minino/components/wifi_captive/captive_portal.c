@@ -83,9 +83,9 @@ static esp_err_t root_get_handler(httpd_req_t* req) {
   httpd_resp_set_type(req, "text/html");
   httpd_resp_send(req, captive_portal_html, strlen(captive_portal_html));
 
-  if (handler_captive_portal_cb) {
-    handler_captive_portal_cb((char*) wifi_config.ap.ssid, "", "");
-  }
+  // if (handler_captive_portal_cb) {
+  //   handler_captive_portal_cb((char*) wifi_config.ap.ssid, "", "");
+  // }
 
   return ESP_OK;
 }
@@ -146,7 +146,7 @@ esp_err_t http_404_error_handler(httpd_req_t* req, httpd_err_code_t err) {
 static httpd_handle_t start_webserver(void) {
   httpd_handle_t server = NULL;
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-  config.max_open_sockets = 13;
+  config.max_open_sockets = 10;
   config.lru_purge_enable = true;
 
   // Start the httpd server
@@ -182,7 +182,33 @@ void captive_portal_begin() {
   }
 }
 
+void captive_portal_set_config_ssid(wifi_ap_record_t ap_record) {
+  wifi_config_t wifi_config_captive = {
+      .ap = {.ssid = "minino",
+             .ssid_len = 6,
+             .password = "",
+             .max_connection = 4,
+             .authmode = WIFI_AUTH_WPA_WPA2_PSK}};
+
+  char* wifi_ssid = malloc(strlen((char*) ap_record.ssid) + 2);
+  strcpy(wifi_ssid, (char*) ap_record.ssid);
+  wifi_ssid[strlen((char*) ap_record.ssid)] = ' ';
+  wifi_ssid[strlen((char*) ap_record.ssid) + 1] = '\0';
+
+  strncpy((char*) wifi_config_captive.ap.ssid, wifi_ssid, strlen(wifi_ssid));
+  wifi_config_captive.ap.ssid[strlen(wifi_ssid)] = '\0';
+  wifi_config_captive.ap.ssid_len = strlen(wifi_ssid);
+
+  ESP_LOGW("CONFIGWQWA", "SSID: %s", wifi_ssid);
+
+  captive_portal_set_config(&wifi_config_captive);
+}
+
 void captive_portal_set_config(wifi_config_t* config) {
+#if !defined(CONFIG_CAPTIVE_PORTAL_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   ESP_LOGI(TAG, "ESP_WIFI_MODE_AP %s", config->ap.ssid);
   wifi_config = *config;
   ESP_LOGI(TAG, "ESP_WIFI_MODE_AP %s", (char*) wifi_config.ap.ssid);
@@ -200,5 +226,9 @@ void captive_portal_stop() {
 }
 
 void captive_portal_register_cb(captive_portal_handler_cb callback) {
+#if !defined(CONFIG_CAPTIVE_PORTAL_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   handler_captive_portal_cb = callback;
 }

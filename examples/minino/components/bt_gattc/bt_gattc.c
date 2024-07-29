@@ -480,6 +480,10 @@ void ble_client_esp_gattc_cb(esp_gattc_cb_event_t event,
 }
 
 void bt_gattc_task_begin(void) {
+#if !defined(CONFIG_BT_GATTC_DEBUG)
+  esp_log_level_set(TAG_BT_GATTC, ESP_LOG_NONE);
+#endif
+
   esp_err_t ret;
 
   ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));

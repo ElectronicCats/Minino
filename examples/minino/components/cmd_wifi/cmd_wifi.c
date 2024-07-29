@@ -29,11 +29,14 @@
 #define JOIN_TIMEOUT_MS (5000)
 #define MAXIMUM_RETRY   (3)
 
+static const char* TAG = "cmd_wifi";
+
 static EventGroupHandle_t wifi_event_group;
 const int CONNECTED_BIT = BIT0;
 static app_callback callback_connection;
 static bool save_credentials = false;
 static int connect(int argc, char** argv);
+static bool wifi_join(const char* ssid, const char* pass, int timeout_ms);
 
 /** Arguments used by 'join' function */
 static struct {
@@ -47,6 +50,53 @@ static struct {
   struct arg_str* index;
   struct arg_end* end;
 } delete_args;
+
+static struct {
+  struct arg_str* index;
+  struct arg_end* end;
+} connect_args;
+
+static int cmd_wifi_connect_index(int argc, char** argv) {
+  int nerrors = arg_parse(argc, argv, (void**) &connect_args);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, connect_args.end, argv[0]);
+    ESP_LOGW(__func__, "Error parsing arguments");
+    return 1;
+  }
+  int count = preferences_get_int("count_ap", 0);
+  int index = atoi(connect_args.index->sval[0]);
+  if (index > count) {
+    ESP_LOGW(__func__, "Index out of range");
+    return 1;
+  }
+  char wifi_ap[100];
+  char wifi_ssid[100];
+  sprintf(wifi_ap, "wifi%d", index);
+  esp_err_t err = preferences_get_string(wifi_ap, wifi_ssid, 100);
+  if (err != ESP_OK) {
+    ESP_LOGW(__func__, "Error getting AP");
+    return 1;
+  }
+  char wifi_pass[100];
+  err = preferences_get_string(wifi_ssid, wifi_pass, 100);
+  if (err != ESP_OK) {
+    ESP_LOGW(__func__, "Error getting AP");
+    return 1;
+  }
+
+  join_args.ssid->sval[0] = wifi_ssid;
+  join_args.password->sval[0] = wifi_pass;
+  join_args.timeout->ival[0] = JOIN_TIMEOUT_MS;
+
+  printf("ssid: %s\n", join_args.ssid->sval[0]);
+  printf("password: %s\n", join_args.password->sval[0]);
+  const char** sniffer_argv[] = {"join", join_args.ssid->sval[0],
+                                 join_args.password->sval[0]};
+  uint8_t sniffer_argc = 3;
+  connect(sniffer_argc, (char**) sniffer_argv);
+  connect(sniffer_argc, (char**) sniffer_argv);
+  return 0;
+}
 
 static void cmd_wifi_save_credentials(int argc, char** argv) {
   save_credentials = true;
@@ -118,7 +168,7 @@ static int cmd_wifi_show_aps(int argc, char** argv) {
       ESP_LOGW(__func__, "Error getting AP");
       return 1;
     }
-    printf("[%i] SSID: %s\n", i, wifi_ssid);
+    printf("[%i][%s] SSID: %s\n", i, wifi_ap, wifi_ssid);
   }
   return 0;
 }
@@ -134,6 +184,7 @@ static void event_handler(void* arg,
   } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
     xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
     preferences_put_bool("wifi_connected", true);
+    ESP_LOGI(TAG, "Connected to AP");
     if (callback_connection) {
       callback_connection();
     }
@@ -141,7 +192,7 @@ static void event_handler(void* arg,
 }
 
 static void initialise_wifi(void) {
-  esp_log_level_set("wifi", ESP_LOG_WARN);
+  esp_log_level_set(TAG, ESP_LOG_WARN);
   static bool initialized = false;
   if (initialized) {
     return;
@@ -154,7 +205,14 @@ static void initialise_wifi(void) {
   esp_netif_t* sta_netif = esp_netif_create_default_wifi_sta();
   assert(sta_netif);
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+  wifi_config_t ap_config = WIFI_AP_CONFIG();
+
+  ESP_ERROR_CHECK(esp_netif_dhcps_start(ap_netif));
+  ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &ap_config));
+
   ESP_ERROR_CHECK(esp_event_handler_register(
       WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &event_handler, NULL));
   ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP,
@@ -163,6 +221,14 @@ static void initialise_wifi(void) {
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
   ESP_ERROR_CHECK(esp_wifi_start());
   initialized = true;
+
+  // Get the IP address of the ESP32 station
+  esp_netif_ip_info_t ip_info;
+  esp_netif_get_ip_info(sta_netif, &ip_info);
+  char ip_address[16];
+  sprintf(ip_address, IPSTR, IP2STR(&ip_info.ip));
+
+  ESP_LOGI(TAG, "IP Address: %s", ip_address);
 }
 
 static bool wifi_join(const char* ssid, const char* pass, int timeout_ms) {
@@ -231,6 +297,10 @@ bool is_wifi_connected() {
 }
 
 void register_wifi(void) {
+#if !defined(CONFIG_CMD_WIFI_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   join_args.timeout =
       arg_int0(NULL, "timeout", "<t>", "Connection timeout, ms");
   join_args.ssid = arg_str1(NULL, NULL, "<ssid>", "SSID of AP");
@@ -239,6 +309,10 @@ void register_wifi(void) {
 
   delete_args.index = arg_str1(NULL, NULL, "<index>", "Index of AP to delete");
   delete_args.end = arg_end(1);
+
+  connect_args.index =
+      arg_str1(NULL, NULL, "<index>", "Index of AP to connect");
+  connect_args.end = arg_end(1);
 
   const esp_console_cmd_t join_cmd = {
       .command = "join",
@@ -265,10 +339,15 @@ void register_wifi(void) {
                                   .func = &cmd_wifi_delete_crendentials,
                                   .argtable = &delete_args};
 
+  esp_console_cmd_t connect_cmd = {.command = "connect",
+                                   .help = "Connect to a saved WiFi AP",
+                                   .hint = NULL,
+                                   .func = &cmd_wifi_connect_index,
+                                   .argtable = &connect_args};
+
   ESP_ERROR_CHECK(esp_console_cmd_register(&join_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&save_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&show_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&delete_cmd));
-
-  esp_log_level_set("wifi", ESP_LOG_NONE);
+  ESP_ERROR_CHECK(esp_console_cmd_register(&connect_cmd));
 }

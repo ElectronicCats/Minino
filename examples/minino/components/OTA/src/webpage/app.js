@@ -12,7 +12,8 @@ function getFileInfo() {
     if (fileInput.files.length > 0 && fileInput.files[0].name == "minino.bin") {
         var fileSize = fileInput.files[0].size;
         var fileName = fileInput.files[0].name;
-        fileInfo.innerHTML = "<h4>Selected file: " + fileName + "<br>Size: " + fileSize + " bytes</h4>";
+        const fileSizeInMB = (fileSize / 1048576).toFixed(2);
+        fileInfo.innerHTML = "<h4>Selected file: " + fileName + "<br>Size: " + fileSizeInMB + " MB</h4>";
         fileInfo.style.opacity = 1;
     } else {
         fileInfo.innerHTML = "";

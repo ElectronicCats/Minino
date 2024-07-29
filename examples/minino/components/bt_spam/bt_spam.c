@@ -6,6 +6,8 @@
 #include "esp_log.h"
 #include "esp_random.h"
 
+static const char* TAG = "bt_spam";
+
 static bt_spam_cb_display display_records_cb = NULL;
 static TimerHandle_t adv_timer;
 static int adv_index = 0;
@@ -140,7 +142,7 @@ static void start_adv_timer_callback() {
   esp_err_t err = esp_ble_gap_config_adv_data_raw(
       &long_devices_raw[adv_index], sizeof(long_devices_raw[adv_index]));
   if (err != ESP_OK) {
-    ESP_LOGE("BT_SPAM", "Error setting adv data: %s", esp_err_to_name(err));
+    ESP_LOGE(TAG, "Error setting adv data: %s", esp_err_to_name(err));
     return;
   }
 }
@@ -162,6 +164,10 @@ void bt_spam_register_cb(bt_spam_cb_display callback) {
 }
 
 void bt_spam_app_main() {
+#if !defined(CONFIG_BT_SPAM_APP_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
   esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
   esp_bt_controller_init(&bt_cfg);

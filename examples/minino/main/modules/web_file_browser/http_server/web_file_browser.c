@@ -3,6 +3,12 @@
 #include <dirent.h>
 #include "esp_http_server.h"
 #include "esp_log.h"
+#include "flash_fs.h"
+#include "sd_card.h"
+
+#define WFB_SD_CARD_PATH   "/sdcard"
+#define WFB_FLASH_FS_PATH  "/internal"
+#define WFB_MOUNT_PATH_LEN 15
 
 static const char TAG[] = "web_file_browser";
 
@@ -16,11 +22,12 @@ extern const uint8_t style_css_end[] asm("_binary_style_css_end");
 static httpd_handle_t http_server_handle = NULL;
 static httpd_handle_t web_file_browser_start(void);
 static esp_err_t favicon_handler(httpd_req_t* req);
+static esp_err_t list_root_paths_handler(httpd_req_t* req);
 static esp_err_t list_files_handler(httpd_req_t* req);
 static esp_err_t download_get_handler(httpd_req_t* req);
 static esp_err_t style_css_handler(httpd_req_t* req);
 
-const char* mount_path = "/sdcard";
+const char* mount_path = NULL;
 bool show_hidden_files = false;
 
 static void web_file_browser_show_event(uint8_t event, void* context) {
@@ -30,8 +37,13 @@ static void web_file_browser_show_event(uint8_t event, void* context) {
 }
 
 void web_file_browser_init() {
+#if !defined(CONFIG_WEB_FILE_BROWSER_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   if (http_server_handle == NULL) {
     http_server_handle = web_file_browser_start();
+    mount_path = (char*) malloc(WFB_MOUNT_PATH_LEN);
   } else {
     web_file_browser_show_event(WEB_FILE_BROWSER_ALREADY_EV, NULL);
   }
@@ -53,7 +65,11 @@ static httpd_handle_t web_file_browser_start(void) {
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
 
   if (httpd_start(&http_server_handle, &config) == ESP_OK) {
-    httpd_uri_t file_server = {.uri = "/",
+    httpd_uri_t root_server = {.uri = "/",
+                               .method = HTTP_GET,
+                               .handler = list_root_paths_handler,
+                               .user_ctx = NULL};
+    httpd_uri_t file_server = {.uri = "/list",
                                .method = HTTP_GET,
                                .handler = list_files_handler,
                                .user_ctx = NULL};
@@ -71,6 +87,7 @@ static httpd_handle_t web_file_browser_start(void) {
                              .handler = style_css_handler,
                              .user_ctx = NULL};
 
+    httpd_register_uri_handler(http_server_handle, &root_server);
     httpd_register_uri_handler(http_server_handle, &file_server);
     httpd_register_uri_handler(http_server_handle, &file_download);
     httpd_register_uri_handler(http_server_handle, &favicon_ico);
@@ -82,6 +99,34 @@ static httpd_handle_t web_file_browser_start(void) {
   web_file_browser_show_event(WEB_FILE_BROWSER_ERROR_EV, NULL);
   return NULL;
 }
+esp_err_t list_root_paths_handler(httpd_req_t* req) {
+  httpd_resp_set_type(req, "text/html");
+  httpd_resp_send_chunk(req, (const char*) html_header_start,
+                        html_header_end - html_header_start);
+  if (flash_fs_mount() == ESP_OK) {
+    httpd_resp_sendstr_chunk(
+        req, "<span class=\"folder\">&#128193;</span> <a href=\"/list?root=");
+    httpd_resp_sendstr_chunk(req, WFB_FLASH_FS_PATH);
+    httpd_resp_sendstr_chunk(req, "\">");
+    httpd_resp_sendstr_chunk(req, "Internal");
+    httpd_resp_sendstr_chunk(req, "/</a><br>");
+  }
+  esp_err_t err = sd_card_mount();
+  if (err == ESP_OK) {
+    httpd_resp_sendstr_chunk(
+        req, "<span class=\"folder\">&#128193;</span> <a href=\"/list?root=");
+    httpd_resp_sendstr_chunk(req, WFB_SD_CARD_PATH);
+    httpd_resp_sendstr_chunk(req, "\">");
+    httpd_resp_sendstr_chunk(req, "SD card");
+    httpd_resp_sendstr_chunk(req, "/</a><br>");
+  } else {
+    printf("SD ERR: %s\n", esp_err_to_name(err));
+  }
+  httpd_resp_send_chunk(req, "</div></div></body></html>",
+                        strlen("</div></div></body></html>"));
+  httpd_resp_send_chunk(req, "", 0);
+  return ESP_OK;
+}
 
 esp_err_t list_files_handler(httpd_req_t* req) {
   size_t path_len = 200;
@@ -92,15 +137,16 @@ esp_err_t list_files_handler(httpd_req_t* req) {
   size_t query_len = 300;
   char* query_str = (char*) malloc(query_len);
   if (httpd_req_get_url_query_str(req, query_str, query_len) == ESP_OK) {
-    esp_err_t parse_err =
-        httpd_query_key_value(query_str, "path", path, path_len);
-    if (parse_err != ESP_OK) {
-      ESP_LOGE(TAG, "Error Parsing Query: %s", esp_err_to_name(parse_err));
+    if (httpd_query_key_value(query_str, "root", mount_path,
+                              WFB_MOUNT_PATH_LEN) == ESP_OK) {
+      strncpy(path, mount_path, WFB_MOUNT_PATH_LEN);
+    } else if (httpd_query_key_value(query_str, "path", path, path_len) !=
+               ESP_OK) {
       httpd_resp_send_500(req);
       return ESP_FAIL;
     }
   } else {
-    strncpy(path, mount_path, 15);
+    strncpy(path, mount_path, WFB_MOUNT_PATH_LEN);
   }
   dir = opendir(path);
   if (dir == NULL) {
@@ -124,10 +170,14 @@ esp_err_t list_files_handler(httpd_req_t* req) {
     }
 
     httpd_resp_sendstr_chunk(
-        req, "<span class=\"folder\">&#x2934;</span><a href=\"/?path=");
+        req, "<span class=\"folder\">&#x2934;</span><a href=\"/list?path=");
     httpd_resp_sendstr_chunk(req, parent_path);
     httpd_resp_sendstr_chunk(req, "\">..</a><br>");
     free(parent_path);
+  } else {
+    httpd_resp_sendstr_chunk(
+        req, "<span class=\"folder\">&#x2934;</span><a href=\"/");
+    httpd_resp_sendstr_chunk(req, "\">..</a><br>");
   }
 
   while ((ent = readdir(dir)) != NULL) {
@@ -140,7 +190,7 @@ esp_err_t list_files_handler(httpd_req_t* req) {
 
     if (ent->d_type == DT_DIR) {
       httpd_resp_sendstr_chunk(
-          req, "<span class=\"folder\">&#128193;</span> <a href=\"/?path=");
+          req, "<span class=\"folder\">&#128193;</span> <a href=\"/list?path=");
       httpd_resp_sendstr_chunk(req, filepath);
       httpd_resp_sendstr_chunk(req, "\">");
       httpd_resp_sendstr_chunk(req, ent->d_name);

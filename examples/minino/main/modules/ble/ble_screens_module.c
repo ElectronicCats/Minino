@@ -1,18 +1,20 @@
 #include <string.h>
+#include "animations_task.h"
 #include "modules/ble/ble_bitmaps.h"
 #include "oled_screen.h"
 #include "trackers_scanner.h"
 
-void ble_screens_display_scanning_animation() {
+static void ble_screens_display_scanning_animation() {
+  static uint8_t frame = 0;
+  oled_screen_display_bitmap(ble_bitmap_scan_attack_allArray[frame], 0, 16, 128,
+                             32, OLED_DISPLAY_NORMAL);
+  frame = ++frame > 3 ? 0 : frame;
+}
+
+void ble_screens_start_scanning_animation() {
   oled_screen_clear();
   oled_screen_display_text_center("BLE SPAM", 0, OLED_DISPLAY_NORMAL);
-  while (true) {
-    for (int i = 0; i < ble_bitmap_scan_attack_allArray_LEN; i++) {
-      oled_screen_display_bitmap(ble_bitmap_scan_attack_allArray[i], 0, 16, 128,
-                                 32, OLED_DISPLAY_NORMAL);
-      vTaskDelay(500 / portTICK_PERIOD_MS);
-    }
-  }
+  animations_task_run(ble_screens_display_scanning_animation, 100, NULL);
 }
 
 void ble_screens_display_scanning_text(char* name) {

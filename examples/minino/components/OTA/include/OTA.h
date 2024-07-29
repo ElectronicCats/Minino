@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#define CURRENT_FW_VERSION "V1.1.0.1"
+#define CURRENT_FW_VERSION CONFIG_PROJECT_VERSION
 
 typedef enum {
   OTA_SHOW_PROGRESS_EVENT,

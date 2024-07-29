@@ -21,7 +21,8 @@ static TaskHandle_t zigbee_task_display_animation = NULL;
 static TaskHandle_t zigbee_task_sniffer = NULL;
 
 static void zigbee_module_app_selector();
-static void zigbee_module_state_machine(button_event_t button_pressed);
+static void zigbee_module_state_machine(uint8_t button_name,
+                                        uint8_t button_event);
 
 static void zigbee_module_display_records_cb(uint8_t* packet,
                                              uint8_t packet_length) {
@@ -35,6 +36,10 @@ static void zigbee_module_display_records_cb(uint8_t* packet,
 }
 
 void zigbee_module_begin(int app_selected) {
+#if !defined(CONFIG_ZIGBEE_MODULE_DEBUG)
+  esp_log_level_set(TAG_ZIGBEE_MODULE, ESP_LOG_NONE);
+#endif
+
   ESP_LOGI(TAG_ZIGBEE_MODULE,
            "Initializing zigbee module screen state machine");
   app_screen_state_information.app_selected = app_selected;
@@ -68,11 +73,7 @@ void zigbee_module_app_selector() {
   }
 }
 
-void zigbee_module_state_machine(button_event_t button_pressed) {
-  uint8_t button_name = button_pressed >> 4;
-  uint8_t button_event = button_pressed & 0x0F;
-  ESP_LOGI(TAG_ZIGBEE_MODULE, "Zigbee engine state machine from team: %d %d",
-           button_name, button_event);
+void zigbee_module_state_machine(uint8_t button_name, uint8_t button_event) {
   switch (app_screen_state_information.app_selected) {
     case MENU_ZIGBEE_SWITCH:
       ESP_LOGI(TAG_ZIGBEE_MODULE, "Zigbee Switch Entered");
