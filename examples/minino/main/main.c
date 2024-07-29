@@ -3,6 +3,7 @@
 #include "cat_console.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "flash_fs.h"
 #include "keyboard_module.h"
 #include "leds.h"
 #include "menu_screens_modules.h"

@@ -199,6 +199,7 @@ esp_err_t sd_card_mount() {
   err = mount(mount_argc, (char**) mount_argv);
   if (err == ESP_OK) {
     _sd_card_mounted = true;
+    return err;
   } else {
     ESP_LOGE(TAG, "Failed to mount SD card");
   }
