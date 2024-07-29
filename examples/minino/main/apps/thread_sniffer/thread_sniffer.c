@@ -9,6 +9,8 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 
+#include "files_ops.h"
+#include "flash_fs.h"
 #include "pcap.h"
 #include "sd_card.h"
 
@@ -20,12 +22,10 @@
 #define THREAD_SNIFFER_QUEUE_SIZE                32
 #define THREAD_SNIFFER_PROCESS_PACKET_TIMEOUT_MS 100
 
-#define TAG "thread_sniffer"
+#define SD_CARD  "/sdcard"
+#define FLASH_FS "/internal"
 
-typedef struct {
-  char* buffer;
-  uint32_t buffer_size;
-} pcap_memory_buffer_t;
+#define TAG "thread_sniffer"
 
 typedef struct {
   bool is_opened;
@@ -34,7 +34,6 @@ typedef struct {
   char filename[PCAP_FILE_NAME_MAX_LEN];
   pcap_file_handle_t pcap_handle;
   pcap_link_type_t link_type;
-  pcap_memory_buffer_t pcap_buffer;
 } thread_pcap_handler_t;
 
 typedef struct {
@@ -98,21 +97,20 @@ static void chek_for_fatal_false(bool ok, const char* err_tag) {
 
 static esp_err_t pcap_start() {
   esp_err_t ret = ESP_OK;
-  char* err_str = malloc(30);
   FILE* fp = NULL;
   bool save_in_sd = false;
-  ret = sd_card_mount();
-  if (ret == ESP_OK || ret == ESP_ERR_ALREADY_MOUNTED) {
-    fp = fopen("/sdcard/thread.pcap", "w");
+  if (sd_card_mount() == ESP_OK) {
     save_in_sd = true;
+  } else if (flash_fs_mount() == ESP_OK) {
+    save_in_sd = false;
   } else {
-    thread_pcap.pcap_buffer.buffer =
-        calloc(PCAP_MEMORY_BUFFER_SIZE, sizeof(char));
-    chek_for_fatal_false(thread_pcap.pcap_buffer.buffer,
-                         "pcap buffer calloc failed");
-    fp = fmemopen(thread_pcap.pcap_buffer.buffer, PCAP_MEMORY_BUFFER_SIZE,
-                  "wb+");
+    chek_for_fatal_false(false, "FAILED TO CREATE PCAP FILE");
   }
+
+  char* pcap_path = (char*) malloc(100);
+  files_ops_incremental_name(save_in_sd ? SD_CARD : FLASH_FS, "thread", ".pcap",
+                             pcap_path);
+  fp = fopen(pcap_path, "w");
   chek_for_fatal_false(fp, "open file failed");
   pcap_config_t pcap_cfg = {
       .fp = fp,
@@ -129,7 +127,8 @@ static esp_err_t pcap_start() {
   thread_pcap.is_writing = true;
 
   thread_sniffer_show_event(THREAD_SNIFFER_DESTINATION_EV, &save_in_sd);
-  free(err_str);
+
+  free(pcap_path);
   return ESP_OK;
   // err:
   if (fp) {

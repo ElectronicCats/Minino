@@ -17,7 +17,7 @@ static void thread_sniffer_scanning_animation() {
 
 static void thread_sniffer_show_destination(bool* save_in_sd) {
   char* str = (char*) malloc(17);
-  sprintf(str, "Dest: %s", *save_in_sd ? "SD card" : "Buffer");
+  sprintf(str, "Dest: %s", *save_in_sd ? "SD card" : "Internal");
   oled_screen_display_text_center(str, 7, OLED_DISPLAY_INVERT);
   free(str);
 }
