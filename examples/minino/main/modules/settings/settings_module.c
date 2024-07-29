@@ -50,6 +50,9 @@ void settings_module_enter_submenu_cb(screen_module_menu_t user_selection) {
 }
 
 void settings_module_begin() {
+#if !defined(CONFIG_SETTINGS_MODULE_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
   menu_screens_register_exit_submenu_cb(settings_module_exit_submenu_cb);
   menu_screens_register_enter_submenu_cb(settings_module_enter_submenu_cb);
 }

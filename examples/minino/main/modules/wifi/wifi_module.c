@@ -9,6 +9,7 @@
 #include "keyboard_module.h"
 #include "string.h"
 
+#include "apps/wifi/deauth/include/deauth_module.h"
 #include "captive_portal.h"
 #include "led_events.h"
 #include "menu_screens_modules.h"
@@ -166,7 +167,8 @@ void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
       wifi_module_analizer_begin();
       break;
     case MENU_WIFI_DEAUTH:
-      wifi_module_deauth_begin();
+      deauth_module_begin();
+      // wifi_module_deauth_begin();
       break;
     case MENU_WIFI_DOS:
       oled_screen_clear();
@@ -202,6 +204,9 @@ void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
 }
 
 void wifi_module_begin() {
+#if !defined(CONFIG_WIFI_MODULE_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
   menu_screens_register_enter_submenu_cb(wifi_module_enter_submenu_cb);
   menu_screens_register_exit_submenu_cb(wifi_module_exit_submenu_cb);
 }
@@ -246,7 +251,6 @@ void wifi_module_analizer_begin() {
   wifi_sniffer_register_animation_cbs(wifi_screens_sniffer_animation_start,
                                       wifi_screens_sniffer_animation_stop);
   wifi_sniffer_register_summary_cb(wifi_module_analizer_summary_cb);
-  wifi_screens_module_create_sniffer_task();
   wifi_sniffer_begin();
   analizer_initialized = true;
 }
@@ -427,9 +431,7 @@ void wifi_module_update_destination_options() {
   menu_screens_update_options(wifi_analizer_destination_items, selected_option);
 }
 
-void wifi_module_keyboard_cb(button_event_t button_pressed) {
-  uint8_t button_name = button_pressed >> 4;
-  uint8_t button_event = button_pressed & 0x0F;
+void wifi_module_keyboard_cb(uint8_t button_name, uint8_t button_event) {
   ESP_LOGI(TAG, "State: %s", wifi_state_names[current_wifi_state.state]);
 
   switch (current_wifi_state.state) {
@@ -663,6 +665,7 @@ void wifi_module_keyboard_cb(button_event_t button_pressed) {
           int count_attacks = wifi_attacks_get_attack_count();
           wifi_screens_module_display_attack_selector(
               WIFI_ATTACKS_LIST, count_attacks, current_option);
+          break;
         }
         case BUTTON_RIGHT:
           if (button_event != BUTTON_SINGLE_CLICK) {

@@ -8,6 +8,10 @@ static uint8_t default_ap_mac[6];
 static esp_err_t err;
 
 wifi_config_t wifi_driver_access_point_begin() {
+#if !defined(CONFIG_WIFI_CONTROLLER_DEBUG)
+  esp_log_level_set(TAG_WIFI_DRIVER, ESP_LOG_NONE);
+#endif
+
   esp_err_t err;
   err = esp_event_loop_create_default();
   if (err == ESP_ERR_INVALID_STATE) {
@@ -78,13 +82,58 @@ void wifi_driver_init_apsta(void) {
   wifi_driver_initialized = true;
 }
 
+void wifi_driver_init_sta(void) {
+  esp_err_t err = esp_netif_init();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_DRIVER, "Error initializing netif: %s",
+             esp_err_to_name(err));
+    esp_restart();
+  }
+  err = esp_event_loop_create_default();
+  if (err == ESP_ERR_INVALID_STATE) {
+    ESP_LOGI(TAG_WIFI_DRIVER, "Event loop already created");
+  } else if (err != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_DRIVER, "Error creating event loop: %s",
+             esp_err_to_name(err));
+    esp_restart();
+  }
+
+  // This shouldn't be a definitive solution, but works for now
+  static bool run_once = false;
+  if (!run_once) {
+    run_once = true;
+    esp_netif_t* sta_netif = esp_netif_create_default_wifi_sta();
+    assert(sta_netif);
+  }
+
+  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+  ESP_ERROR_CHECK(esp_wifi_start());
+  wifi_driver_initialized = true;
+}
+
 void wifi_driver_init_null(void) {
-  ESP_ERROR_CHECK(esp_event_loop_create_default());
+  esp_err_t err = esp_event_loop_create_default();
+  if (err == ESP_ERR_INVALID_STATE) {
+    ESP_LOGI(TAG_WIFI_DRIVER, "Event loop already created");
+  } else if (err != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_DRIVER, "Error creating event loop: %s",
+             esp_err_to_name(err));
+    esp_restart();
+  }
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
   ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
   wifi_driver_initialized = true;
+}
+
+void wifi_driver_deinit() {
+  ESP_ERROR_CHECK(esp_wifi_stop());
+  ESP_ERROR_CHECK(esp_wifi_deinit());
+  wifi_driver_initialized = false;
 }
 
 void wifi_driver_sta_disconnect() {

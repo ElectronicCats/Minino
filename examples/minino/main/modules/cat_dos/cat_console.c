@@ -68,6 +68,9 @@ void show_dos_commands() {
 }
 
 void cat_console_begin() {
+#if !defined(CONFIG_CAT_CONSOLE_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
   // if(running){
   //   esp_console_deinit();
   //   running = false;

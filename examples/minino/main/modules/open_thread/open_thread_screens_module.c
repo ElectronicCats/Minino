@@ -18,3 +18,5 @@ void open_thread_screens_show_new_message(char* msg) {
   oled_screen_display_text(str, 0, 4, OLED_DISPLAY_NORMAL);
   free(str);
 }
+
+void open_thread_screens_display_sniffer_animation() {}

@@ -30,6 +30,9 @@ screen_module_menu_t previous_menu;
 screen_module_menu_t current_menu;
 uint8_t bluetooth_devices_count;
 
+static TaskHandle_t screen_saver_task = NULL;
+static bool screen_saver_running = false;
+
 static app_state_t app_state = {
     .in_app = false,
     .app_handler = NULL,
@@ -93,32 +96,61 @@ void run_tests() {
   ESP_ERROR_CHECK(test_menu_items());
 }
 
+static void show_splash_screen() {
+  screen_saver_running = true;
+  int start_x_position = 32;
+  int start_y_position = 16;
+  int x_direction = 1;
+  int y_direction = 1;
+
+  while (screen_saver_running) {
+    oled_screen_display_bitmap(epd_bitmap_minino_text_logo, start_x_position,
+                               start_y_position, 64, 32, OLED_DISPLAY_NORMAL);
+
+    start_x_position += x_direction;
+    start_y_position += y_direction;
+
+    if (start_x_position <= 0 || start_x_position >= 62) {
+      x_direction = -x_direction;
+    }
+    if (start_y_position <= 0 || start_y_position >= 32) {
+      y_direction = -y_direction;
+    }
+    vTaskDelay(10 / portTICK_PERIOD_MS);
+  }
+
+  vTaskDelete(NULL);
+}
+
+void run_screen_saver() {
+  xTaskCreate(show_splash_screen, "show_splash_screen", 4096, NULL, 5,
+              &screen_saver_task);
+}
+
+void start_screen_saver() {
+  if (screen_saver_task == NULL) {
+    run_screen_saver();
+  } else {
+    screen_saver_running = true;
+    vTaskResume(screen_saver_task);
+  }
+}
+
+void stop_screen_saver() {
+  if (screen_saver_task != NULL) {
+    screen_saver_running = false;
+    // vTaskSuspend(screen_saver_task);
+  }
+}
+
 void show_logo() {
   // buzzer_set_freq(50);
   oled_screen_clear();
   leds_on();
   buzzer_play();
-  vTaskDelay(500 / portTICK_PERIOD_MS);
-  buzzer_stop();
-  oled_screen_display_text_center("Still under", 2, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("DEVELOPMENT", 3, OLED_DISPLAY_NORMAL);
-  vTaskDelay(500 / portTICK_PERIOD_MS);
-  buzzer_play();
-  vTaskDelay(500 / portTICK_PERIOD_MS);
-  buzzer_stop();
-  vTaskDelay(500 / portTICK_PERIOD_MS);
-  buzzer_play();
-  vTaskDelay(500 / portTICK_PERIOD_MS);
-  buzzer_stop();
-  vTaskDelay(2000 / portTICK_PERIOD_MS);
-  buzzer_play();
-  oled_screen_clear();
-  oled_screen_display_bitmap(epd_bitmap_face_logo, 46, 16, 32, 32,
-                             OLED_DISPLAY_NORMAL);
-  char* version = malloc(20);
-  sprintf(version, "v%s BETA", CONFIG_PROJECT_VERSION);
-  oled_screen_display_text_center(version, 6, OLED_DISPLAY_INVERT);
-  free(version);
+  // oled_screen_display_bitmap(epd_bitmap_face_logo, 46, 16, 32, 32,
+  //                            OLED_DISPLAY_NORMAL);
+  run_screen_saver();
   vTaskDelay(500 / portTICK_PERIOD_MS);
   buzzer_stop();
 }
@@ -141,14 +173,20 @@ void screen_module_get_screen() {
         num_items++;
       }
     }
+    preferences_put_int("logo_show", 1);
     show_logo();
   } else {
+    preferences_put_int("logo_show", 0);
     preferences_put_int("MENUNUMBER", MENU_MAIN);
     menu_screens_display_menu();
   }
 }
 
 void menu_screens_begin() {
+#if !defined(CONFIG_MENU_SCREENS_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   selected_item = 0;
   previous_menu = MENU_MAIN;
   current_menu = MENU_MAIN;
@@ -260,11 +298,11 @@ char** get_menu_items() {
   char** submenu = menu_items[current_menu];
   if (submenu != NULL) {
     while (submenu[num_items] != NULL) {
-      // ESP_LOGI(TAG, "Item: %s", submenu[num_items]);
+      ESP_LOGI(TAG, "Item: %s", submenu[num_items]);
       num_items++;
     }
   }
-  // ESP_LOGI(TAG, "Number of items: %d", num_items);
+  ESP_LOGI(TAG, "Number of items: %" PRIu32, num_items);
 
   if (num_items == 0) {
     return NULL;
@@ -337,7 +375,7 @@ void display_scrolling_text(char** text) {
                       ? (MAX_PAGE - 1)
                       : selected_item;
   oled_screen_clear();
-  // ESP_LOGI(TAG, "num: %d", num_items - 2);
+  ESP_LOGI(TAG, "num: %" PRIu32, num_items - 2);
 
   for (uint8_t i = startIdx; i < num_items - 2; i++) {
     // ESP_LOGI(TAG, "Text[%d]: %s", i, text[i]);
@@ -455,7 +493,7 @@ uint32_t menu_screens_get_menu_length(char* menu[]) {
   uint32_t num_items = 0;
   if (menu != NULL) {
     while (menu[num_items] != NULL) {
-      ESP_LOGI(TAG, "Item: %s", menu[num_items]);
+      // ESP_LOGI(TAG, "Item: %s", menu[num_items]);
       num_items++;
     }
   }
@@ -517,9 +555,8 @@ void handle_user_selection(screen_module_menu_t user_selection) {
     case MENU_ZIGBEE_SNIFFER:
       zigbee_module_begin(MENU_ZIGBEE_SNIFFER);
       break;
-    case MENU_THREAD_BROADCAST:
     case MENU_THREAD_APPS:
-      open_thread_module_begin(MENU_THREAD_APPS);
+      open_thread_module_begin();
       break;
     case MENU_MATTER_APPS:
     case MENU_ZIGBEE_LIGHT:
@@ -604,7 +641,7 @@ void menu_screens_update_options(char* options[], uint8_t selected_option) {
 
   for (i = 1; i < menu_length; i++) {
     char* prev_item = options[i];
-    // ESP_LOGI(TAG, "Prev item: %s", prev_item);
+    ESP_LOGI(TAG, "Prev item: %s", prev_item);
     char* new_item = malloc(strlen(prev_item) + 5);
     char* start_of_number = strchr(prev_item, ']') + 2;
     if (i == option) {
@@ -614,7 +651,7 @@ void menu_screens_update_options(char* options[], uint8_t selected_option) {
       snprintf(new_item, strlen(prev_item) + 5, "[ ] %s", start_of_number);
       options[i] = new_item;
     }
-    // ESP_LOGI(TAG, "New item: %s", options[i]);
+    ESP_LOGI(TAG, "New item: %s", options[i]);
   }
   options[i] = NULL;
 }

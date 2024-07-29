@@ -35,6 +35,10 @@ static const char* TAG = "wifi_sniffer";
 #endif
 
 void wifi_sniffer_begin() {
+#if !defined(CONFIG_WIFI_SNIFFER_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   wifi_driver_init_null();
   register_sniffer_cmd();
   register_pcap_cmd();

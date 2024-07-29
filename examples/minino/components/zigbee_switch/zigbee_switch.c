@@ -335,6 +335,10 @@ static void esp_zb_task(void* pvParameters) {
 }
 
 void zigbee_switch_init() {
+#if !defined(CONFIG_ZIGBEE_SWITCH_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   esp_zb_platform_config_t config = {
       .radio_config = ESP_ZB_DEFAULT_RADIO_CONFIG(),
       .host_config = ESP_ZB_DEFAULT_HOST_CONFIG(),

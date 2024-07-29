@@ -144,6 +144,10 @@ static esp_err_t set_duty(led_t* led, uint8_t duty) {
 }
 
 esp_err_t led_controller_led_init(led_t* led_cfg) {
+#if !defined(CONFIG_LEDC_CONTROLLER_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   esp_err_t ret = ESP_OK;
 
   if (!led_cfg) {

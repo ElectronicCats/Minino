@@ -15,7 +15,6 @@
 #include "esp_ieee802154_pib.h"
 #include "esp_ieee802154_sec.h"
 #include "esp_ieee802154_util.h"
-#include "esp_log.h"
 #include "esp_phy_init.h"
 #include "hal/ieee802154_common_ll.h"
 #include "hal/ieee802154_ll.h"

@@ -49,11 +49,48 @@ Minino can operate in 6 different technologies:
 - Open Hardware
 - OTA Updates
 
-### Future Features
-- Thread Broadcast
-- Zigbee Sniffer and deauthenticator
-- Matter CLI
-- Save files in SD
+### TODO Features
+
+`[] Features coming soon` `[x] Working features`
+
+### WIFI
+- [x] Wardriving
+- [x] WiFi sniffer
+- [x] WiFi deauther
+- [x] DOS Attack
+- [x] Analizer -> Save PCAPS in SD or flash
+- [ ] Wireshark integration
+### Bluetooth Classic / BLE
+- [ ] Wardriving
+- [x] BLE sniffer
+- [x] BLE spammer
+- [ ] BLE spoffing
+- [x] BLE trackers scanner (AirTags, Tile, etc)
+- [ ] Wireshark integration
+### Zigbee
+- [x] Zigbee sniffer
+- [x] Zigbee spoofing (Switch End Device)
+- [ ] Wardriving
+- [x] Wireshark integration
+
+### Thread
+- [ ] Thread sniffer
+- [x] Thread broadcast
+- [x] GPS tracker
+- [ ] Wardriving
+- [ ] Wireshark integration
+
+### Matter
+- [ ] Matter protocol support
+- [ ] Matter CLI
+
+### Tools
+- [x] OTA Firmware Update
+- [x] GPS
+- [x] SD
+- [ ] I2C Scanner
+- [ ] UART2
+
 
 Inspired by projects such as [Amini Project](https://github.com/Ocelot-Offensive-Security/Arsenal) and [USBNugget](https://github.com/HakCat-Tech/USB-Nugget).
 
@@ -79,12 +116,22 @@ See the [Wiki](https://github.com/ElectronicCats/Minino/wiki) for more informati
 
 First check the current version of your firmware by going to `About > Version` in your Minino, then check the latest version in the [releases](https://github.com/ElectronicCats/Minino/releases). If there is a new version, continue with the steps below.
 
+TODO: move this to the wiki
+
 - [OTA update](#ota-update)
 - [Manual update](#manual-update)
 
 #### OTA update
 
-TODO: Add OTA update instructions.
+1. Download the latest firmware from the [releases](https://github.com/ElectronicCats/Minino/releases), make sure to download the one that has the `build_files.zip` file.
+
+2. Extract the `build_files.zip` file.
+
+3. In your Minino go to `About > Update`.
+
+4. Connect your device to the WiFi access point created by your Minino. The SSID should be `Minino`, and the password should be `Cats1234`.
+
+5. Once connected, open a web browser and go to `192.168.0.1`. Select the `minino.bin` file from the extracted folder and then click `Update Firmware`.
 
 #### Manual update
 
@@ -113,7 +160,7 @@ partition_table/
 5. Run the following command to flash the firmware:
 
 ```bash
-esptool.py --chip esp32c6 -p $PORT -b 460800 --before=default_reset --after=hard_reset write_flash --flash_mode dio --flash_freq 80m --flash_size 4MB 0x0 bootloader/bootloader.bin 0x10000 minino.bin 0x8000 partition_table/partition-table.bin
+esptool.py --chip esp32c6 -p $PORT -b 460800 --before=default_reset --after=hard_reset write_flash --flash_mode dio --flash_freq 80m --flash_size 8MB 0x0 bootloader/bootloader.bin 0x10000 minino.bin 0x8000 partition_table/partition-table.bin
 ```
 
 > Replace `$PORT` with the port your Minino is connected to.

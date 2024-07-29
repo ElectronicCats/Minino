@@ -8,7 +8,7 @@
 #include "keyboard_module.h"
 #include "screens_modules.h"
 
-typedef void (*app_handler_t)(button_event_t button_pressed);
+typedef void (*app_handler_t)(uint8_t button_name, uint8_t button_event);
 typedef void (*enter_submenu_cb_t)(screen_module_menu_t user_selection);
 typedef void (*exit_submenu_cb_t)();
 
@@ -192,3 +192,6 @@ void menu_screens_update_options(char* options[], uint8_t selected_option);
  * @return void
  */
 void screen_module_set_screen(int current_menu);
+
+void run_screen_saver();
+void stop_screen_saver();

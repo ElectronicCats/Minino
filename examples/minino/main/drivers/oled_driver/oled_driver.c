@@ -6,9 +6,9 @@
 #include "freertos/task.h"
 #include "oled_driver.h"
 
-#define TAG "oled_driver"
-
 #define PACK8 __attribute__((aligned(__alignof__(uint8_t)), packed))
+
+static const char* TAG = "oled_driver";
 
 typedef union out_column_t {
   uint32_t u32;
@@ -16,6 +16,10 @@ typedef union out_column_t {
 } PACK8 out_column_t;
 
 void oled_driver_init(oled_driver_t* dev, int width, int height) {
+#if !defined(CONFIG_OLED_DRIVER_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   if (dev->_address == SPIAddress) {
     spi_init(dev, width, height);
   } else {

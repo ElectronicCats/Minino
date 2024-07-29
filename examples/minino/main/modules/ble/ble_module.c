@@ -1,4 +1,5 @@
 #include "ble_module.h"
+#include "animations_task.h"
 #include "bt_spam.h"
 #include "esp_log.h"
 #include "led_events.h"
@@ -20,12 +21,16 @@ static TaskHandle_t ble_task_display_records = NULL;
 static TaskHandle_t ble_task_display_animation = NULL;
 
 static void ble_module_app_selector();
-static void ble_module_state_machine(button_event_t button_pressed);
+static void ble_module_state_machine(uint8_t button_name, uint8_t button_event);
 static void ble_module_display_trackers_cb(tracker_profile_t record);
 static void ble_module_task_start_trackers_display_devices();
 static void ble_module_task_stop_trackers_display_devices();
 
 void ble_module_begin(int app_selected) {
+#if !defined(CONFIG_BLE_MODULE_DEBUG)
+  esp_log_level_set(TAG_BLE_MODULE, ESP_LOG_NONE);
+#endif
+
   ESP_LOGI(TAG_BLE_MODULE, "Initializing ble module screen state machine");
   app_screen_state_information.app_selected = app_selected;
 
@@ -43,8 +48,10 @@ static void ble_module_app_selector() {
       trackers_scanner_start();
       break;
     case MENU_BLUETOOTH_SPAM:
-      xTaskCreate(ble_screens_display_scanning_animation, "ble_module_scanning",
-                  4096, NULL, 5, &ble_task_display_animation);
+      // xTaskCreate(ble_screens_display_scanning_animation,
+      // "ble_module_scanning",
+      //             4096, NULL, 5, &ble_task_display_animation);
+      ble_screens_start_scanning_animation();
       bt_spam_register_cb(ble_screens_display_scanning_text);
       bt_spam_app_main();
       break;
@@ -52,39 +59,21 @@ static void ble_module_app_selector() {
       break;
   }
 }
-
-static void ble_module_state_machine(button_event_t button_pressed) {
-  uint8_t button_name = button_pressed >> 4;
-  uint8_t button_event = button_pressed & 0x0F;
+static void ble_module_state_machine(uint8_t button_name,
+                                     uint8_t button_event) {
   if (button_event != BUTTON_SINGLE_CLICK &&
       button_event != BUTTON_LONG_PRESS_HOLD) {
     return;
   }
-
-  ESP_LOGI(TAG_BLE_MODULE, "BLE engine state machine from team: %d %d",
-           button_name, button_event);
   switch (app_screen_state_information.app_selected) {
     case MENU_BLUETOOTH_TRAKERS_SCAN:
       ESP_LOGI(TAG_BLE_MODULE, "Bluetooth scanner entered");
       switch (button_name) {
         case BUTTON_LEFT:
           led_control_stop();
-          screen_module_set_screen(MENU_BLUETOOTH_TRAKERS_SCAN);
+          menu_screens_set_app_state(false, NULL);
+          menu_screens_exit_submenu();
           esp_restart();
-          // ESP_LOGI(TAG_BLE_MODULE, "Button left pressed");
-          // if (is_modal_displaying) {
-          //   is_modal_displaying = false;
-          //   oled_screen_clear();
-          //   oled_screen_display_text_center("Trackers Scanner", 0,
-          //                                   OLED_DISPLAY_INVERT);
-          //   break;
-          // }
-
-          // ble_module_task_stop_trackers_display_devices();
-          // trackers_scanner_stop();
-          // menu_screens_set_app_state(false, NULL);
-          // menu_screens_exit_submenu();
-          // led_control_stop();
           break;
         case BUTTON_RIGHT:
           ESP_LOGI(TAG_BLE_MODULE, "Button right pressed - Option selected: %d",
@@ -114,15 +103,11 @@ static void ble_module_state_machine(button_event_t button_pressed) {
     case MENU_BLUETOOTH_SPAM:
       switch (button_name) {
         case BUTTON_LEFT:
-          // TODO: Fix this xD
           led_control_stop();
-          screen_module_set_screen(MENU_BLUETOOTH_SPAM);
+          menu_screens_set_app_state(false, NULL);
+          animations_task_stop();
+          menu_screens_exit_submenu();
           esp_restart();
-          // ESP_LOGI(TAG_BLE_MODULE, "Button left pressed");
-          // vTaskSuspend(ble_task_display_animation);
-          // module_keyboard_update_state(false, NULL);
-          // ESP_LOGI(TAG_BLE_MODULE, "Exiting bluetooth scanner 2");
-          // screen_module_exit_submenu();
           break;
         case BUTTON_RIGHT:
         case BUTTON_UP:
