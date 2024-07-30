@@ -22,6 +22,11 @@ void ble_screens_display_scanning_text(char* name) {
   oled_screen_display_text_center(name, 7, OLED_DISPLAY_INVERT);
 }
 
+void ble_screens_display_trackers_profiles_modal() {
+  oled_screen_clear();
+  oled_screen_display_text_center("Trackers Scanner", 0, OLED_DISPLAY_INVERT);
+}
+
 void ble_screens_display_trackers_profiles(tracker_profile_t* trackers_scanned,
                                            int trackers_count,
                                            int device_selection) {

@@ -77,8 +77,11 @@ static void deauth_handle_attacks() {
     case BROADCAST:
     case ROGUE_AP:
     case COMBINED:
+      ESP_LOGI("deauth", "Attack: %d", menu_stadistics.attack);
       animations_task_run(&deauth_display_attacking_animation, 200, NULL);
+      ESP_LOGI("deauth", "Attack: %d", menu_stadistics.attack);
       wifi_attack_handle_attacks(current_item, &menu_stadistics.selected_ap);
+      ESP_LOGI("deauth", "Attack: %d", menu_stadistics.attack);
       menu_screens_set_app_state(true, deauth_module_cb_event_run);
       current_item = 0;
       break;
@@ -268,8 +271,8 @@ static void deauth_module_cb_event_run(uint8_t button_name,
   switch (button_name) {
     case BUTTON_LEFT:
       current_item = 0;
-      wifi_attacks_module_stop();
       animations_task_stop();
+      wifi_attacks_module_stop();
       menu_screens_set_app_state(true, deauth_module_cb_event);
       deauth_display_menu(current_item, menu_stadistics);
       break;

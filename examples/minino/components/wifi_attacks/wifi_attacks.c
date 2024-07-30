@@ -56,6 +56,7 @@ static void attack_brodcast_send_raw_frame(const uint8_t* frame_buffer,
              esp_err_to_name(err));
     running_broadcast_attack = false;
   }
+  ESP_LOGI(TAG_WIFI_ATTACK_MODULE, "Sent deauth frame");
 }
 
 static void wifi_attack_brod_send_deauth_frame(wifi_ap_record_t* ap_target) {
@@ -106,11 +107,9 @@ void wifi_attacks_module_stop() {
 
 void wifi_attack_handle_attacks(wifi_attacks_types_t attack_type,
                                 wifi_ap_record_t* ap_target) {
-#if !defined(CONFIG_WIFI_ATTACKS_DEBUG)
-  esp_log_level_set(TAG_WIFI_ATTACK_MODULE, ESP_LOG_NONE);
-#endif
-
   running_broadcast_attack = true;
+  ESP_LOGW(TAG_WIFI_ATTACK_MODULE, "Starting attack: %d %s", attack_type,
+           ap_target->ssid);
   switch (attack_type) {
     case WIFI_ATTACK_BROADCAST:
       ESP_LOGI(TAG_WIFI_ATTACK_MODULE, "Starting broadcast attack: %s",
