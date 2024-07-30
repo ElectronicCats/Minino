@@ -17,4 +17,6 @@ void bt_spam_app_main();
  * @param callback The callback to display the spam data
  */
 void bt_spam_register_cb(bt_spam_cb_display callback);
+
+void bt_spam_app_stop();
 #endif  // BLE_SPAM_H

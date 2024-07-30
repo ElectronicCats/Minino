@@ -49,7 +49,6 @@ typedef enum {
   MENU_BLUETOOTH_APPS,
   MENU_ZIGBEE_APPS,
   MENU_THREAD_APPS,
-  MENU_MATTER_APPS,
   MENU_GPS,
   MENU_WEB_SD_BROWSER,
   /* WiFi applications */
@@ -123,7 +122,6 @@ const char* menu_list[] = {
     "MENU_BLUETOOTH_APPS",
     "MENU_ZIGBEE_APPS",
     "MENU_THREAD_APPS",
-    "MENU_MATTER_APPS",
     "MENU_GPS",
     "MENU_WEB_SD_BROWSER",
     "MENU_WIFI_ANALIZER",
@@ -178,7 +176,7 @@ const int next_menu_table[][MAX_NUM_ITEMS] = {
     {MENU_APPLICATIONS, MENU_SETTINGS, MENU_ABOUT},
     // MENU_APPLICATIONS
     {MENU_WIFI_APPS, MENU_BLUETOOTH_APPS, MENU_ZIGBEE_APPS, MENU_THREAD_APPS,
-     MENU_MATTER_APPS, MENU_GPS, MENU_WEB_SD_BROWSER},
+     MENU_GPS, MENU_WEB_SD_BROWSER},
     // MENU_SETTINGS
     {MENU_SETTINGS_DISPLAY, MENU_SETTINGS_SOUND, MENU_SETTINGS_SYSTEM,
      MENU_SETTINGS_WIFI},
@@ -193,8 +191,6 @@ const int next_menu_table[][MAX_NUM_ITEMS] = {
     {MENU_ZIGBEE_SPOOFING, MENU_ZIGBEE_SNIFFER},
     // MENU_THREAD_APPS
     {MENU_THREAD_BROADCAST, MENU_THREAD_SNIFFER},
-    // MENU_MATTER_APPS
-    {MENU_MATTER_APPS},
     // MENU_GPS
     {MENU_GPS_WARDRIVING, MENU_GPS_DATE_TIME, MENU_GPS_LOCATION, MENU_GPS_SPEED,
      MENU_GPS_HELP},
@@ -297,7 +293,6 @@ const int prev_menu_table[] = {
     MENU_APPLICATIONS,               // MENU_BLUETOOTH_APPS
     MENU_APPLICATIONS,               // MENU_ZIGBEE_APPS
     MENU_APPLICATIONS,               // MENU_THREAD_APPS
-    MENU_APPLICATIONS,               // MENU_MATTER_APPS
     MENU_APPLICATIONS,               // MENU_GPS
     MENU_APPLICATIONS,               // MENU_WEB_SD_BROWSER
     MENU_WIFI_APPS,                  // MENU_WIFI_ANALIZER
@@ -356,8 +351,7 @@ char* main_items[] = {
 };
 
 char* applications_items[] = {
-    "WiFi",   "Bluetooth", "Zigbee",       "Thread",
-    "Matter", "GPS",       "W SD Browser", NULL,
+    "WiFi", "Bluetooth", "Zigbee", "Thread", "GPS", "W SD Browser", NULL,
 };
 
 char* settings_items[] = {
@@ -699,7 +693,6 @@ char** menu_items[] = {
     bluetooth_items,                  // MENU_BLUETOOTH_APPS
     zigbee_items,                     // MENU_ZIGBEE_APPS
     thread_items,                     // MENU_THREAD_APPS
-    empty_items,                      // MENU_MATTER_APPS
     gps_items,                        // MENU_GPS
     empty_items,                      // MENU_WEB_SD_BROWSER
     wifi_analizer_items,              // MENU_WIFI_ANALIZER

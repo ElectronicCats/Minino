@@ -10,6 +10,7 @@ static const char* TAG = "bt_spam";
 
 static bt_spam_cb_display display_records_cb = NULL;
 static TimerHandle_t adv_timer;
+static bool running_task = false;
 static int adv_index = 0;
 
 static esp_ble_adv_params_t ble_adv_params = {
@@ -148,7 +149,7 @@ static void start_adv_timer_callback() {
 }
 
 static void start_adv() {
-  while (1) {
+  while (running_task) {
     if (adv_index >
         (sizeof(long_devices_raw) / sizeof(long_devices_raw[0]) - 1)) {
       adv_index = 0;
@@ -157,6 +158,8 @@ static void start_adv() {
     adv_index++;
     vTaskDelay(5000 / portTICK_PERIOD_MS);
   }
+
+  vTaskDelete(NULL);
 }
 
 void bt_spam_register_cb(bt_spam_cb_display callback) {
@@ -179,6 +182,13 @@ void bt_spam_app_main() {
   // configure the adv data
   ESP_ERROR_CHECK(esp_ble_gap_config_adv_data_raw(&adv_raw_data, 17));
   vTaskDelay(500 / portTICK_PERIOD_MS);
+
+  running_task = true;
+
   esp_ble_gap_start_advertising(&ble_adv_params);
   xTaskCreate(&start_adv, "start_adv", 4096, NULL, 5, NULL);
+}
+
+void bt_spam_app_stop() {
+  running_task = false;
 }

@@ -18,8 +18,8 @@ void led_control_ble_spam_breathing(void) {
 }
 
 void led_control_wifi_scanning(void) {
-  led_start_blink(LED_LEFT, 255, 3, 100, 100, 400);
-  led_start_blink(LED_RIGHT, 255, 3, 100, 100, 400);
+  led_start_breath(LED_LEFT, 100);
+  led_start_breath(LED_RIGHT, 100);
   vTaskSuspend(NULL);  ///////////////////////
 }
 
@@ -30,8 +30,8 @@ void led_control_wifi_attacking(void) {
 }
 
 void led_control_zigbee_scanning(void) {
-  led_start_blink(LED_LEFT, 255, 3, 100, 100, 400);
-  led_start_blink(LED_RIGHT, 255, 3, 100, 100, 400);
+  led_start_blink(LED_LEFT, 255, 3, 50, 50, 150);
+  led_start_blink(LED_RIGHT, 255, 3, 50, 50, 150);
   vTaskSuspend(NULL);  ///////////////////////
 }
 

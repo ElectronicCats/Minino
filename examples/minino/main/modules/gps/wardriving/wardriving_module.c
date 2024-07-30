@@ -38,8 +38,8 @@
 #define WRITE_FILE_REFRESH_RATE   5
 
 typedef enum {
-  WARDRIVING_MODULE_STATE_VERIFYING_SD_CARD = 0,
-  WARDRIVING_MODULE_STATE_VERIFYING_GPS,
+  WARDRIVING_MODULE_STATE_NO_SD_CARD = 0,
+  WARDRIVING_MODULE_STATE_INVALID_SD_CARD,
   WARDRIVING_MODULE_STATE_SCANNING,
   WARDRIVING_MODULE_STATE_STOPPED
 } wardriving_module_state_t;
@@ -258,9 +258,12 @@ void wardriving_gps_event_handler_cb(gps_t* gps) {
 
 esp_err_t wardriving_module_verify_sd_card() {
   ESP_LOGI(TAG, "Verifying SD card");
-  wardriving_module_state = WARDRIVING_MODULE_STATE_VERIFYING_SD_CARD;
   esp_err_t err = sd_card_mount();
-  if (err != ESP_OK) {
+  if (err == ESP_ERR_NOT_SUPPORTED) {
+    wardriving_module_state = WARDRIVING_MODULE_STATE_INVALID_SD_CARD;
+    wardriving_screens_module_format_sd_card();
+  } else if (err != ESP_OK) {
+    wardriving_module_state = WARDRIVING_MODULE_STATE_NO_SD_CARD;
     wardriving_screens_module_no_sd_card();
   }
   return err;
@@ -300,7 +303,7 @@ void wardriving_module_start_scan() {
 }
 
 void wardriving_module_stop_scan() {
-  if (wardriving_module_state == WARDRIVING_MODULE_STATE_VERIFYING_SD_CARD) {
+  if (wardriving_module_state != WARDRIVING_MODULE_STATE_SCANNING) {
     return;
   }
 
@@ -315,5 +318,35 @@ void wardriving_module_stop_scan() {
     vTaskDelete(wardriving_module_scan_task_handle);
     wardriving_module_scan_task_handle = NULL;
     ESP_LOGI(TAG, "Task deleted");
+  }
+}
+
+void wardriving_module_keyboard_cb(uint8_t button_name, uint8_t button_event) {
+  if (button_event != BUTTON_SINGLE_CLICK) {
+    return;
+  }
+
+  switch (button_name) {
+    case BUTTON_LEFT:
+      menu_screens_set_app_state(false, NULL);
+      menu_screens_exit_submenu();
+      break;
+    case BUTTON_RIGHT:
+      if (wardriving_module_state == WARDRIVING_MODULE_STATE_NO_SD_CARD) {
+        wardriving_module_start_scan();
+      } else if (wardriving_module_state ==
+                 WARDRIVING_MODULE_STATE_INVALID_SD_CARD) {
+        wardriving_screens_module_formating_sd_card();
+        esp_err_t err = sd_card_format();
+        if (err == ESP_OK) {
+          ESP_LOGI(TAG, "Format done");
+          wardriving_module_start_scan();
+        } else {
+          wardriving_screens_module_failed_format_sd_card();
+        }
+      }
+      break;
+    default:
+      break;
   }
 }
