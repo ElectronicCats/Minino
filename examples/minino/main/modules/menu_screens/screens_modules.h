@@ -369,7 +369,6 @@ char* version_text[] = {
     "",
     "",
     " Minino v" CONFIG_PROJECT_VERSION,
-    "     BETA",
     NULL,
 };
 
@@ -417,7 +416,7 @@ char* legal_text[] = {
 };
 
 char* wifi_items[] = {
-    "Analizer",
+    "Analyzer",
     "Deauth",
     "DoS",
     NULL,
@@ -614,13 +613,14 @@ char* wardriving_help[] = {
     "networks and",
     "save the",
     "results in a",
-    "CSV file.",
+    "CSV file on",
+    "the SD card.",
     "",
-    "You can start",
-    "the scan and",
-    "select the",
-    "destination to",
-    "save the file.",
+    "Before starting",
+    "the scan, make",
+    "sure your date",
+    "and time are",
+    "correct.",
     NULL,
 };
 
