@@ -558,7 +558,6 @@ void handle_user_selection(screen_module_menu_t user_selection) {
     case MENU_THREAD_APPS:
       open_thread_module_begin();
       break;
-    case MENU_MATTER_APPS:
     case MENU_ZIGBEE_LIGHT:
     case MENU_SETTINGS_DISPLAY:
     case MENU_SETTINGS_SOUND:

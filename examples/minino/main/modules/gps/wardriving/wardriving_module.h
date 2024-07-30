@@ -27,3 +27,13 @@ void wardriving_module_start_scan();
  * @return void
  */
 void wardriving_module_stop_scan();
+
+/**
+ * Callback for the keyboard
+ *
+ * @param button_name
+ * @param button_event
+ *
+ * @return void
+ */
+void wardriving_module_keyboard_cb(uint8_t button_name, uint8_t button_event);

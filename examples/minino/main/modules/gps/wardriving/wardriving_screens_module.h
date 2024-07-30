@@ -25,8 +25,29 @@ void wardriving_screens_module_loading_text();
 void wardriving_screens_module_no_sd_card();
 
 /**
+ * @brief Display the format SD card screen
+ *
+ * @return void
+ */
+void wardriving_screens_module_format_sd_card();
+
+/**
  * @brief Display the no GPS signal screen
  *
  * @return void
  */
 void wardriving_screens_module_no_gps_signal();
+
+/**
+ * @brief Display the formating SD card screen
+ *
+ * @return void
+ */
+void wardriving_screens_module_formating_sd_card();
+
+/**
+ * @brief Display the failed format SD card screen
+ *
+ * @return void
+ */
+void wardriving_screens_module_failed_format_sd_card();

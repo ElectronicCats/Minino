@@ -41,6 +41,7 @@ const char* f_result_to_name[] = {"FR_OK",
 
 static const char* TAG = "sd_card";
 bool _sd_card_mounted = false;
+bool _format_if_mount_failed = false;
 
 static struct {
   struct arg_str* device;
@@ -77,9 +78,10 @@ int mount(int argc, char** argv) {
   }
   /* mount sd card */
   if (!strncmp(mount_args.device->sval[0], "sd", 2)) {
-    ESP_LOGI(TAG, "Initializing SD card");
+    ESP_LOGI(TAG, "Initializing SD card, format: %s",
+             _format_if_mount_failed ? "true" : "false");
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
-        .format_if_mount_failed = true,
+        .format_if_mount_failed = _format_if_mount_failed,
         .max_files = 4,
         .allocation_unit_size = 16 * 1024};
 
@@ -118,6 +120,7 @@ int mount(int argc, char** argv) {
                  "Failed to mount filesystem. "
                  "If you want the card to be formatted, set "
                  "format_if_mount_failed = true.");
+        spi_bus_free(host.slot);
         return ESP_ERR_NOT_SUPPORTED;
       } else {
         ESP_LOGE(TAG,
@@ -214,6 +217,14 @@ esp_err_t sd_card_unmount() {
   if (err == ESP_OK) {
     _sd_card_mounted = false;
   }
+  return err;
+}
+
+esp_err_t sd_card_format() {
+  ESP_LOGI(TAG, "Formatting SD Card...");
+  _format_if_mount_failed = true;
+  esp_err_t err = sd_card_mount();
+  _format_if_mount_failed = false;
   return err;
 }
 
