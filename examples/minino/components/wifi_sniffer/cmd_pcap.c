@@ -184,6 +184,7 @@ esp_err_t packet_capture(void* payload,
   esp_err_t err = pcap_capture_packet(pcap_cmd_rt.pcap_handle, payload, length,
                                       seconds, microseconds);
   fflush(pcap_cmd_rt.pcap_handle->file);
+  // fflush(pcap_cmd_rt.pcap_handle->file);
   return err;
 }
 
