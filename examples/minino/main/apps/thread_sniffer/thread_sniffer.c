@@ -8,6 +8,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
+#include "uart_sender.h"
 
 #include "files_ops.h"
 #include "flash_fs.h"
@@ -191,7 +192,9 @@ static void debug_handler_task() {
     pcap_capture(packet.mPsdu, packet.mLength,
                  packet.mInfo.mRxInfo.mTimestamp / 1000000u,
                  packet.mInfo.mRxInfo.mTimestamp % 1000000u);
-    thread_packet_debug(&packet);
+    // thread_packet_debug(&packet);
+    uart_sender_send_packet(UART_SENDER_PACKET_TYPE_THREAD, packet.mPsdu,
+                            packet.mLength);
   }
   ESP_LOGE("debug_handler_task", "Terminated");
   vTaskDelete(NULL);
