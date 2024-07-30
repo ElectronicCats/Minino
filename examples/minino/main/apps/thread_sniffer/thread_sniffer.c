@@ -138,6 +138,7 @@ static esp_err_t pcap_start() {
   chek_for_fatal_error(
       pcap_write_header(thread_pcap.pcap_handle, THREAD_SNIFFER_PCAP_LINKTYPE),
       "Write header failed");
+  fflush(pcap_cfg.fp);
   thread_pcap.is_writing = true;
 
   thread_sniffer_show_event(THREAD_SNIFFER_DESTINATION_EV, &save_in_sd);
