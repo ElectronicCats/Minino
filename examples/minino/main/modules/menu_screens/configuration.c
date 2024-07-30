@@ -18,7 +18,8 @@ static app_screen_state_information_t app_screen_state_information = {
 };
 
 static void config_module_app_selector();
-static void config_module_state_machine(button_event_t button_pressed);
+static void config_module_state_machine(uint8_t button_name,
+                                        uint8_t button_event);
 static void config_module_wifi_display_list();
 static void config_module_wifi_display_connection_status();
 
@@ -90,9 +91,8 @@ static void config_module_app_selector() {
   }
 }
 
-static void config_module_state_machine(button_event_t button_pressed) {
-  uint8_t button_name = button_pressed >> 4;
-  uint8_t button_event = button_pressed & 0x0F;
+static void config_module_state_machine(uint8_t button_name,
+                                        uint8_t button_event) {
   if (button_event != BUTTON_SINGLE_CLICK &&
       button_event != BUTTON_LONG_PRESS_HOLD) {
     return;
