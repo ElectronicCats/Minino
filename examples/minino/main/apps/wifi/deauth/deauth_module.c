@@ -5,6 +5,7 @@
 #include "captive_portal.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
+#include "led_events.h"
 #include "menu_screens_modules.h"
 #include "wifi_attacks.h"
 #include "wifi_controller.h"
@@ -61,6 +62,8 @@ static void scanning_task(void* pvParameters) {
   deauth_display_menu(current_item, menu_stadistics);
   current_wifi_state.state = DEAUTH_STATE_MENU;
   vTaskDelete(NULL);
+
+  led_control_stop();
 }
 
 static void deauth_run_scan_task() {
@@ -73,12 +76,18 @@ static void deauth_run_scan_task() {
 
 static void deauth_handle_attacks() {
   wifi_attacks_module_stop();
+  led_control_run_effect(led_control_wifi_attacking);
+
   switch (menu_stadistics.attack) {
     case BROADCAST:
     case ROGUE_AP:
     case COMBINED:
+      ESP_LOGI("deauth", "Attack: %d", menu_stadistics.attack);
       animations_task_run(&deauth_display_attacking_animation, 200, NULL);
-      wifi_attack_handle_attacks(current_item, &menu_stadistics.selected_ap);
+      ESP_LOGI("deauth", "Attack: %d", menu_stadistics.attack);
+      wifi_attack_handle_attacks(menu_stadistics.attack,
+                                 &menu_stadistics.selected_ap);
+      ESP_LOGI("deauth", "Attack: %d", menu_stadistics.attack);
       menu_screens_set_app_state(true, deauth_module_cb_event_run);
       current_item = 0;
       break;
@@ -115,6 +124,8 @@ void deauth_module_begin() {
   menu_screens_set_app_state(true, deauth_module_cb_event);
 
   menu_stadistics.attack = 99;
+
+  led_control_run_effect(led_control_wifi_scanning);
 }
 
 static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event) {
@@ -185,6 +196,7 @@ static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event) {
     case BUTTON_LEFT:
       menu_screens_set_app_state(false, NULL);
       menu_screens_exit_submenu();
+      led_control_stop();
       break;
     default:
       break;
@@ -268,8 +280,8 @@ static void deauth_module_cb_event_run(uint8_t button_name,
   switch (button_name) {
     case BUTTON_LEFT:
       current_item = 0;
-      wifi_attacks_module_stop();
       animations_task_stop();
+      wifi_attacks_module_stop();
       menu_screens_set_app_state(true, deauth_module_cb_event);
       deauth_display_menu(current_item, menu_stadistics);
       break;

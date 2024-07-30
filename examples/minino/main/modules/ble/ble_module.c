@@ -67,13 +67,18 @@ static void ble_module_state_machine(uint8_t button_name,
   }
   switch (app_screen_state_information.app_selected) {
     case MENU_BLUETOOTH_TRAKERS_SCAN:
-      ESP_LOGI(TAG_BLE_MODULE, "Bluetooth scanner entered");
       switch (button_name) {
         case BUTTON_LEFT:
+          if (is_modal_displaying) {
+            is_modal_displaying = false;
+            ble_screens_display_trackers_profiles_modal();
+            break;
+          }
+          ble_module_task_stop_trackers_display_devices();
+          trackers_scanner_stop();
           led_control_stop();
           menu_screens_set_app_state(false, NULL);
           menu_screens_exit_submenu();
-          esp_restart();
           break;
         case BUTTON_RIGHT:
           ESP_LOGI(TAG_BLE_MODULE, "Button right pressed - Option selected: %d",
@@ -82,8 +87,11 @@ static void ble_module_state_machine(uint8_t button_name,
             break;
           }
           is_modal_displaying = true;
-          ble_screens_display_modal_trackers_profile(
-              scanned_airtags[device_selection]);
+          ESP_LOGW(TAG_BLE_MODULE, "Device selected: %d", device_selection);
+          if (scanned_airtags) {
+            ble_screens_display_modal_trackers_profile(
+                scanned_airtags[device_selection]);
+          }
           break;
         case BUTTON_UP:
           ESP_LOGI(TAG_BLE_MODULE, "Button up pressed");
@@ -103,11 +111,12 @@ static void ble_module_state_machine(uint8_t button_name,
     case MENU_BLUETOOTH_SPAM:
       switch (button_name) {
         case BUTTON_LEFT:
+          bt_spam_app_stop();
           led_control_stop();
           menu_screens_set_app_state(false, NULL);
           animations_task_stop();
           menu_screens_exit_submenu();
-          esp_restart();
+          // esp_restart();
           break;
         case BUTTON_RIGHT:
         case BUTTON_UP:
@@ -146,6 +155,7 @@ static void ble_module_create_task_trackers_display_devices() {
     }
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
+  vTaskDelete(NULL);
 }
 
 static void ble_module_task_start_trackers_display_devices() {

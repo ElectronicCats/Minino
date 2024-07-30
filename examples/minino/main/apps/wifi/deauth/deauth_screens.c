@@ -125,7 +125,7 @@ void deauth_display_attacks(uint16_t current_item,
     }
     char item[18];
     if (i == menu_stadistics.attack) {
-      snprintf(item, 18, "%s..[SELECTED]", deauth_attacks[i]);
+      snprintf(item, 18, "%s..[SEL]", deauth_attacks[i]);
     } else {
       snprintf(item, 18, "%s", deauth_attacks[i]);
     }
