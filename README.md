@@ -31,6 +31,7 @@ Minino can operate in 6 different technologies:
 - WarDriving
 - Sniffing multiprotocol
 - Support file .pcap in microSD
+- File Manager Web
 - OpenSource
 - Open Hardware
 - OTA Updates
@@ -44,13 +45,13 @@ Minino can operate in 6 different technologies:
 - [x] WiFi sniffer
 - [x] WiFi deauther
 - [x] DOS Attack
-- [x] Analizer -> Save PCAPS in SD or flash
+- [x] Analizer
 - [ ] Wireshark integration
 ### BLE
-- [x] BLE sniffer
-- [x] BLE spammer
-- [ ] BLE spoffing
-- [x] BLE trackers scanner (AirTags, Tile, etc)
+- [ ] BLE Sniffer
+- [x] BLE Spammer
+- [x] BLE Spoffing
+- [x] BLE Trackers Scanner (AirTags, Tile, etc)
 - [ ] Wireshark integration
 ### Zigbee
 - [x] Zigbee sniffer
@@ -71,8 +72,12 @@ Minino can operate in 6 different technologies:
 
 ### Tools
 - [x] OTA Firmware Update
-- [x] GPS
+- [x] GPS Location
+- [x] GPS Speed
+- [x] GPS Time
 - [x] SD
+- [x] File Manager Web
+- [ ] File Manager Local
 - [ ] I2C Scanner
 - [ ] UART2
 
