@@ -56,7 +56,6 @@ static void attack_brodcast_send_raw_frame(const uint8_t* frame_buffer,
              esp_err_to_name(err));
     running_broadcast_attack = false;
   }
-  ESP_LOGI(TAG_WIFI_ATTACK_MODULE, "Sent deauth frame");
 }
 
 static void wifi_attack_brod_send_deauth_frame(wifi_ap_record_t* ap_target) {
