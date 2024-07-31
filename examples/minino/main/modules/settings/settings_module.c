@@ -1,9 +1,12 @@
-#include "settings_module.h"
-#include "configuration.h"
+
+#include <string.h>
 #include "esp_log.h"
+
+#include "configuration.h"
 #include "gps_module.h"
 #include "menu_screens_modules.h"
 #include "oled_screen.h"
+#include "sd_card.h"
 #include "settings_module.h"
 
 static const char* TAG = "settings_module";
@@ -11,6 +14,29 @@ static const char* TAG = "settings_module";
 void update_time_zone_options() {
   uint8_t selected_option = gps_module_get_time_zone();
   menu_screens_update_options(gps_time_zone_options, selected_option);
+}
+
+void update_sd_card_info() {
+  sd_card_mount();
+  oled_screen_clear();
+  menu_screens_display_text_banner("Loading...");
+  vTaskDelay(1000 / portTICK_PERIOD_MS);  // Wait for the SD card to be mounted
+  sd_card_info_t sd_info = sd_card_get_info();
+
+  char* name_str = malloc(strlen(sd_info.name) + 1);
+  sprintf(name_str, "Name: %s", sd_info.name);
+  char* capacity_str = malloc(20);
+  sprintf(capacity_str, "Space: %.2fGB", ((float) sd_info.total_space) / 1024);
+  char* speed_str = malloc(25);
+  sprintf(speed_str, "Speed: %.2fMHz", sd_info.speed);
+  char* type_str = malloc(strlen(sd_info.type) + 1 + 6);
+  sprintf(type_str, "Type: %s", sd_info.type);
+
+  sd_card_info[3] = name_str;
+  sd_card_info[4] = capacity_str;
+  sd_card_info[5] = speed_str;
+  sd_card_info[6] = type_str;
+  sd_card_unmount();
 }
 
 void settings_module_exit_submenu_cb() {
@@ -44,15 +70,19 @@ void settings_module_enter_submenu_cb(screen_module_menu_t user_selection) {
     case MENU_SETTINGS_WIFI:
       config_module_begin(MENU_SETTINGS_WIFI);
       break;
+    case MENU_SETTINGS_SD_CARD_INFO:
+      update_sd_card_info();
+      break;
     default:
       break;
   }
 }
 
 void settings_module_begin() {
-#if !defined(CONFIG_SETTINGS_MODULE_DEBUG0)
+#if !defined(CONFIG_SETTINGS_MODULE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
+  ESP_LOGI(TAG, "Settings module begin");
   menu_screens_register_exit_submenu_cb(settings_module_exit_submenu_cb);
   menu_screens_register_enter_submenu_cb(settings_module_enter_submenu_cb);
 }

@@ -101,7 +101,8 @@ typedef enum {
   MENU_SETTINGS_TIME_ZONE,
   MENU_SETTINGS_WIFI,
   MENU_SETTINGS_SD_CARD,
-  /* About submenus */
+  MENU_SETTINGS_SD_CARD_INFO,
+  MENU_SETTINGS_SD_CARD_FORMAT,
   /* Menu count */
   MENU_COUNT,  // Keep this at the end
 } screen_module_menu_t;
@@ -163,6 +164,8 @@ const char* menu_list[] = {
     "MENU_SETTINGS_TIME_ZONE",
     "MENU_SETTINGS_WIFI",
     "MENU_SETTINGS_SD_CARD",
+    "MENU_SETTINGS_SD_CARD_INFO",
+    "MENU_SETTINGS_SD_CARD_FORMAT",
 };
 
 /**
@@ -273,7 +276,11 @@ const int next_menu_table[][MAX_NUM_ITEMS] = {
     // MENU_SETTINGS_WIFI
     {MENU_SETTINGS_WIFI},
     // MENU_SETTINGS_SD_CARD
-    {MENU_SETTINGS_SD_CARD},
+    {MENU_SETTINGS_SD_CARD_INFO, MENU_SETTINGS_SD_CARD_FORMAT},
+    // MENU_SETTINGS_SD_CARD_INFO
+    {MENU_SETTINGS_SD_CARD_INFO},
+    // MENU_SETTINGS_SD_CARD_FORMAT
+    {MENU_SETTINGS_SD_CARD_FORMAT},
 };
 
 /**
@@ -336,6 +343,8 @@ const int prev_menu_table[] = {
     MENU_SETTINGS_SYSTEM,            // MENU_SETTINGS_TIME_ZONE
     MENU_SETTINGS_SYSTEM,            // MENU_SETTINGS_WIFI
     MENU_SETTINGS_SYSTEM,            // MENU_SETTINGS_SD_CARD
+    MENU_SETTINGS_SD_CARD,           // MENU_SETTINGS_SD_CARD_INFO
+    MENU_SETTINGS_SD_CARD,           // MENU_SETTINGS_SD_CARD_FORMAT
 };
 
 /**
@@ -687,6 +696,18 @@ char* sd_card_settings_items[] = {
     NULL,
 };
 
+char* sd_card_info[] = {
+    VERTICAL_SCROLL_TEXT,
+    /***************/
+    "SD Card Info",
+    "",
+    "Name:",
+    "Space:",
+    "Speed:",
+    "Type:",
+    NULL,
+};
+
 char* empty_items[] = {
     NULL,
 };
@@ -748,4 +769,6 @@ char** menu_items[] = {
     gps_time_zone_options,            // MENU_SETTINGS_TIME_ZONE
     empty_items,                      // MENU_SETTINGS_WIFI
     sd_card_settings_items,           // MENU_SETTINGS_SD_CARD
+    sd_card_info,                     // MENU_SETTINGS_SD_CARD_INFO
+    empty_items,                      // MENU_SETTINGS_SD_CARD_FORMAT
 };
