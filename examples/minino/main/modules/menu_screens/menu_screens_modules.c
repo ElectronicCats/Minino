@@ -123,6 +123,7 @@ static void show_splash_screen() {
 }
 
 void run_screen_saver() {
+  oled_screen_clear();
   xTaskCreate(show_splash_screen, "show_splash_screen", 4096, NULL, 5,
               &screen_saver_task);
 }

@@ -125,6 +125,7 @@ void wifi_module_exit_submenu_cb() {
     case MENU_WIFI_ANALIZER_RUN:
       wifi_sniffer_stop();
       led_control_stop();
+      wifi_sniffer_load_summary();
       break;
     case MENU_WIFI_ANALIZER_ASK_SUMMARY:
       oled_screen_clear();
@@ -178,7 +179,7 @@ void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
       wifi_module_init_sniffer();
       break;
     case MENU_WIFI_ANALIZER_SUMMARY:
-      wifi_sniffer_load_summary();
+      // wifi_sniffer_load_summary();
       break;
     case MENU_WIFI_ANALIZER_CHANNEL:
       if (menu_screens_is_configuration(user_selection)) {

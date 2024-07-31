@@ -4,8 +4,17 @@
 #include "menu_screens_modules.h"
 #include "preferences.h"
 
+#define IDLE_TIMEOUT_S 2
+
 static const char* TAG = "keyboard";
 app_state_t app_state;
+esp_timer_handle_t idle_timer;
+bool is_idle;
+
+void timer_callback() {
+  is_idle = true;
+  run_screen_saver();
+}
 
 static void button_event_cb(void* arg, void* data);
 void button_init(uint32_t button_num, uint8_t mask) {
@@ -61,13 +70,23 @@ static void button_event_cb(void* arg, void* data) {
   ESP_LOGI(TAG, "Button: %s, Event: %s", button_name_str, button_event_str);
 
   stop_screen_saver();
+  esp_timer_stop(idle_timer);
+
   // If we have an app with a custom handler, we call it
   app_state = menu_screens_get_app_state();
   if (app_state.in_app) {
     app_state.app_handler(button_name, button_event);
     return;
   }
-
+  esp_timer_start_once(idle_timer, IDLE_TIMEOUT_S * 1000 * 1000);
+  if (button_event != BUTTON_PRESS_DOWN) {
+    return;
+  }
+  if (is_idle) {
+    is_idle = false;
+    menu_screens_display_menu();
+    return;
+  }
   switch (button_name) {
     case BUTTON_BOOT:
       break;
@@ -86,16 +105,13 @@ static void button_event_cb(void* arg, void* data) {
         }
         menu_screens_enter_submenu();
       }
+      menu_screens_enter_submenu();
       break;
     case BUTTON_UP:
-      if (button_event == BUTTON_PRESS_DOWN) {
-        menu_screens_decrement_selected_item();
-      }
+      menu_screens_decrement_selected_item();
       break;
     case BUTTON_DOWN:
-      if (button_event == BUTTON_PRESS_DOWN) {
-        menu_screens_ingrement_selected_item();
-      }
+      menu_screens_ingrement_selected_item();
       break;
     default:
       break;
@@ -111,4 +127,9 @@ void keyboard_module_begin() {
   button_init(RIGHT_BUTTON_PIN, RIGHT_BUTTON_MASK);
   button_init(UP_BUTTON_PIN, UP_BUTTON_MASK);
   button_init(DOWN_BUTTON_PIN, DOWN_BUTTON_MASK);
+  esp_timer_create_args_t timer_args = {.callback = timer_callback,
+                                        .arg = NULL,
+
+                                        .name = "one_shot_timer"};
+  esp_err_t err = esp_timer_create(&timer_args, &idle_timer);
 }
