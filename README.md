@@ -1,5 +1,9 @@
 # Minino
 
+![GitHub release (with filter)](https://img.shields.io/github/v/release/ElectronicCats/Minino?color=%23008000)
+![GitHub actions](https://img.shields.io/github/actions/workflow/status/ElectronicCats/Minino/pre-commit.yml)
+![Static Badge](https://img.shields.io/badge/made-with_love-blue?color=%23008000)
+
 <p align="center">
     <a href="https://github.com/ElectronicCats/Minino/wiki">
         <img src="https://github.com/ElectronicCats/Minino/assets/107638696/ad4bffb2-d428-439c-b691-60add7cfb9af" height=500>
