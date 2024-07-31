@@ -126,5 +126,4 @@ typedef enum {
   MININO_COUNT
 } epd_bitmap_type_t;
 
-char* epd_bitmaps_list[] = {"Letters", "Face", "PwnLabs", "ElectronicCats",
-                            NULL};
+char* epd_bitmaps_list[] = {"Letters", "Face", "PwnLabs", "EC", NULL};
