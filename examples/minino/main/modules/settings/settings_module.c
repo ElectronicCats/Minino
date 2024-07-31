@@ -1,8 +1,8 @@
 #include "settings_module.h"
-#include "configuration.h"
 #include "esp_log.h"
 #include "gps_module.h"
 #include "menu_screens_modules.h"
+#include "modules/settings/wifi/wifi_settings.h"
 #include "oled_screen.h"
 #include "settings_module.h"
 
@@ -15,10 +15,10 @@ void update_time_zone_options() {
 
 void settings_module_exit_submenu_cb() {
   screen_module_menu_t current_menu = menu_screens_get_current_menu();
-
+  ESP_LOGI(TAG, "Exit Selected item: %d", current_menu);
   switch (current_menu) {
+    case MENU_SETTINGS_WIFI:
     case MENU_SETTINGS:
-      // case MENU_SETTINGS_WIFI:
       settings_module_exit();
       break;
     default:
@@ -50,9 +50,6 @@ void settings_module_enter_submenu_cb(screen_module_menu_t user_selection) {
 }
 
 void settings_module_begin() {
-#if !defined(CONFIG_SETTINGS_MODULE_DEBUG)
-  esp_log_level_set(TAG, ESP_LOG_NONE);
-#endif
   menu_screens_register_exit_submenu_cb(settings_module_exit_submenu_cb);
   menu_screens_register_enter_submenu_cb(settings_module_enter_submenu_cb);
 }
