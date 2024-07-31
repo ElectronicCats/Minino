@@ -1,14 +1,15 @@
-
+#include "settings_module.h"
 #include <string.h>
+#include "display_settings.h"
 #include "esp_log.h"
-
-#include "configuration.h"
 #include "gps_module.h"
 #include "menu_screens_modules.h"
+#include "modules/settings/wifi/wifi_settings.h"
 #include "oled_screen.h"
 #include "sd_card.h"
 #include "sd_card_settings_module.h"
 #include "settings_module.h"
+#include "web_file_browser_module.h"
 
 static const char* TAG = "settings_module";
 
@@ -42,10 +43,11 @@ void update_sd_card_info() {
 
 void settings_module_exit_submenu_cb() {
   screen_module_menu_t current_menu = menu_screens_get_current_menu();
-
+  ESP_LOGI(TAG, "Exit Selected item: %d", current_menu);
   switch (current_menu) {
+    case MENU_WEB_SD_BROWSER:
+    case MENU_SETTINGS_WIFI:
     case MENU_SETTINGS:
-      // case MENU_SETTINGS_WIFI:
       settings_module_exit();
       break;
     default:
@@ -57,7 +59,12 @@ void settings_module_enter_submenu_cb(screen_module_menu_t user_selection) {
   uint8_t selected_item = menu_screens_get_selected_item();
   ESP_LOGI(TAG, "Selected item: %d", selected_item);
   switch (user_selection) {
+    case MENU_WEB_SD_BROWSER:
+      web_file_browser_module_init();
+      break;
     case MENU_SETTINGS_DISPLAY:
+      display_config_module_begin();
+      break;
     case MENU_SETTINGS_SOUND:
       oled_screen_clear();
       menu_screens_display_text_banner("In development");
@@ -84,9 +91,6 @@ void settings_module_enter_submenu_cb(screen_module_menu_t user_selection) {
 }
 
 void settings_module_begin() {
-#if !defined(CONFIG_SETTINGS_MODULE_DEBUG)
-  esp_log_level_set(TAG, ESP_LOG_NONE);
-#endif
   ESP_LOGI(TAG, "Settings module begin");
   menu_screens_register_exit_submenu_cb(settings_module_exit_submenu_cb);
   menu_screens_register_enter_submenu_cb(settings_module_enter_submenu_cb);

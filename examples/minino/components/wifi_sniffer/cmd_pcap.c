@@ -23,6 +23,9 @@
 #include "esp_check.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
+#include "files_ops.h"
+#include "flash_fs.h"
+#include "sd_card.h"
 #include "sdkconfig.h"
 #include "wifi_sniffer.h"
 
@@ -33,6 +36,12 @@ static const char* TAG = "cmd_pcap";
 #define SNIFFER_PROCESS_APPTRACE_TIMEOUT_US (100)
 #define SNIFFER_APPTRACE_RETRY              (10)
 #define TRACE_TIMER_FLUSH_INT_MS            (1000)
+
+#define ANALIZER_SD_CARD    "/sdcard"
+#define ANALIZER_FLASH_FS   "/internal"
+#define ANALIZER_APPS_PATH  "apps"
+#define ANALIZER_PATH       ANALIZER_APPS_PATH "/analizer"
+#define ANALIZER_PCAPS_PATH ANALIZER_PATH "/pcaps"
 
 summary_cb_t summary_cb = NULL;
 
@@ -80,6 +89,14 @@ void pcap_flush_apptrace_timer_cb(TimerHandle_t pxTimer) {
 }
 #endif  // CONFIG_SNIFFER_PCAP_DESTINATION_JTAG
 
+static void create_pcaps_dir() {
+  if (sd_card_mount() == ESP_OK) {
+    sd_card_create_dir(ANALIZER_APPS_PATH);
+    sd_card_create_dir(ANALIZER_PATH);
+    sd_card_create_dir(ANALIZER_PCAPS_PATH);
+  }
+}
+
 void wifi_sniffer_register_summary_cb(summary_cb_t cb) {
   summary_cb = cb;
 }
@@ -126,12 +143,17 @@ static esp_err_t pcap_open(pcap_cmd_runtime_t* pcap) {
   // #endif
 
   if (wifi_sniffer_is_destination_sd()) {
+    create_pcaps_dir();
+    char* pcap_dir = (char*) malloc(30);
+    sprintf(pcap_dir, "%s/%s", ANALIZER_SD_CARD, ANALIZER_PCAPS_PATH);
+    files_ops_incremental_name(pcap_dir, "analizer", ".pcap", pcap->filename);
+    free(pcap_dir);
     fp = fopen(pcap->filename, "wb+");
   } else if (wifi_sniffer_is_destination_internal()) {
-    pcap->pcap_buffer.buffer = calloc(PCAP_MEMORY_BUFFER_SIZE, sizeof(char));
-    ESP_GOTO_ON_FALSE(pcap->pcap_buffer.buffer, ESP_ERR_NO_MEM, err, TAG,
-                      "pcap buffer calloc failed");
-    fp = fmemopen(pcap->pcap_buffer.buffer, PCAP_MEMORY_BUFFER_SIZE, "wb+");
+    flash_fs_mount();
+    files_ops_incremental_name(ANALIZER_FLASH_FS, "analizer", ".pcap",
+                               pcap->filename);
+    fp = fopen(pcap->filename, "wb+");
   } else {
     ESP_LOGE(TAG, "pcap file destination hasn't specified");
   }
@@ -159,8 +181,9 @@ esp_err_t packet_capture(void* payload,
                          uint32_t length,
                          uint32_t seconds,
                          uint32_t microseconds) {
-  return pcap_capture_packet(pcap_cmd_rt.pcap_handle, payload, length, seconds,
-                             microseconds);
+  esp_err_t err = pcap_capture_packet(pcap_cmd_rt.pcap_handle, payload, length,
+                                      seconds, microseconds);
+  return err;
 }
 
 esp_err_t sniff_packet_start(pcap_link_type_t link_type) {

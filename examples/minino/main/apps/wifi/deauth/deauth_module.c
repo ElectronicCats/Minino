@@ -12,6 +12,8 @@
 #include "wifi_scanner.h"
 
 #define DEFAULT_SCAN_LIST_SIZE CONFIG_SCAN_MAX_AP
+#define SCAN_RETRIES           10
+
 typedef enum {
   DEAUTH_STATE_IDLE = 0,
   DEAUTH_STATE_MENU,
@@ -52,9 +54,12 @@ static void deauth_decrement_item();
 static void deauth_handle_attacks();
 
 static void scanning_task(void* pvParameters) {
-  while (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 2)) {
+  uint8_t scan_count = 0;
+  while (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 2) &&
+         scan_count < SCAN_RETRIES) {
     wifi_scanner_module_scan();
     vTaskDelay(5000 / portTICK_PERIOD_MS);
+    scan_count++;
   }
   ap_records = wifi_scanner_get_ap_records();
   menu_stadistics.count = ap_records->count;

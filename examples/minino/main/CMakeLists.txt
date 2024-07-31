@@ -18,7 +18,6 @@ set(modules "modules/led_events/led_events.c"
             "modules/cat_dos/catdos_module.c"
             "modules/cat_dos/cat_console.c"
             "modules/cat_dos/cmd_catdos.c"
-            "modules/menu_screens/configuration.c"
             "modules/gps/gps_module.c"
             "modules/gps/wardriving/wardriving_module.c"
             "modules/gps/wardriving/wardriving_screens_module.c"
@@ -29,7 +28,9 @@ set(modules "modules/led_events/led_events.c"
             "apps/thread_sniffer/thread_sniffer.c"
             "apps/thread_sniffer/thread_sniffer_screens.c"
             "apps/wifi/deauth/deauth_module.c"
-            "apps/wifi/deauth/deauth_screens.c")
+            "apps/wifi/deauth/deauth_screens.c"
+            "modules/settings/wifi/wifi_settings.c"
+            "modules/settings/display/display_settings.c")
 
 set(drivers "drivers/oled_driver/oled_driver.c"
             "drivers/oled_driver/oled_driver_i2c.c"
@@ -51,6 +52,8 @@ idf_component_register(
                     "modules/oled_screen/"
                     "modules/settings/"
                     "modules/settings/sd_card"
+                    "modules/settings/wifi/"
+                    "modules/settings/display/"
                     "modules/wifi/"
                     "modules/ble/"
                     "modules/zigbee/"
@@ -63,7 +66,8 @@ idf_component_register(
                     "modules/gps"
                     "modules/gps/wardriving"
                     "apps/thread_sniffer"
-                    "apps/wifi/deauth")
+                    "apps/wifi/deauth"
+                    "general/")
 
 # # Append all directories to INCLUDE_DIRS
 

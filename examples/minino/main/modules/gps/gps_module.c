@@ -14,6 +14,7 @@ static const char* TAG = "gps_module";
 
 nmea_parser_handle_t nmea_hdl = NULL;
 gps_event_callback_t gps_event_callback = NULL;
+static bool is_uart_installed = false;
 
 /**
  * @brief Signal strength levels based on the number of satellites in use
@@ -124,6 +125,10 @@ void gps_module_start_scan() {
 #if !defined(CONFIG_GPS_MODULE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
+  if (is_uart_installed) {
+    return;
+  }
+  is_uart_installed = true;
 
   ESP_LOGI(TAG, "Start reading GPS");
   /* NMEA parser configuration */
@@ -135,6 +140,7 @@ void gps_module_start_scan() {
 }
 
 void gps_module_stop_read() {
+  is_uart_installed = false;
   ESP_LOGI(TAG, "Stop reading GPS");
   /* unregister event handler */
   nmea_parser_remove_handler(nmea_hdl, gps_event_handler);

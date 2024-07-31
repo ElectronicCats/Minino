@@ -61,7 +61,7 @@ static void ble_module_app_selector() {
 }
 static void ble_module_state_machine(uint8_t button_name,
                                      uint8_t button_event) {
-  if (button_event != BUTTON_SINGLE_CLICK &&
+  if (button_event != BUTTON_PRESS_DOWN &&
       button_event != BUTTON_LONG_PRESS_HOLD) {
     return;
   }

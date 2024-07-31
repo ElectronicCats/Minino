@@ -35,6 +35,8 @@ static EventGroupHandle_t wifi_event_group;
 const int CONNECTED_BIT = BIT0;
 static app_callback callback_connection;
 static bool save_credentials = false;
+static bool disconnect_cb = false;
+static int reconnections = 0;
 static int connect(int argc, char** argv);
 static bool wifi_join(const char* ssid, const char* pass, int timeout_ms);
 
@@ -177,17 +179,31 @@ static void event_handler(void* arg,
                           esp_event_base_t event_base,
                           int32_t event_id,
                           void* event_data) {
+  printf("event_handler %ld\n", event_id);
+  if (callback_connection &&
+      (event_id == IP_EVENT_STA_GOT_IP || event_id == WIFI_EVENT_WIFI_READY)) {
+    preferences_put_bool("wifi_connected", true);
+    callback_connection(true);
+  }
+  if (callback_connection && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+    if (reconnections == 0) {
+      callback_connection(false);
+    }
+  }
+
   if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
     preferences_put_bool("wifi_connected", false);
-    esp_wifi_connect();
+    preferences_remove("ssid");
+    preferences_remove("passwd");
+    if (reconnections < 3) {
+      reconnections++;
+      esp_wifi_connect();
+    }
     xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
   } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+    printf("Connected to AP");
     xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
     preferences_put_bool("wifi_connected", true);
-    ESP_LOGI(TAG, "Connected to AP");
-    if (callback_connection) {
-      callback_connection();
-    }
   }
 }
 
@@ -199,20 +215,19 @@ static void initialise_wifi(void) {
   }
   ESP_ERROR_CHECK(esp_netif_init());
   wifi_event_group = xEventGroupCreate();
-  ESP_ERROR_CHECK(esp_event_loop_create_default());
+  esp_err_t err = esp_event_loop_create_default();
+  if (err == ESP_ERR_INVALID_STATE) {
+    ESP_LOGI(TAG, "Event loop already created");
+  } else if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Error creating event loop: %s", esp_err_to_name(err));
+    esp_restart();
+  }
   esp_netif_t* ap_netif = esp_netif_create_default_wifi_ap();
   assert(ap_netif);
   esp_netif_t* sta_netif = esp_netif_create_default_wifi_sta();
   assert(sta_netif);
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-
-  wifi_config_t ap_config = WIFI_AP_CONFIG();
-
-  ESP_ERROR_CHECK(esp_netif_dhcps_start(ap_netif));
-  ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &ap_config));
-
   ESP_ERROR_CHECK(esp_event_handler_register(
       WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &event_handler, NULL));
   ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP,
@@ -233,6 +248,9 @@ static void initialise_wifi(void) {
 
 static bool wifi_join(const char* ssid, const char* pass, int timeout_ms) {
   initialise_wifi();
+  preferences_put_bool("wifi_connected", false);
+  preferences_remove("ssid");
+  preferences_remove("passwd");
   wifi_config_t wifi_config = {0};
   strlcpy((char*) wifi_config.sta.ssid, ssid, sizeof(wifi_config.sta.ssid));
   if (pass) {
@@ -242,7 +260,11 @@ static bool wifi_join(const char* ssid, const char* pass, int timeout_ms) {
 
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-  esp_wifi_connect();
+  esp_err_t err = esp_wifi_connect();
+  if (err != ESP_OK) {
+    ESP_LOGE(__func__, "Failed to connect to AP");
+    return false;
+  }
 
   preferences_put_string("ssid", ssid);
   preferences_put_string("passwd", pass);
@@ -278,11 +300,17 @@ static int connect(int argc, char** argv) {
   return 0;
 }
 
+void cmd_wifi_unregister_callback() {
+  callback_connection = NULL;
+}
+
 int connect_wifi(const char* ssid, const char* pass, app_callback cb) {
   if (cb) {
     callback_connection = cb;
   }
   cmd_wifi_handle_credentials(ssid, pass);
+  printf("ssid: %s\n", ssid);
+  printf("password: %s\n", pass);
   bool connected = wifi_join(ssid, pass, JOIN_TIMEOUT_MS);
   if (connected) {
     ESP_LOGI(__func__, "Connected");

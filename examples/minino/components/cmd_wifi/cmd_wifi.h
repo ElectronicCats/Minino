@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-typedef void (*app_callback)(void);
+typedef void (*app_callback)(bool state);
 // Register WiFi functions
 void register_wifi(void);
 int connect_wifi(const char* ssid, const char* pass, app_callback cb);
@@ -49,7 +49,7 @@ bool is_wifi_connected(void);
       .beacon_interval = WIFI_AP_BEACON_INTERVAL, \
     }                                             \
   }
-
+void cmd_wifi_unregister_callback();
 #ifdef __cplusplus
 }
 #endif

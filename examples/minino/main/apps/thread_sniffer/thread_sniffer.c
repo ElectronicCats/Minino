@@ -8,6 +8,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/task.h"
+#include "uart_sender.h"
 
 #include "files_ops.h"
 #include "flash_fs.h"
@@ -22,8 +23,11 @@
 #define THREAD_SNIFFER_QUEUE_SIZE                32
 #define THREAD_SNIFFER_PROCESS_PACKET_TIMEOUT_MS 100
 
-#define SD_CARD  "/sdcard"
-#define FLASH_FS "/internal"
+#define SD_CARD           "/sdcard"
+#define FLASH_FS          "/internal"
+#define APPS_PATH         "apps"
+#define THREAD_PATH       APPS_PATH "/thread"
+#define THREAD_PCAPS_PATH THREAD_PATH "/pcaps"
 
 #define TAG "thread_sniffer"
 
@@ -60,7 +64,16 @@ static void thread_sniffer_show_event(thread_sniffer_events_t event,
                                       void* context);
 static void debug_handler_task();
 
+static void create_pcaps_dir() {
+  if (sd_card_mount() == ESP_OK) {
+    sd_card_create_dir(APPS_PATH);
+    sd_card_create_dir(THREAD_PATH);
+    sd_card_create_dir(THREAD_PCAPS_PATH);
+  }
+}
+
 void thread_sniffer_init() {
+  create_pcaps_dir();
   openthread_init();
   esp_log_level_set("OPENTHREAD", ESP_LOG_NONE);
   packet_rx_queue =
@@ -108,8 +121,10 @@ static esp_err_t pcap_start() {
   }
 
   char* pcap_path = (char*) malloc(100);
-  files_ops_incremental_name(save_in_sd ? SD_CARD : FLASH_FS, "thread", ".pcap",
-                             pcap_path);
+  char* pcap_dir = (char*) malloc(30);
+  sprintf(pcap_dir, "%s/%s", SD_CARD, THREAD_PCAPS_PATH);
+  files_ops_incremental_name(save_in_sd ? pcap_dir : FLASH_FS, "thread",
+                             ".pcap", pcap_path);
   fp = fopen(pcap_path, "w");
   chek_for_fatal_false(fp, "open file failed");
   pcap_config_t pcap_cfg = {
@@ -124,10 +139,12 @@ static esp_err_t pcap_start() {
   chek_for_fatal_error(
       pcap_write_header(thread_pcap.pcap_handle, THREAD_SNIFFER_PCAP_LINKTYPE),
       "Write header failed");
+  fflush(pcap_cfg.fp);
   thread_pcap.is_writing = true;
 
   thread_sniffer_show_event(THREAD_SNIFFER_DESTINATION_EV, &save_in_sd);
 
+  free(pcap_dir);
   free(pcap_path);
   return ESP_OK;
   // err:
@@ -191,7 +208,9 @@ static void debug_handler_task() {
     pcap_capture(packet.mPsdu, packet.mLength,
                  packet.mInfo.mRxInfo.mTimestamp / 1000000u,
                  packet.mInfo.mRxInfo.mTimestamp % 1000000u);
-    thread_packet_debug(&packet);
+    // thread_packet_debug(&packet);
+    uart_sender_send_packet(UART_SENDER_PACKET_TYPE_THREAD, packet.mPsdu,
+                            packet.mLength);
   }
   ESP_LOGE("debug_handler_task", "Terminated");
   vTaskDelete(NULL);
