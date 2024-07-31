@@ -9,14 +9,18 @@ static void show_ready() {
   if (is_connected) {
     wifi_config_t wifi_config;
     esp_wifi_get_config(ESP_IF_WIFI_STA, &wifi_config);
-    oled_screen_display_text("SSID:", 0, 0, OLED_DISPLAY_NORMAL);
-    oled_screen_display_text((char*) wifi_config.sta.ssid, 0, 1,
+    oled_screen_display_text("< Exit", 0, 0, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text("SSID:", 0, 2, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text((char*) wifi_config.sta.ssid, 0, 3,
                              OLED_DISPLAY_NORMAL);
-    oled_screen_display_text("SERVER:", 0, 2, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text("SERVER:", 0, 4, OLED_DISPLAY_NORMAL);
     esp_netif_ip_info_t ip6_info;
     esp_netif_get_ip_info(esp_netif_get_handle_from_ifkey("WIFI_STA_DEF"),
                           &ip6_info);
     printf("IP address: " IPSTR "\n", IP2STR(&ip6_info.ip));
+    char ipadress[20];
+    sprintf(ipadress, IPSTR, IP2STR(&ip6_info.ip));
+    oled_screen_display_text_center(ipadress, 5, OLED_DISPLAY_NORMAL);
 
   } else {
     oled_screen_display_text("SSID: MININO_AP", 0, 0, OLED_DISPLAY_NORMAL);

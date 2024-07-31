@@ -496,20 +496,28 @@ static void catdos_module_display_wifi() {
   }
 }
 
-static void catdos_module_cb_connection() {
+static void catdos_module_cb_connection(bool state) {
   oled_screen_clear();
-  oled_screen_display_text_center("WIFI", 0, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("Connected", 1, OLED_DISPLAY_NORMAL);
-  vTaskDelay(2000 / portTICK_PERIOD_MS);
-  bool is_target = catdos_module_is_config_target();
-  if (is_target) {
-    catdos_state = CATDOS_STATE_ATTACK;
-    catdos_module_show_target();
+  if (state) {
+    oled_screen_display_text_center("WIFI", 0, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text_center("Connected", 1, OLED_DISPLAY_NORMAL);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    bool is_target = catdos_module_is_config_target();
+    if (is_target) {
+      catdos_state = CATDOS_STATE_ATTACK;
+      catdos_module_show_target();
+    } else {
+      oled_screen_clear();
+      oled_screen_display_text_center("Configure", 1, OLED_DISPLAY_NORMAL);
+      oled_screen_display_text_center("Target", 2, OLED_DISPLAY_NORMAL);
+      catdos_state = CATDOS_STATE_CONFIG_TARGET;
+    }
   } else {
+    oled_screen_display_text_center("WIFI", 0, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text_center("Error", 1, OLED_DISPLAY_NORMAL);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
     oled_screen_clear();
-    oled_screen_display_text_center("Configure", 1, OLED_DISPLAY_NORMAL);
-    oled_screen_display_text_center("Target", 2, OLED_DISPLAY_NORMAL);
-    catdos_state = CATDOS_STATE_CONFIG_TARGET;
+    catdos_module_display_wifi();
   }
 }
 

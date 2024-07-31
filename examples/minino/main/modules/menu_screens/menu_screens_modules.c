@@ -1,11 +1,12 @@
 #include "menu_screens_modules.h"
 #include "OTA.h"
 #include "bitmaps.h"
+#include "bitmaps_general.h"
 #include "ble_module.h"
-#include "configuration.h"
 #include "esp_log.h"
 #include "gps_module.h"
 #include "leds.h"
+#include "modules/settings/wifi/wifi_settings.h"
 #include "oled_screen.h"
 #include "open_thread.h"
 #include "open_thread_module.h"
@@ -32,6 +33,14 @@ uint8_t bluetooth_devices_count;
 
 static TaskHandle_t screen_saver_task = NULL;
 static bool screen_saver_running = false;
+
+#ifdef CONFIG_RESOLUTION_128X64
+  #define SCREEN_WIDTH  128
+  #define SCREEN_HEIGHT 64
+#else  // CONFIG_RESOLUTION_128X32
+  #define SCREEN_WIDTH  128
+  #define SCREEN_HEIGHT 32
+#endif
 
 static app_state_t app_state = {
     .in_app = false,
@@ -97,23 +106,38 @@ void run_tests() {
 }
 
 static void show_splash_screen() {
+  int get_logo = preferences_get_int("dp_select", 0);
+  epd_bitmap_t logo;
+  // TODO: Add a function to get the based on array index
+  if (get_logo == 1) {
+    logo = minino_face_logo;
+  } else if (get_logo == 2) {
+    logo = minino_pwnlabs_logo;
+  } else if (get_logo == 3) {
+    logo = minino_electroniccats_logo;
+  } else {
+    logo = minino_letters_bitmap;
+  }
+
   screen_saver_running = true;
-  int start_x_position = 32;
-  int start_y_position = 16;
-  int x_direction = 1;
-  int y_direction = 1;
+  int w_screen_space = SCREEN_WIDTH - logo.width;
+  int h_screen_space = SCREEN_HEIGHT - logo.height;
+  int start_x_position = w_screen_space / 2;
+  static int start_y_position = 16;
+  static int x_direction = 1;
+  static int y_direction = 1;
 
   while (screen_saver_running) {
-    oled_screen_display_bitmap(epd_bitmap_minino_text_logo, start_x_position,
-                               start_y_position, 64, 32, OLED_DISPLAY_NORMAL);
+    oled_screen_display_bitmap(logo.bitmap, start_x_position, start_y_position,
+                               logo.width, logo.height, OLED_DISPLAY_NORMAL);
 
     start_x_position += x_direction;
     start_y_position += y_direction;
 
-    if (start_x_position <= 0 || start_x_position >= 62) {
+    if (start_x_position <= 0 || start_x_position >= w_screen_space - 2) {
       x_direction = -x_direction;
     }
-    if (start_y_position <= 0 || start_y_position >= 32) {
+    if (start_y_position <= 0 || start_y_position >= h_screen_space) {
       y_direction = -y_direction;
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);

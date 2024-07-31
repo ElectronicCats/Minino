@@ -4,7 +4,7 @@
 #include "menu_screens_modules.h"
 #include "preferences.h"
 
-#define IDLE_TIMEOUT_S 2
+static int IDLE_TIMEOUT_S = 30;
 
 static const char* TAG = "keyboard";
 app_state_t app_state;
@@ -78,6 +78,8 @@ static void button_event_cb(void* arg, void* data) {
     app_state.app_handler(button_name, button_event);
     return;
   }
+
+  IDLE_TIMEOUT_S = preferences_get_int("dp_time", 30);
   esp_timer_start_once(idle_timer, IDLE_TIMEOUT_S * 1000 * 1000);
   if (button_event != BUTTON_PRESS_DOWN) {
     return;
