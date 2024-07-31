@@ -300,6 +300,10 @@ static int connect(int argc, char** argv) {
   return 0;
 }
 
+void cmd_wifi_unregister_callback() {
+  callback_connection = NULL;
+}
+
 int connect_wifi(const char* ssid, const char* pass, app_callback cb) {
   if (cb) {
     callback_connection = cb;

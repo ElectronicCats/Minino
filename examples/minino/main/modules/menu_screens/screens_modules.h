@@ -50,7 +50,6 @@ typedef enum {
   MENU_ZIGBEE_APPS,
   MENU_THREAD_APPS,
   MENU_GPS,
-  MENU_WEB_SD_BROWSER,
   /* WiFi applications */
   MENU_WIFI_ANALIZER,
   MENU_WIFI_DEAUTH,
@@ -97,6 +96,7 @@ typedef enum {
   /* Settings items */
   MENU_SETTINGS_DISPLAY,
   MENU_SETTINGS_SOUND,
+  MENU_WEB_SD_BROWSER,
   MENU_SETTINGS_SYSTEM,
   MENU_SETTINGS_TIME_ZONE,
   MENU_SETTINGS_WIFI,
@@ -125,7 +125,6 @@ const char* menu_list[] = {
     "MENU_ZIGBEE_APPS",
     "MENU_THREAD_APPS",
     "MENU_GPS",
-    "MENU_WEB_SD_BROWSER",
     "MENU_WIFI_ANALIZER",
     "MENU_WIFI_DEAUTH",
     "MENU_WIFI_DOS",
@@ -160,6 +159,7 @@ const char* menu_list[] = {
     "MENU_ABOUT_UPDATE",
     "MENU_SETTINGS_DISPLAY",
     "MENU_SETTINGS_SOUND",
+    "MENU_WEB_SD_BROWSER",
     "MENU_SETTINGS_SYSTEM",
     "MENU_SETTINGS_TIME_ZONE",
     "MENU_SETTINGS_WIFI",
@@ -180,10 +180,13 @@ const int next_menu_table[][MAX_NUM_ITEMS] = {
     // MENU_MAIN
     {MENU_APPLICATIONS, MENU_SETTINGS, MENU_ABOUT},
     // MENU_APPLICATIONS
-    {MENU_WIFI_APPS, MENU_BLUETOOTH_APPS, MENU_ZIGBEE_APPS, MENU_THREAD_APPS,
-     MENU_GPS, MENU_WEB_SD_BROWSER},
+    {
+        MENU_WIFI_APPS, MENU_BLUETOOTH_APPS, MENU_ZIGBEE_APPS, MENU_THREAD_APPS,
+        MENU_GPS  //, MENU_WEB_SD_BROWSER
+    },
     // MENU_SETTINGS
-    {MENU_SETTINGS_DISPLAY, MENU_SETTINGS_SOUND, MENU_SETTINGS_SYSTEM},
+    {MENU_SETTINGS_DISPLAY, MENU_SETTINGS_SOUND, MENU_SETTINGS_SYSTEM,
+     MENU_WEB_SD_BROWSER},
     // MENU_ABOUT
     {MENU_ABOUT_VERSION, MENU_ABOUT_LICENSE, MENU_ABOUT_CREDITS,
      MENU_ABOUT_LEGAL, MENU_ABOUT_UPDATE},
@@ -198,8 +201,6 @@ const int next_menu_table[][MAX_NUM_ITEMS] = {
     // MENU_GPS
     {MENU_GPS_WARDRIVING, MENU_GPS_DATE_TIME, MENU_GPS_LOCATION, MENU_GPS_SPEED,
      MENU_GPS_HELP},
-    // MENU_WEB_SD_BROWSER
-    {MENU_WEB_SD_BROWSER},
     // MENU_WIFI_ANALIZER
     {MENU_WIFI_ANALYZER_RUN, MENU_WIFI_ANALYZER_SETTINGS,
      MENU_WIFI_ANALYZER_HELP},
@@ -269,6 +270,8 @@ const int next_menu_table[][MAX_NUM_ITEMS] = {
     {MENU_SETTINGS_DISPLAY},
     // MENU_SETTINGS_SOUND
     {MENU_SETTINGS_SOUND},
+    // MENU_WEB_SD_BROWSER
+    {MENU_WEB_SD_BROWSER},
     // MENU_SETTINGS_SYSTEM
     {MENU_SETTINGS_TIME_ZONE, MENU_SETTINGS_WIFI, MENU_SETTINGS_SD_CARD},
     // MENU_SETTINGS_TIME_ZONE
@@ -304,7 +307,6 @@ const int prev_menu_table[] = {
     MENU_APPLICATIONS,               // MENU_ZIGBEE_APPS
     MENU_APPLICATIONS,               // MENU_THREAD_APPS
     MENU_APPLICATIONS,               // MENU_GPS
-    MENU_APPLICATIONS,               // MENU_WEB_SD_BROWSER
     MENU_WIFI_APPS,                  // MENU_WIFI_ANALIZER
     MENU_WIFI_APPS,                  // MENU_WIFI_DEAUTH
     MENU_WIFI_APPS,                  // MENU_WIFI_DOS
@@ -339,6 +341,7 @@ const int prev_menu_table[] = {
     MENU_ABOUT,                      // MENU_ABOUT_UPDATE
     MENU_SETTINGS,                   // MENU_SETTINGS_DISPLAY
     MENU_SETTINGS,                   // MENU_SETTINGS_SOUND
+    MENU_SETTINGS,                   // MENU_WEB_SD_BROWSER
     MENU_SETTINGS,                   // MENU_SETTINGS_SYSTEM
     MENU_SETTINGS_SYSTEM,            // MENU_SETTINGS_TIME_ZONE
     MENU_SETTINGS_SYSTEM,            // MENU_SETTINGS_WIFI
@@ -364,14 +367,11 @@ char* main_items[] = {
 };
 
 char* applications_items[] = {
-    "WiFi", "Bluetooth", "Zigbee", "Thread", "GPS", "W SD Browser", NULL,
+    "WiFi", "Bluetooth", "Zigbee", "Thread", "GPS", NULL,
 };
 
 char* settings_items[] = {
-    "Display",
-    "Sound",
-    "System",
-    NULL,
+    "Display", "Sound", "System", "File Manager", NULL,
 };
 
 char* about_items[] = {
@@ -730,7 +730,6 @@ char** menu_items[] = {
     zigbee_items,                     // MENU_ZIGBEE_APPS
     thread_items,                     // MENU_THREAD_APPS
     gps_items,                        // MENU_GPS
-    empty_items,                      // MENU_WEB_SD_BROWSER
     wifi_analyzer_items,              // MENU_WIFI_ANALIZER
     empty_items,                      // MENU_WIFI_DEAUTH
     empty_items,                      // MENU_WIFI_DOS
@@ -765,6 +764,7 @@ char** menu_items[] = {
     empty_items,                      // MENU_ABOUT_UPDATE
     empty_items,                      // MENU_SETTINGS_DISPLAY
     empty_items,                      // MENU_SETTINGS_SOUND
+    empty_items,                      // MENU_WEB_SD_BROWSER
     system_settings_items,            // MENU_SETTINGS_SYSTEM
     gps_time_zone_options,            // MENU_SETTINGS_TIME_ZONE
     empty_items,                      // MENU_SETTINGS_WIFI

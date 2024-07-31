@@ -100,6 +100,7 @@ static void config_module_wifi_display_connected() {
   oled_screen_clear();
   oled_screen_display_text_center("Connected", 4, OLED_DISPLAY_NORMAL);
   vTaskDelay(2000 / portTICK_PERIOD_MS);
+  cmd_wifi_unregister_callback();
   menu_screens_set_app_state(false, NULL);
   menu_screens_exit_submenu();
 }
@@ -243,6 +244,7 @@ static void config_module_state_machine(uint8_t button_name,
       ESP_LOGI(TAG_CONFIG_MODULE, "Bluetooth scanner entered");
       switch (button_name) {
         case BUTTON_LEFT:
+          cmd_wifi_unregister_callback();
           menu_screens_set_app_state(false, NULL);
           menu_screens_exit_submenu();
           break;
