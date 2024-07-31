@@ -1,4 +1,5 @@
 #include "settings_module.h"
+#include "display_settings.h"
 #include "esp_log.h"
 #include "gps_module.h"
 #include "menu_screens_modules.h"
@@ -31,6 +32,8 @@ void settings_module_enter_submenu_cb(screen_module_menu_t user_selection) {
   ESP_LOGI(TAG, "Selected item: %d", selected_item);
   switch (user_selection) {
     case MENU_SETTINGS_DISPLAY:
+      display_config_module_begin();
+      break;
     case MENU_SETTINGS_SOUND:
       oled_screen_clear();
       menu_screens_display_text_banner("In development");
