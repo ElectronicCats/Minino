@@ -17,7 +17,7 @@
 extern "C" {
 #endif
 
-typedef void (*app_callback)(void);
+typedef void (*app_callback)(bool state);
 // Register WiFi functions
 void register_wifi(void);
 int connect_wifi(const char* ssid, const char* pass, app_callback cb);

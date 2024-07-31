@@ -3,6 +3,7 @@
 #include <string.h>
 #include "animations_task.h"
 #include "esp_wifi.h"
+#include "general/bitmaps_general.h"
 #include "oled_screen.h"
 
 #define ITEMOFFSET 2

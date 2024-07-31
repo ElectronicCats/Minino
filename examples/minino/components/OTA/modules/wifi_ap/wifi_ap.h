@@ -12,7 +12,7 @@
 
 // Macros
 // WiFi Application Settings
-#define WIFI_AP_SSID            "minino_ap"  // Access Point Names
+#define WIFI_AP_SSID            "MININO_AP"  // Access Point Names
 #define WIFI_AP_PASSWORD        "Cats1234"   // Access Point Password
 #define WIFI_AP_CHANNEL         1            // Access Point Channels
 #define WIFI_AP_SSID_HIDDEN     0            // Access Point Visibility
