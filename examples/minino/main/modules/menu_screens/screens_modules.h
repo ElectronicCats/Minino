@@ -293,7 +293,6 @@ const int prev_menu_table[] = {
     MENU_APPLICATIONS,            // MENU_BLUETOOTH_APPS
     MENU_APPLICATIONS,            // MENU_ZIGBEE_APPS
     MENU_APPLICATIONS,            // MENU_THREAD_APPS
-    MENU_APPLICATIONS,            // MENU_MATTER_APPS
     MENU_APPLICATIONS,            // MENU_GPS
     MENU_APPLICATIONS,            // MENU_WEB_SD_BROWSER
     MENU_WIFI_APPS,               // MENU_WIFI_ANALIZER
