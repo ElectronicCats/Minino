@@ -67,3 +67,5 @@ typedef struct {
  * @return void
  */
 void keyboard_module_begin();
+
+void keyboard_module_reset_idle_timer();

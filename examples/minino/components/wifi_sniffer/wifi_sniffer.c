@@ -17,6 +17,8 @@
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
+#include "files_ops.h"
+#include "flash_fs.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "menu_screens_modules.h"
