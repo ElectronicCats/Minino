@@ -7,6 +7,7 @@
 #include "menu_screens_modules.h"
 #include "oled_screen.h"
 #include "sd_card.h"
+#include "sd_card_settings_module.h"
 #include "settings_module.h"
 
 static const char* TAG = "settings_module";
@@ -72,6 +73,10 @@ void settings_module_enter_submenu_cb(screen_module_menu_t user_selection) {
       break;
     case MENU_SETTINGS_SD_CARD_INFO:
       update_sd_card_info();
+      break;
+    case MENU_SETTINGS_SD_CARD_FORMAT:
+      sd_card_settings_verify_sd_card();
+      menu_screens_set_app_state(true, sd_card_settings_keyboard_cb);
       break;
     default:
       break;

@@ -280,7 +280,7 @@ const int next_menu_table[][MAX_NUM_ITEMS] = {
     // MENU_SETTINGS_SD_CARD_INFO
     {MENU_SETTINGS_SD_CARD_INFO},
     // MENU_SETTINGS_SD_CARD_FORMAT
-    {MENU_SETTINGS_SD_CARD_FORMAT},
+    {MENU_SETTINGS_SD_CARD_INFO},
 };
 
 /**
@@ -708,6 +708,11 @@ char* sd_card_info[] = {
     NULL,
 };
 
+char* sd_card_format_array[] = {
+    "This array is not used",
+    NULL,
+};
+
 char* empty_items[] = {
     NULL,
 };
@@ -770,5 +775,5 @@ char** menu_items[] = {
     empty_items,                      // MENU_SETTINGS_WIFI
     sd_card_settings_items,           // MENU_SETTINGS_SD_CARD
     sd_card_info,                     // MENU_SETTINGS_SD_CARD_INFO
-    empty_items,                      // MENU_SETTINGS_SD_CARD_FORMAT
+    sd_card_format_array,             // MENU_SETTINGS_SD_CARD_FORMAT
 };
