@@ -162,6 +162,7 @@ static void display_config_module_state_machine_menu_time(
       preferences_put_int("dp_time", time_default_time);
       oled_screen_clear();
       oled_screen_display_text_center("Saved", 3, OLED_DISPLAY_NORMAL);
+      keyboard_module_reset_idle_timer();
       vTaskDelay(2000 / portTICK_PERIOD_MS);
       menu_screens_set_app_state(true, display_config_module_state_machine);
       selected_item = 0;
