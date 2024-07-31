@@ -13,7 +13,9 @@ bool is_idle;
 
 void timer_callback() {
   screen_module_menu_t menu = menu_screens_get_current_menu();
-  if (menu == MENU_WIFI_ANALYZER_RUN || menu == MENU_WIFI_ANALYZER_SUMMARY) {
+  if (menu == MENU_WIFI_ANALYZER_RUN || menu == MENU_WIFI_ANALYZER_SUMMARY ||
+      menu == MENU_GPS_DATE_TIME || menu == MENU_GPS_LOCATION ||
+      menu == MENU_GPS_SPEED) {
     return;
   }
 
