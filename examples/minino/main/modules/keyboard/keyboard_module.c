@@ -12,8 +12,17 @@ esp_timer_handle_t idle_timer;
 bool is_idle;
 
 void timer_callback() {
+  screen_module_menu_t menu = menu_screens_get_current_menu();
+  if (menu == MENU_WIFI_ANALIZER_RUN || menu == MENU_WIFI_ANALIZER_SUMMARY) {
+    return;
+  }
+
   is_idle = true;
   run_screen_saver();
+}
+void keyboard_module_reset_idle_timer() {
+  esp_timer_stop(idle_timer);
+  esp_timer_start_once(idle_timer, IDLE_TIMEOUT_S * 1000 * 1000);
 }
 
 static void button_event_cb(void* arg, void* data);
