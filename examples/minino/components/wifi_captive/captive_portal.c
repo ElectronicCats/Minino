@@ -205,9 +205,9 @@ void captive_portal_set_config_ssid(wifi_ap_record_t ap_record) {
 }
 
 void captive_portal_set_config(wifi_config_t* config) {
-#if !defined(CONFIG_CAPTIVE_PORTAL_DEBUG)
-  esp_log_level_set(TAG, ESP_LOG_NONE);
-#endif
+  // #if !defined(CONFIG_CAPTIVE_PORTAL_DEBUG)
+  //   esp_log_level_set(TAG, ESP_LOG_NONE);
+  // #endif
 
   ESP_LOGI(TAG, "ESP_WIFI_MODE_AP %s", config->ap.ssid);
   wifi_config = *config;
@@ -219,9 +219,12 @@ static void captive_portal_dns_server_stop() {
 }
 
 void captive_portal_stop() {
-  stop_dns_server(captive_portal_dns_server_stop);
+  // stop_dns_server(captive_portal_dns_server_stop);
+  ESP_LOGI(TAG, "Stopping captive portal");
   httpd_stop(NULL);
+  ESP_LOGI(TAG, "Stopping captive portal");
   esp_wifi_stop();
+  ESP_LOGI(TAG, "Stopping captive portal");
   esp_wifi_deinit();
 }
 
