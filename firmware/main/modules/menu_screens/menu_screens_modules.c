@@ -168,15 +168,6 @@ void stop_screen_saver() {
   }
 }
 
-static void show_version() {
-  oled_screen_clear();
-  char version_text[10];
-  sprintf(version_text, "%s", CONFIG_PROJECT_VERSION);
-  oled_screen_display_text_center("Firmware Version", 3, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center(version_text, 4, OLED_DISPLAY_NORMAL);
-  vTaskDelay(2000 / portTICK_PERIOD_MS);
-}
-
 void show_logo() {
   // buzzer_set_freq(50);
   oled_screen_clear();
@@ -207,7 +198,6 @@ void screen_module_get_screen() {
         num_items++;
       }
     }
-    show_version();
     preferences_put_int("logo_show", 1);
     show_logo();
   } else {
