@@ -17,7 +17,7 @@ menu "General project"
 
 	config PROJECT_VERSION
 		string "Firmware version"
-		default "1.0.2.0"
+		default "1.1.0.0"
 		help
 			Firmware version.
 

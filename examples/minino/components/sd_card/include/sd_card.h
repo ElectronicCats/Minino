@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdint.h>
 #include "esp_err.h"
 
 #define ESP_ERR_ALREADY_MOUNTED   ESP_ERR_NOT_ALLOWED
@@ -8,6 +9,13 @@
 #define ESP_ERR_FILE_EXISTS       ESP_ERR_NOT_ALLOWED
 #define ESP_ERR_FILE_OPEN_FAILED  ESP_FAIL
 #define ESP_ERR_FILE_WRITE_FAILED ESP_FAIL
+
+typedef struct {
+  const char* name;
+  uint64_t total_space;
+  float speed;
+  const char* type;
+} sd_card_info_t;
 
 /**
  * Initialize the SD card.
@@ -111,3 +119,10 @@ esp_err_t sd_card_read_file(const char* path);
  * @note return ESP_ERR_NOT_FOUND if the file does not exist.
  */
 esp_err_t sd_card_write_file(const char* path, char* data);
+
+/**
+ * Get the information of the SD card.
+ *
+ * @return sd_card_info_t
+ */
+sd_card_info_t sd_card_get_info();

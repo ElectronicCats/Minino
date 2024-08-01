@@ -49,7 +49,7 @@ bool is_wifi_connected(void);
       .beacon_interval = WIFI_AP_BEACON_INTERVAL, \
     }                                             \
   }
-
+void cmd_wifi_unregister_callback();
 #ifdef __cplusplus
 }
 #endif

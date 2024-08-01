@@ -33,9 +33,9 @@
 #define CSV_FILE_SIZE      CSV_LINE_SIZE* MAX_CSV_LINES
 #define CSV_HEADER_LINES   2  // Check `csv_header` variable
 
-#define WIFI_SCAN_REFRESH_RATE_MS 5000
-#define DISPLAY_REFRESH_RATE_SEC  3
-#define WRITE_FILE_REFRESH_RATE   5
+#define WIFI_SCAN_REFRESH_RATE_MS   3000
+#define DISPLAY_REFRESH_RATE_SEC    2
+#define WRITE_FILE_REFRESH_RATE_SEC 5
 
 typedef enum {
   WARDRIVING_MODULE_STATE_NO_SD_CARD = 0,
@@ -124,8 +124,8 @@ void wardriving_module_scan_task(void* pvParameters) {
  *
  * @param gps The GPS module instance
  *
- * @note This function is called every WRITE_FILE_REFRESH_RATE seconds to save
- * the scanned AP records to a CSV file in the SD card.
+ * @note This function is called every WRITE_FILE_REFRESH_RATE_SEC seconds to
+ * save the scanned AP records to a CSV file in the SD card.
  *
  * @return void
  */
@@ -251,7 +251,7 @@ void wardriving_gps_event_handler_cb(gps_t* gps) {
                                        gps_module_get_signal_strength(gps));
   }
 
-  if (counter % WRITE_FILE_REFRESH_RATE == 0) {
+  if (counter % WRITE_FILE_REFRESH_RATE_SEC == 0) {
     wardriving_module_save_to_file(gps);
   }
 }
