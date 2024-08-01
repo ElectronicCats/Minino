@@ -34,5 +34,5 @@
 "GPIO","SW8","Button_Switch_SMD:SW_SPST_TL3342","C318889","1","","",""
 "GPS","U1","Footprint:GPSM-SMD_ATGM336H","C5804601","1","","",""
 "LNA","U2","Footprint:AT2659S-LSA","C883443","1","","",""
-"AP2112K-3.3","U3","Package_TO_SOT_SMD:SOT-23-5","C150742","1","","","AP7365-33WG-7"
+"XC6220B331MR-G","U3","Package_TO_SOT_SMD:SOT-23-5","C86534","1","","","XC6220B331MR-G "
 "ESP32-C6-WROOM-1U-N8","U4","Footprint:MOD28_ESP32-C6-WROOM-1U_EXP","","1","","","ESP32-C6-WROOM-1U-N8"

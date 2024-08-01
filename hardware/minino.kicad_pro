@@ -81,6 +81,7 @@
         "footprint_type_mismatch": "error",
         "hole_clearance": "error",
         "hole_near_hole": "error",
+        "holes_co_located": "warning",
         "invalid_outline": "error",
         "isolated_copper": "warning",
         "item_on_disabled_layer": "error",
@@ -537,7 +538,7 @@
       "plot": "MININO_GERBER/",
       "pos_files": "./",
       "specctra_dsn": "",
-      "step": "",
+      "step": "minino.step",
       "svg": "",
       "vrml": ""
     },
@@ -545,6 +546,7 @@
   },
   "schematic": {
     "annotate_start_num": 0,
+    "bom_export_filename": "minino.csv",
     "bom_fmt_presets": [],
     "bom_fmt_settings": {
       "field_delimiter": ",",
