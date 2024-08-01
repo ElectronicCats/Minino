@@ -14,6 +14,8 @@
 #include "web_file_browser.h"
 #include "wifi_app.h"
 
+#include "file_manager_module.h"
+
 #define BUZZER_PIN GPIO_NUM_2
 
 static const char* TAG = "main";
@@ -40,6 +42,8 @@ void app_main(void) {
   menu_screens_begin();
   reboot_counter();
   leds_off();
+
+  file_manager_module_init();
 
   end_time = esp_timer_get_time();
   float time = (float) (end_time - start_time) / 1000000;
