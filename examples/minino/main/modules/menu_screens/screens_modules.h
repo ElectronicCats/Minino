@@ -95,7 +95,6 @@ typedef enum {
   MENU_ABOUT_UPDATE,
   /* Settings items */
   MENU_SETTINGS_DISPLAY,
-  MENU_SETTINGS_SOUND,
   MENU_WEB_SD_BROWSER,
   MENU_SETTINGS_SYSTEM,
   MENU_SETTINGS_TIME_ZONE,
@@ -158,7 +157,6 @@ const char* menu_list[] = {
     "MENU_ABOUT_LEGAL",
     "MENU_ABOUT_UPDATE",
     "MENU_SETTINGS_DISPLAY",
-    "MENU_SETTINGS_SOUND",
     "MENU_WEB_SD_BROWSER",
     "MENU_SETTINGS_SYSTEM",
     "MENU_SETTINGS_TIME_ZONE",
@@ -185,8 +183,7 @@ const int next_menu_table[][MAX_NUM_ITEMS] = {
         MENU_GPS  //, MENU_WEB_SD_BROWSER
     },
     // MENU_SETTINGS
-    {MENU_SETTINGS_DISPLAY, MENU_SETTINGS_SOUND, MENU_SETTINGS_SYSTEM,
-     MENU_WEB_SD_BROWSER},
+    {MENU_SETTINGS_DISPLAY, MENU_SETTINGS_SYSTEM, MENU_WEB_SD_BROWSER},
     // MENU_ABOUT
     {MENU_ABOUT_VERSION, MENU_ABOUT_LICENSE, MENU_ABOUT_CREDITS,
      MENU_ABOUT_LEGAL, MENU_ABOUT_UPDATE},
@@ -268,8 +265,6 @@ const int next_menu_table[][MAX_NUM_ITEMS] = {
     {MENU_ABOUT_UPDATE},
     // MENU_SETTINGS_DISPLAY
     {MENU_SETTINGS_DISPLAY},
-    // MENU_SETTINGS_SOUND
-    {MENU_SETTINGS_SOUND},
     // MENU_WEB_SD_BROWSER
     {MENU_WEB_SD_BROWSER},
     // MENU_SETTINGS_SYSTEM
@@ -340,7 +335,6 @@ const int prev_menu_table[] = {
     MENU_ABOUT,                      // MENU_ABOUT_LEGAL
     MENU_ABOUT,                      // MENU_ABOUT_UPDATE
     MENU_SETTINGS,                   // MENU_SETTINGS_DISPLAY
-    MENU_SETTINGS,                   // MENU_SETTINGS_SOUND
     MENU_SETTINGS,                   // MENU_WEB_SD_BROWSER
     MENU_SETTINGS,                   // MENU_SETTINGS_SYSTEM
     MENU_SETTINGS_SYSTEM,            // MENU_SETTINGS_TIME_ZONE
@@ -371,7 +365,10 @@ char* applications_items[] = {
 };
 
 char* settings_items[] = {
-    "Display", "Sound", "System", "File Manager", NULL,
+    "Display",
+    "System",
+    "File Manager",
+    NULL,
 };
 
 char* about_items[] = {
@@ -403,10 +400,19 @@ char* credits_text[] = {
     /***************/
     "Developed by",
     "Electronic Cats",
+    "and PWnLabs",
     "",
-    "This product is",
-    "in a BETA stage",
-    "use at your own",
+    "With love from",
+    "Mexico...",
+    "",
+    "Thanks",
+    "- Kevin",
+    "  @kevlem97",
+    "- Roberto",
+    "- Francisco",
+    "  @deimoshall",
+    "and Electronic",
+    "Cats team",
     NULL,
 };
 
@@ -692,7 +698,7 @@ char* system_settings_items[] = {
 
 char* sd_card_settings_items[] = {
     "Info",
-    "Format",
+    "Check Format",
     NULL,
 };
 
@@ -768,7 +774,6 @@ char** menu_items[] = {
     legal_text,                       // MENU_ABOUT_LEGAL
     empty_items,                      // MENU_ABOUT_UPDATE
     empty_items,                      // MENU_SETTINGS_DISPLAY
-    empty_items,                      // MENU_SETTINGS_SOUND
     empty_items,                      // MENU_WEB_SD_BROWSER
     system_settings_items,            // MENU_SETTINGS_SYSTEM
     gps_time_zone_options,            // MENU_SETTINGS_TIME_ZONE

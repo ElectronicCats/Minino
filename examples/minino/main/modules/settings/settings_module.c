@@ -65,10 +65,6 @@ void settings_module_enter_submenu_cb(screen_module_menu_t user_selection) {
     case MENU_SETTINGS_DISPLAY:
       display_config_module_begin();
       break;
-    case MENU_SETTINGS_SOUND:
-      oled_screen_clear();
-      menu_screens_display_text_banner("In development");
-      break;
     case MENU_SETTINGS_TIME_ZONE:
       if (menu_screens_is_configuration(user_selection)) {
         gps_module_set_time_zone(selected_item);
