@@ -43,10 +43,8 @@ void update_sd_card_info() {
 
 void settings_module_exit_submenu_cb() {
   screen_module_menu_t current_menu = menu_screens_get_current_menu();
-  ESP_LOGI(TAG, "Exit Selected item: %d", current_menu);
   switch (current_menu) {
     case MENU_WEB_SD_BROWSER:
-    case MENU_SETTINGS_WIFI:
     case MENU_SETTINGS:
       settings_module_exit();
       break;
