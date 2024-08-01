@@ -497,8 +497,3 @@ exit:
 } // namespace ot
 
 #endif // #if (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
-
-
-
-
-
