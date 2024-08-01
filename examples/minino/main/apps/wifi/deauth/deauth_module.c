@@ -64,6 +64,7 @@ static void scanning_task(void* pvParameters) {
   ap_records = wifi_scanner_get_ap_records();
   menu_stadistics.count = ap_records->count;
   animations_task_stop();
+  led_control_stop();
   deauth_display_menu(current_item, menu_stadistics);
   current_wifi_state.state = DEAUTH_STATE_MENU;
   vTaskDelete(NULL);
