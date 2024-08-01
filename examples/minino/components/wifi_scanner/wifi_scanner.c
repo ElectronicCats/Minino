@@ -45,3 +45,8 @@ wifi_ap_record_t* wifi_scanner_get_ap_record(unsigned index) {
   }
   return &ap_records.records[index];
 }
+
+void wifi_scanner_clear_ap_records() {
+  memset(&ap_records, 0, sizeof(ap_records));
+  esp_wifi_clear_ap_list();
+}

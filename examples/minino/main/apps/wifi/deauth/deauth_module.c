@@ -159,6 +159,7 @@ static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event) {
     case BUTTON_RIGHT:
       switch (current_item) {
         case SCAN:
+          wifi_scanner_clear_ap_records();
           deauth_clear_screen();
           animations_task_run(&deauth_display_scanning, 200, NULL);
           xTaskCreate(scanning_task, "wifi_scan", 4096, NULL, 5, NULL);
@@ -199,9 +200,11 @@ static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event) {
       }
       break;
     case BUTTON_LEFT:
+      wifi_scanner_clear_ap_records();
+      printf("Exit deauth: %d\n", current_item);
       menu_screens_set_app_state(false, NULL);
       menu_screens_exit_submenu();
-      led_control_stop();
+      // led_control_stop();
       break;
     default:
       break;
@@ -285,6 +288,8 @@ static void deauth_module_cb_event_run(uint8_t button_name,
   switch (button_name) {
     case BUTTON_LEFT:
       current_item = 0;
+      // captive_portal_stop();
+      led_control_stop();
       animations_task_stop();
       wifi_attacks_module_stop();
       menu_screens_set_app_state(true, deauth_module_cb_event);
@@ -303,7 +308,6 @@ static void deauth_module_cb_event_captive_portal(uint8_t button_name,
   if (button_event != BUTTON_PRESS_DOWN) {
     return;
   }
-  ESP_LOGI("asdsad", "Event");
   switch (button_name) {
     case BUTTON_UP:
       deauth_decrement_item();
@@ -326,6 +330,7 @@ static void deauth_module_cb_event_captive_portal(uint8_t button_name,
       deauth_display_menu(current_item, menu_stadistics);
       break;
     case BUTTON_RIGHT:
+      led_control_run_effect(led_control_wifi_scanning);
       captive_portal_set_portal(current_item);
       captive_portal_set_config_ssid(menu_stadistics.selected_ap);
       captive_portal_register_cb(deauth_display_captive_portal_creds);
