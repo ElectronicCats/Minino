@@ -13,6 +13,7 @@ _autosave-*
 *-save.pro
 *-save.kicad_pcb
 fp-info-cache
+hardware/**/~*.lck
 
 # Netlist files (exported from Eeschema)
 *.net
@@ -34,6 +35,14 @@ hardware/minino-backups/
 # Firmware binaries
 /**/build/
 /**/managed_components/
+/**/build_files/
+/**/build_files.tgz
+/**/build_files.zip
+
+# IDF sdkconfig
+/**/sdkconfig
+/**/sdkconfig.old
+/**/dependencies.lock
 
 # CPL file in csv
 minino-all-pos.csv
