@@ -48,13 +48,13 @@ Minino can operate in 6 different technologies:
 - [x] Wardriving
 - [x] WiFi sniffer
 - [x] WiFi deauther
-- [x] DOS Attack
+- [x] DOS Attack (Control with Console and Minino)
 - [x] Analizer
 - [ ] Wireshark integration
 ### BLE
 - [ ] BLE Sniffer
 - [x] BLE Spammer
-- [x] BLE Spoffing
+- [ ] BLE Spoffing
 - [x] BLE Trackers Scanner (AirTags, Tile, etc)
 - [ ] Wireshark integration
 ### Zigbee
@@ -64,11 +64,10 @@ Minino can operate in 6 different technologies:
 - [x] Wireshark integration
 
 ### Thread
-- [ ] Thread sniffer
+- [x] Thread sniffer
 - [x] Thread broadcast
-- [x] GPS tracker
 - [ ] Wardriving
-- [ ] Wireshark integration
+- [x] Wireshark integration
 
 ### Matter
 - [ ] Matter protocol support
@@ -80,11 +79,14 @@ Minino can operate in 6 different technologies:
 - [x] GPS Speed
 - [x] GPS Time
 - [x] SD
-- [x] File Manager Web
+- [x] File Manager Web (Local AP and WIFI access)
 - [ ] File Manager Local
 - [ ] I2C Scanner
 - [ ] UART2
 
+### Settings
+- [x] Change screensaver
+- [x] Change time screensaver
 
 Inspired by projects such as [Amini Project](https://github.com/Ocelot-Offensive-Security/Arsenal) and [USBNugget](https://github.com/HakCat-Tech/USB-Nugget).
 
