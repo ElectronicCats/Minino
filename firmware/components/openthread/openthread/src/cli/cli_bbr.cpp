@@ -423,78 +423,77 @@ exit:
 
 #endif // OPENTHREAD_FTD && OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
 
-otError Bbr::Process(Arg aArgs[]){
-#define CmdEntry(aCommandString)                           \
-    {                                                      \
-        aCommandString, &Bbr::Process<Cmd(aCommandString)> \
-    }
+otError Bbr::Process(Arg aArgs[])
+{
+#define CmdEntry(aCommandString) {aCommandString, &Bbr::Process<Cmd(aCommandString)>}
 
     otError error = OT_ERROR_INVALID_COMMAND;
 
-/**
- * @cli bbr
- * @code
- * bbr
- * BBR Primary:
- * server16: 0xE400
- * seqno:    10
- * delay:    120 secs
- * timeout:  300 secs
- * Done
- * @endcode
- * @code
- * bbr
- * BBR Primary: None
- * Done
- * @endcode
- * @par
- * Returns the current Primary Backbone Router information for the Thread device.
- */
-if (aArgs[0].IsEmpty())
-{
-    otBackboneRouterConfig config;
-
-    OutputFormat("BBR Primary:");
-
-    if (otBackboneRouterGetPrimary(GetInstancePtr(), &config) == OT_ERROR_NONE)
+    /**
+     * @cli bbr
+     * @code
+     * bbr
+     * BBR Primary:
+     * server16: 0xE400
+     * seqno:    10
+     * delay:    120 secs
+     * timeout:  300 secs
+     * Done
+     * @endcode
+     * @code
+     * bbr
+     * BBR Primary: None
+     * Done
+     * @endcode
+     * @par
+     * Returns the current Primary Backbone Router information for the Thread device.
+     */
+    if (aArgs[0].IsEmpty())
     {
-        OutputNewLine();
-        OutputLine("server16: 0x%04X", config.mServer16);
-        OutputConfig(config);
-    }
-    else
-    {
-        OutputLine(" None");
-    }
+        otBackboneRouterConfig config;
 
-    error = OT_ERROR_NONE;
-    ExitNow();
-}
+        OutputFormat("BBR Primary:");
+
+        if (otBackboneRouterGetPrimary(GetInstancePtr(), &config) == OT_ERROR_NONE)
+        {
+            OutputNewLine();
+            OutputLine("server16: 0x%04X", config.mServer16);
+            OutputConfig(config);
+        }
+        else
+        {
+            OutputLine(" None");
+        }
+
+        error = OT_ERROR_NONE;
+        ExitNow();
+    }
 
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
-{
-    static constexpr Command kCommands[] = {
-        CmdEntry("config"), CmdEntry("disable"),  CmdEntry("enable"), CmdEntry("jitter"),
-        CmdEntry("mgmt"),   CmdEntry("register"), CmdEntry("state"),
-    };
+    {
+        static constexpr Command kCommands[] = {
+            CmdEntry("config"), CmdEntry("disable"),  CmdEntry("enable"), CmdEntry("jitter"),
+            CmdEntry("mgmt"),   CmdEntry("register"), CmdEntry("state"),
+        };
 
 #undef CmdEntry
 
-    static_assert(BinarySearch::IsSorted(kCommands), "kCommands is not sorted");
+        static_assert(BinarySearch::IsSorted(kCommands), "kCommands is not sorted");
 
-    const Command *command;
+        const Command *command;
 
-    command = BinarySearch::Find(aArgs[0].GetCString(), kCommands);
-    VerifyOrExit(command != nullptr);
+        command = BinarySearch::Find(aArgs[0].GetCString(), kCommands);
+        VerifyOrExit(command != nullptr);
 
-    error = (this->*command->mHandler)(aArgs + 1);
-}
+        error = (this->*command->mHandler)(aArgs + 1);
+    }
 #endif // #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
 
-exit : return error;
+exit:
+    return error;
 } // namespace Cli
 
-} // namespace ot
+} // namespace Cli
 } // namespace ot
 
 #endif // #if (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)

@@ -89,9 +89,6 @@ static int cmd_wifi_connect_index(int argc, char** argv) {
   join_args.ssid->sval[0] = wifi_ssid;
   join_args.password->sval[0] = wifi_pass;
   join_args.timeout->ival[0] = JOIN_TIMEOUT_MS;
-
-  printf("ssid: %s\n", join_args.ssid->sval[0]);
-  printf("password: %s\n", join_args.password->sval[0]);
   const char** sniffer_argv[] = {"join", join_args.ssid->sval[0],
                                  join_args.password->sval[0]};
   uint8_t sniffer_argc = 3;
@@ -288,7 +285,6 @@ static int connect(int argc, char** argv) {
   }
   printf("timeout: %d\n", join_args.timeout->ival[0]);
   printf("ssid: %s\n", join_args.ssid->sval[0]);
-  printf("password: %s\n", join_args.password->sval[0]);
   bool connected =
       wifi_join(join_args.ssid->sval[0], join_args.password->sval[0],
                 join_args.timeout->ival[0]);
@@ -310,7 +306,6 @@ int connect_wifi(const char* ssid, const char* pass, app_callback cb) {
   }
   cmd_wifi_handle_credentials(ssid, pass);
   printf("ssid: %s\n", ssid);
-  printf("password: %s\n", pass);
   bool connected = wifi_join(ssid, pass, JOIN_TIMEOUT_MS);
   if (connected) {
     ESP_LOGI(__func__, "Connected");

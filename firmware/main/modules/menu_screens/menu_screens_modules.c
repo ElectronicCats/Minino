@@ -207,6 +207,7 @@ void screen_module_get_screen() {
         num_items++;
       }
     }
+    show_version();
     preferences_put_int("logo_show", 1);
     show_logo();
   } else {
@@ -230,7 +231,6 @@ void menu_screens_begin() {
   run_tests();
   oled_screen_begin();
   oled_screen_clear();
-  show_version();
   screen_module_get_screen();
 }
 
