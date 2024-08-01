@@ -122,24 +122,24 @@ void wifi_module_exit_submenu_cb() {
     case MENU_WIFI_APPS:
       menu_screens_unregister_submenu_cbs();
       break;
-    case MENU_WIFI_ANALIZER_RUN:
+    case MENU_WIFI_ANALYZER_RUN:
       wifi_sniffer_stop();
       led_control_stop();
       wifi_sniffer_load_summary();
       break;
-    case MENU_WIFI_ANALIZER_ASK_SUMMARY:
+    case MENU_WIFI_ANALYZER_ASK_SUMMARY:
       oled_screen_clear();
       wifi_sniffer_start();
       led_control_run_effect(led_control_zigbee_scanning);
       break;
-    case MENU_WIFI_ANALIZER_SUMMARY:
+    case MENU_WIFI_ANALYZER_SUMMARY:
       wifi_sniffer_close_file();
       break;
     case MENU_WIFI_ANALIZER:
       screen_module_set_screen(MENU_WIFI_ANALIZER);
       esp_restart();
       break;
-    case MENU_WIFI_ANALIZER_DESTINATION:
+    case MENU_WIFI_ANALYZER_DESTINATION:
       if (wifi_sniffer_is_destination_sd()) {
         // Verify if the SD card is inserted
         sd_card_unmount();
@@ -174,20 +174,20 @@ void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
       oled_screen_clear();
       catdos_module_begin();
       break;
-    case MENU_WIFI_ANALIZER_RUN:
+    case MENU_WIFI_ANALYZER_RUN:
       wifi_module_init_sniffer();
       break;
-    case MENU_WIFI_ANALIZER_SUMMARY:
+    case MENU_WIFI_ANALYZER_SUMMARY:
       // wifi_sniffer_load_summary();
       break;
-    case MENU_WIFI_ANALIZER_CHANNEL:
+    case MENU_WIFI_ANALYZER_CHANNEL:
       if (menu_screens_is_configuration(user_selection)) {
         buzzer_play_for(SOUND_DURATION);
         wifi_sniffer_set_channel(selected_item + 1);
       }
       wifi_module_update_channel_options();
       break;
-    case MENU_WIFI_ANALIZER_DESTINATION:
+    case MENU_WIFI_ANALYZER_DESTINATION:
       if (menu_screens_is_configuration(user_selection)) {
         buzzer_play_for(SOUND_DURATION);
         if (selected_item == WIFI_SNIFFER_DESTINATION_SD) {

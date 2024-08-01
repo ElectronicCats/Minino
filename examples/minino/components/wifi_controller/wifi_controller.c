@@ -4,13 +4,20 @@
 #include "string.h"
 
 static bool wifi_driver_initialized = false;
+static bool netif_default_created = false;
+static bool run_once = false;
 static uint8_t default_ap_mac[6];
 static esp_err_t err;
+static wifi_config_t wifi_manager_config;
 
 wifi_config_t wifi_driver_access_point_begin() {
-#if !defined(CONFIG_WIFI_CONTROLLER_DEBUG)
-  esp_log_level_set(TAG_WIFI_DRIVER, ESP_LOG_NONE);
-#endif
+  // #if !defined(CONFIG_WIFI_CONTROLLER_DEBUG)
+  //   esp_log_level_set(TAG_WIFI_DRIVER, ESP_LOG_NONE);
+  // #endif
+
+  if (wifi_driver_initialized) {
+    wifi_driver_deinit();
+  }
 
   esp_err_t err;
   err = esp_event_loop_create_default();
@@ -63,12 +70,24 @@ void wifi_driver_ap_stop(void) {
 }
 
 void wifi_driver_init_apsta(void) {
-  ESP_ERROR_CHECK(esp_netif_init());
+  esp_err_t err = esp_netif_init();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_DRIVER, "Error initializing netif: %s",
+             esp_err_to_name(err));
+  }
 
   // Create a defailt WiFi Access Point
-  esp_netif_create_default_wifi_ap();
-  // Create a default WiFi Station
-  esp_netif_create_default_wifi_sta();
+  if (!netif_default_created) {
+    err = esp_netif_create_default_wifi_ap();
+    if (err != ESP_OK) {
+      ESP_LOGE(TAG_WIFI_DRIVER, "Error creating default AP: %s",
+               esp_err_to_name(err));
+    }
+    netif_default_created = true;
+    // Create a default WiFi Station
+
+    esp_netif_create_default_wifi_sta();
+  }
 
   wifi_init_config_t wifi_init_config = WIFI_INIT_CONFIG_DEFAULT();
 
@@ -99,7 +118,7 @@ void wifi_driver_init_sta(void) {
   }
 
   // This shouldn't be a definitive solution, but works for now
-  static bool run_once = false;
+
   if (!run_once) {
     run_once = true;
     esp_netif_t* sta_netif = esp_netif_create_default_wifi_sta();

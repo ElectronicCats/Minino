@@ -13,7 +13,9 @@ bool is_idle;
 
 void timer_callback() {
   screen_module_menu_t menu = menu_screens_get_current_menu();
-  if (menu == MENU_WIFI_ANALIZER_RUN || menu == MENU_WIFI_ANALIZER_SUMMARY) {
+  if (menu == MENU_WIFI_ANALYZER_RUN || menu == MENU_WIFI_ANALYZER_SUMMARY ||
+      menu == MENU_GPS_DATE_TIME || menu == MENU_GPS_LOCATION ||
+      menu == MENU_GPS_SPEED) {
     return;
   }
 
@@ -93,11 +95,13 @@ static void button_event_cb(void* arg, void* data) {
   if (button_event != BUTTON_PRESS_DOWN) {
     return;
   }
+
   if (is_idle) {
     is_idle = false;
     menu_screens_display_menu();
     return;
   }
+
   switch (button_name) {
     case BUTTON_BOOT:
       break;

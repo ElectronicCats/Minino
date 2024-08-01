@@ -42,11 +42,14 @@ const char* f_result_to_name[] = {"FR_OK",
 static const char* TAG = "sd_card";
 bool _sd_card_mounted = false;
 bool _format_if_mount_failed = false;
+sd_card_info_t _sd_card_info;
 
 static struct {
   struct arg_str* device;
   struct arg_end* end;
 } mount_args;
+
+esp_err_t sd_card_fill_info(const sdmmc_card_t* card);
 
 void print_files_in_sd() {
   if (!_sd_card_mounted) {
@@ -134,6 +137,7 @@ int mount(int argc, char** argv) {
     }
     /* print card info if mount successfully */
     sdmmc_card_print_info(stdout, card);
+    sd_card_fill_info(card);
   }
   return ESP_OK;
 }
@@ -345,4 +349,35 @@ size_t sd_card_get_file_size(FILE* file) {
   size_t file_size = ftell(file);
   fseek(file, 0, current_ptr);
   return file_size;
+}
+
+esp_err_t sd_card_fill_info(const sdmmc_card_t* card) {
+  if (card == NULL) {
+    ESP_LOGE(TAG, "Card is NULL");
+    return ESP_FAIL;
+  }
+
+  _sd_card_info.name = card->cid.name;
+  _sd_card_info.total_space =
+      ((uint64_t) card->csd.capacity) * card->csd.sector_size / (1024 * 1024);
+  _sd_card_info.speed = card->real_freq_khz < 1000
+                            ? card->real_freq_khz
+                            : card->real_freq_khz / 1000.0;
+  if (card->is_sdio) {
+    _sd_card_info.type = "SDIO";
+  } else if (card->is_mmc) {
+    _sd_card_info.type = "MMC";
+  } else {
+    int SD_OCR_SDHC_CAP = 1 << 30;
+    _sd_card_info.type = (card->ocr & SD_OCR_SDHC_CAP) ? "SDHC/SDXC" : "SDSC";
+  }
+  return ESP_OK;
+}
+
+sd_card_info_t sd_card_get_info() {
+  if (!_sd_card_mounted) {
+    ESP_LOGE(TAG, "SD card not mounted");
+  }
+
+  return _sd_card_info;
 }

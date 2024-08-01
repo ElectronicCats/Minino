@@ -230,11 +230,13 @@ static void display_config_module_state_machine_modal(uint8_t button_name,
       display_config_display_menu_item();
       break;
     case BUTTON_RIGHT:
-      ESP_LOGI(TAG_DISPLAY_CONFIG, "Selected item: %d", selected_item);
-      preferences_put_int("dp_select", screen_selected);
-      oled_screen_clear();
-      oled_screen_display_text_center("Saved", 3, OLED_DISPLAY_NORMAL);
-      vTaskDelay(2000 / portTICK_PERIOD_MS);
+      if (selected_item == 0) {
+        ESP_LOGI(TAG_DISPLAY_CONFIG, "Selected item: %d", selected_item);
+        preferences_put_int("dp_select", screen_selected);
+        oled_screen_clear();
+        oled_screen_display_text_center("Saved", 3, OLED_DISPLAY_NORMAL);
+        vTaskDelay(2000 / portTICK_PERIOD_MS);
+      }
       menu_screens_set_app_state(true, display_config_module_state_machine);
       selected_item = 0;
       display_config_display_menu_item();
