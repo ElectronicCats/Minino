@@ -4,6 +4,7 @@
 #include "bitmaps_general.h"
 #include "ble_module.h"
 #include "esp_log.h"
+#include "file_manager_module.h"
 #include "gps_module.h"
 #include "leds.h"
 #include "modules/settings/wifi/wifi_settings.h"
@@ -566,7 +567,10 @@ void handle_user_selection(screen_module_menu_t user_selection) {
   }
 
   switch (user_selection) {
-    case MENU_WEB_SD_BROWSER:
+    case MENU_FILE_MANAGER_LOCAL:
+      file_manager_module_init();
+      break;
+    case MENU_FILE_MANAGER_WEB:
       web_file_browser_module_init();
       break;
     case MENU_SETTINGS:

@@ -3,11 +3,9 @@
 #include <string.h>
 #include "dirent.h"
 
-#include "sd_card.h"
-
-//////////////////////
 #include "file_manager_screens.h"
-/////////////////////
+#include "menu_screens_modules.h"
+#include "sd_card.h"
 
 #define SD_CARD_ROOT "/sdcard"
 #define TAG          "File Manager"
@@ -85,14 +83,36 @@ static file_manager_context_t* file_manager_context_alloc() {
   return ctx;
 }
 
-static void file_manager_context_free() {
-  clean_items();
-  free(file_manager_ctx);
+static void file_manager_module_exit() {
+  // clean_items();
+  // free(file_manager_ctx);
+  screen_module_set_screen(MENU_FILE_MANAGER_LOCAL);
+  esp_restart();
+}
+
+static void file_manager_input_cb(uint8_t button_name, uint8_t button_event) {
+  if (button_event != BUTTON_PRESS_DOWN) {
+    return;
+  }
+  switch (button_name) {
+    case BUTTON_LEFT:
+      file_manager_module_exit();
+      break;
+    case BUTTON_RIGHT:
+      break;
+    case BUTTON_UP:
+      break;
+    case BUTTON_DOWN:
+      break;
+    default:
+      break;
+  }
 }
 
 void file_manager_module_init() {
+  menu_screens_set_app_state(true, file_manager_input_cb);
   if (sd_card_mount() != ESP_OK)
-    return;
+    return;  // check false
   file_manager_ctx = file_manager_context_alloc();
   file_manager_set_show_event_callback(file_manager_screens_event_handler);
   print_files();

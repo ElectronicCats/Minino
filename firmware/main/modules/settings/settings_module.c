@@ -2,6 +2,7 @@
 #include <string.h>
 #include "display_settings.h"
 #include "esp_log.h"
+#include "file_manager_module.h"
 #include "gps_module.h"
 #include "menu_screens_modules.h"
 #include "modules/settings/wifi/wifi_settings.h"
@@ -44,7 +45,6 @@ void update_sd_card_info() {
 void settings_module_exit_submenu_cb() {
   screen_module_menu_t current_menu = menu_screens_get_current_menu();
   switch (current_menu) {
-    case MENU_WEB_SD_BROWSER:
     case MENU_SETTINGS:
       settings_module_exit();
       break;
@@ -57,7 +57,10 @@ void settings_module_enter_submenu_cb(screen_module_menu_t user_selection) {
   uint8_t selected_item = menu_screens_get_selected_item();
   ESP_LOGI(TAG, "Selected item: %d", selected_item);
   switch (user_selection) {
-    case MENU_WEB_SD_BROWSER:
+    case MENU_FILE_MANAGER_LOCAL:
+      file_manager_module_init();
+      break;
+    case MENU_FILE_MANAGER_WEB:
       web_file_browser_module_init();
       break;
     case MENU_SETTINGS_DISPLAY:

@@ -33,12 +33,12 @@ void web_file_browser_module_init() {
   }
 }
 void web_file_browser_module_exit() {
-  screen_module_set_screen(MENU_WEB_SD_BROWSER);
+  screen_module_set_screen(MENU_FILE_MANAGER_WEB);
   esp_restart();
 }
 static void web_file_browser_input_cb(uint8_t button_name,
                                       uint8_t button_event) {
-  if (button_event != BUTTON_SINGLE_CLICK) {
+  if (button_event != BUTTON_PRESS_DOWN) {
     return;
   }
   switch (button_name) {
