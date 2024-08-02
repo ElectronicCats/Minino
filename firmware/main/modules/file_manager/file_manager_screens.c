@@ -5,10 +5,14 @@
 
 static void update_list(file_manager_context_t* ctx) {
   oled_screen_clear();
-  oled_screen_display_text("< Exit", 0, 0, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text(ctx->is_root ? "< Exit" : "< Back", 0, 0,
+                           OLED_DISPLAY_NORMAL);
   for (uint8_t i = 0; i < MIN(ctx->items_count, MAX_ITEMS_NUM); i++) {
-    oled_screen_display_text(ctx->file_items_arr[i]->name, 0, i + 1,
-                             ctx->selected_item == i);
+    char* str = (char*) malloc(30);
+    sprintf(str, "%s%s", ctx->file_items_arr[i]->name,
+            ctx->file_items_arr[i]->is_dir ? ">" : "");
+    oled_screen_display_text(str, 0, i + 1, ctx->selected_item == i);
+    free(str);
   }
 }
 

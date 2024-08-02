@@ -9,7 +9,7 @@ typedef enum {
 } file_manager_events_t;
 
 typedef struct {
-  bool is_path;
+  bool is_dir;
   char* name;
   char* path;
 } file_item_t;
@@ -17,11 +17,9 @@ typedef struct {
 typedef struct {
   uint8_t items_count;
   uint8_t selected_item;
-  uint8_t last_item;
   bool is_root;
   bool is_main;
   char* current_path;
-  char* parent_path;
   file_item_t** file_items_arr;
 } file_manager_context_t;
 

@@ -567,12 +567,6 @@ void handle_user_selection(screen_module_menu_t user_selection) {
   }
 
   switch (user_selection) {
-    case MENU_FILE_MANAGER_LOCAL:
-      file_manager_module_init();
-      break;
-    case MENU_FILE_MANAGER_WEB:
-      web_file_browser_module_init();
-      break;
     case MENU_SETTINGS:
       settings_module_begin();
       break;
