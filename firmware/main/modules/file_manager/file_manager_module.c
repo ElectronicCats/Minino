@@ -15,7 +15,11 @@
 file_manager_context_t* fm_ctx;
 file_manager_show_event_cb_t file_manager_show_event_cb = NULL;
 
-typedef enum { CANCELED = -1, RENAME_OPTION, ERASE_OPTION } file_options_t;
+typedef enum {
+  FM_CANCELED_OPTION = -1,
+  FM_RENAME_OPTION,
+  FM_ERASE_OPTION
+} file_options_t;
 
 char* file_options[] = {"Rename", "Delete", NULL};
 
@@ -144,29 +148,29 @@ static void navigation_back() {
 
 static void file_options_handler(int8_t selection) {
   switch (selection) {
-    case RENAME_OPTION:
+    case FM_RENAME_OPTION:
 
       break;
-    case ERASE_OPTION:
-      if (modal_module_get_user_selection(NULL, "  Are You Sure   ")) {
+    case FM_ERASE_OPTION:
+      if (modals_module_get_user_y_n_selection("  Are You Sure  ") ==
+          YES_OPTION) {
         if (remove(fm_ctx->file_items_arr[fm_ctx->selected_item]->path) == 0) {
-          printf(
-              "Removed\n");  /////////////////////////////////////////////////////
+          modals_module_show_info("Deleted", "File was deleted successfully",
+                                  2000);
         } else {
-          printf(
-              "Failed to Remove\n");  /////////////////////////////////////////////////////
+          modals_module_show_info("Error", "Something was wrong, try again",
+                                  3000);
         }
       }
       menu_screens_set_app_state(true, file_manager_input_cb);
       break;
-
     default:
       break;
   }
 }
 
 static void open_file_options() {
-  int8_t selection = modal_module_get_user_selection(file_options, "< Cancel");
+  int8_t selection = modals_module_get_user_selection(file_options, "< Cancel");
   menu_screens_set_app_state(true, file_manager_input_cb);
   file_options_handler(selection);
   update_files();
@@ -176,6 +180,9 @@ static void open_file_options() {
 }
 
 static void navigation_enter() {
+  if (!fm_ctx->items_count) {
+    return;
+  }
   if (fm_ctx->file_items_arr[fm_ctx->selected_item]->is_dir) {
     fm_ctx->current_path = fm_ctx->file_items_arr[fm_ctx->selected_item]->path;
     fm_ctx->selected_item = 0;
