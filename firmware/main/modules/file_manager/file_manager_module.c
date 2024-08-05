@@ -17,7 +17,7 @@ file_manager_show_event_cb_t file_manager_show_event_cb = NULL;
 
 typedef enum { CANCELED = -1, RENAME_OPTION, ERASE_OPTION } file_options_t;
 
-char* file_options[] = {"Rename", "Erase"};
+char* file_options[] = {"Rename", "Delete", NULL};
 
 static void file_manager_input_cb(uint8_t button_name, uint8_t button_event);
 
@@ -148,13 +148,16 @@ static void file_options_handler(int8_t selection) {
 
       break;
     case ERASE_OPTION:
-      if (remove(fm_ctx->file_items_arr[fm_ctx->selected_item]->path) == 0) {
-        printf(
-            "Removed\n");  /////////////////////////////////////////////////////
-      } else {
-        printf(
-            "Failed to Remove\n");  /////////////////////////////////////////////////////
+      if (modal_module_get_user_selection(NULL, "  Are You Sure   ")) {
+        if (remove(fm_ctx->file_items_arr[fm_ctx->selected_item]->path) == 0) {
+          printf(
+              "Removed\n");  /////////////////////////////////////////////////////
+        } else {
+          printf(
+              "Failed to Remove\n");  /////////////////////////////////////////////////////
+        }
       }
+      menu_screens_set_app_state(true, file_manager_input_cb);
       break;
 
     default:
@@ -163,7 +166,7 @@ static void file_options_handler(int8_t selection) {
 }
 
 static void open_file_options() {
-  int8_t selection = modal_module_get_user_selection(2, file_options);
+  int8_t selection = modal_module_get_user_selection(file_options, "< Cancel");
   menu_screens_set_app_state(true, file_manager_input_cb);
   file_options_handler(selection);
   update_files();

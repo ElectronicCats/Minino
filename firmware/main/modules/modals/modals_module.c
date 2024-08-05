@@ -6,6 +6,8 @@
 
 modal_get_user_selection_t* modal_get_user_selection_ctx;
 
+char* yes_no_options[] = {"NO", "YES", NULL};
+
 static void get_user_selection_input_cb(uint8_t button_name,
                                         uint8_t button_event) {
   if (button_event != BUTTON_PRESS_DOWN) {
@@ -39,11 +41,25 @@ static void get_user_selection_input_cb(uint8_t button_name,
   }
 }
 
-int8_t modal_module_get_user_selection(uint8_t options_count, char** options) {
+int count_items(char** items) {
+  int count = 0;
+  while (items[count] != NULL) {
+    count++;
+  }
+  return count;
+}
+
+int8_t modal_module_get_user_selection(char** options, char* banner) {
   modal_get_user_selection_ctx = malloc(sizeof(modal_get_user_selection_t));
   memset(modal_get_user_selection_ctx, 0, sizeof(modal_get_user_selection_t));
-  modal_get_user_selection_ctx->options = options;
-  modal_get_user_selection_ctx->options_count = options_count;
+  if (options == NULL) {
+    modal_get_user_selection_ctx->options = yes_no_options;
+    modal_get_user_selection_ctx->options_count = 2;
+  } else {
+    modal_get_user_selection_ctx->options = options;
+    modal_get_user_selection_ctx->options_count = count_items(options);
+  }
+  modal_get_user_selection_ctx->banner = banner;
   menu_screens_set_app_state(true, get_user_selection_input_cb);
   modals_screens_update_options_list(modal_get_user_selection_ctx);
   while (!modal_get_user_selection_ctx->consumed)
