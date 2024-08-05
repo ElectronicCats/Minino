@@ -3,8 +3,10 @@
 #include <string.h>
 #include "dirent.h"
 
+#include "coroutine.h"
 #include "file_manager_screens.h"
 #include "menu_screens_modules.h"
+#include "modals_module.h"
 #include "sd_card.h"
 
 #define SD_CARD_ROOT "/sdcard"
@@ -12,6 +14,10 @@
 
 file_manager_context_t* fm_ctx;
 file_manager_show_event_cb_t file_manager_show_event_cb = NULL;
+
+char* file_options[] = {"Rename", "Erase"};
+
+static void file_manager_input_cb(uint8_t button_name, uint8_t button_event);
 
 void file_manager_set_show_event_callback(file_manager_show_event_cb_t cb) {
   file_manager_show_event_cb = cb;
@@ -133,12 +139,20 @@ static void navigation_back() {
   }
 }
 
+static void open_file_options() {
+  int8_t selection = modal_module_get_user_selection(2, file_options);
+  printf("Selection: %d");
+  update_files();
+}
+
 static void navigation_enter() {
   if (fm_ctx->file_items_arr[fm_ctx->selected_item]->is_dir) {
     fm_ctx->current_path = fm_ctx->file_items_arr[fm_ctx->selected_item]->path;
     update_files();
     fm_ctx->selected_item = 0;
     print_files();
+  } else {
+    start_coroutine(open_file_options);
   }
 }
 
