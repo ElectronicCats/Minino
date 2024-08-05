@@ -15,6 +15,8 @@
 file_manager_context_t* fm_ctx;
 file_manager_show_event_cb_t file_manager_show_event_cb = NULL;
 
+typedef enum { CANCELED = -1, RENAME_OPTION, ERASE_OPTION } file_options_t;
+
 char* file_options[] = {"Rename", "Erase"};
 
 static void file_manager_input_cb(uint8_t button_name, uint8_t button_event);
@@ -94,10 +96,12 @@ static void update_files() {
 }
 
 static void print_files() {
-  for (uint8_t i = 0; i < fm_ctx->items_count; i++) {
-    printf("%s\n", fm_ctx->file_items_arr[i]->path);
-  }
   show_event(FILE_MANAGER_UPDATE_LIST_EV, fm_ctx);
+}
+
+static void refresh_files() {
+  update_files();
+  print_files();
 }
 
 static file_manager_context_t* file_manager_context_alloc() {
@@ -133,26 +137,48 @@ static void navigation_back() {
     file_manager_module_exit();
   } else {
     get_parent_path(fm_ctx->current_path, fm_ctx->current_path);
-    update_files();
     fm_ctx->selected_item = 0;
-    print_files();
+    refresh_files();
+  }
+}
+
+static void file_options_handler(int8_t selection) {
+  switch (selection) {
+    case RENAME_OPTION:
+
+      break;
+    case ERASE_OPTION:
+      if (remove(fm_ctx->file_items_arr[fm_ctx->selected_item]->path) == 0) {
+        printf(
+            "Removed\n");  /////////////////////////////////////////////////////
+      } else {
+        printf(
+            "Failed to Remove\n");  /////////////////////////////////////////////////////
+      }
+      break;
+
+    default:
+      break;
   }
 }
 
 static void open_file_options() {
   int8_t selection = modal_module_get_user_selection(2, file_options);
-  printf("Selection: %d");
+  menu_screens_set_app_state(true, file_manager_input_cb);
+  file_options_handler(selection);
   update_files();
+  fm_ctx->selected_item = MIN(fm_ctx->selected_item, fm_ctx->items_count - 1);
+  print_files();
+  vTaskDelete(NULL);
 }
 
 static void navigation_enter() {
   if (fm_ctx->file_items_arr[fm_ctx->selected_item]->is_dir) {
     fm_ctx->current_path = fm_ctx->file_items_arr[fm_ctx->selected_item]->path;
-    update_files();
     fm_ctx->selected_item = 0;
-    print_files();
+    refresh_files();
   } else {
-    start_coroutine(open_file_options);
+    start_coroutine(open_file_options, NULL);
   }
 }
 
@@ -184,6 +210,5 @@ void file_manager_module_init() {
     return;  // check false
   fm_ctx = file_manager_context_alloc();
   file_manager_set_show_event_callback(file_manager_screens_event_handler);
-  update_files();
-  print_files();
+  refresh_files();
 }

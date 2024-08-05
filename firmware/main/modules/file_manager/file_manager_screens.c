@@ -6,6 +6,7 @@
 static void update_list(file_manager_context_t* ctx) {
   static uint8_t items_offset = 0;
   items_offset = MAX(ctx->selected_item - 6, items_offset);
+  items_offset = MIN(MAX(ctx->items_count - 7, 0), items_offset);
   items_offset = MIN(ctx->selected_item, items_offset);
   oled_screen_clear();
   oled_screen_display_text(ctx->is_root ? "< Exit" : "< Back", 0, 0,

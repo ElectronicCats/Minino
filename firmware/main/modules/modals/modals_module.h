@@ -10,5 +10,5 @@ typedef struct {
   char** options;
 } modal_get_user_selection_t;
 
-void modal_module_get_user_selection(uint8_t options_count, char** options);
+int8_t modal_module_get_user_selection(uint8_t options_count, char** options);
 void set_get_user_selection_handler(void* cb);
