@@ -73,7 +73,7 @@ int8_t modals_module_get_user_selection(char** options, char* banner) {
   free(modal_get_user_selection_ctx);
   return selection;
 }
-bool modals_module_get_user_y_n_selection(char* banner) {
+int8_t modals_module_get_user_y_n_selection(char* banner) {
   modal_get_user_selection_ctx = malloc(sizeof(modal_get_user_selection_t));
   memset(modal_get_user_selection_ctx, 0, sizeof(modal_get_user_selection_t));
   modal_get_user_selection_ctx->options = yes_no_options;
@@ -85,7 +85,7 @@ bool modals_module_get_user_y_n_selection(char* banner) {
   while (!modal_get_user_selection_ctx->consumed)
     ;
   custom_list_options_cb = NULL;
-  bool selection = modal_get_user_selection_ctx->selected_option;
+  int8_t selection = modal_get_user_selection_ctx->selected_option;
   free(modal_get_user_selection_ctx);
   return selection;
 }

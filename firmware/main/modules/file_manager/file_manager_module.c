@@ -157,14 +157,16 @@ static void file_options_handler(int8_t selection) {
           "     RENAME    ");
       if (new_name != NULL) {
         char* new_path =
-            (char*) malloc(strlen(new_name) + strlen(fm_ctx->current_path) + 1);
+            (char*) malloc(strlen(new_name) + strlen(fm_ctx->current_path) + 2);
         sprintf(new_path, "%s/%s", fm_ctx->current_path, new_name);
         if (rename(fm_ctx->file_items_arr[fm_ctx->selected_item]->path,
                    new_path) == 0) {
-          // show info
+          modals_module_show_info("Success", "File was renamed successfully ",
+                                  1000);
         } else {
-          // show info
+          modals_module_show_info("Error", strerror(errno), 1000);
         }
+        free(new_path);
       }
       menu_screens_set_app_state(true, file_manager_input_cb);
       break;

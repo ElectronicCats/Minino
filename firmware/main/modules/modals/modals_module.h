@@ -16,4 +16,4 @@ typedef struct {
 int8_t modals_module_get_user_selection(char** options, char* banner);
 void set_get_user_selection_handler(void* cb);
 void modals_module_show_info(char* head, char* body, size_t time_ms);
-bool modals_module_get_user_y_n_selection(char* banner);
+int8_t modals_module_get_user_y_n_selection(char* banner);

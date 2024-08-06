@@ -11,6 +11,10 @@ void keyboards_screens_update(keyboard_modal_ctx_t* ctx) {
   chars_offset = MIN(ctx->current_char, chars_offset);
   oled_screen_clear();
   oled_screen_display_text(ctx->banner, 0, 0, OLED_DISPLAY_NORMAL);
-
-  oled_screen_display_text(ctx->new_text, 0, 2, OLED_DISPLAY_NORMAL);
+  for (uint8_t i = 0; i < (MIN(ctx->text_length, MAX_CHARS - 1)); i++) {
+    char a_char[2];
+    snprintf(a_char, sizeof(a_char), "%c", ctx->new_text[i + chars_offset]);
+    oled_screen_display_text(&a_char, i * 8, 2,
+                             ctx->current_char == i + chars_offset);
+  }
 }
