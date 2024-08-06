@@ -93,7 +93,3 @@ bool modals_module_get_user_y_n_selection(char* banner) {
 void modals_module_show_info(char* head, char* body, size_t time_ms) {
   modals_screens_show_info(head, body, time_ms);
 }
-
-void modals_module_keyboard(char* old_text, char* new_text) {
-  // Check null texts
-}

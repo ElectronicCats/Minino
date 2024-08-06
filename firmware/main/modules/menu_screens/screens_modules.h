@@ -579,7 +579,7 @@ char* thread_sniffer_items[] = {
 };
 
 char* gps_items[] = {
-    "Wardrive", "Date & Time", "Location", "Speed", "Help", NULL,
+    "Wardriving ", "Date & Time", "Location", "Speed", "Help", NULL,
 };
 
 char* gps_date_time_items[] = {

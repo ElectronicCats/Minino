@@ -1,10 +1,13 @@
 #include "file_manager_module.h"
 
+#include <errno.h>
 #include <string.h>
 #include "dirent.h"
+#include "esp_log.h"
 
 #include "coroutine.h"
 #include "file_manager_screens.h"
+#include "keyboard_modal.h"
 #include "menu_screens_modules.h"
 #include "modals_module.h"
 #include "sd_card.h"
@@ -149,7 +152,21 @@ static void navigation_back() {
 static void file_options_handler(int8_t selection) {
   switch (selection) {
     case FM_RENAME_OPTION:
-
+      char* new_name = keyboard_module_write(
+          fm_ctx->file_items_arr[fm_ctx->selected_item]->name,
+          "     RENAME    ");
+      if (new_name != NULL) {
+        char* new_path =
+            (char*) malloc(strlen(new_name) + strlen(fm_ctx->current_path) + 1);
+        sprintf(new_path, "%s/%s", fm_ctx->current_path, new_name);
+        if (rename(fm_ctx->file_items_arr[fm_ctx->selected_item]->path,
+                   new_path) == 0) {
+          // show info
+        } else {
+          // show info
+        }
+      }
+      menu_screens_set_app_state(true, file_manager_input_cb);
       break;
     case FM_ERASE_OPTION:
       if (modals_module_get_user_y_n_selection("  Are You Sure  ") ==
