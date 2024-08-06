@@ -29,7 +29,7 @@ void modals_screens_default_list_options_cb(modal_get_user_selection_t* ctx) {
 void modals_screens_show_info(char* head, char* body, size_t time_ms) {
   oled_screen_clear();
 
-  uint8_t page = 3;
+  int page = 2;
   oled_screen_display_text_center(head, 0, OLED_DISPLAY_NORMAL);
   oled_screen_display_text_splited(body, &page, OLED_DISPLAY_NORMAL);
   vTaskDelay(pdMS_TO_TICKS(time_ms));
