@@ -8,7 +8,7 @@
 
 #define TAG "Keyboard Modal"
 
-keyboard_modal_ctx_t* kb_ctx;
+static keyboard_modal_ctx_t* kb_ctx;
 
 static void keyboard_event_press_down(uint8_t button_name) {
   switch (button_name) {

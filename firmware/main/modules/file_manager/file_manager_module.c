@@ -15,17 +15,15 @@
 #define SD_CARD_ROOT "/sdcard"
 #define TAG          "File Manager"
 
-file_manager_context_t* fm_ctx;
-file_manager_show_event_cb_t file_manager_show_event_cb = NULL;
-
 typedef enum {
   FM_CANCELED_OPTION = -1,
   FM_RENAME_OPTION,
   FM_ERASE_OPTION
 } file_options_t;
 
-char* file_options[] = {"Rename", "Delete", NULL};
-
+static file_manager_context_t* fm_ctx;
+static file_manager_show_event_cb_t file_manager_show_event_cb = NULL;
+static char* file_options[] = {"Rename", "Delete", NULL};
 static void file_manager_input_cb(uint8_t button_name, uint8_t button_event);
 
 void file_manager_set_show_event_callback(file_manager_show_event_cb_t cb) {
@@ -149,16 +147,33 @@ static void navigation_back() {
   }
 }
 
+void split_filename(const char* filepath, char* filename, char* extension) {
+  const char* dot = strrchr(filepath, '.');
+  if (dot != NULL) {
+    strcpy(extension, dot + 1);
+    size_t length = dot - filepath;
+    strncpy(filename, filepath, length);
+    filename[length] = '\0';
+  } else {
+    strcpy(filename, filepath);
+    extension[0] = '\0';
+  }
+}
+
 static void file_options_handler(int8_t selection) {
   switch (selection) {
     case FM_RENAME_OPTION:
-      char* new_name = keyboard_module_write(
-          fm_ctx->file_items_arr[fm_ctx->selected_item]->name,
-          "     RENAME    ");
+      char filename[50];
+      char extension[10];
+      split_filename(fm_ctx->file_items_arr[fm_ctx->selected_item]->name,
+                     filename, extension);
+      char* new_name = keyboard_module_write(filename, "     RENAME    ");
       if (new_name != NULL) {
         char* new_path =
-            (char*) malloc(strlen(new_name) + strlen(fm_ctx->current_path) + 2);
-        sprintf(new_path, "%s/%s", fm_ctx->current_path, new_name);
+            (char*) malloc(strlen(new_name) + strlen(fm_ctx->current_path) +
+                           strlen(extension) + 3);
+        sprintf(new_path, "%s/%s.%s", fm_ctx->current_path, new_name,
+                extension);
         if (rename(fm_ctx->file_items_arr[fm_ctx->selected_item]->path,
                    new_path) == 0) {
           modals_module_show_info("Success", "File was renamed successfully ",

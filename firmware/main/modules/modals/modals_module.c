@@ -4,11 +4,10 @@
 #include "menu_screens_modules.h"
 #include "modals_screens.h"
 
-modal_get_user_selection_t* modal_get_user_selection_ctx;
+static modal_get_user_selection_t* modal_get_user_selection_ctx;
+static char* yes_no_options[] = {"NO", "YES", NULL};
 
-char* yes_no_options[] = {"NO", "YES", NULL};
-
-void (*custom_list_options_cb)(modal_get_user_selection_t*) = NULL;
+static void (*custom_list_options_cb)(modal_get_user_selection_t*) = NULL;
 
 static void list_options() {
   if (custom_list_options_cb) {
