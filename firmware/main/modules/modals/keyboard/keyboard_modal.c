@@ -10,12 +10,6 @@
 
 keyboard_modal_ctx_t* kb_ctx;
 
-typedef enum {
-  KEYBOARD_MODAL_CANCELED,
-  KEYBOARD_MODAL_WAITING,
-  KEYBOARD_MODAL_READY,
-} keyboard_modal_result_t;
-
 static void keyboard_event_press_down(uint8_t button_name) {
   switch (button_name) {
     case BUTTON_LEFT:
@@ -31,11 +25,25 @@ static void keyboard_event_press_down(uint8_t button_name) {
       keyboards_screens_update(kb_ctx);
       break;
     case BUTTON_UP:
-      kb_ctx->new_text[kb_ctx->current_char]++;
+      kb_ctx->new_text[kb_ctx->current_char] =
+          ++kb_ctx->new_text[kb_ctx->current_char] > 'z' ||
+                  kb_ctx->new_text[kb_ctx->current_char] < '0'
+              ? '0'
+          : kb_ctx->new_text[kb_ctx->current_char] < 'a' &&
+                  kb_ctx->new_text[kb_ctx->current_char] > '9'
+              ? 'a'
+              : kb_ctx->new_text[kb_ctx->current_char];
       keyboards_screens_update(kb_ctx);
       break;
     case BUTTON_DOWN:
-      kb_ctx->new_text[kb_ctx->current_char]--;
+      kb_ctx->new_text[kb_ctx->current_char] =
+          --kb_ctx->new_text[kb_ctx->current_char] < '0' ||
+                  kb_ctx->new_text[kb_ctx->current_char] > 'z'
+              ? 'z'
+          : kb_ctx->new_text[kb_ctx->current_char] > '9' &&
+                  kb_ctx->new_text[kb_ctx->current_char] < 'a'
+              ? '9'
+              : kb_ctx->new_text[kb_ctx->current_char];
       keyboards_screens_update(kb_ctx);
       break;
     case BUTTON_BOOT:
