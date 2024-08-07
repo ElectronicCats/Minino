@@ -7,7 +7,7 @@
 
 void keyboards_screens_update(keyboard_modal_ctx_t* ctx) {
   static uint8_t chars_offset = 0;
-  chars_offset = MAX(ctx->current_char - MAX_CHARS - 1, chars_offset);
+  chars_offset = MAX(ctx->current_char - 14, chars_offset);
   chars_offset = MIN(ctx->current_char, chars_offset);
   oled_screen_clear();
   oled_screen_display_text(ctx->banner, 0, 0, OLED_DISPLAY_NORMAL);
