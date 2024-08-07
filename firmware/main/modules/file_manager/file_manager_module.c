@@ -7,13 +7,15 @@
 
 #include "coroutine.h"
 #include "file_manager_screens.h"
+#include "flash_fs.h"
 #include "keyboard_modal.h"
 #include "menu_screens_modules.h"
 #include "modals_module.h"
 #include "sd_card.h"
 
-#define SD_CARD_ROOT "/sdcard"
-#define TAG          "File Manager"
+#define INTERNAL_ROOT "/internal"
+#define SD_CARD_ROOT  "/sdcard"
+#define TAG           "File Manager"
 
 typedef enum {
   FM_CANCELED_OPTION = -1,
@@ -21,10 +23,18 @@ typedef enum {
   FM_ERASE_OPTION
 } file_options_t;
 
+typedef enum {
+  FILE_MANAGER_EXIT = -1,
+  FILE_MANAGER_ROOT_INTERNAL,
+  FILE_MANAGER_ROOT_SDCARD,
+} root_selection_t;
+
 static file_manager_context_t* fm_ctx;
 static file_manager_show_event_cb_t file_manager_show_event_cb = NULL;
 static char* file_options[] = {"Rename", "Delete", NULL};
 static void file_manager_input_cb(uint8_t button_name, uint8_t button_event);
+
+static void open_root_options();
 
 void file_manager_set_show_event_callback(file_manager_show_event_cb_t cb) {
   file_manager_show_event_cb = cb;
@@ -76,8 +86,8 @@ static void update_files() {
   }
   closedir(dir);
 
-  fm_ctx->is_root = strcmp(SD_CARD_ROOT, fm_ctx->current_path) == 0;
-
+  fm_ctx->is_root = strcmp(SD_CARD_ROOT, fm_ctx->current_path) == 0 ||
+                    strcmp(INTERNAL_ROOT, fm_ctx->current_path) == 0;
   fm_ctx->file_items_arr =
       malloc(fm_ctx->items_count * sizeof(file_item_t*));  // check false
 
@@ -113,7 +123,6 @@ static file_manager_context_t* file_manager_context_alloc() {
   file_manager_context_t* ctx =
       malloc(sizeof(file_manager_context_t));  // check false
   memset(ctx, 0, sizeof(file_manager_context_t));
-  ctx->current_path = SD_CARD_ROOT;
   ctx->file_items_arr = NULL;
   return ctx;
 }
@@ -139,7 +148,7 @@ static void navigation_down() {
 
 static void navigation_back() {
   if (fm_ctx->is_root) {
-    file_manager_module_exit();
+    start_coroutine(open_root_options, NULL);
   } else {
     get_parent_path(fm_ctx->current_path, fm_ctx->current_path);
     fm_ctx->selected_item = 0;
@@ -248,11 +257,57 @@ static void file_manager_input_cb(uint8_t button_name, uint8_t button_event) {
   }
 }
 
-void file_manager_module_init() {
+static void open_root_directory(char* root) {
+  fm_ctx->current_path = root;
   menu_screens_set_app_state(true, file_manager_input_cb);
-  if (sd_card_mount() != ESP_OK)
-    return;  // check false
-  fm_ctx = file_manager_context_alloc();
   file_manager_set_show_event_callback(file_manager_screens_event_handler);
   refresh_files();
+}
+
+static void open_root_options() {
+  char** root_paths = NULL;
+  uint8_t root_idx = 0;
+  if (flash_fs_mount() == ESP_OK) {
+    root_paths = (char**) malloc(sizeof(char*) * (root_idx + 1));
+    root_paths[root_idx] = (char*) malloc(sizeof(INTERNAL_ROOT) + 1);
+    strcpy(root_paths[root_idx++], "Internal");
+  }
+  if (sd_card_mount() == ESP_OK) {
+    root_paths = (char**) realloc(root_paths, sizeof(char*) * (root_idx + 1));
+    root_paths[root_idx] = (char*) malloc(sizeof(SD_CARD_ROOT) + 1);
+    strcpy(root_paths[root_idx++], "SD CARD");
+  }
+  if (!root_idx) {
+    modals_module_show_info("ERROR", "No file systems detected", 2000);
+    file_manager_module_exit();
+  }
+  root_paths = (char**) realloc(root_paths, sizeof(root_paths) + 1);
+  root_paths[root_idx] = NULL;
+  int8_t root_selection =
+      modals_module_get_user_selection(root_paths, "< Exit");
+  root_idx = 0;
+  while (root_paths[root_idx] != NULL) {
+    free(root_paths[root_idx]);
+    root_idx++;
+  }
+  free(root_paths);
+  switch (root_selection) {
+    case FILE_MANAGER_EXIT:
+      file_manager_module_exit();
+      break;
+    case FILE_MANAGER_ROOT_INTERNAL:
+      open_root_directory(INTERNAL_ROOT);
+      break;
+    case FILE_MANAGER_ROOT_SDCARD:
+      open_root_directory(SD_CARD_ROOT);
+      break;
+    default:
+      break;
+  }
+  vTaskDelete(NULL);
+}
+
+void file_manager_module_init() {
+  fm_ctx = file_manager_context_alloc();
+  start_coroutine(open_root_options, NULL);
 }

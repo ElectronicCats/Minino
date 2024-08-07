@@ -18,7 +18,6 @@ typedef struct {
   uint8_t items_count;
   uint8_t selected_item;
   bool is_root;
-  bool is_main;
   char* current_path;
   file_item_t** file_items_arr;
 } file_manager_context_t;

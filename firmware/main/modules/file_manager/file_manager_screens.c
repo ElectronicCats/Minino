@@ -9,8 +9,7 @@ static void update_list(file_manager_context_t* ctx) {
   items_offset = MIN(MAX(ctx->items_count - 7, 0), items_offset);
   items_offset = MIN(ctx->selected_item, items_offset);
   oled_screen_clear();
-  oled_screen_display_text(ctx->is_root ? "< Exit" : "< Back", 0, 0,
-                           OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
   for (uint8_t i = 0; i < (MIN(ctx->items_count, MAX_ITEMS_NUM)); i++) {
     char* str = (char*) malloc(30);
     sprintf(str, "%s%s", ctx->file_items_arr[i + items_offset]->name,
