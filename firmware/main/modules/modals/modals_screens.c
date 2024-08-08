@@ -32,4 +32,5 @@ void modals_screens_show_info(char* head, char* body, size_t time_ms) {
   oled_screen_display_text_center(head, 0, OLED_DISPLAY_NORMAL);
   oled_screen_display_text_splited(body, &page, OLED_DISPLAY_NORMAL);
   vTaskDelay(pdMS_TO_TICKS(time_ms));
+  oled_screen_clear();
 }

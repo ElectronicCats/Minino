@@ -4,6 +4,7 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "flash_fs.h"
+#include "flash_fs_screens.h"
 #include "keyboard_module.h"
 #include "leds.h"
 #include "menu_screens_modules.h"
@@ -36,6 +37,7 @@ void app_main(void) {
   leds_init();
   preferences_begin();
   sd_card_begin();
+  flash_fs_begin(flash_fs_screens_handler);
   keyboard_module_begin();
   menu_screens_begin();
   reboot_counter();

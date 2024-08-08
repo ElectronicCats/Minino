@@ -186,9 +186,9 @@ static void file_options_handler(int8_t selection) {
         if (rename(fm_ctx->file_items_arr[fm_ctx->selected_item]->path,
                    new_path) == 0) {
           modals_module_show_info("Success", "File was renamed successfully ",
-                                  1000);
+                                  1000, true);
         } else {
-          modals_module_show_info("Error", strerror(errno), 1000);
+          modals_module_show_info("Error", strerror(errno), 2000, true);
         }
         free(new_path);
       }
@@ -199,10 +199,10 @@ static void file_options_handler(int8_t selection) {
           YES_OPTION) {
         if (remove(fm_ctx->file_items_arr[fm_ctx->selected_item]->path) == 0) {
           modals_module_show_info("Deleted", "File was deleted successfully",
-                                  2000);
+                                  1000, true);
         } else {
           modals_module_show_info("Error", "Something was wrong, try again",
-                                  3000);
+                                  2000, true);
         }
       }
       menu_screens_set_app_state(true, file_manager_input_cb);
@@ -278,7 +278,7 @@ static void open_root_options() {
     strcpy(root_paths[root_idx++], "SD CARD");
   }
   if (!root_idx) {
-    modals_module_show_info("ERROR", "No file systems detected", 2000);
+    modals_module_show_info("ERROR", "No file systems detected", 2000, true);
     file_manager_module_exit();
   }
   root_paths = (char**) realloc(root_paths, sizeof(root_paths) + 1);

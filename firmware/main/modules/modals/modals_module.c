@@ -17,6 +17,10 @@ static void list_options() {
   modals_screens_default_list_options_cb(modal_get_user_selection_ctx);
 }
 
+static void empty_input_cb(uint8_t button_name, uint8_t button_event) {
+  return;
+}
+
 static void get_user_selection_input_cb(uint8_t button_name,
                                         uint8_t button_event) {
   if (button_event != BUTTON_PRESS_DOWN) {
@@ -89,6 +93,15 @@ int8_t modals_module_get_user_y_n_selection(char* banner) {
   return selection;
 }
 
-void modals_module_show_info(char* head, char* body, size_t time_ms) {
+void modals_module_show_info(char* head,
+                             char* body,
+                             size_t time_ms,
+                             bool lock_input) {
+  if (lock_input) {
+    keyboard_module_set_lock(true);
+  }
   modals_screens_show_info(head, body, time_ms);
+  if (lock_input) {
+    keyboard_module_set_lock(false);
+  }
 }
