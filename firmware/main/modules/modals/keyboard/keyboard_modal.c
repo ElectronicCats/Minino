@@ -16,13 +16,13 @@ static void keyboard_event_press_down(uint8_t button_name) {
       kb_ctx->current_char = kb_ctx->current_char == 0
                                  ? kb_ctx->text_length - 1
                                  : kb_ctx->current_char - 1;
-      keyboards_screens_update(kb_ctx);
+      keyboard_screens_update_text(kb_ctx);
       break;
     case BUTTON_RIGHT:
       kb_ctx->current_char = ++kb_ctx->current_char < kb_ctx->text_length
                                  ? kb_ctx->current_char
                                  : 0;
-      keyboards_screens_update(kb_ctx);
+      keyboard_screens_update_text(kb_ctx);
       break;
     case BUTTON_UP:
       kb_ctx->new_text[kb_ctx->current_char] =
@@ -33,7 +33,7 @@ static void keyboard_event_press_down(uint8_t button_name) {
                   kb_ctx->new_text[kb_ctx->current_char] > '9'
               ? 'a'
               : kb_ctx->new_text[kb_ctx->current_char];
-      keyboards_screens_update(kb_ctx);
+      keyboard_screens_update_text(kb_ctx);
       break;
     case BUTTON_DOWN:
       kb_ctx->new_text[kb_ctx->current_char] =
@@ -44,7 +44,7 @@ static void keyboard_event_press_down(uint8_t button_name) {
                   kb_ctx->new_text[kb_ctx->current_char] < 'a'
               ? '9'
               : kb_ctx->new_text[kb_ctx->current_char];
-      keyboards_screens_update(kb_ctx);
+      keyboard_screens_update_text(kb_ctx);
       break;
     case BUTTON_BOOT:
       break;
@@ -83,7 +83,8 @@ static void keyboard_modal_alloc(char* text, char* banner) {
 char* keyboard_module_write(char* text, char* banner) {
   keyboard_modal_alloc(text, banner);
   menu_screens_set_app_state(true, keyboard_modal_input_cb);
-  keyboards_screens_update(kb_ctx);
+  keyboard_screens_show(kb_ctx);
+  keyboard_screens_update_text(kb_ctx);
   while (!kb_ctx->consumed)
     ;
   if (kb_ctx->consumed > 0) {
