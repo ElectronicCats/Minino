@@ -96,7 +96,7 @@ static void update_files() {
   uint16_t idx = 0;
   while ((entry = readdir(dir)) != NULL) {
     if (entry->d_type == DT_REG || entry->d_type == DT_DIR) {
-      file_item_t* item = malloc(sizeof(file_item_t*));  // check false
+      file_item_t* item = malloc(sizeof(file_item_t));  // check false
       item->is_dir = (entry->d_type == DT_DIR);
       item->name = strdup(entry->d_name);  // check false
       size_t path_len =
