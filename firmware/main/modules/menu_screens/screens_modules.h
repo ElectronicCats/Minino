@@ -95,7 +95,9 @@ typedef enum {
   MENU_ABOUT_UPDATE,
   /* Settings items */
   MENU_SETTINGS_DISPLAY,
-  MENU_WEB_SD_BROWSER,
+  MENU_FILE_MANAGER,
+  MENU_FILE_MANAGER_LOCAL,
+  MENU_FILE_MANAGER_WEB,
   MENU_SETTINGS_SYSTEM,
   MENU_SETTINGS_TIME_ZONE,
   MENU_SETTINGS_WIFI,
@@ -157,7 +159,9 @@ const char* menu_list[] = {
     "MENU_ABOUT_LEGAL",
     "MENU_ABOUT_UPDATE",
     "MENU_SETTINGS_DISPLAY",
-    "MENU_WEB_SD_BROWSER",
+    "MENU_FILE_MANAGER",
+    "MENU_FILE_MANAGER_LOCAL",
+    "MENU_FILE_MANAGER_WEB",
     "MENU_SETTINGS_SYSTEM",
     "MENU_SETTINGS_TIME_ZONE",
     "MENU_SETTINGS_WIFI",
@@ -180,10 +184,10 @@ const int next_menu_table[][MAX_NUM_ITEMS] = {
     // MENU_APPLICATIONS
     {
         MENU_WIFI_APPS, MENU_BLUETOOTH_APPS, MENU_ZIGBEE_APPS, MENU_THREAD_APPS,
-        MENU_GPS  //, MENU_WEB_SD_BROWSER
+        MENU_GPS  //, MENU_FILE_MANAGER
     },
     // MENU_SETTINGS
-    {MENU_SETTINGS_DISPLAY, MENU_SETTINGS_SYSTEM, MENU_WEB_SD_BROWSER},
+    {MENU_SETTINGS_DISPLAY, MENU_SETTINGS_SYSTEM, MENU_FILE_MANAGER},
     // MENU_ABOUT
     {MENU_ABOUT_VERSION, MENU_ABOUT_LICENSE, MENU_ABOUT_CREDITS,
      MENU_ABOUT_LEGAL, MENU_ABOUT_UPDATE},
@@ -265,8 +269,12 @@ const int next_menu_table[][MAX_NUM_ITEMS] = {
     {MENU_ABOUT_UPDATE},
     // MENU_SETTINGS_DISPLAY
     {MENU_SETTINGS_DISPLAY},
-    // MENU_WEB_SD_BROWSER
-    {MENU_WEB_SD_BROWSER},
+    // MENU_FILE_MANAGER
+    {MENU_FILE_MANAGER_LOCAL, MENU_FILE_MANAGER_WEB},
+    // MENU_FILE_MANAGER_LOCAL
+    {MENU_FILE_MANAGER_LOCAL},
+    // MENU_FILE_MANAGER_WEB
+    {MENU_FILE_MANAGER_WEB},
     // MENU_SETTINGS_SYSTEM
     {MENU_SETTINGS_TIME_ZONE, MENU_SETTINGS_WIFI, MENU_SETTINGS_SD_CARD},
     // MENU_SETTINGS_TIME_ZONE
@@ -335,7 +343,9 @@ const int prev_menu_table[] = {
     MENU_ABOUT,                   // MENU_ABOUT_LEGAL
     MENU_ABOUT,                   // MENU_ABOUT_UPDATE
     MENU_SETTINGS,                // MENU_SETTINGS_DISPLAY
-    MENU_SETTINGS,                // MENU_WEB_SD_BROWSER
+    MENU_SETTINGS,                // MENU_FILE_MANAGER
+    MENU_FILE_MANAGER,            // MENU_FILE_MANAGER_LOCAL,
+    MENU_FILE_MANAGER,            // MENU_FILE_MANAGER_WEB,
     MENU_SETTINGS,                // MENU_SETTINGS_SYSTEM
     MENU_SETTINGS_SYSTEM,         // MENU_SETTINGS_TIME_ZONE
     MENU_SETTINGS_SYSTEM,         // MENU_SETTINGS_WIFI
@@ -569,7 +579,7 @@ char* thread_sniffer_items[] = {
 };
 
 char* gps_items[] = {
-    "Wardrive", "Date & Time", "Location", "Speed", "Help", NULL,
+    "Wardriving ", "Date & Time", "Location", "Speed", "Help", NULL,
 };
 
 char* gps_date_time_items[] = {
@@ -689,6 +699,8 @@ char* gps_time_zone_options[] = {
     NULL,
 };
 
+char* file_manager_items[] = {"Local", "Web", NULL};
+
 char* system_settings_items[] = {
     "Time zone",
     "WiFi",
@@ -774,7 +786,9 @@ char** menu_items[] = {
     legal_text,                       // MENU_ABOUT_LEGAL
     empty_items,                      // MENU_ABOUT_UPDATE
     empty_items,                      // MENU_SETTINGS_DISPLAY
-    empty_items,                      // MENU_WEB_SD_BROWSER
+    file_manager_items,               // MENU_FILE_MANAGER
+    empty_items,                      // MENU_FILE_MANAGER_LOCAL
+    empty_items,                      // MENU_FILE_MANAGER_WEB
     system_settings_items,            // MENU_SETTINGS_SYSTEM
     gps_time_zone_options,            // MENU_SETTINGS_TIME_ZONE
     empty_items,                      // MENU_SETTINGS_WIFI

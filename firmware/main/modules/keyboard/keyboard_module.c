@@ -9,7 +9,8 @@ static int IDLE_TIMEOUT_S = 30;
 static const char* TAG = "keyboard";
 app_state_t app_state;
 esp_timer_handle_t idle_timer;
-bool is_idle;
+static bool is_idle = false;
+static bool lock_input = false;
 
 void timer_callback() {
   screen_module_menu_t menu = menu_screens_get_current_menu();
@@ -25,6 +26,10 @@ void timer_callback() {
 void keyboard_module_reset_idle_timer() {
   esp_timer_stop(idle_timer);
   esp_timer_start_once(idle_timer, IDLE_TIMEOUT_S * 1000 * 1000);
+}
+
+void keyboard_module_set_lock(bool lock) {
+  lock_input = lock;
 }
 
 static void button_event_cb(void* arg, void* data);
@@ -84,6 +89,10 @@ static void button_event_cb(void* arg, void* data) {
   esp_timer_stop(idle_timer);
 
   // If we have an app with a custom handler, we call it
+
+  if (lock_input) {
+    return;
+  }
   app_state = menu_screens_get_app_state();
   if (app_state.in_app) {
     app_state.app_handler(button_name, button_event);

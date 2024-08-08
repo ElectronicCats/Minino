@@ -69,3 +69,5 @@ typedef struct {
 void keyboard_module_begin();
 
 void keyboard_module_reset_idle_timer();
+
+void keyboard_module_set_lock(bool lock);
