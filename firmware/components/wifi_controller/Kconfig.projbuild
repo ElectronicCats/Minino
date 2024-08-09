@@ -7,13 +7,13 @@ menu "Wi-Fi Controller"
 	menu "Manager AP"
 			config MANAGER_AP_SSID
 					string "Manager AP SSID"
-					default "APPSECManager"
+					default "MININO_MANAGER"
 					help
 					SSID of management AP
 
 			config MANAGER_AP_PASSWORD
 					string "Manager AP Password"
-					default "appsec1234"
+					default "minino1234"
 					help
 					Password for management AP WPA2 (minimum 8 characters)
 

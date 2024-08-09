@@ -4,6 +4,7 @@
 #include "leds.h"
 
 static TaskHandle_t led_evenet_task = NULL;  ////////////
+static volatile bool led_event_running = false;
 
 void led_control_ble_tracking(void) {
   led_start_blink(LED_LEFT, 255, 3, 100, 100, 400);
@@ -36,6 +37,7 @@ void led_control_zigbee_scanning(void) {
 }
 
 void led_control_stop(void) {
+  if(led_event_running == false) return;
   leds_off();
   vTaskDelete(led_evenet_task);  /////////////
   led_evenet_task = NULL;        ///////////////////
@@ -43,7 +45,7 @@ void led_control_stop(void) {
 
 void led_control_run_effect(effect_control effect_function) {
   // effect_function();
-
+  led_event_running = true;
   xTaskCreate(effect_function, "effect_function", 4096, NULL, 0,
               &led_evenet_task);  ////////////
 }

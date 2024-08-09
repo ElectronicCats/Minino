@@ -151,9 +151,8 @@ void wifi_module_exit_submenu_cb() {
         }
       }
       break;
-      // case MENU_WIFI_DOS:
-      //   screen_module_set_screen(MENU_WIFI_DOS);
-      //   esp_restart();
+    case MENU_WIFI_DEAUTH:
+      screen_module_set_screen(MENU_WIFI_DEAUTH);
       break;
     default:
       break;

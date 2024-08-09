@@ -65,7 +65,6 @@ static void scanning_task(void* pvParameters) {
   menu_stadistics.count = ap_records->count;
   animations_task_stop();
   
-  ESP_LOGI("deauth", "Scanning done: %d", ap_records->count);
   deauth_display_menu(current_item, menu_stadistics);
   current_wifi_state.state = DEAUTH_STATE_MENU;
   vTaskDelete(NULL);
@@ -161,6 +160,7 @@ static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event) {
     case BUTTON_RIGHT:
       switch (current_item) {
         case SCAN:
+          current_wifi_state.state = DEAUTH_STATE_IDLE;
           wifi_scanner_clear_ap_records();
           deauth_clear_screen();
           animations_task_run(&deauth_display_scanning, 200, NULL);
@@ -203,10 +203,9 @@ static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event) {
       break;
     case BUTTON_LEFT:
       wifi_scanner_clear_ap_records();
-      printf("Exit deauth: %d\n", current_item);
       menu_screens_set_app_state(false, NULL);
       menu_screens_exit_submenu();
-      // led_control_stop();
+      led_control_stop();
       break;
     default:
       break;
