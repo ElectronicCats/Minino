@@ -153,6 +153,7 @@ void wifi_module_exit_submenu_cb() {
       break;
     case MENU_WIFI_DEAUTH:
       screen_module_set_screen(MENU_WIFI_DEAUTH);
+      esp_restart();
       break;
     default:
       break;

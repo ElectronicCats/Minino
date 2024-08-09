@@ -38,6 +38,7 @@ void led_control_zigbee_scanning(void) {
 
 void led_control_stop(void) {
   if(led_event_running == false) return;
+  led_event_running = false;
   leds_off();
   vTaskDelete(led_evenet_task);  /////////////
   led_evenet_task = NULL;        ///////////////////

@@ -67,9 +67,9 @@ static void scanning_task(void* pvParameters) {
   
   deauth_display_menu(current_item, menu_stadistics);
   current_wifi_state.state = DEAUTH_STATE_MENU;
-  vTaskDelete(NULL);
-
+  
   led_control_stop();
+  vTaskDelete(NULL);
 }
 
 static void deauth_run_scan_task() {
