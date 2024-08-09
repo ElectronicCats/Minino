@@ -32,10 +32,14 @@ void app_main(void) {
 #endif
   uint64_t start_time, end_time;
   start_time = esp_timer_get_time();
-
-  buzzer_begin(BUZZER_PIN);
-  leds_init();
   preferences_begin();
+
+  bool stealth_mode = preferences_get_bool("stealth_mode", false);
+  if (!stealth_mode) {
+    buzzer_enable();
+    leds_begin();
+  }
+  buzzer_begin(BUZZER_PIN);
   sd_card_begin();
   flash_fs_begin(flash_fs_screens_handler);
   keyboard_module_begin();

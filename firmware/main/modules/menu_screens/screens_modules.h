@@ -104,6 +104,7 @@ typedef enum {
   MENU_SETTINGS_SD_CARD,
   MENU_SETTINGS_SD_CARD_INFO,
   MENU_SETTINGS_SD_CARD_FORMAT,
+  MENU_STEALTH_MODE,
   /* Menu count */
   MENU_COUNT,  // Keep this at the end
 } screen_module_menu_t;
@@ -168,6 +169,7 @@ const char* menu_list[] = {
     "MENU_SETTINGS_SD_CARD",
     "MENU_SETTINGS_SD_CARD_INFO",
     "MENU_SETTINGS_SD_CARD_FORMAT",
+    "MENU_STEALTH_MODE",
 };
 
 /**
@@ -187,7 +189,8 @@ const int next_menu_table[][MAX_NUM_ITEMS] = {
         MENU_GPS  //, MENU_FILE_MANAGER
     },
     // MENU_SETTINGS
-    {MENU_SETTINGS_DISPLAY, MENU_SETTINGS_SYSTEM, MENU_FILE_MANAGER},
+    {MENU_SETTINGS_DISPLAY, MENU_SETTINGS_SYSTEM, MENU_FILE_MANAGER,
+     MENU_STEALTH_MODE},
     // MENU_ABOUT
     {MENU_ABOUT_VERSION, MENU_ABOUT_LICENSE, MENU_ABOUT_CREDITS,
      MENU_ABOUT_LEGAL, MENU_ABOUT_UPDATE},
@@ -287,6 +290,8 @@ const int next_menu_table[][MAX_NUM_ITEMS] = {
     {MENU_SETTINGS_SD_CARD_INFO},
     // MENU_SETTINGS_SD_CARD_FORMAT
     {MENU_SETTINGS_SD_CARD_INFO},
+    // MENU_STEALTH_MODE
+    {MENU_STEALTH_MODE},
 };
 
 /**
@@ -352,6 +357,7 @@ const int prev_menu_table[] = {
     MENU_SETTINGS_SYSTEM,         // MENU_SETTINGS_SD_CARD
     MENU_SETTINGS_SD_CARD,        // MENU_SETTINGS_SD_CARD_INFO
     MENU_SETTINGS_SD_CARD,        // MENU_SETTINGS_SD_CARD_FORMAT
+    MENU_SETTINGS,                // MENU_STEALTH_MODE
 };
 
 /**
@@ -375,10 +381,7 @@ char* applications_items[] = {
 };
 
 char* settings_items[] = {
-    "Display",
-    "System",
-    "File Manager",
-    NULL,
+    "Display", "System", "File Manager", "Stealth Mode", NULL,
 };
 
 char* about_items[] = {
@@ -795,4 +798,5 @@ char** menu_items[] = {
     sd_card_settings_items,           // MENU_SETTINGS_SD_CARD
     sd_card_info,                     // MENU_SETTINGS_SD_CARD_INFO
     sd_card_format_array,             // MENU_SETTINGS_SD_CARD_FORMAT
+    empty_items,                      // MENU_STEALTH_MODE
 };

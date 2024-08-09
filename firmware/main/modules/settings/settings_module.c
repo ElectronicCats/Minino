@@ -1,12 +1,15 @@
 #include "settings_module.h"
 #include <string.h>
+#include "coroutine.h"
 #include "display_settings.h"
 #include "esp_log.h"
 #include "file_manager_module.h"
 #include "gps_module.h"
 #include "menu_screens_modules.h"
+#include "modals_module.h"
 #include "modules/settings/wifi/wifi_settings.h"
 #include "oled_screen.h"
+#include "preferences.h"
 #include "sd_card.h"
 #include "sd_card_settings_module.h"
 #include "settings_module.h"
@@ -53,6 +56,17 @@ void settings_module_exit_submenu_cb() {
   }
 }
 
+void set_stealth_status() {
+  uint8_t stealth_mode = preferences_get_bool("stealth_mode", false);
+  char* stealth_options[] = {"Disabled", "Enabled"};
+  stealth_mode = modals_module_get_radio_selection(
+      stealth_options, "Stealth Mode", stealth_mode);
+  preferences_put_bool("stealth_mode", stealth_mode);
+  menu_screens_set_app_state(false, NULL);
+  menu_screens_exit_submenu();
+  vTaskDelete(NULL);
+}
+
 void settings_module_enter_submenu_cb(screen_module_menu_t user_selection) {
   uint8_t selected_item = menu_screens_get_selected_item();
   ESP_LOGI(TAG, "Selected item: %d", selected_item);
@@ -81,6 +95,9 @@ void settings_module_enter_submenu_cb(screen_module_menu_t user_selection) {
     case MENU_SETTINGS_SD_CARD_FORMAT:
       sd_card_settings_verify_sd_card();
       menu_screens_set_app_state(true, sd_card_settings_keyboard_cb);
+      break;
+    case MENU_STEALTH_MODE:
+      start_coroutine(set_stealth_status, NULL);
       break;
     default:
       break;
