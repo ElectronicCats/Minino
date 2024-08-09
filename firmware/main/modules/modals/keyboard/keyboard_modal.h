@@ -14,4 +14,4 @@ typedef struct {
   bool shift;
 } keyboard_modal_ctx_t;
 
-char* keyboard_module_write(char* text, char* banner);
+char* keyboard_modal_write(char* text, char* banner);

@@ -69,11 +69,6 @@ void oled_screen_display_text(char* text, int x, int page, bool invert) {
     return;
   }
 
-  if (strlen(text) > MAX_LINE_CHAR) {
-    ESP_LOGE(TAG, "%s is too long for the screen", text);
-    return;
-  }
-
   uint8_t _x = x + (strlen(text) * 8) > 128 ? 0 : x;
   if (_x != x) {
     ESP_LOGW(TAG, "Text %s is too long for the screen, x offset: %d", text, _x);

@@ -62,7 +62,7 @@ const char* switch_state_names[] = {
     "SWITCH_LIGHT_FOUND",    "SWITCH_NO_DEVICES",     "SWITCH_EXIT",
 };
 
-switch_state_t switch_state = SWITCH_CREATE_NETWORK;
+volatile switch_state_t switch_state = SWITCH_CREATE_NETWORK;
 switch_state_t switch_state_prev = SWITCH_EXIT;
 uint16_t open_network_duration = 0;
 

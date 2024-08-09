@@ -176,7 +176,7 @@ static void file_options_handler(int8_t selection) {
       char extension[10];
       split_filename(fm_ctx->file_items_arr[fm_ctx->selected_item]->name,
                      filename, extension);
-      char* new_name = keyboard_module_write(filename, "     RENAME    ");
+      char* new_name = keyboard_modal_write(filename, "     RENAME    ");
       if (new_name != NULL) {
         char* new_path =
             (char*) malloc(strlen(new_name) + strlen(fm_ctx->current_path) +

@@ -80,7 +80,7 @@ static void keyboard_modal_alloc(char* text, char* banner) {
   strcpy(kb_ctx->new_text, text);
 }
 
-char* keyboard_module_write(char* text, char* banner) {
+char* keyboard_modal_write(char* text, char* banner) {
   keyboard_modal_alloc(text, banner);
   menu_screens_set_app_state(true, keyboard_modal_input_cb);
   keyboard_screens_show(kb_ctx);

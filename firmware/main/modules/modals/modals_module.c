@@ -17,10 +17,6 @@ static void list_options() {
   modals_screens_default_list_options_cb(modal_get_user_selection_ctx);
 }
 
-static void empty_input_cb(uint8_t button_name, uint8_t button_event) {
-  return;
-}
-
 static void get_user_selection_input_cb(uint8_t button_name,
                                         uint8_t button_event) {
   if (button_event != BUTTON_PRESS_DOWN) {
