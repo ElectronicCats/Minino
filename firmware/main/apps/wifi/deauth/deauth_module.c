@@ -64,7 +64,7 @@ static void scanning_task(void* pvParameters) {
   ap_records = wifi_scanner_get_ap_records();
   menu_stadistics.count = ap_records->count;
   animations_task_stop();
-  
+
   ESP_LOGI("deauth", "Scanning done: %d", ap_records->count);
   deauth_display_menu(current_item, menu_stadistics);
   current_wifi_state.state = DEAUTH_STATE_MENU;
@@ -90,6 +90,7 @@ static void deauth_handle_attacks() {
     case ROGUE_AP:
     case COMBINED:
       ESP_LOGI("deauth", "Attack: %d", menu_stadistics.attack);
+      deauth_display_attaking_text();
       animations_task_run(&deauth_display_attacking_animation, 200, NULL);
       ESP_LOGI("deauth", "Attack: %d", menu_stadistics.attack);
       wifi_attack_handle_attacks(menu_stadistics.attack,
@@ -118,6 +119,7 @@ static void deauth_decrement_item() {
 
 void deauth_module_begin() {
   deauth_clear_screen();
+  deauth_display_scanning_text();
   animations_task_run(&deauth_display_scanning, 200, NULL);
 
   current_wifi_state.state = DEAUTH_STATE_IDLE;
@@ -163,6 +165,7 @@ static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event) {
         case SCAN:
           wifi_scanner_clear_ap_records();
           deauth_clear_screen();
+          deauth_display_scanning_text();
           animations_task_run(&deauth_display_scanning, 200, NULL);
           xTaskCreate(scanning_task, "wifi_scan", 4096, NULL, 5, NULL);
           deauth_run_scan_task();

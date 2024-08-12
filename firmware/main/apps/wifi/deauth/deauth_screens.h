@@ -129,7 +129,9 @@ const unsigned char* punch_animation[] = {
     michi_punch_2,
 };
 
+void deauth_display_scanning_text();
 void deauth_display_scanning();
+void deauth_display_attaking_text();
 void deauth_display_attacking_animation();
 void deauth_display_menu(uint16_t current_item,
                          menu_stadistics_t menu_stadistics);

@@ -91,16 +91,16 @@ void zigbee_screens_display_device_ad() {
                                    OLED_DISPLAY_NORMAL);
 }
 
-void zigbee_screens_display_scanning_animation() {
+void zigbee_screens_display_zigbee_sniffer_text() {
   oled_screen_clear(OLED_DISPLAY_NORMAL);
   oled_screen_display_text_center("ZIGBEE SNIFFER", 0, OLED_DISPLAY_NORMAL);
-  while (true) {
-    for (int i = 0; i < zigbee_bitmap_allArray_LEN; i++) {
-      oled_screen_display_bitmap(zigbee_bitmap_allArray[i], 0, 16, 128, 32,
-                                 OLED_DISPLAY_NORMAL);
-      vTaskDelay(500 / portTICK_PERIOD_MS);
-    }
-  }
+}
+
+void zigbee_screens_display_scanning_animation() {
+  static uint8_t frame = 0;
+  oled_screen_display_bitmap(zigbee_bitmap_allArray[frame], 0, 16, 128, 32,
+                             OLED_DISPLAY_NORMAL);
+  frame = ++frame > zigbee_bitmap_allArray_LEN - 1 ? 0 : frame;
 }
 
 void zigbee_screens_display_scanning_text(int count) {

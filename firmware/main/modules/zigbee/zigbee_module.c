@@ -1,4 +1,5 @@
 #include "zigbee_module.h"
+#include "animations_task.h"
 #include "esp_log.h"
 #include "ieee_sniffer.h"
 #include "led_events.h"
@@ -61,9 +62,8 @@ void zigbee_module_app_selector() {
       zigbee_screens_display_device_ad();
       vTaskDelay(8000 / portTICK_PERIOD_MS);
       ieee_sniffer_register_cb(zigbee_module_display_records_cb);
-      xTaskCreate(zigbee_screens_display_scanning_animation,
-                  "zigbee_module_scanning", 4096, NULL, 5,
-                  &zigbee_task_display_animation);
+      zigbee_screens_display_zigbee_sniffer_text();
+      animations_task_run(zigbee_screens_display_scanning_animation, 200, NULL);
       xTaskCreate(ieee_sniffer_begin, "ieee_sniffer_task", 4096, NULL, 5,
                   &zigbee_task_sniffer);
       led_control_run_effect(led_control_zigbee_scanning);
