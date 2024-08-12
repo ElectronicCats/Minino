@@ -1,4 +1,5 @@
 #include "modals_screens.h"
+#include "bitmaps_general.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "oled_screen.h"
@@ -37,6 +38,8 @@ void modals_screens_default_list_radio_options_cb(
     char* str = malloc(20);
     bool is_selected = i + items_offset == ctx->selected_option;
     bool is_current = i + items_offset == ctx->current_option;
+    oled_screen_display_bitmap(minino_face, 0, (ctx->selected_option + 2) * 8,
+                               8, 8, OLED_DISPLAY_NORMAL);
     sprintf(str, "%s%s", ctx->options[i + items_offset],
             is_current ? "[curr]" : "");
     oled_screen_display_text(str, is_selected ? 16 : 0, i + 2, is_selected);
