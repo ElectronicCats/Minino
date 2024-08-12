@@ -12,6 +12,8 @@ dependencies:
     path: ../components/openthread
   OTA:
     path: ../components/OTA
+  ble_hid_demos:
+    path: ../components/ble_hid_demos
   espressif/iperf:
     version: "~0.1.1"
 
