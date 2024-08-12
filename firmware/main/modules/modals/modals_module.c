@@ -110,7 +110,7 @@ int8_t modals_module_get_user_selection(char** options, char* banner) {
   modal_get_user_selection_ctx->options = options;
   modal_get_user_selection_ctx->options_count = count_items(options);
   modal_get_user_selection_ctx->banner = banner;
-  menu_screens_set_app_state(true, get_radio_selection_input_cb);
+  menu_screens_set_app_state(true, get_user_selection_input_cb);
   list_options();
   while (!modal_get_user_selection_ctx->consumed)
     ;
@@ -125,7 +125,7 @@ int8_t modals_module_get_user_y_n_selection(char* banner) {
   modal_get_user_selection_ctx->options_count = 2;
   modal_get_user_selection_ctx->banner = banner;
   custom_list_options_cb = modals_screens_list_y_n_options_cb;
-  menu_screens_set_app_state(true, get_radio_selection_input_cb);
+  menu_screens_set_app_state(true, get_user_selection_input_cb);
   list_options();
   while (!modal_get_user_selection_ctx->consumed)
     ;

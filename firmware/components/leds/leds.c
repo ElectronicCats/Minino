@@ -23,6 +23,9 @@ void leds_begin() {
 }
 
 void leds_deinit() {
+  if (!left_led || !right_led) {
+    return;
+  }
   led_controller_led_deinit(left_led);
   led_controller_led_deinit(right_led);
   free(left_led);

@@ -62,7 +62,7 @@ void ble_screens_display_modal_trackers_profile(tracker_profile_t profile) {
           profile.mac_address[5]);
 
   sprintf(str_adv_data, "ADV: ");
-  for (int i = 96; i < 112; i++) {
+  for (int i = 0; i < 31; i++) {
     sprintf(str_adv_data + strlen(str_adv_data), "%02X ", profile.adv_data[i]);
   }
   oled_screen_display_text_center(name, 0, OLED_DISPLAY_NORMAL);
