@@ -10,8 +10,20 @@
 menus_manager_t* menus_ctx;
 static void menus_input_cb(uint8_t button_name, uint8_t button_event);
 
+static uint8_t get_menu_idx(menu_idx_t menu_idx) {
+  for (uint8_t i = 0; i < menus_ctx->menus_count; i++) {
+    if (menus[i].menu_idx == menu_idx) {
+      return i;
+    }
+  }
+  return 0;
+}
+
 static void update_menus() {
   if (menus_ctx->submenus_idx != NULL) {
+    for (uint8_t i = 0; i < menus_ctx->submenus_count; i++) {
+      free(menus_ctx->submenus_idx[i]);
+    }
     free(menus_ctx->submenus_idx);
   }
   menus_ctx->submenus_idx = NULL;
@@ -21,19 +33,19 @@ static void update_menus() {
       menus_ctx->submenus_count++;
     }
   }
-  printf("Count: %d\n", menus_ctx->submenus_count);
-  menus_ctx->submenus_idx = malloc(menus_ctx->submenus_count);
+  if (!menus_ctx->submenus_count) {
+    return;
+  }
+  menus_ctx->submenus_idx =
+      malloc(menus_ctx->submenus_count * sizeof(uint8_t*));
   uint8_t submenu_idx = 0;
   for (uint8_t i = 0; i < menus_ctx->menus_count; i++) {
-    printf("+++++++++++: %d\n", i);
     if (menus[i].is_visible && menus[i].parent_idx == menus_ctx->current_menu) {
-      printf("Submenu: %d\tMenuIdx: %d\n", submenu_idx, i);
-      menus_ctx->submenus_idx[submenu_idx++] = &menus[i].menu_idx;
-      printf("%s\n", menus[i].display_name);
+      menus_ctx->submenus_idx[submenu_idx] = malloc(sizeof(uint8_t));
+      *menus_ctx->submenus_idx[submenu_idx] = i;
+      submenu_idx++;
     }
-    printf("+++++++++++: %d\n", i);
   }
-  printf("LINE: %d\n", __LINE__);
 }
 
 static void display_menus() {
@@ -59,7 +71,7 @@ static void navigation_down() {
 }
 
 static void set_input_cb() {
-  void (*cb)() = menus[menus_ctx->current_menu].input_cb;
+  void (*cb)() = menus[get_menu_idx(menus_ctx->current_menu)].input_cb;
   if (cb) {
     menu_screens_set_app_state(true, cb);
   } else {
@@ -74,7 +86,7 @@ static void navigation_enter() {
       menus[*menus_ctx->submenus_idx[menus_ctx->selected_submenu]].menu_idx;
   menus_ctx->selected_submenu = 0;
   refresh_menus();
-  void (*cb)() = menus[menus_ctx->current_menu].on_enter_cb;
+  void (*cb)() = menus[get_menu_idx(menus_ctx->current_menu)].on_enter_cb;
   if (cb) {
     cb();
   }
@@ -85,11 +97,12 @@ static void navigation_exit() {
   if (menus_ctx->current_menu == MENU_MAIN_2) {
     return;
   }
-  void (*cb)() = menus[menus_ctx->current_menu].on_exit_cb;
+  void (*cb)() = menus[get_menu_idx(menus_ctx->current_menu)].on_exit_cb;
   if (cb) {
     cb();
   }
-  menus_ctx->current_menu = menus[menus_ctx->current_menu].parent_idx;
+  menus_ctx->current_menu =
+      menus[get_menu_idx(menus_ctx->current_menu)].parent_idx;
   menus_ctx->selected_submenu = 0;
   refresh_menus();
   set_input_cb();
