@@ -91,6 +91,13 @@ typedef struct {
   uint8_t** submenus_idx;
 } menus_manager_t;
 
+void apps_exit_cb() {
+  printf("apps_exit_cb\n");
+}
+void apps_enter_cb() {
+  printf("apps_enter_cb\n");
+}
+
 menu_t menus[] = {{.display_name = "Must Not See This",
                    .menu_idx = MENU_MAIN_2,
                    .parent_idx = -1,
@@ -102,8 +109,8 @@ menu_t menus[] = {{.display_name = "Must Not See This",
                    .menu_idx = MENU_APPLICATIONS_2,
                    .parent_idx = MENU_MAIN_2,
                    .input_cb = NULL,
-                   .on_enter_cb = NULL,
-                   .on_exit_cb = NULL,
+                   .on_enter_cb = apps_enter_cb,
+                   .on_exit_cb = apps_exit_cb,
                    .is_visible = true},
                   {.display_name = "MENU_SETTINGS",
                    .menu_idx = MENU_SETTINGS_2,

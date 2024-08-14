@@ -61,11 +61,19 @@ static void navigation_enter() {
       menus[*menus_ctx->submenus_idx[menus_ctx->selected_menu]].menu_idx;
   menus_ctx->selected_menu = 0;
   refresh_menus();
+  void (*cb)() = menus[menus_ctx->current_menu].on_enter_cb;
+  if (cb != NULL) {
+    cb();
+  }
 }
 
 static void navigation_exit() {
   if (menus_ctx->current_menu == MENU_MAIN_2) {
     return;
+  }
+  void (*cb)() = menus[menus_ctx->current_menu].on_exit_cb;
+  if (cb) {
+    cb();
   }
   menus_ctx->current_menu = menus[menus_ctx->current_menu].parent_idx;
   menus_ctx->selected_menu = 0;
