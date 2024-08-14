@@ -13,7 +13,6 @@ static void menus_input_cb(uint8_t button_name, uint8_t button_event);
 static void update_menus() {
   if (menus_ctx->submenus_idx != NULL) {
     free(menus_ctx->submenus_idx);
-    menus_ctx->submenus_idx = NULL;
   }
   menus_ctx->submenus_idx = NULL;
   menus_ctx->submenus_count = 0;
@@ -24,17 +23,21 @@ static void update_menus() {
   }
   printf("Count: %d\n", menus_ctx->submenus_count);
   menus_ctx->submenus_idx = malloc(menus_ctx->submenus_count);
-  uint8_t idx = 0;
+  uint8_t submenu_idx = 0;
   for (uint8_t i = 0; i < menus_ctx->menus_count; i++) {
+    printf("+++++++++++: %d\n", i);
     if (menus[i].is_visible && menus[i].parent_idx == menus_ctx->current_menu) {
-      menus_ctx->submenus_idx[idx++] = &menus[i].menu_idx;
+      printf("Submenu: %d\tMenuIdx: %d\n", submenu_idx, i);
+      menus_ctx->submenus_idx[submenu_idx++] = &menus[i].menu_idx;
       printf("%s\n", menus[i].display_name);
     }
+    printf("+++++++++++: %d\n", i);
   }
+  printf("LINE: %d\n", __LINE__);
 }
 
 static void display_menus() {
-  menus_screens_display_menus(menus_ctx);
+  menus_screens_display_menus_f(menus_ctx);
 }
 
 static void refresh_menus() {
@@ -42,15 +45,15 @@ static void refresh_menus() {
   display_menus();
 }
 static void navigation_up() {
-  menus_ctx->selected_menu = menus_ctx->selected_menu == 0
-                                 ? menus_ctx->submenus_count - 1
-                                 : menus_ctx->selected_menu - 1;
+  menus_ctx->selected_submenu = menus_ctx->selected_submenu == 0
+                                    ? menus_ctx->submenus_count - 1
+                                    : menus_ctx->selected_submenu - 1;
   display_menus();
 }
 static void navigation_down() {
-  menus_ctx->selected_menu =
-      ++menus_ctx->selected_menu < menus_ctx->submenus_count
-          ? menus_ctx->selected_menu
+  menus_ctx->selected_submenu =
+      ++menus_ctx->selected_submenu < menus_ctx->submenus_count
+          ? menus_ctx->selected_submenu
           : 0;
   display_menus();
 }
@@ -68,8 +71,8 @@ static void navigation_enter() {
     return;
   }
   menus_ctx->current_menu =
-      menus[*menus_ctx->submenus_idx[menus_ctx->selected_menu]].menu_idx;
-  menus_ctx->selected_menu = 0;
+      menus[*menus_ctx->submenus_idx[menus_ctx->selected_submenu]].menu_idx;
+  menus_ctx->selected_submenu = 0;
   refresh_menus();
   void (*cb)() = menus[menus_ctx->current_menu].on_enter_cb;
   if (cb) {
@@ -87,7 +90,7 @@ static void navigation_exit() {
     cb();
   }
   menus_ctx->current_menu = menus[menus_ctx->current_menu].parent_idx;
-  menus_ctx->selected_menu = 0;
+  menus_ctx->selected_submenu = 0;
   refresh_menus();
   set_input_cb();
 }
