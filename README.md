@@ -49,12 +49,12 @@ Minino can operate in 6 different technologies:
 - [x] WiFi sniffer
 - [x] WiFi deauther
 - [x] DOS Attack (Control with Console and Minino)
-- [x] Analizer
+- [x] Analyzer
 - [ ] Wireshark integration
 ### BLE
 - [ ] BLE Sniffer
 - [x] BLE Spammer
-- [ ] BLE Spoffing
+- [ ] BLE Spoofing
 - [x] BLE Trackers Scanner (AirTags, Tile, etc)
 - [ ] Wireshark integration
 ### Zigbee
@@ -94,13 +94,13 @@ Inspired by projects such as [Amini Project](https://github.com/Ocelot-Offensive
 
 Contributions are welcome!
 
-Please read the document [**Contribution Manual**](https://github.com/ElectronicCats/electroniccats-cla/blob/main/electroniccats-contribution-manual.md) which will show you how to contribute your changes to the project.
+Please read the document [**Contribution manual**](https://github.com/ElectronicCats/electroniccats-cla/blob/main/electroniccats-contribution-manual.md) which will show you how to contribute your changes to the project.
 
-✨ Thanks to all our [contributors](https://github.com/ElectronicCats/Minino/graphs/contributors)! ✨
+✨ Thanks to all our [Contributors](https://github.com/ElectronicCats/Minino/graphs/contributors)! ✨
 
 See [**_Electronic Cats CLA_**](https://github.com/ElectronicCats/electroniccats-cla/blob/main/electroniccats-cla.md) for more information.
 
-See the [**community code of conduct**](https://github.com/ElectronicCats/electroniccats-cla/blob/main/electroniccats-community-code-of-conduct.md) for a vision of the community we want to build and what we expect from it.
+See the [**Community code of conduct**](https://github.com/ElectronicCats/electroniccats-cla/blob/main/electroniccats-community-code-of-conduct.md) for a vision of the community we want to build and what we expect from it.
 
 ## License
 
