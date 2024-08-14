@@ -8,6 +8,7 @@
 #include "oled_screen.h"
 
 menus_manager_t* menus_ctx;
+static void menus_input_cb(uint8_t button_name, uint8_t button_event);
 
 static void update_menus() {
   if (menus_ctx->submenus_idx != NULL) {
@@ -53,6 +54,15 @@ static void navigation_down() {
           : 0;
   display_menus();
 }
+
+static void set_input_cb() {
+  void (*cb)() = menus[menus_ctx->current_menu].input_cb;
+  if (cb) {
+    menu_screens_set_app_state(true, cb);
+  } else {
+    menu_screens_set_app_state(true, menus_input_cb);
+  }
+}
 static void navigation_enter() {
   if (!menus_ctx->submenus_count) {
     return;
@@ -62,9 +72,10 @@ static void navigation_enter() {
   menus_ctx->selected_menu = 0;
   refresh_menus();
   void (*cb)() = menus[menus_ctx->current_menu].on_enter_cb;
-  if (cb != NULL) {
+  if (cb) {
     cb();
   }
+  set_input_cb();
 }
 
 static void navigation_exit() {
@@ -78,6 +89,7 @@ static void navigation_exit() {
   menus_ctx->current_menu = menus[menus_ctx->current_menu].parent_idx;
   menus_ctx->selected_menu = 0;
   refresh_menus();
+  set_input_cb();
 }
 
 static void menus_input_cb(uint8_t button_name, uint8_t button_event) {
@@ -107,7 +119,7 @@ void menus_module_begin() {
   memset(menus_ctx, 0, sizeof(menus_manager_t));
   menus_ctx->menus_count = sizeof(menus) / sizeof(menu_t);
   printf("Menus Count: %d\n", menus_ctx->menus_count);
-  oled_screen_begin();
   menu_screens_set_app_state(true, menus_input_cb);
+  oled_screen_begin();
   refresh_menus();
 }
