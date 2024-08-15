@@ -21,7 +21,7 @@ void timer_callback() {
   }
 
   is_idle = true;
-  run_screen_saver();
+  screen_saver_run();
 }
 void keyboard_module_reset_idle_timer() {
   esp_timer_stop(idle_timer);
@@ -85,8 +85,8 @@ static void button_event_cb(void* arg, void* data) {
 
   ESP_LOGI(TAG, "Button: %s, Event: %s", button_name_str, button_event_str);
 
-  stop_screen_saver();
-  esp_timer_stop(idle_timer);
+  // stop_screen_saver();
+  // esp_timer_stop(idle_timer);
 
   // If we have an app with a custom handler, we call it
 
@@ -98,16 +98,16 @@ static void button_event_cb(void* arg, void* data) {
     return;
   }
 
-  IDLE_TIMEOUT_S = preferences_get_int("dp_time", 30);
-  esp_timer_start_once(idle_timer, IDLE_TIMEOUT_S * 1000 * 1000);
-  if (button_event != BUTTON_PRESS_DOWN) {
-    return;
-  }
+  // IDLE_TIMEOUT_S = preferences_get_int("dp_time", 30);
+  // esp_timer_start_once(idle_timer, IDLE_TIMEOUT_S * 1000 * 1000);
+  // if (button_event != BUTTON_PRESS_DOWN) {
+  //   return;
+  // }
 
-  if (is_idle) {
-    is_idle = false;
-    return;
-  }
+  // if (is_idle) {
+  //   is_idle = false;
+  //   return;
+  // }
 }
 
 void keyboard_module_set_input_callback(input_callback_t input_cb) {

@@ -147,7 +147,7 @@ static void show_splash_screen() {
   vTaskDelete(NULL);
 }
 
-void run_screen_saver() {
+static void screen_saver_run() {
   oled_screen_clear();
   xTaskCreate(show_splash_screen, "show_splash_screen", 4096, NULL, 5,
               &screen_saver_task);
@@ -155,7 +155,7 @@ void run_screen_saver() {
 
 void start_screen_saver() {
   if (screen_saver_task == NULL) {
-    run_screen_saver();
+    screen_saver_run();
   } else {
     screen_saver_running = true;
     vTaskResume(screen_saver_task);
@@ -176,7 +176,7 @@ void show_logo() {
   buzzer_play();
   // oled_screen_display_bitmap(epd_bitmap_face_logo, 46, 16, 32, 32,
   //                            OLED_DISPLAY_NORMAL);
-  run_screen_saver();
+  screen_saver_run();
   vTaskDelay(500 / portTICK_PERIOD_MS);
   buzzer_stop();
 }

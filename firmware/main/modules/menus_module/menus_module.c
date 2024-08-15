@@ -8,6 +8,7 @@
 #include "modals_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
+#include "screen_saver.h"
 
 static menus_manager_t* menus_ctx;
 static void menus_input_cb(uint8_t button_name, uint8_t button_event);
@@ -119,6 +120,11 @@ static void menus_input_cb(uint8_t button_name, uint8_t button_event) {
     return;
   }
 
+  if (screen_saver_get_idle_state()) {
+    display_menus();
+    return;
+  }
+
   switch (button_name) {
     case BUTTON_LEFT:
       navigation_exit();
@@ -128,7 +134,6 @@ static void menus_input_cb(uint8_t button_name, uint8_t button_event) {
       break;
     case BUTTON_UP:
       navigation_up();
-
       break;
     case BUTTON_DOWN:
       navigation_down();
@@ -142,7 +147,7 @@ static void show_logo() {
   oled_screen_clear();
   leds_on();
   buzzer_play();
-  run_screen_saver();
+  screen_saver_run();
   vTaskDelay(500 / portTICK_PERIOD_MS);
   buzzer_stop();
 }
@@ -161,6 +166,7 @@ static void get_reset_menu() {
   } else {
     preferences_put_int("logo_show", 0);
     preferences_put_int("MENUNUMBER", MENU_MAIN_2);
+    screen_saver_get_idle_state();
     refresh_menus();
   }
 }
@@ -175,10 +181,21 @@ void menus_module_disable_input() {
 void menus_module_set_app_state(bool in_app, input_callback_t input_cb) {
   app_state2.in_app = in_app;
   app_state2.input_callback = input_cb;
+  screen_saver_get_idle_state();
 }
+
+menu_idx_t menus_module_get_current_menu() {
+  return menus_ctx->current_menu;
+}
+
+bool menus_module_get_app_state() {
+  return app_state2.in_app;
+}
+
 void menus_module_begin() {
   menus_ctx = calloc(1, sizeof(menus_manager_t));
   menus_ctx->menus_count = sizeof(menus) / sizeof(menu_t);
+  screen_saver_begin();
   keyboard_module_set_input_callback(menus_input_cb);
   oled_screen_begin();
   get_reset_menu();
