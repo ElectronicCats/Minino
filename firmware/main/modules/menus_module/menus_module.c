@@ -54,6 +54,8 @@ static void display_menus() {
 
 static void refresh_menus() {
   update_menus();
+  menus_ctx->selected_submenu =
+      menus[get_menu_idx(menus_ctx->current_menu)].last_selected_submenu;
   display_menus();
 }
 static void navigation_up() {
@@ -70,42 +72,34 @@ static void navigation_down() {
   display_menus();
 }
 
-static void set_input_cb() {
-  void (*cb)() = menus[get_menu_idx(menus_ctx->current_menu)].input_cb;
-  if (cb) {
-    menu_screens_set_app_state(true, cb);
-  } else {
-    menu_screens_set_app_state(true, menus_input_cb);
-  }
-}
 static void navigation_enter() {
   if (!menus_ctx->submenus_count) {
     return;
   }
+  menus[get_menu_idx(menus_ctx->current_menu)].last_selected_submenu =
+      menus_ctx->selected_submenu;
   menus_ctx->current_menu =
       menus[*menus_ctx->submenus_idx[menus_ctx->selected_submenu]].menu_idx;
-  menus_ctx->selected_submenu = 0;
   refresh_menus();
   void (*cb)() = menus[get_menu_idx(menus_ctx->current_menu)].on_enter_cb;
   if (cb) {
     cb();
   }
-  set_input_cb();
 }
 
 static void navigation_exit() {
   if (menus_ctx->current_menu == MENU_MAIN_2) {
     return;
   }
+  menus[get_menu_idx(menus_ctx->current_menu)].last_selected_submenu =
+      menus_ctx->selected_submenu;
   void (*cb)() = menus[get_menu_idx(menus_ctx->current_menu)].on_exit_cb;
   if (cb) {
     cb();
   }
   menus_ctx->current_menu =
       menus[get_menu_idx(menus_ctx->current_menu)].parent_idx;
-  menus_ctx->selected_submenu = 0;
   refresh_menus();
-  set_input_cb();
 }
 
 static void menus_input_cb(uint8_t button_name, uint8_t button_event) {
