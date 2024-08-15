@@ -10,7 +10,7 @@ void ota_module_init() {
   OTA_set_show_event_cb(ota_module_screens_show_event);
   ota_module_screens_show_help();
   OTA_init();
-  // menu_screens_set_app_state(true, ota_module_input);
+  // menus_module_set_app_state(true, ota_module_input);
 }
 
 void ota_module_deinit() {

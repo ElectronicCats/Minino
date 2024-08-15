@@ -2,13 +2,16 @@
 
 #include <string.h>
 
-#include "keyboard_module.h"
+#include "leds.h"
 #include "menu_screens_modules.h"
 #include "menus_screens.h"
+#include "modals_module.h"
 #include "oled_screen.h"
+#include "preferences.h"
 
-menus_manager_t* menus_ctx;
+static menus_manager_t* menus_ctx;
 static void menus_input_cb(uint8_t button_name, uint8_t button_event);
+static app_state2_t app_state2 = {.in_app = false, .input_callback = NULL};
 
 static uint8_t get_menu_idx(menu_idx_t menu_idx) {
   for (uint8_t i = 0; i < menus_ctx->menus_count; i++) {
@@ -103,9 +106,19 @@ static void navigation_exit() {
 }
 
 static void menus_input_cb(uint8_t button_name, uint8_t button_event) {
+  if (menus_ctx->input_lock) {
+    return;
+  }
+
+  if (app_state2.input_callback) {
+    app_state2.input_callback(button_name, button_event);
+    return;
+  }
+
   if (button_event != BUTTON_PRESS_DOWN) {
     return;
   }
+
   switch (button_name) {
     case BUTTON_LEFT:
       navigation_exit();
@@ -115,6 +128,7 @@ static void menus_input_cb(uint8_t button_name, uint8_t button_event) {
       break;
     case BUTTON_UP:
       navigation_up();
+
       break;
     case BUTTON_DOWN:
       navigation_down();
@@ -124,12 +138,49 @@ static void menus_input_cb(uint8_t button_name, uint8_t button_event) {
   }
 }
 
+static void show_logo() {
+  oled_screen_clear();
+  leds_on();
+  buzzer_play();
+  run_screen_saver();
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  buzzer_stop();
+}
+
+void screen_module_set_reset_screen(menu_idx_t menu) {
+  preferences_put_int("MENUNUMBER", menu);
+  modals_module_show_banner("Exiting...");
+}
+
+static void get_reset_menu() {
+  menus_ctx->current_menu = preferences_get_int("MENUNUMBER", MENU_MAIN_2);
+
+  if ((int) menus_ctx->current_menu == MENU_MAIN) {
+    preferences_put_int("logo_show", 1);
+    show_logo();
+  } else {
+    preferences_put_int("logo_show", 0);
+    preferences_put_int("MENUNUMBER", MENU_MAIN_2);
+    refresh_menus();
+  }
+}
+
+void menus_module_enable_input() {
+  menus_ctx->input_lock = false;
+}
+void menus_module_disable_input() {
+  menus_ctx->input_lock = true;
+}
+
+void menus_module_set_app_state(bool in_app, input_callback_t input_cb) {
+  app_state2.in_app = in_app;
+  app_state2.input_callback = input_cb;
+}
 void menus_module_begin() {
-  menus_ctx = malloc(sizeof(menus_manager_t));
-  memset(menus_ctx, 0, sizeof(menus_manager_t));
+  menus_ctx = calloc(1, sizeof(menus_manager_t));
   menus_ctx->menus_count = sizeof(menus) / sizeof(menu_t);
-  printf("Menus Count: %d\n", menus_ctx->menus_count);
-  menu_screens_set_app_state(true, menus_input_cb);
+  keyboard_module_set_input_callback(menus_input_cb);
   oled_screen_begin();
-  refresh_menus();
+  get_reset_menu();
+  update_menus();
 }

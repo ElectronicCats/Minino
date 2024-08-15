@@ -7,7 +7,7 @@
 static int IDLE_TIMEOUT_S = 30;
 
 static const char* TAG = "keyboard";
-app_state_t app_state;
+static input_callback_t input_callback = NULL;
 esp_timer_handle_t idle_timer;
 static bool is_idle = false;
 static bool lock_input = false;
@@ -93,9 +93,8 @@ static void button_event_cb(void* arg, void* data) {
   if (lock_input) {
     return;
   }
-  app_state = menu_screens_get_app_state();
-  if (app_state.in_app) {
-    app_state.app_handler(button_name, button_event);
+  if (input_callback) {
+    input_callback(button_name, button_event);
     return;
   }
 
@@ -107,34 +106,12 @@ static void button_event_cb(void* arg, void* data) {
 
   if (is_idle) {
     is_idle = false;
-    menu_screens_display_menu();
     return;
   }
+}
 
-  switch (button_name) {
-    case BUTTON_BOOT:
-      break;
-    case BUTTON_LEFT:
-      menu_screens_exit_submenu();
-      break;
-    case BUTTON_RIGHT:
-      int is_main = preferences_get_int("MENUNUMBER", MENU_MAIN);
-      if (preferences_get_int("logo_show", 1) == 1 && is_main == MENU_MAIN) {
-        preferences_put_int("logo_show", 0);
-        menu_screens_decrement_selected_item();
-        break;
-      }
-      menu_screens_enter_submenu();
-      break;
-    case BUTTON_UP:
-      menu_screens_decrement_selected_item();
-      break;
-    case BUTTON_DOWN:
-      menu_screens_ingrement_selected_item();
-      break;
-    default:
-      break;
-  }
+void keyboard_module_set_input_callback(input_callback_t input_cb) {
+  input_callback = input_cb;
 }
 
 void keyboard_module_begin() {

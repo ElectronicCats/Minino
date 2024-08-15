@@ -187,7 +187,7 @@ void screen_module_set_screen(int current_menu) {
   menu_screens_display_text_banner("Exiting...");
 }
 
-void screen_module_get_screen() {
+void get_reset_menu() {
   current_menu = preferences_get_int("MENUNUMBER", MENU_MAIN);
   handle_user_selection(current_menu);
 
@@ -222,7 +222,7 @@ void menu_screens_begin() {
   run_tests();
   oled_screen_begin();
   oled_screen_clear();
-  screen_module_get_screen();
+  get_reset_menu();
 }
 
 /**

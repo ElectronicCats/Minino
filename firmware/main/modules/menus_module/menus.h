@@ -90,6 +90,7 @@ typedef struct {
   uint8_t submenus_count;
   uint8_t menus_count;
   uint8_t** submenus_idx;
+  bool input_lock;
 } menus_manager_t;
 
 menu_t menus[] = {  //////////////////////////////////

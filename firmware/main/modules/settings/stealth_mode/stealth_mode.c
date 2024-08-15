@@ -7,6 +7,7 @@
 #include "coroutine.h"
 #include "leds.h"
 #include "menu_screens_modules.h"
+#include "menus_module.h"
 #include "modals_module.h"
 #include "preferences.h"
 
@@ -23,7 +24,7 @@ static void set_stealth_status() {
     buzzer_enable();
     leds_begin();
   }
-  menu_screens_set_app_state(false, NULL);
+  menus_module_set_app_state(false, NULL);
   menu_screens_exit_submenu();
   vTaskDelete(NULL);
 }

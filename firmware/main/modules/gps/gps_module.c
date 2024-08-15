@@ -3,6 +3,7 @@
 
 #include "gps_module.h"
 #include "menu_screens_modules.h"
+#include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
 #include "wardriving_module.h"
@@ -191,7 +192,7 @@ void gps_module_enter_submenu_cb(screen_module_menu_t user_selection) {
       break;
     case MENU_GPS_WARDRIVING_START:
       wardriving_module_start_scan();
-      menu_screens_set_app_state(true, wardriving_module_keyboard_cb);
+      menus_module_set_app_state(true, wardriving_module_keyboard_cb);
       break;
     case MENU_GPS_DATE_TIME:
     case MENU_GPS_LOCATION:

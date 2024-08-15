@@ -6,6 +6,7 @@
 
 #include "gps_module.h"
 #include "menu_screens_modules.h"
+#include "menus_module.h"
 #include "sd_card.h"
 #include "wardriving_module.h"
 #include "wardriving_screens_module.h"
@@ -328,7 +329,7 @@ void wardriving_module_keyboard_cb(uint8_t button_name, uint8_t button_event) {
 
   switch (button_name) {
     case BUTTON_LEFT:
-      menu_screens_set_app_state(false, NULL);
+      menus_module_set_app_state(false, NULL);
       menu_screens_exit_submenu();
       break;
     case BUTTON_RIGHT:

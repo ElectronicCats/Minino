@@ -32,3 +32,4 @@ void modals_module_show_info(char* head,
                              char* body,
                              size_t time_ms,
                              bool lock_input);
+void modals_module_show_banner(char* text);

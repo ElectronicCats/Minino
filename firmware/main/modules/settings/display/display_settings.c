@@ -4,6 +4,7 @@
 #include "esp_log.h"
 #include "led_events.h"
 #include "menu_screens_modules.h"
+#include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
 
@@ -91,7 +92,7 @@ static void display_config_display_time_selection() {
 
 void display_config_module_begin() {
   ESP_LOGI(TAG_DISPLAY_CONFIG, "Initializing ble module screen state machine");
-  menu_screens_set_app_state(true, display_config_module_state_machine);
+  menus_module_set_app_state(true, display_config_module_state_machine);
   display_config_display_menu_item();
 };
 
@@ -114,19 +115,19 @@ static void display_config_module_state_machine(uint8_t button_name,
   }
   switch (button_name) {
     case BUTTON_LEFT:
-      menu_screens_set_app_state(false, NULL);
+      menus_module_set_app_state(false, NULL);
       menu_screens_exit_submenu();
       break;
     case BUTTON_RIGHT:
       ESP_LOGI(TAG_DISPLAY_CONFIG, "Selected item: %d", selected_item);
       if (selected_item == 0) {
         selected_item = 0;
-        menu_screens_set_app_state(
+        menus_module_set_app_state(
             true, display_config_module_state_machine_menu_logo);
         display_config_display_list_logo();
       } else {
         selected_item = 0;
-        menu_screens_set_app_state(
+        menus_module_set_app_state(
             true, display_config_module_state_machine_menu_time);
         display_config_display_time_selection();
       }
@@ -154,7 +155,7 @@ static void display_config_module_state_machine_menu_time(
   }
   switch (button_name) {
     case BUTTON_LEFT:
-      menu_screens_set_app_state(true, display_config_module_state_machine);
+      menus_module_set_app_state(true, display_config_module_state_machine);
       display_config_display_menu_item();
       break;
     case BUTTON_RIGHT:
@@ -164,7 +165,7 @@ static void display_config_module_state_machine_menu_time(
       oled_screen_display_text_center("Saved", 3, OLED_DISPLAY_NORMAL);
       keyboard_module_reset_idle_timer();
       vTaskDelay(2000 / portTICK_PERIOD_MS);
-      menu_screens_set_app_state(true, display_config_module_state_machine);
+      menus_module_set_app_state(true, display_config_module_state_machine);
       selected_item = 0;
       display_config_display_menu_item();
       break;
@@ -194,14 +195,14 @@ static void display_config_module_state_machine_menu_logo(
   }
   switch (button_name) {
     case BUTTON_LEFT:
-      menu_screens_set_app_state(true, display_config_module_state_machine);
+      menus_module_set_app_state(true, display_config_module_state_machine);
       display_config_display_menu_item();
       break;
     case BUTTON_RIGHT:
       ESP_LOGI(TAG_DISPLAY_CONFIG, "Selected item: %d", selected_item);
       screen_selected = selected_item;
       selected_item = 0;
-      menu_screens_set_app_state(true,
+      menus_module_set_app_state(true,
                                  display_config_module_state_machine_modal);
       display_settings_show_modal();
       break;
@@ -226,7 +227,7 @@ static void display_config_module_state_machine_modal(uint8_t button_name,
   }
   switch (button_name) {
     case BUTTON_LEFT:
-      menu_screens_set_app_state(true, display_config_module_state_machine);
+      menus_module_set_app_state(true, display_config_module_state_machine);
       display_config_display_menu_item();
       break;
     case BUTTON_RIGHT:
@@ -237,7 +238,7 @@ static void display_config_module_state_machine_modal(uint8_t button_name,
         oled_screen_display_text_center("Saved", 3, OLED_DISPLAY_NORMAL);
         vTaskDelay(2000 / portTICK_PERIOD_MS);
       }
-      menu_screens_set_app_state(true, display_config_module_state_machine);
+      menus_module_set_app_state(true, display_config_module_state_machine);
       selected_item = 0;
       display_config_display_menu_item();
       break;

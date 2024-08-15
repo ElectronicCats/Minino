@@ -57,6 +57,8 @@ typedef struct {
   uint8_t button_event;
 } button_event_state_t;
 
+typedef void (*input_callback_t)(uint8_t, uint8_t);
+
 /**
  * @brief Initialize the keyboard button
  *
@@ -71,3 +73,5 @@ void keyboard_module_begin();
 void keyboard_module_reset_idle_timer();
 
 void keyboard_module_set_lock(bool lock);
+
+void keyboard_module_set_input_callback(input_callback_t input_cb);
