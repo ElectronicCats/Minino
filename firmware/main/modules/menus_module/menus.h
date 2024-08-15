@@ -1,6 +1,9 @@
 #pragma once
 #include <stdbool.h>
 #include <stdio.h>
+
+#include "ota_module.h"
+
 typedef enum {
   MENU_MAIN_2 = 0,
   MENU_APPLICATIONS_2,
@@ -360,9 +363,9 @@ menu_t menus[] = {  //////////////////////////////////
     {.display_name = "Update",
      .menu_idx = MENU_ABOUT_UPDATE_2,
      .parent_idx = MENU_ABOUT_2,
-     .input_cb = NULL,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .input_cb = ota_module_input,
+     .on_enter_cb = ota_module_init,
+     .on_exit_cb = ota_module_deinit,
      .is_visible = true},
     {.display_name = "Display",
      .menu_idx = MENU_SETTINGS_DISPLAY_2,
