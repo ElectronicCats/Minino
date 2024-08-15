@@ -1,6 +1,5 @@
 #include <stdio.h>
-#include "apps/wifi/deauth/include/deauth_module.h"
-#include "ble_hidd_demo_main.h"
+#include "apps/ble/hid_device/hid_module.h"
 #include "cat_console.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -27,30 +26,6 @@ void reboot_counter() {
   preferences_put_int("reboot_counter", counter);
 }
 
-static void hid_input_cb(uint8_t button_name, uint8_t button_event) {
-  switch (button_name) {
-    case BUTTON_LEFT:
-      break;
-    case BUTTON_RIGHT:
-      break;
-    case BUTTON_UP:
-      if (button_event == BUTTON_PRESS_DOWN) {
-        ble_hid_volume_up(true);
-      } else if (button_event == BUTTON_PRESS_UP) {
-        ble_hid_volume_up(false);
-      }
-      break;
-    case BUTTON_DOWN:
-      if (button_event == BUTTON_PRESS_DOWN) {
-        ble_hid_volume_down(true);
-      } else if (button_event == BUTTON_PRESS_UP) {
-        ble_hid_volume_down(false);
-      }
-      break;
-    default:
-      break;
-  }
-}
 void app_main() {
 #if !defined(CONFIG_MAIN_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
@@ -72,10 +47,6 @@ void app_main() {
   reboot_counter();
   leds_off();
 
-  ble_hid_begin();
-
-  menu_screens_set_app_state(true, hid_input_cb);
-
   end_time = esp_timer_get_time();
   float time = (float) (end_time - start_time) / 1000000;
   char* time_str = malloc(sizeof(time) + 1);
@@ -83,5 +54,6 @@ void app_main() {
   ESP_LOGI(TAG, "Total time taken: %s seconds", time_str);
 
   preferences_put_bool("wifi_connected", false);
-  cat_console_begin();
+  // cat_console_begin();
+  hid_module_begin();
 }

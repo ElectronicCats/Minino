@@ -756,3 +756,42 @@ void oled_driver_draw_custom_box(oled_driver_t* dev) {
 
   // oled_driver_show_buffer(dev);
 }
+
+void oled_driver_draw_modal_box(oled_driver_t* dev,
+                                int pos_x,
+                                int modal_height) {
+  int page = 2;
+  int x = pos_x;
+  int y = page * 8 - 3;  // 13
+  int width = x + dev->_width - 4;
+  int height = y + 35;  //- 6; // 15
+
+  oled_driver_draw_rect(dev, x, y, width, height, 0);
+  oled_driver_draw_rect(dev, x, y, width - 1, height - 1, 0);
+
+  // Top left border
+  oled_driver_draw_pixel(dev, x, y, 1);
+  oled_driver_draw_pixel(dev, x + 1, y, 1);
+  oled_driver_draw_pixel(dev, x, y + 1, 1);
+  oled_driver_draw_pixel(dev, x + 1, y + 1, 0);
+
+  // Top right border
+  oled_driver_draw_pixel(dev, width - 1, y, 1);
+  oled_driver_draw_pixel(dev, width - 2, y, 1);
+  oled_driver_draw_pixel(dev, width - 1, y + 1, 1);
+  oled_driver_draw_pixel(dev, width - 2, y + 1, 0);
+
+  // Bottom left border
+  oled_driver_draw_pixel(dev, x, y + height - 1, 1);
+  oled_driver_draw_pixel(dev, x + 1, y + height - 1, 1);
+  oled_driver_draw_pixel(dev, x, y + height - 2, 1);
+  oled_driver_draw_pixel(dev, x + 1, y + height - 2, 0);
+
+  // Bottom right border
+  oled_driver_draw_pixel(dev, width - 1, y + height - 1, 1);
+  oled_driver_draw_pixel(dev, width - 2, y + height - 1, 1);
+  oled_driver_draw_pixel(dev, width - 1, y + height - 2, 1);
+  oled_driver_draw_pixel(dev, width - 2, y + height - 2, 0);
+
+  // oled_driver_show_buffer(dev);
+}

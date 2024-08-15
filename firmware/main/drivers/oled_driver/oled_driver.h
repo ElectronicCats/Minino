@@ -242,7 +242,9 @@ void spi_display_image(oled_driver_t* dev,
                        int width);
 void spi_contrast(oled_driver_t* dev, int contrast);
 void spi_hardware_scroll(oled_driver_t* dev, oled_driver_scroll_type_t scroll);
-
+void oled_driver_draw_modal_box(oled_driver_t* dev,
+                                int pos_x,
+                                int modal_height);
 #ifdef __cplusplus
 }
 #endif

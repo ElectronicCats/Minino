@@ -53,17 +53,17 @@
  * please ignore.
  */
 
-#define HID_DEMO_TAG "HID_DEMO"
+#define HID_DEMO_TAG          "HID_DEMO"
+#define CHAR_DECLARATION_SIZE (sizeof(uint8_t))
 
 static uint16_t hid_conn_id = 0;
 static bool sec_conn = false;
-static bool send_volum_up = false;
-#define CHAR_DECLARATION_SIZE (sizeof(uint8_t))
+static hid_event_callback_f hid_event_callback = NULL;
 
 static void hidd_event_callback(esp_hidd_cb_event_t event,
                                 esp_hidd_cb_param_t* param);
 
-#define HIDD_DEVICE_NAME "HID"
+static char* HIDD_DEVICE_NAME = "MININO_HID";
 static uint8_t hidd_service_uuid128[] = {
     /* LSB
        <-------------------------------------------------------------------------------->
@@ -121,12 +121,18 @@ static void hidd_event_callback(esp_hidd_cb_event_t event,
     case ESP_HIDD_EVENT_BLE_CONNECT: {
       ESP_LOGI(HID_DEMO_TAG, "ESP_HIDD_EVENT_BLE_CONNECT");
       hid_conn_id = param->connect.conn_id;
+      if (hid_event_callback != NULL) {
+        hid_event_callback(true);
+      }
       break;
     }
     case ESP_HIDD_EVENT_BLE_DISCONNECT: {
       sec_conn = false;
       ESP_LOGI(HID_DEMO_TAG, "ESP_HIDD_EVENT_BLE_DISCONNECT");
       esp_ble_gap_start_advertising(&hidd_adv_params);
+      if (hid_event_callback != NULL) {
+        hid_event_callback(false);
+      }
       break;
     }
     case ESP_HIDD_EVENT_BLE_VENDOR_REPORT_WRITE_EVT: {
@@ -193,6 +199,26 @@ void ble_hid_volume_down(bool press) {
   if (sec_conn) {
     esp_hidd_send_consumer_value(hid_conn_id, HID_CONSUMER_VOLUME_DOWN, press);
   }
+}
+
+void ble_hid_play(bool press) {
+  if (sec_conn) {
+    esp_hidd_send_consumer_value(hid_conn_id, HID_CONSUMER_PLAY, press);
+  }
+}
+
+void ble_hid_pause(bool press) {
+  if (sec_conn) {
+    esp_hidd_send_consumer_value(hid_conn_id, HID_CONSUMER_PAUSE, press);
+  }
+}
+
+void ble_hid_register_callback(hid_event_callback_f callback) {
+  hid_event_callback = callback;
+}
+
+void ble_hid_get_device_name(char* device_name) {
+  strcpy(device_name, HIDD_DEVICE_NAME);
 }
 
 void ble_hid_begin() {

@@ -136,6 +136,13 @@ void oled_screen_display_selected_item_box() {
   xSemaphoreGive(oled_mutex);
 }
 
+void oled_screen_display_card_border() {
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
+  oled_driver_draw_modal_box(&dev, 0, 3);
+  oled_driver_show_buffer(&dev);
+  xSemaphoreGive(oled_mutex);
+}
+
 void oled_screen_display_text_splited(char* p_text,
                                       int* p_started_page,
                                       int invert) {
@@ -152,18 +159,18 @@ void oled_screen_display_text_splited(char* p_text,
         }
         strcat(current_line, token);
       } else {
-        oled_screen_display_text(current_line, 0, *p_started_page, invert);
+        oled_screen_display_text(current_line, 3, *p_started_page, invert);
         (*p_started_page)++;
         strcpy(current_line, token);
       }
       token = strtok(NULL, " ");
     }
     if (strlen(current_line) > 0) {
-      oled_screen_display_text(current_line, 0, *p_started_page, invert);
+      oled_screen_display_text(current_line, 3, *p_started_page, invert);
       (*p_started_page)++;
     }
   } else {
-    oled_screen_display_text(p_text, 0, *p_started_page, invert);
+    oled_screen_display_text(p_text, 3, *p_started_page, invert);
     (*p_started_page)++;
   }
 }

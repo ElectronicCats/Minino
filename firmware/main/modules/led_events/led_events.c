@@ -6,8 +6,8 @@
 static TaskHandle_t led_evenet_task = NULL;  ////////////
 
 void led_control_ble_tracking(void) {
-  led_start_blink(LED_LEFT, 255, 3, 100, 100, 400);
-  led_start_blink(LED_RIGHT, 255, 3, 100, 100, 400);
+  led_start_blink(LED_LEFT, 150, 3, 100, 100, 400);
+  led_start_blink(LED_RIGHT, 150, 3, 100, 100, 400);
   vTaskSuspend(NULL);  ///////////////////////
 }
 
@@ -32,6 +32,27 @@ void led_control_wifi_attacking(void) {
 void led_control_zigbee_scanning(void) {
   led_start_blink(LED_LEFT, 255, 3, 50, 50, 150);
   led_start_blink(LED_RIGHT, 255, 3, 50, 50, 150);
+  vTaskSuspend(NULL);  ///////////////////////
+}
+
+void led_control_pulse_leds(void) {
+  leds_on();
+  vTaskDelay(150 / portTICK_PERIOD_MS);
+  leds_off();
+  vTaskSuspend(NULL);  ///////////////////////
+}
+
+void led_control_pulse_led_right(void) {
+  led_right_on();
+  vTaskDelay(150 / portTICK_PERIOD_MS);
+  led_right_off();
+  vTaskSuspend(NULL);  ///////////////////////
+}
+
+void led_control_pulse_led_left(void) {
+  led_left_on();
+  vTaskDelay(150 / portTICK_PERIOD_MS);
+  led_left_off();
   vTaskSuspend(NULL);  ///////////////////////
 }
 

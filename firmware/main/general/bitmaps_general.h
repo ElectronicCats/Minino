@@ -1,3 +1,8 @@
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#ifndef BITMAPS_GENERAL_H
+  #define BITMAPS_GENERAL_H
 // 'FACE', 8x8px
 const unsigned char minino_face[] = {0x42, 0xe7, 0xff, 0xff,
                                      0x99, 0x99, 0x7e, 0x3c};
@@ -127,3 +132,4 @@ typedef enum {
 } epd_bitmap_type_t;
 
 char* epd_bitmaps_list[] = {"Letters", "Face", "PwnLabs", "EC", NULL};
+#endif  // BITMAPS_GENERAL_H
