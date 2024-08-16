@@ -55,5 +55,5 @@ void app_main() {
 
   preferences_put_bool("wifi_connected", false);
   // cat_console_begin();
-  hid_module_begin();
+  // hid_module_begin();
 }

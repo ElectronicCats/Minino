@@ -3,7 +3,7 @@
  *
  * SPDX-License-Identifier: Unlicense OR CC0-1.0
  */
-#include "ble_hidd_demo_main.h"
+#include "ble_hidd_main.h"
 
 #include <stdio.h>
 #include <stdlib.h>
