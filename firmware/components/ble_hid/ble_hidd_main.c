@@ -4,13 +4,13 @@
  * SPDX-License-Identifier: Unlicense OR CC0-1.0
  */
 #include "ble_hidd_main.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "esp_bt.h"
 #include "esp_event.h"
 #include "esp_log.h"
+#include "esp_mac.h"
 #include "esp_system.h"
 #include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
@@ -219,6 +219,10 @@ void ble_hid_register_callback(hid_event_callback_f callback) {
 
 void ble_hid_get_device_name(char* device_name) {
   strcpy(device_name, HIDD_DEVICE_NAME);
+}
+
+void ble_hid_get_device_mac(uint8_t* mac) {
+  esp_read_mac(mac, ESP_MAC_BT);
 }
 
 void ble_hid_begin() {

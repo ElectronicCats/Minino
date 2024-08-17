@@ -80,10 +80,6 @@ static void button_event_cb(void* arg, void* data) {
   uint8_t button_event =
       ((button_event_t) data) &
       0x0F;  // & 0x0F to get the event number without the mask
-  const char* button_name_str = button_names[button_name];
-  const char* button_event_str = button_events_name[button_event];
-
-  ESP_LOGI(TAG, "Button: %s, Event: %s", button_name_str, button_event_str);
 
   // stop_screen_saver();
   // esp_timer_stop(idle_timer);

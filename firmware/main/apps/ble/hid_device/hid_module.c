@@ -2,6 +2,7 @@
 #include "apps/ble/hid_device/hid_screens.h"
 #include "ble_hidd_main.h"
 #include "esp_log.h"
+#include "esp_mac.h"
 #include "menus_module.h"
 
 static uint16_t current_item = 0;
@@ -93,11 +94,25 @@ static void hid_module_cb_event(uint8_t button_name, uint8_t button_event) {
       break;
     case BUTTON_RIGHT:
       if (current_item == HID_CONFIG_NAME) {
+        hid_module_register_menu(GENERAL_TREE_APP_INFORMATION);
+        general_screen_display_scrolling_text_handler(hid_module_display_menu,
+                                                      hid_module_cb_event);
         current_item = 0;
-        hid_module_display_device_name();
+        char* hid_name[20];
+        ble_hid_get_device_name(&hid_name);
+        general_screen_display_card_information_handler(
+            "Device Name", &hid_name, hid_module_display_menu,
+            hid_module_cb_event);
       } else if (current_item == HID_CONFIG_MAC) {
         current_item = 0;
-        hid_module_display_device_mac();
+        uint8_t hid_mac[8] = {0};
+        esp_read_mac(hid_mac, ESP_MAC_BT);
+        char mac_address[20];
+        sprintf(mac_address, "%02X:%02X:%02X:%02X", hid_mac[2], hid_mac[3],
+                hid_mac[4], hid_mac[5]);
+        general_screen_display_card_information_handler(
+            "Device MAC", &mac_address, hid_module_display_menu,
+            hid_module_cb_event);
       } else if (current_item == HID_CONFIG_START) {
         current_item = 0;
         hid_module_register_menu(GENERAL_TREE_APP_SUBMENU);

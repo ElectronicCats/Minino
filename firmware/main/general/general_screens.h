@@ -27,8 +27,15 @@ typedef struct {
 } general_menu_t;
 
 void general_register_menu(const general_menu_t* ctx);
+void general_register_scrolling_menu(const general_menu_t* ctx);
 void general_clear_screen();
 void general_screen_display_menu(uint16_t current_option);
 void genera_screen_display_card_information(char* title, char* body);
 void genera_screen_display_notify_information(char* title, char* body);
+void general_screen_display_card_information_handler(char* title,
+                                                     char* body,
+                                                     void* callback_exit,
+                                                     void* callback_restore);
+void general_screen_display_scrolling_text_handler(void* callback_exit,
+                                                   void* callback_restore);
 #endif  // GENERAL_SCREENS_H

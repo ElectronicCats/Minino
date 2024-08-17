@@ -43,9 +43,22 @@ void module_add_tracker_to_list(char* tracker_name) {
   trackers_current_item++;
 }
 
+void module_update_scan_state(bool scanning) {
+  trackers_menu_items[TRACKERS_SCAN] = scanning ? "SCANNING" : "SCAN";
+}
+
+void module_update_tracker_name(char* tracker_name, uint16_t index) {
+  list_trackers[index] = tracker_name;
+}
+
 void module_display_scanning() {
   led_control_run_effect(led_control_pulse_leds);
   genera_screen_display_notify_information("Searching", "Looking for devices");
+}
+
+void module_display_tracker_information(char* title, char* body) {
+  led_control_run_effect(led_control_pulse_leds);
+  genera_screen_display_card_information(title, body);
 }
 
 void module_display_device_detected(char* device_name) {

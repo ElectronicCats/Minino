@@ -10,8 +10,7 @@ enum {
   HID_CONFIG_START,
   HID_MENU_COUNT
 } hid_menu_item = HID_CONFIG_NAME;
-const char* hid_menu_items[HID_MENU_COUNT] = {"Device name", "Device MAC",
-                                              "Start"};
+char* hid_menu_items[HID_MENU_COUNT] = {"Device name", "Device MAC", "Start"};
 
 enum {
   HID_DEVICE_VOL_UP,
@@ -19,7 +18,7 @@ enum {
   HID_DEVICE_PLAY,
   HID_DEVICE_COUNT
 } hid_device_item = HID_DEVICE_VOL_UP;
-const char* hid_device_items[HID_DEVICE_COUNT] = {
+char* hid_device_items[HID_DEVICE_COUNT] = {
     "Volumen Up",
     "Volumen Down",
     "Play/Pause",
@@ -35,4 +34,5 @@ void hid_module_display_notify_volumen_down();
 void hid_module_display_notify_play_pause();
 void hid_module_display_device_connection(bool status);
 void hid_module_display_device_pairing();
+void hid_module_display_device_information(char* title, char* body);
 #endif  // HID_SCREENS_H

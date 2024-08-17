@@ -89,6 +89,7 @@ typedef struct {
 
 typedef struct {
   menu_idx_t current_menu;
+  menu_idx_t parent_menu_idx;
   uint8_t selected_submenu;
   uint8_t submenus_count;
   uint8_t menus_count;

@@ -84,6 +84,8 @@ static void navigation_enter() {
       menus_ctx->selected_submenu;
   menus_ctx->current_menu =
       menus[*menus_ctx->submenus_idx[menus_ctx->selected_submenu]].menu_idx;
+  menus_ctx->parent_menu_idx =
+      menus[get_menu_idx(menus_ctx->current_menu)].parent_idx;
   refresh_menus();
   void (*cb)() = menus[get_menu_idx(menus_ctx->current_menu)].on_enter_cb;
   if (cb) {
@@ -191,8 +193,10 @@ void menus_module_set_app_state(bool in_app, input_callback_t input_cb) {
 void menus_module_exit_app() {
   app_state2.in_app = false;
   app_state2.input_callback = NULL;
-  screen_saver_get_idle_state();
-  navigation_exit();
+  screen_module_set_reset_screen(menus_ctx->parent_menu_idx);
+  // screen_saver_get_idle_state();
+  // navigation_exit();
+  esp_restart();
 }
 
 menu_idx_t menus_module_get_current_menu() {
