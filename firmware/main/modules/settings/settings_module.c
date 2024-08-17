@@ -77,7 +77,7 @@ void settings_module_enter_submenu_cb(screen_module_menu_t user_selection) {
       file_manager_module_init();
       break;
     case MENU_FILE_MANAGER_WEB:
-      web_file_browser_module_init();
+      web_file_browser_module_begin();
       break;
     case MENU_SETTINGS_DISPLAY:
       display_config_module_begin();

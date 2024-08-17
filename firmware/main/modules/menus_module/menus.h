@@ -4,7 +4,9 @@
 #include "apps/ble/hid_device/hid_module.h"
 #include "apps/ble/trackers/trackers_module.h"
 
+#include "file_manager_module.h"
 #include "ota_module.h"
+#include "web_file_browser_module.h"
 
 typedef enum {
   MENU_MAIN_2 = 0,
@@ -466,7 +468,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_FILE_MANAGER_LOCAL_2,
      .parent_idx = MENU_FILE_MANAGER_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = file_manager_module_init,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
@@ -475,7 +477,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_FILE_MANAGER_WEB_2,
      .parent_idx = MENU_FILE_MANAGER_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = web_file_browser_module_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif

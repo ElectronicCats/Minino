@@ -156,7 +156,7 @@ static void show_logo() {
   buzzer_stop();
 }
 
-void screen_module_set_reset_screen(menu_idx_t menu) {
+void menus_module_set_reset_screen(menu_idx_t menu) {
   preferences_put_int("MENUNUMBER", menu);
   modals_module_show_banner("Exiting...");
 }
