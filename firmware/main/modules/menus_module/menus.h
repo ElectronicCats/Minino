@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include "apps/ble/hid_device/hid_module.h"
+#include "apps/ble/spam/spam_module.h"
 #include "apps/ble/trackers/trackers_module.h"
 
 #include "ota_module.h"
@@ -247,7 +248,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_BLUETOOTH_SPAM_2,
      .parent_idx = MENU_BLUETOOTH_APPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = ble_module_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif

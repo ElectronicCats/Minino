@@ -94,9 +94,6 @@ static void hid_module_cb_event(uint8_t button_name, uint8_t button_event) {
       break;
     case BUTTON_RIGHT:
       if (current_item == HID_CONFIG_NAME) {
-        hid_module_register_menu(GENERAL_TREE_APP_INFORMATION);
-        general_screen_display_scrolling_text_handler(hid_module_display_menu,
-                                                      hid_module_cb_event);
         current_item = 0;
         char* hid_name[20];
         ble_hid_get_device_name(&hid_name);

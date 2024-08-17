@@ -2,7 +2,6 @@
 #include "OTA.h"
 #include "bitmaps.h"
 #include "bitmaps_general.h"
-#include "ble_module.h"
 #include "esp_log.h"
 #include "file_manager_module.h"
 #include "gps_module.h"
@@ -564,10 +563,7 @@ void handle_user_selection(screen_module_menu_t user_selection) {
       wifi_module_begin();
       break;
     case MENU_BLUETOOTH_TRAKERS_SCAN:
-      ble_module_begin(MENU_BLUETOOTH_TRAKERS_SCAN);
-      break;
     case MENU_BLUETOOTH_SPAM:
-      ble_module_begin(MENU_BLUETOOTH_SPAM);
       break;
     case MENU_ZIGBEE_SWITCH:
       zigbee_module_begin(MENU_ZIGBEE_SWITCH);
