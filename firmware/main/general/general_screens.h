@@ -14,10 +14,16 @@ typedef enum {
   GENERAL_MENU_SUBMENU
 } general_menu_tree_index_t;
 
+typedef enum {
+  GENERAL_TREE_APP_MENU,
+  GENERAL_TREE_APP_SUBMENU,
+  GENERAL_TREE_APP_INFORMATION
+} menu_tree_t;
+
 typedef struct {
-  const char** menu_items;
+  char** menu_items;
   uint16_t menu_count;
-  general_menu_tree_index_t menu_level;
+  menu_tree_t menu_level;
 } general_menu_t;
 
 void general_register_menu(const general_menu_t* ctx);

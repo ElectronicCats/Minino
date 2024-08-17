@@ -4,6 +4,7 @@
 #include "esp_log.h"
 #include "led_events.h"
 #include "menu_screens_modules.h"
+#include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
 
@@ -92,7 +93,7 @@ static void config_module_wifi_display_disconnected() {
   wifi_config_state.state = WIFI_SETTING_IDLE;
   selected_item = 0;
   vTaskDelay(2000 / portTICK_PERIOD_MS);
-  menu_screens_set_app_state(true, config_module_state_machine);
+  menus_module_set_app_state(true, config_module_state_machine);
   config_module_wifi_display_list();
 }
 
@@ -101,7 +102,7 @@ static void config_module_wifi_display_connected() {
   oled_screen_display_text_center("Connected", 4, OLED_DISPLAY_NORMAL);
   vTaskDelay(2000 / portTICK_PERIOD_MS);
   cmd_wifi_unregister_callback();
-  menu_screens_set_app_state(false, NULL);
+  menus_module_set_app_state(false, NULL);
   menu_screens_exit_submenu();
 }
 
@@ -208,7 +209,7 @@ void config_module_begin(int app_selected) {
   ESP_LOGI(TAG_CONFIG_MODULE, "Initializing ble module screen state machine");
   app_screen_state_information.app_selected = app_selected;
 
-  menu_screens_set_app_state(true, config_module_state_machine);
+  menus_module_set_app_state(true, config_module_state_machine);
   oled_screen_clear();
   config_module_app_selector();
 };
@@ -245,7 +246,7 @@ static void config_module_state_machine(uint8_t button_name,
       switch (button_name) {
         case BUTTON_LEFT:
           cmd_wifi_unregister_callback();
-          menu_screens_set_app_state(false, NULL);
+          menus_module_set_app_state(false, NULL);
           menu_screens_exit_submenu();
           break;
         case BUTTON_RIGHT:
@@ -255,7 +256,7 @@ static void config_module_state_machine(uint8_t button_name,
           selected_item = 0;
 
           config_module_wifi_display_sel_options();
-          menu_screens_set_app_state(true, config_module_state_machine_config);
+          menus_module_set_app_state(true, config_module_state_machine_config);
           break;
         case BUTTON_UP:
           selected_item =
@@ -287,7 +288,7 @@ static void config_module_state_machine_config(uint8_t button_name,
     case BUTTON_LEFT:
       wifi_config_state.state = WIFI_SETTING_IDLE;
       selected_item = 0;
-      menu_screens_set_app_state(true, config_module_state_machine);
+      menus_module_set_app_state(true, config_module_state_machine);
       config_module_wifi_display_list();
       break;
     case BUTTON_RIGHT:
@@ -295,12 +296,12 @@ static void config_module_state_machine_config(uint8_t button_name,
       if (selected_item == 0) {
         selected_item = 0;
         config_module_wifi_display_connect_modal();
-        menu_screens_set_app_state(
+        menus_module_set_app_state(
             true, config_module_state_machine_config_modal_connect);
       } else {
         selected_item = 0;
         config_module_wifi_display_forget_modal();
-        menu_screens_set_app_state(
+        menus_module_set_app_state(
             true, config_module_state_machine_config_modal_forget);
       }
       break;
@@ -345,11 +346,11 @@ static void config_module_state_machine_config_modal_connect(
         preferences_get_string(wifi_ssid, wifi_pass, 100);
         connect_wifi(wifi_ssid, wifi_pass,
                      config_module_wifi_handle_connection);
-        menu_screens_set_app_state(true, config_module_state_machine_config);
+        menus_module_set_app_state(true, config_module_state_machine_config);
       } else {
         selected_item = 0;
         wifi_config_state.state = WIFI_SETTING_IDLE;
-        menu_screens_set_app_state(true, config_module_state_machine_config);
+        menus_module_set_app_state(true, config_module_state_machine_config);
         config_module_wifi_display_sel_options();
       }
       break;
@@ -402,7 +403,7 @@ static void config_module_state_machine_config_modal_forget(
       }
       selected_item = 0;
       wifi_config_state.state = WIFI_SETTING_IDLE;
-      menu_screens_set_app_state(true, config_module_state_machine_config);
+      menus_module_set_app_state(true, config_module_state_machine_config);
       config_module_wifi_display_sel_options();
       break;
     case BUTTON_UP:

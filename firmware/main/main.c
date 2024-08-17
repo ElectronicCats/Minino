@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include "apps/ble/hid_device/hid_module.h"
+#include "apps/ble/trackers/trackers_module.h"
 #include "cat_console.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -8,6 +9,7 @@
 #include "keyboard_module.h"
 #include "leds.h"
 #include "menu_screens_modules.h"
+#include "menus_module.h"
 #include "open_thread.h"
 #include "preferences.h"
 #include "sd_card.h"
@@ -43,7 +45,8 @@ void app_main() {
   sd_card_begin();
   flash_fs_begin(flash_fs_screens_handler);
   keyboard_module_begin();
-  menu_screens_begin();
+  // menu_screens_begin();
+  menus_module_begin();
   reboot_counter();
   leds_off();
 
@@ -55,5 +58,5 @@ void app_main() {
 
   preferences_put_bool("wifi_connected", false);
   // cat_console_begin();
-  // hid_module_begin();
+  trackers_module_begin();
 }

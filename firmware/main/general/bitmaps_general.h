@@ -131,5 +131,32 @@ typedef enum {
   MININO_COUNT
 } epd_bitmap_type_t;
 
+epd_bitmap_t screen_savers[] = {  ///////////////////
+    {
+        .bitmap = minino_face,
+        .width = 8,
+        .height = 8,
+    },
+    {
+        .bitmap = epd_bitmap_face_logo,
+        .width = 32,
+        .height = 32,
+    },
+    {
+        .bitmap = epd_bitmap_face_logo,
+        .width = 32,
+        .height = 32,
+    },
+    {
+        .bitmap = epd_bitmap_pwn_02,
+        .width = 64,
+        .height = 32,
+    },
+    {
+        .bitmap = epd_bitmap_electroniccats,
+        .width = 32,
+        .height = 32,
+    }};
+
 char* epd_bitmaps_list[] = {"Letters", "Face", "PwnLabs", "EC", NULL};
 #endif  // BITMAPS_GENERAL_H

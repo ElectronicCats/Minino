@@ -143,16 +143,10 @@ static void tracker_dissector(esp_ble_gap_cb_param_t* scan_rst,
 
 void trackers_scanner_add_tracker_profile(tracker_profile_t** profiles,
                                           int* num_profiles,
-                                          uint8_t mac_address[6],
-                                          int rssi,
-                                          char* name) {
+                                          tracker_profile_t new_profile) {
   *profiles =
       realloc(*profiles, (*num_profiles + 1) * sizeof(tracker_profile_t));
-
-  (*profiles)[*num_profiles].rssi = rssi;
-  (*profiles)[*num_profiles].name = name;
-  memcpy((*profiles)[*num_profiles].mac_address, mac_address, 6);
-
+  (*profiles)[*num_profiles] = new_profile;
   (*num_profiles)++;
 }
 

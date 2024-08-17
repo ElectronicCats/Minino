@@ -1,9 +1,8 @@
 #include <stdbool.h>
 #include <stdint.h>
+#include "general/general_screens.h"
 #ifndef HID_SCREENS_H
   #define HID_SCREENS_H
-
-typedef enum { HID_TREE_MENU, HID_TREE_DEVICE, HID_TREE_COUNT } hid_menu_t;
 
 enum {
   HID_CONFIG_NAME,
@@ -26,7 +25,7 @@ const char* hid_device_items[HID_DEVICE_COUNT] = {
     "Play/Pause",
 };
 
-void hid_module_register_menu(hid_menu_t menu);
+void hid_module_register_menu(menu_tree_t menu);
 void hid_clear_screen();
 void hid_module_display_menu(uint16_t current_item);
 void hid_module_display_device_name();

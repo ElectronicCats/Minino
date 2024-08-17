@@ -4,7 +4,6 @@
 #include "animations_task.h"
 #include "freertos/FreeRTOS.h"
 #include "general/bitmaps_general.h"
-#include "general/general_screens.h"
 #include "led_events.h"
 #include "oled_screen.h"
 
@@ -13,21 +12,21 @@ static uint16_t hid_current_item = 0;
 static const general_menu_t hid_menu = {
     .menu_items = hid_menu_items,
     .menu_count = HID_MENU_COUNT,
-    .menu_level = GENERAL_MENU_MAIN,
+    .menu_level = GENERAL_TREE_APP_MENU,
 };
 
 static const general_menu_t hid_device_menu = {
     .menu_items = hid_device_items,
     .menu_count = HID_DEVICE_COUNT,
-    .menu_level = GENERAL_MENU_SUBMENU,
+    .menu_level = GENERAL_TREE_APP_SUBMENU,
 };
 
-void hid_module_register_menu(hid_menu_t menu) {
+void hid_module_register_menu(menu_tree_t menu) {
   switch (menu) {
-    case HID_TREE_MENU:
+    case GENERAL_TREE_APP_MENU:
       general_register_menu(&hid_menu);
       break;
-    case HID_TREE_DEVICE:
+    case GENERAL_TREE_APP_SUBMENU:
       general_register_menu(&hid_device_menu);
       break;
     default:

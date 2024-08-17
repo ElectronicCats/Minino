@@ -2,6 +2,7 @@
 
 #include "keyboard_module.h"
 #include "menu_screens_modules.h"
+#include "menus_module.h"
 #include "sd_card.h"
 #include "sd_card_settings_module.h"
 #include "sd_card_settings_screens_module.h"
@@ -51,7 +52,7 @@ void sd_card_settings_keyboard_cb(uint8_t button_name, uint8_t button_event) {
 
   switch (button_name) {
     case BUTTON_LEFT:
-      menu_screens_set_app_state(false, NULL);
+      menus_module_set_app_state(false, NULL);
       menu_screens_exit_submenu();
       break;
     case BUTTON_RIGHT:
@@ -70,11 +71,11 @@ void sd_card_settings_keyboard_cb(uint8_t button_name, uint8_t button_event) {
           }
           break;
         case SD_CARD_SETTINGS_OK:
-          menu_screens_set_app_state(false, NULL);
+          menus_module_set_app_state(false, NULL);
           menu_screens_enter_submenu();
           break;
         default:
-          menu_screens_set_app_state(false, NULL);
+          menus_module_set_app_state(false, NULL);
           menu_screens_exit_submenu();
           break;
       }

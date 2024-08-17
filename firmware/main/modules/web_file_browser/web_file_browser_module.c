@@ -3,6 +3,7 @@
 #include "flash_fs.h"
 #include "keyboard_module.h"
 #include "menu_screens_modules.h"
+#include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
 #include "sd_card.h"
@@ -16,7 +17,7 @@ static void web_file_browser_module_exit();
 
 void web_file_browser_module_init() {
   oled_screen_clear();
-  menu_screens_set_app_state(true, web_file_browser_input_cb);
+  menus_module_set_app_state(true, web_file_browser_input_cb);
   if (sd_card_mount() == ESP_OK || flash_fs_mount() == ESP_OK) {
     bool wifi_connected = preferences_get_bool("wifi_connected", false);
     if (!wifi_connected) {

@@ -6,6 +6,7 @@
 #include "file_manager_module.h"
 #include "gps_module.h"
 #include "menu_screens_modules.h"
+#include "menus_module.h"
 #include "modals_module.h"
 #include "modules/settings/wifi/wifi_settings.h"
 #include "oled_screen.h"
@@ -63,7 +64,7 @@ void set_stealth_status() {
   stealth_mode = modals_module_get_radio_selection(
       stealth_options, "Stealth Mode", stealth_mode);
   preferences_put_bool("stealth_mode", stealth_mode);
-  menu_screens_set_app_state(false, NULL);
+  menus_module_set_app_state(false, NULL);
   menu_screens_exit_submenu();
   vTaskDelete(NULL);
 }
@@ -95,7 +96,7 @@ void settings_module_enter_submenu_cb(screen_module_menu_t user_selection) {
       break;
     case MENU_SETTINGS_SD_CARD_FORMAT:
       sd_card_settings_verify_sd_card();
-      menu_screens_set_app_state(true, sd_card_settings_keyboard_cb);
+      menus_module_set_app_state(true, sd_card_settings_keyboard_cb);
       break;
     case MENU_STEALTH_MODE:
       stealth_mode_open_menu();

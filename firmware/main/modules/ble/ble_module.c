@@ -4,6 +4,7 @@
 #include "esp_log.h"
 #include "led_events.h"
 #include "menu_screens_modules.h"
+#include "menus_module.h"
 #include "modules/ble/ble_screens_module.h"
 #include "oled_screen.h"
 #include "trackers_scanner.h"
@@ -34,7 +35,7 @@ void ble_module_begin(int app_selected) {
   ESP_LOGI(TAG_BLE_MODULE, "Initializing ble module screen state machine");
   app_screen_state_information.app_selected = app_selected;
 
-  menu_screens_set_app_state(true, ble_module_state_machine);
+  menus_module_set_app_state(true, ble_module_state_machine);
   oled_screen_clear();
   ble_module_app_selector();
 };
@@ -77,7 +78,7 @@ static void ble_module_state_machine(uint8_t button_name,
           ble_module_task_stop_trackers_display_devices();
           trackers_scanner_stop();
           led_control_stop();
-          menu_screens_set_app_state(false, NULL);
+          menus_module_set_app_state(false, NULL);
           menu_screens_exit_submenu();
           break;
         case BUTTON_RIGHT:
@@ -113,7 +114,7 @@ static void ble_module_state_machine(uint8_t button_name,
         case BUTTON_LEFT:
           bt_spam_app_stop();
           led_control_stop();
-          menu_screens_set_app_state(false, NULL);
+          menus_module_set_app_state(false, NULL);
           animations_task_stop();
           menu_screens_exit_submenu();
           // esp_restart();
@@ -136,8 +137,7 @@ static void ble_module_display_trackers_cb(tracker_profile_t record) {
       scanned_airtags, trackers_count, record.mac_address);
   if (has_device == -1) {
     trackers_scanner_add_tracker_profile(&scanned_airtags, &trackers_count,
-                                         record.mac_address, record.rssi,
-                                         record.name);
+                                         record);
   } else {
     scanned_airtags[has_device].rssi = record.rssi;
     if (is_modal_displaying) {

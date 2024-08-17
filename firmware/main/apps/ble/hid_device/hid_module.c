@@ -2,7 +2,7 @@
 #include "apps/ble/hid_device/hid_screens.h"
 #include "ble_hidd_main.h"
 #include "esp_log.h"
-#include "menu_screens_modules.h"
+#include "menus_module.h"
 
 static uint16_t current_item = 0;
 
@@ -22,7 +22,7 @@ static void hid_module_decrement_item() {
 static void hid_module_cb_connection_handler(bool connection) {
   hid_module_display_device_connection(connection);
   if (!connection) {
-    esp_restart();
+    // esp_restart();
   }
 }
 
@@ -48,9 +48,9 @@ static void hid_module_cb_event_volumen(uint8_t button_name,
       break;
     case BUTTON_LEFT:
       current_item = 0;
-      hid_module_register_menu(HID_TREE_MENU);
+      hid_module_register_menu(GENERAL_TREE_APP_MENU);
       hid_module_display_menu(current_item);
-      menu_screens_set_app_state(true, hid_module_cb_event);
+      menus_module_set_app_state(true, hid_module_cb_event);
       break;
     case BUTTON_RIGHT:
       if (current_item == HID_DEVICE_VOL_UP) {
@@ -100,17 +100,15 @@ static void hid_module_cb_event(uint8_t button_name, uint8_t button_event) {
         hid_module_display_device_mac();
       } else if (current_item == HID_CONFIG_START) {
         current_item = 0;
-        hid_module_register_menu(HID_TREE_DEVICE);
+        hid_module_register_menu(GENERAL_TREE_APP_SUBMENU);
         hid_module_display_device_pairing();
         ble_hid_register_callback(hid_module_cb_connection_handler);
         ble_hid_begin();
-        menu_screens_set_app_state(true, hid_module_cb_event_volumen);
+        menus_module_set_app_state(true, hid_module_cb_event_volumen);
       }
       break;
     case BUTTON_LEFT:
-      current_item = 0;
-      hid_module_register_menu(HID_TREE_MENU);
-      hid_module_display_menu(current_item);
+      menus_module_exit_app();
       break;
     default:
       break;
@@ -118,7 +116,7 @@ static void hid_module_cb_event(uint8_t button_name, uint8_t button_event) {
 }
 
 void hid_module_begin() {
-  hid_module_register_menu(HID_TREE_MENU);
+  hid_module_register_menu(GENERAL_TREE_APP_MENU);
   hid_module_display_menu(current_item);
-  menu_screens_set_app_state(true, hid_module_cb_event);
+  menus_module_set_app_state(true, hid_module_cb_event);
 }

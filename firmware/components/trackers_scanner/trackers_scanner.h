@@ -84,9 +84,7 @@ bool trackers_scanner_is_active();
  */
 void trackers_scanner_add_tracker_profile(tracker_profile_t** profiles,
                                           int* num_profiles,
-                                          uint8_t mac_address[6],
-                                          int rssi,
-                                          char* name);
+                                          tracker_profile_t new_profile);
 
 /**
  * @brief Find a profile by the mac address
