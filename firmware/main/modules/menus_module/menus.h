@@ -4,6 +4,7 @@
 #include "apps/ble/hid_device/hid_module.h"
 #include "apps/ble/trackers/trackers_module.h"
 
+#include "display_settings.h"
 #include "file_manager_module.h"
 #include "ota_module.h"
 #include "web_file_browser_module.h"
@@ -417,7 +418,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_SETTINGS_DISPLAY_2,
      .parent_idx = MENU_SETTINGS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = display_config_module_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "System",
