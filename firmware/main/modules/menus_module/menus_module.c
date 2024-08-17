@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#include "leds.h"
+#include "led_events.h"
 #include "menu_screens_modules.h"
 #include "menus_screens.h"
 #include "modals_module.h"
@@ -93,6 +93,7 @@ static void navigation_enter() {
 
 static void navigation_exit() {
   if (menus_ctx->current_menu == MENU_MAIN_2) {
+    screen_saver_run();
     return;
   }
   menus[get_menu_idx(menus_ctx->current_menu)].last_selected_submenu =
@@ -149,11 +150,9 @@ static void menus_input_cb(uint8_t button_name, uint8_t button_event) {
 
 static void show_logo() {
   oled_screen_clear();
-  leds_on();
-  buzzer_play();
+  led_control_run_effect(led_control_pulse_leds);
+  buzzer_play_for(100);
   screen_saver_run();
-  vTaskDelay(500 / portTICK_PERIOD_MS);
-  buzzer_stop();
 }
 
 void menus_module_set_reset_screen(menu_idx_t menu) {
@@ -163,12 +162,9 @@ void menus_module_set_reset_screen(menu_idx_t menu) {
 
 static void get_reset_menu() {
   menus_ctx->current_menu = preferences_get_int("MENUNUMBER", MENU_MAIN_2);
-
-  if ((int) menus_ctx->current_menu == MENU_MAIN) {
-    preferences_put_int("logo_show", 1);
+  if ((int) menus_ctx->current_menu == MENU_MAIN_2) {
     show_logo();
   } else {
-    preferences_put_int("logo_show", 0);
     preferences_put_int("MENUNUMBER", MENU_MAIN_2);
     screen_saver_get_idle_state();
     refresh_menus();

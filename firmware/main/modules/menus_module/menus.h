@@ -7,6 +7,7 @@
 #include "display_settings.h"
 #include "file_manager_module.h"
 #include "ota_module.h"
+#include "stealth_mode.h"
 #include "web_file_browser_module.h"
 
 typedef enum {
@@ -487,6 +488,6 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_STEALTH_MODE_2,
      .parent_idx = MENU_SETTINGS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = stealth_mode_open_menu,
      .on_exit_cb = NULL,
      .is_visible = true}};
