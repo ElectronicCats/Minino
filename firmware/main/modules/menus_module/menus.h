@@ -10,6 +10,7 @@
 #include "ota_module.h"
 #include "stealth_mode.h"
 #include "web_file_browser_module.h"
+#include "zigbee_module.h"
 
 typedef enum {
   MENU_MAIN_2 = 0,
@@ -285,7 +286,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_ZIGBEE_LIGHT_2,
      .parent_idx = MENU_ZIGBEE_SPOOFING_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = zigbee_module_switch_enter,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Light",
@@ -301,7 +302,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_ZIGBEE_SWITCH_2,
      .parent_idx = MENU_ZIGBEE_APPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = zigbee_module_sniffer_enter,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
