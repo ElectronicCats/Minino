@@ -6,6 +6,7 @@
 
 #include "display_settings.h"
 #include "file_manager_module.h"
+#include "open_thread_module.h"
 #include "ota_module.h"
 #include "stealth_mode.h"
 #include "web_file_browser_module.h"
@@ -318,8 +319,8 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_THREAD_BROADCAST_2,
      .parent_idx = MENU_THREAD_APPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .on_enter_cb = open_thread_module_broadcast_enter,
+     .on_exit_cb = open_thread_module_exit,
      .is_visible = true},
   #endif
   #ifdef CONFIG_THREAD_APP_SNIFFER
@@ -327,14 +328,14 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_THREAD_SNIFFER_2,
      .parent_idx = MENU_THREAD_APPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .on_enter_cb = open_thread_module_sniffer_enter,
+     .on_exit_cb = open_thread_module_exit,
      .is_visible = true},
     {.display_name = "Run",
      .menu_idx = MENU_THREAD_SNIFFER_RUN_2,
      .parent_idx = MENU_THREAD_SNIFFER_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = open_thread_module_sniffer_run,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
