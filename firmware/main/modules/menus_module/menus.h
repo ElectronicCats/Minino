@@ -4,12 +4,15 @@
 #include "apps/ble/hid_device/hid_module.h"
 #include "apps/ble/trackers/trackers_module.h"
 
+#include "catdos_module.h"
+#include "deauth_module.h"
 #include "display_settings.h"
 #include "file_manager_module.h"
 #include "open_thread_module.h"
 #include "ota_module.h"
 #include "stealth_mode.h"
 #include "web_file_browser_module.h"
+#include "wifi_module.h"
 #include "zigbee_module.h"
 
 typedef enum {
@@ -172,15 +175,15 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_WIFI_ANALIZER_2,
      .parent_idx = MENU_WIFI_APPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .on_enter_cb = wifi_module_analizer_begin,
+     .on_exit_cb = wifi_module_analizer_exit,
      .is_visible = true},
     {.display_name = "Start",
      .menu_idx = MENU_WIFI_ANALYZER_RUN_2,
      .parent_idx = MENU_WIFI_ANALIZER_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .on_enter_cb = wifi_module_init_sniffer,
+     .on_exit_cb = wifi_module_analyzer_run_exit,
      .is_visible = true},
     {.display_name = "Settings",
      .menu_idx = MENU_WIFI_ANALYZER_SETTINGS_2,
@@ -201,7 +204,7 @@ menu_t menus[] = {  //////////////////////////////////
      .parent_idx = MENU_WIFI_ANALYZER_SETTINGS_2,
      .last_selected_submenu = 0,
      .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .on_exit_cb = wifi_module_analyzer_destination_exit,
      .is_visible = true},
     {.display_name = "Help",
      .menu_idx = MENU_WIFI_ANALYZER_HELP_2,
@@ -216,7 +219,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_WIFI_DEAUTH_2,
      .parent_idx = MENU_WIFI_APPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = deauth_module_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
@@ -225,7 +228,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_WIFI_DOS_2,
      .parent_idx = MENU_WIFI_APPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = catdos_module_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif

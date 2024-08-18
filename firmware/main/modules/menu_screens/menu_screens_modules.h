@@ -192,6 +192,4 @@ void menu_screens_update_options(char* options[], uint8_t selected_option);
  * @return void
  */
 void screen_module_set_screen(int current_menu);
-
-static void screen_saver_run();
 void stop_screen_saver();

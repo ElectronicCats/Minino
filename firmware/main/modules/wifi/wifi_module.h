@@ -16,20 +16,19 @@ void wifi_module_begin();
  *
  * @return void
  */
-void wifi_module_deauth_begin();
-
-/**
- * @brief Initialize the wifi module
- *
- * @return void
- */
 void wifi_module_analizer_begin();
+
+void wifi_module_init_sniffer();
 
 /**
  * @brief Stop the wifi module
  *
  */
 void wifi_module_exit(void);
+void wifi_module_analyzer_run_exit();
+void wifi_module_analizer_exit();
+void wifi_module_analizer_summary_exit();
+void wifi_module_analyzer_destination_exit();
 
 /**
  * @brief Callback to show the summary of the wifi analizer
