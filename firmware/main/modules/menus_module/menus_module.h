@@ -24,3 +24,4 @@ void menus_module_set_app_state(bool in_app, input_callback_t input_cb);
 menu_idx_t menus_module_get_current_menu();
 bool menus_module_get_app_state();
 void menus_module_exit_app();
+void menus_module_exit_app_information();

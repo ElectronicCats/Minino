@@ -4,6 +4,7 @@
 #include "apps/ble/hid_device/hid_module.h"
 #include "apps/ble/spam/spam_module.h"
 #include "apps/ble/trackers/trackers_module.h"
+#include "modules/about/about_module.h"
 
 #include "ota_module.h"
 
@@ -145,14 +146,14 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_ABOUT_CREDITS_2,
      .parent_idx = MENU_ABOUT_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = about_module_display_credits_menu,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Legal",
      .menu_idx = MENU_ABOUT_LEGAL_2,
      .parent_idx = MENU_ABOUT_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = about_module_display_legal_menu,
      .on_exit_cb = NULL,
      .is_visible = true},
 #ifdef CONFIG_WIFI_APPS_ENABLE

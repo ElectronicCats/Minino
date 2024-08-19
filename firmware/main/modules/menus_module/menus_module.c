@@ -194,9 +194,16 @@ void menus_module_exit_app() {
   app_state2.in_app = false;
   app_state2.input_callback = NULL;
   screen_module_set_reset_screen(menus_ctx->parent_menu_idx);
-  // screen_saver_get_idle_state();
-  // navigation_exit();
   esp_restart();
+}
+
+void menus_module_exit_app_information() {
+  app_state2.in_app = false;
+  app_state2.input_callback = NULL;
+  keyboard_module_set_input_callback(menus_input_cb);
+  screen_module_set_reset_screen(menus_ctx->parent_menu_idx);
+  screen_saver_get_idle_state();
+  navigation_exit();
 }
 
 menu_idx_t menus_module_get_current_menu() {

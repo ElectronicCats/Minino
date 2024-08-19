@@ -9,24 +9,6 @@
 
 static uint16_t hid_current_item = 0;
 
-static char* credits_text_ts[] = {
-    "Developed by",
-    "Electronic Cats",
-    "and PWnLabs",
-    "",
-    "With love from",
-    "Mexico...",
-    "",
-    "Thanks",
-    "- Kevin",
-    "  @kevlem97",
-    "- Roberto",
-    "- Francisco",
-    "  @deimoshall",
-    "and Electronic",
-    "Cats team",
-};
-
 static const general_menu_t hid_menu = {
     .menu_items = hid_menu_items,
     .menu_count = HID_MENU_COUNT,
@@ -39,12 +21,6 @@ static const general_menu_t hid_device_menu = {
     .menu_level = GENERAL_TREE_APP_SUBMENU,
 };
 
-static const general_menu_t hid_device_information = {
-    .menu_items = credits_text_ts,
-    .menu_count = 14,
-    .menu_level = GENERAL_TREE_APP_INFORMATION,
-};
-
 void hid_module_register_menu(menu_tree_t menu) {
   switch (menu) {
     case GENERAL_TREE_APP_MENU:
@@ -52,9 +28,6 @@ void hid_module_register_menu(menu_tree_t menu) {
       break;
     case GENERAL_TREE_APP_SUBMENU:
       general_register_menu(&hid_device_menu);
-      break;
-    case GENERAL_TREE_APP_INFORMATION:
-      general_register_scrolling_menu(&hid_device_information);
       break;
     default:
       general_register_menu(&hid_menu);
