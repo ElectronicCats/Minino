@@ -4,36 +4,67 @@
 #include "animations_task.h"
 #include "freertos/FreeRTOS.h"
 #include "general/bitmaps_general.h"
-#include "general/general_screens.h"
 #include "led_events.h"
 #include "oled_screen.h"
 
 static uint16_t hid_current_item = 0;
 
+static char* credits_text_ts[] = {
+    "Developed by",
+    "Electronic Cats",
+    "and PWnLabs",
+    "",
+    "With love from",
+    "Mexico...",
+    "",
+    "Thanks",
+    "- Kevin",
+    "  @kevlem97",
+    "- Roberto",
+    "- Francisco",
+    "  @deimoshall",
+    "and Electronic",
+    "Cats team",
+};
+
 static const general_menu_t hid_menu = {
     .menu_items = hid_menu_items,
     .menu_count = HID_MENU_COUNT,
-    .menu_level = GENERAL_MENU_MAIN,
+    .menu_level = GENERAL_TREE_APP_MENU,
 };
 
 static const general_menu_t hid_device_menu = {
     .menu_items = hid_device_items,
     .menu_count = HID_DEVICE_COUNT,
-    .menu_level = GENERAL_MENU_SUBMENU,
+    .menu_level = GENERAL_TREE_APP_SUBMENU,
 };
 
-void hid_module_register_menu(hid_menu_t menu) {
+static const general_menu_t hid_device_information = {
+    .menu_items = credits_text_ts,
+    .menu_count = 14,
+    .menu_level = GENERAL_TREE_APP_INFORMATION,
+};
+
+void hid_module_register_menu(menu_tree_t menu) {
   switch (menu) {
-    case HID_TREE_MENU:
+    case GENERAL_TREE_APP_MENU:
       general_register_menu(&hid_menu);
       break;
-    case HID_TREE_DEVICE:
+    case GENERAL_TREE_APP_SUBMENU:
       general_register_menu(&hid_device_menu);
+      break;
+    case GENERAL_TREE_APP_INFORMATION:
+      general_register_scrolling_menu(&hid_device_information);
       break;
     default:
       general_register_menu(&hid_menu);
       break;
   }
+}
+
+void hid_module_display_device_information(char* title, char* body) {
+  led_control_run_effect(led_control_pulse_leds);
+  genera_screen_display_card_information(title, body);
 }
 
 void hid_module_display_notify_volumen_up() {

@@ -7,6 +7,7 @@
 #include "freertos/FreeRTOS.h"
 #include "led_events.h"
 #include "menu_screens_modules.h"
+#include "menus_module.h"
 #include "wifi_attacks.h"
 #include "wifi_controller.h"
 #include "wifi_scanner.h"
@@ -96,12 +97,12 @@ static void deauth_handle_attacks() {
       wifi_attack_handle_attacks(menu_stadistics.attack,
                                  &menu_stadistics.selected_ap);
       ESP_LOGI("deauth", "Attack: %d", menu_stadistics.attack);
-      menu_screens_set_app_state(true, deauth_module_cb_event_run);
+      menus_module_set_app_state(true, deauth_module_cb_event_run);
       current_item = 0;
       break;
     case CAPTIVEPORTAL:
       current_item = 0;
-      menu_screens_set_app_state(true, deauth_module_cb_event_captive_portal);
+      menus_module_set_app_state(true, deauth_module_cb_event_captive_portal);
       deauth_display_captive_portals(current_item, menu_stadistics);
       break;
     default:
@@ -130,7 +131,7 @@ void deauth_module_begin() {
   xTaskCreate(scanning_task, "wifi_scan", 4096, NULL, 5, NULL);
   deauth_run_scan_task();
 
-  menu_screens_set_app_state(true, deauth_module_cb_event);
+  menus_module_set_app_state(true, deauth_module_cb_event);
 
   menu_stadistics.attack = 99;
 
@@ -169,18 +170,18 @@ static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event) {
           animations_task_run(&deauth_display_scanning, 200, NULL);
           xTaskCreate(scanning_task, "wifi_scan", 4096, NULL, 5, NULL);
           deauth_run_scan_task();
-          menu_screens_set_app_state(true, deauth_module_cb_event);
+          menus_module_set_app_state(true, deauth_module_cb_event);
           current_item = 0;
           break;
         case SELECT:
           current_item = 0;
-          menu_screens_set_app_state(true, deauth_module_cb_event_select_ap);
+          menus_module_set_app_state(true, deauth_module_cb_event_select_ap);
           deauth_display_scanned_ap(ap_records->records, ap_records->count,
                                     current_item);
           break;
         case DEAUTH:
           current_item = 0;
-          menu_screens_set_app_state(true, deauth_module_cb_event_attacks);
+          menus_module_set_app_state(true, deauth_module_cb_event_attacks);
           deauth_display_attacks(current_item, menu_stadistics);
           break;
         case RUN:
@@ -207,7 +208,7 @@ static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event) {
     case BUTTON_LEFT:
       wifi_scanner_clear_ap_records();
       printf("Exit deauth: %d\n", current_item);
-      menu_screens_set_app_state(false, NULL);
+      menus_module_set_app_state(false, NULL);
       menu_screens_exit_submenu();
       // led_control_stop();
       break;
@@ -240,13 +241,13 @@ static void deauth_module_cb_event_select_ap(uint8_t button_name,
       break;
     case BUTTON_RIGHT:
       menu_stadistics.selected_ap = ap_records->records[current_item];
-      menu_screens_set_app_state(true, deauth_module_cb_event);
+      menus_module_set_app_state(true, deauth_module_cb_event);
       deauth_display_menu(current_item, menu_stadistics);
       current_item = 0;
       break;
     case BUTTON_LEFT:
       current_item = 0;
-      menu_screens_set_app_state(true, deauth_module_cb_event);
+      menus_module_set_app_state(true, deauth_module_cb_event);
       deauth_display_menu(current_item, menu_stadistics);
       break;
     default:
@@ -270,14 +271,14 @@ static void deauth_module_cb_event_attacks(uint8_t button_name,
       break;
     case BUTTON_RIGHT:
       menu_stadistics.attack = current_item;
-      menu_screens_set_app_state(true, deauth_module_cb_event);
+      menus_module_set_app_state(true, deauth_module_cb_event);
 
       current_item = 0;
       deauth_display_menu(current_item, menu_stadistics);
       break;
     case BUTTON_LEFT:
       current_item = 0;
-      menu_screens_set_app_state(true, deauth_module_cb_event);
+      menus_module_set_app_state(true, deauth_module_cb_event);
       deauth_display_menu(current_item, menu_stadistics);
       break;
     default:
@@ -297,7 +298,7 @@ static void deauth_module_cb_event_run(uint8_t button_name,
       led_control_stop();
       animations_task_stop();
       wifi_attacks_module_stop();
-      menu_screens_set_app_state(true, deauth_module_cb_event);
+      menus_module_set_app_state(true, deauth_module_cb_event);
       deauth_display_menu(current_item, menu_stadistics);
       break;
     case BUTTON_UP:
@@ -331,7 +332,7 @@ static void deauth_module_cb_event_captive_portal(uint8_t button_name,
     case BUTTON_LEFT:
       current_item = 0;
       captive_portal_stop();
-      menu_screens_set_app_state(true, deauth_module_cb_event);
+      menus_module_set_app_state(true, deauth_module_cb_event);
       deauth_display_menu(current_item, menu_stadistics);
       break;
     case BUTTON_RIGHT:
@@ -342,7 +343,7 @@ static void deauth_module_cb_event_captive_portal(uint8_t button_name,
       deauth_display_captive_waiting();
       xTaskCreate(captive_portal_begin, "captive_portal_start", 4096, NULL, 5,
                   NULL);
-      menu_screens_set_app_state(true, deauth_module_cb_event_run);
+      menus_module_set_app_state(true, deauth_module_cb_event_run);
       current_item = 0;
       break;
     default:

@@ -55,3 +55,13 @@ void modals_screens_show_info(char* head, char* body, size_t time_ms) {
   vTaskDelay(pdMS_TO_TICKS(time_ms));
   oled_screen_clear();
 }
+
+void modals_screens_show_banner(char* text) {
+#ifdef CONFIG_RESOLUTION_128X64
+  uint8_t page = 3;
+#else  // CONFIG_RESOLUTION_128X32
+  uint8_t page = 2;
+#endif
+  oled_screen_clear();
+  oled_screen_display_text_center(text, page, OLED_DISPLAY_NORMAL);
+}

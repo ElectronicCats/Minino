@@ -4,6 +4,7 @@
 #include "ieee_sniffer.h"
 #include "led_events.h"
 #include "menu_screens_modules.h"
+#include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
 #include "radio_selector.h"
@@ -45,7 +46,7 @@ void zigbee_module_begin(int app_selected) {
            "Initializing zigbee module screen state machine");
   app_screen_state_information.app_selected = app_selected;
 
-  menu_screens_set_app_state(true, zigbee_module_state_machine);
+  menus_module_set_app_state(true, zigbee_module_state_machine);
   oled_screen_clear(OLED_DISPLAY_NORMAL);
   zigbee_module_app_selector();
 };

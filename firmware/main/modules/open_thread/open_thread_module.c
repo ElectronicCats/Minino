@@ -2,6 +2,7 @@
 #include "esp_log.h"
 #include "led_events.h"
 #include "menu_screens_modules.h"
+#include "menus_module.h"
 #include "oled_screen.h"
 #include "open_thread.h"
 #include "open_thread_screens_module.h"
@@ -37,7 +38,7 @@ static void open_thread_module_enter_submenu_cb(
   oled_screen_clear();
   switch (user_selection) {
     case MENU_THREAD_BROADCAST:
-      menu_screens_set_app_state(true, thread_broadcast_input);
+      menus_module_set_app_state(true, thread_broadcast_input);
       led_control_run_effect(led_control_zigbee_scanning);
       open_thread_screens_display_broadcast_mode(channel);
       thread_broadcast_set_on_msg_recieve_cb(
@@ -49,7 +50,7 @@ static void open_thread_module_enter_submenu_cb(
       thread_sniffer_init();
       break;
     case MENU_THREAD_SNIFFER_RUN:
-      menu_screens_set_app_state(true, thread_sniffer_input);
+      menus_module_set_app_state(true, thread_sniffer_input);
       led_control_run_effect(led_control_zigbee_scanning);
       thread_sniffer_run();
       break;
@@ -109,7 +110,7 @@ static void thread_sniffer_input(uint8_t button_name, uint8_t button_event) {
       thread_sniffer_stop();
       led_control_stop();
       menu_screens_exit_submenu();
-      menu_screens_set_app_state(false, NULL);
+      menus_module_set_app_state(false, NULL);
       break;
     case BUTTON_RIGHT:
       break;

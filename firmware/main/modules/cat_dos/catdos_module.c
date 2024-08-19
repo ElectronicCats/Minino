@@ -22,6 +22,7 @@
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
 #include "menu_screens_modules.h"
+#include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
 #include "sdkconfig.h"
@@ -439,7 +440,7 @@ void catdos_module_begin() {
   esp_log_level_set(CATDOS_TAG, ESP_LOG_NONE);
 #endif
   // ESP_ERROR_CHECK(esp_event_loop_create_default());
-  menu_screens_set_app_state(true, catdos_module_state_machine);
+  menus_module_set_app_state(true, catdos_module_state_machine);
 
   oled_screen_clear(OLED_DISPLAY_NORMAL);
   oled_screen_display_text_center("THIS APP STILL", 0, OLED_DISPLAY_INVERT);
@@ -591,7 +592,7 @@ static void catdos_module_state_machine(uint8_t button_name,
     case CATDOS_STATE_CONFIG_WIFI: {
       switch (button_name) {
         case BUTTON_LEFT:
-          menu_screens_set_app_state(false, NULL);
+          menus_module_set_app_state(false, NULL);
           menu_screens_exit_submenu();
           break;
         case BUTTON_RIGHT:
@@ -631,7 +632,7 @@ static void catdos_module_state_machine(uint8_t button_name,
     case CATDOS_STATE_ATTACK: {
       switch (button_name) {
         case BUTTON_LEFT:
-          menu_screens_set_app_state(false, NULL);
+          menus_module_set_app_state(false, NULL);
           menu_screens_exit_submenu();
           break;
         case BUTTON_RIGHT:
