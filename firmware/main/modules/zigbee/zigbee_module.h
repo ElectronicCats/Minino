@@ -7,4 +7,9 @@
  * @param app_selected The selected app
  */
 void zigbee_module_begin(int app_selected);
+
+void zigbee_module_switch_enter();
+
+void zigbee_module_sniffer_enter();
+
 #endif  // ZIGBEE_MODULE_H

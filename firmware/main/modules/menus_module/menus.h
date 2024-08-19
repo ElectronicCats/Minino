@@ -6,7 +6,16 @@
 #include "apps/ble/trackers/trackers_module.h"
 #include "modules/about/about_module.h"
 
+#include "catdos_module.h"
+#include "deauth_module.h"
+#include "display_settings.h"
+#include "file_manager_module.h"
+#include "open_thread_module.h"
 #include "ota_module.h"
+#include "stealth_mode.h"
+#include "web_file_browser_module.h"
+#include "wifi_module.h"
+#include "zigbee_module.h"
 
 typedef enum {
   MENU_MAIN_2 = 0,
@@ -169,15 +178,15 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_WIFI_ANALIZER_2,
      .parent_idx = MENU_WIFI_APPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .on_enter_cb = wifi_module_analizer_begin,
+     .on_exit_cb = wifi_module_analizer_exit,
      .is_visible = true},
     {.display_name = "Start",
      .menu_idx = MENU_WIFI_ANALYZER_RUN_2,
      .parent_idx = MENU_WIFI_ANALIZER_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .on_enter_cb = wifi_module_init_sniffer,
+     .on_exit_cb = wifi_module_analyzer_run_exit,
      .is_visible = true},
     {.display_name = "Settings",
      .menu_idx = MENU_WIFI_ANALYZER_SETTINGS_2,
@@ -198,7 +207,7 @@ menu_t menus[] = {  //////////////////////////////////
      .parent_idx = MENU_WIFI_ANALYZER_SETTINGS_2,
      .last_selected_submenu = 0,
      .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .on_exit_cb = wifi_module_analyzer_destination_exit,
      .is_visible = true},
     {.display_name = "Help",
      .menu_idx = MENU_WIFI_ANALYZER_HELP_2,
@@ -213,7 +222,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_WIFI_DEAUTH_2,
      .parent_idx = MENU_WIFI_APPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = deauth_module_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
@@ -222,7 +231,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_WIFI_DOS_2,
      .parent_idx = MENU_WIFI_APPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = catdos_module_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
@@ -283,7 +292,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_ZIGBEE_LIGHT_2,
      .parent_idx = MENU_ZIGBEE_SPOOFING_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = zigbee_module_switch_enter,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Light",
@@ -299,7 +308,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_ZIGBEE_SWITCH_2,
      .parent_idx = MENU_ZIGBEE_APPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = zigbee_module_sniffer_enter,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
@@ -317,8 +326,8 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_THREAD_BROADCAST_2,
      .parent_idx = MENU_THREAD_APPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .on_enter_cb = open_thread_module_broadcast_enter,
+     .on_exit_cb = open_thread_module_exit,
      .is_visible = true},
   #endif
   #ifdef CONFIG_THREAD_APP_SNIFFER
@@ -326,14 +335,14 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_THREAD_SNIFFER_2,
      .parent_idx = MENU_THREAD_APPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .on_enter_cb = open_thread_module_sniffer_enter,
+     .on_exit_cb = open_thread_module_exit,
      .is_visible = true},
     {.display_name = "Run",
      .menu_idx = MENU_THREAD_SNIFFER_RUN_2,
      .parent_idx = MENU_THREAD_SNIFFER_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = open_thread_module_sniffer_run,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
@@ -418,7 +427,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_SETTINGS_DISPLAY_2,
      .parent_idx = MENU_SETTINGS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = display_config_module_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "System",
@@ -469,7 +478,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_FILE_MANAGER_LOCAL_2,
      .parent_idx = MENU_FILE_MANAGER_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = file_manager_module_init,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
@@ -478,7 +487,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_FILE_MANAGER_WEB_2,
      .parent_idx = MENU_FILE_MANAGER_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = web_file_browser_module_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
@@ -487,6 +496,6 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_STEALTH_MODE_2,
      .parent_idx = MENU_SETTINGS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = stealth_mode_open_menu,
      .on_exit_cb = NULL,
      .is_visible = true}};
