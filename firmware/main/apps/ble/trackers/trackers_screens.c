@@ -18,7 +18,7 @@ static const general_menu_t main_menu = {
     .menu_level = GENERAL_TREE_APP_MENU,
 };
 
-static const general_menu_t trackers_list = {
+static general_menu_t trackers_list = {
     .menu_items = list_trackers,
     .menu_count = 20,
     .menu_level = GENERAL_TREE_APP_SUBMENU,
@@ -41,6 +41,7 @@ void module_register_menu(menu_tree_t menu) {
 void module_add_tracker_to_list(char* tracker_name) {
   list_trackers[trackers_current_item] = tracker_name;
   trackers_current_item++;
+  trackers_list.menu_count = trackers_current_item;
 }
 
 void module_update_scan_state(bool scanning) {

@@ -36,6 +36,9 @@ void general_screen_display_card_information_handler(char* title,
                                                      char* body,
                                                      void* callback_exit,
                                                      void* callback_restore);
-void general_screen_display_scrolling_text_handler(void* callback_exit,
-                                                   void* callback_restore);
+void general_screen_display_scrolling_text_handler(void* callback_exit);
+char** general_screen_truncate_text(char* p_text, int* num_lines);
+void general_screen_display_auto_card(char* lines,
+                                      int num_lines,
+                                      void* callback_exit);
 #endif  // GENERAL_SCREENS_H

@@ -760,11 +760,20 @@ void oled_driver_draw_custom_box(oled_driver_t* dev) {
 void oled_driver_draw_modal_box(oled_driver_t* dev,
                                 int pos_x,
                                 int modal_height) {
-  int page = 2;
+#ifdef CONFIG_RESOLUTION_128X64
+  int initial_page = 2;
+  int height_offset = 35;
+  int y_offset = 3;
+#else
+  int initial_page = 1;
+  int height_offset = 18;
+  int y_offset = 1;
+#endif
+  int page = initial_page;
   int x = pos_x;
-  int y = page * 8 - 3;  // 13
+  int y = page * 8 - y_offset;  // 13
   int width = x + dev->_width - 4;
-  int height = y + 35;  //- 6; // 15
+  int height = y + height_offset;  //- 6; // 15
 
   oled_driver_draw_rect(dev, x, y, width, height, 0);
   oled_driver_draw_rect(dev, x, y, width - 1, height - 1, 0);

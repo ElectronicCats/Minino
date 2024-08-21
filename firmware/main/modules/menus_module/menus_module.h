@@ -15,6 +15,7 @@
 typedef struct {
   bool in_app;
   input_callback_t input_callback;
+  input_callback_t input_last_callback;
 } app_state2_t;
 
 void menus_module_begin();
@@ -22,6 +23,8 @@ void menus_module_enable_input();
 void menus_module_disable_input();
 void menus_module_set_app_state(bool in_app, input_callback_t input_cb);
 menu_idx_t menus_module_get_current_menu();
+void menus_module_set_app_state_last();
 bool menus_module_get_app_state();
 void menus_module_exit_app();
 void menus_module_exit_app_information();
+void menus_module_screen_saver_run();

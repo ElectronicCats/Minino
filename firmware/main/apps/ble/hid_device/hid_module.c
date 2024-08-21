@@ -12,6 +12,13 @@ static void hid_module_cb_event_volumen(uint8_t button_name,
                                         uint8_t button_event);
 static void hid_module_cb_connection_handler(bool connection);
 
+static void hid_module_reset_menu() {
+  current_item = 0;
+  hid_module_register_menu(GENERAL_TREE_APP_MENU);
+  hid_module_display_menu(current_item);
+  menus_module_set_app_state(true, hid_module_cb_event);
+}
+
 static void hid_module_increment_item() {
   current_item++;
 }
@@ -98,7 +105,7 @@ static void hid_module_cb_event(uint8_t button_name, uint8_t button_event) {
         char* hid_name[20];
         ble_hid_get_device_name(&hid_name);
         general_screen_display_card_information_handler(
-            "Device Name", &hid_name, hid_module_display_menu,
+            "Device Name", &hid_name, hid_module_reset_menu,
             hid_module_cb_event);
       } else if (current_item == HID_CONFIG_MAC) {
         current_item = 0;
@@ -108,7 +115,7 @@ static void hid_module_cb_event(uint8_t button_name, uint8_t button_event) {
         sprintf(mac_address, "%02X:%02X:%02X:%02X", hid_mac[2], hid_mac[3],
                 hid_mac[4], hid_mac[5]);
         general_screen_display_card_information_handler(
-            "Device MAC", &mac_address, hid_module_display_menu,
+            "Device MAC", &mac_address, hid_module_reset_menu,
             hid_module_cb_event);
       } else if (current_item == HID_CONFIG_START) {
         current_item = 0;

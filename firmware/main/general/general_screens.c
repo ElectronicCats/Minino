@@ -3,7 +3,15 @@
 #include "keyboard_module.h"
 #include "oled_screen.h"
 
-#define ITEMOFFSET 2
+#define MAX_LINE_CHAR 16
+
+#ifdef CONFIG_RESOLUTION_128X64
+  #define ITEMOFFSET       2
+  #define ITEM_PAGE_OFFSET 2
+#else  // CONFIG_RESOLUTION_128X32
+  #define ITEMOFFSET       1
+  #define ITEM_PAGE_OFFSET 1
+#endif
 static uint8_t scrolling_option = 0;
 static const general_menu_t* current_menu_ctx = NULL;
 static const general_menu_t* scrolling_menu_ctx = NULL;
@@ -12,6 +20,48 @@ static void* (*menu_restore_function)(void);
 static void general_screen_display_scrolling();
 static void general_screen_cb_modal(uint8_t button_name, uint8_t button_event);
 static void general_screen_cb_scroll(uint8_t button_name, uint8_t button_event);
+
+char** general_screen_truncate_text(char* p_text, int* num_lines) {
+  char** lines = NULL;
+  *num_lines = 0;
+
+  if (strlen(p_text) > MAX_LINE_CHAR) {
+    char temp[50];
+    strncpy(temp, p_text, 50);
+
+    char* token = strtok(temp, " ");
+    char current_line[MAX_LINE_CHAR] = "";
+
+    while (token != NULL) {
+      if (strlen(current_line) + strlen(token) + 1 <= MAX_LINE_CHAR) {
+        if (strlen(current_line) > 0) {
+          strcat(current_line, " ");
+        }
+        strcat(current_line, token);
+      } else {
+        lines = realloc(lines, sizeof(char*) * (*num_lines + 1));
+        lines[*num_lines] = strdup(current_line);
+        (*num_lines)++;
+
+        strcpy(current_line, token);
+      }
+      token = strtok(NULL, " ");
+    }
+
+    if (strlen(current_line) > 0) {
+      lines = realloc(lines, sizeof(char*) * (*num_lines + 1));
+      lines[*num_lines] = strdup(current_line);
+      (*num_lines)++;
+    }
+  } else {
+    lines = realloc(lines, sizeof(char*) * (*num_lines + 1));
+    lines[*num_lines] = strdup(p_text);
+    (*num_lines)++;
+  }
+
+  return lines;  // Regresar el array de líneas spliteadas
+}
+
 static void general_screen_display_selected_item(char* item_text,
                                                  uint8_t item_number) {
   oled_screen_display_bitmap(minino_face, 0, (item_number * 8), 8, 8,
@@ -53,7 +103,7 @@ static void general_screen_cb_modal(uint8_t button_name, uint8_t button_event) {
     case BUTTON_RIGHT:
       break;
     case BUTTON_LEFT:
-      keyboard_module_set_input_callback(menu_restore_function);
+      keyboard_module_restore_input_callback();
       menu_exit_function();
       break;
     default:
@@ -80,7 +130,7 @@ static void general_screen_cb_scroll(uint8_t button_name,
     case BUTTON_LEFT:
       general_register_menu(current_menu_ctx);
       general_register_scrolling_menu(NULL);
-      keyboard_module_set_input_callback(menu_restore_function);
+      keyboard_module_restore_input_callback();
       menu_exit_function();
       break;
     default:
@@ -95,18 +145,29 @@ static void general_screen_display_scrolling() {
   if (scrolling_menu_ctx == NULL) {
     return;
   }
+
   oled_screen_display_card_border();
-  int page = 2;
-  oled_screen_display_text_center("Information", page, OLED_DISPLAY_NORMAL);
-  uint16_t end_index = scrolling_option + 3;
+#ifdef CONFIG_RESOLUTION_128X64
+  uint16_t items_per_screen = 3;
+  uint16_t screen_title = 1;
+
+  oled_screen_display_text_center("Information", ITEM_PAGE_OFFSET,
+                                  OLED_DISPLAY_NORMAL);
+#else
+  uint16_t items_per_screen = 2;
+  uint16_t screen_title = 0;
+#endif
+
+  uint16_t end_index = scrolling_option + items_per_screen;
   if (end_index > scrolling_menu_ctx->menu_count) {
     end_index = scrolling_menu_ctx->menu_count;
   }
 
   for (uint16_t i = scrolling_option; i < end_index; i++) {
-    oled_screen_display_text(scrolling_menu_ctx->menu_items[i], 3,
-                             (i - scrolling_option) + (ITEMOFFSET + 1),
-                             OLED_DISPLAY_NORMAL);
+    oled_screen_display_text(
+        scrolling_menu_ctx->menu_items[i], 3,
+        (i - scrolling_option) + (ITEMOFFSET + screen_title),
+        OLED_DISPLAY_NORMAL);
   }
 }
 
@@ -122,11 +183,9 @@ void general_clear_screen() {
   oled_screen_clear();
 }
 
-void general_screen_display_scrolling_text_handler(void* callback_exit,
-                                                   void* callback_restore) {
+void general_screen_display_scrolling_text_handler(void* callback_exit) {
   scrolling_option = 0;
   menu_exit_function = callback_exit;
-  menu_restore_function = callback_restore;
   keyboard_module_set_input_callback(general_screen_cb_scroll);
   general_screen_display_scrolling();
 }
@@ -145,7 +204,7 @@ void genera_screen_display_card_information(char* title, char* body) {
   general_clear_screen();
   general_screen_display_breadcrumb();
   oled_screen_display_card_border();
-  int page = 2;
+  int page = ITEM_PAGE_OFFSET;
   oled_screen_display_text_center(title, page, OLED_DISPLAY_NORMAL);
   page++;
   if (strlen(body) > MAX_LINE_CHAR) {
@@ -158,7 +217,7 @@ void genera_screen_display_card_information(char* title, char* body) {
 void genera_screen_display_notify_information(char* title, char* body) {
   general_clear_screen();
   general_screen_display_breadcrumb();
-  int page = 2;
+  int page = ITEM_PAGE_OFFSET;
   oled_screen_display_text_center(title, page, OLED_DISPLAY_NORMAL);
   page++;
   if (strlen(body) > MAX_LINE_CHAR) {

@@ -1,27 +1,33 @@
 #include "keyboard_module.h"
 #include "esp_log.h"
 #include "esp_timer.h"
-#include "menu_screens_modules.h"
+#include "menus_module.h"
 #include "preferences.h"
 
 static int IDLE_TIMEOUT_S = 30;
 
 static const char* TAG = "keyboard";
 static input_callback_t input_callback = NULL;
+static input_callback_t last_input_callback = NULL;
 esp_timer_handle_t idle_timer;
 static bool is_idle = false;
 static bool lock_input = false;
 
+static void button_event_cb(void* arg, void* data);
+
 void timer_callback() {
-  screen_module_menu_t menu = menu_screens_get_current_menu();
-  if (menu == MENU_WIFI_ANALYZER_RUN || menu == MENU_WIFI_ANALYZER_SUMMARY ||
-      menu == MENU_GPS_DATE_TIME || menu == MENU_GPS_LOCATION ||
-      menu == MENU_GPS_SPEED) {
+  menu_idx_t menu = menus_module_get_current_menu();
+  if (menu == MENU_WIFI_ANALYZER_RUN_2 ||
+      menu == MENU_WIFI_ANALYZER_SUMMARY_2 || menu == MENU_GPS_DATE_TIME_2 ||
+      menu == MENU_GPS_LOCATION_2 || menu == MENU_GPS_SPEED_2) {
+    return;
+  }
+  if (menus_module_get_app_state()) {
     return;
   }
 
   is_idle = true;
-  screen_saver_run();
+  menus_module_screen_saver_run();
 }
 void keyboard_module_reset_idle_timer() {
   esp_timer_stop(idle_timer);
@@ -32,7 +38,6 @@ void keyboard_module_set_lock(bool lock) {
   lock_input = lock;
 }
 
-static void button_event_cb(void* arg, void* data);
 void button_init(uint32_t button_num, uint8_t mask) {
   button_config_t btn_cfg = {
       .type = BUTTON_TYPE_GPIO,
@@ -107,7 +112,12 @@ static void button_event_cb(void* arg, void* data) {
 }
 
 void keyboard_module_set_input_callback(input_callback_t input_cb) {
+  last_input_callback = input_callback;
   input_callback = input_cb;
+}
+
+void keyboard_module_restore_input_callback() {
+  input_callback = last_input_callback;
 }
 
 void keyboard_module_begin() {

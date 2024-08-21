@@ -4,6 +4,7 @@
 #include "apps/ble/hid_device/hid_module.h"
 #include "apps/ble/spam/spam_module.h"
 #include "apps/ble/trackers/trackers_module.h"
+#include "apps/zigbee/z_switch/z_switch_module.h"
 #include "modules/about/about_module.h"
 
 #include "ota_module.h"
@@ -280,14 +281,14 @@ menu_t menus[] = {  //////////////////////////////////
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Switch",
-     .menu_idx = MENU_ZIGBEE_LIGHT_2,
+     .menu_idx = MENU_ZIGBEE_SWITCH_2,
      .parent_idx = MENU_ZIGBEE_SPOOFING_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = z_switch_module_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Light",
-     .menu_idx = MENU_ZIGBEE_SNIFFER_2,
+     .menu_idx = MENU_ZIGBEE_LIGHT_2,
      .parent_idx = MENU_ZIGBEE_SPOOFING_2,
      .last_selected_submenu = 0,
      .on_enter_cb = NULL,
@@ -296,7 +297,7 @@ menu_t menus[] = {  //////////////////////////////////
   #endif
   #ifdef CONFIG_ZIGBEE_APP_SNIFFER
     {.display_name = "Sniffer",
-     .menu_idx = MENU_ZIGBEE_SWITCH_2,
+     .menu_idx = MENU_ZIGBEE_SNIFFER_2,
      .parent_idx = MENU_ZIGBEE_APPS_2,
      .last_selected_submenu = 0,
      .on_enter_cb = NULL,

@@ -47,11 +47,11 @@ static const general_menu_t about_legal_menu = {
 void about_module_display_credits_menu() {
   general_register_scrolling_menu(&about_credits_menu);
   general_screen_display_scrolling_text_handler(
-      menus_module_exit_app_information, NULL);
+      menus_module_exit_app_information);
 }
 
 void about_module_display_legal_menu() {
   general_register_scrolling_menu(&about_legal_menu);
   general_screen_display_scrolling_text_handler(
-      menus_module_exit_app_information, NULL);
+      menus_module_exit_app_information);
 }
