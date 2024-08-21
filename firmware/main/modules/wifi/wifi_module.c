@@ -10,15 +10,15 @@
 #include "string.h"
 
 #include "apps/wifi/deauth/include/deauth_module.h"
-#include "captive_portal.h"
 #include "led_events.h"
 #include "menu_screens_modules.h"
-#include "modules/wifi/wifi_module.h"
+#include "menus_module.h"
 #include "modules/wifi/wifi_screens_module.h"
 #include "oled_screen.h"
 #include "sd_card.h"
 #include "wifi_attacks.h"
 #include "wifi_controller.h"
+#include "wifi_module.h"
 #include "wifi_scanner.h"
 
 static const char* TAG = "wifi_module";
@@ -115,6 +115,34 @@ void wifi_module_init_sniffer() {
   led_control_run_effect(led_control_zigbee_scanning);
 }
 
+void wifi_module_analyzer_run_exit() {
+  wifi_sniffer_stop();
+  led_control_stop();
+  wifi_sniffer_load_summary();
+}
+
+void wifi_module_analizer_summary_exit() {
+  wifi_sniffer_close_file();
+}
+
+void wifi_module_analizer_exit() {
+  menus_module_set_reset_screen(MENU_WIFI_APPS_2);
+  esp_restart();
+}
+
+void wifi_module_analyzer_destination_exit() {
+  if (wifi_sniffer_is_destination_sd()) {
+    // Verify if the SD card is inserted
+    sd_card_unmount();
+    if (sd_card_mount() == ESP_OK) {
+      vTaskDelay(100 / portTICK_PERIOD_MS);
+      sd_card_unmount();
+    } else {
+      wifi_sniffer_set_destination_internal();
+    }
+  }
+}
+
 void wifi_module_exit_submenu_cb() {
   screen_module_menu_t current_menu = menu_screens_get_current_menu();
 
@@ -123,9 +151,6 @@ void wifi_module_exit_submenu_cb() {
       menu_screens_unregister_submenu_cbs();
       break;
     case MENU_WIFI_ANALYZER_RUN:
-      wifi_sniffer_stop();
-      led_control_stop();
-      wifi_sniffer_load_summary();
       break;
     case MENU_WIFI_ANALYZER_ASK_SUMMARY:
       oled_screen_clear();

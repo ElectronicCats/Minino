@@ -15,20 +15,6 @@ static bool lock_input = false;
 
 static void button_event_cb(void* arg, void* data);
 
-void timer_callback() {
-  menu_idx_t menu = menus_module_get_current_menu();
-  if (menu == MENU_WIFI_ANALYZER_RUN_2 ||
-      menu == MENU_WIFI_ANALYZER_SUMMARY_2 || menu == MENU_GPS_DATE_TIME_2 ||
-      menu == MENU_GPS_LOCATION_2 || menu == MENU_GPS_SPEED_2) {
-    return;
-  }
-  if (menus_module_get_app_state()) {
-    return;
-  }
-
-  is_idle = true;
-  menus_module_screen_saver_run();
-}
 void keyboard_module_reset_idle_timer() {
   esp_timer_stop(idle_timer);
   esp_timer_start_once(idle_timer, IDLE_TIMEOUT_S * 1000 * 1000);
@@ -129,9 +115,4 @@ void keyboard_module_begin() {
   button_init(RIGHT_BUTTON_PIN, RIGHT_BUTTON_MASK);
   button_init(UP_BUTTON_PIN, UP_BUTTON_MASK);
   button_init(DOWN_BUTTON_PIN, DOWN_BUTTON_MASK);
-  esp_timer_create_args_t timer_args = {.callback = timer_callback,
-                                        .arg = NULL,
-
-                                        .name = "one_shot_timer"};
-  esp_err_t err = esp_timer_create(&timer_args, &idle_timer);
 }
