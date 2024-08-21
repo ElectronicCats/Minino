@@ -49,8 +49,7 @@ void menus_screens_display_menus_f(menus_manager_t* ctx) {
             .display_name;
     char* str = (char*) malloc(strlen(display_name) + 3);
     sprintf(str, "%s%s", i == 1 ? prefix : " ", display_name);
-    oled_screen_display_text(str, 0, i * page_increment + 1,
-                             OLED_DISPLAY_NORMAL);
+    oled_screen_display_text(str, 0, i * page_increment, OLED_DISPLAY_NORMAL);
   }
 
 #ifdef CONFIG_RESOLUTION_128X64

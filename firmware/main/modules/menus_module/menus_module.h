@@ -28,3 +28,4 @@ bool menus_module_get_app_state();
 void menus_module_exit_app();
 void menus_module_exit_app_information();
 void menus_module_screen_saver_run();
+void menus_module_set_reset_screen(menu_idx_t menu);

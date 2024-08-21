@@ -208,8 +208,7 @@ static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event) {
     case BUTTON_LEFT:
       wifi_scanner_clear_ap_records();
       printf("Exit deauth: %d\n", current_item);
-      menus_module_set_app_state(false, NULL);
-      menu_screens_exit_submenu();
+      menus_module_exit_app();
       // led_control_stop();
       break;
     default:

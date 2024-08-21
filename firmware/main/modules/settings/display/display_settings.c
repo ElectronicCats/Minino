@@ -115,8 +115,7 @@ static void display_config_module_state_machine(uint8_t button_name,
   }
   switch (button_name) {
     case BUTTON_LEFT:
-      menus_module_set_app_state(false, NULL);
-      menu_screens_exit_submenu();
+      menus_module_exit_app();
       break;
     case BUTTON_RIGHT:
       ESP_LOGI(TAG_DISPLAY_CONFIG, "Selected item: %d", selected_item);

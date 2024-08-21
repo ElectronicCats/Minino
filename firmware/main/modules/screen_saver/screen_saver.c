@@ -16,7 +16,7 @@ esp_timer_handle_t screen_savar_idle_timer2;
 void screen_saver_run();
 
 static void timer_callback() {
-  if (menus_module_get_app_state()) {
+  if (menus_module_get_app_state() || screen_saver_running) {
     return;
   }
 
