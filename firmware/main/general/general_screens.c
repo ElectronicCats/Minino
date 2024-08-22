@@ -1,6 +1,6 @@
 #include "general/general_screens.h"
 #include "general/bitmaps_general.h"
-#include "keyboard_module.h"
+#include "menus_module.h"
 #include "oled_screen.h"
 
 #define MAX_LINE_CHAR 16
@@ -103,7 +103,7 @@ static void general_screen_cb_modal(uint8_t button_name, uint8_t button_event) {
     case BUTTON_RIGHT:
       break;
     case BUTTON_LEFT:
-      keyboard_module_restore_input_callback();
+      menus_module_set_app_state_last();
       menu_exit_function();
       break;
     default:
@@ -130,7 +130,7 @@ static void general_screen_cb_scroll(uint8_t button_name,
     case BUTTON_LEFT:
       general_register_menu(current_menu_ctx);
       general_register_scrolling_menu(NULL);
-      keyboard_module_restore_input_callback();
+      menus_module_set_app_state_last();
       menu_exit_function();
       break;
     default:
@@ -186,7 +186,7 @@ void general_clear_screen() {
 void general_screen_display_scrolling_text_handler(void* callback_exit) {
   scrolling_option = 0;
   menu_exit_function = callback_exit;
-  keyboard_module_set_input_callback(general_screen_cb_scroll);
+  menus_module_set_app_state(true, general_screen_cb_scroll);
   general_screen_display_scrolling();
 }
 
@@ -196,7 +196,7 @@ void general_screen_display_card_information_handler(char* title,
                                                      void* callback_restore) {
   menu_exit_function = callback_exit;
   menu_restore_function = callback_restore;
-  keyboard_module_set_input_callback(general_screen_cb_modal);
+  menus_module_set_app_state(true, general_screen_cb_modal);
   genera_screen_display_card_information(title, body);
 }
 
