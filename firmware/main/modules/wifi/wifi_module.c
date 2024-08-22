@@ -25,53 +25,6 @@ static const char* TAG = "wifi_module";
 bool analizer_initialized = false;
 const uint32_t SOUND_DURATION = 100;
 
-/**
- * @brief Enum with the wifi module states
- *
- */
-typedef enum {
-  WIFI_STATE_SCANNING = 0,
-  WIFI_STATE_SCANNED,
-  WIFI_STATE_DETAILS,
-  WIFI_STATE_ATTACK_SELECTOR,
-  WIFI_STATE_ATTACK,
-  WIFI_STATE_ATTACK_CAPTIVE_PORTAL,
-} wifi_state_t;
-
-/**
- * @brief Structure to store the wifi module data
- *
- */
-typedef struct {
-  wifi_state_t state;
-  wifi_config_t wifi_config;
-} wifi_module_t;
-
-char* wifi_state_names[] = {
-    "WIFI_STATE_SCANNING", "WIFI_STATE_SCANNED",
-    "WIFI_STATE_DETAILS",  "WIFI_STATE_ATTACK_SELECTOR",
-    "WIFI_STATE_ATTACK",   "WIFI_STATE_ATTACK_CAPTIVE_PORTAL"};
-
-static TaskHandle_t task_display_scanning = NULL;
-static TaskHandle_t task_display_attacking = NULL;
-static wifi_scanner_ap_records_t* ap_records;
-static wifi_module_t current_wifi_state;
-static int current_option = 0;
-static bool show_details = false;
-static bool valid_records = false;
-static int index_targeted = 0;
-
-static void scanning_task(void* pvParameters) {
-  while (!valid_records) {
-    wifi_scanner_module_scan();
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
-  }
-  vTaskSuspend(task_display_scanning);
-  wifi_screens_module_display_scanned_networks(
-      ap_records->records, ap_records->count, current_option);
-  vTaskDelete(NULL);
-}
-
 void wifi_module_init_sniffer() {
   oled_screen_clear();
   if (wifi_sniffer_is_destination_sd()) {
@@ -80,18 +33,9 @@ void wifi_module_init_sniffer() {
       case ESP_OK:
         ESP_LOGI(TAG, "SD card mounted");
         break;
-      case ESP_ERR_ALREADY_MOUNTED:
-        ESP_LOGI(TAG, "SD card already mounted");
-        break;
       case ESP_ERR_NOT_SUPPORTED:
         ESP_LOGI(TAG, "SD card not supported");
-        oled_screen_display_text_center("SD card not", 0, OLED_DISPLAY_NORMAL);
-        oled_screen_display_text_center("supported", 1, OLED_DISPLAY_NORMAL);
-        oled_screen_display_text_center("Switching to", 3, OLED_DISPLAY_NORMAL);
-        oled_screen_display_text_center("internal storage", 4,
-                                        OLED_DISPLAY_NORMAL);
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
-        oled_screen_clear();
+        wifi_screeens_show_sd_not_supported();
         wifi_sniffer_set_destination_internal();
         // TODO: add an option to format the SD card
         break;
@@ -99,18 +43,11 @@ void wifi_module_init_sniffer() {
         ESP_LOGE(TAG, "SD card mount failed: reason: %s", esp_err_to_name(err));
       case ESP_ERR_NOT_FOUND:
         ESP_LOGW(TAG, "SD card not found");
-        oled_screen_display_text_center("SD card ", 0, OLED_DISPLAY_NORMAL);
-        oled_screen_display_text_center("not found", 1, OLED_DISPLAY_NORMAL);
-        oled_screen_display_text_center("Switching to", 3, OLED_DISPLAY_NORMAL);
-        oled_screen_display_text_center("internal storage", 4,
-                                        OLED_DISPLAY_NORMAL);
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
-        oled_screen_clear();
+        wifi_screeens_show_sd_not_found();
         wifi_sniffer_set_destination_internal();
         break;
     }
   }
-
   wifi_sniffer_start();
   led_control_run_effect(led_control_zigbee_scanning);
 }
@@ -121,13 +58,12 @@ void wifi_module_analyzer_run_exit() {
   wifi_sniffer_load_summary();
 }
 
-void wifi_module_analizer_summary_exit() {
+void wifi_module_analyzer_summary_exit() {
   wifi_sniffer_close_file();
 }
 
-void wifi_module_analizer_exit() {
-  menus_module_set_reset_screen(MENU_WIFI_APPS_2);
-  esp_restart();
+void wifi_module_analyzer_exit() {
+  menus_module_restart();
 }
 
 void wifi_module_analyzer_destination_exit() {
@@ -192,13 +128,6 @@ void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
     case MENU_WIFI_ANALIZER:
       wifi_module_analizer_begin();
       break;
-    case MENU_WIFI_DEAUTH:
-      deauth_module_begin();
-      break;
-    case MENU_WIFI_DOS:
-      oled_screen_clear();
-      catdos_module_begin();
-      break;
     case MENU_WIFI_ANALYZER_RUN:
       wifi_module_init_sniffer();
       break;
@@ -236,17 +165,7 @@ void wifi_module_begin() {
   menu_screens_register_exit_submenu_cb(wifi_module_exit_submenu_cb);
 }
 
-void wifi_module_exit() {
-  screen_module_set_screen(MENU_WIFI_DEAUTH);
-  esp_restart();
-}
-
 void wifi_module_analizer_begin() {
-  if (analizer_initialized) {
-    ESP_LOGW(TAG, "WiFi analizer already initialized");
-    return;
-  }
-
   ESP_LOGI(TAG, "Initializing WiFi analizer module");
   wifi_sniffer_register_cb(wifi_screens_module_display_sniffer_cb);
   wifi_sniffer_register_animation_cbs(wifi_screens_sniffer_animation_start,

@@ -26,8 +26,8 @@ void wifi_module_init_sniffer();
  */
 void wifi_module_exit(void);
 void wifi_module_analyzer_run_exit();
-void wifi_module_analizer_exit();
-void wifi_module_analizer_summary_exit();
+void wifi_module_analyzer_exit();
+void wifi_module_analyzer_summary_exit();
 void wifi_module_analyzer_destination_exit();
 
 /**
