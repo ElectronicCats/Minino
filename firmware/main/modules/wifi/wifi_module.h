@@ -20,6 +20,8 @@ void wifi_module_analizer_begin();
 
 void wifi_module_init_sniffer();
 
+void wifi_module_analyzer_run();
+
 /**
  * @brief Stop the wifi module
  *
@@ -52,10 +54,3 @@ void wifi_module_update_channel_options();
  * @return void
  */
 void wifi_module_update_destination_options();
-
-/**
- * @brief State machine for the wifi module
- *
- * @param button_pressed The button pressed
- */
-void wifi_module_keyboard_cb(uint8_t button_name, uint8_t button_event);

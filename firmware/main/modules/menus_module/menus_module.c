@@ -204,15 +204,11 @@ void menus_module_set_app_state_last() {
 }
 
 void menus_module_restart() {
-  app_state2.in_app = false;
-  app_state2.input_callback = NULL;
   menus_module_set_reset_screen(menus_ctx->parent_menu_idx);
   esp_restart();
 }
 
 void menus_module_exit_app() {
-  app_state2.in_app = false;
-  app_state2.input_callback = NULL;
   menus_module_set_app_state(false, menus_input_cb);
   screen_saver_get_idle_state();
   navigation_exit();

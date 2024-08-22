@@ -1,5 +1,5 @@
+#include "wifi_module.h"
 
-#include "modules/wifi/wifi_module.h"
 #include "captive_portal.h"
 #include "catdos_module.h"
 #include "esp_check.h"
@@ -9,21 +9,43 @@
 #include "keyboard_module.h"
 #include "string.h"
 
-#include "apps/wifi/deauth/include/deauth_module.h"
+#include "deauth_module.h"
+#include "general_screens.h"
 #include "led_events.h"
 #include "menu_screens_modules.h"
 #include "menus_module.h"
-#include "modules/wifi/wifi_screens_module.h"
 #include "oled_screen.h"
 #include "sd_card.h"
 #include "wifi_attacks.h"
 #include "wifi_controller.h"
 #include "wifi_module.h"
 #include "wifi_scanner.h"
+#include "wifi_screens_module.h"
 
 static const char* TAG = "wifi_module";
 bool analizer_initialized = false;
 const uint32_t SOUND_DURATION = 100;
+
+static general_menu_t analyzer_summary_menu;
+static char* wifi_analizer_summary_2[120] = {
+    "Summary",
+};
+static void wifi_module_input_cb(uint8_t button_name, uint8_t button_event);
+
+uint16_t get_summary_rows_count() {
+  uint8_t num_items = 0;
+  char** submenu = wifi_analizer_summary_2;
+  if (submenu != NULL) {
+    while (submenu[num_items] != NULL) {
+      num_items++;
+    }
+  }
+
+  if (num_items == 0) {
+    return -1;
+  }
+  return num_items;
+}
 
 void wifi_module_init_sniffer() {
   oled_screen_clear();
@@ -51,11 +73,20 @@ void wifi_module_init_sniffer() {
   wifi_sniffer_start();
   led_control_run_effect(led_control_zigbee_scanning);
 }
+static void wifi_module_summary_exit_cb() {
+  wifi_sniffer_close_file();
+  menus_module_exit_app();
+}
 
 void wifi_module_analyzer_run_exit() {
+  analyzer_summary_menu.menu_items = wifi_analizer_summary_2;
+  analyzer_summary_menu.menu_level = GENERAL_TREE_APP_MENU;
   wifi_sniffer_stop();
   led_control_stop();
   wifi_sniffer_load_summary();
+  analyzer_summary_menu.menu_count = get_summary_rows_count();
+  general_register_scrolling_menu(&analyzer_summary_menu);
+  general_screen_display_scrolling_text_handler(wifi_module_summary_exit_cb);
 }
 
 void wifi_module_analyzer_summary_exit() {
@@ -121,6 +152,11 @@ void wifi_module_exit_submenu_cb() {
   }
 }
 
+void wifi_module_analyzer_run() {
+  wifi_module_init_sniffer();
+  menus_module_set_app_state(true, wifi_module_input_cb);
+}
+
 void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
   uint8_t selected_item = menu_screens_get_selected_item();
 
@@ -129,7 +165,7 @@ void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
       wifi_module_analizer_begin();
       break;
     case MENU_WIFI_ANALYZER_RUN:
-      wifi_module_init_sniffer();
+
       break;
     case MENU_WIFI_ANALYZER_SUMMARY:
       // wifi_sniffer_load_summary();
@@ -201,14 +237,14 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
   snprintf(link_type_str, 16, "LinkType: %" PRIu32, file_header.link_type);
 
   // Load header information
-  uint32_t summary_index = 2;  // Skip scroll text flag and Summary title
-  wifi_analizer_summary[summary_index++] = "----------------";
-  wifi_analizer_summary[summary_index++] = "Magic Number:";
-  wifi_analizer_summary[summary_index++] = magic_number_str;
-  wifi_analizer_summary[summary_index++] = major_version_str;
-  wifi_analizer_summary[summary_index++] = snaplen_str;
-  wifi_analizer_summary[summary_index++] = link_type_str;
-  wifi_analizer_summary[summary_index++] = "----------------";
+  uint32_t summary_index = 1;  // Skip scroll text flag and Summary title
+  wifi_analizer_summary_2[summary_index++] = "----------------";
+  wifi_analizer_summary_2[summary_index++] = "Magic Number:";
+  wifi_analizer_summary_2[summary_index++] = magic_number_str;
+  wifi_analizer_summary_2[summary_index++] = major_version_str;
+  wifi_analizer_summary_2[summary_index++] = snaplen_str;
+  wifi_analizer_summary_2[summary_index++] = link_type_str;
+  wifi_analizer_summary_2[summary_index++] = "----------------";
 
   uint32_t packet_num = 0;
   pcap_packet_header_t packet_header;
@@ -235,10 +271,10 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
              packet_header.packet_length);
 
     // Load packet header information
-    wifi_analizer_summary[summary_index++] = packet_num_str;
-    wifi_analizer_summary[summary_index++] = timestamp_seconds_str;
-    wifi_analizer_summary[summary_index++] = capture_length_str;
-    wifi_analizer_summary[summary_index++] = packet_length_str;
+    wifi_analizer_summary_2[summary_index++] = packet_num_str;
+    wifi_analizer_summary_2[summary_index++] = timestamp_seconds_str;
+    wifi_analizer_summary_2[summary_index++] = capture_length_str;
+    wifi_analizer_summary_2[summary_index++] = packet_length_str;
 
     size_t payload_length = packet_header.capture_length;
     packet_payload = malloc(payload_length);
@@ -269,11 +305,11 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
         snprintf(bssid_str2, 32, "       %2X:%2X:%2X", packet_payload[19],
                  packet_payload[20], packet_payload[21]);
 
-        wifi_analizer_summary[summary_index++] = "SSID:";
-        wifi_analizer_summary[summary_index++] = ssid_str;
-        wifi_analizer_summary[summary_index++] = channel_str;
-        wifi_analizer_summary[summary_index++] = bssid_str;
-        wifi_analizer_summary[summary_index++] = bssid_str2;
+        wifi_analizer_summary_2[summary_index++] = "SSID:";
+        wifi_analizer_summary_2[summary_index++] = ssid_str;
+        wifi_analizer_summary_2[summary_index++] = channel_str;
+        wifi_analizer_summary_2[summary_index++] = bssid_str;
+        wifi_analizer_summary_2[summary_index++] = bssid_str2;
       }
       // Frame Control Field is coded as LSB first
       char* frame_type_str = malloc(32);
@@ -295,20 +331,20 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
       snprintf(source_str2, 32, "        %2X:%2X:%2X", packet_payload[13],
                packet_payload[14], packet_payload[15]);
 
-      wifi_analizer_summary[summary_index++] = frame_type_str;
-      wifi_analizer_summary[summary_index++] = frame_subtype_str;
-      wifi_analizer_summary[summary_index++] = "Destination:";
-      wifi_analizer_summary[summary_index++] = destination_str;
-      wifi_analizer_summary[summary_index++] = destination_str2;
-      wifi_analizer_summary[summary_index++] = source_str;
-      wifi_analizer_summary[summary_index++] = source_str2;
+      wifi_analizer_summary_2[summary_index++] = frame_type_str;
+      wifi_analizer_summary_2[summary_index++] = frame_subtype_str;
+      wifi_analizer_summary_2[summary_index++] = "Destination:";
+      wifi_analizer_summary_2[summary_index++] = destination_str;
+      wifi_analizer_summary_2[summary_index++] = destination_str2;
+      wifi_analizer_summary_2[summary_index++] = source_str;
+      wifi_analizer_summary_2[summary_index++] = source_str2;
 
-      wifi_analizer_summary[summary_index++] = "----------------";
+      wifi_analizer_summary_2[summary_index++] = "----------------";
     } else {
       char* link_type_str = malloc(32);
       snprintf(link_type_str, 32, "Link Type: %" PRIu32, file_header.link_type);
-      wifi_analizer_summary[summary_index++] = "Unknown link type";
-      wifi_analizer_summary[summary_index++] = link_type_str;
+      wifi_analizer_summary_2[summary_index++] = "Unknown link type";
+      wifi_analizer_summary_2[summary_index++] = link_type_str;
     }
     free(packet_payload);
     packet_payload = NULL;
@@ -317,15 +353,15 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
   }
 
   if (packet_num > 0) {
-    wifi_analizer_summary[summary_index++] = "Open the pcap";
-    wifi_analizer_summary[summary_index++] = "file in";
-    wifi_analizer_summary[summary_index++] = "Wireshark to see";
-    wifi_analizer_summary[summary_index++] = "more.";
+    wifi_analizer_summary_2[summary_index++] = "Open the pcap";
+    wifi_analizer_summary_2[summary_index++] = "file in";
+    wifi_analizer_summary_2[summary_index++] = "Wireshark to see";
+    wifi_analizer_summary_2[summary_index++] = "more.";
   } else {
-    wifi_analizer_summary[summary_index++] = "No packets found";
+    wifi_analizer_summary_2[summary_index++] = "No packets found";
   }
 
-  wifi_analizer_summary[summary_index++] = NULL;
+  wifi_analizer_summary_2[summary_index++] = NULL;
   if (packet_payload) {
     free(packet_payload);
   }
@@ -334,7 +370,7 @@ err:
   if (packet_payload) {
     free(packet_payload);
   }
-  wifi_analizer_summary[summary_index++] = NULL;
+  wifi_analizer_summary_2[summary_index++] = NULL;
 }
 
 void wifi_module_update_channel_options() {
@@ -349,4 +385,23 @@ void wifi_module_update_destination_options() {
     selected_option = 1;
   }
   menu_screens_update_options(wifi_analizer_destination_items, selected_option);
+}
+
+static void wifi_module_input_cb(uint8_t button_name, uint8_t button_event) {
+  if (button_event != BUTTON_PRESS_DOWN) {
+    return;
+  }
+  switch (button_name) {
+    case BUTTON_LEFT:
+      wifi_module_analyzer_run_exit();
+      break;
+    case BUTTON_RIGHT:
+      break;
+    case BUTTON_UP:
+      break;
+    case BUTTON_DOWN:
+      break;
+    default:
+      break;
+  }
 }
