@@ -20,7 +20,7 @@ static void ble_module_state_machine(uint8_t button_name,
       bt_spam_app_stop();
       menus_module_set_app_state(false, NULL);
       animations_task_stop();
-      menus_module_exit_app();
+      menus_module_restart();
       break;
     case BUTTON_RIGHT:
     case BUTTON_UP:

@@ -203,18 +203,17 @@ void menus_module_set_app_state_last() {
   app_state2.input_callback = app_state2.input_last_callback;
 }
 
-void menus_module_exit_app() {
+void menus_module_restart() {
   app_state2.in_app = false;
   app_state2.input_callback = NULL;
   menus_module_set_reset_screen(menus_ctx->parent_menu_idx);
   esp_restart();
 }
 
-void menus_module_exit_app_information() {
+void menus_module_exit_app() {
   app_state2.in_app = false;
   app_state2.input_callback = NULL;
-  keyboard_module_set_input_callback(menus_input_cb);
-  // screen_module_set_reset_screen(menus_ctx->parent_menu_idx);
+  menus_module_set_app_state(false, menus_input_cb);
   screen_saver_get_idle_state();
   navigation_exit();
 }

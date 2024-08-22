@@ -43,17 +43,6 @@ void zigbee_module_begin(int app_selected) {
 #endif
 };
 
-void zigbee_module_app_selector() {
-  switch (app_screen_state_information.app_selected) {
-    case MENU_ZIGBEE_SWITCH:
-      break;
-    case MENU_ZIGBEE_SNIFFER:
-      break;
-    default:
-      break;
-  }
-}
-
 void zigbee_module_switch_enter() {
   radio_selector_set_zigbee_switch();
   menus_module_set_app_state(true, switch_input_cb);

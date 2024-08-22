@@ -25,7 +25,7 @@ void menus_module_set_app_state(bool in_app, input_callback_t input_cb);
 menu_idx_t menus_module_get_current_menu();
 void menus_module_set_app_state_last();
 bool menus_module_get_app_state();
+void menus_module_restart();
 void menus_module_exit_app();
-void menus_module_exit_app_information();
 void menus_module_screen_saver_run();
 void menus_module_set_reset_screen(menu_idx_t menu);

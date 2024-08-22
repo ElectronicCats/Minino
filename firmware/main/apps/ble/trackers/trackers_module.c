@@ -96,7 +96,7 @@ static void module_main_cb_event(uint8_t button_name, uint8_t button_event) {
         module_display_menu(current_item);
         menus_module_set_app_state(true, module_main_cb_event);
       } else {
-        menus_module_exit_app();
+        menus_module_restart();
       }
       break;
     default:

@@ -24,7 +24,7 @@ static void set_stealth_status() {
     buzzer_enable();
     leds_begin();
   }
-  menus_module_exit_app();
+  menus_module_restart();
   vTaskDelete(NULL);
 }
 

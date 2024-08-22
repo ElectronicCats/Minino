@@ -127,7 +127,7 @@ static void hid_module_cb_event(uint8_t button_name, uint8_t button_event) {
       }
       break;
     case BUTTON_LEFT:
-      menus_module_exit_app();
+      menus_module_restart();
       break;
     default:
       break;

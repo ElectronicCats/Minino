@@ -592,7 +592,7 @@ static void catdos_module_state_machine(uint8_t button_name,
     case CATDOS_STATE_CONFIG_WIFI: {
       switch (button_name) {
         case BUTTON_LEFT:
-          menus_module_exit_app();
+          menus_module_restart();
           break;
         case BUTTON_RIGHT:
           ESP_LOGI(CATDOS_TAG, "Selected item: %d", selected_item);

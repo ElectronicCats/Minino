@@ -131,7 +131,7 @@ static file_manager_context_t* file_manager_context_alloc() {
 static void file_manager_module_exit() {
   clear_items();
   free(fm_ctx);
-  menus_module_exit_app();
+  menus_module_restart();
 }
 
 static void navigation_up() {

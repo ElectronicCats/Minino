@@ -49,24 +49,31 @@ void zigbee_screens_module_closing_network() {
 void zigbee_screens_module_display_status(uint8_t status) {
   switch (status) {
     case CREATING_NETWORK:
+      printf("LINE: %d\n", __LINE__);
       zigbee_screens_module_creating_network();
       break;
     case CREATING_NETWORK_FAILED:
+      printf("LINE: %d\n", __LINE__);
       zigbee_screens_module_creating_network_failed();
       break;
     case WAITING_FOR_DEVICES:
+      printf("LINE: %d\n", __LINE__);
       zigbee_screens_module_waiting_for_devices();
       break;
     case NO_DEVICES_FOUND:
+      printf("LINE: %d\n", __LINE__);
       zigbee_screens_module_no_devices_found();
       break;
     case CLOSING_NETWORK:
+      printf("LINE: %d\n", __LINE__);
       zigbee_screens_module_closing_network();
       break;
     case LIGHT_PRESSED:
+      printf("LINE: %d\n", __LINE__);
       zigbee_screens_module_toogle_pressed();
       break;
     case LIGHT_RELASED:
+      printf("LINE: %d\n", __LINE__);
       zigbee_screens_module_toggle_released();
     default:
       break;
