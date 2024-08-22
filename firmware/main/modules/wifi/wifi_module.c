@@ -30,6 +30,21 @@ static general_menu_t analyzer_summary_menu;
 static char* wifi_analizer_summary_2[120] = {
     "Summary",
 };
+char* wifi_analizer_help_2[] = {
+    "This tool",      "allows you to",   "analyze the",
+    "WiFi networks",  "around you.",     "",
+    "You can select", "the channel and", "the destination",
+    "to save the",    "results.",
+};
+static general_menu_t analyzer_help_menu = {
+    .menu_items = wifi_analizer_help_2,
+    .menu_count = 11,
+    .menu_level = GENERAL_TREE_APP_MENU};
+
+void wifi_module_show_analyzer_help() {
+  general_register_scrolling_menu(&analyzer_help_menu);
+  general_screen_display_scrolling_text_handler(menus_module_exit_app);
+}
 static void wifi_module_input_cb(uint8_t button_name, uint8_t button_event);
 
 uint16_t get_summary_rows_count() {

@@ -214,7 +214,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_WIFI_ANALYZER_HELP_2,
      .parent_idx = MENU_WIFI_ANALIZER_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = wifi_module_show_analyzer_help,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
