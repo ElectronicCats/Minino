@@ -13,7 +13,7 @@
 #include "wifi_scanner.h"
 
 #define DEFAULT_SCAN_LIST_SIZE CONFIG_SCAN_MAX_AP
-#define SCAN_RETRIES           10
+#define SCAN_RETRIES           5
 
 typedef enum {
   DEAUTH_STATE_IDLE = 0,
@@ -69,9 +69,8 @@ static void scanning_task(void* pvParameters) {
   ESP_LOGI("deauth", "Scanning done: %d", ap_records->count);
   deauth_display_menu(current_item, menu_stadistics);
   current_wifi_state.state = DEAUTH_STATE_MENU;
-  vTaskDelete(NULL);
-
   led_control_stop();
+  vTaskDelete(NULL);
 }
 
 static void deauth_run_scan_task() {
