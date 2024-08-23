@@ -118,6 +118,8 @@ static void navigation_exit() {
   }
   menus_ctx->current_menu =
       menus[get_menu_idx(menus_ctx->current_menu)].parent_idx;
+  menus_ctx->parent_menu_idx =
+      menus[get_menu_idx(menus_ctx->current_menu)].parent_idx;
   refresh_menus();
 }
 
