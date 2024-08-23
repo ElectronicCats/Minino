@@ -5,15 +5,42 @@
 #include "menus_module.h"
 #include "oled_screen.h"
 
-#define MAX_OPTIONS_NUM 7
-static const uint32_t SOUND_DURATION = 100;
+#define MAX_OPTIONS_NUM 6
 
+static const uint32_t SOUND_DURATION = 100;
 static general_radio_selection_t* general_radio_selection_ctx;
 
-static void list_radio_options() {
+static void list_radio_options_old_style();
+static void list_radio_options_new_style();
+
+static void* list_radio_options_styles[] = {list_radio_options_old_style,
+                                            list_radio_options_new_style};
+static void (*list_radio_options)() = NULL;
+
+static void list_radio_options_old_style() {
   general_radio_selection_t* ctx = general_radio_selection_ctx;
   static uint8_t items_offset = 0;
-  items_offset = MAX(ctx->selected_option - 6, items_offset);
+  items_offset = MAX(ctx->selected_option - 4, items_offset);
+  items_offset = MIN(MAX(ctx->options_count - 4, 0), items_offset);
+  items_offset = MIN(ctx->selected_option, items_offset);
+  oled_screen_clear();
+  char* str = malloc(20);
+  oled_screen_display_text(ctx->banner, 0, 0, OLED_DISPLAY_NORMAL);
+  for (uint8_t i = 0; i < (MIN(ctx->options_count, MAX_OPTIONS_NUM - 1)); i++) {
+    bool is_selected = i + items_offset == ctx->selected_option;
+    bool is_current = i + items_offset == ctx->current_option;
+    char state = is_current ? 'x' : ' ';
+    sprintf(str, "[%c] %s", state, ctx->options[i + items_offset]);
+    oled_screen_display_text(str, 0, i + 2, is_selected);
+  }
+  free(str);
+}
+
+static void list_radio_options_new_style() {
+  general_radio_selection_t* ctx = general_radio_selection_ctx;
+  static uint8_t items_offset = 0;
+  items_offset = MAX(ctx->selected_option - 4, items_offset);
+  items_offset = MIN(MAX(ctx->options_count - 4, 0), items_offset);
   items_offset = MIN(ctx->selected_option, items_offset);
   oled_screen_clear();
   char* str = malloc(20);
@@ -86,5 +113,6 @@ void general_radio_selection(
   general_radio_selection_ctx->select_cb = radio_selection_menu.select_cb;
   general_radio_selection_ctx->exit_cb = radio_selection_menu.exit_cb;
   menus_module_set_app_state(true, input_cb);
+  list_radio_options = list_radio_options_styles[radio_selection_menu.style];
   list_radio_options();
 }

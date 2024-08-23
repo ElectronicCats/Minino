@@ -31,18 +31,22 @@ static general_menu_t analyzer_summary_menu;
 static char* wifi_analizer_summary_2[120] = {
     "Summary",
 };
-char* wifi_analizer_help_2[] = {
+static const char* wifi_analizer_help_2[] = {
     "This tool",      "allows you to",   "analyze the",
     "WiFi networks",  "around you.",     "",
     "You can select", "the channel and", "the destination",
     "to save the",    "results.",
 };
-static general_menu_t analyzer_help_menu = {
+
+static const general_menu_t analyzer_help_menu = {
     .menu_items = wifi_analizer_help_2,
     .menu_count = 11,
     .menu_level = GENERAL_TREE_APP_MENU};
 
-const char* options[] = {"SD", "Internal"};
+static const char* destination_options[] = {"SD", "Internal"};
+static const char* channel_options[] = {
+    "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+};
 
 void wifi_module_show_analyzer_help() {
   general_register_scrolling_menu(&analyzer_help_menu);
@@ -182,15 +186,31 @@ static void wifi_module_set_destination(uint8_t selected_item) {
     wifi_sniffer_set_destination_internal();
   }
 }
+static void wifi_module_set_channel(uint8_t selected_item) {
+  wifi_sniffer_set_channel(selected_item + 1);
+}
+
+void wifi_module_analyzer_channel() {
+  general_radio_selection_menu_t channel = {0};
+  channel.banner = "Choose Channel",
+  channel.current_option = wifi_sniffer_get_channel() - 1;
+  channel.options = channel_options;
+  channel.options_count = 14;
+  channel.select_cb = wifi_module_set_channel;
+  channel.exit_cb = menus_module_exit_app;
+  channel.style = RADIO_SELECTION_OLD_STYLE;
+  general_radio_selection(channel);
+}
 
 void wifi_module_analyzer_destination() {
   general_radio_selection_menu_t destination = {0};
   destination.banner = "Choose Destination",
   destination.current_option = wifi_sniffer_is_destination_internal();
-  destination.options = options;
+  destination.options = destination_options;
   destination.options_count = 2;
   destination.select_cb = wifi_module_set_destination;
   destination.exit_cb = menus_module_exit_app;
+  destination.style = RADIO_SELECTION_OLD_STYLE;
   general_radio_selection(destination);
 }
 
