@@ -56,3 +56,5 @@ void wifi_module_update_channel_options();
 void wifi_module_update_destination_options();
 
 void wifi_module_show_analyzer_help();
+
+void wifi_module_analyzer_destination();

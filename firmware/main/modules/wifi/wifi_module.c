@@ -10,6 +10,7 @@
 #include "string.h"
 
 #include "deauth_module.h"
+#include "general_radio_selection.h"
 #include "general_screens.h"
 #include "led_events.h"
 #include "menu_screens_modules.h"
@@ -24,7 +25,7 @@
 
 static const char* TAG = "wifi_module";
 bool analizer_initialized = false;
-const uint32_t SOUND_DURATION = 100;
+static const uint32_t SOUND_DURATION = 100;
 
 static general_menu_t analyzer_summary_menu;
 static char* wifi_analizer_summary_2[120] = {
@@ -40,6 +41,8 @@ static general_menu_t analyzer_help_menu = {
     .menu_items = wifi_analizer_help_2,
     .menu_count = 11,
     .menu_level = GENERAL_TREE_APP_MENU};
+
+const char* options[] = {"SD", "Internal"};
 
 void wifi_module_show_analyzer_help() {
   general_register_scrolling_menu(&analyzer_help_menu);
@@ -170,6 +173,25 @@ void wifi_module_exit_submenu_cb() {
 void wifi_module_analyzer_run() {
   wifi_module_init_sniffer();
   menus_module_set_app_state(true, wifi_module_input_cb);
+}
+
+static void wifi_module_set_destination(uint8_t selected_item) {
+  if (selected_item == WIFI_SNIFFER_DESTINATION_SD) {
+    wifi_sniffer_set_destination_sd();
+  } else {
+    wifi_sniffer_set_destination_internal();
+  }
+}
+
+void wifi_module_analyzer_destination() {
+  general_radio_selection_menu_t destination = {0};
+  destination.banner = "Choose Destination",
+  destination.current_option = wifi_sniffer_is_destination_internal();
+  destination.options = options;
+  destination.options_count = 2;
+  destination.select_cb = wifi_module_set_destination;
+  destination.exit_cb = menus_module_exit_app;
+  general_radio_selection(destination);
 }
 
 void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
