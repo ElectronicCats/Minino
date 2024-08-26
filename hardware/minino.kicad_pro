@@ -535,7 +535,7 @@
       "gencad": "",
       "idf": "",
       "netlist": "",
-      "plot": "MININO_V1.5_GERBER",
+      "plot": "MININO_V1.5_GERBER_SW2",
       "pos_files": "CPL",
       "specctra_dsn": "",
       "step": "minino.step",

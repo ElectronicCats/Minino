@@ -113,7 +113,7 @@
 			(mirror no)
 			(drillshape 0)
 			(scaleselection 1)
-			(outputdirectory "mininoV1.0Gerbers/")
+			(outputdirectory "MININO_V1.5_GERBER_SW2")
 		)
 	)
 	(net 0 "")
@@ -9716,7 +9716,7 @@
 	(footprint "kibuzzard-65BC2610"
 		(layer "B.Cu")
 		(uuid "127234a8-e67f-4259-a585-00979717eef7")
-		(at 65.37 113.28 -45)
+		(at 61.81 113.86 135)
 		(descr "Generated with KiBuzzard")
 		(tags "kb_params=eyJBbGlnbm1lbnRDaG9pY2UiOiAiQ2VudGVyIiwgIkNhcExlZnRDaG9pY2UiOiAiKCIsICJDYXBSaWdodENob2ljZSI6ICIpIiwgIkZvbnRDb21ib0JveCI6ICJGcmVkb2thT25lIiwgIkhlaWdodEN0cmwiOiAiMSIsICJMYXllckNvbWJvQm94IjogIkYuU2lsa1MiLCAiTXVsdGlMaW5lVGV4dCI6ICJPTiIsICJQYWRkaW5nQm90dG9tQ3RybCI6ICI1IiwgIlBhZGRpbmdMZWZ0Q3RybCI6ICIxIiwgIlBhZGRpbmdSaWdodEN0cmwiOiAiMSIsICJQYWRkaW5nVG9wQ3RybCI6ICI1IiwgIldpZHRoQ3RybCI6ICIxIn0=")
 		(property "Reference" "kibuzzard-65BC2610"
@@ -9746,7 +9746,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 0 0 -45)
+			(at 0 0 135)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
@@ -9759,7 +9759,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 0 0 -45)
+			(at 0 0 135)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
@@ -9772,7 +9772,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 0 0 -45)
+			(at 0 0 135)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
@@ -16493,6 +16493,7 @@
 		(property "Reference" "SW1"
 			(at 0 1 -45)
 			(layer "B.SilkS")
+			(hide yes)
 			(uuid "a2f67b34-57e3-4fa3-8566-e553f10d2e66")
 			(effects
 				(font
@@ -17827,7 +17828,7 @@
 		)
 		(fp_arc
 			(start 5.168 -9.472)
-			(mid 5.659553 -9.609631)
+			(mid 5.659555 -9.609616)
 			(end 6.1679 -9.656)
 			(stroke
 				(width 0.127)
@@ -18096,7 +18097,7 @@
 	(footprint "kibuzzard-65BC266D"
 		(layer "B.Cu")
 		(uuid "b7a94edd-9a89-4c7d-9495-cacdc9d30233")
-		(at 70.17 118.2 -45)
+		(at 66.02 117.95 135)
 		(descr "Generated with KiBuzzard")
 		(tags "kb_params=eyJBbGlnbm1lbnRDaG9pY2UiOiAiQ2VudGVyIiwgIkNhcExlZnRDaG9pY2UiOiAiKCIsICJDYXBSaWdodENob2ljZSI6ICIpIiwgIkZvbnRDb21ib0JveCI6ICJGcmVkb2thT25lIiwgIkhlaWdodEN0cmwiOiAiMSIsICJMYXllckNvbWJvQm94IjogIkYuU2lsa1MiLCAiTXVsdGlMaW5lVGV4dCI6ICJPRkYiLCAiUGFkZGluZ0JvdHRvbUN0cmwiOiAiNSIsICJQYWRkaW5nTGVmdEN0cmwiOiAiMSIsICJQYWRkaW5nUmlnaHRDdHJsIjogIjEiLCAiUGFkZGluZ1RvcEN0cmwiOiAiNSIsICJXaWR0aEN0cmwiOiAiMSJ9")
 		(property "Reference" "kibuzzard-65BC266D"
@@ -18126,7 +18127,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 0 0 -45)
+			(at 0 0 135)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
@@ -18139,7 +18140,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 0 0 -45)
+			(at 0 0 135)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
@@ -18152,7 +18153,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 0 0 -45)
+			(at 0 0 135)
 			(unlocked yes)
 			(layer "F.Fab")
 			(hide yes)
