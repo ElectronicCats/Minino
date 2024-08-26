@@ -5319,7 +5319,7 @@
 					)
 				)
 			)
-			(property "Footprint" "Footprint:JS102011SAQN"
+			(property "Footprint" "Footprint:MSK12C02"
 				(at 0 0 0)
 				(effects
 					(font
@@ -5337,7 +5337,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "Single Pole Single Throw (SPST) switch"
+			(property "Description" ""
 				(at 0 0 0)
 				(effects
 					(font
@@ -5346,7 +5346,7 @@
 					(hide yes)
 				)
 			)
-			(property "LCSC#" "-"
+			(property "LCSC#" "C431540"
 				(at 0 0 0)
 				(effects
 					(font
@@ -5420,7 +5420,7 @@
 			)
 			(symbol "SW_SPST_1_1"
 				(pin passive line
-					(at 5.08 0 180)
+					(at -5.08 0 0)
 					(length 2.54)
 					(name "B"
 						(effects
@@ -5438,7 +5438,7 @@
 					)
 				)
 				(pin passive line
-					(at -5.08 0 0)
+					(at 5.08 0 180)
 					(length 2.54)
 					(name "A"
 						(effects
@@ -10423,7 +10423,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Footprint:JS102011SAQN"
+		(property "Footprint" "Footprint:MSK12C02"
 			(at 133.985 179.07 0)
 			(effects
 				(font
@@ -10450,7 +10450,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC#" "C221660"
+		(property "LCSC#" "C431540"
 			(at 133.985 179.07 0)
 			(effects
 				(font

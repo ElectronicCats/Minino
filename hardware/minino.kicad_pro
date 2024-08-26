@@ -535,8 +535,8 @@
       "gencad": "",
       "idf": "",
       "netlist": "",
-      "plot": "MININO_GERBER/",
-      "pos_files": "./",
+      "plot": "MININO_V1.5_GERBER",
+      "pos_files": "CPL",
       "specctra_dsn": "",
       "step": "minino.step",
       "svg": "",
@@ -698,7 +698,7 @@
   "sheets": [
     [
       "aed8b10b-62ba-47cf-bd6c-c207f8432caa",
-      "Raíz"
+      "Root"
     ]
   ],
   "text_variables": {}
