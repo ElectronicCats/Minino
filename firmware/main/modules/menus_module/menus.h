@@ -13,6 +13,7 @@
 #include "file_manager_module.h"
 #include "open_thread_module.h"
 #include "ota_module.h"
+#include "sd_card_settings_module.h"
 #include "settings_module.h"
 #include "stealth_mode.h"
 #include "web_file_browser_module.h"
@@ -465,7 +466,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_SETTINGS_SD_CARD_FORMAT_2,
      .parent_idx = MENU_SETTINGS_SD_CARD_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = sd_card_settings_verify_sd_card,
      .on_exit_cb = NULL,
      .is_visible = true},
 #ifdef CONFIG_FILE_MANAGER_ENABLE
