@@ -149,7 +149,7 @@ static void general_screen_display_scrolling() {
   oled_screen_display_card_border();
 #ifdef CONFIG_RESOLUTION_128X64
   uint16_t items_per_screen = 3;
-  uint16_t screen_title = 1;
+  uint16_t screen_title = 2;
 
   oled_screen_display_text_center("Information", ITEM_PAGE_OFFSET,
                                   OLED_DISPLAY_NORMAL);
