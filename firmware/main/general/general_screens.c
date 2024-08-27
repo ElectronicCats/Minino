@@ -20,6 +20,11 @@ static void* (*menu_restore_function)(void);
 static void general_screen_display_scrolling();
 static void general_screen_cb_modal(uint8_t button_name, uint8_t button_event);
 static void general_screen_cb_scroll(uint8_t button_name, uint8_t button_event);
+static const general_menu_t card_info_menu_ctx = {
+    .menu_items = NULL,
+    .menu_count = 0,
+    .menu_level = GENERAL_TREE_APP_SUBMENU,
+};
 
 char** general_screen_truncate_text(char* p_text, int* num_lines) {
   char** lines = NULL;
@@ -84,7 +89,7 @@ static void general_screen_decrement_option() {
 }
 
 static void general_screen_display_breadcrumb() {
-  if (current_menu_ctx->menu_level == 0) {
+  if (current_menu_ctx->menu_level == GENERAL_TREE_APP_MENU) {
     oled_screen_display_text("< Exit", 0, 0, OLED_DISPLAY_NORMAL);
   } else {
     oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
@@ -201,6 +206,7 @@ void general_screen_display_card_information_handler(char* title,
 }
 
 void genera_screen_display_card_information(char* title, char* body) {
+  general_register_menu(&card_info_menu_ctx);
   general_clear_screen();
   general_screen_display_breadcrumb();
   oled_screen_display_card_border();

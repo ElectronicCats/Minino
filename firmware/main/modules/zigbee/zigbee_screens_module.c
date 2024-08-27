@@ -27,11 +27,11 @@ void zigbee_screens_module_creating_network_failed() {
 void zigbee_screens_module_waiting_for_devices() {
   static uint8_t dots = 0;
   dots = ++dots > 3 ? 0 : dots;
-  oled_screen_clear_line(80, 3, OLED_DISPLAY_NORMAL);
   genera_screen_display_card_information("Waiting for", "devices");
   // Print dots from lef to right
-  for (int i = 0; i < dots; i++) {
-    oled_screen_display_text(".", 80 + (i * 8), 3, OLED_DISPLAY_NORMAL);
+  for (int i = 0; i < 3; i++) {
+    oled_screen_display_text(i < dots ? "." : "", 56 + (i * 8), 4,
+                             OLED_DISPLAY_NORMAL);
   }
 }
 
@@ -49,31 +49,24 @@ void zigbee_screens_module_closing_network() {
 void zigbee_screens_module_display_status(uint8_t status) {
   switch (status) {
     case CREATING_NETWORK:
-      printf("LINE: %d\n", __LINE__);
       zigbee_screens_module_creating_network();
       break;
     case CREATING_NETWORK_FAILED:
-      printf("LINE: %d\n", __LINE__);
       zigbee_screens_module_creating_network_failed();
       break;
     case WAITING_FOR_DEVICES:
-      printf("LINE: %d\n", __LINE__);
       zigbee_screens_module_waiting_for_devices();
       break;
     case NO_DEVICES_FOUND:
-      printf("LINE: %d\n", __LINE__);
       zigbee_screens_module_no_devices_found();
       break;
     case CLOSING_NETWORK:
-      printf("LINE: %d\n", __LINE__);
       zigbee_screens_module_closing_network();
       break;
     case LIGHT_PRESSED:
-      printf("LINE: %d\n", __LINE__);
       zigbee_screens_module_toogle_pressed();
       break;
     case LIGHT_RELASED:
-      printf("LINE: %d\n", __LINE__);
       zigbee_screens_module_toggle_released();
     default:
       break;
