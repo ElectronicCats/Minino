@@ -37,6 +37,7 @@ static wifi_setting_state_t wifi_setting_state = WIFI_SETTING_IDLE;
 static wifi_setting_t wifi_config_state;
 
 static void config_module_app_selector();
+static void only_exit_input_cb(uint8_t button_name, uint8_t button_event);
 static void config_module_state_machine(uint8_t button_name,
                                         uint8_t button_event);
 static void config_module_state_machine_config(uint8_t button_name,
@@ -102,8 +103,7 @@ static void config_module_wifi_display_connected() {
   oled_screen_display_text_center("Connected", 4, OLED_DISPLAY_NORMAL);
   vTaskDelay(2000 / portTICK_PERIOD_MS);
   cmd_wifi_unregister_callback();
-  menus_module_set_app_state(false, NULL);
-  menu_screens_exit_submenu();
+  menus_module_exit_app();
 }
 
 static void config_module_wifi_handle_connection(bool state) {
@@ -232,6 +232,29 @@ static void config_module_app_selector() {
   }
 }
 
+void wifi_settings_begin() {
+  int count = validate_wifi_count();
+  if (count == 0) {
+    menus_module_set_app_state(true, only_exit_input_cb);
+    return;
+  }
+  menus_module_set_app_state(true, config_module_state_machine);
+  wifi_config_state.state = WIFI_SETTING_IDLE;
+  wifi_config_state.total_items = count;
+  total_items = count;
+  ESP_LOGI(__func__, "Saved APs: %d", count);
+  config_module_wifi_display_list();
+}
+
+static void only_exit_input_cb(uint8_t button_name, uint8_t button_event) {
+  if (button_event != BUTTON_PRESS_DOWN) {
+    return;
+  }
+  if (button_name == BUTTON_LEFT) {
+    cmd_wifi_unregister_callback();
+    menus_module_exit_app();
+  }
+}
 static void config_module_state_machine(uint8_t button_name,
                                         uint8_t button_event) {
   if (button_event != BUTTON_PRESS_DOWN) {
@@ -240,40 +263,33 @@ static void config_module_state_machine(uint8_t button_name,
 
   ESP_LOGI(TAG_CONFIG_MODULE, "BLE engine state machine from team: %d %d",
            button_name, button_event);
-  switch (app_screen_state_information.app_selected) {
-    case MENU_SETTINGS_WIFI:
-      ESP_LOGI(TAG_CONFIG_MODULE, "Bluetooth scanner entered");
-      switch (button_name) {
-        case BUTTON_LEFT:
-          cmd_wifi_unregister_callback();
-          menus_module_set_app_state(false, NULL);
-          menu_screens_exit_submenu();
-          break;
-        case BUTTON_RIGHT:
-          ESP_LOGI(TAG_CONFIG_MODULE, "Selected item: %d", selected_item);
-          wifi_config_state.selected_item = selected_item;
-          wifi_config_state.state = WIFI_SETTING_CONFIG;
-          selected_item = 0;
 
-          config_module_wifi_display_sel_options();
-          menus_module_set_app_state(true, config_module_state_machine_config);
-          break;
-        case BUTTON_UP:
-          selected_item =
-              (selected_item == 0) ? total_items - 1 : selected_item - 1;
-
-          config_module_wifi_display_list();
-          break;
-        case BUTTON_DOWN:
-          selected_item =
-              (selected_item == total_items - 1) ? 0 : selected_item + 1;
-          config_module_wifi_display_list();
-          break;
-        case BUTTON_BOOT:
-        default:
-          break;
-      }
+  switch (button_name) {
+    case BUTTON_LEFT:
+      cmd_wifi_unregister_callback();
+      menus_module_exit_app();
       break;
+    case BUTTON_RIGHT:
+      ESP_LOGI(TAG_CONFIG_MODULE, "Selected item: %d", selected_item);
+      wifi_config_state.selected_item = selected_item;
+      wifi_config_state.state = WIFI_SETTING_CONFIG;
+      selected_item = 0;
+
+      config_module_wifi_display_sel_options();
+      menus_module_set_app_state(true, config_module_state_machine_config);
+      break;
+    case BUTTON_UP:
+      selected_item =
+          (selected_item == 0) ? total_items - 1 : selected_item - 1;
+
+      config_module_wifi_display_list();
+      break;
+    case BUTTON_DOWN:
+      selected_item =
+          (selected_item == total_items - 1) ? 0 : selected_item + 1;
+      config_module_wifi_display_list();
+      break;
+    case BUTTON_BOOT:
     default:
       break;
   }

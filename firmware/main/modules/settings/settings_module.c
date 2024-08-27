@@ -29,6 +29,11 @@ char* gps_time_zone_options_2[] = {
     "UTC+9:30", "UTC+10",   "UTC+10:30", "UTC+11",   "UTC+12",   "UTC+12:45",
     "UTC+13",   "UTC+14"};
 
+char* sd_card_info_2[6];
+general_menu_t SD_inf = {.menu_count = 6,
+                         .menu_items = sd_card_info_2,
+                         .menu_level = GENERAL_MENU_MAIN};
+
 void update_sd_card_info() {
   sd_card_mount();
   oled_screen_clear();
@@ -45,11 +50,15 @@ void update_sd_card_info() {
   char* type_str = malloc(strlen(sd_info.type) + 1 + 6);
   sprintf(type_str, "Type: %s", sd_info.type);
 
-  sd_card_info[3] = name_str;
-  sd_card_info[4] = capacity_str;
-  sd_card_info[5] = speed_str;
-  sd_card_info[6] = type_str;
+  sd_card_info_2[0] = "";
+  sd_card_info_2[1] = "SD Card Info";
+  sd_card_info_2[2] = name_str;
+  sd_card_info_2[3] = capacity_str;
+  sd_card_info_2[4] = speed_str;
+  sd_card_info_2[5] = type_str;
   sd_card_unmount();
+  general_register_scrolling_menu(&SD_inf);
+  general_screen_display_scrolling_text_handler(menus_module_exit_app);
 }
 
 void settings_module_exit_submenu_cb() {

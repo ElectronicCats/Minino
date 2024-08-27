@@ -17,6 +17,7 @@
 #include "stealth_mode.h"
 #include "web_file_browser_module.h"
 #include "wifi_module.h"
+#include "wifi_settings.h"
 #include "zigbee_module.h"
 
 typedef enum {
@@ -443,7 +444,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_SETTINGS_WIFI_2,
      .parent_idx = MENU_SETTINGS_SYSTEM_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = wifi_settings_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "SD card",
@@ -457,7 +458,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_SETTINGS_SD_CARD_INFO_2,
      .parent_idx = MENU_SETTINGS_SD_CARD_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = update_sd_card_info,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Check Format",

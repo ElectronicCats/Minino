@@ -7,4 +7,5 @@
  * @param app_selected The selected app
  */
 void config_module_begin(int app_selected);
+void wifi_settings_begin();
 #endif  // CONFIGURATION_MODULE_H

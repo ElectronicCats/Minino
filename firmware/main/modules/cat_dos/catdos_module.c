@@ -631,8 +631,7 @@ static void catdos_module_state_machine(uint8_t button_name,
     case CATDOS_STATE_ATTACK: {
       switch (button_name) {
         case BUTTON_LEFT:
-          menus_module_set_app_state(false, NULL);
-          menu_screens_exit_submenu();
+          menus_module_exit_app();
           break;
         case BUTTON_RIGHT:
           catdos_module_send_attack();

@@ -329,8 +329,7 @@ void wardriving_module_keyboard_cb(uint8_t button_name, uint8_t button_event) {
 
   switch (button_name) {
     case BUTTON_LEFT:
-      menus_module_set_app_state(false, NULL);
-      menu_screens_exit_submenu();
+      menus_module_exit_app();
       break;
     case BUTTON_RIGHT:
       if (wardriving_module_state == WARDRIVING_MODULE_STATE_NO_SD_CARD) {
