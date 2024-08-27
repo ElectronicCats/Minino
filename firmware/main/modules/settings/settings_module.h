@@ -13,3 +13,5 @@ void settings_module_begin();
  * @return void
  */
 void settings_module_exit();
+
+void settings_module_time_zone();

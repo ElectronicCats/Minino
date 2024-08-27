@@ -1,11 +1,11 @@
 #pragma once
 #include <stdbool.h>
 #include <stdio.h>
-#include "apps/ble/hid_device/hid_module.h"
-#include "apps/ble/spam/spam_module.h"
-#include "apps/ble/trackers/trackers_module.h"
-#include "apps/zigbee/z_switch/z_switch_module.h"
-#include "modules/about/about_module.h"
+#include "about_module.h"
+#include "hid_module.h"
+#include "spam_module.h"
+#include "trackers_module.h"
+#include "z_switch_module.h"
 
 #include "catdos_module.h"
 #include "deauth_module.h"
@@ -13,6 +13,7 @@
 #include "file_manager_module.h"
 #include "open_thread_module.h"
 #include "ota_module.h"
+#include "settings_module.h"
 #include "stealth_mode.h"
 #include "web_file_browser_module.h"
 #include "wifi_module.h"
@@ -411,7 +412,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_SETTINGS_TIME_ZONE_2,
      .parent_idx = MENU_SETTINGS_SYSTEM_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = settings_module_time_zone,
      .on_exit_cb = NULL,
      .is_visible = true},
 #endif
