@@ -24,14 +24,6 @@ static const general_menu_t trackers_information = {
 static void module_main_cb_event(uint8_t button_name, uint8_t button_event);
 static void module_list_cb_event(uint8_t button_name, uint8_t button_event);
 
-static void module_increment_item() {
-  current_item++;
-}
-
-static void module_decrement_item() {
-  current_item--;
-}
-
 static void module_reset_menu() {
   current_item = 0;
   module_register_menu(GENERAL_TREE_APP_SUBMENU);
@@ -63,17 +55,11 @@ static void module_main_cb_event(uint8_t button_name, uint8_t button_event) {
   }
   switch (button_name) {
     case BUTTON_UP:
-      module_decrement_item();
-      if (current_item < 0) {
-        current_item = TRACKERS_COUNT - 1;
-      }
+      current_item = current_item-- == 0 ? TRACKERS_COUNT - 1 : current_item;
       module_display_menu(current_item);
       break;
     case BUTTON_DOWN:
-      module_increment_item();
-      if (current_item > TRACKERS_COUNT - 1) {
-        current_item = 0;
-      }
+      current_item = ++current_item > TRACKERS_COUNT - 1 ? 0 : current_item;
       module_display_menu(current_item);
       break;
     case BUTTON_RIGHT:
@@ -111,17 +97,11 @@ static void module_list_cb_event(uint8_t button_name, uint8_t button_event) {
 
   switch (button_name) {
     case BUTTON_UP:
-      module_decrement_item();
-      if (current_item < 0) {
-        current_item = TRACKERS_COUNT - 1;
-      }
+      current_item = current_item-- == 0 ? TRACKERS_COUNT - 1 : current_item;
       module_display_menu(current_item);
       break;
     case BUTTON_DOWN:
-      module_increment_item();
-      if (current_item > TRACKERS_COUNT - 1) {
-        current_item = 0;
-      }
+      current_item = ++current_item > TRACKERS_COUNT - 1 ? 0 : current_item;
       module_display_menu(current_item);
       break;
     case BUTTON_RIGHT:
