@@ -34,7 +34,6 @@ const float TIME_ZONES[] = {-12.0, -11.0, -10.0, -9.5,  -9.0, -8.0, -7.0, -6.0,
                             2.0,   3.0,   3.5,   4.0,   4.5,  5.0,  5.5,  5.75,
                             6.0,   6.5,   7.0,   8.0,   8.75, 9.0,  9.5,  10.0,
                             10.5,  11.0,  12.0,  12.75, 13.0, 14.0};
-
 // TODO: Refactor this update functions to screen module
 void update_date_and_time(gps_t* gps) {
   char* signal_str = (char*) malloc(20);

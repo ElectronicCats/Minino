@@ -12,12 +12,14 @@
 #include "display_settings.h"
 #include "file_manager_module.h"
 #include "gps_module.h"
+#include "gps_screens.h"
 #include "open_thread_module.h"
 #include "ota_module.h"
 #include "sd_card_settings_module.h"
 #include "settings_module.h"
 #include "stealth_mode.h"
 #include "wardriving_module.h"
+#include "wardriving_screens_module.h"
 #include "web_file_browser_module.h"
 #include "wifi_module.h"
 #include "wifi_settings.h"
@@ -380,7 +382,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_GPS_WARDRIVING_HELP_2,
      .parent_idx = MENU_GPS_WARDRIVING_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = wardriving_screens_show_help,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
@@ -409,7 +411,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_GPS_HELP_2,
      .parent_idx = MENU_GPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = gps_screens_show_help,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Time zone",

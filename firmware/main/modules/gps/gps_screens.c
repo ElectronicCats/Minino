@@ -1,7 +1,22 @@
 #include "gps_screens.h"
 
+#include "general_screens.h"
 #include "menus_module.h"
 #include "oled_screen.h"
+
+char* gps_help_2[] = {
+    "Verify your",    "time zone if", "the time is not",
+    "correct, go to", "`Settings/",   "System/Time",
+    "zone` and",      "select the",   "correct one.",
+};
+const general_menu_t gps_help_menu = {.menu_count = 9,
+                                      .menu_items = gps_help_2,
+                                      .menu_level = GENERAL_TREE_APP_MENU};
+
+void gps_screens_show_help() {
+  general_register_scrolling_menu(&gps_help_menu);
+  general_screen_display_scrolling_text_handler(menus_module_exit_app);
+}
 
 static void gps_screens_update_date_and_time(gps_t* gps) {
   char* str = (char*) malloc(20);
