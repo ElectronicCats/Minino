@@ -147,17 +147,11 @@ static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event) {
 
   switch (button_name) {
     case BUTTON_UP:
-      deauth_decrement_item();
-      if (current_item < 0) {
-        current_item = MENUCOUNT - 1;
-      }
+      current_item = current_item-- == 0 ? MENUCOUNT - 1 : current_item;
       deauth_display_menu(current_item, menu_stadistics);
       break;
     case BUTTON_DOWN:
-      deauth_increment_item();
-      if (current_item > MENUCOUNT - 1) {
-        current_item = 0;
-      }
+      current_item = ++current_item > MENUCOUNT - 1 ? 0 : current_item;
       deauth_display_menu(current_item, menu_stadistics);
       break;
     case BUTTON_RIGHT:
