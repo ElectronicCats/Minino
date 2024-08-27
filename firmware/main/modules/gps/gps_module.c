@@ -2,6 +2,7 @@
 #include "stdint.h"
 
 #include "gps_module.h"
+#include "gps_screens.h"
 #include "menu_screens_modules.h"
 #include "menus_module.h"
 #include "oled_screen.h"
@@ -93,26 +94,15 @@ static void gps_event_handler(void* event_handler_arg,
                               esp_event_base_t event_base,
                               int32_t event_id,
                               void* event_data) {
-  screen_module_menu_t current_menu = menu_screens_get_current_menu();
-
-  if (current_menu == MENU_GPS) {
-    return;
-  }
-
   switch (event_id) {
     case GPS_UPDATE:
       /* update GPS information */
       gps_t* gps = gps_module_get_instance(event_data);
-
       if (gps_event_callback != NULL) {
         gps_event_callback(gps);
         return;
       }
-
-      update_date_and_time(gps);
-      update_location(gps);
-      update_speed(gps);
-      menu_screens_display_menu();
+      gps_screens_update_handler(gps);
       break;
     case GPS_UNKNOWN:
       /* print unknown statements */
@@ -139,6 +129,7 @@ void gps_module_start_scan() {
   nmea_hdl = nmea_parser_init(&config);
   /* register event handler for NMEA parser library */
   nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
+  gps_screens_show_waiting_signal();
 }
 
 void gps_module_stop_read() {
