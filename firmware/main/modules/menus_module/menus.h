@@ -11,11 +11,13 @@
 #include "deauth_module.h"
 #include "display_settings.h"
 #include "file_manager_module.h"
+#include "gps_module.h"
 #include "open_thread_module.h"
 #include "ota_module.h"
 #include "sd_card_settings_module.h"
 #include "settings_module.h"
 #include "stealth_mode.h"
+#include "wardriving_module.h"
 #include "web_file_browser_module.h"
 #include "wifi_module.h"
 #include "wifi_settings.h"
@@ -364,15 +366,15 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_GPS_WARDRIVING_2,
      .parent_idx = MENU_GPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .on_enter_cb = wardriving_module_begin,
+     .on_exit_cb = wardriving_module_end,
      .is_visible = true},
     {.display_name = "Start",
      .menu_idx = MENU_GPS_WARDRIVING_START_2,
      .parent_idx = MENU_GPS_WARDRIVING_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .on_enter_cb = wardriving_module_start_scan,
+     .on_exit_cb = wardriving_module_stop_scan,
      .is_visible = true},
     {.display_name = "Help",
      .menu_idx = MENU_GPS_WARDRIVING_HELP_2,
@@ -386,22 +388,22 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_GPS_DATE_TIME_2,
      .parent_idx = MENU_GPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .on_enter_cb = gps_module_start_scan,
+     .on_exit_cb = gps_module_stop_read,
      .is_visible = true},
     {.display_name = "Location",
      .menu_idx = MENU_GPS_LOCATION_2,
      .parent_idx = MENU_GPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .on_enter_cb = gps_module_start_scan,
+     .on_exit_cb = gps_module_stop_read,
      .is_visible = true},
     {.display_name = "Speed",
      .menu_idx = MENU_GPS_SPEED_2,
      .parent_idx = MENU_GPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .on_enter_cb = gps_module_start_scan,
+     .on_exit_cb = gps_module_stop_read,
      .is_visible = true},
     {.display_name = "Help",
      .menu_idx = MENU_GPS_HELP_2,

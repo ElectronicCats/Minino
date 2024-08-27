@@ -293,7 +293,7 @@ void wardriving_module_start_scan() {
   if (wardriving_module_verify_sd_card() != ESP_OK) {
     return;
   }
-
+  menus_module_set_app_state(true, wardriving_module_keyboard_cb);
   ESP_LOGI(TAG, "Start scan");
   wardriving_module_state = WARDRIVING_MODULE_STATE_SCANNING;
   xTaskCreate(wardriving_module_scan_task, "wardriving_module_scan_task", 4096,
