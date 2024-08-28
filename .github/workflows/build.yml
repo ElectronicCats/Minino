@@ -25,20 +25,16 @@ jobs:
       - name: esp-idf build
         uses: espressif/esp-idf-ci-action@v1
         with:
+          #source https://hub.docker.com/r/espressif/idf/tags  
           esp_idf_version: v5.4-dev
           target: esp32c6
           path: './firmware'
   
-      - name: Rename artifact
-        run: |
-          ls -lah 
-          cp build/minino.bin minino-esp32s3.bin
-  
       - name: Archive Firmware Files
         uses: actions/upload-artifact@v3
         with: 
-          name: esp32s3-firmware
-          path: "*-esp32s3.bin"
+          name: minino-firmware
+          path: "minino.bin"
   
     release:
       needs: build
