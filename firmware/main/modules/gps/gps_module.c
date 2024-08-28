@@ -34,6 +34,9 @@ const float TIME_ZONES[] = {-12.0, -11.0, -10.0, -9.5,  -9.0, -8.0, -7.0, -6.0,
                             2.0,   3.0,   3.5,   4.0,   4.5,  5.0,  5.5,  5.75,
                             6.0,   6.5,   7.0,   8.0,   8.75, 9.0,  9.5,  10.0,
                             10.5,  11.0,  12.0,  12.75, 13.0, 14.0};
+static void gps_module_general_data_input_cb(uint8_t button_name,
+                                             uint8_t button_event);
+
 // TODO: Refactor this update functions to screen module
 void update_date_and_time(gps_t* gps) {
   char* signal_str = (char*) malloc(20);
@@ -273,4 +276,18 @@ void gps_module_register_cb(gps_event_callback_t callback) {
 
 void gps_module_unregister_cb() {
   gps_event_callback = NULL;
+}
+
+void gps_module_general_data_run() {
+  menus_module_set_app_state(true, gps_module_general_data_input_cb);
+  gps_module_start_scan();
+}
+
+static void gps_module_general_data_input_cb(uint8_t button_name,
+                                             uint8_t button_event) {
+  if (button_event != BUTTON_PRESS_DOWN || button_name != BUTTON_LEFT) {
+    return;
+  }
+  gps_module_stop_read();
+  menus_module_exit_app();
 }
