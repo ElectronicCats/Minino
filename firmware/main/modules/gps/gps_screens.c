@@ -20,7 +20,7 @@ void gps_screens_show_help() {
 
 static void gps_screens_update_date_and_time(gps_t* gps) {
   char* str = (char*) malloc(20);
-  sprintf(str, "Signal: %s  ", gps_module_get_signal_strength(gps));
+  sprintf(str, "Signal: %s   ", gps_module_get_signal_strength(gps));
   oled_screen_display_text(str, 0, 0, OLED_DISPLAY_NORMAL);
   sprintf(str, "Date: %d/%d/%d", gps->date.year, gps->date.month,
           gps->date.day);
@@ -32,7 +32,7 @@ static void gps_screens_update_date_and_time(gps_t* gps) {
 }
 static void gps_screens_update_location(gps_t* gps) {
   char* str = (char*) malloc(20);
-  sprintf(str, "Signal: %s  ", gps_module_get_signal_strength(gps));
+  sprintf(str, "Signal: %s   ", gps_module_get_signal_strength(gps));
   oled_screen_display_text(str, 0, 0, OLED_DISPLAY_NORMAL);
   oled_screen_display_text("Latitude:", 0, 2, OLED_DISPLAY_NORMAL);
   sprintf(str, "  %.05f N", gps->latitude);
@@ -47,7 +47,7 @@ static void gps_screens_update_location(gps_t* gps) {
 }
 static void gps_screens_update_speed(gps_t* gps) {
   char* str = (char*) malloc(20);
-  sprintf(str, "Signal: %s  ", gps_module_get_signal_strength(gps));
+  sprintf(str, "Signal: %s   ", gps_module_get_signal_strength(gps));
   oled_screen_display_text(str, 0, 0, OLED_DISPLAY_NORMAL);
   sprintf(str, "Speed: %.02fm/s", gps->speed);
   oled_screen_display_text(str, 0, 2, OLED_DISPLAY_NORMAL);
