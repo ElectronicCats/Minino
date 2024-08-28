@@ -1,0 +1,23 @@
+name: IDFBuild
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Test Action
+      uses: tobozo/idf-builder@v1
+      with:
+        # target_repo: user/esp-idf-project # github repository
+        # target_repo_ref: main
+        idf_project_folder: ./firmware
+        idf_version: v5.4-dev # esp-idf version, must match a tag listed at https://hub.docker.com/r/espressif/idf/tags
+        idf_target_chip: esp32c6 # any chip supported by the picked version of esp-idf
+        merged_bin: merged.bin # optional
+        artifact_name: merged_bin # optional
