@@ -33,7 +33,7 @@ jobs:
           path: './firmware'
   
       - name: Archive Firmware Files
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with: 
           name: minino-firmware
           path: "./firmware/build/"
