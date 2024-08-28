@@ -1,7 +1,6 @@
 #include "open_thread_module.h"
 #include "esp_log.h"
 #include "led_events.h"
-#include "menu_screens_modules.h"
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "open_thread.h"
@@ -21,20 +20,6 @@ void open_thread_module_begin() {
   esp_log_level_set(TAG_OT_MODULE, ESP_LOG_NONE);
 #endif
   radio_selector_set_thread();
-}
-
-static void open_thread_module_exit_submenu_cb() {
-  screen_module_menu_t current_menu = menu_screens_get_current_menu();
-  switch (current_menu) {
-    case MENU_THREAD_APPS:
-      menu_screens_unregister_submenu_cbs();
-      break;
-    case MENU_THREAD_SNIFFER:
-      open_thread_module_exit();
-      break;
-    default:
-      break;
-  }
 }
 
 void open_thread_module_exit() {

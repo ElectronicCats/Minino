@@ -30,6 +30,7 @@ static void gps_screens_update_date_and_time(gps_t* gps) {
   oled_screen_display_text(str, 0, 3, OLED_DISPLAY_NORMAL);
   free(str);
 }
+
 static void gps_screens_update_location(gps_t* gps) {
   char* str = (char*) malloc(20);
   sprintf(str, "Signal: %s   ", gps_module_get_signal_strength(gps));
@@ -45,6 +46,7 @@ static void gps_screens_update_location(gps_t* gps) {
   oled_screen_display_text(str, 0, 7, OLED_DISPLAY_NORMAL);
   free(str);
 }
+
 static void gps_screens_update_speed(gps_t* gps) {
   char* str = (char*) malloc(20);
   sprintf(str, "Signal: %s   ", gps_module_get_signal_strength(gps));

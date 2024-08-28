@@ -2,7 +2,6 @@
 
 #include "esp_wifi.h"
 #include "keyboard_module.h"
-#include "menu_screens_modules.h"
 
 /**
  * @brief Initialize the wifi module
@@ -40,20 +39,6 @@ void wifi_module_analyzer_destination_exit();
  * @return void
  */
 void wifi_module_analizer_summary_cb(FILE* pcap_file);
-
-/**
- * @brief Update the channel items array
- *
- * @return void
- */
-void wifi_module_update_channel_options();
-
-/**
- * @brief Update the destination items array
- *
- * @return void
- */
-void wifi_module_update_destination_options();
 
 void wifi_module_show_analyzer_help();
 

@@ -428,7 +428,7 @@ menu_t menus[] = {  //////////////////////////////////
      .parent_idx = MENU_ABOUT_2,
      .last_selected_submenu = 0,
      .on_enter_cb = ota_module_init,
-     .on_exit_cb = ota_module_deinit,
+     .on_exit_cb = NULL,
      .is_visible = true},
 #endif
     {.display_name = "Display",

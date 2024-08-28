@@ -21,7 +21,6 @@
 #include "lwip/netdb.h"
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
-#include "menu_screens_modules.h"
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
@@ -47,10 +46,6 @@ static enum {
 
 static int catdos_state = CATDOS_STATE_CONFIG_WIFI;
 
-app_screen_state_information_t app_screen_state_information = {
-    .in_app = false,
-    .app_selected = 0,
-};
 static bool running_attack = false;
 static TaskHandle_t task_display_attacking = NULL;
 static bool catdos_module_is_config_wifi();

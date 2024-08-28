@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "apps/ble/hid_device/hid_module.h"
 #include "apps/ble/trackers/trackers_module.h"
+#include "buzzer.h"
 #include "cat_console.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -8,7 +9,6 @@
 #include "flash_fs_screens.h"
 #include "keyboard_module.h"
 #include "leds.h"
-#include "menu_screens_modules.h"
 #include "menus_module.h"
 #include "open_thread.h"
 #include "preferences.h"

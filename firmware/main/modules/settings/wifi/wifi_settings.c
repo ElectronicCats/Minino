@@ -3,7 +3,6 @@
 #include "cmd_wifi.h"
 #include "esp_log.h"
 #include "led_events.h"
-#include "menu_screens_modules.h"
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
@@ -14,10 +13,6 @@ static int selected_item = 0;
 static int total_items = 0;
 static int max_items = 6;
 
-static app_screen_state_information_t app_screen_state_information = {
-    .in_app = false,
-    .app_selected = 0,
-};
 char* options_wifi_menu[] = {"Connect", "Forget", NULL};
 
 typedef enum {
@@ -36,7 +31,6 @@ typedef struct {
 static wifi_setting_state_t wifi_setting_state = WIFI_SETTING_IDLE;
 static wifi_setting_t wifi_config_state;
 
-static void config_module_app_selector();
 static void only_exit_input_cb(uint8_t button_name, uint8_t button_event);
 static void config_module_state_machine(uint8_t button_name,
                                         uint8_t button_event);
@@ -198,37 +192,6 @@ static void config_module_wifi_display_connect_modal() {
   } else {
     oled_screen_display_text_center("YES", 4, OLED_DISPLAY_NORMAL);
     config_module_wifi_display_selected_item_center("NO", 5);
-  }
-}
-
-void config_module_begin(int app_selected) {
-#if !defined(CONFIG_CONFIGURATION_DEBUG)
-  esp_log_level_set(TAG_CONFIG_MODULE, ESP_LOG_NONE);
-#endif
-
-  ESP_LOGI(TAG_CONFIG_MODULE, "Initializing ble module screen state machine");
-  app_screen_state_information.app_selected = app_selected;
-
-  menus_module_set_app_state(true, config_module_state_machine);
-  oled_screen_clear();
-  config_module_app_selector();
-};
-
-static void config_module_app_selector() {
-  switch (app_screen_state_information.app_selected) {
-    case MENU_SETTINGS_WIFI:
-      int count = validate_wifi_count();
-      if (count == 0) {
-        break;
-      }
-      wifi_config_state.state = WIFI_SETTING_IDLE;
-      wifi_config_state.total_items = count;
-      total_items = count;
-      ESP_LOGI(__func__, "Saved APs: %d", count);
-      config_module_wifi_display_list();
-      break;
-    default:
-      break;
   }
 }
 

@@ -13,7 +13,6 @@
 #include "general_radio_selection.h"
 #include "general_screens.h"
 #include "led_events.h"
-#include "menu_screens_modules.h"
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "sd_card.h"
@@ -25,7 +24,6 @@
 
 static const char* TAG = "wifi_module";
 bool analizer_initialized = false;
-static const uint32_t SOUND_DURATION = 100;
 
 static general_menu_t analyzer_summary_menu;
 static char* wifi_analizer_summary_2[120] = {
@@ -132,48 +130,6 @@ void wifi_module_analyzer_destination_exit() {
   }
 }
 
-void wifi_module_exit_submenu_cb() {
-  screen_module_menu_t current_menu = menu_screens_get_current_menu();
-
-  switch (current_menu) {
-    case MENU_WIFI_APPS:
-      menu_screens_unregister_submenu_cbs();
-      break;
-    case MENU_WIFI_ANALYZER_RUN:
-      break;
-    case MENU_WIFI_ANALYZER_ASK_SUMMARY:
-      oled_screen_clear();
-      wifi_sniffer_start();
-      led_control_run_effect(led_control_zigbee_scanning);
-      break;
-    case MENU_WIFI_ANALYZER_SUMMARY:
-      wifi_sniffer_close_file();
-      break;
-    case MENU_WIFI_ANALIZER:
-      screen_module_set_screen(MENU_WIFI_ANALIZER);
-      esp_restart();
-      break;
-    case MENU_WIFI_ANALYZER_DESTINATION:
-      if (wifi_sniffer_is_destination_sd()) {
-        // Verify if the SD card is inserted
-        sd_card_unmount();
-        if (sd_card_mount() == ESP_OK) {
-          vTaskDelay(100 / portTICK_PERIOD_MS);
-          sd_card_unmount();
-        } else {
-          wifi_sniffer_set_destination_internal();
-        }
-      }
-      break;
-      // case MENU_WIFI_DOS:
-      //   screen_module_set_screen(MENU_WIFI_DOS);
-      //   esp_restart();
-      break;
-    default:
-      break;
-  }
-}
-
 void wifi_module_analyzer_run() {
   wifi_module_init_sniffer();
   menus_module_set_app_state(true, wifi_module_input_cb);
@@ -213,51 +169,6 @@ void wifi_module_analyzer_destination() {
   destination.style = RADIO_SELECTION_OLD_STYLE;
   general_radio_selection(destination);
 }
-
-void wifi_module_enter_submenu_cb(screen_module_menu_t user_selection) {
-  uint8_t selected_item = menu_screens_get_selected_item();
-
-  switch (user_selection) {
-    case MENU_WIFI_ANALIZER:
-      wifi_module_analizer_begin();
-      break;
-    case MENU_WIFI_ANALYZER_RUN:
-
-      break;
-    case MENU_WIFI_ANALYZER_SUMMARY:
-      // wifi_sniffer_load_summary();
-      break;
-    case MENU_WIFI_ANALYZER_CHANNEL:
-      if (menu_screens_is_configuration(user_selection)) {
-        buzzer_play_for(SOUND_DURATION);
-        wifi_sniffer_set_channel(selected_item + 1);
-      }
-      wifi_module_update_channel_options();
-      break;
-    case MENU_WIFI_ANALYZER_DESTINATION:
-      if (menu_screens_is_configuration(user_selection)) {
-        buzzer_play_for(SOUND_DURATION);
-        if (selected_item == WIFI_SNIFFER_DESTINATION_SD) {
-          wifi_sniffer_set_destination_sd();
-        } else {
-          wifi_sniffer_set_destination_internal();
-        }
-      }
-      wifi_module_update_destination_options();
-      break;
-    default:
-      break;
-  }
-}
-
-void wifi_module_begin() {
-#if !defined(CONFIG_WIFI_MODULE_DEBUG)
-  esp_log_level_set(TAG, ESP_LOG_NONE);
-#endif
-  menu_screens_register_enter_submenu_cb(wifi_module_enter_submenu_cb);
-  menu_screens_register_exit_submenu_cb(wifi_module_exit_submenu_cb);
-}
-
 void wifi_module_analizer_begin() {
   ESP_LOGI(TAG, "Initializing WiFi analizer module");
   wifi_sniffer_register_cb(wifi_screens_module_display_sniffer_cb);
@@ -428,20 +339,6 @@ err:
     free(packet_payload);
   }
   wifi_analizer_summary_2[summary_index++] = NULL;
-}
-
-void wifi_module_update_channel_options() {
-  uint8_t selected_option = wifi_sniffer_get_channel();
-  selected_option--;
-  menu_screens_update_options(wifi_analizer_channel_items, selected_option);
-}
-
-void wifi_module_update_destination_options() {
-  uint8_t selected_option = 0;
-  if (wifi_sniffer_is_destination_internal()) {
-    selected_option = 1;
-  }
-  menu_screens_update_options(wifi_analizer_destination_items, selected_option);
 }
 
 static void wifi_module_input_cb(uint8_t button_name, uint8_t button_event) {

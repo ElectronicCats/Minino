@@ -2,8 +2,8 @@
 
 #include <string.h>
 #include "bitmaps_general.h"
+#include "buzzer.h"
 #include "led_events.h"
-#include "menu_screens_modules.h"
 #include "menus_screens.h"
 #include "modals_module.h"
 #include "oled_screen.h"
