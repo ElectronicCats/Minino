@@ -1,8 +1,7 @@
 on:
   push:    
-#    tags:        
-#      - 'v*'
-#    branches: main
+    tags:        
+      - 'v*'
   pull_request:
 
 permissions:
@@ -43,7 +42,7 @@ jobs:
       runs-on: ubuntu-latest
       steps:
       - name: Download Firmware Files
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           path: release
       - name: Release Firmware
