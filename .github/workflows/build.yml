@@ -36,7 +36,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with: 
           name: minino-firmware
-          path: "./firmware/build/minino.bin ./firmware/build/bootloader/bootloader.bin ./firmware/build/partition_table/partition-table.bin ./firmware/build/ota_data_initial.bin"
+          path: "./firmware/build/"
   
     release:
       needs: build
