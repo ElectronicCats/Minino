@@ -82,10 +82,9 @@ static void general_screen_increment_option() {
 }
 
 static void general_screen_decrement_option() {
-  scrolling_option--;
-  if (scrolling_option < 0) {
-    scrolling_option = scrolling_menu_ctx->menu_count - 1;
-  }
+  scrolling_option = scrolling_option-- == 0
+                         ? scrolling_menu_ctx->menu_count - 1
+                         : scrolling_option;
 }
 
 static void general_screen_display_breadcrumb() {

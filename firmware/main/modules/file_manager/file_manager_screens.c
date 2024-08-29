@@ -8,7 +8,7 @@ static void update_list(file_manager_context_t* ctx) {
   items_offset = MAX(ctx->selected_item - 6, items_offset);
   items_offset = MIN(MAX(ctx->items_count - 7, 0), items_offset);
   items_offset = MIN(ctx->selected_item, items_offset);
-  oled_screen_clear();
+  oled_screen_clear_buffer();
   oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
   if (ctx->items_count == 0) {
     oled_screen_display_text("  Empty folder  ", 0, 3, OLED_DISPLAY_NORMAL);
@@ -23,6 +23,7 @@ static void update_list(file_manager_context_t* ctx) {
       free(str);
     }
   }
+  oled_screen_display_show();
 }
 
 static void show_fatal_error(char* error_tag) {}

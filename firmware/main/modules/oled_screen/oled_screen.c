@@ -61,7 +61,6 @@ void oled_screen_display_show() {
   oled_driver_show_buffer(&dev);
   xSemaphoreGive(oled_mutex);
 }
-
 void oled_screen_clear_buffer() {
   xSemaphoreTake(oled_mutex, portMAX_DELAY);
   oled_driver_clear_buffer(&dev);

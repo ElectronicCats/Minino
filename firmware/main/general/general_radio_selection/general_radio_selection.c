@@ -23,7 +23,7 @@ static void list_radio_options_old_style() {
   items_offset = MAX(ctx->selected_option - 4, items_offset);
   items_offset = MIN(MAX(ctx->options_count - 4, 0), items_offset);
   items_offset = MIN(ctx->selected_option, items_offset);
-  oled_screen_clear();
+  oled_screen_clear_buffer();
   char* str = malloc(20);
   oled_screen_display_text(ctx->banner, 0, 0, OLED_DISPLAY_NORMAL);
   for (uint8_t i = 0; i < (MIN(ctx->options_count, MAX_OPTIONS_NUM - 1)); i++) {
@@ -33,6 +33,7 @@ static void list_radio_options_old_style() {
     sprintf(str, "[%c] %s", state, ctx->options[i + items_offset]);
     oled_screen_display_text(str, 0, i + 2, is_selected);
   }
+  oled_screen_display_show();
   free(str);
 }
 
@@ -42,7 +43,7 @@ static void list_radio_options_new_style() {
   items_offset = MAX(ctx->selected_option - 4, items_offset);
   items_offset = MIN(MAX(ctx->options_count - 4, 0), items_offset);
   items_offset = MIN(ctx->selected_option, items_offset);
-  oled_screen_clear();
+  oled_screen_clear_buffer();
   char* str = malloc(20);
   oled_screen_display_text(ctx->banner, 0, 0, OLED_DISPLAY_NORMAL);
   for (uint8_t i = 0; i < (MIN(ctx->options_count, MAX_OPTIONS_NUM - 1)); i++) {
@@ -54,6 +55,7 @@ static void list_radio_options_new_style() {
             is_current ? "[curr]" : "");
     oled_screen_display_text(str, is_selected ? 16 : 0, i + 2, is_selected);
   }
+  oled_screen_display_show();
   free(str);
 }
 
