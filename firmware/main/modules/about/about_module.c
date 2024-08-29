@@ -53,3 +53,12 @@ void about_module_display_legal_menu() {
   general_register_scrolling_menu(&about_legal_menu);
   general_screen_display_scrolling_text_handler(menus_module_exit_app);
 }
+
+void about_module_display_version() {
+  general_screen_display_card_information_handler(
+      "Minino", "v" CONFIG_PROJECT_VERSION, menus_module_exit_app, NULL);
+}
+void about_module_display_license() {
+  general_screen_display_card_information_handler("License", "GNU GPL 3.0",
+                                                  menus_module_exit_app, NULL);
+}

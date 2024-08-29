@@ -1,21 +1,28 @@
 #pragma once
 #include <stdbool.h>
 #include <stdio.h>
-#include "apps/ble/hid_device/hid_module.h"
-#include "apps/ble/spam/spam_module.h"
-#include "apps/ble/trackers/trackers_module.h"
-#include "apps/zigbee/z_switch/z_switch_module.h"
-#include "modules/about/about_module.h"
+#include "about_module.h"
+#include "hid_module.h"
+#include "spam_module.h"
+#include "trackers_module.h"
+#include "z_switch_module.h"
 
 #include "catdos_module.h"
 #include "deauth_module.h"
 #include "display_settings.h"
 #include "file_manager_module.h"
+#include "gps_module.h"
+#include "gps_screens.h"
 #include "open_thread_module.h"
 #include "ota_module.h"
+#include "sd_card_settings_module.h"
+#include "settings_module.h"
 #include "stealth_mode.h"
+#include "wardriving_module.h"
+#include "wardriving_screens_module.h"
 #include "web_file_browser_module.h"
 #include "wifi_module.h"
+#include "wifi_settings.h"
 #include "zigbee_module.h"
 
 typedef enum {
@@ -142,14 +149,14 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_ABOUT_VERSION_2,
      .parent_idx = MENU_ABOUT_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = about_module_display_version,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "License",
      .menu_idx = MENU_ABOUT_LICENSE_2,
      .parent_idx = MENU_ABOUT_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = about_module_display_license,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Credits",
@@ -186,8 +193,8 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_WIFI_ANALYZER_RUN_2,
      .parent_idx = MENU_WIFI_ANALIZER_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = wifi_module_init_sniffer,
-     .on_exit_cb = wifi_module_analyzer_run_exit,
+     .on_enter_cb = wifi_module_analyzer_run,
+     .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Settings",
      .menu_idx = MENU_WIFI_ANALYZER_SETTINGS_2,
@@ -200,21 +207,21 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_WIFI_ANALYZER_CHANNEL_2,
      .parent_idx = MENU_WIFI_ANALYZER_SETTINGS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = wifi_module_analyzer_channel,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Destination",
      .menu_idx = MENU_WIFI_ANALYZER_DESTINATION_2,
      .parent_idx = MENU_WIFI_ANALYZER_SETTINGS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = wifi_module_analyzer_destination,
      .on_exit_cb = wifi_module_analyzer_destination_exit,
      .is_visible = true},
     {.display_name = "Help",
      .menu_idx = MENU_WIFI_ANALYZER_HELP_2,
      .parent_idx = MENU_WIFI_ANALIZER_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = wifi_module_show_analyzer_help,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
@@ -361,21 +368,21 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_GPS_WARDRIVING_2,
      .parent_idx = MENU_GPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .on_enter_cb = wardriving_module_begin,
+     .on_exit_cb = wardriving_module_end,
      .is_visible = true},
     {.display_name = "Start",
      .menu_idx = MENU_GPS_WARDRIVING_START_2,
      .parent_idx = MENU_GPS_WARDRIVING_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .on_enter_cb = wardriving_module_start_scan,
+     .on_exit_cb = wardriving_module_stop_scan,
      .is_visible = true},
     {.display_name = "Help",
      .menu_idx = MENU_GPS_WARDRIVING_HELP_2,
      .parent_idx = MENU_GPS_WARDRIVING_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = wardriving_screens_show_help,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
@@ -383,35 +390,35 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_GPS_DATE_TIME_2,
      .parent_idx = MENU_GPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = gps_module_general_data_run,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Location",
      .menu_idx = MENU_GPS_LOCATION_2,
      .parent_idx = MENU_GPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = gps_module_general_data_run,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Speed",
      .menu_idx = MENU_GPS_SPEED_2,
      .parent_idx = MENU_GPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = gps_module_general_data_run,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Help",
      .menu_idx = MENU_GPS_HELP_2,
      .parent_idx = MENU_GPS_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = gps_screens_show_help,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Time zone",
      .menu_idx = MENU_SETTINGS_TIME_ZONE_2,
      .parent_idx = MENU_SETTINGS_SYSTEM_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = settings_module_time_zone,
      .on_exit_cb = NULL,
      .is_visible = true},
 #endif
@@ -421,7 +428,7 @@ menu_t menus[] = {  //////////////////////////////////
      .parent_idx = MENU_ABOUT_2,
      .last_selected_submenu = 0,
      .on_enter_cb = ota_module_init,
-     .on_exit_cb = ota_module_deinit,
+     .on_exit_cb = NULL,
      .is_visible = true},
 #endif
     {.display_name = "Display",
@@ -442,7 +449,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_SETTINGS_WIFI_2,
      .parent_idx = MENU_SETTINGS_SYSTEM_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = wifi_settings_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "SD card",
@@ -456,14 +463,14 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_SETTINGS_SD_CARD_INFO_2,
      .parent_idx = MENU_SETTINGS_SD_CARD_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = update_sd_card_info,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Check Format",
      .menu_idx = MENU_SETTINGS_SD_CARD_FORMAT_2,
      .parent_idx = MENU_SETTINGS_SD_CARD_2,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = sd_card_settings_verify_sd_card,
      .on_exit_cb = NULL,
      .is_visible = true},
 #ifdef CONFIG_FILE_MANAGER_ENABLE

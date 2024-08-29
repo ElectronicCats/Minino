@@ -2,8 +2,8 @@
 
 #include <string.h>
 #include "bitmaps_general.h"
+#include "buzzer.h"
 #include "led_events.h"
-#include "menu_screens_modules.h"
 #include "menus_screens.h"
 #include "modals_module.h"
 #include "oled_screen.h"
@@ -118,6 +118,8 @@ static void navigation_exit() {
   }
   menus_ctx->current_menu =
       menus[get_menu_idx(menus_ctx->current_menu)].parent_idx;
+  menus_ctx->parent_menu_idx =
+      menus[get_menu_idx(menus_ctx->current_menu)].parent_idx;
   refresh_menus();
 }
 
@@ -204,15 +206,11 @@ void menus_module_set_app_state_last() {
 }
 
 void menus_module_restart() {
-  app_state2.in_app = false;
-  app_state2.input_callback = NULL;
   menus_module_set_reset_screen(menus_ctx->parent_menu_idx);
   esp_restart();
 }
 
 void menus_module_exit_app() {
-  app_state2.in_app = false;
-  app_state2.input_callback = NULL;
   menus_module_set_app_state(false, menus_input_cb);
   screen_saver_get_idle_state();
   navigation_exit();

@@ -6,7 +6,6 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "led_events.h"
-#include "menu_screens_modules.h"
 #include "menus_module.h"
 #include "wifi_attacks.h"
 #include "wifi_controller.h"
@@ -147,17 +146,11 @@ static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event) {
 
   switch (button_name) {
     case BUTTON_UP:
-      deauth_decrement_item();
-      if (current_item < 0) {
-        current_item = MENUCOUNT - 1;
-      }
+      current_item = current_item-- == 0 ? MENUCOUNT - 1 : current_item;
       deauth_display_menu(current_item, menu_stadistics);
       break;
     case BUTTON_DOWN:
-      deauth_increment_item();
-      if (current_item > MENUCOUNT - 1) {
-        current_item = 0;
-      }
+      current_item = ++current_item > MENUCOUNT - 1 ? 0 : current_item;
       deauth_display_menu(current_item, menu_stadistics);
       break;
     case BUTTON_RIGHT:
@@ -222,18 +215,12 @@ static void deauth_module_cb_event_select_ap(uint8_t button_name,
   }
   switch (button_name) {
     case BUTTON_UP:
-      deauth_decrement_item();
-      if (current_item < 0) {
-        current_item = ap_records->count;
-      }
+      current_item = current_item-- == 0 ? ap_records->count - 1 : current_item;
       deauth_display_scanned_ap(ap_records->records, ap_records->count,
                                 current_item);
       break;
     case BUTTON_DOWN:
-      deauth_increment_item();
-      if (current_item > ap_records->count) {
-        current_item = 0;
-      }
+      current_item = ++current_item > ap_records->count - 1 ? 0 : current_item;
       deauth_display_scanned_ap(ap_records->records, ap_records->count,
                                 current_item);
       break;
@@ -260,11 +247,11 @@ static void deauth_module_cb_event_attacks(uint8_t button_name,
   }
   switch (button_name) {
     case BUTTON_UP:
-      deauth_decrement_item();
+      current_item = current_item-- == 0 ? ATTACKSCOUNT - 1 : current_item;
       deauth_display_attacks(current_item, menu_stadistics);
       break;
     case BUTTON_DOWN:
-      deauth_increment_item();
+      current_item = ++current_item > ATTACKSCOUNT - 1 ? 0 : current_item;
       deauth_display_attacks(current_item, menu_stadistics);
       break;
     case BUTTON_RIGHT:
@@ -314,17 +301,12 @@ static void deauth_module_cb_event_captive_portal(uint8_t button_name,
   }
   switch (button_name) {
     case BUTTON_UP:
-      deauth_decrement_item();
-      if (current_item < 0) {
-        current_item = CAPTIVEPORTALCOUNT - 1;
-      }
+      current_item =
+          current_item-- == 0 ? CAPTIVEPORTALCOUNT - 1 : current_item;
       deauth_display_captive_portals(current_item, menu_stadistics);
       break;
     case BUTTON_DOWN:
-      deauth_increment_item();
-      if (current_item > CAPTIVEPORTALCOUNT - 1) {
-        current_item = 0;
-      }
+      current_item = ++current_item > CAPTIVEPORTALCOUNT - 1 ? 0 : current_item;
       deauth_display_captive_portals(current_item, menu_stadistics);
       break;
     case BUTTON_LEFT:

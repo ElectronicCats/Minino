@@ -176,17 +176,10 @@ void oled_driver_display_text_x3(oled_driver_t* dev,
 }
 
 void oled_driver_clear_screen(oled_driver_t* dev, bool invert) {
-  // char space[16];
-  // memset(space, 0x00, sizeof(space));
-  // for (int page = 0; page < dev->_pages; page++) {
-  //     oled_driver_display_text(dev, page, space, sizeof(space), invert);
-  // }
-
-  char* space = "                ";
-  int pages = 7;
-  for (int page = 0; page <= pages; page++) {
-    oled_driver_display_text(dev, page, space, 0, invert);
+  for (int i = 0; i < dev->_pages; i++) {
+    memset(dev->_page[i]._segs, 0, dev->_width);
   }
+  oled_driver_show_buffer(dev);
 }
 
 void oled_driver_clear_line(oled_driver_t* dev, int x, int page, bool invert) {
@@ -496,7 +489,6 @@ void oled_driver_bitmaps(oled_driver_t* dev,
         _seg++;
       }
     }
-    vTaskDelay(1);
     offset = offset + _width;
     dstBits++;
     _seg = xpos;

@@ -93,70 +93,47 @@ static const unsigned char epd_bitmap_electroniccats[] = {
 unsigned char* epd_startup_logo[] = {epd_bitmap_minino_text_logo,
                                      epd_bitmap_face_logo};
 
-epd_bitmap_t minino_face_bitmap = {
+const epd_bitmap_t minino_face_bitmap = {
     .bitmap = minino_face,
     .width = 8,
     .height = 8,
 };
 
-epd_bitmap_t minino_letters_bitmap = {
+const epd_bitmap_t minino_letters_bitmap = {
     .bitmap = epd_bitmap_minino_text_logo,
     .width = 64,
     .height = 32,
 };
 
-epd_bitmap_t minino_face_logo = {
+const epd_bitmap_t minino_face_logo = {
     .bitmap = epd_bitmap_face_logo,
     .width = 32,
     .height = 32,
 };
 
-epd_bitmap_t minino_pwnlabs_logo = {
+const epd_bitmap_t minino_pwnlabs_logo = {
     .bitmap = epd_bitmap_pwn_02,
     .width = 64,
     .height = 32,
 };
 
-epd_bitmap_t minino_electroniccats_logo = {
+const epd_bitmap_t minino_electroniccats_logo = {
     .bitmap = epd_bitmap_electroniccats,
     .width = 32,
     .height = 32,
 };
 
 typedef enum {
-  MININO_FACE,
   MININO_LETTERS,
+  MININO_FACE,
   MININO_PWNLABS,
   MININO_ELECTRONICCATS,
   MININO_COUNT
 } epd_bitmap_type_t;
 
-epd_bitmap_t screen_savers[] = {  ///////////////////
-    {
-        .bitmap = minino_face,
-        .width = 8,
-        .height = 8,
-    },
-    {
-        .bitmap = epd_bitmap_face_logo,
-        .width = 32,
-        .height = 32,
-    },
-    {
-        .bitmap = epd_bitmap_face_logo,
-        .width = 32,
-        .height = 32,
-    },
-    {
-        .bitmap = epd_bitmap_pwn_02,
-        .width = 64,
-        .height = 32,
-    },
-    {
-        .bitmap = epd_bitmap_electroniccats,
-        .width = 32,
-        .height = 32,
-    }};
+epd_bitmap_t screen_savers[] = {minino_letters_bitmap, minino_face_logo,
+                                minino_pwnlabs_logo,
+                                minino_electroniccats_logo};
 
 char* epd_bitmaps_list[] = {"Letters", "Face", "PwnLabs", "EC", NULL};
 #endif  // BITMAPS_GENERAL_H

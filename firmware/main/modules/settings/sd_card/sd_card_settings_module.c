@@ -1,7 +1,6 @@
 #include "esp_log.h"
 
 #include "keyboard_module.h"
-#include "menu_screens_modules.h"
 #include "menus_module.h"
 #include "sd_card.h"
 #include "sd_card_settings_module.h"
@@ -28,6 +27,7 @@ const char* sd_card_state_to_name[] = {
 sd_card_settings_state_t state = SD_CARD_SETTINGS_VERIFYING;
 
 void sd_card_settings_verify_sd_card() {
+  menus_module_set_app_state(true, sd_card_settings_keyboard_cb);
   ESP_LOGI(TAG, "Verifying SD card...");
   state = SD_CARD_SETTINGS_VERIFYING;
 
@@ -52,8 +52,7 @@ void sd_card_settings_keyboard_cb(uint8_t button_name, uint8_t button_event) {
 
   switch (button_name) {
     case BUTTON_LEFT:
-      menus_module_set_app_state(false, NULL);
-      menu_screens_exit_submenu();
+      menus_module_exit_app();
       break;
     case BUTTON_RIGHT:
       ESP_LOGI(TAG, "State: %s", sd_card_state_to_name[state]);
@@ -71,12 +70,10 @@ void sd_card_settings_keyboard_cb(uint8_t button_name, uint8_t button_event) {
           }
           break;
         case SD_CARD_SETTINGS_OK:
-          menus_module_set_app_state(false, NULL);
-          menu_screens_enter_submenu();
+          menus_module_exit_app();
           break;
         default:
-          menus_module_set_app_state(false, NULL);
-          menu_screens_exit_submenu();
+          menus_module_exit_app();
           break;
       }
       break;

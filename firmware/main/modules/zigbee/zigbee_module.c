@@ -3,7 +3,6 @@
 #include "esp_log.h"
 #include "ieee_sniffer.h"
 #include "led_events.h"
-#include "menu_screens_modules.h"
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
@@ -12,10 +11,6 @@
 #include "zigbee_screens_module.h"
 #include "zigbee_switch.h"
 
-app_screen_state_information_t app_screen_state_information = {
-    .in_app = false,
-    .app_selected = 0,
-};
 static int packet_count = 0;
 int current_channel = IEEE_SNIFFER_CHANNEL_DEFAULT;
 static TaskHandle_t zigbee_task_display_records = NULL;

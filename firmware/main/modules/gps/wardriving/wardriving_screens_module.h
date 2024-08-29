@@ -51,3 +51,5 @@ void wardriving_screens_module_formating_sd_card();
  * @return void
  */
 void wardriving_screens_module_failed_format_sd_card();
+
+void wardriving_screens_show_help();

@@ -3,7 +3,6 @@
 #include "bitmaps_general.h"
 #include "esp_log.h"
 #include "led_events.h"
-#include "menu_screens_modules.h"
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
@@ -133,11 +132,13 @@ static void display_config_module_state_machine(uint8_t button_name,
 
       break;
     case BUTTON_UP:
-      selected_item = (selected_item == 0) ? DISPLAY_COUNT : selected_item - 1;
+      selected_item =
+          (selected_item == 0) ? DISPLAY_COUNT - 1 : selected_item - 1;
       display_config_display_menu_item();
       break;
     case BUTTON_DOWN:
-      selected_item = (selected_item == DISPLAY_COUNT) ? 0 : selected_item + 1;
+      selected_item =
+          (selected_item == DISPLAY_COUNT - 1) ? 0 : selected_item + 1;
       display_config_display_menu_item();
       break;
     case BUTTON_BOOT:
@@ -206,11 +207,13 @@ static void display_config_module_state_machine_menu_logo(
       display_settings_show_modal();
       break;
     case BUTTON_UP:
-      selected_item = (selected_item == 0) ? MININO_COUNT : selected_item - 1;
+      selected_item =
+          (selected_item == 0) ? MININO_COUNT - 1 : selected_item - 1;
       display_config_display_list_logo();
       break;
     case BUTTON_DOWN:
-      selected_item = (selected_item == MININO_COUNT) ? 0 : selected_item + 1;
+      selected_item =
+          (selected_item == MININO_COUNT - 1) ? 0 : selected_item + 1;
       display_config_display_list_logo();
       break;
     case BUTTON_BOOT:
@@ -242,11 +245,11 @@ static void display_config_module_state_machine_modal(uint8_t button_name,
       display_config_display_menu_item();
       break;
     case BUTTON_UP:
-      selected_item = (selected_item == 0) ? 2 : selected_item - 1;
+      selected_item = (selected_item == 0) ? 1 : selected_item - 1;
       display_settings_show_modal();
       break;
     case BUTTON_DOWN:
-      selected_item = (selected_item == 2) ? 0 : selected_item + 1;
+      selected_item = (selected_item == 1) ? 0 : selected_item + 1;
       display_settings_show_modal();
       break;
     case BUTTON_BOOT:
