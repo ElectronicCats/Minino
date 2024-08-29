@@ -45,7 +45,7 @@ static void config_module_wifi_display_selected_item_center(
 }
 
 static void display_config_display_menu_item() {
-  oled_screen_clear();
+  oled_screen_clear_buffer();
   oled_screen_display_text("< Exit", 0, 0, OLED_DISPLAY_NORMAL);
   for (int i = 0; display_settings_menu_items[i] != NULL; i++) {
     int page = (i + 1);
@@ -57,10 +57,11 @@ static void display_config_display_menu_item() {
                                OLED_DISPLAY_NORMAL);
     }
   }
+  oled_screen_display_show();
 }
 
 static void display_config_display_list_logo() {
-  oled_screen_clear();
+  oled_screen_clear_buffer();
   oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
   int current_scren = preferences_get_int("dp_select", 0);
   for (int i = 0; epd_bitmaps_list[i] != NULL; i++) {
@@ -77,16 +78,18 @@ static void display_config_display_list_logo() {
       oled_screen_display_text(display_text, 0, page, OLED_DISPLAY_NORMAL);
     }
   }
+  oled_screen_display_show();
 }
 
 static void display_config_display_time_selection() {
-  oled_screen_clear();
+  oled_screen_clear_buffer();
   oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
   oled_screen_display_text_center("Time in seconds", 1, OLED_DISPLAY_NORMAL);
   oled_screen_display_text_center("Min:30 - Max:360", 2, OLED_DISPLAY_NORMAL);
   char time_text[18];
   sprintf(time_text, "Time: %d", time_default_time);
   oled_screen_display_text_center(time_text, 4, OLED_DISPLAY_NORMAL);
+  oled_screen_display_show();
 }
 
 void display_config_module_begin() {
@@ -96,7 +99,7 @@ void display_config_module_begin() {
 };
 
 static void display_settings_show_modal() {
-  oled_screen_clear();
+  oled_screen_clear_buffer();
   oled_screen_display_text_center("Apply this config?", 1, OLED_DISPLAY_NORMAL);
   if (selected_item == 0) {
     config_module_wifi_display_selected_item_center("YES", 3);
@@ -105,6 +108,7 @@ static void display_settings_show_modal() {
     oled_screen_display_text_center("YES", 3, OLED_DISPLAY_NORMAL);
     config_module_wifi_display_selected_item_center("NO", 4);
   }
+  oled_screen_display_show();
 }
 
 static void display_config_module_state_machine(uint8_t button_name,
