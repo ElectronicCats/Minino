@@ -72,13 +72,13 @@ static void input_cb(uint8_t button_name, uint8_t button_event) {
       free(general_radio_selection_ctx);
       break;
     case BUTTON_RIGHT:
-      buzzer_play_for(SOUND_DURATION);
       general_radio_selection_ctx->current_option =
           general_radio_selection_ctx->selected_option;
       void (*select_cb)() = general_radio_selection_ctx->select_cb;
       if (select_cb) {
         select_cb(general_radio_selection_ctx->current_option);
       }
+      buzzer_play_for(SOUND_DURATION);
       list_radio_options();
       break;
     case BUTTON_UP:

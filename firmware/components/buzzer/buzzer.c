@@ -93,9 +93,6 @@ void buzzer_play_for(uint32_t duration) {
 }
 
 void buzzer_stop() {
-  if (!buzzer.enabled) {
-    return;
-  }
   ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 0));
   ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
 
