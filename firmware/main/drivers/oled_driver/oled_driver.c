@@ -175,10 +175,14 @@ void oled_driver_display_text_x3(oled_driver_t* dev,
   }
 }
 
-void oled_driver_clear_screen(oled_driver_t* dev, bool invert) {
+void oled_driver_clear_buffer(oled_driver_t* dev) {
   for (int i = 0; i < dev->_pages; i++) {
     memset(dev->_page[i]._segs, 0, dev->_width);
   }
+}
+
+void oled_driver_clear_screen(oled_driver_t* dev, bool invert) {
+  oled_driver_clear_buffer(dev);
   oled_driver_show_buffer(dev);
 }
 

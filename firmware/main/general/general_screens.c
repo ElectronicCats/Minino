@@ -185,7 +185,7 @@ void general_register_scrolling_menu(const general_menu_t* ctx) {
 }
 
 void general_clear_screen() {
-  oled_screen_clear();
+  oled_screen_clear_buffer();
 }
 
 void general_screen_display_scrolling_text_handler(void* callback_exit) {

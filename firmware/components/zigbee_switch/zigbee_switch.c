@@ -283,7 +283,7 @@ void wait_for_devices_task(void* pvParameters) {
       continue;
     }
     zigbee_switch_display_status_cb(WAITING_FOR_DEVICES);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    vTaskDelay(300 / portTICK_PERIOD_MS);
   }
 }
 

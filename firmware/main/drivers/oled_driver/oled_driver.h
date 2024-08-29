@@ -127,6 +127,7 @@ void oled_driver_display_text_x3(oled_driver_t* dev,
                                  char* text,
                                  int text_len,
                                  bool invert);
+void oled_driver_clear_buffer(oled_driver_t* dev);
 void oled_driver_clear_screen(oled_driver_t* dev, bool invert);
 void oled_driver_clear_line(oled_driver_t* dev, int x, int page, bool invert);
 void oled_driver_contrast(oled_driver_t* dev, int contrast);

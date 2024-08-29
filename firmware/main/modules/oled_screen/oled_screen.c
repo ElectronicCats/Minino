@@ -62,6 +62,12 @@ void oled_screen_display_show() {
   xSemaphoreGive(oled_mutex);
 }
 
+void oled_screen_clear_buffer() {
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
+  oled_driver_clear_buffer(&dev);
+  xSemaphoreGive(oled_mutex);
+}
+
 void oled_screen_display_text(char* text, int x, int page, bool invert) {
   if (text == NULL) {
     ESP_LOGE(TAG, "Text is NULL");
