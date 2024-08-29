@@ -99,10 +99,8 @@ void oled_screen_display_text_center(char* text, int page, bool invert) {
 }
 
 void oled_screen_clear_line(int x, int page, bool invert) {
-  // oled_driver_clear_line(&dev, x, page, invert);
   xSemaphoreTake(oled_mutex, portMAX_DELAY);
-  oled_driver_bitmaps(&dev, x, page * 8, epd_bitmap_clear_line, 128 - x, 8,
-                      invert);
+  oled_driver_clear_line(&dev, x, page, invert);
   xSemaphoreGive(oled_mutex);
 }
 
