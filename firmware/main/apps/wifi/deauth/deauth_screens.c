@@ -59,7 +59,7 @@ void deauth_display_attacking_animation() {
 
 void deauth_display_menu(uint16_t current_item,
                          menu_stadistics_t menu_stadistics) {
-  oled_screen_clear();
+  oled_screen_clear_buffer();
   oled_screen_display_text("< Exit", 0, 0, OLED_DISPLAY_NORMAL);
 
   int position = 1;
@@ -95,12 +95,13 @@ void deauth_display_menu(uint16_t current_item,
     }
     position = position + 2;
   }
+  oled_screen_display_show();
 }
 
 void deauth_display_scanned_ap(wifi_ap_record_t* ap_records,
                                uint16_t scanned_records,
                                uint16_t current_option) {
-  oled_screen_clear();
+  oled_screen_clear_buffer();
   oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
 
   ap_count = scanned_records;
@@ -122,11 +123,12 @@ void deauth_display_scanned_ap(wifi_ap_record_t* ap_records,
                                (i + 1) - current_option, OLED_DISPLAY_NORMAL);
     }
   }
+  oled_screen_display_show();
 }
 
 void deauth_display_attacks(uint16_t current_item,
                             menu_stadistics_t menu_stadistics) {
-  oled_screen_clear();
+  oled_screen_clear_buffer();
   oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
 
   for (uint16_t i = 0; i < ATTACKSCOUNT; i++) {
@@ -145,11 +147,12 @@ void deauth_display_attacks(uint16_t current_item,
       oled_screen_display_text(item, 0, i + ITEMOFFSET, OLED_DISPLAY_NORMAL);
     }
   }
+  oled_screen_display_show();
 }
 
 void deauth_display_captive_portals(uint16_t current_item,
                                     menu_stadistics_t menu_stadistics) {
-  oled_screen_clear();
+  oled_screen_clear_buffer();
   oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
 
   for (uint16_t i = 0; i < CAPTIVEPORTALCOUNT; i++) {
@@ -168,6 +171,7 @@ void deauth_display_captive_portals(uint16_t current_item,
       oled_screen_display_text(item, 0, i + ITEMOFFSET, OLED_DISPLAY_NORMAL);
     }
   }
+  oled_screen_display_show();
 }
 
 void deauth_display_captive_waiting() {
