@@ -4,7 +4,6 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 
-#include "bitmaps.h"
 #include "esp_log.h"
 #include "oled_screen.h"
 
