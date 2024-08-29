@@ -1,5 +1,6 @@
-#ifndef BLE_BITMAPS_H
-#define BLE_BITMAPS_H
+#ifndef SPAM_SCREENS_H
+#define SPAM_SCREENS_H
+
 // 'ble_loading-2', 128x32px
 unsigned char ble_bitmap_ble_loading_2[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -188,4 +189,7 @@ unsigned char* ble_bitmap_scan_attack_allArray[4] = {
     ble_bitmap_ble_loading_1, ble_bitmap_ble_loading_2,
     ble_bitmap_ble_loading_3, ble_bitmap_ble_loading_4};
 
-#endif  // BLE_BITMAPS_H
+void ble_screens_start_scanning_animation();
+void ble_screens_display_scanning_text(char* name);
+void ble_screens_display_ble_spam();
+#endif  // SPAM_SCREENS_H

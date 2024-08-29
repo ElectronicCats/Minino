@@ -9,7 +9,7 @@
 #include "file_manager_screens.h"
 #include "flash_fs.h"
 #include "keyboard_modal.h"
-#include "menu_screens_modules.h"
+#include "menus_module.h"
 #include "modals_module.h"
 #include "sd_card.h"
 
@@ -130,8 +130,7 @@ static file_manager_context_t* file_manager_context_alloc() {
 static void file_manager_module_exit() {
   clear_items();
   free(fm_ctx);
-  menu_screens_exit_submenu();
-  menu_screens_set_app_state(false, NULL);
+  menus_module_restart();
 }
 
 static void navigation_up() {
@@ -192,7 +191,7 @@ static void file_options_handler(int8_t selection) {
         }
         free(new_path);
       }
-      menu_screens_set_app_state(true, file_manager_input_cb);
+      menus_module_set_app_state(true, file_manager_input_cb);
       break;
     case FM_ERASE_OPTION:
       if (modals_module_get_user_y_n_selection("  Are You Sure  ") ==
@@ -205,7 +204,7 @@ static void file_options_handler(int8_t selection) {
                                   2000, true);
         }
       }
-      menu_screens_set_app_state(true, file_manager_input_cb);
+      menus_module_set_app_state(true, file_manager_input_cb);
       break;
     default:
       break;
@@ -214,7 +213,7 @@ static void file_options_handler(int8_t selection) {
 
 static void open_file_options() {
   int8_t selection = modals_module_get_user_selection(file_options, "< Cancel");
-  menu_screens_set_app_state(true, file_manager_input_cb);
+  menus_module_set_app_state(true, file_manager_input_cb);
   file_options_handler(selection);
   update_files();
   fm_ctx->selected_item = MIN(fm_ctx->selected_item, fm_ctx->items_count - 1);
@@ -259,7 +258,7 @@ static void file_manager_input_cb(uint8_t button_name, uint8_t button_event) {
 
 static void open_root_directory(char* root) {
   fm_ctx->current_path = root;
-  menu_screens_set_app_state(true, file_manager_input_cb);
+  menus_module_set_app_state(true, file_manager_input_cb);
   file_manager_set_show_event_callback(file_manager_screens_event_handler);
   refresh_files();
 }

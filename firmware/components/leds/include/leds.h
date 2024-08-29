@@ -8,7 +8,8 @@
 
 typedef enum { LED_LEFT, LED_RIGHT } leds_enum;
 
-void leds_init();
+void leds_begin();
+void leds_deinit();
 void leds_on();
 void leds_off();
 void leds_set_brightness(uint8_t led, uint8_t brightness);

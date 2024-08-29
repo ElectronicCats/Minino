@@ -4,7 +4,7 @@
 
 #include "keyboard_module.h"
 #include "keyboard_screens.h"
-#include "menu_screens_modules.h"
+#include "menus_module.h"
 
 #define TAG "Keyboard Modal"
 
@@ -82,7 +82,7 @@ static void keyboard_modal_alloc(char* text, char* banner) {
 
 char* keyboard_modal_write(char* text, char* banner) {
   keyboard_modal_alloc(text, banner);
-  menu_screens_set_app_state(true, keyboard_modal_input_cb);
+  menus_module_set_app_state(true, keyboard_modal_input_cb);
   keyboard_screens_show(kb_ctx);
   keyboard_screens_update_text(kb_ctx);
   while (!kb_ctx->consumed)

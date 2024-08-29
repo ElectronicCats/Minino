@@ -2,7 +2,8 @@
 #include "stdint.h"
 
 #include "gps_module.h"
-#include "menu_screens_modules.h"
+#include "gps_screens.h"
+#include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
 #include "wardriving_module.h"
@@ -32,54 +33,8 @@ const float TIME_ZONES[] = {-12.0, -11.0, -10.0, -9.5,  -9.0, -8.0, -7.0, -6.0,
                             2.0,   3.0,   3.5,   4.0,   4.5,  5.0,  5.5,  5.75,
                             6.0,   6.5,   7.0,   8.0,   8.75, 9.0,  9.5,  10.0,
                             10.5,  11.0,  12.0,  12.75, 13.0, 14.0};
-
-// TODO: Refactor this update functions to screen module
-void update_date_and_time(gps_t* gps) {
-  char* signal_str = (char*) malloc(20);
-  char* date_str = (char*) malloc(20);
-  char* time_str = (char*) malloc(20);
-
-  sprintf(signal_str, "Signal: %s", gps_module_get_signal_strength(gps));
-  sprintf(date_str, "Date: %d/%d/%d", gps->date.year, gps->date.month,
-          gps->date.day);
-  sprintf(time_str, "Time: %d:%d:%d", gps->tim.hour, gps->tim.minute,
-          gps->tim.second);
-
-  gps_date_time_items[1] = signal_str;
-  gps_date_time_items[3] = date_str;
-  gps_date_time_items[4] = time_str;
-}
-
-void update_location(gps_t* gps) {
-  char* signal_str = (char*) malloc(20);
-  char* latitude_str = (char*) malloc(22);
-  char* longitude_str = (char*) malloc(22);
-  char* altitude_str = (char*) malloc(22);
-  char* speed_str = (char*) malloc(22);
-
-  // TODO: add ° symbol
-  sprintf(signal_str, "Signal: %s", gps_module_get_signal_strength(gps));
-  sprintf(latitude_str, "  %.05f N", gps->latitude);
-  sprintf(longitude_str, "  %.05f E", gps->longitude);
-  sprintf(altitude_str, "  %.04fm", gps->altitude);
-
-  gps_location_items[1] = signal_str;
-  gps_location_items[4] = latitude_str;
-  gps_location_items[6] = longitude_str;
-  gps_location_items[8] = altitude_str;
-}
-
-void update_speed(gps_t* gps) {
-  char* signal_str = (char*) malloc(20);
-  char* speed_str = (char*) malloc(22);
-
-  sprintf(signal_str, "Signal: %s", gps_module_get_signal_strength(gps));
-  sprintf(speed_str, "Speed: %.02fm/s", gps->speed);
-
-  gps_speed_items[1] = signal_str;
-  gps_speed_items[3] = speed_str;
-}
-
+static void gps_module_general_data_input_cb(uint8_t button_name,
+                                             uint8_t button_event);
 /**
  * @brief GPS Event Handler
  *
@@ -92,26 +47,15 @@ static void gps_event_handler(void* event_handler_arg,
                               esp_event_base_t event_base,
                               int32_t event_id,
                               void* event_data) {
-  screen_module_menu_t current_menu = menu_screens_get_current_menu();
-
-  if (current_menu == MENU_GPS) {
-    return;
-  }
-
   switch (event_id) {
     case GPS_UPDATE:
       /* update GPS information */
       gps_t* gps = gps_module_get_instance(event_data);
-
       if (gps_event_callback != NULL) {
         gps_event_callback(gps);
         return;
       }
-
-      update_date_and_time(gps);
-      update_location(gps);
-      update_speed(gps);
-      menu_screens_display_menu();
+      gps_screens_update_handler(gps);
       break;
     case GPS_UNKNOWN:
       /* print unknown statements */
@@ -138,6 +82,7 @@ void gps_module_start_scan() {
   nmea_hdl = nmea_parser_init(&config);
   /* register event handler for NMEA parser library */
   nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
+  gps_screens_show_waiting_signal();
 }
 
 void gps_module_stop_read() {
@@ -159,56 +104,6 @@ char* gps_module_get_signal_strength(gps_t* gps) {
   } else {
     return (char*) GPS_SIGNAL_STRENGTH[3];
   }
-}
-
-void gps_module_exit_submenu_cb() {
-  screen_module_menu_t current_menu = menu_screens_get_current_menu();
-
-  switch (current_menu) {
-    case MENU_GPS_WARDRIVING:
-      wardriving_module_end();
-      break;
-    case MENU_GPS_WARDRIVING_START:
-      wardriving_module_stop_scan();
-      break;
-    case MENU_GPS:
-      menu_screens_unregister_submenu_cbs();
-      break;
-    case MENU_GPS_DATE_TIME:
-    case MENU_GPS_LOCATION:
-    case MENU_GPS_SPEED:
-      gps_module_stop_read();
-      break;
-    default:
-      break;
-  }
-}
-
-void gps_module_enter_submenu_cb(screen_module_menu_t user_selection) {
-  switch (user_selection) {
-    case MENU_GPS_WARDRIVING:
-      wardriving_module_begin();
-      break;
-    case MENU_GPS_WARDRIVING_START:
-      wardriving_module_start_scan();
-      menu_screens_set_app_state(true, wardriving_module_keyboard_cb);
-      break;
-    case MENU_GPS_DATE_TIME:
-    case MENU_GPS_LOCATION:
-    case MENU_GPS_SPEED:
-      gps_module_start_scan();
-      break;
-    default:
-      break;
-  }
-}
-
-void gps_module_begin() {
-#if !defined(CONFIG_GPS_MODULE_DEBUG)
-  esp_log_level_set(TAG, ESP_LOG_NONE);
-#endif
-  menu_screens_register_exit_submenu_cb(gps_module_exit_submenu_cb);
-  menu_screens_register_enter_submenu_cb(gps_module_enter_submenu_cb);
 }
 
 gps_t* gps_module_get_instance(void* event_data) {
@@ -282,4 +177,18 @@ void gps_module_register_cb(gps_event_callback_t callback) {
 
 void gps_module_unregister_cb() {
   gps_event_callback = NULL;
+}
+
+void gps_module_general_data_run() {
+  menus_module_set_app_state(true, gps_module_general_data_input_cb);
+  gps_module_start_scan();
+}
+
+static void gps_module_general_data_input_cb(uint8_t button_name,
+                                             uint8_t button_event) {
+  if (button_event != BUTTON_PRESS_DOWN || button_name != BUTTON_LEFT) {
+    return;
+  }
+  gps_module_stop_read();
+  menus_module_exit_app();
 }

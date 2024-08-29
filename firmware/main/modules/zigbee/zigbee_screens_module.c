@@ -1,4 +1,5 @@
 #include "zigbee_screens_module.h"
+#include "general/general_screens.h"
 #include "oled_screen.h"
 #include "zigbee_bitmaps.h"
 #include "zigbee_switch.h"
@@ -15,40 +16,34 @@ void zigbee_screens_module_toggle_released() {
 
 void zigbee_screens_module_creating_network() {
   oled_screen_clear();
-  oled_screen_display_text("Creating", 25, 3, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("network...", 20, 4, OLED_DISPLAY_NORMAL);
+  genera_screen_display_card_information("Creating network", "Please wait...");
 }
 
 void zigbee_screens_module_creating_network_failed() {
   oled_screen_clear();
-  oled_screen_display_text("Creating", 25, 3, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("network", 29, 4, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("failed", 33, 5, OLED_DISPLAY_NORMAL);
+  genera_screen_display_card_information("Creating network", "Failed");
 }
 
 void zigbee_screens_module_waiting_for_devices() {
   static uint8_t dots = 0;
   dots = ++dots > 3 ? 0 : dots;
-  oled_screen_clear_line(80, 4, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("Waiting for", 19, 3, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("devices", 24, 4, OLED_DISPLAY_NORMAL);
+  genera_screen_display_card_information("Waiting for", "devices");
   // Print dots from lef to right
-  for (int i = 0; i < dots; i++) {
-    oled_screen_display_text(".", 80 + (i * 8), 4, OLED_DISPLAY_NORMAL);
+  for (int i = 0; i < 3; i++) {
+    oled_screen_display_text(i < dots ? "." : "", 56 + (i * 8), 4,
+                             OLED_DISPLAY_NORMAL);
   }
 }
 
 void zigbee_screens_module_no_devices_found() {
   oled_screen_clear();
   vTaskDelay(100 / portTICK_PERIOD_MS);
-  oled_screen_display_text("No devices", 24, 3, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("found", 44, 4, OLED_DISPLAY_NORMAL);
+  genera_screen_display_card_information("No devices", "found");
 }
 
 void zigbee_screens_module_closing_network() {
   oled_screen_clear();
-  oled_screen_display_text("Closing", 25, 3, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("network...", 20, 4, OLED_DISPLAY_NORMAL);
+  genera_screen_display_card_information("Closing network", "Please wait...");
 }
 
 void zigbee_screens_module_display_status(uint8_t status) {
@@ -81,7 +76,7 @@ void zigbee_screens_module_display_status(uint8_t status) {
 ///////////////////////////////////////////////////////////////////////////
 void zigbee_screens_display_device_ad() {
   oled_screen_clear(OLED_DISPLAY_NORMAL);
-  int index_page = 1;
+  int index_page = 0;
   oled_screen_display_text_splited("Use our", &index_page, OLED_DISPLAY_NORMAL);
   oled_screen_display_text_splited("PyCatSniffer", &index_page,
                                    OLED_DISPLAY_NORMAL);
@@ -91,16 +86,16 @@ void zigbee_screens_display_device_ad() {
                                    OLED_DISPLAY_NORMAL);
 }
 
-void zigbee_screens_display_scanning_animation() {
+void zigbee_screens_display_zigbee_sniffer_text() {
   oled_screen_clear(OLED_DISPLAY_NORMAL);
   oled_screen_display_text_center("ZIGBEE SNIFFER", 0, OLED_DISPLAY_NORMAL);
-  while (true) {
-    for (int i = 0; i < zigbee_bitmap_allArray_LEN; i++) {
-      oled_screen_display_bitmap(zigbee_bitmap_allArray[i], 0, 16, 128, 32,
-                                 OLED_DISPLAY_NORMAL);
-      vTaskDelay(500 / portTICK_PERIOD_MS);
-    }
-  }
+}
+
+void zigbee_screens_display_scanning_animation() {
+  static uint8_t frame = 0;
+  oled_screen_display_bitmap(zigbee_bitmap_allArray[frame], 0, 16, 128, 32,
+                             OLED_DISPLAY_NORMAL);
+  frame = ++frame > zigbee_bitmap_allArray_LEN - 1 ? 0 : frame;
 }
 
 void zigbee_screens_display_scanning_text(int count) {

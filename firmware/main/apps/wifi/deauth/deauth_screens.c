@@ -32,6 +32,11 @@ void deauth_display_warning_not_attack_selected() {
   oled_screen_display_text_center("SELECT AN ATTACK", 2, OLED_DISPLAY_NORMAL);
 }
 
+void deauth_display_scanning_text() {
+  oled_screen_clear();
+  oled_screen_display_text_center("SCANNING AP", 0, OLED_DISPLAY_NORMAL);
+}
+
 void deauth_display_scanning() {
   oled_screen_display_text_center("SCANNING AP", 0, OLED_DISPLAY_NORMAL);
   static uint8_t idx = 0;
@@ -40,8 +45,12 @@ void deauth_display_scanning() {
   idx = ++idx > (BITMAPS_WIFI_LOADING_FRAME - 1) ? 0 : idx;
 }
 
-void deauth_display_attacking_animation() {
+void deauth_display_attaking_text() {
+  oled_screen_clear();
   oled_screen_display_text_center("ATTACKING AP", 0, OLED_DISPLAY_NORMAL);
+}
+
+void deauth_display_attacking_animation() {
   static uint8_t idx = 0;
   oled_screen_display_bitmap(punch_animation[idx], 48, 16, 32, 32,
                              OLED_DISPLAY_NORMAL);
