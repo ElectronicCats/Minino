@@ -27,11 +27,12 @@ void wardriving_screens_module_scanning(uint32_t packets, char* signal) {
   char* packets_str = (char*) malloc(20);
   sprintf(packets_str, "%ld", packets);
 
-  oled_screen_clear();
+  oled_screen_clear_buffer();
   oled_screen_display_text("Packets", 64, 0, OLED_DISPLAY_INVERT);
   oled_screen_display_text(packets_str, 64, 1, OLED_DISPLAY_INVERT);
   oled_screen_display_text("Signal", 64, 3, OLED_DISPLAY_INVERT);
   oled_screen_display_text(signal, 64, 4, OLED_DISPLAY_INVERT);
+  oled_screen_display_show();
 }
 
 void wardriving_screens_module_loading_text() {
