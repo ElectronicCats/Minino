@@ -19,14 +19,6 @@ static void hid_module_reset_menu() {
   menus_module_set_app_state(true, hid_module_cb_event);
 }
 
-static void hid_module_increment_item() {
-  current_item++;
-}
-
-static void hid_module_decrement_item() {
-  current_item--;
-}
-
 static void hid_module_cb_connection_handler(bool connection) {
   hid_module_display_device_connection(connection);
   if (!connection) {
@@ -41,17 +33,11 @@ static void hid_module_cb_event_volumen(uint8_t button_name,
   }
   switch (button_name) {
     case BUTTON_UP:
-      hid_module_decrement_item();
-      if (current_item < 0) {
-        current_item = HID_DEVICE_COUNT - 1;
-      }
+      current_item = current_item-- == 0 ? HID_DEVICE_COUNT - 1 : current_item;
       hid_module_display_menu(current_item);
       break;
     case BUTTON_DOWN:
-      hid_module_increment_item();
-      if (current_item > HID_DEVICE_COUNT - 1) {
-        current_item = 0;
-      }
+      current_item = ++current_item > HID_DEVICE_COUNT - 1 ? 0 : current_item;
       hid_module_display_menu(current_item);
       break;
     case BUTTON_LEFT:
@@ -86,17 +72,11 @@ static void hid_module_cb_event(uint8_t button_name, uint8_t button_event) {
   }
   switch (button_name) {
     case BUTTON_UP:
-      hid_module_decrement_item();
-      if (current_item < 0) {
-        current_item = HID_MENU_COUNT - 1;
-      }
+      current_item = current_item-- == 0 ? HID_MENU_COUNT - 1 : current_item;
       hid_module_display_menu(current_item);
       break;
     case BUTTON_DOWN:
-      hid_module_increment_item();
-      if (current_item > HID_MENU_COUNT - 1) {
-        current_item = 0;
-      }
+      current_item = ++current_item > HID_MENU_COUNT - 1 ? 0 : current_item;
       hid_module_display_menu(current_item);
       break;
     case BUTTON_RIGHT:
