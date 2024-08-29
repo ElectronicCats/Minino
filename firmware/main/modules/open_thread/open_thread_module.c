@@ -57,6 +57,7 @@ static void thread_broadcast_input(uint8_t button_name, uint8_t button_event) {
       open_thread_module_exit();
       break;
     case BUTTON_RIGHT:
+      break;
     case BUTTON_UP:
       printf("channel++\n");
       channel = ++channel > 26 ? 11 : channel;
