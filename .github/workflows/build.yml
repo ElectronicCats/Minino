@@ -1,0 +1,54 @@
+on:
+  push:    
+    tags:        
+      - 'v*'
+  pull_request:
+
+permissions:
+    contents: write
+name: Build
+jobs:
+    build:
+      strategy:
+        fail-fast: true
+      runs-on: ubuntu-latest
+      steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+          fetch-tags: true
+          fetch-depth: 0
+  
+      - name: Add version
+        run: git describe --tags | sed 's/-[^-]*$//' > version.txt
+  
+      - name: esp-idf build
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          #source https://hub.docker.com/r/espressif/idf/tags  
+          esp_idf_version: v5.4-dev
+          target: esp32c6
+          path: './firmware'
+  
+      - name: Archive Firmware Files
+        uses: actions/upload-artifact@v4
+        with: 
+          name: minino-firmware
+          path: "./firmware/build/"
+  
+    release:
+      needs: build
+      runs-on: ubuntu-latest
+      steps:
+      - name: Download Firmware Files
+        uses: actions/download-artifact@v4
+        with:
+          path: release
+      - name: Release Firmware
+        uses: ncipollo/release-action@v1
+        if: startsWith(github.ref, 'refs/tags/') 
+        with:
+          artifacts: release/*/*.bin
+          generateReleaseNotes: true
+          allowUpdates: true
