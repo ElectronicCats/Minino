@@ -44,6 +44,7 @@ static void show_splash_screen() {
   static int y_direction = 1;
 
   while (screen_saver_running) {
+    // oled_screen_clear_buffer();
     oled_screen_display_bitmap(logo.bitmap, start_x_position, start_y_position,
                                logo.width, logo.height, OLED_DISPLAY_NORMAL);
 
