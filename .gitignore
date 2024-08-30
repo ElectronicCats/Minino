@@ -33,8 +33,7 @@ hardware/minino-backups/
 /**/.DS_Store
 
 # Firmware binaries
-/**/build/
-/**/build*
+/**/build/*
 /**/managed_components/
 /**/build_files/
 /**/build_files.tgz
