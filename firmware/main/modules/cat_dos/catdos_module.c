@@ -21,7 +21,7 @@
 #include "lwip/netdb.h"
 #include "lwip/sockets.h"
 #include "lwip/sys.h"
-#include "menu_screens_modules.h"
+#include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
 #include "sdkconfig.h"
@@ -46,10 +46,6 @@ static enum {
 
 static int catdos_state = CATDOS_STATE_CONFIG_WIFI;
 
-app_screen_state_information_t app_screen_state_information = {
-    .in_app = false,
-    .app_selected = 0,
-};
 static bool running_attack = false;
 static TaskHandle_t task_display_attacking = NULL;
 static bool catdos_module_is_config_wifi();
@@ -439,7 +435,7 @@ void catdos_module_begin() {
   esp_log_level_set(CATDOS_TAG, ESP_LOG_NONE);
 #endif
   // ESP_ERROR_CHECK(esp_event_loop_create_default());
-  menu_screens_set_app_state(true, catdos_module_state_machine);
+  menus_module_set_app_state(true, catdos_module_state_machine);
 
   oled_screen_clear(OLED_DISPLAY_NORMAL);
   oled_screen_display_text_center("THIS APP STILL", 0, OLED_DISPLAY_INVERT);
@@ -591,8 +587,7 @@ static void catdos_module_state_machine(uint8_t button_name,
     case CATDOS_STATE_CONFIG_WIFI: {
       switch (button_name) {
         case BUTTON_LEFT:
-          menu_screens_set_app_state(false, NULL);
-          menu_screens_exit_submenu();
+          menus_module_restart();
           break;
         case BUTTON_RIGHT:
           ESP_LOGI(CATDOS_TAG, "Selected item: %d", selected_item);
@@ -631,8 +626,7 @@ static void catdos_module_state_machine(uint8_t button_name,
     case CATDOS_STATE_ATTACK: {
       switch (button_name) {
         case BUTTON_LEFT:
-          menu_screens_set_app_state(false, NULL);
-          menu_screens_exit_submenu();
+          menus_module_exit_app();
           break;
         case BUTTON_RIGHT:
           catdos_module_send_attack();

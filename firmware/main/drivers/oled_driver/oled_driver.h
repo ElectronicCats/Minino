@@ -127,6 +127,7 @@ void oled_driver_display_text_x3(oled_driver_t* dev,
                                  char* text,
                                  int text_len,
                                  bool invert);
+void oled_driver_clear_buffer(oled_driver_t* dev);
 void oled_driver_clear_screen(oled_driver_t* dev, bool invert);
 void oled_driver_clear_line(oled_driver_t* dev, int x, int page, bool invert);
 void oled_driver_contrast(oled_driver_t* dev, int contrast);
@@ -242,7 +243,9 @@ void spi_display_image(oled_driver_t* dev,
                        int width);
 void spi_contrast(oled_driver_t* dev, int contrast);
 void spi_hardware_scroll(oled_driver_t* dev, oled_driver_scroll_type_t scroll);
-
+void oled_driver_draw_modal_box(oled_driver_t* dev,
+                                int pos_x,
+                                int modal_height);
 #ifdef __cplusplus
 }
 #endif

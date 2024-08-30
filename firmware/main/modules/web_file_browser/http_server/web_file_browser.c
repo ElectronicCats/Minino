@@ -39,7 +39,7 @@ static void web_file_browser_show_event(uint8_t event, void* context) {
   }
 }
 
-void web_file_browser_init() {
+void web_file_browser_begin() {
 #if !defined(CONFIG_WEB_FILE_BROWSER_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif

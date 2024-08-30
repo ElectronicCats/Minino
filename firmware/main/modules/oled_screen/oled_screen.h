@@ -121,7 +121,8 @@ void oled_screen_display_selected_item_box();
 /**
  * @brief Display and split the text on the OLED display
  *
- * @param p_text Pointer of the text to display on the OLED display
+ * @param p_text Pointer of the text to display on the OLED display limited to
+ * 50 char
  * @param p_started_page Pointer to the index of the page to display the text on
  * the OLED display
  * @param invert Invert the background and foreground color of the OLED display
@@ -131,3 +132,6 @@ void oled_screen_display_text_splited(char* p_text,
                                       int invert);
 
 void oled_screen_display_loading_bar(uint8_t value, uint8_t page);
+void oled_screen_display_card_border();
+void oled_screen_clear_buffer();
+void oled_screen_display_show();

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "menu_screens_modules.h"
+#include <stdio.h>
 
 /**
  * @brief Display toogle button pressed
@@ -60,3 +60,4 @@ void zigbee_screens_module_display_status(uint8_t status);
 void zigbee_screens_display_device_ad(void);
 void zigbee_screens_display_scanning_animation(void);
 void zigbee_screens_display_scanning_text(int count);
+void zigbee_screens_display_zigbee_sniffer_text();

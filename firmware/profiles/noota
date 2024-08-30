@@ -1,0 +1,1 @@
+-B build-noota -DSDKCONFIG=build-noota/sdkconfig -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.noota"
