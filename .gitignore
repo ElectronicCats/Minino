@@ -34,6 +34,7 @@ hardware/minino-backups/
 
 # Firmware binaries
 /**/build/*
+/**/build-*
 /**/managed_components/
 /**/build_files/
 /**/build_files.tgz

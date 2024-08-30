@@ -173,6 +173,7 @@ static void general_screen_display_scrolling() {
         (i - scrolling_option) + (ITEMOFFSET + screen_title),
         OLED_DISPLAY_NORMAL);
   }
+  oled_screen_display_show();
 }
 
 void general_register_menu(const general_menu_t* ctx) {
@@ -214,9 +215,11 @@ void genera_screen_display_card_information(char* title, char* body) {
   page++;
   if (strlen(body) > MAX_LINE_CHAR) {
     oled_screen_display_text_splited(body, &page, OLED_DISPLAY_NORMAL);
+    oled_screen_display_show();
     return;
   }
   oled_screen_display_text_center(body, page, OLED_DISPLAY_NORMAL);
+  oled_screen_display_show();
 }
 
 void genera_screen_display_notify_information(char* title, char* body) {
@@ -227,9 +230,11 @@ void genera_screen_display_notify_information(char* title, char* body) {
   page++;
   if (strlen(body) > MAX_LINE_CHAR) {
     oled_screen_display_text_splited(body, &page, OLED_DISPLAY_NORMAL);
+    oled_screen_display_show();
     return;
   }
   oled_screen_display_text_center(body, page, OLED_DISPLAY_NORMAL);
+  oled_screen_display_show();
 }
 
 void general_screen_display_menu(uint16_t current_option) {
@@ -256,4 +261,5 @@ void general_screen_display_menu(uint16_t current_option) {
                                i + ITEMOFFSET, OLED_DISPLAY_NORMAL);
     }
   }
+  oled_screen_display_show();
 }
