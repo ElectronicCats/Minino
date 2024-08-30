@@ -6,6 +6,7 @@ cmake_minimum_required(VERSION 3.16)
 
 set(EXTRA_COMPONENT_DIRS components/oled_driver)
 set(EXTRA_COMPONENT_DIRS components/wifi_sniffer)
+set(EXTRA_COMPONENT_DIRS components/ble_hid)
 set(EXTRA_COMPONENT_DIRS components/buzzer)
 set(EXTRA_COMPONENT_DIRS components/files_ops)
 set(EXTRA_COMPONENT_DIRS components/flash_fs)

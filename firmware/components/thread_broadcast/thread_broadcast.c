@@ -1,5 +1,6 @@
 #include "thread_broadcast.h"
 #include <stdio.h>
+#include <string.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -12,19 +13,20 @@ void (*on_msg_recieve_cb)(char*) = NULL;
 void on_udp_recieve(void* aContext,
                     otMessage* aMessage,
                     const otMessageInfo* aMessageInfo) {
-  printf("MSG\n");
   otError error = OT_ERROR_NONE;
 
   int payload_size =
       (otMessageGetLength(aMessage) - otMessageGetOffset(aMessage));
   void* data = malloc(payload_size);
   otMessageRead(aMessage, otMessageGetOffset(aMessage), data, payload_size);
-  char* str = (char*) data;
-  str[payload_size] = "\0";
+  char* str = (char*) malloc(payload_size + 1);
+  sprintf(str, "%s", (char*) data);
+  printf("MSG\n");
   printf("%s\n", str);
   if (on_msg_recieve_cb != NULL) {
     on_msg_recieve_cb(str);
   }
+  free(str);
   free(data);
 }
 
@@ -32,10 +34,10 @@ void sender() {
   uint16_t counter = 0;
   while (1) {
     counter++;
-    char* str = (char*) malloc(15);
-    sprintf(str, "counter: %d", counter);
+    char* str = (char*) malloc(20);
+    sprintf(str, "Counter: %d", counter);
     vTaskDelay(pdMS_TO_TICKS(500));
-    openthread_udp_send(&mSocket, "ff02::1", PORT, &str, sizeof(str));
+    openthread_udp_send(&mSocket, "ff02::1", PORT, str, strlen(str));
     free(str);
   }
 }
