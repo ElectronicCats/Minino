@@ -31,7 +31,6 @@ typedef enum {
   WIFI_ATTACK_COMBINE,
   WIFI_ATTACK_MULTI_AP,
   WIFI_ATTACK_PASSWORD,
-  WIFI_ATTACKS_NUM
 } wifi_attacks_types_t;
 
 /**
