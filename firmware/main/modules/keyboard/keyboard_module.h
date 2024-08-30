@@ -17,26 +17,6 @@
 #define BUTTON_ACTIVE_LEVEL 0
 
 /**
- * @brief Events for the available keyboard buttons events
- *
- */
-static const char* button_events_name[] = {
-    "BUTTON_PRESS_DOWN",      "BUTTON_PRESS_UP",
-    "BUTTON_PRESS_REPEAT",    "BUTTON_PRESS_REPEAT_DONE",
-    "BUTTON_SINGLE_CLICK",    "BUTTON_DOUBLE_CLICK",
-    "BUTTON_MULTIPLE_CLICK",  "BUTTON_LONG_PRESS_START",
-    "BUTTON_LONG_PRESS_HOLD", "BUTTON_LONG_PRESS_UP",
-};
-
-/**
- * @brief Events for the available keyboard buttons events
- *
- */
-static const char* button_names[] = {
-    "BOOT", "LEFT", "RIGHT", "UP", "DOWN",
-};
-
-/**
  * @brief Enum of the available keyboard buttons
  *
  */
@@ -57,6 +37,8 @@ typedef struct {
   uint8_t button_event;
 } button_event_state_t;
 
+typedef void (*input_callback_t)(uint8_t, uint8_t);
+
 /**
  * @brief Initialize the keyboard button
  *
@@ -69,3 +51,7 @@ typedef struct {
 void keyboard_module_begin();
 
 void keyboard_module_reset_idle_timer();
+
+void keyboard_module_set_lock(bool lock);
+
+void keyboard_module_set_input_callback(input_callback_t input_cb);

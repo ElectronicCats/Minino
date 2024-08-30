@@ -1,15 +1,5 @@
 #pragma once
 
-/**
- * @brief Initialize the settings module
- *
- * @return void
- */
-void settings_module_begin();
+void settings_module_time_zone();
 
-/**
- * @brief Deinitialize the settings module
- *
- * @return void
- */
-void settings_module_exit();
+void update_sd_card_info();

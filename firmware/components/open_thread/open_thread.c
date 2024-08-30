@@ -268,8 +268,6 @@ otError openthread_udp_send(otUdpSocket* mSocket,
   messageInfo.mPeerPort = port;
 
   message = otUdpNewMessage(instance, &messageSettings);
-  if (message == NULL)
-    printf("ERR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
 
   uint8_t* payload = (uint8_t*) malloc(data_size);
   if (!payload) {

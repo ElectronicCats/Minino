@@ -506,7 +506,7 @@ esp_err_t led_controller_start_blink_effect(led_t* led,
 
 esp_err_t led_controller_stop_any_effect(led_t* led) {
   if (!led) {
-    ESP_LOGE(TAG, "Invalid LED pointer");
+    // ESP_LOGE(TAG, "Invalid LED pointer");
     return ESP_ERR_INVALID_ARG;
   }
 

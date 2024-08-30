@@ -1,3 +1,8 @@
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#ifndef BITMAPS_GENERAL_H
+  #define BITMAPS_GENERAL_H
 // 'FACE', 8x8px
 const unsigned char minino_face[] = {0x42, 0xe7, 0xff, 0xff,
                                      0x99, 0x99, 0x7e, 0x3c};
@@ -88,42 +93,49 @@ static const unsigned char epd_bitmap_electroniccats[] = {
 unsigned char* epd_startup_logo[] = {epd_bitmap_minino_text_logo,
                                      epd_bitmap_face_logo};
 
-epd_bitmap_t minino_face_bitmap = {
+const epd_bitmap_t minino_face_bitmap = {
     .bitmap = minino_face,
     .width = 8,
     .height = 8,
 };
 
-epd_bitmap_t minino_letters_bitmap = {
+const epd_bitmap_t minino_letters_bitmap = {
     .bitmap = epd_bitmap_minino_text_logo,
     .width = 64,
     .height = 32,
 };
 
-epd_bitmap_t minino_face_logo = {
+const epd_bitmap_t minino_face_logo = {
     .bitmap = epd_bitmap_face_logo,
     .width = 32,
     .height = 32,
 };
 
-epd_bitmap_t minino_pwnlabs_logo = {
+const epd_bitmap_t minino_pwnlabs_logo = {
     .bitmap = epd_bitmap_pwn_02,
     .width = 64,
     .height = 32,
 };
 
-epd_bitmap_t minino_electroniccats_logo = {
+const epd_bitmap_t minino_electroniccats_logo = {
     .bitmap = epd_bitmap_electroniccats,
     .width = 32,
     .height = 32,
 };
 
 typedef enum {
-  MININO_FACE,
   MININO_LETTERS,
+  MININO_FACE,
   MININO_PWNLABS,
   MININO_ELECTRONICCATS,
+  MININO_FACE_MINI,
   MININO_COUNT
 } epd_bitmap_type_t;
 
-char* epd_bitmaps_list[] = {"Letters", "Face", "PwnLabs", "EC", NULL};
+epd_bitmap_t screen_savers[] = {minino_letters_bitmap, minino_face_logo,
+                                minino_pwnlabs_logo, minino_electroniccats_logo,
+                                minino_face_bitmap};
+
+char* epd_bitmaps_list[] = {"Letters", "Face",      "PwnLabs",
+                            "EC",      "Mini face", NULL};
+#endif  // BITMAPS_GENERAL_H

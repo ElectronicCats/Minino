@@ -3,7 +3,7 @@
 #include "bitmaps_general.h"
 #include "esp_log.h"
 #include "led_events.h"
-#include "menu_screens_modules.h"
+#include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
 
@@ -45,7 +45,7 @@ static void config_module_wifi_display_selected_item_center(
 }
 
 static void display_config_display_menu_item() {
-  oled_screen_clear();
+  oled_screen_clear_buffer();
   oled_screen_display_text("< Exit", 0, 0, OLED_DISPLAY_NORMAL);
   for (int i = 0; display_settings_menu_items[i] != NULL; i++) {
     int page = (i + 1);
@@ -57,10 +57,11 @@ static void display_config_display_menu_item() {
                                OLED_DISPLAY_NORMAL);
     }
   }
+  oled_screen_display_show();
 }
 
 static void display_config_display_list_logo() {
-  oled_screen_clear();
+  oled_screen_clear_buffer();
   oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
   int current_scren = preferences_get_int("dp_select", 0);
   for (int i = 0; epd_bitmaps_list[i] != NULL; i++) {
@@ -77,26 +78,28 @@ static void display_config_display_list_logo() {
       oled_screen_display_text(display_text, 0, page, OLED_DISPLAY_NORMAL);
     }
   }
+  oled_screen_display_show();
 }
 
 static void display_config_display_time_selection() {
-  oled_screen_clear();
+  oled_screen_clear_buffer();
   oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
   oled_screen_display_text_center("Time in seconds", 1, OLED_DISPLAY_NORMAL);
   oled_screen_display_text_center("Min:30 - Max:360", 2, OLED_DISPLAY_NORMAL);
   char time_text[18];
   sprintf(time_text, "Time: %d", time_default_time);
   oled_screen_display_text_center(time_text, 4, OLED_DISPLAY_NORMAL);
+  oled_screen_display_show();
 }
 
 void display_config_module_begin() {
   ESP_LOGI(TAG_DISPLAY_CONFIG, "Initializing ble module screen state machine");
-  menu_screens_set_app_state(true, display_config_module_state_machine);
+  menus_module_set_app_state(true, display_config_module_state_machine);
   display_config_display_menu_item();
 };
 
 static void display_settings_show_modal() {
-  oled_screen_clear();
+  oled_screen_clear_buffer();
   oled_screen_display_text_center("Apply this config?", 1, OLED_DISPLAY_NORMAL);
   if (selected_item == 0) {
     config_module_wifi_display_selected_item_center("YES", 3);
@@ -105,6 +108,7 @@ static void display_settings_show_modal() {
     oled_screen_display_text_center("YES", 3, OLED_DISPLAY_NORMAL);
     config_module_wifi_display_selected_item_center("NO", 4);
   }
+  oled_screen_display_show();
 }
 
 static void display_config_module_state_machine(uint8_t button_name,
@@ -114,30 +118,31 @@ static void display_config_module_state_machine(uint8_t button_name,
   }
   switch (button_name) {
     case BUTTON_LEFT:
-      menu_screens_set_app_state(false, NULL);
-      menu_screens_exit_submenu();
+      menus_module_restart();
       break;
     case BUTTON_RIGHT:
       ESP_LOGI(TAG_DISPLAY_CONFIG, "Selected item: %d", selected_item);
       if (selected_item == 0) {
         selected_item = 0;
-        menu_screens_set_app_state(
+        menus_module_set_app_state(
             true, display_config_module_state_machine_menu_logo);
         display_config_display_list_logo();
       } else {
         selected_item = 0;
-        menu_screens_set_app_state(
+        menus_module_set_app_state(
             true, display_config_module_state_machine_menu_time);
         display_config_display_time_selection();
       }
 
       break;
     case BUTTON_UP:
-      selected_item = (selected_item == 0) ? DISPLAY_COUNT : selected_item - 1;
+      selected_item =
+          (selected_item == 0) ? DISPLAY_COUNT - 1 : selected_item - 1;
       display_config_display_menu_item();
       break;
     case BUTTON_DOWN:
-      selected_item = (selected_item == DISPLAY_COUNT) ? 0 : selected_item + 1;
+      selected_item =
+          (selected_item == DISPLAY_COUNT - 1) ? 0 : selected_item + 1;
       display_config_display_menu_item();
       break;
     case BUTTON_BOOT:
@@ -154,7 +159,7 @@ static void display_config_module_state_machine_menu_time(
   }
   switch (button_name) {
     case BUTTON_LEFT:
-      menu_screens_set_app_state(true, display_config_module_state_machine);
+      menus_module_set_app_state(true, display_config_module_state_machine);
       display_config_display_menu_item();
       break;
     case BUTTON_RIGHT:
@@ -164,7 +169,7 @@ static void display_config_module_state_machine_menu_time(
       oled_screen_display_text_center("Saved", 3, OLED_DISPLAY_NORMAL);
       keyboard_module_reset_idle_timer();
       vTaskDelay(2000 / portTICK_PERIOD_MS);
-      menu_screens_set_app_state(true, display_config_module_state_machine);
+      menus_module_set_app_state(true, display_config_module_state_machine);
       selected_item = 0;
       display_config_display_menu_item();
       break;
@@ -194,23 +199,25 @@ static void display_config_module_state_machine_menu_logo(
   }
   switch (button_name) {
     case BUTTON_LEFT:
-      menu_screens_set_app_state(true, display_config_module_state_machine);
+      menus_module_set_app_state(true, display_config_module_state_machine);
       display_config_display_menu_item();
       break;
     case BUTTON_RIGHT:
       ESP_LOGI(TAG_DISPLAY_CONFIG, "Selected item: %d", selected_item);
       screen_selected = selected_item;
       selected_item = 0;
-      menu_screens_set_app_state(true,
+      menus_module_set_app_state(true,
                                  display_config_module_state_machine_modal);
       display_settings_show_modal();
       break;
     case BUTTON_UP:
-      selected_item = (selected_item == 0) ? MININO_COUNT : selected_item - 1;
+      selected_item =
+          (selected_item == 0) ? MININO_COUNT - 1 : selected_item - 1;
       display_config_display_list_logo();
       break;
     case BUTTON_DOWN:
-      selected_item = (selected_item == MININO_COUNT) ? 0 : selected_item + 1;
+      selected_item =
+          (selected_item == MININO_COUNT - 1) ? 0 : selected_item + 1;
       display_config_display_list_logo();
       break;
     case BUTTON_BOOT:
@@ -226,7 +233,7 @@ static void display_config_module_state_machine_modal(uint8_t button_name,
   }
   switch (button_name) {
     case BUTTON_LEFT:
-      menu_screens_set_app_state(true, display_config_module_state_machine);
+      menus_module_set_app_state(true, display_config_module_state_machine);
       display_config_display_menu_item();
       break;
     case BUTTON_RIGHT:
@@ -237,16 +244,16 @@ static void display_config_module_state_machine_modal(uint8_t button_name,
         oled_screen_display_text_center("Saved", 3, OLED_DISPLAY_NORMAL);
         vTaskDelay(2000 / portTICK_PERIOD_MS);
       }
-      menu_screens_set_app_state(true, display_config_module_state_machine);
+      menus_module_set_app_state(true, display_config_module_state_machine);
       selected_item = 0;
       display_config_display_menu_item();
       break;
     case BUTTON_UP:
-      selected_item = (selected_item == 0) ? 2 : selected_item - 1;
+      selected_item = (selected_item == 0) ? 1 : selected_item - 1;
       display_settings_show_modal();
       break;
     case BUTTON_DOWN:
-      selected_item = (selected_item == 2) ? 0 : selected_item + 1;
+      selected_item = (selected_item == 1) ? 0 : selected_item + 1;
       display_settings_show_modal();
       break;
     case BUTTON_BOOT:

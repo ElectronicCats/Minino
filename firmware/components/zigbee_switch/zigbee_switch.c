@@ -62,7 +62,7 @@ const char* switch_state_names[] = {
     "SWITCH_LIGHT_FOUND",    "SWITCH_NO_DEVICES",     "SWITCH_EXIT",
 };
 
-switch_state_t switch_state = SWITCH_CREATE_NETWORK;
+volatile switch_state_t switch_state = SWITCH_CREATE_NETWORK;
 switch_state_t switch_state_prev = SWITCH_EXIT;
 uint16_t open_network_duration = 0;
 
@@ -283,7 +283,7 @@ void wait_for_devices_task(void* pvParameters) {
       continue;
     }
     zigbee_switch_display_status_cb(WAITING_FOR_DEVICES);
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    vTaskDelay(300 / portTICK_PERIOD_MS);
   }
 }
 
@@ -335,10 +335,6 @@ static void esp_zb_task(void* pvParameters) {
 }
 
 void zigbee_switch_init() {
-#if !defined(CONFIG_ZIGBEE_SWITCH_DEBUG)
-  esp_log_level_set(TAG, ESP_LOG_NONE);
-#endif
-
   esp_zb_platform_config_t config = {
       .radio_config = ESP_ZB_DEFAULT_RADIO_CONFIG(),
       .host_config = ESP_ZB_DEFAULT_HOST_CONFIG(),

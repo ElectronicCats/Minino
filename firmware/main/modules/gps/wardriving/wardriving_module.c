@@ -5,7 +5,7 @@
 #include "freertos/task.h"
 
 #include "gps_module.h"
-#include "menu_screens_modules.h"
+#include "menus_module.h"
 #include "sd_card.h"
 #include "wardriving_module.h"
 #include "wardriving_screens_module.h"
@@ -292,7 +292,7 @@ void wardriving_module_start_scan() {
   if (wardriving_module_verify_sd_card() != ESP_OK) {
     return;
   }
-
+  menus_module_set_app_state(true, wardriving_module_keyboard_cb);
   ESP_LOGI(TAG, "Start scan");
   wardriving_module_state = WARDRIVING_MODULE_STATE_SCANNING;
   xTaskCreate(wardriving_module_scan_task, "wardriving_module_scan_task", 4096,
@@ -328,8 +328,7 @@ void wardriving_module_keyboard_cb(uint8_t button_name, uint8_t button_event) {
 
   switch (button_name) {
     case BUTTON_LEFT:
-      menu_screens_set_app_state(false, NULL);
-      menu_screens_exit_submenu();
+      menus_module_exit_app();
       break;
     case BUTTON_RIGHT:
       if (wardriving_module_state == WARDRIVING_MODULE_STATE_NO_SD_CARD) {

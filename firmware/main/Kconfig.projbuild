@@ -562,3 +562,158 @@ menu "Frequency Configuration"
         default 13 if EXAMPLE_MIN_CPU_FREQ_13M
         default 32 if EXAMPLE_MIN_CPU_FREQ_32M
 endmenu
+
+menu "Apps & Features"
+################################# WIFI ###################################
+config WIFI_APPS_ENABLE
+    bool "Enable WiFi Apps"
+    default true
+    help
+      Enable or disable all WiFi applications.
+
+if WIFI_APPS_ENABLE
+
+config WIFI_APP_ANALYZER
+    bool "Enable Analyzer App"
+    default true
+    help
+      Enable or disable the WiFi Analyzer application.
+
+config WIFI_APP_DEAUTH
+    bool "Enable Deauth App"
+    default true
+    help
+      Enable or disable the WiFi Deauth application.
+
+config WIFI_APP_DOS
+    bool "Enable DoS App"
+    default true
+    help
+      Enable or disable the WiFi DoS application.
+
+endif # WIFI_APPS_ENABLE
+
+############################### BLUETOOTH #################################
+
+config BLUETOOTH_APPS_ENABLE
+    bool "Enable Bluetooth Apps"
+    default true
+    help
+      Enable or disable all Bluetooth applications.
+
+if BLUETOOTH_APPS_ENABLE
+
+config BLUETOOTH_APP_TRAKERS
+    bool "Enable Trakers App"
+    default true
+    help
+      Enable or disable the Bluetooth Trakers application.
+
+config BLUETOOTH_APP_SPAM
+    bool "Enable Spam App"
+    default true
+    help
+      Enable or disable the Bluetooth Spam application.
+
+config BLUETOOTH_APP_HID
+	bool "Enable HID App"
+	default true
+	help
+		Enable or disable the Bluetooth HID application.
+endif # BLUETOOTH_APPS_ENABLE
+
+################################# ZIGBEE ###################################
+
+config ZIGBEE_APPS_ENABLE
+    bool "Enable Zigbee Apps"
+    default true
+    help
+      Enable or disable all Zigbee applications.
+
+if ZIGBEE_APPS_ENABLE
+
+config ZIGBEE_APP_SPOOFING
+    bool "Enable Spoofing App"
+    default true
+    help
+      Enable or disable the Zigbee Spoofing application.
+
+config ZIGBEE_APP_SNIFFER
+    bool "Enable Sniffer App"
+    default true
+    help
+      Enable or disable the Zigbee Sniffer application.
+endif # ZIGBEE_APPS_ENABLE
+
+################################# THREAD ###################################
+
+config THREAD_APPS_ENABLE
+    bool "Enable Thread Apps"
+    default true
+    help
+      Enable or disable all Thread applications.
+
+if THREAD_APPS_ENABLE
+
+config THREAD_APP_BROADCAST
+    bool "Enable Boradcast App"
+    default true
+    help
+      Enable or disable the Thread Broadcast application.
+
+config THREAD_APP_SNIFFER
+    bool "Enable Sniffer App"
+    default true
+    help
+      Enable or disable the Thread Sniffer application.
+endif # THREAD_APPS_ENABLE
+
+################################# GPS ###################################
+
+config GPS_APPS_ENABLE
+    bool "Enable GPS Apps"
+    default true
+    help
+      Enable or disable all GPS applications.
+
+if GPS_APPS_ENABLE
+
+config GPS_APP_WARDRIVING
+    bool "Enable Wardriving App"
+    default true
+    help
+      Enable or disable the GPS Wardriving application.
+endif # GPS_APPS_ENABLE
+
+################################# OTA ###################################
+
+config OTA_ENABLE
+    bool "Enable OTA feature"
+    default true
+    help
+      Enable or disable OTA feature.
+
+########################### FILE MANAGER #############################
+
+config FILE_MANAGER_ENABLE
+    bool "Enable File Manager Features"
+    default true
+    help
+      Enable or disable all File Manager Features.
+
+if FILE_MANAGER_ENABLE
+
+config FILE_MANAGER_LOCAL
+    bool "Enable Local File Manager"
+    default true
+    help
+      Enable or disable the Local File Manager feature.
+
+config FILE_MANAGER_WEB
+    bool "Enable Web File Manager"
+    default true
+    help
+      Enable or disable the Web File Manager Feature.
+endif # FILE_MANAGER_ENABLE
+
+endmenu

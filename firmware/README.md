@@ -136,208 +136,28 @@ chmod +x get_build.sh
 
 The build files will be in the `build_files.zip` file. Now you can create a release on GitHub and attach the `build_files.zip` file.
 
-## Development process
 
-### Add a new menu
+# Flashing release
+## OTA
+### Table for [ESP Tool](https://espressif.github.io/esptool-js/)
+| Flash Address | File                 |
+|---------------|----------------------|
+| 0x0           | bootloader.bin       |
+| 0x8000        | partition-table.bin  |
+| 0x15000       | ota_data_initial.bin |
+| 0xa0000       | minino.bin           |
 
-#### Menus structure
+### Command
 
-Menus are defined in `screen_module_menu_t` in the `screens_module.h` file. Most of them have a tree structure, you can go from one menu to another, and go back. For example in the `MENU_MAIN` menu, you can go to `MENU_APPLICATIONS`, `MENU_SETTINGS`, or `MENU_ABOUT` and go back to `MENU_MAIN`.
-
-```mermaid
-graph TD
-  A[MENU_MAIN] --> B[MENU_APPLICATIONS]
-  A --> C[MENU_SETTINGS]
-  A --> D[MENU_ABOUT]
-  B --> A
-  C --> A
-  D --> A
+```bash
+ python -m esptool --chip esp32c6 -b 460800 --before default_reset --after hard_reset write_flash --flash_mode dio --flash_size 8MB --flash_freq 80m 0x0 bootloader.bin 0x8000 partition-table.bin 0x15000 ota_data_initial.bin 0xa0000 minino.bin
 ```
-
-**Menus can only have two possible actions: go to another menu or go back.**
-
-Let's say you want to add a new menu called `MENU_GPS_WARDRIVING` that will be a child of `MENU_GPS` wich is a child of `MENU_APPLICATIONS`.
-
-```mermaid
-graph TD
-  A[MENU_MAIN] --> B[MENU_APPLICATIONS]
-  B --> C[MENU_GPS]
-  C --> D[MENU_GPS_WARDRIVING]
-  D --> C
-  B --> A
-  C --> B
+## NO OTA
+| Flash Address | File                 |
+|---------------|----------------------|
+| 0x0           | bootloader.bin       |
+| 0x8000        | partition-table.bin  |
+| 0x20000       | minino.bin           |
+```bash
+ python -m esptool --chip esp32c6 -b 460800 --before default_reset --after hard_reset write_flash --flash_mode dio --flash_size 8MB --flash_freq 80m 0x0 bootloader.bin 0x8000 partition-table.bin 0x20000 minino.bin
 ```
-
-#### Steps to add a new menu
-
-1. The first step is to add an enum value in `screen_module_menu_t`, it can be anywhere, but it's recommended to place it near to it's parent to make it easier to find. In this case, we will add it after `MENU_GPS`.
-
-```c
-/**
- * @brief Enum of menus
- *
- * Used to navigate through the different menus
- *
- * Modify this menu also requires to modify the `menu_list`, `next_menu_table`,
- * `prev_menu_table` and `menu_items` arrays
- */
-typedef enum {
-  MENU_MAIN = 0,
-  MENU_APPLICATIONS,
-  MENU_SETTINGS,
-  MENU_ABOUT,
-  /* Applications */
-  ...
-  MENU_GPS,
-  /* GPS applications */
-  MENU_GPS_WARDRIVING,
-  MENU_GPS_DATE_TIME,
-  MENU_GPS_LOCATION,
-  MENU_GPS_SPEED,
-  MENU_GPS_HELP,
-  ...
-  /* Menu count */
-  MENU_COUNT,
-} screen_module_menu_t;
-```
-
-> **Note:** The `MENU_COUNT` is used to get the number of menus, it's important to keep it at the end of the enum because it's used to do some runtime checks.
-
-2. Add `MENU_GPS_WARDRIVING` as a string in `menu_list`, this is to debug purposes.
-
-```c
-/**
- * @brief List of menus
- *
- * Used to get the menu name from the enum value
- * following the order of the `screen_module_menu_t` enum
- *
- * Usage: menu_list[screen_module_menu_t]
- */
-const char* menu_list[] = {
-  "MENU_MAIN",
-  "MENU_APPLICATIONS",
-  "MENU_SETTINGS",
-  "MENU_ABOUT",
-  ...
-  "MENU_GPS",
-  ...
-  "MENU_GPS_WARDRIVING",  // Add this line
-  "MENU_GPS_DATE_TIME",
-  "MENU_GPS_LOCATION",
-  "MENU_GPS_SPEED",
-  "MENU_GPS_HELP",
-  ...
-};
-```
-
-3. Add the option to the gps items array.
-
-```c
-char* gps_items[] = {
-    "Wardrive",  // Add this line
-    "Date & Time",
-    "Location",
-    "Speed",
-    "Help",
-    NULL,
-};
-```
-
-> **Note:** The `NULL` at the end is to indicate the end of the array. It's important to add it, otherwise, the program will have undefined behavior.
-
-4. Define the next menus of `MENU_GPS`, to go to `MENU_GPS_WARDRIVING` in the `screen_module_menu_t` array. We decided to place it as the first child of `MENU_GPS`, this **must** be consistent with the order of `gps_items`.
-
-```c
-/**
- * @brief List of menus
- *
- * Used to get the next menu to display when the user selects an option
- * following the order of the `screen_module_menu_t` enum
- *
- * Usage: next_menu_table[screen_module_menu_t][selected_item]
- */
-const int next_menu_table[][MAX_NUM_ITEMS] = {
-    // MENU_MAIN
-    {MENU_APPLICATIONS, MENU_SETTINGS, MENU_ABOUT},
-    ...
-    // MENU_GPS
-    {MENU_GPS_WARDRIVING, MENU_GPS_DATE_TIME, MENU_GPS_LOCATION, MENU_GPS_SPEED,
-     MENU_GPS_HELP},
-    ...
-};
-```
-
-In this case, the comments `// MENU_MAIN` and `// MENU_GPS` represent the parent menu, they *must* be in the same order as the `screen_module_menu_t` enum. The `next_menu_table` is a 2D array where the first index is the parent menu and the second index is the child menu. The order of the child menus must be the same as the order of the items in the `menu_items` array.
-
-5. Define the next menu of `MENU_GPS_WARDRIVING`. In this case, it's an application that doesn't have any child menus, so pressing the select button should do nothing.
-
-```c
-const int next_menu_table[][MAX_NUM_ITEMS] = {
-    ...
-     // MENU_GPS_WARDRIVING
-    {MENU_GPS_WARDRIVING},  // Add it as itself does nothing
-    ...
-};
-```
-
-6. Define the previous menu of `MENU_GPS_WARDRIVING` in the `prev_menu_table` array.
-
-```c
-/**
- * @brief List of menus
- *
- * Used to get the previous menu to display when the user returns to the
- * previous menu in `menu_screens_exit_submenu`. Add the previous menu
- * following the order of the `screen_module_menu_t` enum
- *
- * Usage: prev_menu_table[screen_module_menu_t]
- */
-const int prev_menu_table[] = {
-    // PREVIOUS_MENU,                // CURRENT_MENU
-    /*****************************************************************/
-    MENU_MAIN,                       // MENU_MAIN
-    MENU_MAIN,                       // MENU_APPLICATIONS
-    MENU_MAIN,                       // MENU_SETTINGS
-    MENU_MAIN,                       // MENU_ABOUT
-    ...
-    MENU_GPS,                        // MENU_GPS_WARDRIVING  --> Add this line
-    MENU_GPS,                        // MENU_GPS_DATE_TIME
-    MENU_GPS,                        // MENU_GPS_LOCATION
-    MENU_GPS,                        // MENU_GPS_SPEED
-    MENU_GPS,                        // MENU_GPS_HELP
-    ...
-};
-```
-
-Again, the comments represent the parent menu, and they *must* be in the same order as the `screen_module_menu_t` enum. The `prev_menu_table` is a 1D array where the index is the child menu and the value is the parent menu.
-
-7. Add the menu items to the `menu_items` array. For now, we will add an empty array, but you can add the items you want to display in the menu.
-
-```c
-/**
- * @brief List of menu items
- *
- * Used to get the menu items from the menu enum value
- * following the order of the `screen_module_menu_t` enum
- *
- * Usage: menu_items[screen_module_menu_t]
- */
-char** menu_items[] = {
-    main_items,                       // MENU_MAIN
-    applications_items,               // MENU_APPLICATIONS
-    settings_items,                   // MENU_SETTINGS
-    about_items,                      // MENU_ABOUT
-    ...
-    gps_items,                        // MENU_GPS
-    ...
-    empty_items,                      // MENU_GPS_WARDRIVING
-    gps_date_time_items,              // MENU_GPS_DATE_TIME
-    gps_location_items,               // MENU_GPS_LOCATION
-    gps_speed_items,                  // MENU_GPS_SPEED
-    gps_help,                         // MENU_GPS_HELP
-    ...
-};
-```
-
-And that's it! You should be able to navigate to the new menu. Test it and review this guide again in case you missed something.
