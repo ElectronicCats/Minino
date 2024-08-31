@@ -90,6 +90,10 @@ Minino can operate in 6 different technologies:
 
 Inspired by projects such as [Amini Project](https://github.com/Ocelot-Offensive-Security/Arsenal) and [USBNugget](https://github.com/HakCat-Tech/USB-Nugget).
 
+## How to build the firmware
+
+Check the [Developer guide](./firmware/README.md) to learn how to build the firmware from scratch.
+
 ## How to contribute <img src="https://electroniccats.com/wp-content/uploads/2018/01/fav.png" height="35"><img src="https://raw.githubusercontent.com/gist/ManulMax/2d20af60d709805c55fd784ca7cba4b9/raw/bcfeac7604f674ace63623106eb8bb8471d844a6/github.gif" height="30">
 
 Contributions are welcome!
