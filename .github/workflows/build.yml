@@ -5,14 +5,16 @@ on:
   pull_request:
 
 permissions:
-    contents: write
+  contents: write
+
 name: Build
+
 jobs:
-    build:
-      strategy:
-        fail-fast: true
-      runs-on: ubuntu-latest
-      steps:
+  build:
+    strategy:
+      fail-fast: true
+    runs-on: ubuntu-latest
+    steps:
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
@@ -23,32 +25,76 @@ jobs:
       - name: Add version
         run: git describe --tags | sed 's/-[^-]*$//' > version.txt
   
-      - name: esp-idf build
+      - name: esp-idf build NO OTA
         uses: espressif/esp-idf-ci-action@v1
         with:
-          #source https://hub.docker.com/r/espressif/idf/tags  
           esp_idf_version: v5.4-dev
           target: esp32c6
           path: './firmware'
-  
-      - name: Archive Firmware Files
+          command: "idf.py @profiles/noota build"
+      
+      - name: Create NO OTA folder
+        run: mkdir -p ./firmware/build-noota-release
+
+      - name: Move NO OTA binaries
+        run: |
+          cp ./firmware/build-noota/*.bin ./firmware/build-noota-release/
+          cp ./firmware/build-noota/*/*.bin ./firmware/build-noota-release/
+
+      - name: esp-idf build OTA
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.4-dev
+          target: esp32c6
+          path: './firmware'
+          command: "idf.py @profiles/ota build"
+
+      - name: Create OTA folder
+        run: mkdir -p ./firmware/build-ota-release
+
+      - name: Move OTA binaries
+        run: |
+          cp ./firmware/build-ota/*.bin ./firmware/build-ota-release/
+          cp ./firmware/build-ota/*/*.bin ./firmware/build-ota-release/
+
+      - name: Zip NO OTA Folder
+        run: zip -r ./firmware/minino-noota-firmware.zip ./firmware/build-noota-release/
+
+      - name: Zip OTA Folder
+        run: zip -r ./firmware/minino-ota-firmware.zip ./firmware/build-ota-release/
+
+      - name: Archive Firmware NO OTA ZIP
         uses: actions/upload-artifact@v4
         with: 
-          name: minino-firmware
-          path: "./firmware/build/"
+          name: minino-noota-firmware-zip
+          path: "./firmware/minino-noota-firmware.zip"
+      
+      - name: Archive Firmware OTA ZIP
+        uses: actions/upload-artifact@v4
+        with: 
+          name: minino-ota-firmware-zip
+          path: "./firmware/minino-ota-firmware.zip"
   
-    release:
-      needs: build
-      runs-on: ubuntu-latest
-      steps:
-      - name: Download Firmware Files
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Firmware ZIP Files
         uses: actions/download-artifact@v4
         with:
-          path: release
+          name: minino-noota-firmware-zip
+          path: ./release/
+      
+      - name: Download OTA Firmware ZIP Files
+        uses: actions/download-artifact@v4
+        with:
+          name: minino-ota-firmware-zip
+          path: ./release/
+
       - name: Release Firmware
         uses: ncipollo/release-action@v1
         if: startsWith(github.ref, 'refs/tags/') 
         with:
-          artifacts: release/*/*.bin
+          artifacts: release/minino-noota-firmware.zip,release/minino-ota-firmware.zip
           generateReleaseNotes: true
           allowUpdates: true

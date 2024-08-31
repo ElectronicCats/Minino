@@ -50,3 +50,6 @@ void buzzer_play_for(uint32_t duration);
  * @return void
  */
 void buzzer_stop();
+
+void buzzer_enable();
+void buzzer_disable();

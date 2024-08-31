@@ -21,7 +21,6 @@
 #include "flash_fs.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "menu_screens_modules.h"
 #include "preferences.h"
 #include "sd_card.h"
 #include "sdkconfig.h"
@@ -82,11 +81,6 @@ void wifi_sniffer_close_file() {
   if (wifi_sniffer_is_destination_sd()) {
     sd_card_unmount();
   }
-}
-
-void wifi_sniffer_exit() {
-  screen_module_set_screen(MENU_WIFI_ANALIZER);
-  esp_restart();
 }
 
 void wifi_sniffer_load_summary() {

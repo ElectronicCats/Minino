@@ -41,13 +41,6 @@ void wifi_sniffer_stop();
 void wifi_sniffer_close_file();
 
 /**
- * @brief Exit the wifi sniffer
- *
- * @return void
- */
-void wifi_sniffer_exit();
-
-/**
  * @brief Load the summary
  *
  * @return void

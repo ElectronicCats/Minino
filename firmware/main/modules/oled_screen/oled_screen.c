@@ -4,7 +4,6 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 
-#include "bitmaps.h"
 #include "esp_log.h"
 #include "oled_screen.h"
 
@@ -62,15 +61,15 @@ void oled_screen_display_show() {
   oled_driver_show_buffer(&dev);
   xSemaphoreGive(oled_mutex);
 }
+void oled_screen_clear_buffer() {
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
+  oled_driver_clear_buffer(&dev);
+  xSemaphoreGive(oled_mutex);
+}
 
 void oled_screen_display_text(char* text, int x, int page, bool invert) {
   if (text == NULL) {
     ESP_LOGE(TAG, "Text is NULL");
-    return;
-  }
-
-  if (strlen(text) > MAX_LINE_CHAR) {
-    ESP_LOGE(TAG, "%s is too long for the screen", text);
     return;
   }
 
@@ -104,10 +103,8 @@ void oled_screen_display_text_center(char* text, int page, bool invert) {
 }
 
 void oled_screen_clear_line(int x, int page, bool invert) {
-  // oled_driver_clear_line(&dev, x, page, invert);
   xSemaphoreTake(oled_mutex, portMAX_DELAY);
-  oled_driver_bitmaps(&dev, x, page * 8, epd_bitmap_clear_line, 128 - x, 8,
-                      invert);
+  oled_driver_clear_line(&dev, x, page, invert);
   xSemaphoreGive(oled_mutex);
 }
 
@@ -141,6 +138,13 @@ void oled_screen_display_selected_item_box() {
   xSemaphoreGive(oled_mutex);
 }
 
+void oled_screen_display_card_border() {
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
+  oled_driver_draw_modal_box(&dev, 0, 3);
+  oled_driver_show_buffer(&dev);
+  xSemaphoreGive(oled_mutex);
+}
+
 void oled_screen_display_text_splited(char* p_text,
                                       int* p_started_page,
                                       int invert) {
@@ -157,18 +161,18 @@ void oled_screen_display_text_splited(char* p_text,
         }
         strcat(current_line, token);
       } else {
-        oled_screen_display_text(current_line, 0, *p_started_page, invert);
+        oled_screen_display_text(current_line, 3, *p_started_page, invert);
         (*p_started_page)++;
         strcpy(current_line, token);
       }
       token = strtok(NULL, " ");
     }
     if (strlen(current_line) > 0) {
-      oled_screen_display_text(current_line, 0, *p_started_page, invert);
+      oled_screen_display_text(current_line, 3, *p_started_page, invert);
       (*p_started_page)++;
     }
   } else {
-    oled_screen_display_text(p_text, 0, *p_started_page, invert);
+    oled_screen_display_text(p_text, 3, *p_started_page, invert);
     (*p_started_page)++;
   }
 }

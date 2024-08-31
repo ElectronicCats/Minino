@@ -23,9 +23,9 @@ static void handle_bt_gapc_events(esp_gap_ble_cb_event_t event_type,
                                   esp_ble_gap_cb_param_t* param);
 
 void trackers_scanner_start() {
-#if !defined(CONFIG_TRACKERS_SCANNER_DEBUG)
-  esp_log_level_set(TAG_BLE_CLIENT_MODULE, ESP_LOG_NONE);
-#endif
+  // #if !defined(CONFIG_TRACKERS_SCANNER_DEBUG)
+  //   esp_log_level_set(TAG_BLE_CLIENT_MODULE, ESP_LOG_NONE);
+  // #endif
 
   gattc_scan_params_t scan_params = {
       .remote_filter_service_uuid =
@@ -90,7 +90,7 @@ void trackers_scanner_register_cb(bluetooth_traker_scanner_cb_t callback) {
 static void task_tracker_timer() {
   ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task started");
   trackers_scan_duration = 0;
-  while (1) {
+  while (trackers_scanner_active) {
     if (trackers_scan_duration >= TRACKER_SCAN_DURATION) {
       ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
       trackers_scanner_stop();
@@ -100,14 +100,18 @@ static void task_tracker_timer() {
 }
 
 void trackers_scanner_stop() {
+  trackers_scanner_active = false;
   ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
   if (trackers_scan_timer_task != NULL) {
-    vTaskDelete(trackers_scan_timer_task);
-    trackers_scan_timer_task = NULL;
+    ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
+    vTaskSuspend(trackers_scan_timer_task);
   }
+  ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
   trackers_scan_duration = 0;
+  vTaskDelete(NULL);
   // TODO: When this is called, the BLE stopping bricks the device
   // bt_gattc_task_stop();
+  ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
 }
 
 static void tracker_dissector(esp_ble_gap_cb_param_t* scan_rst,
@@ -133,7 +137,7 @@ static void tracker_dissector(esp_ble_gap_cb_param_t* scan_rst,
                scan_rst->scan_rst.bda[1], scan_rst->scan_rst.bda[0]);
       ESP_LOGI(TAG_BLE_CLIENT_MODULE,
                "ADV data %d:", scan_rst->scan_rst.adv_data_len);
-      esp_log_buffer_hex(TAG_BLE_CLIENT_MODULE, &scan_rst->scan_rst.ble_adv,
+      ESP_LOG_BUFFER_HEX(TAG_BLE_CLIENT_MODULE, &scan_rst->scan_rst.ble_adv,
                          scan_rst->scan_rst.adv_data_len);
       ESP_LOGI(TAG_BLE_CLIENT_MODULE, " ");
       break;
@@ -142,22 +146,16 @@ static void tracker_dissector(esp_ble_gap_cb_param_t* scan_rst,
 }
 
 void trackers_scanner_add_tracker_profile(tracker_profile_t** profiles,
-                                          int* num_profiles,
-                                          uint8_t mac_address[6],
-                                          int rssi,
-                                          char* name) {
+                                          uint16_t* num_profiles,
+                                          tracker_profile_t new_profile) {
   *profiles =
       realloc(*profiles, (*num_profiles + 1) * sizeof(tracker_profile_t));
-
-  (*profiles)[*num_profiles].rssi = rssi;
-  (*profiles)[*num_profiles].name = name;
-  memcpy((*profiles)[*num_profiles].mac_address, mac_address, 6);
-
+  (*profiles)[*num_profiles] = new_profile;
   (*num_profiles)++;
 }
 
 int trackers_scanner_find_profile_by_mac(tracker_profile_t* profiles,
-                                         int num_profiles,
+                                         uint16_t num_profiles,
                                          uint8_t mac_address[6]) {
   for (int i = 0; i < num_profiles; i++) {
     if (memcmp(profiles[i].mac_address, mac_address, 6) == 0) {

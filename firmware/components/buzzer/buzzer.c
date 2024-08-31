@@ -18,9 +18,17 @@ typedef struct {
   uint8_t pin;
   uint32_t freq;
   uint32_t duty;
+  bool enabled;
 } buzzer_t;
 
-buzzer_t buzzer;
+static buzzer_t buzzer;
+
+void buzzer_enable() {
+  buzzer.enabled = true;
+}
+void buzzer_disable() {
+  buzzer.enabled = false;
+}
 
 void buzzer_begin(uint8_t pin) {
   buzzer.pin = pin;
@@ -57,8 +65,10 @@ void buzzer_set_duty(uint32_t duty) {
 }
 
 void buzzer_play() {
+  if (!buzzer.enabled) {
+    return;
+  }
   buzzer_configure();
-
   // Set the duty cycle
   ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, buzzer.duty));
   ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
@@ -73,6 +83,9 @@ void buzzer_play_for_task(void* duration) {
 }
 
 void buzzer_play_for(uint32_t duration) {
+  if (!buzzer.enabled) {
+    return;
+  }
   uint32_t* duration_ptr = malloc(sizeof(uint32_t));
   *duration_ptr = duration;
   xTaskCreate(buzzer_play_for_task, "buzzer_play_for_task", 2048, duration_ptr,

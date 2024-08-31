@@ -1,73 +1,31 @@
-set(modules "modules/led_events/led_events.c"
-            "modules/keyboard/keyboard_module.c"
-            "modules/menu_screens/menu_screens_modules.c"
-            "modules/oled_screen/oled_screen.c"
-            "modules/settings/settings_module.c"
-            "modules/settings/sd_card/sd_card_settings_module.c"
-            "modules/settings/sd_card/sd_card_settings_screens_module.c"
-            "modules/wifi/wifi_module.c"
-            "modules/wifi/wifi_screens_module.c"
-            "modules/zigbee/zigbee_module.c"
-            "modules/zigbee/zigbee_screens_module.c"
-            "modules/ble/ble_module.c"
-            "modules/ble/ble_screens_module.c"
-            "modules/open_thread/open_thread_module.c"
-            "modules/open_thread/open_thread_screens_module.c"
-            "modules/ota/ota_module.c"
-            "modules/ota/ota_module_screens.c"
-            "modules/cat_dos/catdos_module.c"
-            "modules/cat_dos/cat_console.c"
-            "modules/cat_dos/cmd_catdos.c"
-            "modules/gps/gps_module.c"
-            "modules/gps/wardriving/wardriving_module.c"
-            "modules/gps/wardriving/wardriving_screens_module.c"
-            "modules/web_file_browser/http_server/web_file_browser.c"
-            "modules/web_file_browser/web_file_browser_module.c"
-            "modules/web_file_browser/web_file_browser_screens.c"
-            "modules/animations_task/animations_task.c"
-            "apps/thread_sniffer/thread_sniffer.c"
-            "apps/thread_sniffer/thread_sniffer_screens.c"
-            "apps/wifi/deauth/deauth_module.c"
-            "apps/wifi/deauth/deauth_screens.c"
-            "modules/settings/wifi/wifi_settings.c"
-            "modules/settings/display/display_settings.c")
+file(GLOB_RECURSE ALL_SOURCE_FILES "./*")
+set(modules_src "")
 
-set(drivers "drivers/oled_driver/oled_driver.c"
-            "drivers/oled_driver/oled_driver_i2c.c"
-            "drivers/oled_driver/oled_driver_spi.c")
+ foreach(file ${ALL_SOURCE_FILES})
+     get_filename_component(extension ${file} EXT)
+     if(NOT extension STREQUAL "")
+        list(APPEND modules_src ${file})
+    endif()
+ endforeach()
+
+ file(GLOB_RECURSE ALL_INCLUDE_PATHS "./*")
+ set(headers_dirs "")
+
+ foreach(path ${ALL_INCLUDE_PATHS})
+     get_filename_component(parentDir ${path} DIRECTORY)
+
+     if(IS_DIRECTORY ${parentDir})
+         list(APPEND headers_dirs ${parentDir})
+     endif()
+ endforeach()
 
 idf_component_register(
                     SRCS
-                    "main.c"
-                    "${modules}"
-                    "${drivers}"
+                    "${modules_src}"
                     EMBED_FILES modules/web_file_browser/http_server/header.html modules/web_file_browser/http_server/favicon_b.ico
                     modules/web_file_browser/http_server/style.css
                     INCLUDE_DIRS
-                    "."
-                    "modules/animations_task"
-                    "modules/keyboard/"
-                    "modules/menu_screens/"
-                    "drivers/oled_driver/"
-                    "modules/oled_screen/"
-                    "modules/settings/"
-                    "modules/settings/sd_card"
-                    "modules/settings/wifi/"
-                    "modules/settings/display/"
-                    "modules/wifi/"
-                    "modules/ble/"
-                    "modules/zigbee/"
-                    "modules/led_events"
-                    "modules/open_thread"
-                    "modules/web_file_browser/http_server"
-                    "modules/web_file_browser"
-                    "modules/ota"
-                    "modules/cat_dos/"
-                    "modules/gps"
-                    "modules/gps/wardriving"
-                    "apps/thread_sniffer"
-                    "apps/wifi/deauth"
-                    "general/")
+                    "${headers_dirs}")
 
 # # Append all directories to INCLUDE_DIRS
 
