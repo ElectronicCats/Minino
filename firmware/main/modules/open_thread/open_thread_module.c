@@ -23,7 +23,7 @@ void open_thread_module_begin() {
 }
 
 void open_thread_module_exit() {
-  menus_module_set_reset_screen(MENU_THREAD_APPS_2);
+  menus_module_set_reset_screen(MENU_THREAD_APPS);
   esp_restart();
 }
 

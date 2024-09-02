@@ -21,9 +21,9 @@ static void timer_callback() {
   }
 
   menu_idx_t menu = menus_module_get_current_menu();
-  if (menu == MENU_WIFI_ANALYZER_RUN_2 ||
-      menu == MENU_WIFI_ANALYZER_SUMMARY_2 || menu == MENU_GPS_DATE_TIME_2 ||
-      menu == MENU_GPS_LOCATION_2 || menu == MENU_GPS_SPEED_2) {
+  if (menu == MENU_WIFI_ANALYZER_RUN || menu == MENU_WIFI_ANALYZER_SUMMARY ||
+      menu == MENU_GPS_DATE_TIME || menu == MENU_GPS_LOCATION ||
+      menu == MENU_GPS_SPEED) {
     return;
   }
 

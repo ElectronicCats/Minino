@@ -79,7 +79,7 @@ static void switch_input_cb(uint8_t button_name, uint8_t button_event) {
     case BUTTON_LEFT:
       switch (button_event) {
         case BUTTON_PRESS_DOWN:
-          menus_module_set_reset_screen(MENU_ZIGBEE_SPOOFING_2);
+          menus_module_set_reset_screen(MENU_ZIGBEE_SPOOFING);
           zigbee_switch_deinit();
           break;
       }
@@ -95,7 +95,7 @@ static void sniffer_input_cb(uint8_t button_name, uint8_t button_event) {
     case BUTTON_LEFT:
       if (button_event == BUTTON_SINGLE_CLICK) {
         led_control_stop();
-        menus_module_set_reset_screen(MENU_ZIGBEE_APPS_2);
+        menus_module_set_reset_screen(MENU_ZIGBEE_APPS);
         esp_restart();
       }
       break;

@@ -71,13 +71,13 @@ void gps_screens_show_waiting_signal() {
 void gps_screens_update_handler(gps_t* gps) {
   menu_idx_t current = menus_module_get_current_menu();
   switch (current) {
-    case MENU_GPS_DATE_TIME_2:
+    case MENU_GPS_DATE_TIME:
       gps_screens_update_date_and_time(gps);
       break;
-    case MENU_GPS_LOCATION_2:
+    case MENU_GPS_LOCATION:
       gps_screens_update_location(gps);
       break;
-    case MENU_GPS_SPEED_2:
+    case MENU_GPS_SPEED:
       gps_screens_update_speed(gps);
       break;
     default:

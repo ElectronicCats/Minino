@@ -106,7 +106,7 @@ static void navigation_enter() {
 }
 
 static void navigation_exit() {
-  if (menus_ctx->current_menu == MENU_MAIN_2) {
+  if (menus_ctx->current_menu == MENU_MAIN) {
     screen_saver_run();
     return;
   }
@@ -176,11 +176,11 @@ void menus_module_set_reset_screen(menu_idx_t menu) {
 }
 
 static void get_reset_menu() {
-  menus_ctx->current_menu = preferences_get_int("MENUNUMBER", MENU_MAIN_2);
-  if ((int) menus_ctx->current_menu == MENU_MAIN_2) {
+  menus_ctx->current_menu = preferences_get_int("MENUNUMBER", MENU_MAIN);
+  if ((int) menus_ctx->current_menu == MENU_MAIN) {
     show_logo();
   } else {
-    preferences_put_int("MENUNUMBER", MENU_MAIN_2);
+    preferences_put_int("MENUNUMBER", MENU_MAIN);
     screen_saver_get_idle_state();
     refresh_menus();
   }
