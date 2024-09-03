@@ -44,6 +44,10 @@ Minino can operate in 6 different technologies:
 
 `[] Features coming soon [x] Working features`
 
+>[!IMPORTANT]
+> OTA require 8MB, if you want build it for other memory capacity, compile without the OTA.
+
+
 ### WIFI
 - [x] Wardriving
 - [x] WiFi sniffer
@@ -54,7 +58,7 @@ Minino can operate in 6 different technologies:
 ### BLE
 - [ ] BLE Sniffer
 - [x] BLE Spammer
-- [ ] BLE Spoofing
+- [x] BLE Spoffing (HID device, audio control)
 - [x] BLE Trackers Scanner (AirTags, Tile, etc)
 - [ ] Wireshark integration
 ### Zigbee
@@ -80,13 +84,15 @@ Minino can operate in 6 different technologies:
 - [x] GPS Time
 - [x] SD
 - [x] File Manager Web (Local AP and WIFI access)
-- [ ] File Manager Local
+- [x] File Manager Local
 - [ ] I2C Scanner
 - [ ] UART2
 
 ### Settings
 - [x] Change screensaver
 - [x] Change time screensaver
+- [x] Stealth mode (Disable animation, leds and sound) 
+- [x] APP selection
 
 Inspired by projects such as [Amini Project](https://github.com/Ocelot-Offensive-Security/Arsenal) and [USBNugget](https://github.com/HakCat-Tech/USB-Nugget).
 
