@@ -4,13 +4,13 @@
 #include "menus_module.h"
 #include "oled_screen.h"
 
-char* gps_help_2[] = {
+char* gps_help[] = {
     "Verify your",    "time zone if", "the time is not",
     "correct, go to", "`Settings/",   "System/Time",
     "zone` and",      "select the",   "correct one.",
 };
 const general_menu_t gps_help_menu = {.menu_count = 9,
-                                      .menu_items = gps_help_2,
+                                      .menu_items = gps_help,
                                       .menu_level = GENERAL_TREE_APP_MENU};
 
 void gps_screens_show_help() {
