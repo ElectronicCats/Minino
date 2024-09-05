@@ -223,6 +223,24 @@ bool menus_module_get_app_state() {
   return app_state2.in_app;
 }
 
+void menus_module_set_menu(menu_idx_t menu_idx) {
+  keyboard_module_set_input_callback(menus_input_cb);
+  menus_ctx->current_menu = menus[get_menu_idx(menu_idx)].menu_idx;
+  menus_ctx->parent_menu_idx = menus[get_menu_idx(menu_idx)].parent_idx;
+  refresh_menus();
+}
+
+void menus_module_hide_menu(menu_idx_t menu_idx) {
+  menus[get_menu_idx(menu_idx)].is_visible = false;
+}
+
+void menus_module_reveal_menu(menu_idx_t menu_idx) {
+  menus[get_menu_idx(menu_idx)].is_visible = true;
+}
+void menus_module_refresh() {
+  refresh_menus();
+}
+
 void menus_module_begin() {
   menus_ctx = calloc(1, sizeof(menus_manager_t));
   menus_ctx->menus_count = sizeof(menus) / sizeof(menu_t);

@@ -29,3 +29,7 @@ void menus_module_restart();
 void menus_module_exit_app();
 void menus_module_screen_saver_run();
 void menus_module_set_reset_screen(menu_idx_t menu);
+void menus_module_set_menu(menu_idx_t menu_idx);
+void menus_module_hide_menu(menu_idx_t menu_idx);
+void menus_module_reveal_menu(menu_idx_t menu_idx);
+void menus_module_refresh();
