@@ -224,8 +224,9 @@ void genera_screen_display_card_information(char* title, char* body) {
 
 void genera_screen_display_notify_information(char* title, char* body) {
   general_clear_screen();
-  general_screen_display_breadcrumb();
+  // general_screen_display_breadcrumb();
   int page = ITEM_PAGE_OFFSET;
+  oled_screen_display_card_border();
   oled_screen_display_text_center(title, page, OLED_DISPLAY_NORMAL);
   page++;
   if (strlen(body) > MAX_LINE_CHAR) {
