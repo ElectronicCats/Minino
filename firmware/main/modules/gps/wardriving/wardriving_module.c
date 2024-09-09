@@ -29,10 +29,10 @@
 
 #define MAC_ADDRESS_FORMAT "%02x:%02x:%02x:%02x:%02x:%02x"
 #define EMPTY_MAC_ADDRESS  "00:00:00:00:00:00"
-#define MAX_CSV_LINES      200
 #define CSV_LINE_SIZE      150  // Got it from real time tests
-#define CSV_FILE_SIZE      CSV_LINE_SIZE* MAX_CSV_LINES
+#define CSV_FILE_SIZE      (CSV_LINE_SIZE) * (MAX_CSV_LINES)
 #define CSV_HEADER_LINES   2  // Check `csv_header` variable
+#define MAX_CSV_LINES      200 + CSV_HEADER_LINES
 
 #define WIFI_SCAN_REFRESH_RATE_MS   3000
 #define DISPLAY_REFRESH_RATE_SEC    2
@@ -175,7 +175,7 @@ void wardriving_module_save_to_file(gps_t* gps) {
       ESP_LOGI(TAG, "Free heap size before allocation: %" PRIu32 " bytes",
                esp_get_free_heap_size());
       ESP_LOGI(TAG, "Allocating %d bytes for csv_file_buffer", CSV_FILE_SIZE);
-      csv_file_buffer = malloc(CSV_FILE_SIZE);  // Here does not work
+      csv_file_buffer = malloc(CSV_FILE_SIZE);
       if (csv_file_buffer == NULL) {
         ESP_LOGE(TAG, "Failed to allocate memory for csv_file_buffer");
         return;
@@ -297,7 +297,7 @@ void wardriving_module_begin() {
   ESP_LOGI(TAG, "Free heap size before allocation: %" PRIu32 " bytes",
            esp_get_free_heap_size());
   ESP_LOGI(TAG, "Allocating %d bytes for csv_file_buffer", CSV_FILE_SIZE);
-  csv_file_buffer = malloc(CSV_FILE_SIZE);  // Here works
+  csv_file_buffer = malloc(CSV_FILE_SIZE);
   if (csv_file_buffer == NULL) {
     ESP_LOGE(TAG, "Failed to allocate memory for csv_file_buffer");
     return;

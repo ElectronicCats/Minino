@@ -8,8 +8,6 @@
 
 #include "oled_driver.h"
 
-#define tag "oled_driver_i2c"
-
 #if CONFIG_I2C_PORT_0
   #define I2C_NUM I2C_NUM_0
 #elif CONFIG_I2C_PORT_1
@@ -20,6 +18,8 @@
 
 #define I2C_MASTER_FREQ_HZ \
   400000 /*!< I2C clock of SH1106 can run at 400 kHz max. */
+
+static const char* TAG = "oled_driver_i2c";
 
 void i2c_master_init(oled_driver_t* dev,
                      int16_t sda,
@@ -105,9 +105,9 @@ void i2c_init(oled_driver_t* dev, int width, int height) {
 
   esp_err_t espRc = i2c_master_cmd_begin(I2C_NUM, cmd, 10 / portTICK_PERIOD_MS);
   if (espRc == ESP_OK) {
-    ESP_LOGI(tag, "OLED configured successfully");
+    ESP_LOGI(TAG, "OLED configured successfully");
   } else {
-    ESP_LOGE(tag, "OLED configuration failed. code: 0x%.2X", espRc);
+    ESP_LOGE(TAG, "OLED configuration failed. code: 0x%.2X", espRc);
   }
   i2c_cmd_link_delete(cmd);
 }
@@ -260,9 +260,9 @@ void i2c_hardware_scroll(oled_driver_t* dev, oled_driver_scroll_type_t scroll) {
   i2c_master_stop(cmd);
   espRc = i2c_master_cmd_begin(I2C_NUM, cmd, 10 / portTICK_PERIOD_MS);
   if (espRc == ESP_OK) {
-    ESP_LOGD(tag, "Scroll command succeeded");
+    ESP_LOGD(TAG, "Scroll command succeeded");
   } else {
-    ESP_LOGE(tag, "Scroll command failed. code: 0x%.2X", espRc);
+    ESP_LOGE(TAG, "Scroll command failed. code: 0x%.2X", espRc);
   }
 
   i2c_cmd_link_delete(cmd);

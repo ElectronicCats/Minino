@@ -1,6 +1,7 @@
 #include "screen_saver.h"
 
 #include "bitmaps_general.h"
+#include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -9,6 +10,7 @@
 #include "preferences.h"
 
 static int IDLE_TIMEOUT_S = 30;
+static const char* TAG = "screen_saver";
 
 static volatile bool screen_saver_running;
 esp_timer_handle_t screen_savar_idle_timer2;
@@ -38,13 +40,18 @@ static void show_splash_screen() {
   screen_saver_running = true;
   int w_screen_space = SCREEN_WIDTH2 - logo.width;
   int h_screen_space = SCREEN_HEIGHT2 - logo.height;
+  h_screen_space = h_screen_space == 0 ? 2 : h_screen_space;
   int start_x_position = w_screen_space / 2;
+#if CONFIG_RESOLUTION_128X64
   static int start_y_position = 16;
-  static int x_direction = 1;
   static int y_direction = 1;
+#else
+  static int start_y_position = 0;
+  static int y_direction = 0;
+#endif
+  static int x_direction = 1;
 
   while (screen_saver_running) {
-    // oled_screen_clear_buffer();
     oled_screen_display_bitmap(logo.bitmap, start_x_position, start_y_position,
                                logo.width, logo.height, OLED_DISPLAY_NORMAL);
 
