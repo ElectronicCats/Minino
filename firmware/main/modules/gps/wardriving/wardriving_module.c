@@ -1,4 +1,5 @@
 #include <string.h>
+#include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
@@ -28,10 +29,10 @@
 
 #define MAC_ADDRESS_FORMAT "%02x:%02x:%02x:%02x:%02x:%02x"
 #define EMPTY_MAC_ADDRESS  "00:00:00:00:00:00"
-#define MAX_CSV_LINES      100
-#define CSV_LINE_SIZE      200  // Got it from real time tests
-#define CSV_FILE_SIZE      CSV_LINE_SIZE* MAX_CSV_LINES
+#define CSV_LINE_SIZE      150  // Got it from real time tests
+#define CSV_FILE_SIZE      (CSV_LINE_SIZE) * (MAX_CSV_LINES)
 #define CSV_HEADER_LINES   2  // Check `csv_header` variable
+#define MAX_CSV_LINES      200 + CSV_HEADER_LINES
 
 #define WIFI_SCAN_REFRESH_RATE_MS   3000
 #define DISPLAY_REFRESH_RATE_SEC    2
@@ -119,6 +120,19 @@ void wardriving_module_scan_task(void* pvParameters) {
   }
 }
 
+void update_file_name(char* full_date_time) {
+  sprintf(csv_file_name, "%s_%s.csv", FILE_NAME, full_date_time);
+  // Replace " " by "_" and ":" by "-"
+  for (int i = 0; i < strlen(csv_file_name); i++) {
+    if (csv_file_name[i] == ' ') {
+      csv_file_name[i] = '_';
+    }
+    if (csv_file_name[i] == ':') {
+      csv_file_name[i] = '-';
+    }
+  }
+}
+
 /**
  * @brief Save the scanned AP records to a CSV file
  *
@@ -133,7 +147,7 @@ void wardriving_module_save_to_file(gps_t* gps) {
   esp_err_t err = sd_card_create_dir(DIR_NAME);
 
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to create directory");
+    ESP_LOGE(TAG, "Failed to create %s directory", DIR_NAME);
     return;
   }
 
@@ -142,24 +156,14 @@ void wardriving_module_save_to_file(gps_t* gps) {
 
   // Append records to csv file buffer
   for (int i = 0; i < ap_records->count; i++) {
-    csv_lines++;
-    wifi_scanned_packets++;
+    // TODO: Free memory
     char* mac_address_str = get_mac_address(ap_records->records[i].bssid);
     char* auth_mode_str = get_auth_mode(ap_records->records[i].authmode);
     char* full_date_time = get_full_date_time(gps);
 
     // +1 because there is a csv_lines++ before this
-    if (csv_lines == CSV_HEADER_LINES + 1) {
-      sprintf(csv_file_name, "%s_%s.csv", FILE_NAME, full_date_time);
-      // Replace " " by "_" and ":" by "-"
-      for (int i = 0; i < strlen(csv_file_name); i++) {
-        if (csv_file_name[i] == ' ') {
-          csv_file_name[i] = '_';
-        }
-        if (csv_file_name[i] == ':') {
-          csv_file_name[i] = '-';
-        }
-      }
+    if (csv_lines == CSV_HEADER_LINES) {
+      update_file_name(full_date_time);
     }
 
     if (csv_lines >= MAX_CSV_LINES) {
@@ -167,9 +171,19 @@ void wardriving_module_save_to_file(gps_t* gps) {
       sd_card_write_file(csv_file_name, csv_file_buffer);
       csv_lines = CSV_HEADER_LINES;
       free(csv_file_buffer);
+
+      ESP_LOGI(TAG, "Free heap size before allocation: %" PRIu32 " bytes",
+               esp_get_free_heap_size());
+      ESP_LOGI(TAG, "Allocating %d bytes for csv_file_buffer", CSV_FILE_SIZE);
       csv_file_buffer = malloc(CSV_FILE_SIZE);
+      if (csv_file_buffer == NULL) {
+        ESP_LOGE(TAG, "Failed to allocate memory for csv_file_buffer");
+        return;
+      }
+
       sprintf(csv_file_buffer, "%s\n",
               csv_header);  // Append header to csv file
+      continue;
     }
 
     if (strcmp(mac_address_str, EMPTY_MAC_ADDRESS) == 0) {
@@ -214,7 +228,9 @@ void wardriving_module_save_to_file(gps_t* gps) {
 
     // ESP_LOGI(TAG, "CSV Line: %s", csv_line_buffer);
     // ESP_LOGI(TAG, "Line size %d bytes", strlen(csv_line_buffer));
-    strcat(csv_file_buffer, csv_line_buffer);
+    strcat(csv_file_buffer, csv_line_buffer);  // Append line to csv file
+    csv_lines++;
+    wifi_scanned_packets++;
   }
   free(csv_line_buffer);
   ESP_LOGI(TAG, "File size %d bytes, scanned packets: %u",
@@ -241,10 +257,10 @@ void wardriving_gps_event_handler_cb(gps_t* gps) {
            gps->sats_in_use, gps_module_get_signal_strength(gps), gps->latitude,
            gps->longitude);
 
-  if (gps->sats_in_use == 0) {
-    wardriving_screens_module_no_gps_signal();
-    return;
-  }
+  // if (gps->sats_in_use == 0) {
+  //   wardriving_screens_module_no_gps_signal();
+  //   return;
+  // }
 
   if (counter % DISPLAY_REFRESH_RATE_SEC == 0 || counter == 1) {
     wardriving_screens_module_scanning(wifi_scanned_packets,
@@ -269,6 +285,7 @@ esp_err_t wardriving_module_verify_sd_card() {
   return err;
 }
 
+// TODO: return error code
 void wardriving_module_begin() {
 #if !defined(CONFIG_WARDRIVING_MODULE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
@@ -276,8 +293,22 @@ void wardriving_module_begin() {
   ESP_LOGI(TAG, "Wardriving module begin");
   csv_lines = CSV_HEADER_LINES;
   wifi_scanned_packets = 0;
+
+  ESP_LOGI(TAG, "Free heap size before allocation: %" PRIu32 " bytes",
+           esp_get_free_heap_size());
+  ESP_LOGI(TAG, "Allocating %d bytes for csv_file_buffer", CSV_FILE_SIZE);
   csv_file_buffer = malloc(CSV_FILE_SIZE);
+  if (csv_file_buffer == NULL) {
+    ESP_LOGE(TAG, "Failed to allocate memory for csv_file_buffer");
+    return;
+  }
+
   csv_file_name = malloc(strlen(FILE_NAME) + 30);
+  if (csv_file_name == NULL) {
+    ESP_LOGE(TAG, "Failed to allocate memory for csv_file_name");
+    return;
+  }
+
   sprintf(csv_file_name, "%s.csv", FILE_NAME);
   sprintf(csv_file_buffer, "%s\n", csv_header);  // Append header to csv file
 }
