@@ -112,6 +112,22 @@ static const unsigned char epd_bitmap_arrow_down[] = {
     0x80, 0x01, 0x80, 0xff, 0xff, 0xff, 0xff, 0x7f, 0xfe, 0x3f, 0xfc,
     0x1f, 0xf8, 0x0f, 0xf0, 0x07, 0xe0, 0x03, 0xc0, 0x01, 0x80};
 
+static const unsigned char* arrows_bitmap_arr[] = {
+    epd_bitmap_arrow_left, epd_bitmap_arrow_right, epd_bitmap_arrow_up,
+    epd_bitmap_arrow_down};
+// simple_left_arrow 8x8
+static const unsigned char simple_left_arrow_bmp[] = {0x08, 0x10, 0x20, 0x40,
+                                                      0x40, 0x20, 0x10, 0x08};
+// simple_right_arrow 8x8
+static const unsigned char simple_right_arrow_bmp[] = {0x10, 0x08, 0x04, 0x02,
+                                                       0x02, 0x04, 0x08, 0x10};
+// simple_up_arrow 8x8
+static const unsigned char simple_up_arrow_bmp[] = {0x00, 0x18, 0x24, 0x42,
+                                                    0x81, 0x00, 0x00, 0x00};
+// simple_down_arrow 8x8
+static const unsigned char simple_down_arrow_bmp[] = {0x00, 0x00, 0x00, 0x81,
+                                                      0x42, 0x24, 0x18, 0x00};
+
 unsigned char* epd_startup_logo[] = {epd_bitmap_minino_text_logo,
                                      epd_bitmap_face_logo};
 
