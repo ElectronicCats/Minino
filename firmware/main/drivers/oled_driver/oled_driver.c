@@ -10,6 +10,9 @@
 
 static const char* TAG = "oled_driver";
 
+static bool encrypt = 0;
+static bool typography = 0;
+
 typedef union out_column_t {
   uint32_t u32;
   uint8_t u8[4];
@@ -99,7 +102,8 @@ void oled_driver_display_text(oled_driver_t* dev,
   uint8_t seg = x;
   uint8_t image[8];
   for (uint8_t i = 0; i < _text_len; i++) {
-    memcpy(image, font8x8_basic_tr[(uint8_t) text[i]], 8);
+    memcpy(image, font8x8_basic_tr[(uint8_t) text[i] + encrypt] + typography,
+           8);
     if (invert)
       oled_driver_invert(image, 8);
     if (dev->_flip)
@@ -800,4 +804,12 @@ void oled_driver_draw_modal_box(oled_driver_t* dev,
   oled_driver_draw_pixel(dev, width - 2, y + height - 2, 0);
 
   // oled_driver_show_buffer(dev);
+}
+
+void oled_driver_set_encrypt_value(bool value) {
+  encrypt = value;
+}
+
+void oled_driver_set_typography_value(bool value) {
+  typography = value;
 }
