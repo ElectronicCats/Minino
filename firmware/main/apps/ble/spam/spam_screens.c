@@ -12,11 +12,18 @@ static void ble_screens_display_scanning_animation() {
 
 void ble_screens_start_scanning_animation() {
   oled_screen_clear();
-  oled_screen_display_text_center("BLE SPAM", 0, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("< Back", 0, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("BLE SPAM", 1, OLED_DISPLAY_NORMAL);
+#ifdef CONFIG_RESOLUTION_128X64
   animations_task_run(ble_screens_display_scanning_animation, 100, NULL);
+#endif
 }
 
 void ble_screens_display_scanning_text(char* name) {
-  oled_screen_clear_line(0, 7, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center(name, 7, OLED_DISPLAY_INVERT);
+  int page = 7;
+#ifdef CONFIG_RESOLUTION_128X32
+  page = 2;
+#endif
+  oled_screen_clear_line(0, page, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center(name, page, OLED_DISPLAY_INVERT);
 }

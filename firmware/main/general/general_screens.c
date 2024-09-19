@@ -26,45 +26,18 @@ static const general_menu_t card_info_menu_ctx = {
     .menu_level = GENERAL_TREE_APP_SUBMENU,
 };
 
-char** general_screen_truncate_text(char* p_text, int* num_lines) {
-  char** lines = NULL;
-  *num_lines = 0;
-
-  if (strlen(p_text) > MAX_LINE_CHAR) {
-    char temp[50];
-    strncpy(temp, p_text, 50);
-
-    char* token = strtok(temp, " ");
-    char current_line[MAX_LINE_CHAR] = "";
-
-    while (token != NULL) {
-      if (strlen(current_line) + strlen(token) + 1 <= MAX_LINE_CHAR) {
-        if (strlen(current_line) > 0) {
-          strcat(current_line, " ");
-        }
-        strcat(current_line, token);
-      } else {
-        lines = realloc(lines, sizeof(char*) * (*num_lines + 1));
-        lines[*num_lines] = strdup(current_line);
-        (*num_lines)++;
-
-        strcpy(current_line, token);
-      }
-      token = strtok(NULL, " ");
-    }
-
-    if (strlen(current_line) > 0) {
-      lines = realloc(lines, sizeof(char*) * (*num_lines + 1));
-      lines[*num_lines] = strdup(current_line);
-      (*num_lines)++;
-    }
-  } else {
-    lines = realloc(lines, sizeof(char*) * (*num_lines + 1));
-    lines[*num_lines] = strdup(p_text);
-    (*num_lines)++;
+void general_screen_truncate_text(char* p_text, char* p_truncated_text) {
+  // Truncate the text if it is longer than the screen width and add 3 dots
+  char* p_truncated_text_ptr = p_truncated_text;
+  for (uint8_t i = 0; i < (MAX_LINE_CHAR - 3); i++) {
+    *p_truncated_text_ptr = *p_text;
+    p_text++;
+    p_truncated_text_ptr++;
   }
-
-  return lines;  // Regresar el array de líneas spliteadas
+  *p_truncated_text_ptr++ = '.';
+  *p_truncated_text_ptr++ = '.';
+  *p_truncated_text_ptr++ = '.';
+  *p_truncated_text_ptr = '\0';
 }
 
 static void general_screen_display_selected_item(char* item_text,
