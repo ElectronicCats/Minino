@@ -12,6 +12,10 @@ esp_timer_handle_t idle_timer;
 static bool is_idle = false;
 static bool lock_input = false;
 
+const char* button_to_name[] = {
+    "BOOT", "LEFT", "RIGHT", "UP", "DOWN",
+};
+
 static void button_event_cb(void* arg, void* data);
 
 void keyboard_module_reset_idle_timer() {
@@ -65,33 +69,22 @@ void button_init(uint32_t button_num, uint8_t mask) {
  * @return void
  */
 static void button_event_cb(void* arg, void* data) {
-  uint8_t button_name =
-      (((button_event_t) data) >> 4);  // >> 4 to get the button number
-  uint8_t button_event =
-      ((button_event_t) data) &
-      0x0F;  // & 0x0F to get the event number without the mask
-  // esp_timer_stop(idle_timer);
-
-  // If we have an app with a custom handler, we call it
+  // >> 4 to get the button number
+  uint8_t button_name = (((button_event_t) data) >> 4);
+  // & 0x0F to get the event number without the mask
+  uint8_t button_event = ((button_event_t) data) & 0x0F;
+  // DO NOT REMOVE THIS LOG
+  ESP_LOGI(TAG, "Button %s event %d", button_to_name[button_name],
+           button_event);
 
   if (lock_input) {
     return;
   }
+
   if (input_callback) {
     input_callback(button_name, button_event);
     return;
   }
-
-  // IDLE_TIMEOUT_S = preferences_get_int("dp_time", 30);
-  // esp_timer_start_once(idle_timer, IDLE_TIMEOUT_S * 1000 * 1000);
-  // if (button_event != BUTTON_PRESS_DOWN) {
-  //   return;
-  // }
-
-  // if (is_idle) {
-  //   is_idle = false;
-  //   return;
-  // }
 }
 
 void keyboard_module_set_input_callback(input_callback_t input_cb) {

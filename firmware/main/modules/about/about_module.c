@@ -56,7 +56,7 @@ void about_module_display_legal_menu() {
 
 void about_module_display_version() {
   general_screen_display_card_information_handler(
-      "Minino", "v" CONFIG_PROJECT_VERSION, menus_module_exit_app, NULL);
+      "Minino", CONFIG_PROJECT_VERSION, menus_module_exit_app, NULL);
 }
 void about_module_display_license() {
   general_screen_display_card_information_handler("License", "GNU GPL 3.0",

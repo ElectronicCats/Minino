@@ -146,7 +146,7 @@ esp_err_t http_404_error_handler(httpd_req_t* req, httpd_err_code_t err) {
 static httpd_handle_t start_webserver(void) {
   httpd_handle_t server = NULL;
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-  config.max_open_sockets = 10;
+  config.max_open_sockets = 7;
   config.lru_purge_enable = true;
 
   // Start the httpd server

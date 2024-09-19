@@ -55,6 +55,6 @@ void menus_screens_display_menus_f(menus_manager_t* ctx) {
 
 #ifdef CONFIG_RESOLUTION_128X64
   oled_screen_display_selected_item_box();
-  oled_screen_display_show();
 #endif
+  oled_screen_display_show();
 }

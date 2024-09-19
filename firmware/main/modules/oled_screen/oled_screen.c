@@ -149,8 +149,8 @@ void oled_screen_display_text_splited(char* p_text,
                                       int* p_started_page,
                                       int invert) {
   if (strlen(p_text) > MAX_LINE_CHAR) {
-    char temp[50];
-    strncpy(temp, p_text, 50);
+    char temp[100];
+    strncpy(temp, p_text, 100);
 
     char* token = strtok(temp, " ");
     char current_line[MAX_LINE_CHAR] = "";
@@ -188,4 +188,8 @@ void oled_screen_display_loading_bar(uint8_t value, uint8_t page) {
   }
   oled_screen_display_bitmap(bar_bitmap, 0, page * 8, 128, 8,
                              OLED_DISPLAY_NORMAL);
+}
+
+uint8_t oled_screen_get_pages() {
+  return dev._pages;
 }

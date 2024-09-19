@@ -106,12 +106,11 @@ static void navigation_enter() {
 }
 
 static void navigation_exit() {
-  if (menus_ctx->current_menu == MENU_MAIN_2) {
+  if (menus_ctx->current_menu == MENU_MAIN) {
     screen_saver_run();
     return;
   }
-  menus[get_menu_idx(menus_ctx->current_menu)].last_selected_submenu =
-      menus_ctx->selected_submenu;
+  menus[get_menu_idx(menus_ctx->current_menu)].last_selected_submenu = 0;
   void (*cb)() = menus[get_menu_idx(menus_ctx->current_menu)].on_exit_cb;
   if (cb) {
     cb();
@@ -177,11 +176,11 @@ void menus_module_set_reset_screen(menu_idx_t menu) {
 }
 
 static void get_reset_menu() {
-  menus_ctx->current_menu = preferences_get_int("MENUNUMBER", MENU_MAIN_2);
-  if ((int) menus_ctx->current_menu == MENU_MAIN_2) {
+  menus_ctx->current_menu = preferences_get_int("MENUNUMBER", MENU_MAIN);
+  if ((int) menus_ctx->current_menu == MENU_MAIN) {
     show_logo();
   } else {
-    preferences_put_int("MENUNUMBER", MENU_MAIN_2);
+    preferences_put_int("MENUNUMBER", MENU_MAIN);
     screen_saver_get_idle_state();
     refresh_menus();
   }
@@ -210,6 +209,11 @@ void menus_module_restart() {
   esp_restart();
 }
 
+void menus_module_reset() {
+  preferences_put_int("MENUNUMBER", menus_ctx->parent_menu_idx);
+  esp_restart();
+}
+
 void menus_module_exit_app() {
   menus_module_set_app_state(false, menus_input_cb);
   screen_saver_get_idle_state();
@@ -222,6 +226,24 @@ menu_idx_t menus_module_get_current_menu() {
 
 bool menus_module_get_app_state() {
   return app_state2.in_app;
+}
+
+void menus_module_set_menu(menu_idx_t menu_idx) {
+  keyboard_module_set_input_callback(menus_input_cb);
+  menus_ctx->current_menu = menus[get_menu_idx(menu_idx)].menu_idx;
+  menus_ctx->parent_menu_idx = menus[get_menu_idx(menu_idx)].parent_idx;
+  refresh_menus();
+}
+
+void menus_module_hide_menu(menu_idx_t menu_idx) {
+  menus[get_menu_idx(menu_idx)].is_visible = false;
+}
+
+void menus_module_reveal_menu(menu_idx_t menu_idx) {
+  menus[get_menu_idx(menu_idx)].is_visible = true;
+}
+void menus_module_refresh() {
+  refresh_menus();
 }
 
 void menus_module_begin() {

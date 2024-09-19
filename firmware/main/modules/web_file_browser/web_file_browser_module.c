@@ -33,7 +33,7 @@ void web_file_browser_module_begin() {
   }
 }
 void web_file_browser_module_exit() {
-  menus_module_set_reset_screen(MENU_FILE_MANAGER_2);
+  menus_module_set_reset_screen(MENU_FILE_MANAGER);
   esp_restart();
 }
 static void web_file_browser_input_cb(uint8_t button_name,

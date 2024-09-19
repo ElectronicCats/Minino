@@ -190,7 +190,8 @@ void oled_driver_clear_line(oled_driver_t* dev, int x, int page, bool invert) {
   // char space[16];
   // memset(space, 0x00, sizeof(space));
   // oled_driver_display_text(dev, page, space, sizeof(space), invert);
-  char* space = "                ";
+  // char* space = "                ";
+  char* space = "        ";
   oled_driver_display_text(dev, page, space, x, invert);
 }
 

@@ -443,7 +443,7 @@ menu "OLED Screen Configuration"
 
 endmenu
 
-menu "KEYBOARD Configuration"
+menu "Keyboard Configuration"
 
 	config GPIO_RANGE_MAX
 		int

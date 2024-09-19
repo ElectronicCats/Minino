@@ -43,7 +43,7 @@ git clone git@github.com:ElectronicCats/Minino.git
 2. Change to the firmware directory:
 
 ```bash
-cd Minino/examples/minino
+cd Minino/firmware
 ```
 
 3. Set the IDF_PATH environment variable:

@@ -54,7 +54,7 @@ void module_update_tracker_name(char* tracker_name, uint16_t index) {
 
 void module_display_scanning() {
   led_control_run_effect(led_control_pulse_leds);
-  genera_screen_display_notify_information("Searching", "Looking for devices");
+  genera_screen_display_notify_information("Searching", "Devices");
 }
 
 void module_display_tracker_information(char* title, char* body) {

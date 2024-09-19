@@ -1,10 +1,13 @@
 #include <stdio.h>
 
+#include "esp_log.h"
+
 #include "general_screens.h"
 #include "gps_bitmaps.h"
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "wardriving_screens_module.h"
+#include "wifi_bitmaps.h"
 
 char* wardriving_help_2[] = {
     "This tool",       "allows you to",  "scan for WiFi",
@@ -23,16 +26,48 @@ void wardriving_screens_show_help() {
   general_screen_display_scrolling_text_handler(menus_module_exit_app);
 }
 
+void wardriving_screens_wifi_animation_task() {
+  oled_screen_clear_buffer();
+
+  while (true) {
+    static uint8_t idx = 0;
+    oled_screen_display_bitmap(epd_bitmap_wifi_loading[idx], 0, 0, 56, 56,
+                               OLED_DISPLAY_NORMAL);
+    idx = ++idx > 3 ? 0 : idx;
+    vTaskDelay(500 / portTICK_PERIOD_MS);
+  }
+}
+
 void wardriving_screens_module_scanning(uint32_t packets, char* signal) {
   char* packets_str = (char*) malloc(20);
   sprintf(packets_str, "%ld", packets);
 
-  oled_screen_clear_buffer();
-  oled_screen_display_text("Packets", 64, 0, OLED_DISPLAY_INVERT);
-  oled_screen_display_text(packets_str, 64, 1, OLED_DISPLAY_INVERT);
-  oled_screen_display_text("Signal", 64, 3, OLED_DISPLAY_INVERT);
-  oled_screen_display_text(signal, 64, 4, OLED_DISPLAY_INVERT);
+  // oled_screen_clear_buffer();
+  uint8_t x = 64;
+  static uint8_t y = 0;
+
+  static uint8_t count = 0;
+  count++;
+  if (count == 255) {
+    uint8_t pages = oled_screen_get_pages();
+    for (uint8_t page = 0; page < pages; page++) {
+      oled_screen_clear_line(x, page, OLED_DISPLAY_NORMAL);
+    }
+    y++;
+  }
+
+  if (y == 2) {
+    y = 0;
+  }
+
+  uint8_t yy = y;
+  oled_screen_display_text("Packets", x, yy++, OLED_DISPLAY_INVERT);
+  oled_screen_display_text(packets_str, x, yy++, OLED_DISPLAY_INVERT);
+  yy++;
+  oled_screen_display_text("GPS", x, yy++, OLED_DISPLAY_INVERT);
+  oled_screen_display_text(signal, x, yy++, OLED_DISPLAY_INVERT);
   oled_screen_display_show();
+  free(packets_str);
 }
 
 void wardriving_screens_module_loading_text() {
