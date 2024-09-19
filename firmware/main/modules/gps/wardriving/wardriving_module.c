@@ -266,12 +266,12 @@ void wardriving_gps_event_handler_cb(gps_t* gps) {
            gps->sats_in_use, gps_module_get_signal_strength(gps), gps->latitude,
            gps->longitude);
 
-  // if (gps->sats_in_use == 0) {
-  //   vTaskSuspend(scanning_wifi_animation_task_handle);
-  //   running_wifi_scanner_animation = false;
-  //   wardriving_screens_module_no_gps_signal();
-  //   return;
-  // }
+  if (gps->sats_in_use == 0) {
+    vTaskSuspend(scanning_wifi_animation_task_handle);
+    running_wifi_scanner_animation = false;
+    wardriving_screens_module_no_gps_signal();
+    return;
+  }
 
   if (!running_wifi_scanner_animation) {
     vTaskResume(scanning_wifi_animation_task_handle);
