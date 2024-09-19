@@ -1,6 +1,20 @@
 #pragma once
 
 /**
+ * @brief Show the help screen
+ *
+ * @return void
+ */
+void wardriving_screens_show_help();
+
+/**
+ * @brif Display the scanning wifi networks animation
+ *
+ * @return void
+ */
+void wardriving_screens_wifi_animation_task();
+
+/**
  * @brief Display the scanning screen
  *
  * @param packets Number of packets received
@@ -51,5 +65,3 @@ void wardriving_screens_module_formating_sd_card();
  * @return void
  */
 void wardriving_screens_module_failed_format_sd_card();
-
-void wardriving_screens_show_help();
