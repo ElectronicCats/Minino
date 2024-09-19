@@ -49,6 +49,9 @@ const char* TAG = "wardriving";
 wardriving_module_state_t wardriving_module_state =
     WARDRIVING_MODULE_STATE_STOPPED;
 TaskHandle_t wardriving_module_scan_task_handle = NULL;
+TaskHandle_t scanning_wifi_animation_task_handle = NULL;
+bool running_wifi_scanner_animation = false;
+
 uint16_t csv_lines;
 uint16_t wifi_scanned_packets;
 char* csv_file_name = NULL;
@@ -120,6 +123,13 @@ void wardriving_module_scan_task(void* pvParameters) {
   }
 }
 
+/**
+ * @brief Update the file name where the scanned packets will be saved
+ *
+ * @param full_date_time The full date and time string
+ *
+ * @return void
+ */
 void update_file_name(char* full_date_time) {
   sprintf(csv_file_name, "%s_%s.csv", FILE_NAME, full_date_time);
   // Replace " " by "_" and ":" by "-"
@@ -156,12 +166,11 @@ void wardriving_module_save_to_file(gps_t* gps) {
 
   // Append records to csv file buffer
   for (int i = 0; i < ap_records->count; i++) {
-    // TODO: Free memory
-    char* mac_address_str = get_mac_address(ap_records->records[i].bssid);
     char* auth_mode_str = get_auth_mode(ap_records->records[i].authmode);
+    char* mac_address_str = get_mac_address(ap_records->records[i].bssid);
     char* full_date_time = get_full_date_time(gps);
 
-    // +1 because there is a csv_lines++ before this
+    // End of file reached, write to new file
     if (csv_lines == CSV_HEADER_LINES) {
       update_file_name(full_date_time);
     }
@@ -258,9 +267,16 @@ void wardriving_gps_event_handler_cb(gps_t* gps) {
            gps->longitude);
 
   // if (gps->sats_in_use == 0) {
+  //   vTaskSuspend(scanning_wifi_animation_task_handle);
+  //   running_wifi_scanner_animation = false;
   //   wardriving_screens_module_no_gps_signal();
   //   return;
   // }
+
+  if (!running_wifi_scanner_animation) {
+    vTaskResume(scanning_wifi_animation_task_handle);
+  }
+  running_wifi_scanner_animation = true;
 
   if (counter % DISPLAY_REFRESH_RATE_SEC == 0 || counter == 1) {
     wardriving_screens_module_scanning(wifi_scanned_packets,
@@ -328,6 +344,12 @@ void wardriving_module_start_scan() {
   wardriving_module_state = WARDRIVING_MODULE_STATE_SCANNING;
   xTaskCreate(wardriving_module_scan_task, "wardriving_module_scan_task", 4096,
               NULL, 5, &wardriving_module_scan_task_handle);
+  xTaskCreate(wardriving_screens_wifi_animation_task,
+              "scanning_wifi_animation_task", 4096, NULL, 5,
+              &scanning_wifi_animation_task_handle);
+  vTaskSuspend(scanning_wifi_animation_task_handle);
+  running_wifi_scanner_animation = false;
+
   gps_module_register_cb(wardriving_gps_event_handler_cb);
   wardriving_screens_module_loading_text();
   gps_module_start_scan();
@@ -348,7 +370,13 @@ void wardriving_module_stop_scan() {
   if (wardriving_module_scan_task_handle != NULL) {
     vTaskDelete(wardriving_module_scan_task_handle);
     wardriving_module_scan_task_handle = NULL;
-    ESP_LOGI(TAG, "Task deleted");
+    ESP_LOGI(TAG, "Task wardriving_module_scan_task deleted");
+  }
+
+  if (scanning_wifi_animation_task_handle != NULL) {
+    vTaskDelete(scanning_wifi_animation_task_handle);
+    scanning_wifi_animation_task_handle = NULL;
+    ESP_LOGI(TAG, "Task scanning_wifi_animation_task deleted");
   }
 }
 
