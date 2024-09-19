@@ -189,3 +189,7 @@ void oled_screen_display_loading_bar(uint8_t value, uint8_t page) {
   oled_screen_display_bitmap(bar_bitmap, 0, page * 8, 128, 8,
                              OLED_DISPLAY_NORMAL);
 }
+
+uint8_t oled_screen_get_pages() {
+  return dev._pages;
+}

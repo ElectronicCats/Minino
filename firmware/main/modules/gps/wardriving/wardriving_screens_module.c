@@ -44,13 +44,28 @@ void wardriving_screens_module_scanning(uint32_t packets, char* signal) {
 
   // oled_screen_clear_buffer();
   uint8_t x = 64;
-  uint8_t y = 0;
+  static uint8_t y = 0;
 
-  oled_screen_display_text("Packets", x, y++, OLED_DISPLAY_INVERT);
-  oled_screen_display_text(packets_str, x, y++, OLED_DISPLAY_INVERT);
-  y++;
-  oled_screen_display_text("GPS", x, y++, OLED_DISPLAY_INVERT);
-  oled_screen_display_text(signal, x, y++, OLED_DISPLAY_INVERT);
+  static uint8_t count = 0;
+  count++;
+  if (count == 255) {
+    uint8_t pages = oled_screen_get_pages();
+    for (uint8_t page = 0; page < pages; page++) {
+      oled_screen_clear_line(x, page, OLED_DISPLAY_NORMAL);
+    }
+    y++;
+  }
+
+  if (y == 2) {
+    y = 0;
+  }
+
+  uint8_t yy = y;
+  oled_screen_display_text("Packets", x, yy++, OLED_DISPLAY_INVERT);
+  oled_screen_display_text(packets_str, x, yy++, OLED_DISPLAY_INVERT);
+  yy++;
+  oled_screen_display_text("GPS", x, yy++, OLED_DISPLAY_INVERT);
+  oled_screen_display_text(signal, x, yy++, OLED_DISPLAY_INVERT);
   oled_screen_display_show();
   free(packets_str);
 }
