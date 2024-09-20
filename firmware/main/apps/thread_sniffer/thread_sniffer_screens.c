@@ -8,26 +8,58 @@
 #include "open_thread_module.h"
 #include "thread_sniffer_bitmaps.h"
 
+#ifdef CONFIG_RESOLUTION_128X64
+#else  // CONFIG_RESOLUTION_128X32
+#endif
+
 static void thread_sniffer_scanning_animation() {
   static uint8_t frame = 0;
-  oled_screen_display_bitmap(thread_sniffer_bitmap_arr[frame], 40, 8, 32, 32,
+#ifdef CONFIG_RESOLUTION_128X64
+  uint8_t x = 48;
+  uint8_t y = 8;
+#else  // CONFIG_RESOLUTION_128X32
+  uint8_t x = 0;
+  uint8_t y = 0;
+#endif
+  oled_screen_display_bitmap(thread_sniffer_bitmap_arr[frame], x, y, 32, 32,
                              OLED_DISPLAY_NORMAL);
   frame = ++frame > 3 ? 0 : frame;
 }
 
+#ifdef CONFIG_RESOLUTION_128X64
 static void thread_sniffer_show_destination(bool* save_in_sd) {
   char* str = (char*) malloc(17);
   sprintf(str, "Dest: %s", *save_in_sd ? "SD card" : "Internal");
-  oled_screen_display_text_center(str, 7, OLED_DISPLAY_INVERT);
+  oled_screen_display_text_center(str, 7, OLED_DISPLAY_NORMAL);
   free(str);
 }
+#else  // CONFIG_RESOLUTION_128X32
+static void thread_sniffer_show_destination(bool* save_in_sd) {
+  char* str = (char*) malloc(17);
+  oled_screen_display_text("Dest:", 40, 0, OLED_DISPLAY_INVERT);
+  oled_screen_display_text(*save_in_sd ? "SD card" : "Internal", 40, 1,
+                           OLED_DISPLAY_NORMAL);
+  free(str);
+}
+#endif
 
+#ifdef CONFIG_RESOLUTION_128X64
 static void thread_sniffer_show_new_packet(uint32_t packets_count) {
   char* str = (char*) malloc(17);
   sprintf(str, "Packets: %lu", packets_count);
   oled_screen_display_text_center(str, 6, OLED_DISPLAY_INVERT);
   free(str);
 }
+#else  // CONFIG_RESOLUTION_128X32
+static void thread_sniffer_show_new_packet(uint32_t packets_count) {
+  char* str = (char*) malloc(10);
+  sprintf(str, "%lu", packets_count);
+  oled_screen_display_text("Packets:", 40, 2, OLED_DISPLAY_INVERT);
+  oled_screen_display_text(str, 40, 3, OLED_DISPLAY_INVERT);
+  free(str);
+}
+
+#endif
 
 static void thread_sniffer_show_fatal_error(const char* error) {
   int page = 2;
@@ -57,6 +89,7 @@ void thread_sniffer_show_event_handler(thread_sniffer_events_t event,
       thread_sniffer_show_fatal_error(context);
       break;
     case THREAD_SNIFFER_DESTINATION_EV:
+      oled_screen_clear();
       thread_sniffer_show_destination(context);
       break;
     case THREAD_SNIFFER_NEW_PACKET_EV:
