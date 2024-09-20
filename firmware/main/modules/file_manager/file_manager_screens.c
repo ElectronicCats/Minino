@@ -18,8 +18,10 @@ static void update_list(file_manager_context_t* ctx) {
   oled_screen_clear_buffer();
   oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
   if (ctx->items_count == 0) {
-    oled_screen_display_text("  Empty folder  ", 0, 3, OLED_DISPLAY_NORMAL);
-    oled_screen_display_text("No files to show", 0, 4, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text("  Empty folder  ", 0, MAX_ITEMS_NUM / 2 - 1,
+                             OLED_DISPLAY_NORMAL);
+    oled_screen_display_text("Nothing to show", 0, MAX_ITEMS_NUM / 2,
+                             OLED_DISPLAY_NORMAL);
   } else {
     for (uint8_t i = 0; i < (MIN(ctx->items_count, MAX_ITEMS_NUM - 1)); i++) {
       char* str = (char*) malloc(30);
