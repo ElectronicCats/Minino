@@ -4,10 +4,19 @@
 #include "esp_log.h"
 #include "led_events.h"
 #include "menus_module.h"
+#include "modals_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
 
 #define TAG_CONFIG_MODULE "CONFIG_MODULE"
+
+#ifdef CONFIG_RESOLUTION_128X64
+  #define START_PAGE 2
+  #define Y_N_OFFSET 2
+#else  // CONFIG_RESOLUTION_128X32
+  #define START_PAGE 0
+  #define Y_N_OFFSET 1
+#endif
 
 static int selected_item = 0;
 static int total_items = 0;
@@ -62,10 +71,14 @@ static void config_module_wifi_display_selected_item_center(
 
 static void config_module_wifi_display_not_wifi() {
   oled_screen_clear();
-  oled_screen_display_text_center("No saved APs", 2, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("Add new AP", 3, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("From our serial", 4, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("Console", 5, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("No saved APs", START_PAGE,
+                                  OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("Add new AP", START_PAGE + 1,
+                                  OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("From our serial", START_PAGE + 2,
+                                  OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("Console", START_PAGE + 3,
+                                  OLED_DISPLAY_NORMAL);
 }
 
 static int validate_wifi_count() {
@@ -79,12 +92,12 @@ static int validate_wifi_count() {
 
 static void config_module_wifi_display_connecting() {
   oled_screen_clear();
-  oled_screen_display_text_center("Connecting", 4, OLED_DISPLAY_NORMAL);
+  modals_module_show_banner("Connecting");
 }
 
 static void config_module_wifi_display_disconnected() {
   oled_screen_clear();
-  oled_screen_display_text_center("Disconnected", 4, OLED_DISPLAY_NORMAL);
+  modals_module_show_banner("Disconnected");
   wifi_config_state.state = WIFI_SETTING_IDLE;
   selected_item = 0;
   vTaskDelay(2000 / portTICK_PERIOD_MS);
@@ -94,7 +107,7 @@ static void config_module_wifi_display_disconnected() {
 
 static void config_module_wifi_display_connected() {
   oled_screen_clear();
-  oled_screen_display_text_center("Connected", 4, OLED_DISPLAY_NORMAL);
+  modals_module_show_banner("Connected");
   vTaskDelay(2000 / portTICK_PERIOD_MS);
   cmd_wifi_unregister_callback();
   menus_module_exit_app();
@@ -175,11 +188,15 @@ static void config_module_wifi_display_forget_modal() {
   oled_screen_clear();
   oled_screen_display_text_center("Forget this AP?", 1, OLED_DISPLAY_NORMAL);
   if (selected_item == 0) {
-    config_module_wifi_display_selected_item_center("YES", 4);
-    oled_screen_display_text_center("NO", 5, OLED_DISPLAY_NORMAL);
+    config_module_wifi_display_selected_item_center("YES",
+                                                    START_PAGE + Y_N_OFFSET);
+    oled_screen_display_text_center("NO", START_PAGE + Y_N_OFFSET + 1,
+                                    OLED_DISPLAY_NORMAL);
   } else {
-    oled_screen_display_text_center("YES", 4, OLED_DISPLAY_NORMAL);
-    config_module_wifi_display_selected_item_center("NO", 5);
+    oled_screen_display_text_center("YES", START_PAGE + Y_N_OFFSET,
+                                    OLED_DISPLAY_NORMAL);
+    config_module_wifi_display_selected_item_center(
+        "NO", START_PAGE + Y_N_OFFSET + 1);
   }
 }
 
