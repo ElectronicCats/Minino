@@ -194,7 +194,7 @@ static void file_options_handler(int8_t selection) {
       menus_module_set_app_state(true, file_manager_input_cb);
       break;
     case FM_ERASE_OPTION:
-      if (modals_module_get_user_y_n_selection("  Are You Sure  ") ==
+      if (modals_module_get_user_y_n_selection(" Are You Sure? ") ==
           YES_OPTION) {
         if (remove(fm_ctx->file_items_arr[fm_ctx->selected_item]->path) == 0) {
           modals_module_show_info("Deleted", "File was deleted successfully",

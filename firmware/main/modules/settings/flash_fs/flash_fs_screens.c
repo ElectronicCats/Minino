@@ -1,11 +1,14 @@
 #include "flash_fs_screens.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "general_screens.h"
 #include "keyboard_module.h"
 #include "modals_module.h"
 
 static void show_mounting_banner() {
-  modals_module_show_info(
-      "Mounting Flash", "Mounting Flash File System, please wait", 2000, false);
+  genera_screen_display_card_information("Mounting flash", "file system");
+  vTaskDelay(pdMS_TO_TICKS(2000));
 }
 
 static void show_result_banner(esp_err_t err) {

@@ -4,14 +4,20 @@
 #include "freertos/task.h"
 #include "oled_screen.h"
 
-#define MAX_OPTIONS_NUM 7
+#ifdef CONFIG_RESOLUTION_128X64
+  #define MAX_OPTIONS_NUM 8
+  #define ITEMOFFSET      1
+#else  // CONFIG_RESOLUTION_128X32
+  #define MAX_OPTIONS_NUM 4
+  #define ITEMOFFSET      0
+#endif
 
 void modals_screens_list_y_n_options_cb(modal_get_user_selection_t* ctx) {
   oled_screen_clear_buffer();
   oled_screen_display_text(ctx->banner, 0, 0, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center(ctx->options[0], 3,
+  oled_screen_display_text_center(ctx->options[0], MAX_OPTIONS_NUM / 2 - 1,
                                   ctx->selected_option == 0);
-  oled_screen_display_text_center(ctx->options[1], 4,
+  oled_screen_display_text_center(ctx->options[1], MAX_OPTIONS_NUM / 2,
                                   ctx->selected_option == 1);
   oled_screen_display_show();
 }
