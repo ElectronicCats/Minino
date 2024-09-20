@@ -5,7 +5,13 @@
 #include "menus_module.h"
 #include "oled_screen.h"
 
-#define MAX_OPTIONS_NUM 6
+#ifdef CONFIG_RESOLUTION_128X64
+  #define MAX_OPTIONS_NUM 8
+  #define ITEMOFFSET      1
+#else  // CONFIG_RESOLUTION_128X32
+  #define MAX_OPTIONS_NUM 4
+  #define ITEMOFFSET      1
+#endif
 
 static const uint32_t SOUND_DURATION = 100;
 static general_radio_selection_t* general_radio_selection_ctx;
@@ -20,8 +26,9 @@ static void (*list_radio_options)() = NULL;
 static void list_radio_options_old_style() {
   general_radio_selection_t* ctx = general_radio_selection_ctx;
   static uint8_t items_offset = 0;
-  items_offset = MAX(ctx->selected_option - 4, items_offset);
-  items_offset = MIN(MAX(ctx->options_count - 4, 0), items_offset);
+  items_offset = MAX(ctx->selected_option - MAX_OPTIONS_NUM + 2, items_offset);
+  items_offset =
+      MIN(MAX(ctx->options_count - MAX_OPTIONS_NUM + 2, 0), items_offset);
   items_offset = MIN(ctx->selected_option, items_offset);
   oled_screen_clear_buffer();
   char* str = malloc(20);
@@ -31,7 +38,7 @@ static void list_radio_options_old_style() {
     bool is_current = i + items_offset == ctx->current_option;
     char state = is_current ? 'x' : ' ';
     sprintf(str, "[%c] %s", state, ctx->options[i + items_offset]);
-    oled_screen_display_text(str, 0, i + 2, is_selected);
+    oled_screen_display_text(str, 0, i + ITEMOFFSET, is_selected);
   }
   oled_screen_display_show();
   free(str);

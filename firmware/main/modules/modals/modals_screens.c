@@ -24,12 +24,17 @@ void modals_screens_list_y_n_options_cb(modal_get_user_selection_t* ctx) {
 
 void modals_screens_default_list_options_cb(modal_get_user_selection_t* ctx) {
   static uint8_t items_offset = 0;
-  items_offset = MAX(ctx->selected_option - 6, items_offset);
+  items_offset = MAX(ctx->selected_option - MAX_OPTIONS_NUM + 1 + ITEMOFFSET,
+                     items_offset);
+  items_offset =
+      MIN(MAX(ctx->options_count - MAX_OPTIONS_NUM + 1 + ITEMOFFSET, 0),
+          items_offset);
   items_offset = MIN(ctx->selected_option, items_offset);
   oled_screen_clear_buffer();
   oled_screen_display_text(ctx->banner, 0, 0, OLED_DISPLAY_NORMAL);
   for (uint8_t i = 0; i < (MIN(ctx->options_count, MAX_OPTIONS_NUM - 1)); i++) {
-    oled_screen_display_text_center(ctx->options[i + items_offset], i + 2,
+    oled_screen_display_text_center(ctx->options[i + items_offset],
+                                    i + 1 + ITEMOFFSET,
                                     ctx->selected_option == i + items_offset);
   }
   oled_screen_display_show();
