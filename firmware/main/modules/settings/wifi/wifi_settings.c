@@ -12,7 +12,7 @@
 
 #ifdef CONFIG_RESOLUTION_128X64
   #define START_PAGE 2
-  #define Y_N_OFFSET 2
+  #define Y_N_OFFSET 4
 #else  // CONFIG_RESOLUTION_128X32
   #define START_PAGE 0
   #define Y_N_OFFSET 1
@@ -188,15 +188,11 @@ static void config_module_wifi_display_forget_modal() {
   oled_screen_clear();
   oled_screen_display_text_center("Forget this AP?", 1, OLED_DISPLAY_NORMAL);
   if (selected_item == 0) {
-    config_module_wifi_display_selected_item_center("YES",
-                                                    START_PAGE + Y_N_OFFSET);
-    oled_screen_display_text_center("NO", START_PAGE + Y_N_OFFSET + 1,
-                                    OLED_DISPLAY_NORMAL);
+    config_module_wifi_display_selected_item_center("YES", Y_N_OFFSET);
+    oled_screen_display_text_center("NO", Y_N_OFFSET + 1, OLED_DISPLAY_NORMAL);
   } else {
-    oled_screen_display_text_center("YES", START_PAGE + Y_N_OFFSET,
-                                    OLED_DISPLAY_NORMAL);
-    config_module_wifi_display_selected_item_center(
-        "NO", START_PAGE + Y_N_OFFSET + 1);
+    oled_screen_display_text_center("YES", Y_N_OFFSET, OLED_DISPLAY_NORMAL);
+    config_module_wifi_display_selected_item_center("NO", Y_N_OFFSET + 1);
   }
 }
 
