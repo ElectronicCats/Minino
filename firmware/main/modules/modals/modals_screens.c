@@ -74,7 +74,7 @@ void modals_screens_show_banner(char* text) {
 #ifdef CONFIG_RESOLUTION_128X64
   uint8_t page = 3;
 #else  // CONFIG_RESOLUTION_128X32
-  uint8_t page = 2;
+  uint8_t page = 1;
 #endif
   oled_screen_clear();
   oled_screen_display_text_center(text, page, OLED_DISPLAY_NORMAL);
