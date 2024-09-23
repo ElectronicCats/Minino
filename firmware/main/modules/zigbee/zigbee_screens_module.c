@@ -5,13 +5,29 @@
 #include "zigbee_switch.h"
 
 void zigbee_screens_module_toogle_pressed() {
-  oled_screen_display_bitmap(epd_bitmap_toggle_btn_pressed, 0, 0, 128, 64,
+#ifdef CONFIG_RESOLUTION_128X64
+  uint8_t width = 128;
+  uint8_t height = 64;
+#else
+  uint8_t width = 128;
+  uint8_t height = 32;
+#endif
+
+  oled_screen_display_bitmap(epd_bitmap_toggle_btn_pressed, 0, 0, width, height,
                              OLED_DISPLAY_NORMAL);
 }
 
 void zigbee_screens_module_toggle_released() {
-  oled_screen_display_bitmap(epd_bitmap_toggle_btn_released, 0, 0, 128, 64,
-                             OLED_DISPLAY_NORMAL);
+#ifdef CONFIG_RESOLUTION_128X64
+  uint8_t width = 128;
+  uint8_t height = 64;
+#else
+  uint8_t width = 128;
+  uint8_t height = 32;
+#endif
+
+  oled_screen_display_bitmap(epd_bitmap_toggle_btn_released, 0, 0, width,
+                             height, OLED_DISPLAY_NORMAL);
 }
 
 void zigbee_screens_module_creating_network() {
