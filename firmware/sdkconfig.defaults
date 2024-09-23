@@ -127,3 +127,15 @@ CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
 CONFIG_PARTITION_TABLE_OFFSET=0x8000
 CONFIG_PARTITION_TABLE_MD5=y
 # end of Partition Table
+
+#
+# Buzzer Configuration
+#
+CONFIG_BUZZER_COMPONENT_ENABLED=y
+# end of Buzzer Configuration
+
+#
+# LEDs Configuration
+#
+CONFIG_LEDS_COMPONENT_ENABLED=y
+# end of LEDs Configuration
