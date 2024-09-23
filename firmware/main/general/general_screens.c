@@ -2,6 +2,7 @@
 #include "general/bitmaps_general.h"
 #include "menus_module.h"
 #include "oled_screen.h"
+#include "preferences.h"
 
 #define MAX_LINE_CHAR 16
 
