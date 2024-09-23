@@ -135,6 +135,27 @@ static void cmd_wifi_delete_crendentials(int argc, char** argv) {
   preferences_remove(wifi_ssid);
   ESP_LOGI(__func__, "Deleted AP %s", wifi_ssid);
 
+  // Restore the AP indexes
+  int counter = 0;
+  for (int i = 0; i < count - 1; i++) {
+    char wifi_ap[100];
+    char wifi_ssid[100];
+    sprintf(wifi_ap, "wifi%d", i);
+    esp_err_t err = preferences_get_string(wifi_ap, wifi_ssid, 100);
+    if (err != ESP_OK) {
+      continue;
+    }
+    char wifi_pass[100];
+    err = preferences_get_string(wifi_ssid, wifi_pass, 100);
+    if (err != ESP_OK) {
+      continue;
+    }
+    char wifi_ap_new[100];
+    sprintf(wifi_ap_new, "wifi%d", counter);
+    preferences_put_string(wifi_ap_new, wifi_ssid);
+    counter++;
+  }
+
   preferences_put_int("count_ap", count - 1);
 }
 
@@ -164,8 +185,7 @@ static int cmd_wifi_show_aps(int argc, char** argv) {
     sprintf(wifi_ap, "wifi%d", i);
     esp_err_t err = preferences_get_string(wifi_ap, wifi_ssid, 100);
     if (err != ESP_OK) {
-      ESP_LOGW(__func__, "Error getting AP");
-      return 1;
+      continue;
     }
     printf("[%i][%s] SSID: %s\n", i, wifi_ap, wifi_ssid);
   }
@@ -199,8 +219,8 @@ static void event_handler(void* arg,
     xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
   } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
     printf("Connected to AP");
-    xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
     preferences_put_bool("wifi_connected", true);
+    xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
   }
 }
 
