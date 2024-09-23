@@ -8,6 +8,12 @@
 
 TaskHandle_t wifi_sniffer_animation_task_handle = NULL;
 
+#ifdef CONFIG_RESOLUTION_128X64
+uint8_t pkts_offset = 3;
+#else
+uint8_t pkts_offset = 2;
+#endif
+
 void wifi_screens_module_display_sniffer_cb(sniffer_runtime_t* sniffer) {
   if (sniffer->is_running) {
     const char* packets_str = malloc(16);
@@ -19,8 +25,10 @@ void wifi_screens_module_display_sniffer_cb(sniffer_runtime_t* sniffer) {
     uint8_t x_offset = 66;
     oled_screen_display_text("Packets", x_offset, 0, OLED_DISPLAY_INVERT);
     oled_screen_display_text(packets_str, x_offset, 1, OLED_DISPLAY_INVERT);
-    oled_screen_display_text("Channel", x_offset, 3, OLED_DISPLAY_INVERT);
-    oled_screen_display_text(channel_str, x_offset, 4, OLED_DISPLAY_INVERT);
+    oled_screen_display_text("Channel", x_offset, pkts_offset,
+                             OLED_DISPLAY_INVERT);
+    oled_screen_display_text(channel_str, x_offset, pkts_offset + 1,
+                             OLED_DISPLAY_INVERT);
   } else {
     ESP_LOGI(TAG_WIFI_SCREENS_MODULE, "sniffer task stopped");
   }
@@ -45,6 +53,7 @@ void wifi_screens_display_sniffer_animation_task() {
 }
 
 void wifi_screens_sniffer_animation_start() {
+  oled_screen_clear();
   animations_task_run(&wifi_screens_display_sniffer_animation_task, 100, NULL);
 }
 
