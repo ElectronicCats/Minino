@@ -27,8 +27,19 @@ void wifi_screens_module_display_sniffer_cb(sniffer_runtime_t* sniffer) {
 }
 
 void wifi_screens_display_sniffer_animation_task() {
+#ifdef CONFIG_RESOLUTION_128X64
+  uint8_t width = 56;
+  uint8_t height = 56;
+  uint8_t x = 0;
+#else
+  uint8_t width = 32;
+  uint8_t height = 32;
+  uint8_t x = (64 - width) / 2;
+  // uint8_t x = 0;
+#endif
+
   static uint8_t idx = 0;
-  oled_screen_display_bitmap(epd_bitmap_wifi_loading[idx], 0, 1, 56, 56,
+  oled_screen_display_bitmap(epd_bitmap_wifi_loading[idx], x, 1, width, height,
                              OLED_DISPLAY_NORMAL);
   idx = ++idx > 3 ? 0 : idx;
 }
