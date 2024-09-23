@@ -716,4 +716,12 @@ config FILE_MANAGER_WEB
       Enable or disable the Web File Manager Feature.
 endif # FILE_MANAGER_ENABLE
 
+########################### SD_CARD #############################
+
+config SD_CARD
+    bool "Enable SD Card Menus"
+    default true
+    help
+      Enable or disable SD Card Menus.
+
 endmenu
