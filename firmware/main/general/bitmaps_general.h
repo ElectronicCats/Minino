@@ -192,10 +192,10 @@ typedef enum {
   MININO_COUNT
 } epd_bitmap_type_t;
 
-extern epd_bitmap_t screen_savers[] = {
+epd_bitmap_t screen_savers[] = {
     minino_letters_bitmap,      minino_face_logo,   minino_pwnlabs_logo,
     minino_electroniccats_logo, minino_face_bitmap, minino_baby_dragon_bitmap};
 
-extern char* epd_bitmaps_list[] = {"Letters",   "Face",        "PwnLabs", "EC",
-                                   "Mini face", "Baby Dragon", NULL};
+char* epd_bitmaps_list[] = {"Letters",   "Face",        "PwnLabs", "EC",
+                            "Mini face", "Baby Dragon", NULL};
 #endif  // BITMAPS_GENERAL_H
