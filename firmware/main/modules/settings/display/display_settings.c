@@ -14,11 +14,15 @@
 #define TIMER_MIN_TIME 30
 
 #ifdef CONFIG_RESOLUTION_128X64
-  #define TIME_PAGE  4
-  #define Y_N_OFFSET 4
+  #define ITEMOFFSET     2
+  #define ITEMSPERSCREEN 4
+  #define TIME_PAGE      4
+  #define Y_N_OFFSET     4
 #else  // CONFIG_RESOLUTION_128X32
-  #define TIME_PAGE  3
-  #define Y_N_OFFSET 1
+  #define ITEMOFFSET     1
+  #define ITEMSPERSCREEN 2
+  #define TIME_PAGE      3
+  #define Y_N_OFFSET     1
 #endif
 
 typedef enum { DISPLAY_MENU, DISPLAY_LIST, DISPLAY_COUNT } display_menu_t;
@@ -73,19 +77,22 @@ static void display_config_display_list_logo() {
   oled_screen_clear_buffer();
   oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
   int current_scren = preferences_get_int("dp_select", 0);
-  for (int i = 0; epd_bitmaps_list[i] != NULL; i++) {
+  int position = 1;
+  uint16_t start_item = (selected_item / ITEMSPERSCREEN) * ITEMSPERSCREEN;
+  for (uint16_t i = start_item;
+       i < start_item + ITEMSPERSCREEN && epd_bitmaps_list[i] != NULL; i++) {
     char display_text[18];
     if (i == current_scren) {
       sprintf(display_text, "%s..[Curr]", epd_bitmaps_list[i]);
     } else {
       sprintf(display_text, "%s", epd_bitmaps_list[i]);
     }
-    int page = (i + 1);
     if (selected_item == i) {
-      config_module_wifi_display_selected_item(display_text, page);
+      config_module_wifi_display_selected_item(display_text, position);
     } else {
-      oled_screen_display_text(display_text, 0, page, OLED_DISPLAY_NORMAL);
+      oled_screen_display_text(display_text, 0, position, OLED_DISPLAY_NORMAL);
     }
+    position = position + ITEMOFFSET;
   }
   oled_screen_display_show();
 }
@@ -128,7 +135,7 @@ static void display_config_module_state_machine(uint8_t button_name,
   }
   switch (button_name) {
     case BUTTON_LEFT:
-      menus_module_restart();
+      menus_module_exit_app();
       break;
     case BUTTON_RIGHT:
       ESP_LOGI(TAG_DISPLAY_CONFIG, "Selected item: %d", selected_item);
@@ -169,6 +176,7 @@ static void display_config_module_state_machine_menu_time(
   }
   switch (button_name) {
     case BUTTON_LEFT:
+      selected_item = 0;
       menus_module_set_app_state(true, display_config_module_state_machine);
       display_config_display_menu_item();
       break;
@@ -209,6 +217,7 @@ static void display_config_module_state_machine_menu_logo(
   }
   switch (button_name) {
     case BUTTON_LEFT:
+      selected_item = 0;
       menus_module_set_app_state(true, display_config_module_state_machine);
       display_config_display_menu_item();
       break;
