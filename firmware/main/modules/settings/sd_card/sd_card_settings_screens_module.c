@@ -24,11 +24,22 @@ void sd_card_settings_screens_module_sd_card_ok() {
   oled_screen_display_text_center("Ok", screen_64 ? 5 : 3, OLED_DISPLAY_INVERT);
 }
 
-void sd_card_settings_screens_module_format_question() {
+void sd_card_settings_screens_module_wrong_format() {
   oled_screen_clear();
   oled_screen_display_text_center("SD Card is not", screen_64 ? 1 : 0,
                                   OLED_DISPLAY_NORMAL);
   oled_screen_display_text_center("in FAT32,", screen_64 ? 2 : 1,
+                                  OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("Format?", screen_64 ? 3 : 2,
+                                  OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("Ok", screen_64 ? 5 : 3, OLED_DISPLAY_INVERT);
+}
+
+void sd_card_settings_screens_module_format_question() {
+  oled_screen_clear();
+  oled_screen_display_text_center("SD Card data", screen_64 ? 1 : 0,
+                                  OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("will be lost!", screen_64 ? 2 : 1,
                                   OLED_DISPLAY_NORMAL);
   oled_screen_display_text_center("Format?", screen_64 ? 3 : 2,
                                   OLED_DISPLAY_NORMAL);
@@ -58,5 +69,5 @@ void sd_card_settings_screens_module_format_done() {
   oled_screen_clear();
   oled_screen_display_text_center("Format done!", screen_64 ? 3 : 1,
                                   OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("Ok", screen_64 ? 3 : 0, OLED_DISPLAY_INVERT);
+  oled_screen_display_text_center("Ok", screen_64 ? 5 : 3, OLED_DISPLAY_INVERT);
 }

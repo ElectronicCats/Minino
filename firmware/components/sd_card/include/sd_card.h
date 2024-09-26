@@ -51,13 +51,24 @@ esp_err_t sd_card_mount();
 esp_err_t sd_card_unmount();
 
 /**
- * Format the SD card if mount failed.
+ * Mount the SD card.
  *
  * @return esp_err_t
  *
- * @note return ESP_ERR_NOT_MOUNTED if the SD card is not mounted.
+ * @note return ESP_ERR_NOT_FOUND if the SD card is not found.
+ * @note return ESP_ERR_NO_MEM if failed to initialize the spi bus.
+ * @note return ESP_ERR_NOT_SUPPORTED if the SD card is not formatted with FAT.
+ * @note return ESP_ERR_INVALID_ARG if the arguments are invalid.
  * @note return ESP_FAIL if the operation failed.
- * @note return ESP_OK if the operation was successful.
+ * @note return ESP_OK if the operation was successful or the card is already
+ * mounted.
+ */
+esp_err_t sd_card_check_format();
+
+/**
+ * Format the SD card.
+ *
+ * @return esp_err_t
  */
 esp_err_t sd_card_format();
 
