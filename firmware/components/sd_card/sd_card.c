@@ -356,9 +356,5 @@ esp_err_t sd_card_fill_info(const sdmmc_card_t* card) {
 }
 
 sd_card_info_t sd_card_get_info() {
-  if (sd_card_is_not_mounted()) {
-    ESP_LOGE(TAG, "SD card not mounted");
-  }
-
   return _sd_card_info;
 }
