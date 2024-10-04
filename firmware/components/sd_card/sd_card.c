@@ -143,7 +143,7 @@ esp_err_t unmount() {
 
   /* unmount sd card */
   // TODO: use esp_vfs_fat_sdcard_unmount instead
-  if (esp_vfs_fat_sdmmc_unmount() != ESP_OK) {
+  if (esp_vfs_fat_sdcard_unmount(MOUNT_POINT, card) != ESP_OK) {
     ESP_LOGE(TAG, "Card unmount failed");
     return ESP_FAIL;
   }
