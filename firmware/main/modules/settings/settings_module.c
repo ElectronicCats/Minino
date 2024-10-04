@@ -58,12 +58,17 @@ void update_sd_card_info() {
     char* type_str = malloc(strlen(sd_info.type) + 1 + 6);
     sprintf(type_str, "Type: %s", sd_info.type);
 
-    sd_card_info_2[0] = "";
-    sd_card_info_2[1] = "SD Card Info";
-    sd_card_info_2[2] = name_str;
-    sd_card_info_2[3] = capacity_str;
-    sd_card_info_2[4] = speed_str;
-    sd_card_info_2[5] = type_str;
+    sd_card_info_2[0] = strdup("");
+    sd_card_info_2[1] = strdup("SD Card Info");
+    sd_card_info_2[2] = strdup(name_str);
+    sd_card_info_2[3] = strdup(capacity_str);
+    sd_card_info_2[4] = strdup(speed_str);
+    sd_card_info_2[5] = strdup(type_str);
+
+    free(name_str);
+    free(capacity_str);
+    free(speed_str);
+    free(type_str);
   }
 
   sd_card_unmount();
