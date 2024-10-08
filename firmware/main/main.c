@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "apps/ble/hid_device/hid_module.h"
 #include "apps/ble/trackers/trackers_module.h"
+#include "ble_scann.h"
 #include "buzzer.h"
 #include "cat_console.h"
 #include "esp_log.h"
@@ -35,6 +36,7 @@ void app_main() {
   buzzer_begin(BUZZER_PIN);
   sd_card_begin();
   flash_fs_begin(flash_fs_screens_handler);
+  ble_scanner_begin();
   keyboard_module_begin();
   menus_module_begin();
   leds_off();
