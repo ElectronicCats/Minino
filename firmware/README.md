@@ -19,6 +19,9 @@ You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/p
 
 ## Prerequisites
 
+> [!IMPORTANT]
+> The version you need to install must be 5.3.1; we cannot guarantee that a more recent version will compile.
+
 - [Minino](https://electroniccats.com/store/minino/)
 - [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html) installed
 - [Make](https://www.gnu.org/software/make/) installed
