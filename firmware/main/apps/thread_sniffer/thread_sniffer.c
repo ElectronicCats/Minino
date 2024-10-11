@@ -83,7 +83,6 @@ void thread_sniffer_init() {
 
 void thread_sniffer_run() {
   pcap_start();
-  printf("START SESSION\n");
   packets_count = 0;
   thread_sniffer_show_event(THREAD_SNIFFER_START_EV, NULL);
   thread_sniffer_show_event_cb(THREAD_SNIFFER_NEW_PACKET_EV, packets_count);
@@ -91,7 +90,6 @@ void thread_sniffer_run() {
 }
 
 void thread_sniffer_stop() {
-  printf("STOP SESSION\n");
   pcap_stop();
   thread_sniffer_show_event(THREAD_SNIFFER_STOP_EV, NULL);
   openthread_disable_promiscous_mode();

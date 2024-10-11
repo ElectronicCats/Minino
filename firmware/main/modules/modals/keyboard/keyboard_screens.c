@@ -5,19 +5,26 @@
 
 #define MAX_CHARS 16
 
+#ifdef CONFIG_RESOLUTION_128X64
+  #define TEXT_PAGE 2
+#else  // CONFIG_RESOLUTION_128X32
+  #define TEXT_PAGE 1
+#endif
+
 void keyboard_screens_update_text(keyboard_modal_ctx_t* ctx) {
   static uint8_t chars_offset = 0;
   chars_offset = MAX(ctx->current_char - 14, chars_offset);
   chars_offset = MIN(ctx->current_char, chars_offset);
-  oled_screen_clear_line(0, 2, OLED_DISPLAY_NORMAL);
+  oled_screen_clear_line(0, TEXT_PAGE, OLED_DISPLAY_NORMAL);
   for (uint8_t i = 0; i < (MIN(ctx->text_length, MAX_CHARS - 1)); i++) {
     char a_char[2];
     snprintf(a_char, sizeof(a_char), "%c", ctx->new_text[i + chars_offset]);
-    oled_screen_display_text(&a_char, i * 8, 2,
+    oled_screen_display_text(&a_char, i * 8, TEXT_PAGE,
                              ctx->current_char == i + chars_offset);
   }
 }
 
+#ifdef CONFIG_RESOLUTION_128X64
 void keyboard_screens_show(keyboard_modal_ctx_t* ctx) {
   oled_screen_clear();
   oled_screen_display_text(ctx->banner, 0, 0, OLED_DISPLAY_NORMAL);
@@ -26,3 +33,11 @@ void keyboard_screens_show(keyboard_modal_ctx_t* ctx) {
   oled_screen_display_text("Hold > to Save", 0, 5, OLED_DISPLAY_NORMAL);
   oled_screen_display_text("Hold < to Cancel", 0, 6, OLED_DISPLAY_NORMAL);
 }
+#else  // CONFIG_RESOLUTION_128X32
+void keyboard_screens_show(keyboard_modal_ctx_t* ctx) {
+  oled_screen_clear();
+  oled_screen_display_text(ctx->banner, 0, 0, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("Hold > to Save", 0, 2, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("Hold < to Cancel", 0, 3, OLED_DISPLAY_NORMAL);
+}
+#endif

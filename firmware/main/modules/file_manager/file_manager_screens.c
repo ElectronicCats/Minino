@@ -1,20 +1,29 @@
 #include "file_manager_screens.h"
 #include "oled_screen.h"
 
-#define MAX_ITEMS_NUM 7
+#ifdef CONFIG_RESOLUTION_128X64
+  #define MAX_ITEMS_NUM 8
+  #define ITEMOFFSET    1
+#else  // CONFIG_RESOLUTION_128X32
+  #define MAX_ITEMS_NUM 4
+  #define ITEMOFFSET    1
+#endif
 
 static void update_list(file_manager_context_t* ctx) {
   static uint8_t items_offset = 0;
-  items_offset = MAX(ctx->selected_item - 6, items_offset);
-  items_offset = MIN(MAX(ctx->items_count - 7, 0), items_offset);
+  items_offset = MAX(ctx->selected_item - MAX_ITEMS_NUM + 2, items_offset);
+  items_offset =
+      MIN(MAX(ctx->items_count - MAX_ITEMS_NUM + 1, 0), items_offset);
   items_offset = MIN(ctx->selected_item, items_offset);
   oled_screen_clear_buffer();
   oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
   if (ctx->items_count == 0) {
-    oled_screen_display_text("  Empty folder  ", 0, 3, OLED_DISPLAY_NORMAL);
-    oled_screen_display_text("No files to show", 0, 4, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text("  Empty folder  ", 0, MAX_ITEMS_NUM / 2 - 1,
+                             OLED_DISPLAY_NORMAL);
+    oled_screen_display_text("Nothing to show", 0, MAX_ITEMS_NUM / 2,
+                             OLED_DISPLAY_NORMAL);
   } else {
-    for (uint8_t i = 0; i < (MIN(ctx->items_count, MAX_ITEMS_NUM)); i++) {
+    for (uint8_t i = 0; i < (MIN(ctx->items_count, MAX_ITEMS_NUM - 1)); i++) {
       char* str = (char*) malloc(30);
       sprintf(str, "%s%s", ctx->file_items_arr[i + items_offset]->name,
               ctx->file_items_arr[i + items_offset]->is_dir ? ">" : "");

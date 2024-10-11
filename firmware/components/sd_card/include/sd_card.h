@@ -4,8 +4,6 @@
 #include <stdint.h>
 #include "esp_err.h"
 
-#define ESP_ERR_ALREADY_MOUNTED   ESP_ERR_NOT_ALLOWED
-#define ESP_ERR_NOT_MOUNTED       ESP_ERR_NOT_FOUND
 #define ESP_ERR_FILE_EXISTS       ESP_ERR_NOT_ALLOWED
 #define ESP_ERR_FILE_OPEN_FAILED  ESP_FAIL
 #define ESP_ERR_FILE_WRITE_FAILED ESP_FAIL
@@ -29,10 +27,9 @@ void sd_card_begin();
  *
  * @return esp_err_t
  *
- * @note return ESP_ERR_NOT_FOUND if the SD card is not found.
  * @note return ESP_ERR_NO_MEM if failed to initialize the spi bus.
  * @note return ESP_ERR_NOT_SUPPORTED if the SD card is not formatted with FAT.
- * @note return ESP_ERR_INVALID_ARG if the arguments are invalid.
+ * @note return ESP_ERR_NOT_FOUND if the SD card is not found.
  * @note return ESP_FAIL if the operation failed.
  * @note return ESP_OK if the operation was successful or the card is already
  * mounted.
@@ -44,20 +41,29 @@ esp_err_t sd_card_mount();
  *
  * @return esp_err_t
  *
- * @note return ESP_ERR_NOT_MOUNTED if the SD card is not mounted.
+ * @note return ESP_ERR_NOT_FOUND if the SD card is not mounted.
  * @note return ESP_FAIL if the operation failed.
  * @note return ESP_OK if the operation was successful.
  */
 esp_err_t sd_card_unmount();
 
 /**
- * Format the SD card if mount failed.
+ * Mount the SD card.
  *
  * @return esp_err_t
- *
- * @note return ESP_ERR_NOT_MOUNTED if the SD card is not mounted.
+ * @note return ESP_ERR_NO_MEM if failed to initialize the spi bus.
+ * @note return ESP_ERR_NOT_SUPPORTED if the SD card is not formatted with FAT.
+ * @note return ESP_ERR_INVALID_ARG if the arguments are invalid.
  * @note return ESP_FAIL if the operation failed.
- * @note return ESP_OK if the operation was successful.
+ * @note return ESP_OK if the operation was successful or the card is already
+ * mounted.
+ */
+esp_err_t sd_card_check_format();
+
+/**
+ * Format the SD card.
+ *
+ * @return esp_err_t
  */
 esp_err_t sd_card_format();
 
@@ -69,13 +75,20 @@ esp_err_t sd_card_format();
 bool sd_card_is_mounted();
 
 /**
+ * Check if the SD card is not mounted.
+ *
+ * return bool
+ */
+bool sd_card_is_not_mounted();
+
+/**
  * @brief Create a directory in the SD card.
  *
  * @param dir_name The name of the directory to create.
  *
  * @return esp_err_t
  *
- * @note return ESP_ERR_NOT_MOUNTED if the SD card is not mounted.
+ * @note return ESP_ERR_NOT_FOUND if the SD card is not mounted.
  * @note return ESP_OK if the operation was successful or the directory already
  * exists.
  * @note return ESP_FAIL if the operation failed.
@@ -89,7 +102,7 @@ esp_err_t sd_card_create_dir(const char* dir_name);
  *
  * @return esp_err_t
  *
- * @note return ESP_ERR_NOT_MOUNTED if the SD card is not mounted.
+ * @note return ESP_ERR_NOT_FOUND if the SD card is not mounted.
  * @note return ESP_ERR_FILE_EXISTS if the file already exists.
  * @note return ESP_FAIL if the operation failed.
  * @note return ESP_OK if the operation was successful.

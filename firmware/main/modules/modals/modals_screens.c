@@ -4,26 +4,37 @@
 #include "freertos/task.h"
 #include "oled_screen.h"
 
-#define MAX_OPTIONS_NUM 7
+#ifdef CONFIG_RESOLUTION_128X64
+  #define MAX_OPTIONS_NUM 8
+  #define ITEMOFFSET      1
+#else  // CONFIG_RESOLUTION_128X32
+  #define MAX_OPTIONS_NUM 4
+  #define ITEMOFFSET      0
+#endif
 
 void modals_screens_list_y_n_options_cb(modal_get_user_selection_t* ctx) {
   oled_screen_clear_buffer();
   oled_screen_display_text(ctx->banner, 0, 0, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center(ctx->options[0], 3,
+  oled_screen_display_text_center(ctx->options[0], MAX_OPTIONS_NUM / 2 - 1,
                                   ctx->selected_option == 0);
-  oled_screen_display_text_center(ctx->options[1], 4,
+  oled_screen_display_text_center(ctx->options[1], MAX_OPTIONS_NUM / 2,
                                   ctx->selected_option == 1);
   oled_screen_display_show();
 }
 
 void modals_screens_default_list_options_cb(modal_get_user_selection_t* ctx) {
   static uint8_t items_offset = 0;
-  items_offset = MAX(ctx->selected_option - 6, items_offset);
+  items_offset = MAX(ctx->selected_option - MAX_OPTIONS_NUM + 1 + ITEMOFFSET,
+                     items_offset);
+  items_offset =
+      MIN(MAX(ctx->options_count - MAX_OPTIONS_NUM + 1 + ITEMOFFSET, 0),
+          items_offset);
   items_offset = MIN(ctx->selected_option, items_offset);
   oled_screen_clear_buffer();
   oled_screen_display_text(ctx->banner, 0, 0, OLED_DISPLAY_NORMAL);
   for (uint8_t i = 0; i < (MIN(ctx->options_count, MAX_OPTIONS_NUM - 1)); i++) {
-    oled_screen_display_text_center(ctx->options[i + items_offset], i + 2,
+    oled_screen_display_text_center(ctx->options[i + items_offset],
+                                    i + 1 + ITEMOFFSET,
                                     ctx->selected_option == i + items_offset);
   }
   oled_screen_display_show();
@@ -63,7 +74,7 @@ void modals_screens_show_banner(char* text) {
 #ifdef CONFIG_RESOLUTION_128X64
   uint8_t page = 3;
 #else  // CONFIG_RESOLUTION_128X32
-  uint8_t page = 2;
+  uint8_t page = 1;
 #endif
   oled_screen_clear();
   oled_screen_display_text_center(text, page, OLED_DISPLAY_NORMAL);

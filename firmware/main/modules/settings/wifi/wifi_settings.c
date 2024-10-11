@@ -2,12 +2,26 @@
 #include "bitmaps_general.h"
 #include "cmd_wifi.h"
 #include "esp_log.h"
+#include "general/general_screens.h"
 #include "led_events.h"
 #include "menus_module.h"
+#include "modals_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
 
 #define TAG_CONFIG_MODULE "CONFIG_MODULE"
+
+#ifdef CONFIG_RESOLUTION_128X64
+  #define START_PAGE     2
+  #define Y_N_OFFSET     4
+  #define ITEMOFFSET     2
+  #define ITEMSPERSCREEN 4
+#else  // CONFIG_RESOLUTION_128X32
+  #define START_PAGE     0
+  #define Y_N_OFFSET     2
+  #define ITEMOFFSET     1
+  #define ITEMSPERSCREEN 3
+#endif
 
 static int selected_item = 0;
 static int total_items = 0;
@@ -55,17 +69,23 @@ static void config_module_wifi_display_selected_item(char* item_text,
 static void config_module_wifi_display_selected_item_center(
     char* item_text,
     uint8_t item_number) {
-  oled_screen_display_bitmap(minino_face, 36, (item_number * 8), 8, 8,
+  uint8_t x = (128 - (strlen(item_text) * 8)) / 2;
+
+  oled_screen_display_bitmap(minino_face, x - 12, (item_number * 8), 8, 8,
                              OLED_DISPLAY_NORMAL);
-  oled_screen_display_text(item_text, 56, item_number, OLED_DISPLAY_INVERT);
+  oled_screen_display_text(item_text, x, item_number, OLED_DISPLAY_INVERT);
 }
 
 static void config_module_wifi_display_not_wifi() {
   oled_screen_clear();
-  oled_screen_display_text_center("No saved APs", 2, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("Add new AP", 3, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("From our serial", 4, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("Console", 5, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("No saved APs", START_PAGE,
+                                  OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("Add new AP", START_PAGE + 1,
+                                  OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("From our serial", START_PAGE + 2,
+                                  OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("Console", START_PAGE + 3,
+                                  OLED_DISPLAY_NORMAL);
 }
 
 static int validate_wifi_count() {
@@ -79,12 +99,12 @@ static int validate_wifi_count() {
 
 static void config_module_wifi_display_connecting() {
   oled_screen_clear();
-  oled_screen_display_text_center("Connecting", 4, OLED_DISPLAY_NORMAL);
+  modals_module_show_banner("Connecting");
 }
 
 static void config_module_wifi_display_disconnected() {
   oled_screen_clear();
-  oled_screen_display_text_center("Disconnected", 4, OLED_DISPLAY_NORMAL);
+  modals_module_show_banner("Disconnected");
   wifi_config_state.state = WIFI_SETTING_IDLE;
   selected_item = 0;
   vTaskDelay(2000 / portTICK_PERIOD_MS);
@@ -94,7 +114,7 @@ static void config_module_wifi_display_disconnected() {
 
 static void config_module_wifi_display_connected() {
   oled_screen_clear();
-  oled_screen_display_text_center("Connected", 4, OLED_DISPLAY_NORMAL);
+  modals_module_show_banner("Connected");
   vTaskDelay(2000 / portTICK_PERIOD_MS);
   cmd_wifi_unregister_callback();
   menus_module_exit_app();
@@ -116,12 +136,17 @@ static void config_module_wifi_display_list() {
     return;
   }
 
+  int position = 1;
+  uint16_t start_item = (selected_item / ITEMSPERSCREEN) * ITEMSPERSCREEN;
+
   ESP_LOGI(__func__, "Selected item: %d", validate_wifi_count());
-  int index = (wifi_config_state.total_items > max_items) ? selected_item : 0;
-  int limit = (wifi_config_state.total_items > max_items)
-                  ? (max_items + selected_item)
-                  : max_items;
-  for (int i = index; i < limit; i++) {
+  // int index = (wifi_config_state.total_items > max_items) ? selected_item :
+  // 0; int limit = (wifi_config_state.total_items > max_items)
+  //                 ? (max_items + selected_item)
+  //                 : max_items;
+  for (int i = start_item;
+       i < start_item + ITEMSPERSCREEN && i < wifi_config_state.total_items;
+       i++) {
     char wifi_ap[100];
     char wifi_ssid[100];
     sprintf(wifi_ap, "wifi%d", i);
@@ -133,14 +158,15 @@ static void config_module_wifi_display_list() {
     if (strlen(wifi_ssid) > 16) {
       wifi_ssid[16] = '\0';
     }
-    int page = (wifi_config_state.total_items > max_items)
-                   ? (i + 1) - selected_item
-                   : (i + 1);
+    // int page = (wifi_config_state.total_items > max_items)
+    //                ? (i + 1) - selected_item
+    //                : (i + 1);
     if (i == selected_item) {
-      config_module_wifi_display_selected_item(wifi_ssid, page);
+      config_module_wifi_display_selected_item(wifi_ssid, position);
     } else {
-      oled_screen_display_text(wifi_ssid, 0, page, OLED_DISPLAY_NORMAL);
+      oled_screen_display_text(wifi_ssid, 0, position, OLED_DISPLAY_NORMAL);
     }
+    position = position + ITEMOFFSET;
   }
 }
 
@@ -156,16 +182,18 @@ static void config_module_wifi_display_sel_options() {
   if (strlen(wifi_ssid) > 16) {
     wifi_ssid[16] = '\0';
   }
-  oled_screen_clear();
-  oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center(wifi_ssid, 1, OLED_DISPLAY_NORMAL);
-  int page = 3;
+  genera_screen_display_card_information(wifi_ssid, "");
+  // oled_screen_clear();
+  // oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
+  // oled_screen_display_text_center(wifi_ssid, 1, OLED_DISPLAY_NORMAL);
+  int page = 2;
   for (int i = 0; options_wifi_menu[i] != NULL; i++) {
     if (i == selected_item) {
-      config_module_wifi_display_selected_item(options_wifi_menu[i], page);
+      config_module_wifi_display_selected_item_center(options_wifi_menu[i],
+                                                      page);
     } else {
-      oled_screen_display_text(options_wifi_menu[i], 0, page,
-                               OLED_DISPLAY_NORMAL);
+      oled_screen_display_text_center(options_wifi_menu[i], page,
+                                      OLED_DISPLAY_NORMAL);
     }
     page++;
   }
@@ -175,23 +203,22 @@ static void config_module_wifi_display_forget_modal() {
   oled_screen_clear();
   oled_screen_display_text_center("Forget this AP?", 1, OLED_DISPLAY_NORMAL);
   if (selected_item == 0) {
-    config_module_wifi_display_selected_item_center("YES", 4);
-    oled_screen_display_text_center("NO", 5, OLED_DISPLAY_NORMAL);
+    config_module_wifi_display_selected_item_center("YES", Y_N_OFFSET);
+    oled_screen_display_text_center("NO", Y_N_OFFSET + 1, OLED_DISPLAY_NORMAL);
   } else {
-    oled_screen_display_text_center("YES", 4, OLED_DISPLAY_NORMAL);
-    config_module_wifi_display_selected_item_center("NO", 5);
+    oled_screen_display_text_center("YES", Y_N_OFFSET, OLED_DISPLAY_NORMAL);
+    config_module_wifi_display_selected_item_center("NO", Y_N_OFFSET + 1);
   }
 }
 
 static void config_module_wifi_display_connect_modal() {
-  oled_screen_clear();
-  oled_screen_display_text_center("Connect this AP?", 1, OLED_DISPLAY_NORMAL);
+  genera_screen_display_card_information("Connect this AP?", "");
   if (selected_item == 0) {
-    config_module_wifi_display_selected_item_center("YES", 4);
-    oled_screen_display_text_center("NO", 5, OLED_DISPLAY_NORMAL);
+    config_module_wifi_display_selected_item_center("YES", Y_N_OFFSET);
+    oled_screen_display_text_center("NO", Y_N_OFFSET + 1, OLED_DISPLAY_NORMAL);
   } else {
-    oled_screen_display_text_center("YES", 4, OLED_DISPLAY_NORMAL);
-    config_module_wifi_display_selected_item_center("NO", 5);
+    oled_screen_display_text_center("YES", Y_N_OFFSET, OLED_DISPLAY_NORMAL);
+    config_module_wifi_display_selected_item_center("NO", Y_N_OFFSET + 1);
   }
 }
 
@@ -244,7 +271,6 @@ static void config_module_state_machine(uint8_t button_name,
     case BUTTON_UP:
       selected_item =
           (selected_item == 0) ? total_items - 1 : selected_item - 1;
-
       config_module_wifi_display_list();
       break;
     case BUTTON_DOWN:
@@ -326,6 +352,7 @@ static void config_module_state_machine_config_modal_connect(
         connect_wifi(wifi_ssid, wifi_pass,
                      config_module_wifi_handle_connection);
         menus_module_set_app_state(true, config_module_state_machine_config);
+        wifi_config_state.selected_item = 0;
       } else {
         selected_item = 0;
         wifi_config_state.state = WIFI_SETTING_IDLE;
@@ -360,7 +387,7 @@ static void config_module_state_machine_config_modal_forget(
       ESP_LOGI(TAG_CONFIG_MODULE, "Selected item: %d", selected_item);
       if (selected_item == 0) {
         char wifi_ap[100];
-        sprintf(wifi_ap, "wifi%d", selected_item);
+        sprintf(wifi_ap, "wifi%d", wifi_config_state.selected_item);
         char wifi_ssid[100];
         preferences_get_string(wifi_ap, wifi_ssid, 100);
         esp_err_t err = preferences_remove(wifi_ssid);
@@ -374,12 +401,33 @@ static void config_module_state_machine_config_modal_forget(
           return;
         }
         int count = preferences_get_int("count_ap", 0);
+        int counter = 0;
+        for (int i = 0; i < count - 1; i++) {
+          char wifi_ap[100];
+          char wifi_ssid[100];
+          sprintf(wifi_ap, "wifi%d", i);
+          esp_err_t err = preferences_get_string(wifi_ap, wifi_ssid, 100);
+          if (err != ESP_OK) {
+            continue;
+          }
+          char wifi_ap_new[100];
+          sprintf(wifi_ap_new, "wifi%d", counter);
+          preferences_put_string(wifi_ap_new, wifi_ssid);
+          counter++;
+        }
         err = preferences_put_int("count_ap", count - 1);
         if (err != ESP_OK) {
           ESP_LOGW(__func__, "Error removing AP");
           return;
         }
       }
+      int count = validate_wifi_count();
+      if (count == 0) {
+        menus_module_set_app_state(true, only_exit_input_cb);
+        return;
+      }
+      wifi_config_state.total_items = count;
+      total_items = count;
       selected_item = 0;
       wifi_config_state.state = WIFI_SETTING_IDLE;
       menus_module_set_app_state(true, config_module_state_machine_config);

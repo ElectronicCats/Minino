@@ -395,7 +395,7 @@ void wardriving_module_keyboard_cb(uint8_t button_name, uint8_t button_event) {
       } else if (wardriving_module_state ==
                  WARDRIVING_MODULE_STATE_INVALID_SD_CARD) {
         wardriving_screens_module_formating_sd_card();
-        esp_err_t err = sd_card_format();
+        esp_err_t err = sd_card_check_format();
         if (err == ESP_OK) {
           ESP_LOGI(TAG, "Format done");
           wardriving_module_start_scan();

@@ -14,6 +14,10 @@
 static led_t *left_led, *right_led;
 
 void leds_begin() {
+#ifndef CONFIG_LEDS_COMPONENT_ENABLED
+  return;
+#endif
+
   left_led = (led_t*) malloc(sizeof(led_t));
   right_led = (led_t*) malloc(sizeof(led_t));
   *left_led = led_controller_led_new(LEFT_LED_IO, LEFT_LED_CHANNEL);
@@ -23,6 +27,10 @@ void leds_begin() {
 }
 
 void leds_deinit() {
+#ifndef CONFIG_LEDS_COMPONENT_ENABLED
+  return;
+#endif
+
   if (!left_led || !right_led) {
     return;
   }
@@ -35,32 +43,60 @@ void leds_deinit() {
 }
 
 void leds_on() {
+#ifndef CONFIG_LEDS_COMPONENT_ENABLED
+  return;
+#endif
+
   led_controller_led_on(left_led);
   led_controller_led_on(right_led);
 }
 
 void leds_off() {
+#ifndef CONFIG_LEDS_COMPONENT_ENABLED
+  return;
+#endif
+
   led_controller_led_off(left_led);
   led_controller_led_off(right_led);
 }
 
 void leds_set_brightness(uint8_t led, uint8_t brightness) {
+#ifndef CONFIG_LEDS_COMPONENT_ENABLED
+  return;
+#endif
+
   led_controller_set_duty(led == LED_LEFT ? left_led : right_led, brightness);
 }
 
 void led_left_on() {
+#ifndef CONFIG_LEDS_COMPONENT_ENABLED
+  return;
+#endif
+
   led_controller_led_on(left_led);
 }
 
 void led_left_off() {
+#ifndef CONFIG_LEDS_COMPONENT_ENABLED
+  return;
+#endif
+
   led_controller_led_off(left_led);
 }
 
 void led_right_on() {
+#ifndef CONFIG_LEDS_COMPONENT_ENABLED
+  return;
+#endif
+
   led_controller_led_on(right_led);
 }
 
 void led_right_off() {
+#ifndef CONFIG_LEDS_COMPONENT_ENABLED
+  return;
+#endif
+
   led_controller_led_off(right_led);
 }
 
@@ -70,14 +106,26 @@ void led_start_blink(uint8_t led,
                      uint32_t time_on,
                      uint32_t time_off,
                      uint32_t time_out) {
+#ifndef CONFIG_LEDS_COMPONENT_ENABLED
+  return;
+#endif
+
   led_controller_start_blink_effect(led == LED_LEFT ? left_led : right_led,
                                     duty, pulse_count, time_on, time_off,
                                     time_out);
 }
 void led_start_breath(uint8_t led, uint16_t period_ms) {
+#ifndef CONFIG_LEDS_COMPONENT_ENABLED
+  return;
+#endif
+
   led_controller_start_breath_effect(led == LED_LEFT ? left_led : right_led,
                                      period_ms);
 }
 void led_stop(uint8_t led) {
+#ifndef CONFIG_LEDS_COMPONENT_ENABLED
+  return;
+#endif
+
   led_controller_stop_any_effect(led == LED_LEFT ? left_led : right_led);
 }

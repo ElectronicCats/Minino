@@ -24,19 +24,32 @@ typedef struct {
 static buzzer_t buzzer;
 
 void buzzer_enable() {
+#ifndef CONFIG_BUZZER_COMPONENT_ENABLED
+  return;
+#endif
+
   buzzer.enabled = true;
 }
+
 void buzzer_disable() {
   buzzer.enabled = false;
 }
 
 void buzzer_begin(uint8_t pin) {
+#ifndef CONFIG_BUZZER_COMPONENT_ENABLED
+  return;
+#endif
+
   buzzer.pin = pin;
   buzzer.freq = BUZZER_DEFAULT_FREQUENCY_HZ;
   buzzer.duty = BUZZER_DEFAULT_DUTTY;
 }
 
 void buzzer_configure() {
+#ifndef CONFIG_BUZZER_COMPONENT_ENABLED
+  return;
+#endif
+
   // Prepare and then apply the LEDC PWM timer configuration
   ledc_timer_config_t ledc_timer = {.speed_mode = LEDC_MODE,
                                     .duty_resolution = LEDC_DUTY_RES,
@@ -57,14 +70,26 @@ void buzzer_configure() {
 }
 
 void buzzer_set_freq(uint32_t freq) {
+#ifndef CONFIG_BUZZER_COMPONENT_ENABLED
+  return;
+#endif
+
   buzzer.freq = freq;
 }
 
 void buzzer_set_duty(uint32_t duty) {
+#ifndef CONFIG_BUZZER_COMPONENT_ENABLED
+  return;
+#endif
+
   buzzer.duty = duty;
 }
 
 void buzzer_play() {
+#ifndef CONFIG_BUZZER_COMPONENT_ENABLED
+  return;
+#endif
+
   if (!buzzer.enabled) {
     return;
   }
@@ -75,6 +100,10 @@ void buzzer_play() {
 }
 
 void buzzer_play_for_task(void* duration) {
+#ifndef CONFIG_BUZZER_COMPONENT_ENABLED
+  return;
+#endif
+
   uint32_t dur = *(uint32_t*) duration;
   buzzer_play();
   vTaskDelay(*(uint32_t*) duration / portTICK_PERIOD_MS);
@@ -83,6 +112,10 @@ void buzzer_play_for_task(void* duration) {
 }
 
 void buzzer_play_for(uint32_t duration) {
+#ifndef CONFIG_BUZZER_COMPONENT_ENABLED
+  return;
+#endif
+
   if (!buzzer.enabled) {
     return;
   }
@@ -93,6 +126,10 @@ void buzzer_play_for(uint32_t duration) {
 }
 
 void buzzer_stop() {
+#ifndef CONFIG_BUZZER_COMPONENT_ENABLED
+  return;
+#endif
+
   ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 0));
   ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
 

@@ -63,7 +63,7 @@ void hid_module_display_notify_play_pause() {
 
 void hid_module_display_device_pairing() {
   led_control_run_effect(led_control_ble_spam_breathing);
-  genera_screen_display_notify_information("Pairing", "Waiting for connection");
+  genera_screen_display_notify_information("Pairing", "Waiting conn");
 }
 
 void hid_module_display_device_connection(bool status) {

@@ -2,6 +2,7 @@
 #include "general/bitmaps_general.h"
 #include "menus_module.h"
 #include "oled_screen.h"
+#include "preferences.h"
 
 #define MAX_LINE_CHAR 16
 
@@ -61,6 +62,10 @@ static void general_screen_decrement_option() {
 }
 
 static void general_screen_display_breadcrumb() {
+  if (current_menu_ctx == NULL) {
+    oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
+    return;
+  }
   if (current_menu_ctx->menu_level == GENERAL_TREE_APP_MENU) {
     oled_screen_display_text("< Exit", 0, 0, OLED_DISPLAY_NORMAL);
   } else {
@@ -197,7 +202,7 @@ void genera_screen_display_card_information(char* title, char* body) {
 
 void genera_screen_display_notify_information(char* title, char* body) {
   general_clear_screen();
-  // general_screen_display_breadcrumb();
+  general_screen_display_breadcrumb();
   int page = ITEM_PAGE_OFFSET;
   oled_screen_display_card_border();
   oled_screen_display_text_center(title, page, OLED_DISPLAY_NORMAL);
