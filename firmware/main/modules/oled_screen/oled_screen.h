@@ -142,3 +142,5 @@ void oled_screen_display_show();
  * @return Number of pages of the OLED display
  */
 uint8_t oled_screen_get_pages();
+
+void oled_screen_display_card_border_full_h();

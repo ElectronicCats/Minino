@@ -145,6 +145,13 @@ void oled_screen_display_card_border() {
   xSemaphoreGive(oled_mutex);
 }
 
+void oled_screen_display_card_border_full_h() {
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
+  oled_driver_draw_modal_box_full_h(&dev);
+  oled_driver_show_buffer(&dev);
+  xSemaphoreGive(oled_mutex);
+}
+
 void oled_screen_display_text_splited(char* p_text,
                                       int* p_started_page,
                                       int invert) {

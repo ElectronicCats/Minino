@@ -31,6 +31,7 @@ void general_register_scrolling_menu(const general_menu_t* ctx);
 void general_clear_screen();
 void general_screen_display_menu(uint16_t current_option);
 void genera_screen_display_card_information(char* title, char* body);
+void genera_screen_display_card_information_nbc(char* title, char* body);
 void genera_screen_display_notify_information(char* title, char* body);
 void general_screen_display_card_information_handler(char* title,
                                                      char* body,

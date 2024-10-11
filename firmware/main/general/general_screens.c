@@ -183,6 +183,39 @@ void general_screen_display_card_information_handler(char* title,
   genera_screen_display_card_information(title, body);
 }
 
+void genera_screen_display_card_information_scroll_nbc(char* title,
+                                                       char* body) {
+  general_register_menu(&card_info_menu_ctx);
+  general_clear_screen();
+  oled_screen_display_card_border_full_h();
+  int page = ITEM_PAGE_OFFSET;
+  oled_screen_display_text_center(title, page, OLED_DISPLAY_NORMAL);
+  page++;
+  if (strlen(body) > MAX_LINE_CHAR) {
+    oled_screen_display_text_splited(body, &page, OLED_DISPLAY_NORMAL);
+    oled_screen_display_show();
+    return;
+  }
+  oled_screen_display_text_center(body, page, OLED_DISPLAY_NORMAL);
+  oled_screen_display_show();
+}
+
+void genera_screen_display_card_information_nbc(char* title, char* body) {
+  general_register_menu(&card_info_menu_ctx);
+  general_clear_screen();
+  oled_screen_display_card_border_full_h();
+  int page = ITEM_PAGE_OFFSET;
+  oled_screen_display_text_center(title, page, OLED_DISPLAY_NORMAL);
+  page++;
+  if (strlen(body) > MAX_LINE_CHAR) {
+    oled_screen_display_text_splited(body, &page, OLED_DISPLAY_NORMAL);
+    oled_screen_display_show();
+    return;
+  }
+  oled_screen_display_text_center(body, page, OLED_DISPLAY_NORMAL);
+  oled_screen_display_show();
+}
+
 void genera_screen_display_card_information(char* title, char* body) {
   general_register_menu(&card_info_menu_ctx);
   general_clear_screen();

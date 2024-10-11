@@ -246,7 +246,7 @@ void spi_hardware_scroll(oled_driver_t* dev, oled_driver_scroll_type_t scroll);
 void oled_driver_draw_modal_box(oled_driver_t* dev,
                                 int pos_x,
                                 int modal_height);
-
+void oled_driver_draw_modal_box_full_h(oled_driver_t* dev);
 void oled_driver_set_encrypt_value(bool value);
 void oled_driver_set_typography_value(bool value);
 #ifdef __cplusplus
