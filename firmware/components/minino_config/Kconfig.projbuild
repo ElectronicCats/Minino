@@ -716,7 +716,7 @@ config FILE_MANAGER_WEB
       Enable or disable the Web File Manager Feature.
 endif # FILE_MANAGER_ENABLE
 
-########################### SD_CARD #############################
+########################### SD CARD #############################
 
 config SD_CARD
     bool "Enable SD Card Menus"
@@ -724,4 +724,27 @@ config SD_CARD
     help
       Enable or disable SD Card Menus.
 
+endmenu
+
+########################### Screen Savers ############################
+
+menu "Screen Saver"
+	config SCREEN_SAVER_LETTERS
+    	bool "Letters"
+    	default true
+	config SCREEN_SAVER_FACE
+    	bool "Face"
+    	default true
+	config SCREEN_SAVER_PWNLABS
+    	bool "PwnLabs"
+    	default true
+	config SCREEN_SAVER_EC
+    	bool "EC"
+    	default true
+	config SCREEN_SAVER_MINI_FACE
+    	bool "Mini Face"
+    	default true
+	config SCREEN_SAVER_BABY_DRAGON
+    	bool "Baby Dragon"
+    	default true									
 endmenu

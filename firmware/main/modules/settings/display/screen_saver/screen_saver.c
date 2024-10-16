@@ -33,13 +33,15 @@ static void timer_callback() {
 }
 
 static void show_splash_screen() {
-  int get_logo = preferences_get_int("dp_select", 0);
-  epd_bitmap_t logo;
+  uint8_t screen_savers_count = sizeof(screen_savers) / sizeof(epd_bitmap_t*);
+  int get_logo =
+      MIN(screen_savers_count - 1, preferences_get_int("dp_select", 0));
+  epd_bitmap_t* logo;
   logo = screen_savers[get_logo];
 
   screen_saver_running = true;
-  int w_screen_space = SCREEN_WIDTH2 - logo.width;
-  int h_screen_space = SCREEN_HEIGHT2 - logo.height;
+  int w_screen_space = SCREEN_WIDTH2 - logo->width;
+  int h_screen_space = SCREEN_HEIGHT2 - logo->height;
   h_screen_space = h_screen_space == 0 ? 2 : h_screen_space;
   int start_x_position = w_screen_space / 2;
 #if CONFIG_RESOLUTION_128X64
@@ -52,8 +54,8 @@ static void show_splash_screen() {
   static int x_direction = 1;
 
   while (screen_saver_running) {
-    oled_screen_display_bitmap(logo.bitmap, start_x_position, start_y_position,
-                               logo.width, logo.height, OLED_DISPLAY_NORMAL);
+    oled_screen_display_bitmap(logo->bitmap, start_x_position, start_y_position,
+                               logo->width, logo->height, OLED_DISPLAY_NORMAL);
 
     start_x_position += x_direction;
     start_y_position += y_direction;
