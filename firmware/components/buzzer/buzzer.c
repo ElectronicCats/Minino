@@ -104,9 +104,9 @@ void buzzer_play_for_task(void* duration) {
   return;
 #endif
 
-  uint32_t dur = *(uint32_t*) duration;
+  uint32_t dur = (uint32_t) duration;
   buzzer_play();
-  vTaskDelay(*(uint32_t*) duration / portTICK_PERIOD_MS);
+  vTaskDelay(dur / portTICK_PERIOD_MS);
   buzzer_stop();
   vTaskDelete(NULL);
 }
@@ -119,10 +119,8 @@ void buzzer_play_for(uint32_t duration) {
   if (!buzzer.enabled) {
     return;
   }
-  uint32_t* duration_ptr = malloc(sizeof(uint32_t));
-  *duration_ptr = duration;
-  xTaskCreate(buzzer_play_for_task, "buzzer_play_for_task", 2048, duration_ptr,
-              5, NULL);
+  xTaskCreate(buzzer_play_for_task, "buzzer_play_for_task", 2048,
+              (void*) duration, 5, NULL);
 }
 
 void buzzer_stop() {

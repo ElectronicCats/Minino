@@ -146,10 +146,16 @@ static void general_screen_display_scrolling() {
   }
 
   for (uint16_t i = scrolling_option; i < end_index; i++) {
-    oled_screen_display_text(
-        scrolling_menu_ctx->menu_items[i], 3,
-        (i - scrolling_option) + (ITEMOFFSET + screen_title),
-        OLED_DISPLAY_NORMAL);
+    if (i == scrolling_option) {
+      general_screen_display_selected_item(
+          scrolling_menu_ctx->menu_items[i],
+          (i - scrolling_option) + (ITEMOFFSET + screen_title));
+    } else {
+      oled_screen_display_text(
+          scrolling_menu_ctx->menu_items[i], 3,
+          (i - scrolling_option) + (ITEMOFFSET + screen_title),
+          OLED_DISPLAY_NORMAL);
+    }
   }
   oled_screen_display_show();
 }
