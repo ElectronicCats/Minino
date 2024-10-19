@@ -5,6 +5,7 @@
 #include "preferences.h"
 
 #define MAX_LINE_CHAR 16
+#define ARROWS_X_POS  118
 
 #ifdef CONFIG_RESOLUTION_128X64
   #define ITEMOFFSET       2
@@ -129,21 +130,28 @@ static void general_screen_display_scrolling() {
   }
 
   oled_screen_display_card_border();
+
 #ifdef CONFIG_RESOLUTION_128X64
   uint16_t items_per_screen = 3;
   uint16_t screen_title = 2;
+  uint8_t scroll_pos = (8 * 2) + 2;
 
   oled_screen_display_text_center("Information", ITEM_PAGE_OFFSET,
                                   OLED_DISPLAY_NORMAL);
 #else
   uint16_t items_per_screen = 2;
   uint16_t screen_title = 0;
+  uint8_t scroll_pos = (4 * 2) + 2;
 #endif
 
   uint16_t end_index = scrolling_option + items_per_screen;
   if (end_index > scrolling_menu_ctx->menu_count) {
     end_index = scrolling_menu_ctx->menu_count;
   }
+  oled_screen_display_bitmap(simple_up_arrow_bmp, ARROWS_X_POS, scroll_pos, 8,
+                             8, OLED_DISPLAY_NORMAL);
+  oled_screen_display_bitmap(simple_down_arrow_bmp, ARROWS_X_POS,
+                             scroll_pos + 8, 8, 8, OLED_DISPLAY_NORMAL);
 
   for (uint16_t i = scrolling_option; i < end_index; i++) {
     if (i == scrolling_option) {
