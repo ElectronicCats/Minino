@@ -121,7 +121,7 @@ static void general_screen_cb_scroll(uint8_t button_name,
   }
 }
 
-static void general_screen_display_scrolling() {
+static void general_screen_display_scrolling_selector() {
   general_clear_screen();
   oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
 
@@ -168,6 +168,47 @@ static void general_screen_display_scrolling() {
   oled_screen_display_show();
 }
 
+static void general_screen_display_scrolling() {
+  general_clear_screen();
+  oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
+
+  if (scrolling_menu_ctx == NULL) {
+    return;
+  }
+
+  oled_screen_display_card_border();
+
+#ifdef CONFIG_RESOLUTION_128X64
+  uint16_t items_per_screen = 3;
+  uint16_t screen_title = 2;
+  uint8_t scroll_pos = (8 * 2) + 2;
+
+  oled_screen_display_text_center("Information", ITEM_PAGE_OFFSET,
+                                  OLED_DISPLAY_NORMAL);
+#else
+  uint16_t items_per_screen = 2;
+  uint16_t screen_title = 0;
+  uint8_t scroll_pos = (4 * 2) + 2;
+#endif
+
+  uint16_t end_index = scrolling_option + items_per_screen;
+  if (end_index > scrolling_menu_ctx->menu_count) {
+    end_index = scrolling_menu_ctx->menu_count;
+  }
+  oled_screen_display_bitmap(simple_up_arrow_bmp, ARROWS_X_POS, scroll_pos, 8,
+                             8, OLED_DISPLAY_NORMAL);
+  oled_screen_display_bitmap(simple_down_arrow_bmp, ARROWS_X_POS,
+                             scroll_pos + 8, 8, 8, OLED_DISPLAY_NORMAL);
+
+  for (uint16_t i = scrolling_option; i < end_index; i++) {
+    oled_screen_display_text(
+        scrolling_menu_ctx->menu_items[i], 3,
+        (i - scrolling_option) + (ITEMOFFSET + screen_title),
+        OLED_DISPLAY_NORMAL);
+  }
+  oled_screen_display_show();
+}
+
 void general_register_menu(const general_menu_t* ctx) {
   current_menu_ctx = ctx;
 }
@@ -185,6 +226,14 @@ void general_screen_display_scrolling_text_handler(void* callback_exit) {
   menu_exit_function = callback_exit;
   menus_module_set_app_state(true, general_screen_cb_scroll);
   general_screen_display_scrolling();
+}
+
+void general_screen_display_scrolling_selector_text_handler(
+    void* callback_exit) {
+  scrolling_option = 0;
+  menu_exit_function = callback_exit;
+  menus_module_set_app_state(true, general_screen_cb_scroll);
+  general_screen_display_scrolling_selector();
 }
 
 void general_screen_display_card_information_handler(char* title,

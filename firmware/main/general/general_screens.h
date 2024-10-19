@@ -38,6 +38,8 @@ void general_screen_display_card_information_handler(char* title,
                                                      void* callback_exit,
                                                      void* callback_restore);
 void general_screen_display_scrolling_text_handler(void* callback_exit);
+void general_screen_display_scrolling_selector_text_handler(
+    void* callback_exit);
 void general_screen_truncate_text(char* p_text, char* p_truncated_text);
 void general_screen_display_auto_card(char* lines,
                                       int num_lines,
