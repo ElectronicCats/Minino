@@ -21,7 +21,7 @@
 #include "wardriving_module.h"
 #include "wardriving_screens_module.h"
 #include "web_file_browser_module.h"
-#include "wifi_module.h"
+#include "wifi_analyzer.h"
 #include "wifi_settings.h"
 #include "zigbee_module.h"
 

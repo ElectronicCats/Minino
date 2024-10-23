@@ -1,4 +1,4 @@
-#include "wifi_module.h"
+#include "wifi_analyzer.h"
 
 #include "captive_portal.h"
 #include "catdos_module.h"
@@ -16,9 +16,9 @@
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "sd_card.h"
+#include "wifi_analyzer.h"
 #include "wifi_attacks.h"
 #include "wifi_controller.h"
-#include "wifi_module.h"
 #include "wifi_scanner.h"
 #include "wifi_screens_module.h"
 

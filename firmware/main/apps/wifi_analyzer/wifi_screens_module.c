@@ -3,8 +3,8 @@
 #include "animations_task.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
-#include "modules/wifi/wifi_bitmaps.h"
 #include "oled_screen.h"
+#include "wifi_bitmaps.h"
 
 TaskHandle_t wifi_sniffer_animation_task_handle = NULL;
 
