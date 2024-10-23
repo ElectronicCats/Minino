@@ -7,6 +7,7 @@
 #include "trackers_module.h"
 #include "z_switch_module.h"
 
+#include "analyzer_scenes.h"
 #include "catdos_module.h"
 #include "deauth_module.h"
 #include "display_settings.h"
@@ -189,42 +190,7 @@ menu_t menus[] = {  //////////////////////////////////
      .parent_idx = MENU_WIFI_APPS,
      .entry_cmd = "analyzer",
      .last_selected_submenu = 0,
-     .on_enter_cb = wifi_module_analizer_begin,
-     .on_exit_cb = wifi_module_analyzer_exit,
-     .is_visible = true},
-    {.display_name = "Start",
-     .menu_idx = MENU_WIFI_ANALYZER_RUN,
-     .parent_idx = MENU_WIFI_ANALIZER,
-     .last_selected_submenu = 0,
-     .on_enter_cb = wifi_module_analyzer_run,
-     .on_exit_cb = NULL,
-     .is_visible = true},
-    {.display_name = "Settings",
-     .menu_idx = MENU_WIFI_ANALYZER_SETTINGS,
-     .parent_idx = MENU_WIFI_ANALIZER,
-     .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
-     .is_visible = true},
-    {.display_name = "Channel",
-     .menu_idx = MENU_WIFI_ANALYZER_CHANNEL,
-     .parent_idx = MENU_WIFI_ANALYZER_SETTINGS,
-     .last_selected_submenu = 0,
-     .on_enter_cb = wifi_module_analyzer_channel,
-     .on_exit_cb = NULL,
-     .is_visible = true},
-    {.display_name = "Destination",
-     .menu_idx = MENU_WIFI_ANALYZER_DESTINATION,
-     .parent_idx = MENU_WIFI_ANALYZER_SETTINGS,
-     .last_selected_submenu = 0,
-     .on_enter_cb = wifi_module_analyzer_destination,
-     .on_exit_cb = wifi_module_analyzer_destination_exit,
-     .is_visible = true},
-    {.display_name = "Help",
-     .menu_idx = MENU_WIFI_ANALYZER_HELP,
-     .parent_idx = MENU_WIFI_ANALIZER,
-     .last_selected_submenu = 0,
-     .on_enter_cb = wifi_module_show_analyzer_help,
+     .on_enter_cb = analyzer_scenes_main_menu,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
