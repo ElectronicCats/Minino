@@ -17,6 +17,12 @@ static void adv_scanner_module_reset_menu() {
   menus_module_set_app_state(true, adv_scanner_module_cb_event);
 }
 
+static void adv_scanner_module_reset_start_menu() {
+  ble_scanner_register_cb(NULL);
+  menus_module_reset();
+  adv_scanner_module_reset_menu();
+}
+
 static void adv_filter_selection(uint8_t selection) {
   set_filter_type(selection);
   adv_scanner_module_reset_menu();
@@ -65,6 +71,10 @@ static void adv_scanner_module_cb_event(uint8_t button_name,
       } else if (current_item == SCAN_FILTER) {
         adv_scanner_display_filter();
       } else if (current_item == SCAN_START) {
+        general_screen_display_card_information_handler(
+            "Scanning", "Scanning for devices",
+            adv_scanner_module_reset_start_menu,
+            adv_scanner_module_reset_start_menu);
         ble_scanner_register_cb(adv_scanner_display_record);
         ble_scanner_begin();
       }
