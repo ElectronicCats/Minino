@@ -13,7 +13,7 @@
   #define SCANNER_PROFILE_NUM             1
   #define SCANNER_PROFILE_A_APP_ID        0
   #define SCANNER_INVALID_HANDLE          0
-  #define SCANNER_SCAN_DURATION           240
+  #define SCANNER_SCAN_DURATION           60
 
 /**
  * @brief Structure to store the tracker profile
@@ -44,14 +44,14 @@ typedef struct {
  *
  * @param record The tracker profile record
  */
-typedef void (*bluetooth_traker_scanner_cb_t)(device_profile record);
+typedef void (*bluetooth_adv_scanner_cb_t)(esp_ble_gap_cb_param_t* record);
 
 /**
  * @brief Register the callback to handle the bluetooth scanner
  *
  * @param cb The callback to handle the bluetooth scanner
  */
-void ble_scanner_register_cb(bluetooth_traker_scanner_cb_t cb);
+void ble_scanner_register_cb(bluetooth_adv_scanner_cb_t cb);
 
 /**
  * @brief Start the bluetooth scanner
@@ -72,4 +72,5 @@ void ble_scanner_stop();
  * @return false The bluetooth scanner is not active
  */
 bool ble_scanner_is_active();
+void set_filter_type(uint8_t filter_type);
 #endif  // BLE_SCANNER_H
