@@ -10,12 +10,17 @@ static bluetooth_adv_scanner_cb_t display_records_cb = NULL;
 static int ble_scan_duration = 0;
 static bool ble_scanner_active = false;
 static esp_ble_scan_filter_t ble_scan_filter = BLE_SCAN_FILTER_ALLOW_ALL;
+static esp_ble_scan_type_t ble_scan_type = BLE_SCAN_TYPE_ACTIVE;
 static void task_scanner_timer();
 static void handle_bt_gapc_events(esp_gap_ble_cb_event_t event_type,
                                   esp_ble_gap_cb_param_t* param);
 
 void set_filter_type(uint8_t filter_type) {
   ble_scan_filter = filter_type;
+}
+
+void set_scan_type(uint8_t scan_type) {
+  ble_scan_type = scan_type;
 }
 
 void ble_scanner_begin() {
@@ -30,6 +35,7 @@ void ble_scanner_begin() {
       .notify_descr_uuid = bt_gattc_set_default_ble_notify_descr_uuid(),
       .ble_scan_params = bt_gattc_set_default_ble_scan_params()};
   scan_params.ble_scan_params.scan_filter_policy = ble_scan_filter;
+  scan_params.ble_scan_params.scan_type = ble_scan_type;
   bt_gattc_set_ble_scan_params(&scan_params);
   bt_client_event_cb_t event_cb = {.handler_gattc_cb = NULL,
                                    .handler_gapc_cb = handle_bt_gapc_events};
@@ -79,7 +85,7 @@ static void task_scanner_timer() {
       ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
       ble_scanner_stop();
     }
-    // ble_scan_duration++;
+    ble_scan_duration++;
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 }

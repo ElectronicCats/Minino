@@ -19,6 +19,12 @@ static void adv_scanner_module_reset_menu() {
 
 static void adv_filter_selection(uint8_t selection) {
   set_filter_type(selection);
+  adv_scanner_module_reset_menu();
+}
+
+static void adv_type_selection(uint8_t selection) {
+  set_scan_type(selection);
+  adv_scanner_module_reset_menu();
 }
 
 void adv_scanner_display_filter() {
@@ -28,6 +34,15 @@ void adv_scanner_display_filter() {
   adv_menu_filter.select_cb = adv_filter_selection;
   adv_menu_filter.exit_cb = adv_scanner_module_reset_menu;
   general_submenu(adv_menu_filter);
+}
+
+void adv_scanner_display_type() {
+  general_submenu_menu_t adv_menu_type;
+  adv_menu_type.options = scan_type_items;
+  adv_menu_type.options_count = 2;
+  adv_menu_type.select_cb = adv_type_selection;
+  adv_menu_type.exit_cb = adv_scanner_module_reset_menu;
+  general_submenu(adv_menu_type);
 }
 
 static void adv_scanner_module_cb_event(uint8_t button_name,
@@ -46,9 +61,10 @@ static void adv_scanner_module_cb_event(uint8_t button_name,
       break;
     case BUTTON_RIGHT:
       if (current_item == SCAN_TYPE) {
+        adv_scanner_display_type();
+      } else if (current_item == SCAN_FILTER) {
         adv_scanner_display_filter();
       } else if (current_item == SCAN_START) {
-        ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Scan start");
         ble_scanner_register_cb(adv_scanner_display_record);
         ble_scanner_begin();
       }

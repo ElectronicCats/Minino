@@ -73,4 +73,5 @@ void ble_scanner_stop();
  */
 bool ble_scanner_is_active();
 void set_filter_type(uint8_t filter_type);
+void set_scan_type(uint8_t scan_type);
 #endif  // BLE_SCANNER_H
