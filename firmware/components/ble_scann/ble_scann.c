@@ -45,9 +45,7 @@ static void handle_bt_gapc_events(esp_gap_ble_cb_event_t event_type,
           if (!ble_scanner_active) {
             break;
           }
-          uart_sender_send_packet(UART_SENDER_PACKET_TYPE_BLE,
-                                  scan_result->scan_rst.ble_adv,
-                                  scan_result->scan_rst.adv_data_len);
+          uart_sender_send_packet_ble(UART_SENDER_PACKET_TYPE_BLE, scan_result);
           ESP_LOGI(TAG_BLE_CLIENT_MODULE, "New ADV found");
           break;
         case ESP_GAP_SEARCH_INQ_CMPL_EVT:
