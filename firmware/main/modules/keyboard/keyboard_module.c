@@ -8,6 +8,7 @@ static int IDLE_TIMEOUT_S = 30;
 
 static const char* TAG = "keyboard";
 static input_callback_t input_callback = NULL;
+static input_callback_t secondary_input_callback = NULL;
 esp_timer_handle_t idle_timer;
 static bool is_idle = false;
 static bool lock_input = false;
@@ -81,6 +82,9 @@ static void button_event_cb(void* arg, void* data) {
     return;
   }
 
+  if (secondary_input_callback) {
+    secondary_input_callback(button_name, button_event);
+  }
   if (input_callback) {
     input_callback(button_name, button_event);
     return;
@@ -90,6 +94,11 @@ static void button_event_cb(void* arg, void* data) {
 void keyboard_module_set_input_callback(input_callback_t input_cb) {
   input_callback = input_cb;
 }
+
+void keyboard_module_set_secondary_input_callback(input_callback_t input_cb) {
+  secondary_input_callback = input_cb;
+}
+
 void keyboard_module_begin() {
 #if !defined(CONFIG_KEYBOARD_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);

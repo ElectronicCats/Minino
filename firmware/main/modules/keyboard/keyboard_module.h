@@ -55,3 +55,4 @@ void keyboard_module_reset_idle_timer();
 void keyboard_module_set_lock(bool lock);
 
 void keyboard_module_set_input_callback(input_callback_t input_cb);
+void keyboard_module_set_secondary_input_callback(input_callback_t input_cb);
