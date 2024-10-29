@@ -73,13 +73,14 @@ void oled_screen_display_text(char* text, int x, int page, bool invert) {
     return;
   }
 
-  uint8_t _x = x + (strlen(text) * 8) > 128 ? 0 : x;
-  if (_x != x) {
-    ESP_LOGW(TAG, "Text %s is too long for the screen, x offset: %d", text, _x);
-  }
+  // uint8_t _x = x + (strlen(text) * 8) > 128 ? 0 : x;
+  // if (_x != x) {
+  //   ESP_LOGW(TAG, "Text %s is too long for the screen, x offset: %d", text,
+  //   _x);
+  // }
 
   xSemaphoreTake(oled_mutex, portMAX_DELAY);
-  oled_driver_display_text(&dev, page, text, _x, invert);
+  oled_driver_display_text(&dev, page, text, x, invert);
   xSemaphoreGive(oled_mutex);
 }
 

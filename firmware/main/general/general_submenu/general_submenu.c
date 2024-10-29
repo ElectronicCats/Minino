@@ -43,6 +43,7 @@ static void input_cb(uint8_t button_name, uint8_t button_event) {
     case BUTTON_LEFT:
       void (*exit_cb)() = general_radio_selection_ctx->exit_cb;
       free(general_radio_selection_ctx);
+      general_radio_selection_ctx = NULL;
       if (exit_cb) {
         exit_cb();
       }
@@ -74,6 +75,10 @@ static void input_cb(uint8_t button_name, uint8_t button_event) {
 }
 
 void general_submenu(general_submenu_menu_t radio_selection_menu) {
+  if (general_radio_selection_ctx) {
+    free(general_radio_selection_ctx);
+  }
+  general_radio_selection_ctx = NULL;
   general_radio_selection_ctx = calloc(1, sizeof(general_submenu_menu_t));
   general_radio_selection_ctx->options = radio_selection_menu.options;
   general_radio_selection_ctx->options_count =
