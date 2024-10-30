@@ -144,3 +144,4 @@ void oled_screen_display_show();
 uint8_t oled_screen_get_pages();
 
 void oled_screen_display_card_border_full_h();
+void oled_screen_fadeout();
