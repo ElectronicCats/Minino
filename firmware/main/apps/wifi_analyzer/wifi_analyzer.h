@@ -15,11 +15,11 @@ void wifi_module_begin();
  *
  * @return void
  */
-void wifi_module_analizer_begin();
+void wifi_analyzer_begin();
 
 void wifi_module_init_sniffer();
 
-void wifi_module_analyzer_run();
+void wifi_analyzer_run();
 
 /**
  * @brief Stop the wifi module
@@ -27,7 +27,7 @@ void wifi_module_analyzer_run();
  */
 void wifi_module_exit(void);
 void wifi_module_analyzer_run_exit();
-void wifi_module_analyzer_exit();
+void wifi_analyzer_exit();
 void wifi_module_analyzer_summary_exit();
 void wifi_module_analyzer_destination_exit();
 
@@ -40,7 +40,7 @@ void wifi_module_analyzer_destination_exit();
  */
 void wifi_module_analizer_summary_cb(FILE* pcap_file);
 
-void wifi_module_show_analyzer_help();
+void wifi_analyzer_help();
 
-void wifi_module_analyzer_destination();
-void wifi_module_analyzer_channel();
+void analyzer_scenes_destination();
+void analyzer_scenes_channel();

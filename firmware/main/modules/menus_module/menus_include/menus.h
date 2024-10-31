@@ -8,6 +8,7 @@
 #include "z_switch_module.h"
 
 #include "adv_scan_module.h"
+#include "analyzer_scenes.h"
 #include "catdos_module.h"
 #include "deauth_module.h"
 #include "display_settings.h"
@@ -22,7 +23,7 @@
 #include "wardriving_module.h"
 #include "wardriving_screens_module.h"
 #include "web_file_browser_module.h"
-#include "wifi_module.h"
+#include "wifi_analyzer.h"
 #include "wifi_settings.h"
 #include "zigbee_module.h"
 
@@ -103,6 +104,7 @@ typedef struct {
   menu_idx_t menu_idx;
   menu_idx_t parent_idx;
   const char* display_name;
+  const char* entry_cmd;
   uint8_t last_selected_submenu;
   void* on_enter_cb;
   void* on_exit_cb;
@@ -188,43 +190,9 @@ menu_t menus[] = {  //////////////////////////////////
     {.display_name = "Analyzer",
      .menu_idx = MENU_WIFI_ANALIZER,
      .parent_idx = MENU_WIFI_APPS,
+     .entry_cmd = "analyzer",
      .last_selected_submenu = 0,
-     .on_enter_cb = wifi_module_analizer_begin,
-     .on_exit_cb = wifi_module_analyzer_exit,
-     .is_visible = true},
-    {.display_name = "Start",
-     .menu_idx = MENU_WIFI_ANALYZER_RUN,
-     .parent_idx = MENU_WIFI_ANALIZER,
-     .last_selected_submenu = 0,
-     .on_enter_cb = wifi_module_analyzer_run,
-     .on_exit_cb = NULL,
-     .is_visible = true},
-    {.display_name = "Settings",
-     .menu_idx = MENU_WIFI_ANALYZER_SETTINGS,
-     .parent_idx = MENU_WIFI_ANALIZER,
-     .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
-     .is_visible = true},
-    {.display_name = "Channel",
-     .menu_idx = MENU_WIFI_ANALYZER_CHANNEL,
-     .parent_idx = MENU_WIFI_ANALYZER_SETTINGS,
-     .last_selected_submenu = 0,
-     .on_enter_cb = wifi_module_analyzer_channel,
-     .on_exit_cb = NULL,
-     .is_visible = true},
-    {.display_name = "Destination",
-     .menu_idx = MENU_WIFI_ANALYZER_DESTINATION,
-     .parent_idx = MENU_WIFI_ANALYZER_SETTINGS,
-     .last_selected_submenu = 0,
-     .on_enter_cb = wifi_module_analyzer_destination,
-     .on_exit_cb = wifi_module_analyzer_destination_exit,
-     .is_visible = true},
-    {.display_name = "Help",
-     .menu_idx = MENU_WIFI_ANALYZER_HELP,
-     .parent_idx = MENU_WIFI_ANALIZER,
-     .last_selected_submenu = 0,
-     .on_enter_cb = wifi_module_show_analyzer_help,
+     .on_enter_cb = analyzer_scenes_main_menu,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
@@ -232,6 +200,7 @@ menu_t menus[] = {  //////////////////////////////////
     {.display_name = "Deauth",
      .menu_idx = MENU_WIFI_DEAUTH,
      .parent_idx = MENU_WIFI_APPS,
+     .entry_cmd = "deauth",
      .last_selected_submenu = 0,
      .on_enter_cb = deauth_module_begin,
      .on_exit_cb = NULL,
@@ -241,6 +210,7 @@ menu_t menus[] = {  //////////////////////////////////
     {.display_name = "DoS",
      .menu_idx = MENU_WIFI_DOS,
      .parent_idx = MENU_WIFI_APPS,
+     .entry_cmd = "dos",
      .last_selected_submenu = 0,
      .on_enter_cb = catdos_module_begin,
      .on_exit_cb = NULL,
@@ -259,6 +229,7 @@ menu_t menus[] = {  //////////////////////////////////
     {.display_name = "Trakers scan",
      .menu_idx = MENU_BLUETOOTH_TRAKERS_SCAN,
      .parent_idx = MENU_BLUETOOTH_APPS,
+     .entry_cmd = "trakers_scan",
      .last_selected_submenu = 0,
      .on_enter_cb = trackers_module_begin,
      .on_exit_cb = NULL,
@@ -268,6 +239,7 @@ menu_t menus[] = {  //////////////////////////////////
     {.display_name = "Spam",
      .menu_idx = MENU_BLUETOOTH_SPAM,
      .parent_idx = MENU_BLUETOOTH_APPS,
+     .entry_cmd = "spam",
      .last_selected_submenu = 0,
      .on_enter_cb = ble_module_begin,
      .on_exit_cb = NULL,
@@ -277,6 +249,7 @@ menu_t menus[] = {  //////////////////////////////////
     {.display_name = "HID",
      .menu_idx = MENU_BLUETOOTH_HID,
      .parent_idx = MENU_BLUETOOTH_APPS,
+     .entry_cmd = "hid",
      .last_selected_submenu = 0,
      .on_enter_cb = hid_module_begin,
      .on_exit_cb = NULL,
@@ -311,6 +284,7 @@ menu_t menus[] = {  //////////////////////////////////
     {.display_name = "Switch",
      .menu_idx = MENU_ZIGBEE_SWITCH,
      .parent_idx = MENU_ZIGBEE_SPOOFING,
+     .entry_cmd = "switch",
      .last_selected_submenu = 0,
      .on_enter_cb = zigbee_module_switch_enter,
      .on_exit_cb = NULL,
@@ -318,6 +292,7 @@ menu_t menus[] = {  //////////////////////////////////
     {.display_name = "Light",
      .menu_idx = MENU_ZIGBEE_LIGHT,
      .parent_idx = MENU_ZIGBEE_SPOOFING,
+     .entry_cmd = "light",
      .last_selected_submenu = 0,
      .on_enter_cb = NULL,
      .on_exit_cb = NULL,
@@ -327,6 +302,7 @@ menu_t menus[] = {  //////////////////////////////////
     {.display_name = "Sniffer",
      .menu_idx = MENU_ZIGBEE_SNIFFER,
      .parent_idx = MENU_ZIGBEE_APPS,
+     .entry_cmd = "zigbee_sniffer",
      .last_selected_submenu = 0,
      .on_enter_cb = zigbee_module_sniffer_enter,
      .on_exit_cb = NULL,
@@ -345,6 +321,7 @@ menu_t menus[] = {  //////////////////////////////////
     {.display_name = "Broadcast",
      .menu_idx = MENU_THREAD_BROADCAST,
      .parent_idx = MENU_THREAD_APPS,
+     .entry_cmd = "broadcast",
      .last_selected_submenu = 0,
      .on_enter_cb = open_thread_module_broadcast_enter,
      .on_exit_cb = open_thread_module_exit,
@@ -354,6 +331,7 @@ menu_t menus[] = {  //////////////////////////////////
     {.display_name = "Sniffer",
      .menu_idx = MENU_THREAD_SNIFFER,
      .parent_idx = MENU_THREAD_APPS,
+     .entry_cmd = "thread_sniffer",
      .last_selected_submenu = 0,
      .on_enter_cb = open_thread_module_sniffer_enter,
      .on_exit_cb = open_thread_module_exit,
@@ -379,6 +357,7 @@ menu_t menus[] = {  //////////////////////////////////
     {.display_name = "Wardriving",
      .menu_idx = MENU_GPS_WARDRIVING,
      .parent_idx = MENU_GPS,
+     .entry_cmd = "gps_wardriving",
      .last_selected_submenu = 0,
      .on_enter_cb = wardriving_module_begin,
      .on_exit_cb = wardriving_module_end,
@@ -431,6 +410,7 @@ menu_t menus[] = {  //////////////////////////////////
     {.display_name = "File Manager",
      .menu_idx = MENU_FILE_MANAGER,
      .parent_idx = MENU_APPLICATIONS,
+     .entry_cmd = "file_manager",
      .last_selected_submenu = 0,
      .on_enter_cb = NULL,
      .on_exit_cb = NULL,
@@ -458,6 +438,7 @@ menu_t menus[] = {  //////////////////////////////////
     {.display_name = "Update",
      .menu_idx = MENU_ABOUT_UPDATE,
      .parent_idx = MENU_ABOUT,
+     .entry_cmd = "ota",
      .last_selected_submenu = 0,
      .on_enter_cb = ota_module_init,
      .on_exit_cb = NULL,

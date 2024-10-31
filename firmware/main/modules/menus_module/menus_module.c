@@ -35,6 +35,18 @@ static uint8_t get_menu_idx(menu_idx_t menu_idx) {
   return 0;
 }
 
+static uint8_t get_menu_idx_over_cmd(char* entry_cmd) {
+  for (uint8_t i = 0; i < menus_ctx->menus_count; i++) {
+    if (!menus[i].entry_cmd) {
+      continue;
+    }
+    if (!memcmp(menus[i].entry_cmd, entry_cmd, strlen(menus[i].entry_cmd))) {
+      return i;
+    }
+  }
+  return 0;
+}
+
 static void update_menus() {
   if (menus_ctx->submenus_idx != NULL) {
     for (uint8_t i = 0; i < menus_ctx->submenus_count; i++) {
@@ -229,10 +241,25 @@ bool menus_module_get_app_state() {
 }
 
 void menus_module_set_menu(menu_idx_t menu_idx) {
+  if (!menus_ctx->submenus_count) {
+    return;
+  }
+  screen_saver_stop();
   keyboard_module_set_input_callback(menus_input_cb);
-  menus_ctx->current_menu = menus[get_menu_idx(menu_idx)].menu_idx;
-  menus_ctx->parent_menu_idx = menus[get_menu_idx(menu_idx)].parent_idx;
+  menus[get_menu_idx(menus_ctx->current_menu)].last_selected_submenu =
+      menus_ctx->selected_submenu;
+  menus_ctx->current_menu = menus[menu_idx].menu_idx;
+  menus_ctx->parent_menu_idx =
+      menus[get_menu_idx(menus_ctx->current_menu)].parent_idx;
   refresh_menus();
+  void (*cb)() = menus[get_menu_idx(menus_ctx->current_menu)].on_enter_cb;
+  if (cb) {
+    cb();
+  }
+}
+
+void menus_module_set_menu_over_cmd(char* entry_cmd) {
+  menus_module_set_menu(get_menu_idx_over_cmd(entry_cmd));
 }
 
 void menus_module_hide_menu(menu_idx_t menu_idx) {
