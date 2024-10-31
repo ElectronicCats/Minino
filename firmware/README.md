@@ -161,3 +161,24 @@ The build files will be in the `build_files.zip` file. Now you can create a rele
 ```bash
  python -m esptool --chip esp32c6 -b 460800 --before default_reset --after hard_reset write_flash --flash_mode dio --flash_size 8MB --flash_freq 80m 0x0 bootloader.bin 0x8000 partition-table.bin 0x20000 minino.bin
 ```
+
+
+
+## BLE
+
+### ADV Filters
+```
+BLE_SCAN_FILTER_ALLOW_ALL           = 0x0,  /*!< Accept all :
+                                                  1. advertisement packets except directed advertising packets not addressed to this device (default). */
+    BLE_SCAN_FILTER_ALLOW_ONLY_WLST     = 0x1,  /*!< Accept only :
+                                                  1. advertisement packets from devices where the advertiser’s address is in the White list.
+                                                  2. Directed advertising packets which are not addressed for this device shall be ignored. */
+    BLE_SCAN_FILTER_ALLOW_UND_RPA_DIR   = 0x2,  /*!< Accept all :
+                                                  1. undirected advertisement packets, and
+                                                  2. directed advertising packets where the initiator address is a resolvable private address, and
+                                                  3. directed advertising packets addressed to this device. */
+    BLE_SCAN_FILTER_ALLOW_WLIST_RPA_DIR = 0x3,  /*!< Accept all :
+                                                  1. advertisement packets from devices where the advertiser’s address is in the White list, and
+                                                  2. directed advertising packets where the initiator address is a resolvable private address, and
+                                                  3. directed advertising packets addressed to this device.*/
+```

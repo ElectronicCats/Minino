@@ -620,8 +620,12 @@ config BLUETOOTH_APP_HID
 	default true
 	help
 		Enable or disable the Bluetooth HID application.
+config BLUETOOTH_APP_ADV
+	bool "Enable ADV Scanner App"
+	default true
+	help
+		Enable or disable the Bluetooth ADV Scanner application.
 endif # BLUETOOTH_APPS_ENABLE
-
 ################################# ZIGBEE ###################################
 
 config ZIGBEE_APPS_ENABLE
