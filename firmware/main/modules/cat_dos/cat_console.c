@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include "argtable3/argtable3.h"
 #include "cmd_catdos.h"
+#include "cmd_control.h"
 #include "cmd_wifi.h"
 // #include "driver/uart.h"
 // #include "driver/uart_vfs.h"
@@ -83,6 +84,8 @@ void cat_console_begin() {
   /* Register commands */
   esp_console_register_help_command();
   register_wifi();
+  launch_cmd_register();
+
   // if(show_dos){
   // register_catdos_commands();
   // }
