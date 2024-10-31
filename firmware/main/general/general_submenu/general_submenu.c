@@ -20,11 +20,16 @@ static void list_submenu_options() {
       MIN(MAX(ctx->options_count - MAX_OPTIONS_NUM + 2, 0), items_offset);
   items_offset = MIN(ctx->selected_option, items_offset);
   oled_screen_clear_buffer();
+  oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
   char* str = malloc(20);
   for (uint8_t i = 0; i < (MIN(ctx->options_count, MAX_OPTIONS_NUM - 1)); i++) {
     bool is_selected = i + items_offset == ctx->selected_option;
     sprintf(str, "%s", ctx->options[i + items_offset]);
-    oled_screen_display_text(str, 0, i + 1, is_selected);
+    oled_screen_display_text(str, is_selected ? 16 : 0, i + 1, is_selected);
+    if (is_selected) {
+      oled_screen_display_bitmap(minino_face, 0, (i + 1) * 8, 8, 8,
+                                 OLED_DISPLAY_NORMAL);
+    }
   }
   oled_screen_display_show();
   free(str);
