@@ -8,11 +8,13 @@
 #define ARROWS_X_POS  118
 
 #ifdef CONFIG_RESOLUTION_128X64
-  #define ITEMOFFSET       2
-  #define ITEM_PAGE_OFFSET 2
+  #define ITEMOFFSET           2
+  #define ITEM_PAGE_OFFSET     2
+  #define MAX_ITEMS_PER_SCREEN 5
 #else  // CONFIG_RESOLUTION_128X32
-  #define ITEMOFFSET       1
-  #define ITEM_PAGE_OFFSET 1
+  #define ITEMOFFSET           1
+  #define ITEM_PAGE_OFFSET     1
+  #define MAX_ITEMS_PER_SCREEN 3
 #endif
 static uint8_t scrolling_option = 0;
 static const general_menu_t* current_menu_ctx = NULL;

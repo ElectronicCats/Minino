@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "apps/ble/hid_device/hid_module.h"
 #include "apps/ble/trackers/trackers_module.h"
+
 #include "buzzer.h"
 #include "cat_console.h"
 #include "esp_log.h"
