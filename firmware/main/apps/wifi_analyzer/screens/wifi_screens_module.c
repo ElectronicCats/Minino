@@ -29,6 +29,8 @@ void wifi_screens_module_display_sniffer_cb(sniffer_runtime_t* sniffer) {
                              OLED_DISPLAY_INVERT);
     oled_screen_display_text(channel_str, x_offset, pkts_offset + 1,
                              OLED_DISPLAY_INVERT);
+    free(packets_str);
+    free(channel_str);
   } else {
     ESP_LOGI(TAG_WIFI_SCREENS_MODULE, "sniffer task stopped");
   }
