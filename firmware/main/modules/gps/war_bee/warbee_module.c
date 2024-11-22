@@ -27,8 +27,16 @@ static int current_channel = IEEE_SNIFFER_CHANNEL_DEFAULT;
 static char addressing_mode[4][15] = {"None", "Reserved", "Short/16-bit",
                                       "Long/64-bit"};
 
-const char* csv_header = FORMAT_VERSION ",appRelease=" APP_VERSION
-                                        ",model=" MODEL ",release=" RELEASE;
+const char* csv_header = FORMAT_VERSION
+    ",appRelease=" APP_VERSION ",model=" MODEL ",release=" RELEASE
+    ",device=" DEVICE ",display=" DISPLAY ",board=" BOARD ",brand=" BRAND
+    ",star=" STAR ",body=" BODY ",subBody=" SUB_BODY
+    "\n"
+    // IEEE 802.15.4 fields
+    "Source,DestinationPAN,Channel,"
+    // GPS fields
+    "CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,RCOIs,"
+    "MfgrId,Type";
 
 static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
   uint8_t position = 0;
@@ -71,6 +79,7 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
     case FRAME_TYPE_MAC_COMMAND:
       printf("Beacon Request\n");
       printf("└Channel:                      %d\n", ieee_sniffer_get_channel());
+      printf("RSSI: %d\n", ieee_sniffer_get_rssi());
       uint8_t sequence_number = packet[position];
       position += sizeof(uint8_t);
       printf("Sequence number: %u\n", sequence_number);
@@ -87,8 +96,8 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
           break;
         // Device is sending to a short address
         case ADDR_MODE_SHORT:
-          pan_id = *((uint8_t*) &packet[position]);
-          position += sizeof(uint8_t);
+          pan_id = *((uint16_t*) &packet[position]);
+          position += sizeof(uint16_t);
           short_dst_addr = *((uint16_t*) &packet[position]);
           position += sizeof(uint16_t);
           if (pan_id == 0xFFFF && short_dst_addr == 0xFFFF) {
