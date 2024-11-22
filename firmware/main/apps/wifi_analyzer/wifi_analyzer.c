@@ -48,6 +48,10 @@ uint16_t get_summary_rows_count() {
   return num_items;
 }
 
+static void no_mem_handler() {
+  wifi_module_analyzer_run_exit();
+  wifi_screens_show_no_mem();
+}
 void wifi_module_init_sniffer() {
   oled_screen_clear();
   if (wifi_sniffer_is_destination_sd()) {
@@ -118,7 +122,8 @@ void wifi_analyzer_run() {
 
 void wifi_analyzer_begin() {
   ESP_LOGI(TAG, "Initializing WiFi analizer module");
-  wifi_sniffer_register_cb(wifi_screens_module_display_sniffer_cb);
+  wifi_sniffer_register_cb(wifi_screens_module_display_sniffer_cb,
+                           no_mem_handler);
   wifi_sniffer_register_animation_cbs(wifi_screens_sniffer_animation_start,
                                       wifi_screens_sniffer_animation_stop);
   wifi_sniffer_register_summary_cb(wifi_module_analizer_summary_cb);

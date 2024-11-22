@@ -3,6 +3,7 @@
 #include "animations_task.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
+#include "general_screens.h"
 #include "oled_screen.h"
 #include "wifi_bitmaps.h"
 
@@ -79,4 +80,8 @@ void wifi_screeens_show_sd_not_found() {
   oled_screen_display_text_center("internal storage", 4, OLED_DISPLAY_NORMAL);
   vTaskDelay(2000 / portTICK_PERIOD_MS);
   oled_screen_clear();
+}
+
+void wifi_screens_show_no_mem() {
+  genera_screen_display_card_information("Out of memory", "free up space");
 }
