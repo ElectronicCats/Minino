@@ -308,7 +308,7 @@ esp_err_t sd_card_write_file(const char* path, char* data) {
   char full_path[path_len + 1 + strlen(MOUNT_POINT)];
   sprintf(full_path, "%s/%s", MOUNT_POINT, path);
 
-  ESP_LOGI(TAG, "Opening file %s", full_path);
+  ESP_LOGI(TAG, "Opening file w %s", full_path);
   FILE* file = fopen(full_path, "w");
   if (file == NULL) {
     ESP_LOGE(TAG, "Failed to open file for writing");
@@ -331,7 +331,7 @@ esp_err_t sd_card_append_to_file(const char* path, char* data) {
   char full_path[path_len + 1 + strlen(MOUNT_POINT)];
   sprintf(full_path, "%s/%s", MOUNT_POINT, path);
 
-  ESP_LOGI(TAG, "Opening file %s", full_path);
+  ESP_LOGI(TAG, "Opening file a %s", full_path);
   FILE* file = fopen(full_path, "a");
   if (file == NULL) {
     ESP_LOGE(TAG, "Failed to open file for writing");
