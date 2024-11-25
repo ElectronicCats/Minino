@@ -16,6 +16,7 @@ static esp_err_t err;
 static QueueHandle_t packet_rx_queue = NULL;
 static ieee_sniffer_cb_t packet_callback = NULL;
 static int current_channel = IEEE_SNIFFER_CHANNEL_DEFAULT;
+static bool running = false;
 
 static void debug_print_packet(uint8_t* packet, uint8_t packet_length);
 static void debug_handler_task(void* pvParameters);
@@ -105,17 +106,19 @@ static void ieee_sniffer_configure() {
 }
 
 void ieee_sniffer_begin(void) {
+  running = true;
   ieee_sniffer_configure();
-  while (true) {
+  while (running) {
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
   vTaskDelete(NULL);
 }
 
 void ieee_sniffer_channel_hop() {
+  running = true;
   ieee_sniffer_configure();
   esp_ieee802154_disable();
-  while (true) {
+  while (running) {
     esp_ieee802154_enable();
     ieee_sniffer_set_channel(current_channel + 1);
     esp_ieee802154_receive();
@@ -126,6 +129,7 @@ void ieee_sniffer_channel_hop() {
 }
 
 void ieee_sniffer_stop(void) {
+  running = false;
   err = esp_ieee802154_disable();
   if (err != ESP_OK) {
     ESP_LOGE(TAG_IEEE_SNIFFER, "Error disabling IEEE 802.15.4 driver: %s",

@@ -1,12 +1,18 @@
 #include "warbee_module.h"
+#include <string.h>
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "general_submenu.h"
+#include "gps_module.h"
 #include "ieee_sniffer.h"
+#include "menus_module.h"
 #include "radio_selector.h"
+#include "sd_card.h"
+#include "wardriving_screens_module.h"
 
-#define DIR_NAME       "Wardriving"
-#define FILE_NAME      DIR_NAME "/Minino"
+#define DIR_NAME       "warbee"
+#define FILE_NAME      DIR_NAME "/Warbee"
 #define FORMAT_VERSION "ElecCats-1.0"
 #define APP_VERSION    CONFIG_PROJECT_VERSION
 #define MODEL          "MININO"
@@ -19,13 +25,24 @@
 #define BODY           "3"
 #define SUB_BODY       "0"
 
-static bool running = false;
+#define MAC_ADDRESS_FORMAT "%02x:%02x:%02x:%02x:%02x:%02x"
+#define EMPTY_MAC_ADDRESS  "00:00:00:00:00:00"
+#define CSV_LINE_SIZE      150  // Got it from real time tests
+#define CSV_FILE_SIZE      (CSV_LINE_SIZE) * (MAX_CSV_LINES)
+#define CSV_HEADER_LINES   2  // Check `csv_header` variable
+#define MAX_CSV_LINES      200 + CSV_HEADER_LINES
 
 static TaskHandle_t zigbee_task_sniffer = NULL;
-static int current_channel = IEEE_SNIFFER_CHANNEL_DEFAULT;
-
 static char addressing_mode[4][15] = {"None", "Reserved", "Short/16-bit",
                                       "Long/64-bit"};
+static QueueHandle_t packet_rx_queue = NULL;
+
+static warbee_module_t context_session;
+static gps_t* gps_ctx;
+
+static uint16_t csv_lines;
+char* csv_file_name = NULL;
+char* csv_file_buffer = NULL;
 
 const char* csv_header = FORMAT_VERSION
     ",appRelease=" APP_VERSION ",model=" MODEL ",release=" RELEASE
@@ -33,62 +50,135 @@ const char* csv_header = FORMAT_VERSION
     ",star=" STAR ",body=" BODY ",subBody=" SUB_BODY
     "\n"
     // IEEE 802.15.4 fields
-    "Source,DestinationPAN,Channel,"
+    "Source,DestinationPAN,Channel,RSSI,"
     // GPS fields
     "CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,RCOIs,"
     "MfgrId,Type";
 
-static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
-  uint8_t position = 0;
+static void warbee_gps_event_handler_cb(gps_t* gps);
+static void warbee_module_save_to_file(gps_t* gps);
+static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length);
 
-  mac_fcs_t* fcs = (mac_fcs_t*) &packet[position];
-  position += sizeof(uint16_t);
-  // printf("Frame Control Field\n");
-  // printf("└Channel:                      %d\n", current_channel);
-  // printf("└Frame type:                   %x\n", fcs->frameType);
-  // printf("└Security Enabled:             %s\n", fcs->secure ? "True" :
-  // "False"); printf("└Frame pending:                %s\n",
-  //        fcs->framePending ? "True" : "False");
-  // printf("└Acknowledge request:          %s\n",
-  //        fcs->ackReqd ? "True" : "False");
-  // printf("└PAN ID Compression:           %s\n",
-  //        fcs->panIdCompressed ? "True" : "False");
-  // printf("└Reserved:                     %s\n", fcs->rfu1 ? "True" :
-  // "False"); printf("└Sequence Number Suppression:  %s\n",
-  //        fcs->sequenceNumberSuppression ? "True" : "False");
-  // printf("└Information Elements Present: %s\n",
-  //        fcs->informationElementsPresent ? "True" : "False");
-  // printf("└Destination addressing mode:  %02X %s\n", fcs->destAddrType,
-  //        addressing_mode[fcs->destAddrType]);
-  // printf("└Frame version:                %x\n", fcs->frameVer);
-  // printf("└Source addressing mode:       %02X %s\n", fcs->srcAddrType,
-  // addressing_mode[fcs->srcAddrType]);
+static char* get_full_date_time(gps_t* gps) {
+  char* date_time = malloc(sizeof(char) * 30);
+  sprintf(date_time, "%d-%d-%d %d:%d:%d", gps->date.year, gps->date.month,
+          gps->date.day, gps->tim.hour, gps->tim.minute, gps->tim.second);
+  return date_time;
+}
 
-  if (fcs->rfu1) {
-    ESP_LOGE(TAG_IEEE_SNIFFER, "Reserved field 1 is set, ignoring packet");
+static void update_file_name(char* full_date_time) {
+  sprintf(csv_file_name, "%s_%s_b.csv", FILE_NAME, full_date_time);
+  // Replace " " by "_" and ":" by "-"
+  for (int i = 0; i < strlen(csv_file_name); i++) {
+    if (csv_file_name[i] == ' ') {
+      csv_file_name[i] = '_';
+    }
+    if (csv_file_name[i] == ':') {
+      csv_file_name[i] = '-';
+    }
+  }
+}
+
+static esp_err_t wardriving_module_verify_sd_card() {
+  ESP_LOGI("Warbee", "Verifying SD card");
+  esp_err_t err = sd_card_mount();
+  return err;
+}
+
+static void warbee_module_cb_event(uint8_t button_name, uint8_t button_event) {
+  if (button_event != BUTTON_PRESS_DOWN) {
     return;
   }
+  switch (button_name) {
+    case BUTTON_LEFT:
+      warbee_module_exit();
+      menus_module_restart();
+      break;
+    case BUTTON_UP:
+    case BUTTON_DOWN:
+    case BUTTON_RIGHT:
+    default:
+      break;
+  }
+}
+
+static void warbee_gps_event_handler_cb(gps_t* gps) {
+  static uint32_t counter = 0;
+  counter++;
+
+  gps_ctx = gps;
+
+  ESP_LOGI("Warbee",
+           "Satellites in use: %d, signal: %s \r\n"
+           "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
+           "\t\t\t\t\t\tlongitude = %.05f°E\r\n",
+           gps->sats_in_use, gps_module_get_signal_strength(gps), gps->latitude,
+           gps->longitude);
+
+  if (strcmp(context_session.session_str, "") == 0) {
+    esp_err_t err = sd_card_create_dir(DIR_NAME);
+
+    if (err != ESP_OK) {
+      ESP_LOGE("Warbee", "Failed to create %s directory", DIR_NAME);
+      return;
+    }
+    ESP_LOGI("Warbee", "Nueva session");
+    context_session.session_str = get_full_date_time(gps);
+    update_file_name(context_session.session_str);
+    ESP_LOGI("Warbee", "Creating Session File: %s",
+             context_session.session_str);
+    sd_card_write_file(csv_file_name, csv_file_buffer);
+    csv_lines = CSV_HEADER_LINES;
+    free(csv_file_buffer);
+
+    ESP_LOGI("Warbee", "Free heap size before allocation: %" PRIu32 " bytes",
+             esp_get_free_heap_size());
+    ESP_LOGI("Warbee", "Allocating %d bytes for csv_file_buffer",
+             CSV_FILE_SIZE);
+    csv_file_buffer = malloc(CSV_FILE_SIZE);
+    if (csv_file_buffer == NULL) {
+      ESP_LOGE("Warbee", "Failed to allocate memory for csv_file_buffer");
+      return;
+    }
+
+    sprintf(csv_file_buffer, "%s\n", csv_header);  // Append header to csv file
+  }
+
+  if (gps->sats_in_use == 0) {
+    ESP_LOGW("Warbee", "No GPS signal");
+    wardriving_screens_module_no_gps_signal();
+    // return;
+  }
+
+  // warbee_module_save_to_file(gps);
+}
+
+static void warbee_module_save_to_file(gps_t* gps) {
+  ESP_LOGI("Warbee", "Saving to file");
+}
+
+static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
+  char* csv_line_buffer = malloc(CSV_LINE_SIZE);
+  uint8_t position = 0;
+  mac_fcs_t* fcs = (mac_fcs_t*) &packet[position];
+  position += sizeof(uint16_t);
+
+  if (csv_lines == CSV_HEADER_LINES) {
+    ESP_LOGI("Warbee", "CSV Full");
+  }
+  uint16_t pan_id = 0;
+  uint8_t dst_addr[8] = {0};
+  uint8_t src_addr[8] = {0};
+  uint16_t short_dst_addr = 0;
+  uint16_t short_src_addr = 0;
+
+  char* dst_addr_str = malloc(24);
 
   switch (fcs->frameType) {
-    case FRAME_TYPE_BEACON:
-      printf("Beacon frame\n");
-      break;
     case FRAME_TYPE_DATA:
-      printf("Data frame\n");
-      break;
     case FRAME_TYPE_MAC_COMMAND:
-      printf("Beacon Request\n");
-      printf("└Channel:                      %d\n", ieee_sniffer_get_channel());
-      printf("RSSI: %d\n", ieee_sniffer_get_rssi());
       uint8_t sequence_number = packet[position];
       position += sizeof(uint8_t);
-      printf("Sequence number: %u\n", sequence_number);
-
-      uint16_t pan_id = 0;
-      uint8_t dst_addr[8] = {0};
-      uint8_t src_addr[8] = {0};
-      uint16_t short_dst_addr = 0;
-      uint16_t short_src_addr = 0;
 
       switch (fcs->destAddrType) {
         case ADDR_MODE_NONE:
@@ -108,6 +198,19 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
             printf("Destination PAN:               0x%04x\n", pan_id);
             printf("Destination    :               0x%04x\n", short_dst_addr);
           }
+          sprintf(dst_addr_str, "0x%04x", short_dst_addr);
+          break;
+        case ADDR_MODE_LONG:
+          pan_id = *((uint16_t*) &packet[position]);
+          position += sizeof(uint16_t);
+          for (uint8_t idx = 0; idx < sizeof(dst_addr); idx++) {
+            dst_addr[idx] = packet[position + sizeof(dst_addr) - 1 - idx];
+          }
+          position += sizeof(dst_addr);
+          sprintf(dst_addr_str, "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x",
+                  dst_addr[0], dst_addr[1], dst_addr[2], dst_addr[3],
+                  dst_addr[4], dst_addr[5], dst_addr[6], dst_addr[7]);
+          printf("On PAN %04x to long address %s\n", pan_id, dst_addr_str);
           break;
         default: {
           ESP_LOGE(TAG_IEEE_SNIFFER,
@@ -116,32 +219,87 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
         }
       }
       break;
+    case FRAME_TYPE_BEACON:
     default:
       printf("Packet ignored because of frame type (%u)\n", fcs->frameType);
       break;
   }
+  // "Source,DestinationPAN,Channel,RSSI,"
+  sprintf(csv_line_buffer, "0x%04x,0x%04x,%d,%d,%f,%f,%f,%f,%s,%s,%s\n",
+          // Source
+          pan_id,
+          // DestinationPAN
+          short_dst_addr,
+          // Channel
+          ieee_sniffer_get_channel(),
+          // RSSI
+          ieee_sniffer_get_rssi(),
+          // CurrentLatitude
+          gps_ctx->latitude,
+          // CurrentLongitude
+          gps_ctx->longitude,
+          // AltitudeMeters
+          gps_ctx->altitude,
+          // AccuracyMeters
+          GPS_ACCURACY,
+          // RCOIs
+          "",
+          // MfgrId
+          "",
+          // Type
+          "Zigbee");
+  // xQueueSendToBackFromISR(packet_rx_queue, packet, NULL);
+  ESP_LOGI("Warbee", "CSV Line: %s", csv_line_buffer);
 
-  esp_log_buffer_hex(">", packet, packet_length);
-}
-
-static void warbee_channel_hopp_task() {
-  while (running) {
-    current_channel = (current_channel == IEEE_SNIFFER_CHANNEL_MAX)
-                          ? IEEE_SNIFFER_CHANNEL_MIN
-                          : (current_channel + 1);
-    ieee_sniffer_set_channel(current_channel);
-
-    vTaskDelay(3500 / portTICK_PERIOD_MS);
-  }
-  vTaskDelete(NULL);
+  sd_card_append_to_file(csv_file_name, csv_line_buffer);
+  free(csv_line_buffer);
+  free(dst_addr_str);
 }
 
 void warbee_module_begin() {
-  running = true;
+  if (wardriving_module_verify_sd_card() != ESP_OK) {
+    return;
+  }
+  ESP_LOGI("Warbee", "Wardriving module begin");
+  packet_rx_queue = xQueueCreate(8, 257);
+  csv_lines = CSV_HEADER_LINES;
+  ESP_LOGI("Warbee", "Free heap size before allocation: %" PRIu32 " bytes",
+           esp_get_free_heap_size());
+  ESP_LOGI("Warbee", "Allocating %d bytes for csv_file_buffer", CSV_FILE_SIZE);
+  csv_file_buffer = malloc(CSV_FILE_SIZE);
+  if (csv_file_buffer == NULL) {
+    ESP_LOGE("Warbee", "Failed to allocate memory for csv_file_buffer");
+    return;
+  }
+
+  csv_file_name = malloc(strlen(FILE_NAME) + 30);
+  if (csv_file_name == NULL) {
+    ESP_LOGE("Warbee", "Failed to allocate memory for csv_file_name");
+    return;
+  }
+
+  sprintf(csv_file_name, "%s_b.csv", FILE_NAME);
+  sprintf(csv_file_buffer, "%s\n", csv_header);
+
+  context_session.session_str = "";
+
   radio_selector_set_zigbee_sniffer();
   ieee_sniffer_register_cb(warbee_packet_dissector);
   xTaskCreate(ieee_sniffer_channel_hop, "ieee_sniffer_task", 4096, NULL, 5,
               &zigbee_task_sniffer);
-  xTaskCreate(warbee_channel_hopp_task, "warbee_channel_hopp_task", 4096, NULL,
-              5, NULL);
+
+  gps_module_register_cb(warbee_gps_event_handler_cb);
+  gps_module_start_scan();
+
+  menus_module_set_app_state(true, warbee_module_cb_event);
+}
+
+void warbee_module_exit() {
+  ESP_LOGI("Warbee", "Wardriving module end");
+  ieee_sniffer_stop();
+  sd_card_read_file(csv_file_name);
+  sd_card_unmount();
+  free(csv_file_buffer);
+  free(csv_file_name);
+  vQueueDelete(packet_rx_queue);
 }

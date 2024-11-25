@@ -42,6 +42,6 @@ void app_main() {
   menus_module_begin();
   leds_off();
   preferences_put_bool("wifi_connected", false);
-  warbee_module_begin();
+  // warbee_module_begin();
   cat_console_begin();
 }
