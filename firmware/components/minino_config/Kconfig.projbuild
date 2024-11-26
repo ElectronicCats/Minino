@@ -660,7 +660,7 @@ config THREAD_APPS_ENABLE
 if THREAD_APPS_ENABLE
 
 config THREAD_APP_BROADCAST
-    bool "Enable Boradcast App"
+    bool "Enable Broadcast App"
     default true
     help
       Enable or disable the Thread Broadcast application.
@@ -671,6 +671,23 @@ config THREAD_APP_SNIFFER
     help
       Enable or disable the Thread Sniffer application.
 endif # THREAD_APPS_ENABLE
+
+################################# MATTER ###################################
+
+config MATTER_APPS_ENABLE
+    bool "Enable Matter Apps"
+    default true
+    help
+      Enable or disable all Matter applications.
+
+if MATTER_APPS_ENABLE
+
+config MATTER_APP_SPAM
+    bool "Enable Matter Spam App"
+    default true
+    help
+      Enable or disable the Matter Spam application.
+endif # MATTER_APPS_ENABLE
 
 ################################# GPS ###################################
 

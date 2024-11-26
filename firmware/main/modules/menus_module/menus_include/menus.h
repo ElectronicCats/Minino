@@ -37,6 +37,7 @@ typedef enum {
   MENU_BLUETOOTH_APPS,
   MENU_ZIGBEE_APPS,
   MENU_THREAD_APPS,
+  MENU_MATTER_APPS,
   MENU_GPS,
   /* WiFi applications */
   MENU_WIFI_ANALIZER,
@@ -68,6 +69,8 @@ typedef enum {
   MENU_THREAD_SNIFFER,
   /* Thread Sniffer App */
   MENU_THREAD_SNIFFER_RUN,
+  /* Matter Sapm */
+  MENU_MATTER_SPAM,
   /* GPS applications */
   MENU_GPS_WARDRIVING,
   MENU_GPS_DATE_TIME,
@@ -341,6 +344,25 @@ menu_t menus[] = {  //////////////////////////////////
      .parent_idx = MENU_THREAD_SNIFFER,
      .last_selected_submenu = 0,
      .on_enter_cb = open_thread_module_sniffer_run,
+     .on_exit_cb = NULL,
+     .is_visible = true},
+  #endif
+#endif
+#ifdef CONFIG_MATTER_APPS_ENABLE
+    {.display_name = "Matter",
+     .menu_idx = MENU_MATTER_APPS,
+     .parent_idx = MENU_APPLICATIONS,
+     .last_selected_submenu = 0,
+     .on_enter_cb = NULL,
+     .on_exit_cb = NULL,
+     .is_visible = true},
+  #ifdef CONFIG_MATTER_APP_SPAM
+    {.display_name = "Matter Spam",
+     .menu_idx = MENU_MATTER_SPAM,
+     .parent_idx = MENU_MATTER_APPS,
+     .entry_cmd = "matter_spam",
+     .last_selected_submenu = 0,
+     .on_enter_cb = NULL,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
