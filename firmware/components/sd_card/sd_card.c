@@ -158,9 +158,9 @@ esp_err_t unmount() {
 }
 
 void sd_card_begin() {
-  // #if !defined(CONFIG_SD_CARD_DEBUG)
-  //   esp_log_level_set(TAG, ESP_LOG_NONE);
-  // #endif
+#if !defined(CONFIG_SD_CARD_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
 }
 
 esp_err_t sd_card_mount() {

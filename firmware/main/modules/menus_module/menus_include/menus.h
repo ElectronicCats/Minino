@@ -371,6 +371,7 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = wardriving_module_start_scan,
      .on_exit_cb = wardriving_module_stop_scan,
      .is_visible = true},
+    #ifdef CONFIG_GPS_APP_WARDRIVING_ZB
     {.display_name = "Zigbee Start",
      .menu_idx = MENU_GPS_WARDRIVING_BEE_START,
      .parent_idx = MENU_GPS_WARDRIVING,
@@ -378,6 +379,7 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = warbee_module_begin,
      .on_exit_cb = warbee_module_exit,
      .is_visible = true},
+    #endif
     {.display_name = "Help",
      .menu_idx = MENU_GPS_WARDRIVING_HELP,
      .parent_idx = MENU_GPS_WARDRIVING,

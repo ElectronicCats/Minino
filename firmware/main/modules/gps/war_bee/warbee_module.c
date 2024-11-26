@@ -34,7 +34,8 @@ const char* csv_header = FORMAT_VERSION
     ",star=" STAR ",body=" BODY ",subBody=" SUB_BODY
     "\n"
     // IEEE 802.15.4 fields
-    "Source,DestinationPAN,Channel,RSSI,"
+    "SourcePanID,SourceADDR,DestinationADDR,Channel,RSSI,SecurityEnabled,"
+    "FrameType,"
     // GPS fields
     "CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,RCOIs,"
     "MfgrId,Type";
@@ -79,6 +80,19 @@ static void warbee_module_cb_event(uint8_t button_name, uint8_t button_event) {
     case BUTTON_RIGHT:
     default:
       break;
+  }
+}
+
+static char* get_packet_type(uint8_t frame_type) {
+  switch (frame_type) {
+    case FRAME_TYPE_BEACON:
+      return "Beacon";
+    case FRAME_TYPE_DATA:
+      return "Data";
+    case FRAME_TYPE_MAC_COMMAND:
+      return "MAC Command";
+    default:
+      return "Unknown";
   }
 }
 
@@ -142,6 +156,11 @@ static void warbee_gps_event_handler_cb(gps_t* gps) {
 }
 
 static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
+  if (gps->sats_in_use == 0) {
+    ESP_LOGW("Warbee", "No GPS signa dont savel");
+    return;
+  }
+
   char* csv_line_buffer = malloc(CSV_LINE_SIZE);
   uint8_t position = 0;
   mac_fcs_t* fcs = (mac_fcs_t*) &packet[position];
@@ -157,6 +176,7 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
   uint16_t short_src_addr = 0;
 
   char* dst_addr_str = malloc(24);
+  char* src_addr_str = malloc(24);
 
   switch (fcs->frameType) {
     case FRAME_TYPE_DATA:
@@ -202,6 +222,41 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
           return;
         }
       }
+
+      switch (fcs->srcAddrType) {
+        case ADDR_MODE_NONE: {
+          printf("Originating from the PAN coordinator\n");
+          break;
+        }
+        case ADDR_MODE_SHORT: {
+          short_src_addr = *((uint16_t*) &packet[position]);
+          position += sizeof(uint16_t);
+          printf("Source:                        0x%04x\n", short_src_addr);
+          sprintf(src_addr_str, "0x%04x", short_src_addr);
+          break;
+        }
+        case ADDR_MODE_LONG: {
+          for (uint8_t idx = 0; idx < sizeof(src_addr); idx++) {
+            src_addr[idx] = packet[position + sizeof(src_addr) - 1 - idx];
+          }
+          position += sizeof(src_addr);
+          printf(
+              "Originating from long address "
+              "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n",
+              src_addr[0], src_addr[1], src_addr[2], src_addr[3], src_addr[4],
+              src_addr[5], src_addr[6], src_addr[7]);
+          sprintf(src_addr_str, ZB_ADDRESS_FORMAT, src_addr[0], src_addr[1],
+                  src_addr[2], src_addr[3], src_addr[4], src_addr[5],
+                  src_addr[6], src_addr[7]);
+          break;
+        }
+        default: {
+          ESP_LOGE(TAG_IEEE_SNIFFER,
+                   "With reserved source address type, ignoring packet");
+          return;
+        }
+      }
+
       break;
     case FRAME_TYPE_BEACON:
     default:
@@ -209,15 +264,21 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
       break;
   }
   // "Source,DestinationPAN,Channel,RSSI,"
-  sprintf(csv_line_buffer, "0x%04x,0x%04x,%d,%d,%f,%f,%f,%f,%s,%s,%s\n",
-          // Source
+  sprintf(csv_line_buffer, "0x%04x,%s,%s,%d,%d,%s,%s,%f,%f,%f,%f,%s,%s,%s\n",
+          // SourcePanID
           pan_id,
+          // SourceDestination
+          src_addr_str,
           // DestinationPAN
-          short_dst_addr,
+          dst_addr_str,
           // Channel
           ieee_sniffer_get_channel(),
           // RSSI
           ieee_sniffer_get_rssi(),
+          // SecurityEnabled
+          fcs->secure ? "Yes" : "No",
+          // FrameType
+          get_packet_type(fcs->frameType),
           // CurrentLatitude
           gps_ctx->latitude,
           // CurrentLongitude

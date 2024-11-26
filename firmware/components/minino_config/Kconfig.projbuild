@@ -687,6 +687,12 @@ config GPS_APP_WARDRIVING
     default true
     help
       Enable or disable the GPS Wardriving application.
+
+config GPS_APP_WARDRIVING_ZB
+	bool "Enable Wardriving Zigbee App"
+	default true
+	help
+		Enable or disable the GPS Wardriving Zigbee application.
 endif # GPS_APPS_ENABLE
 
 ################################# OTA ###################################
