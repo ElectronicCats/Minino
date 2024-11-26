@@ -13,26 +13,9 @@
 #include "wifi_controller.h"
 #include "wifi_scanner.h"
 
-#define DIR_NAME       "Wardriving"
-#define FILE_NAME      DIR_NAME "/Minino"
-#define FORMAT_VERSION "WigleWifi-1.6"
-#define APP_VERSION    CONFIG_PROJECT_VERSION
-#define MODEL          "MININO"
-#define RELEASE        APP_VERSION
-#define DEVICE         "MININO"
-#define DISPLAY        "SH1106 OLED"
-#define BOARD          "ESP32C6"
-#define BRAND          "Electronic Cats"
-#define STAR           "Sol"
-#define BODY           "3"
-#define SUB_BODY       "0"
+#include "wardriving_common.h"
 
-#define MAC_ADDRESS_FORMAT "%02x:%02x:%02x:%02x:%02x:%02x"
-#define EMPTY_MAC_ADDRESS  "00:00:00:00:00:00"
-#define CSV_LINE_SIZE      150  // Got it from real time tests
-#define CSV_FILE_SIZE      (CSV_LINE_SIZE) * (MAX_CSV_LINES)
-#define CSV_HEADER_LINES   2  // Check `csv_header` variable
-#define MAX_CSV_LINES      200 + CSV_HEADER_LINES
+#define FILE_NAME DIR_NAME "/Minino"
 
 #define WIFI_SCAN_REFRESH_RATE_MS   3000
 #define DISPLAY_REFRESH_RATE_SEC    2
@@ -101,13 +84,6 @@ char* get_auth_mode(int authmode) {
     default:
       return "Uncategorized";
   }
-}
-
-char* get_full_date_time(gps_t* gps) {
-  char* date_time = malloc(sizeof(char) * 30);
-  sprintf(date_time, "%d-%d-%d %d:%d:%d", gps->date.year, gps->date.month,
-          gps->date.day, gps->tim.hour, gps->tim.minute, gps->tim.second);
-  return date_time;
 }
 
 uint16_t get_frequency(uint8_t primary) {

@@ -1,7 +1,9 @@
 #pragma once
+#include <stdint.h>
 
 typedef struct {
   char* session_str;
+  uint16_t session_records_count;
 } warbee_module_t;
 
 /**
