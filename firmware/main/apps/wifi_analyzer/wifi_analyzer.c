@@ -1,4 +1,4 @@
-#include "wifi_module.h"
+#include "wifi_analyzer.h"
 
 #include "captive_portal.h"
 #include "catdos_module.h"
@@ -9,6 +9,7 @@
 #include "keyboard_module.h"
 #include "string.h"
 
+#include "analyzer_scenes.h"
 #include "deauth_module.h"
 #include "general_radio_selection.h"
 #include "general_screens.h"
@@ -16,40 +17,20 @@
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "sd_card.h"
+#include "wifi_analyzer.h"
 #include "wifi_attacks.h"
 #include "wifi_controller.h"
-#include "wifi_module.h"
 #include "wifi_scanner.h"
 #include "wifi_screens_module.h"
 
 static const char* TAG = "wifi_module";
-bool analizer_initialized = false;
+static bool analizer_initialized = false;
 
 static general_menu_t analyzer_summary_menu;
 static char* wifi_analizer_summary_2[120] = {
     "Summary",
 };
-static const char* wifi_analizer_help_2[] = {
-    "This tool",      "allows you to",   "analyze the",
-    "WiFi networks",  "around you.",     "",
-    "You can select", "the channel and", "the destination",
-    "to save the",    "results.",
-};
 
-static const general_menu_t analyzer_help_menu = {
-    .menu_items = wifi_analizer_help_2,
-    .menu_count = 11,
-    .menu_level = GENERAL_TREE_APP_MENU};
-
-static const char* destination_options[] = {"SD", "Internal"};
-static const char* channel_options[] = {
-    "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
-};
-
-void wifi_module_show_analyzer_help() {
-  general_register_scrolling_menu(&analyzer_help_menu);
-  general_screen_display_scrolling_text_handler(menus_module_exit_app);
-}
 static void wifi_module_input_cb(uint8_t button_name, uint8_t button_event);
 
 uint16_t get_summary_rows_count() {
@@ -95,7 +76,7 @@ void wifi_module_init_sniffer() {
 }
 static void wifi_module_summary_exit_cb() {
   wifi_sniffer_close_file();
-  menus_module_exit_app();
+  analyzer_scenes_main_menu();
 }
 
 void wifi_module_analyzer_run_exit() {
@@ -113,7 +94,7 @@ void wifi_module_analyzer_summary_exit() {
   wifi_sniffer_close_file();
 }
 
-void wifi_module_analyzer_exit() {
+void wifi_analyzer_exit() {
   menus_module_restart();
 }
 
@@ -130,51 +111,20 @@ void wifi_module_analyzer_destination_exit() {
   }
 }
 
-void wifi_module_analyzer_run() {
+void wifi_analyzer_run() {
   wifi_module_init_sniffer();
   menus_module_set_app_state(true, wifi_module_input_cb);
 }
 
-static void wifi_module_set_destination(uint8_t selected_item) {
-  if (selected_item == WIFI_SNIFFER_DESTINATION_SD) {
-    wifi_sniffer_set_destination_sd();
-  } else {
-    wifi_sniffer_set_destination_internal();
-  }
-}
-static void wifi_module_set_channel(uint8_t selected_item) {
-  wifi_sniffer_set_channel(selected_item + 1);
-}
-
-void wifi_module_analyzer_channel() {
-  general_radio_selection_menu_t channel = {0};
-  channel.banner = "Choose Channel",
-  channel.current_option = wifi_sniffer_get_channel() - 1;
-  channel.options = channel_options;
-  channel.options_count = 14;
-  channel.select_cb = wifi_module_set_channel;
-  channel.exit_cb = menus_module_exit_app;
-  channel.style = RADIO_SELECTION_OLD_STYLE;
-  general_radio_selection(channel);
-}
-
-void wifi_module_analyzer_destination() {
-  general_radio_selection_menu_t destination = {0};
-  destination.banner = "Choose Destination",
-  destination.current_option = wifi_sniffer_is_destination_internal();
-  destination.options = destination_options;
-  destination.options_count = 2;
-  destination.select_cb = wifi_module_set_destination;
-  destination.exit_cb = menus_module_exit_app;
-  destination.style = RADIO_SELECTION_OLD_STYLE;
-  general_radio_selection(destination);
-}
-void wifi_module_analizer_begin() {
+void wifi_analyzer_begin() {
   ESP_LOGI(TAG, "Initializing WiFi analizer module");
   wifi_sniffer_register_cb(wifi_screens_module_display_sniffer_cb);
   wifi_sniffer_register_animation_cbs(wifi_screens_sniffer_animation_start,
                                       wifi_screens_sniffer_animation_stop);
   wifi_sniffer_register_summary_cb(wifi_module_analizer_summary_cb);
+  if (analizer_initialized) {
+    return;
+  }
   wifi_sniffer_begin();
   analizer_initialized = true;
 }

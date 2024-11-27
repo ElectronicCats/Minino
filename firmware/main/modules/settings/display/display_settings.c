@@ -2,6 +2,7 @@
 #include <string.h>
 #include "bitmaps_general.h"
 #include "esp_log.h"
+#include "general_radio_selection.h"
 #include "led_events.h"
 #include "menus_module.h"
 #include "modals_module.h"
@@ -29,6 +30,7 @@ typedef enum { DISPLAY_MENU, DISPLAY_LIST, DISPLAY_COUNT } display_menu_t;
 
 static char* display_settings_menu_items[] = {"Screen Logo", "Screen Time",
                                               NULL};
+static char** screen_saver_options = NULL;
 static int selected_item = 0;
 static int screen_selected = 0;
 static int time_default_time = 30;
@@ -41,6 +43,7 @@ static void display_config_module_state_machine_menu_time(uint8_t button_name,
                                                           uint8_t button_event);
 static void display_config_module_state_machine_modal(uint8_t button_name,
                                                       uint8_t button_event);
+void screen_saver_selector_menu();
 
 static void config_module_wifi_display_selected_item(char* item_text,
                                                      uint8_t item_number) {
@@ -140,10 +143,7 @@ static void display_config_module_state_machine(uint8_t button_name,
     case BUTTON_RIGHT:
       ESP_LOGI(TAG_DISPLAY_CONFIG, "Selected item: %d", selected_item);
       if (selected_item == 0) {
-        selected_item = 0;
-        menus_module_set_app_state(
-            true, display_config_module_state_machine_menu_logo);
-        display_config_display_list_logo();
+        screen_saver_selector_menu();
       } else {
         selected_item = 0;
         menus_module_set_app_state(
@@ -279,4 +279,36 @@ static void display_config_module_state_machine_modal(uint8_t button_name,
     default:
       break;
   }
+}
+static void screen_saver_selection_exit() {
+  selected_item = 0;
+  menus_module_set_app_state(true, display_config_module_state_machine);
+  display_config_display_menu_item();
+}
+
+static void screen_saver_selection_handler(uint8_t screen_saver) {
+  preferences_put_int("dp_select", screen_saver);
+}
+
+char** get_screen_saver_names() {
+  uint8_t screen_savers_count = sizeof(screen_savers) / sizeof(epd_bitmap_t*);
+  char** names = malloc(sizeof(char*) * screen_savers_count);
+  for (uint8_t i = 0; i < screen_savers_count; i++) {
+    names[i] = screen_savers[i]->name;
+  }
+  return names;
+}
+void screen_saver_selector_menu() {
+  uint8_t screen_savers_count = sizeof(screen_savers) / sizeof(epd_bitmap_t*);
+  screen_saver_options = get_screen_saver_names();
+  general_radio_selection_menu_t screen_saver_logo_menu;
+  screen_saver_logo_menu.banner = "Screen Saver";
+  screen_saver_logo_menu.exit_cb = screen_saver_selection_exit;
+  screen_saver_logo_menu.options = screen_saver_options;
+  screen_saver_logo_menu.options_count = screen_savers_count;
+  screen_saver_logo_menu.style = RADIO_SELECTION_OLD_STYLE;
+  screen_saver_logo_menu.current_option =
+      MIN(screen_savers_count - 1, preferences_get_int("dp_select", 0));
+  screen_saver_logo_menu.select_cb = screen_saver_selection_handler;
+  general_radio_selection(screen_saver_logo_menu);
 }

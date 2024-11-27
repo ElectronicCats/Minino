@@ -3,11 +3,24 @@
 #include <stdlib.h>
 #ifndef BITMAPS_GENERAL_H
   #define BITMAPS_GENERAL_H
+
+typedef enum {
+  MININO_LETTERS,
+  MININO_FACE,
+  MININO_PWNLABS,
+  MININO_ELECTRONICCATS,
+  MININO_FACE_MINI,
+  MININO_BABY_DRAGON,
+  MININO_COUNT
+} epd_bitmap_type_t;
+
 // 'FACE', 8x8px
 const unsigned char minino_face[] = {0x42, 0xe7, 0xff, 0xff,
                                      0x99, 0x99, 0x7e, 0x3c};
 
 typedef struct {
+  const epd_bitmap_type_t idx;
+  const char* name;
   const unsigned char* bitmap;
   uint8_t width;
   uint8_t height;
@@ -137,54 +150,73 @@ unsigned char* epd_startup_logo[] = {epd_bitmap_minino_text_logo,
                                      epd_bitmap_face_logo};
 
 const epd_bitmap_t minino_face_bitmap = {
+    .idx = MININO_FACE_MINI,
+    .name = "Mini Face",
     .bitmap = minino_face,
     .width = 8,
     .height = 8,
 };
 
 const epd_bitmap_t minino_letters_bitmap = {
+    .idx = MININO_LETTERS,
+    .name = "Letters",
     .bitmap = epd_bitmap_minino_text_logo,
     .width = 64,
     .height = 32,
 };
 
 const epd_bitmap_t minino_face_logo = {
+    .idx = MININO_FACE,
+    .name = "Face",
     .bitmap = epd_bitmap_face_logo,
     .width = 32,
     .height = 32,
 };
 
 const epd_bitmap_t minino_pwnlabs_logo = {
+    .idx = MININO_PWNLABS,
+    .name = "PwnLabs",
     .bitmap = epd_bitmap_pwn_02,
     .width = 64,
     .height = 11,
 };
 
 const epd_bitmap_t minino_electroniccats_logo = {
+    .idx = MININO_ELECTRONICCATS,
+    .name = "EC",
     .bitmap = epd_bitmap_electroniccats,
     .width = 48,
     .height = 30,
 };
 
 const epd_bitmap_t minino_baby_dragon_bitmap = {
+    .idx = MININO_BABY_DRAGON,
+    .name = "Baby Dragon",
     .bitmap = epd_bitmap_baby_dragon_ss,
     .width = 32,
     .height = 32,
 };
 
-typedef enum {
-  MININO_LETTERS,
-  MININO_FACE,
-  MININO_PWNLABS,
-  MININO_ELECTRONICCATS,
-  MININO_FACE_MINI,
-  MININO_BABY_DRAGON,
-  MININO_COUNT
-} epd_bitmap_type_t;
-
-epd_bitmap_t screen_savers[] = {
-    minino_letters_bitmap,      minino_face_logo,   minino_pwnlabs_logo,
-    minino_electroniccats_logo, minino_face_bitmap, minino_baby_dragon_bitmap};
+const epd_bitmap_t* screen_savers[] = {
+  #if CONFIG_SCREEN_SAVER_LETTERS
+    &minino_letters_bitmap,
+  #endif
+  #if CONFIG_SCREEN_SAVER_FACE
+    &minino_face_logo,
+  #endif
+  #if CONFIG_SCREEN_SAVER_PWNLABS
+    &minino_pwnlabs_logo,
+  #endif
+  #if CONFIG_SCREEN_SAVER_EC
+    &minino_electroniccats_logo,
+  #endif
+  #if CONFIG_SCREEN_SAVER_MINI_FACE
+    &minino_face_bitmap,
+  #endif
+  #if CONFIG_SCREEN_SAVER_BABY_DRAGON
+    &minino_baby_dragon_bitmap,
+  #endif
+};
 
 char* epd_bitmaps_list[] = {"Letters",   "Face",        "PwnLabs", "EC",
                             "Mini face", "Baby Dragon", NULL};
