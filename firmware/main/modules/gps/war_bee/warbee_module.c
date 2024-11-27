@@ -156,7 +156,7 @@ static void warbee_gps_event_handler_cb(gps_t* gps) {
 }
 
 static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
-  if (gps->sats_in_use == 0) {
+  if (gps_ctx->sats_in_use == 0) {
     ESP_LOGW("Warbee", "No GPS signa dont savel");
     return;
   }
