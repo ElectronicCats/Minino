@@ -1,6 +1,6 @@
 # Developer guide
 
-You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html) framework or [Arduino](https://www.arduino.cc/en/software). However, we will focus on the ESP-IDF framework in this guide.
+You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html) framework. However, we will focus on the ESP-IDF framework in this guide.
 
 ## Table of contents
 
@@ -19,8 +19,11 @@ You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/p
 
 ## Prerequisites
 
+> [!IMPORTANT]
+> The version you need to install must be [5.3.1](https://github.com/espressif/esp-idf/releases/tag/v5.3.1); we cannot guarantee that a more recent version will compile.
+
 - [Minino](https://electroniccats.com/store/minino/)
-- [ESP-IDF](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html) installed
+- [ESP-IDF v5.3.1](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html) installed
 - [Make](https://www.gnu.org/software/make/) installed
 - [pre-commit](https://pre-commit.com/) installed (optional but recommended)
 
@@ -161,8 +164,6 @@ The build files will be in the `build_files.zip` file. Now you can create a rele
 ```bash
  python -m esptool --chip esp32c6 -b 460800 --before default_reset --after hard_reset write_flash --flash_mode dio --flash_size 8MB --flash_freq 80m 0x0 bootloader.bin 0x8000 partition-table.bin 0x20000 minino.bin
 ```
-
-
 
 ## BLE
 
