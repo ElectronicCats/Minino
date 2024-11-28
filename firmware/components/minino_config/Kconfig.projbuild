@@ -642,6 +642,21 @@ config ZIGBEE_APP_SPOOFING
     help
       Enable or disable the Zigbee Spoofing application.
 
+if ZIGBEE_APP_SPOOFING
+
+config ZIGBEE_APP_SPOOFING_SWITCH
+    bool "Enable Spoofing Switch App"
+    default true
+    help
+      Enable or disable the Zigbee Spoofing Switch application.
+
+config ZIGBEE_APP_SNIFFER_LIGHT
+    bool "Enable Spoofing Light App"
+    default true
+    help
+      Enable or disable the Zigbee Spoofing Light application.
+endif # ZIGBEE_APP_SPOOFING
+
 config ZIGBEE_APP_SNIFFER
     bool "Enable Sniffer App"
     default true

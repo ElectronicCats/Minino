@@ -281,6 +281,7 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = NULL,
      .on_exit_cb = NULL,
      .is_visible = true},
+    #ifdef CONFIG_ZIGBEE_APP_SPOOFING_SWITCH
     {.display_name = "Switch",
      .menu_idx = MENU_ZIGBEE_SWITCH,
      .parent_idx = MENU_ZIGBEE_SPOOFING,
@@ -289,6 +290,8 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = zigbee_module_switch_enter,
      .on_exit_cb = NULL,
      .is_visible = true},
+    #endif
+    #ifdef CONFIG_ZIGBEE_APP_SNIFFER_LIGHT
     {.display_name = "Light",
      .menu_idx = MENU_ZIGBEE_LIGHT,
      .parent_idx = MENU_ZIGBEE_SPOOFING,
@@ -297,6 +300,7 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = NULL,
      .on_exit_cb = NULL,
      .is_visible = true},
+    #endif
   #endif
   #ifdef CONFIG_ZIGBEE_APP_SNIFFER
     {.display_name = "Sniffer",
