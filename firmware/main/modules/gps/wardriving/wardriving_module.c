@@ -336,10 +336,10 @@ void wardriving_module_end() {
 }
 
 void wardriving_module_start_scan() {
+  menus_module_set_app_state(true, wardriving_module_keyboard_cb);
   if (wardriving_module_verify_sd_card() != ESP_OK) {
     return;
   }
-  menus_module_set_app_state(true, wardriving_module_keyboard_cb);
   ESP_LOGI(TAG, "Start scan");
   wardriving_module_state = WARDRIVING_MODULE_STATE_SCANNING;
   xTaskCreate(wardriving_module_scan_task, "wardriving_module_scan_task", 4096,
@@ -381,7 +381,7 @@ void wardriving_module_stop_scan() {
 }
 
 void wardriving_module_keyboard_cb(uint8_t button_name, uint8_t button_event) {
-  if (button_event != BUTTON_SINGLE_CLICK) {
+  if (button_event != BUTTON_PRESS_DOWN) {
     return;
   }
 
@@ -395,6 +395,7 @@ void wardriving_module_keyboard_cb(uint8_t button_name, uint8_t button_event) {
       } else if (wardriving_module_state ==
                  WARDRIVING_MODULE_STATE_INVALID_SD_CARD) {
         wardriving_screens_module_formating_sd_card();
+        sd_card_settings_format();
         esp_err_t err = sd_card_check_format();
         if (err == ESP_OK) {
           ESP_LOGI(TAG, "Format done");
