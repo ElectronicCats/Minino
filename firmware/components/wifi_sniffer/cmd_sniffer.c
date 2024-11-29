@@ -45,11 +45,11 @@ static wlan_filter_table_t wifi_filter_hash_table[SNIFFER_WLAN_FILTER_MAX] = {
 static sniffer_cb_t sniffer_cb = NULL;
 static sniffer_animation_cb_t sniffer_animation_start_cb = NULL;
 static sniffer_animation_cb_t sniffer_animation_stop_cb = NULL;
-static void (*no_mem_cb)();
+static void (*out_of_mem_cb)();
 
-void wifi_sniffer_register_cb(sniffer_cb_t callback, void* _no_mem_cb) {
+void wifi_sniffer_register_cb(sniffer_cb_t callback, void* _out_of_mem_cb) {
   sniffer_cb = callback;
-  no_mem_cb = _no_mem_cb;
+  out_of_mem_cb = _out_of_mem_cb;
 }
 
 void wifi_sniffer_register_animation_cbs(sniffer_animation_cb_t start_cb,
@@ -71,6 +71,7 @@ static uint32_t hash_func(const char* str, uint32_t max_num) {
 }
 
 static void create_wifi_filter_hashtable(void) {
+  memset(wifi_filter_hash_table, 0, sizeof(wifi_filter_hash_table));
   char* wifi_filter_keys[SNIFFER_WLAN_FILTER_MAX] = {
       "mgmt", "data", "ctrl", "misc", "mpdu", "ampdu", "fcsfail"};
   uint32_t wifi_filter_values[SNIFFER_WLAN_FILTER_MAX] = {
@@ -174,10 +175,10 @@ static void sniffer_task(void* parameters) {
                        packet_info.seconds,
                        packet_info.microseconds) != ESP_OK) {
       ESP_LOGW(TAG, "save captured packet failed");
-      if (no_mem_cb) {
+      if (out_of_mem_cb) {
         xSemaphoreGive(sniffer->sem_task_over);
         force_exit = true;
-        no_mem_cb();
+        out_of_mem_cb();
       }
     }
     free(packet_info.payload);
@@ -332,6 +333,7 @@ err_sem:
 err_queue:
   sniffer->is_running = false;
 err:
+  out_of_mem_cb();
   return ret;
 }
 

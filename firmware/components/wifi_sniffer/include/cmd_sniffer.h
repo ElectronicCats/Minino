@@ -64,7 +64,7 @@ typedef void (*sniffer_animation_cb_t)(void);
 
 void register_sniffer_cmd(void);
 int do_sniffer_cmd(int argc, char** argv);
-void wifi_sniffer_register_cb(sniffer_cb_t callback, void* _no_mem_cb);
+void wifi_sniffer_register_cb(sniffer_cb_t callback, void* _out_of_mem_cb);
 void wifi_sniffer_register_animation_cbs(sniffer_animation_cb_t start_cb,
                                          sniffer_animation_cb_t stop_cb);
 
