@@ -17,7 +17,7 @@ void wifi_module_begin();
  */
 void wifi_analyzer_begin();
 
-void wifi_module_init_sniffer();
+esp_err_t wifi_module_init_sniffer();
 
 void wifi_analyzer_run();
 
