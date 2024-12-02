@@ -18,6 +18,8 @@ void wifi_scanner_module_scan() {
   if (err != ESP_OK) {
     ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to create event loop: %s",
              esp_err_to_name(err));
+    esp_event_loop_delete_default();
+    esp_event_loop_create_default();
   }
 
   ap_records.count = CONFIG_SCAN_MAX_AP;
