@@ -148,9 +148,9 @@ static void warbee_gps_event_handler_cb(gps_t* gps) {
   }
 
   if (running_zigbee_scanner_animation == false) {
+    vTaskResume(scanning_zigbee_animation_task_handle);
     wardriving_screens_module_scanning(context_session.session_records_count,
                                        gps_module_get_signal_strength(gps));
-    vTaskResume(scanning_zigbee_animation_task_handle);
     running_zigbee_scanner_animation = true;
   }
 }
