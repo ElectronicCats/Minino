@@ -183,3 +183,33 @@ BLE_SCAN_FILTER_ALLOW_ALL           = 0x0,  /*!< Accept all :
                                                   2. directed advertising packets where the initiator address is a resolvable private address, and
                                                   3. directed advertising packets addressed to this device.*/
 ```
+
+## WIFI
+
+### DoS test
+First run a python simple server with:
+`python3 -m http.server`
+
+Next open the DoS app in minino and if you haven't a AP saved in the serial terminal you need to add your AP:
+```
+Welcome to the Minino Console.
+Type 'help' to get the list of commands.
+Use UP/DOWN arrows to navigate through command history.
+Press TAB when typing command name to auto-complete.
+Press Enter or Ctrl+C will terminate the console environment.
+minino> save AP_NAME PASSWORD
+```
+
+The minino will try to connect to AP.
+Once you have a AP saved if the minino app do not show the AP's exit and come back to the app to load AP, once minino found a AP available this will try to connect and if done, the next screen will show the target, if target is not configured, you need to introduce manually in the serial terminal:
+```
+Welcome to the Minino Console.
+Type 'help' to get the list of commands.
+Use UP/DOWN arrows to navigate through command history.
+Press TAB when typing command name to auto-complete.
+Press Enter or Ctrl+C will terminate the console environment.
+minino> web_config IP_VICTIM PORT_VICTIM _PATH_VICTIM
+```
+In this case our victim server are our pc so the command will be like this: `web_config 192.168.0.178 8000 /`
+
+Then we can execute the command `catdos` to start the attack.

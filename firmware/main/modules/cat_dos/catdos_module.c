@@ -35,6 +35,7 @@ static const char* CATDOS_TAG = "catdos_module";
 static int selected_item = 0;
 static int total_items = 0;
 static int max_items = 6;
+static bool is_exit = false;
 
 static TaskHandle_t task_atack = NULL;
 
@@ -64,11 +65,8 @@ static void catdos_module_show_target();
 static void catdos_module_display_attack_animation() {
   oled_screen_clear(OLED_DISPLAY_NORMAL);
   while (running_attack) {
-    for (int i = 0; i < 4; i++) {
-      oled_screen_clear(OLED_DISPLAY_NORMAL);
-      oled_screen_display_text_center("Attacking", 0, OLED_DISPLAY_NORMAL);
-      vTaskDelay(250 / portTICK_PERIOD_MS);
-    }
+    oled_screen_clear(OLED_DISPLAY_NORMAL);
+    oled_screen_display_text_center("Attacking", 0, OLED_DISPLAY_NORMAL);
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 }
@@ -375,11 +373,8 @@ static void http_get_task(void* pvParameters) {
     // ESP_LOGI(CATDOS_TAG, "... socket send success");
     close(s);
   }
-  running_attack = false;
-  if (task_atack) {
-    vTaskSuspend(task_atack);
-    vTaskDelete(task_atack);
-  }
+  // running_attack = false;
+  vTaskDelete(NULL);
 }
 
 void catdos_module_send_attack() {
@@ -428,12 +423,14 @@ void catdos_module_send_attack() {
   assert(res == 0);
   res = pthread_join(thread8, NULL);
   assert(res == 0);
+
+  vTaskDelete(NULL);
 }
 
 void catdos_module_begin() {
-#if !defined(CONFIG_CATDOS_MODULE_DEBUG)
-  esp_log_level_set(CATDOS_TAG, ESP_LOG_NONE);
-#endif
+  // #if !defined(CONFIG_CATDOS_MODULE_DEBUG)
+  //   esp_log_level_set(CATDOS_TAG, ESP_LOG_NONE);
+  // #endif
   // ESP_ERROR_CHECK(esp_event_loop_create_default());
   menus_module_set_app_state(true, catdos_module_state_machine);
 
@@ -447,25 +444,40 @@ void catdos_module_begin() {
 
   bool wifi_connection = preferences_get_bool("wifi_connected", false);
 
+  int total_items = preferences_get_int("count_ap", 0);
+  ESP_LOGI(CATDOS_TAG, "Total items: %d", total_items);
+
   if (wifi_connection) {
     oled_screen_display_text_center("WIFI Connection", 1, OLED_DISPLAY_NORMAL);
     catdos_state = CATDOS_STATE_CONFIG_TARGET;
+    catdos_module_show_target();
   } else {
     catdos_state = CATDOS_STATE_CONFIG_WIFI;
     int total_items = preferences_get_int("count_ap", 0);
+    ESP_LOGI(CATDOS_TAG, "Total items: %d", total_items);
     if (total_items == 0) {
       oled_screen_display_text_center("No WIFI", 1, OLED_DISPLAY_NORMAL);
       oled_screen_display_text_center("Add WiFi", 2, OLED_DISPLAY_NORMAL);
       oled_screen_display_text_center("From console", 3, OLED_DISPLAY_NORMAL);
       return;
     }
-    catdos_module_display_wifi();
+    // }else{
+    //   catdos_module_display_wifi();
+    // }
   }
 }
 
 static void catdos_module_display_wifi() {
   oled_screen_clear();
-  oled_screen_display_text_center("Selected WIFI", 0, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("Select WIFI", 0, OLED_DISPLAY_NORMAL);
+  int total_items = preferences_get_int("count_ap", 0);
+
+  if (total_items == 0) {
+    oled_screen_display_text_center("No WIFI", 1, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text_center("Add WIFI", 2, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text_center("From console", 3, OLED_DISPLAY_NORMAL);
+    return;
+  }
 
   for (int i = selected_item; i < max_items + selected_item; i++) {
     char wifi_ap[100];
@@ -474,7 +486,7 @@ static void catdos_module_display_wifi() {
     esp_err_t err = preferences_get_string(wifi_ap, wifi_ssid, 100);
     if (err != ESP_OK) {
       ESP_LOGW(__func__, "Error getting AP %d", i);
-      return;
+      continue;
     }
     char wifi_text[120];
     if (strlen(wifi_ssid) > 16) {
@@ -509,6 +521,9 @@ static void catdos_module_cb_connection(bool state) {
       catdos_state = CATDOS_STATE_CONFIG_TARGET;
     }
   } else {
+    if (is_exit) {
+      return;
+    }
     oled_screen_display_text_center("WIFI", 0, OLED_DISPLAY_NORMAL);
     oled_screen_display_text_center("Error", 1, OLED_DISPLAY_NORMAL);
     vTaskDelay(2000 / portTICK_PERIOD_MS);
@@ -536,6 +551,10 @@ static void catdos_module_show_target() {
   if (err != ESP_OK) {
     ESP_LOGE(CATDOS_TAG, "Error getting endpoint");
     return;
+  }
+  bool is_target = catdos_module_is_config_target();
+  if (is_target) {
+    catdos_state = CATDOS_STATE_ATTACK;
   }
   oled_screen_display_text_center("Target", 0, OLED_DISPLAY_INVERT);
   oled_screen_display_text_center("Host", 1, OLED_DISPLAY_NORMAL);
@@ -626,10 +645,15 @@ static void catdos_module_state_machine(uint8_t button_name,
     case CATDOS_STATE_ATTACK: {
       switch (button_name) {
         case BUTTON_LEFT:
-          menus_module_exit_app();
+          is_exit = true;
+          menus_module_reset();
           break;
         case BUTTON_RIGHT:
-          catdos_module_send_attack();
+          xTaskCreate(&catdos_module_send_attack, "http_send_task", 4096, NULL,
+                      5, NULL);
+          xTaskCreate(&catdos_module_display_attack_animation, "http_an_task",
+                      4096, NULL, 5, NULL);
+          // catdos_module_send_attack();
           break;
         case BUTTON_UP:
         case BUTTON_DOWN:
