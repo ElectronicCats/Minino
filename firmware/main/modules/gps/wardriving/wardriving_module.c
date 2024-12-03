@@ -92,16 +92,8 @@ uint16_t get_frequency(uint8_t primary) {
 }
 
 void wardriving_module_scan_task(void* pvParameters) {
-  oled_screen_clear();
-  oled_screen_display_text_center("Start sta", 3, OLED_DISPLAY_NORMAL);
-  wifi_driver_init_sta();
-  oled_screen_clear();
-  oled_screen_display_text_center("Finished", 3, OLED_DISPLAY_NORMAL);
-
   while (true) {
-    oled_screen_clear();
-    oled_screen_display_text_center("Scanning module", 3, OLED_DISPLAY_NORMAL);
-    wifi_scanner_module_scan();
+    // wifi_scanner_module_scan();
     vTaskDelay(WIFI_SCAN_REFRESH_RATE_MS / portTICK_PERIOD_MS);
   }
 }
