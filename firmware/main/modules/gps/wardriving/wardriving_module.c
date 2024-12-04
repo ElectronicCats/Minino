@@ -93,7 +93,7 @@ uint16_t get_frequency(uint8_t primary) {
 
 void wardriving_module_scan_task(void* pvParameters) {
   while (true) {
-    // wifi_scanner_module_scan();
+    wifi_scanner_module_scan();
     vTaskDelay(WIFI_SCAN_REFRESH_RATE_MS / portTICK_PERIOD_MS);
   }
 }

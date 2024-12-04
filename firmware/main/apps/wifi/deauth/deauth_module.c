@@ -78,6 +78,7 @@ static void deauth_run_scan_task() {
   while (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 2)) {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
+  vTaskDelete(NULL);
 }
 
 static void deauth_handle_attacks() {
