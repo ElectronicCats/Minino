@@ -278,9 +278,9 @@ esp_err_t wardriving_module_verify_sd_card() {
 
 // TODO: return error code
 void wardriving_module_begin() {
-#if !defined(CONFIG_WARDRIVING_MODULE_DEBUG)
-  esp_log_level_set(TAG, ESP_LOG_NONE);
-#endif
+  // #if !defined(CONFIG_WARDRIVING_MODULE_DEBUG)
+  //   esp_log_level_set(TAG, ESP_LOG_NONE);
+  // #endif
   ESP_LOGI(TAG, "Wardriving module begin");
   csv_lines = CSV_HEADER_LINES;
   wifi_scanned_packets = 0;
@@ -362,6 +362,8 @@ void wardriving_module_keyboard_cb(uint8_t button_name, uint8_t button_event) {
 
   switch (button_name) {
     case BUTTON_LEFT:
+      ESP_LOGI(TAG, "Left button pressed");
+      wardriving_module_stop_scan();
       menus_module_exit_app();
       break;
     case BUTTON_RIGHT:

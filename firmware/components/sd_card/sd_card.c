@@ -272,6 +272,11 @@ esp_err_t sd_card_read_file(const char* path) {
     return ESP_FAIL;
   }
 
+  if (path == NULL) {
+    ESP_LOGE(TAG, "Path is NULL");
+    return ESP_FAIL;
+  }
+
   uint8_t path_len = strlen(path);
   char full_path[path_len + 1 + strlen(MOUNT_POINT)];
   sprintf(full_path, "%s/%s", MOUNT_POINT, path);
