@@ -16,7 +16,7 @@
 
 #define FILE_NAME DIR_NAME "/Warbee"
 
-const char* TAG = "warbee";
+static const char* TAG = "warbee";
 
 static TaskHandle_t zigbee_task_sniffer = NULL;
 static TaskHandle_t scanning_zigbee_animation_task_handle = NULL;
@@ -116,7 +116,7 @@ static void warbee_gps_event_handler_cb(gps_t* gps) {
       ESP_LOGE("Warbee", "Failed to create %s directory", DIR_NAME);
       return;
     }
-    ESP_LOGI("Warbee", "Nueva session");
+    ESP_LOGI("Warbee", "New session");
     context_session.session_str = get_str_date_time(gps);
     context_session.session_records_count = 0;
     update_file_name(context_session.session_str);
@@ -329,7 +329,7 @@ void warbee_module_begin() {
   if (wardriving_module_verify_sd_card() != ESP_OK) {
     return;
   }
-  ESP_LOGI("Warbee", "Wardriving module begin");
+  ESP_LOGI("Warbee", "Warbee module begin");
   csv_lines = CSV_HEADER_LINES;
   ESP_LOGI("Warbee", "Free heap size before allocation: %" PRIu32 " bytes",
            esp_get_free_heap_size());
@@ -366,7 +366,7 @@ void warbee_module_begin() {
 }
 
 void warbee_module_exit() {
-  ESP_LOGI("Warbee", "Wardriving module end");
+  ESP_LOGI("Warbee", "Warbee module end");
   ieee_sniffer_stop();
   sd_card_read_file(csv_file_name);
   sd_card_unmount();

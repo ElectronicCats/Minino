@@ -29,7 +29,7 @@ typedef enum {
   WARDRIVING_MODULE_STATE_STOPPED
 } wardriving_module_state_t;
 
-const char* TAG = "wardriving";
+static const char* TAG = "wardriving";
 wardriving_module_state_t wardriving_module_state =
     WARDRIVING_MODULE_STATE_STOPPED;
 TaskHandle_t wardriving_module_scan_task_handle = NULL;
