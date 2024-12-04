@@ -23,7 +23,19 @@ void wifi_scanner_module_scan() {
   }
 
   ap_records.count = CONFIG_SCAN_MAX_AP;
-  ESP_ERROR_CHECK(esp_wifi_start());
+  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+  err = esp_wifi_init(&cfg);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to init wifi: %s",
+             esp_err_to_name(err));
+    return;
+  }
+  err = esp_wifi_start();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to start wifi: %s",
+             esp_err_to_name(err));
+    return;
+  }
   ESP_ERROR_CHECK(esp_wifi_clear_ap_list());
   ESP_ERROR_CHECK(esp_wifi_scan_start(NULL, true));
   ESP_LOGI(TAG_WIFI_SCANNER_MODULE, "Max AP number ap_info can hold = %u",
