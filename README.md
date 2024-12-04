@@ -60,7 +60,7 @@ Minino can operate in 6 different technologies:
 - [x] BLE Spammer
 - [x] BLE Spoffing (HID device, audio control)
 - [x] BLE Trackers Scanner (AirTags, Tile, etc)
-- [ ] Wireshark integration
+- [x] Wireshark integration
 ### Zigbee
 - [x] Zigbee sniffer
 - [x] Zigbee spoofing (Switch End Device)
@@ -75,8 +75,9 @@ Minino can operate in 6 different technologies:
 
 ### Matter
 - [ ] Matter protocol support
+- [ ] Matter Spoof
 - [ ] Matter CLI
-
+      
 ### Tools
 - [x] OTA Firmware Update
 - [x] GPS Location
@@ -85,6 +86,7 @@ Minino can operate in 6 different technologies:
 - [x] SD
 - [x] File Manager Web (Local AP and WIFI access)
 - [x] File Manager Local
+- [x] Serial CMD Commander
 - [ ] I2C Scanner
 - [ ] UART2
 
