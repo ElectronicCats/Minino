@@ -59,3 +59,5 @@ void wifi_screens_sniffer_animation_stop();
 void wifi_screeens_show_sd_not_supported();
 
 void wifi_screeens_show_sd_not_found();
+
+void wifi_screens_show_no_mem();

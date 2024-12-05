@@ -14,7 +14,6 @@ NO_OTA_BUILD_FINAL_DIR="minino-noota-firmware-$PROJECT_VERSION"
 
 # Build the firmware
 echo "Building ota firmware..."
-make setup
 idf.py @profiles/ota build
 mkdir -p $TEMPORARY_BUILD_DIR
 
@@ -48,5 +47,7 @@ echo "Cleaning build files..."
 rm -rf $TEMPORARY_BUILD_DIR
 rm -rf $OTA_BUILD_FINAL_DIR
 rm -rf $NO_OTA_BUILD_FINAL_DIR
+rm -rf build-noota
+rm -rf build-ota
 
 echo "Done!"

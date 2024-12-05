@@ -139,3 +139,5 @@ esp_err_t sd_card_write_file(const char* path, char* data);
  * @return sd_card_info_t
  */
 sd_card_info_t sd_card_get_info();
+
+esp_err_t sd_card_append_to_file(const char* path, char* data);

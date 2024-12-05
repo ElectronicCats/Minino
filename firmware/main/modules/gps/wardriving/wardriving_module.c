@@ -7,32 +7,16 @@
 
 #include "gps_module.h"
 #include "menus_module.h"
+#include "oled_screen.h"
 #include "sd_card.h"
 #include "wardriving_module.h"
 #include "wardriving_screens_module.h"
 #include "wifi_controller.h"
 #include "wifi_scanner.h"
 
-#define DIR_NAME       "Wardriving"
-#define FILE_NAME      DIR_NAME "/Minino"
-#define FORMAT_VERSION "WigleWifi-1.6"
-#define APP_VERSION    CONFIG_PROJECT_VERSION
-#define MODEL          "MININO"
-#define RELEASE        APP_VERSION
-#define DEVICE         "MININO"
-#define DISPLAY        "SH1106 OLED"
-#define BOARD          "ESP32C6"
-#define BRAND          "Electronic Cats"
-#define STAR           "Sol"
-#define BODY           "3"
-#define SUB_BODY       "0"
+#include "wardriving_common.h"
 
-#define MAC_ADDRESS_FORMAT "%02x:%02x:%02x:%02x:%02x:%02x"
-#define EMPTY_MAC_ADDRESS  "00:00:00:00:00:00"
-#define CSV_LINE_SIZE      150  // Got it from real time tests
-#define CSV_FILE_SIZE      (CSV_LINE_SIZE) * (MAX_CSV_LINES)
-#define CSV_HEADER_LINES   2  // Check `csv_header` variable
-#define MAX_CSV_LINES      200 + CSV_HEADER_LINES
+#define FILE_NAME DIR_NAME "/Minino"
 
 #define WIFI_SCAN_REFRESH_RATE_MS   3000
 #define DISPLAY_REFRESH_RATE_SEC    2
@@ -45,7 +29,7 @@ typedef enum {
   WARDRIVING_MODULE_STATE_STOPPED
 } wardriving_module_state_t;
 
-const char* TAG = "wardriving";
+static const char* TAG = "wardriving";
 wardriving_module_state_t wardriving_module_state =
     WARDRIVING_MODULE_STATE_STOPPED;
 TaskHandle_t wardriving_module_scan_task_handle = NULL;
@@ -103,20 +87,11 @@ char* get_auth_mode(int authmode) {
   }
 }
 
-char* get_full_date_time(gps_t* gps) {
-  char* date_time = malloc(sizeof(char) * 30);
-  sprintf(date_time, "%d-%d-%d %d:%d:%d", gps->date.year, gps->date.month,
-          gps->date.day, gps->tim.hour, gps->tim.minute, gps->tim.second);
-  return date_time;
-}
-
 uint16_t get_frequency(uint8_t primary) {
   return 2412 + 5 * (primary - 1);
 }
 
 void wardriving_module_scan_task(void* pvParameters) {
-  wifi_driver_init_sta();
-
   while (true) {
     wifi_scanner_module_scan();
     vTaskDelay(WIFI_SCAN_REFRESH_RATE_MS / portTICK_PERIOD_MS);
@@ -336,10 +311,10 @@ void wardriving_module_end() {
 }
 
 void wardriving_module_start_scan() {
+  menus_module_set_app_state(true, wardriving_module_keyboard_cb);
   if (wardriving_module_verify_sd_card() != ESP_OK) {
     return;
   }
-  menus_module_set_app_state(true, wardriving_module_keyboard_cb);
   ESP_LOGI(TAG, "Start scan");
   wardriving_module_state = WARDRIVING_MODULE_STATE_SCANNING;
   xTaskCreate(wardriving_module_scan_task, "wardriving_module_scan_task", 4096,
@@ -381,12 +356,13 @@ void wardriving_module_stop_scan() {
 }
 
 void wardriving_module_keyboard_cb(uint8_t button_name, uint8_t button_event) {
-  if (button_event != BUTTON_SINGLE_CLICK) {
+  if (button_event != BUTTON_PRESS_DOWN) {
     return;
   }
 
   switch (button_name) {
     case BUTTON_LEFT:
+      wardriving_module_stop_scan();
       menus_module_exit_app();
       break;
     case BUTTON_RIGHT:
@@ -395,6 +371,7 @@ void wardriving_module_keyboard_cb(uint8_t button_name, uint8_t button_event) {
       } else if (wardriving_module_state ==
                  WARDRIVING_MODULE_STATE_INVALID_SD_CARD) {
         wardriving_screens_module_formating_sd_card();
+        sd_card_settings_format();
         esp_err_t err = sd_card_check_format();
         if (err == ESP_OK) {
           ESP_LOGI(TAG, "Format done");

@@ -20,6 +20,7 @@
 #include "sd_card_settings_module.h"
 #include "settings_module.h"
 #include "stealth_mode.h"
+#include "warbee_module.h"
 #include "wardriving_module.h"
 #include "wardriving_screens_module.h"
 #include "web_file_browser_module.h"
@@ -76,6 +77,7 @@ typedef enum {
   MENU_GPS_HELP,
   /* Wardriving submenus */
   MENU_GPS_WARDRIVING_START,
+  MENU_GPS_WARDRIVING_BEE_START,
   MENU_GPS_WARDRIVING_HELP,
   /* About submenus */
   MENU_ABOUT_VERSION,
@@ -281,6 +283,7 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = NULL,
      .on_exit_cb = NULL,
      .is_visible = true},
+    #ifdef CONFIG_ZIGBEE_APP_SPOOFING_SWITCH
     {.display_name = "Switch",
      .menu_idx = MENU_ZIGBEE_SWITCH,
      .parent_idx = MENU_ZIGBEE_SPOOFING,
@@ -289,6 +292,8 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = zigbee_module_switch_enter,
      .on_exit_cb = NULL,
      .is_visible = true},
+    #endif
+    #ifdef CONFIG_ZIGBEE_APP_SNIFFER_LIGHT
     {.display_name = "Light",
      .menu_idx = MENU_ZIGBEE_LIGHT,
      .parent_idx = MENU_ZIGBEE_SPOOFING,
@@ -297,6 +302,7 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = NULL,
      .on_exit_cb = NULL,
      .is_visible = true},
+    #endif
   #endif
   #ifdef CONFIG_ZIGBEE_APP_SNIFFER
     {.display_name = "Sniffer",
@@ -362,13 +368,22 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = wardriving_module_begin,
      .on_exit_cb = wardriving_module_end,
      .is_visible = true},
-    {.display_name = "Start",
+    {.display_name = "AP Start",
      .menu_idx = MENU_GPS_WARDRIVING_START,
      .parent_idx = MENU_GPS_WARDRIVING,
      .last_selected_submenu = 0,
      .on_enter_cb = wardriving_module_start_scan,
      .on_exit_cb = wardriving_module_stop_scan,
      .is_visible = true},
+    #ifdef CONFIG_GPS_APP_WARDRIVING_ZB
+    {.display_name = "Zigbee Start",
+     .menu_idx = MENU_GPS_WARDRIVING_BEE_START,
+     .parent_idx = MENU_GPS_WARDRIVING,
+     .last_selected_submenu = 0,
+     .on_enter_cb = warbee_module_begin,
+     .on_exit_cb = warbee_module_exit,
+     .is_visible = true},
+    #endif
     {.display_name = "Help",
      .menu_idx = MENU_GPS_WARDRIVING_HELP,
      .parent_idx = MENU_GPS_WARDRIVING,

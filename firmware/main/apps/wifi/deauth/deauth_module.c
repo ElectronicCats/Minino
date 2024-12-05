@@ -47,13 +47,13 @@ static void deauth_module_cb_event_run(uint8_t button_name,
 static void deauth_module_cb_event_captive_portal(uint8_t button_name,
                                                   uint8_t button_event);
 
-static void scanning_task(void* pvParameters);
+static void scanning_task();
 static void deauth_run_scan_task();
 static void deauth_increment_item();
 static void deauth_decrement_item();
 static void deauth_handle_attacks();
 
-static void scanning_task(void* pvParameters) {
+static void scanning_task() {
   uint8_t scan_count = 0;
   while (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 2) &&
          scan_count < SCAN_RETRIES) {
@@ -125,6 +125,13 @@ void deauth_module_begin() {
 
   memset(&current_wifi_state.wifi_config, 0, sizeof(wifi_config_t));
   current_wifi_state.wifi_config = wifi_driver_access_point_begin();
+
+  ap_records = wifi_scanner_get_ap_records();
+  if (ap_records == NULL) {
+    ESP_LOGE("deauth", "Failed to get ap records");
+    return;
+  }
+  ap_records->count = 0;
 
   xTaskCreate(scanning_task, "wifi_scan", 4096, NULL, 5, NULL);
   deauth_run_scan_task();

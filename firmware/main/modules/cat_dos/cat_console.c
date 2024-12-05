@@ -56,7 +56,7 @@ static void initialize_console(void) {
   esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
   // initialize_filesystem();
   // repl_config.history_save_path = HISTORY_FILE_PATH;
-  repl_config.prompt = "bsides>";
+  repl_config.prompt = "minino>";
 
   esp_console_dev_usb_serial_jtag_config_t usbjtag_config =
       ESP_CONSOLE_DEV_USB_SERIAL_JTAG_CONFIG_DEFAULT();

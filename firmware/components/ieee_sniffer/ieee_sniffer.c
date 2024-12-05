@@ -10,10 +10,13 @@
 #include "freertos/queue.h"
 #include "freertos/task.h"
 
+#define HOPPING_TIME 3500
+
 static esp_err_t err;
 static QueueHandle_t packet_rx_queue = NULL;
 static ieee_sniffer_cb_t packet_callback = NULL;
 static int current_channel = IEEE_SNIFFER_CHANNEL_DEFAULT;
+static bool running = false;
 
 static void debug_print_packet(uint8_t* packet, uint8_t packet_length);
 static void debug_handler_task(void* pvParameters);
@@ -34,6 +37,14 @@ void ieee_sniffer_register_cb(ieee_sniffer_cb_t callback) {
   packet_callback = callback;
 }
 
+uint8_t ieee_sniffer_get_channel() {
+  return current_channel;
+}
+
+int8_t ieee_sniffer_get_rssi() {
+  return esp_ieee802154_get_recent_rssi();
+}
+
 void ieee_sniffer_set_channel(int channel) {
   current_channel = channel;
   if (channel < IEEE_SNIFFER_CHANNEL_MIN) {
@@ -51,7 +62,7 @@ void ieee_sniffer_set_channel(int channel) {
   ESP_LOGI(TAG_IEEE_SNIFFER, "Channel set to %d", current_channel);
 }
 
-void ieee_sniffer_begin(void) {
+static void ieee_sniffer_configure() {
 #if !defined(CONFIG_IEEE_SNIFFER_DEBUG)
   esp_log_level_set(TAG_IEEE_SNIFFER, ESP_LOG_NONE);
 #endif
@@ -92,13 +103,33 @@ void ieee_sniffer_begin(void) {
   }
   esp_ieee802154_set_extended_address(eui64_rev);
   ESP_ERROR_CHECK(esp_ieee802154_receive());
+}
 
-  while (true) {
+void ieee_sniffer_begin(void) {
+  running = true;
+  ieee_sniffer_configure();
+  while (running) {
     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
+  vTaskDelete(NULL);
+}
+
+void ieee_sniffer_channel_hop() {
+  running = true;
+  ieee_sniffer_configure();
+  esp_ieee802154_disable();
+  while (running) {
+    esp_ieee802154_enable();
+    ieee_sniffer_set_channel(current_channel + 1);
+    esp_ieee802154_receive();
+    vTaskDelay(HOPPING_TIME / portTICK_PERIOD_MS);
+    esp_ieee802154_disable();
+  }
+  vTaskDelete(NULL);
 }
 
 void ieee_sniffer_stop(void) {
+  running = false;
   err = esp_ieee802154_disable();
   if (err != ESP_OK) {
     ESP_LOGE(TAG_IEEE_SNIFFER, "Error disabling IEEE 802.15.4 driver: %s",

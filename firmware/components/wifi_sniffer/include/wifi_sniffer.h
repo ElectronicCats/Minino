@@ -24,7 +24,7 @@ void wifi_sniffer_begin();
  *
  * @return void
  */
-void wifi_sniffer_start();
+esp_err_t wifi_sniffer_start();
 
 /**
  * @brief Stop the wifi sniffer

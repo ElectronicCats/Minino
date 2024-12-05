@@ -279,11 +279,8 @@ void network_failed_task(void* pvParameters) {
  */
 void wait_for_devices_task(void* pvParameters) {
   while (true) {
-    if (switch_state != SWITCH_WAIT_FOR_DEVICES) {
-      continue;
-    }
     zigbee_switch_display_status_cb(WAITING_FOR_DEVICES);
-    vTaskDelay(300 / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(300));
   }
 }
 
@@ -298,7 +295,6 @@ void switch_state_machine_task(void* pvParameters) {
   while (true) {
     if (switch_state != switch_state_prev) {
       ESP_LOGI(TAG, "Switch state: %s", switch_state_names[switch_state]);
-
       switch (switch_state) {
         case SWITCH_CREATE_NETWORK:
           zigbee_switch_display_status_cb(CREATING_NETWORK);

@@ -58,6 +58,27 @@ void sd_card_settings_verify_sd_card() {
   sd_card_unmount();
 }
 
+void sd_card_settings_format() {
+  esp_err_t err;
+  sd_card_settings_screens_module_formating_sd_card();
+  err = sd_card_check_format();
+  if (err == ESP_OK) {
+    ESP_LOGI(TAG, "Mount ok, formatting...");
+    state = SD_CARD_SETTINGS_FORMATTING;
+    esp_err_t err_format = sd_card_format();
+    if (err_format == ESP_OK) {
+      state = SD_CARD_SETTINGS_FORMAT_DONE;
+      sd_card_settings_screens_module_format_done();
+    } else {
+      state = SD_CARD_SETTINGS_FAILED_FORMAT;
+      sd_card_settings_screens_module_failed_format_sd_card();
+    }
+  } else {
+    state = SD_CARD_SETTINGS_FAILED_FORMAT;
+    sd_card_settings_screens_module_failed_format_sd_card();
+  }
+}
+
 void sd_card_settings_keyboard_cb(uint8_t button_name, uint8_t button_event) {
   if (button_event != BUTTON_PRESS_DOWN) {
     return;
@@ -84,23 +105,7 @@ void sd_card_settings_keyboard_cb(uint8_t button_name, uint8_t button_event) {
           }
           break;
         case SD_CARD_SETTINGS_FORMAT_QUESTION:
-          sd_card_settings_screens_module_formating_sd_card();
-          err = sd_card_check_format();
-          if (err == ESP_OK) {
-            ESP_LOGI(TAG, "Mount ok, formatting...");
-            state = SD_CARD_SETTINGS_FORMATTING;
-            esp_err_t err_format = sd_card_format();
-            if (err_format == ESP_OK) {
-              state = SD_CARD_SETTINGS_FORMAT_DONE;
-              sd_card_settings_screens_module_format_done();
-            } else {
-              state = SD_CARD_SETTINGS_FAILED_FORMAT;
-              sd_card_settings_screens_module_failed_format_sd_card();
-            }
-          } else {
-            state = SD_CARD_SETTINGS_FAILED_FORMAT;
-            sd_card_settings_screens_module_failed_format_sd_card();
-          }
+          sd_card_settings_format();
           break;
         case SD_CARD_SETTINGS_FORMATTING:
           // TODO: implement on LEFT button

@@ -166,6 +166,20 @@ uint8_t gps_module_get_time_zone() {
   return preferences_get_uint("time_zone", default_time_zone);
 }
 
+char* get_full_date_time(gps_t* gps) {
+  char* date_time = malloc(sizeof(char) * 30);
+  sprintf(date_time, "%d-%d-%d %d:%d:%d", gps->date.year, gps->date.month,
+          gps->date.day, gps->tim.hour, gps->tim.minute, gps->tim.second);
+  return date_time;
+}
+
+char* get_str_date_time(gps_t* gps) {
+  char* date_time = malloc(sizeof(char) * 30);
+  sprintf(date_time, "%d%d%d%d%d%d", gps->date.year, gps->date.month,
+          gps->date.day, gps->tim.hour, gps->tim.minute, gps->tim.second);
+  return date_time;
+}
+
 void gps_module_set_time_zone(uint8_t time_zone) {
   preferences_put_uint("time_zone", time_zone);
 }

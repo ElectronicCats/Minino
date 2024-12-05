@@ -157,7 +157,6 @@ static esp_err_t pcap_open(pcap_cmd_runtime_t* pcap) {
   } else {
     ESP_LOGE(TAG, "pcap file destination hasn't specified");
   }
-
   ESP_GOTO_ON_FALSE(fp, ESP_FAIL, err, TAG, "open file failed");
   pcap_config_t pcap_config = {
       .fp = fp,
@@ -465,7 +464,7 @@ int do_pcap_cmd(int argc, char** argv) {
   }
 
   if (pcap_args.open->count) {
-    pcap_open(&pcap_cmd_rt);
+    ret = pcap_open(&pcap_cmd_rt);
   }
 err:
   return ret;

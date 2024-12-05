@@ -84,3 +84,6 @@ void gps_module_register_cb(gps_event_callback_t callback);
 void gps_module_unregister_cb();
 
 void gps_module_general_data_run();
+
+char* get_full_date_time(gps_t* gps);
+char* get_str_date_time(gps_t* gps);
