@@ -39,14 +39,13 @@ void wifi_sniffer_begin() {
 #if !defined(CONFIG_WIFI_SNIFFER_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
-
   wifi_driver_init_null();
   register_sniffer_cmd();
   register_pcap_cmd();
   ESP_LOGI(TAG, "Commands registered");
 }
 
-void wifi_sniffer_start() {
+esp_err_t wifi_sniffer_start() {
   ESP_LOGI(TAG, "Starting sniffer");
 
   if (wifi_sniffer_is_destination_sd()) {
@@ -55,7 +54,10 @@ void wifi_sniffer_start() {
 
   const char** pcap_argv[] = {"pcap", "--open", "-f", "sniffer"};
   uint8_t pcap_argc = 4;
-  do_pcap_cmd(pcap_argc, (char**) pcap_argv);
+  esp_err_t ret = do_pcap_cmd(pcap_argc, (char**) pcap_argv);
+  if (ret != ESP_OK) {
+    return ret;
+  }
 
   char* channel_str = (char*) malloc(4);
   uint8_t channel = wifi_sniffer_get_channel();
@@ -64,6 +66,7 @@ void wifi_sniffer_start() {
                                  channel_str, "-n", "2147483647"};
   uint8_t sniffer_argc = 7;
   do_sniffer_cmd(sniffer_argc, (char**) sniffer_argv);
+  return ESP_OK;
 }
 
 void wifi_sniffer_stop() {

@@ -36,6 +36,7 @@ void wardriving_screens_wifi_animation_task() {
     idx = ++idx > 3 ? 0 : idx;
     vTaskDelay(500 / portTICK_PERIOD_MS);
   }
+  vTaskDelete(NULL);
 }
 
 void wardriving_screens_module_scanning(uint32_t packets, char* signal) {

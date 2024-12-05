@@ -45,9 +45,11 @@ static wlan_filter_table_t wifi_filter_hash_table[SNIFFER_WLAN_FILTER_MAX] = {
 static sniffer_cb_t sniffer_cb = NULL;
 static sniffer_animation_cb_t sniffer_animation_start_cb = NULL;
 static sniffer_animation_cb_t sniffer_animation_stop_cb = NULL;
+static void (*out_of_mem_cb)();
 
-void wifi_sniffer_register_cb(sniffer_cb_t callback) {
+void wifi_sniffer_register_cb(sniffer_cb_t callback, void* _out_of_mem_cb) {
   sniffer_cb = callback;
+  out_of_mem_cb = _out_of_mem_cb;
 }
 
 void wifi_sniffer_register_animation_cbs(sniffer_animation_cb_t start_cb,
@@ -69,6 +71,7 @@ static uint32_t hash_func(const char* str, uint32_t max_num) {
 }
 
 static void create_wifi_filter_hashtable(void) {
+  memset(wifi_filter_hash_table, 0, sizeof(wifi_filter_hash_table));
   char* wifi_filter_keys[SNIFFER_WLAN_FILTER_MAX] = {
       "mgmt", "data", "ctrl", "misc", "mpdu", "ampdu", "fcsfail"};
   uint32_t wifi_filter_values[SNIFFER_WLAN_FILTER_MAX] = {
@@ -146,6 +149,7 @@ static void wifi_sniffer_cb(void* recv_buf, wifi_promiscuous_pkt_type_t type) {
 static void sniffer_task(void* parameters) {
   sniffer_packet_info_t packet_info;
   sniffer_runtime_t* sniffer = (sniffer_runtime_t*) parameters;
+  bool force_exit = false;
   if (sniffer_animation_start_cb) {
     sniffer_animation_start_cb();
   }
@@ -171,6 +175,11 @@ static void sniffer_task(void* parameters) {
                        packet_info.seconds,
                        packet_info.microseconds) != ESP_OK) {
       ESP_LOGW(TAG, "save captured packet failed");
+      if (out_of_mem_cb) {
+        xSemaphoreGive(sniffer->sem_task_over);
+        force_exit = true;
+        out_of_mem_cb();
+      }
     }
     free(packet_info.payload);
     if (sniffer->packets_to_sniff > 0) {
@@ -186,7 +195,9 @@ static void sniffer_task(void* parameters) {
   }
   /* notify that sniffer task is over */
   if (sniffer->packets_to_sniff != 0) {
-    xSemaphoreGive(sniffer->sem_task_over);
+    if (!force_exit) {
+      xSemaphoreGive(sniffer->sem_task_over);
+    }
   }
   if (sniffer_cb) {
     sniffer_cb(sniffer);
@@ -322,6 +333,7 @@ err_sem:
 err_queue:
   sniffer->is_running = false;
 err:
+  out_of_mem_cb();
   return ret;
 }
 
