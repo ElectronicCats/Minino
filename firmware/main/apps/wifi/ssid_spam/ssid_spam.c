@@ -7,6 +7,7 @@
 #include "nvs_flash.h"
 #include "string.h"
 
+#include "animations_task.h"
 #include "keyboard_module.h"
 #include "menus_module.h"
 #include "ssid_spam_screens.h"
@@ -125,6 +126,7 @@ static void ssid_spam_input_cb(uint8_t button_name, uint8_t button_event) {
 
 void ssid_spam_begin() {
   ssid_spam_screens_running();
+  animations_task_run(ssid_spam_animation, 200, NULL);
   ssid_spam_init();
   menus_module_set_app_state(true, ssid_spam_input_cb);
 }
