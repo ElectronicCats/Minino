@@ -36,12 +36,26 @@ void wifi_scanner_module_scan() {
              esp_err_to_name(err));
     return;
   }
-  ESP_ERROR_CHECK(esp_wifi_clear_ap_list());
-  ESP_ERROR_CHECK(esp_wifi_scan_start(NULL, true));
+  err = esp_wifi_clear_ap_list();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to clear AP list: %s",
+             esp_err_to_name(err));
+    return;
+  }
+  err = esp_wifi_scan_start(NULL, true);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to start scan: %s",
+             esp_err_to_name(err));
+    return;
+  }
   ESP_LOGI(TAG_WIFI_SCANNER_MODULE, "Max AP number ap_info can hold = %u",
            ap_records.count);
-  ESP_ERROR_CHECK(
-      esp_wifi_scan_get_ap_records(&ap_records.count, ap_records.records));
+  err = esp_wifi_scan_get_ap_records(&ap_records.count, ap_records.records);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to get AP records: %s",
+             esp_err_to_name(err));
+    return;
+  }
   ESP_LOGI(TAG_WIFI_SCANNER_MODULE, "Found %u APs.", ap_records.count);
   ESP_LOGD(TAG_WIFI_SCANNER_MODULE, "Scan done.");
 }

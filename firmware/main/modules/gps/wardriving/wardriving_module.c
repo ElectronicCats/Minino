@@ -362,6 +362,7 @@ void wardriving_module_keyboard_cb(uint8_t button_name, uint8_t button_event) {
 
   switch (button_name) {
     case BUTTON_LEFT:
+      wardriving_module_stop_scan();
       menus_module_exit_app();
       break;
     case BUTTON_RIGHT:
