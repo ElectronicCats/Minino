@@ -56,15 +56,14 @@ Minino can operate in 6 different technologies:
 - [x] Analyzer
 - [ ] Wireshark integration
 ### BLE
-- [ ] BLE Sniffer
+- [x] BLE ADV Sniffer (Wireshark Integration)
 - [x] BLE Spammer
 - [x] BLE Spoffing (HID device, audio control)
 - [x] BLE Trackers Scanner (AirTags, Tile, etc)
-- [ ] Wireshark integration
 ### Zigbee
 - [x] Zigbee sniffer
 - [x] Zigbee spoofing (Switch End Device)
-- [ ] Wardriving
+- [x] Wardriving
 - [x] Wireshark integration
 
 ### Thread
