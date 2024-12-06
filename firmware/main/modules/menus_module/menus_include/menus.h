@@ -20,6 +20,7 @@
 #include "ota_module.h"
 #include "sd_card_settings_module.h"
 #include "settings_module.h"
+#include "ssid_spam.h"
 #include "stealth_mode.h"
 #include "warbee_module.h"
 #include "wardriving_module.h"
@@ -45,6 +46,7 @@ typedef enum {
   MENU_WIFI_ANALIZER,
   MENU_WIFI_DEAUTH,
   MENU_WIFI_DOS,
+  MENU_WIFI_SSID_SPAM,
   /* WiFi analizer items */
   MENU_WIFI_ANALYZER_RUN,
   MENU_WIFI_ANALYZER_SETTINGS,
@@ -220,6 +222,16 @@ menu_t menus[] = {  //////////////////////////////////
      .entry_cmd = "dos",
      .last_selected_submenu = 0,
      .on_enter_cb = catdos_module_begin,
+     .on_exit_cb = NULL,
+     .is_visible = true},
+  #endif
+  #ifdef CONFIG_WIFI_APP_SSID_SPAM
+    {.display_name = "SSID Spammer",
+     .menu_idx = MENU_WIFI_SSID_SPAM,
+     .parent_idx = MENU_WIFI_APPS,
+     .entry_cmd = "ssid_spam",
+     .last_selected_submenu = 0,
+     .on_enter_cb = ssid_spam_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
