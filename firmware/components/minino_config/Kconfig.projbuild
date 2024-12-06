@@ -710,28 +710,28 @@ config GPS_APP_WARDRIVING_ZB
 		Enable or disable the GPS Wardriving Zigbee application.
 endif # GPS_APPS_ENABLE
 
-################################# UTILITIES ###################################
+################################# GPIO ###################################
 
-config UTILITIES_APPS_ENABLE
-    bool "Enable Utilities Apps"
+config GPIO_APPS_ENABLE
+    bool "Enable GPIO Apps"
     default true
     help
-      Enable or disable all utilities applications.
+      Enable or disable all GPIO applications.
 
-if UTILITIES_APPS_ENABLE
+if GPIO_APPS_ENABLE
 
-config UTILITIES_I2C_SCAN_APP
+config GPIO_I2C_SCAN_APP
     bool "Enable I2C Scanner App"
     default true
     help
       Enable or disable the I2C Scanner application.
 
-config UTILITIES_UART_BRIDGE_APP
+config GPIO_UART_BRIDGE_APP
     bool "Enable UART Bridge App"
     default true
     help
       Enable or disable the UART Bridge application.
-endif # UTILITIES_APPS_ENABLE
+endif # GPIO_APPS_ENABLE
 
 ################################# OTA ###################################
 
