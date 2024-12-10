@@ -13,7 +13,6 @@ void wifi_scanner_module_scan() {
 #if !defined(CONFIG_WIFI_SCANNER_DEBUG)
   esp_log_level_set(TAG_WIFI_SCANNER_MODULE, ESP_LOG_NONE);
 #endif
-
   esp_err_t err = esp_event_loop_create_default();
   if (err != ESP_OK) {
     ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to create event loop: %s",
@@ -21,12 +20,17 @@ void wifi_scanner_module_scan() {
     esp_event_loop_delete_default();
     esp_event_loop_create_default();
   }
-
   ap_records.count = CONFIG_SCAN_MAX_AP;
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   err = esp_wifi_init(&cfg);
   if (err != ESP_OK) {
     ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to init wifi: %s",
+             esp_err_to_name(err));
+    return;
+  }
+  err = esp_wifi_set_mode(WIFI_MODE_STA);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to set wifi mode: %s",
              esp_err_to_name(err));
     return;
   }
