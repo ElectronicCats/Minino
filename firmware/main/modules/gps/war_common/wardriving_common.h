@@ -1,6 +1,5 @@
 #pragma once
 
-#define DIR_NAME       "warbee"
 #define FORMAT_VERSION "ElecCats-1.0"
 #define APP_VERSION    CONFIG_PROJECT_VERSION
 #define MODEL          "MININO"
@@ -15,7 +14,9 @@
 
 // Zigbee Packet fields
 #define ZB_ADDRESS_FORMAT "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x"
+#define WARBEE_DIR_NAME   "warbee"
 // AP WiFi Packet fields
+#define WARFI_DIR_NAME     "warfi"
 #define MAC_ADDRESS_FORMAT "%02x:%02x:%02x:%02x:%02x:%02x"
 #define EMPTY_MAC_ADDRESS  "00:00:00:00:00:00"
 
