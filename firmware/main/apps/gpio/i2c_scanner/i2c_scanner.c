@@ -43,8 +43,10 @@ void imprimir_direcciones(uint8_t* found_addresses, size_t num_addresses) {
   } else {
     nodes_arr = malloc(sizeof(char*) * num_addresses);
     for (size_t i = 0; i < num_addresses; i++) {
-      nodes_arr[i] = malloc(12);
-      sprintf(nodes_arr[i], "Node: 0x%02X", found_addresses[i]);
+      nodes_arr[i] = malloc(20);
+      sprintf(nodes_arr[i], "%s: 0x%02X",
+              found_addresses[i] == 0x3C ? "(Screen)" : "Node",
+              found_addresses[i]);
     }
   }
 }
