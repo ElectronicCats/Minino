@@ -14,7 +14,7 @@
 #include "wardriving_screens_module.h"
 #include "zigbee_bitmaps.h"
 
-#define FILE_NAME DIR_NAME "/Warbee"
+#define FILE_NAME WARBEE_DIR_NAME "/Warbee"
 
 static const char* TAG = "warbee";
 
@@ -110,10 +110,10 @@ static void warbee_gps_event_handler_cb(gps_t* gps) {
            gps->longitude);
 
   if (strcmp(context_session.session_str, "") == 0) {
-    esp_err_t err = sd_card_create_dir(DIR_NAME);
+    esp_err_t err = sd_card_create_dir(WARBEE_DIR_NAME);
 
     if (err != ESP_OK) {
-      ESP_LOGE("Warbee", "Failed to create %s directory", DIR_NAME);
+      ESP_LOGE("Warbee", "Failed to create %s directory", WARBEE_DIR_NAME);
       return;
     }
     ESP_LOGI("Warbee", "New session");

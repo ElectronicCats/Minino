@@ -15,10 +15,12 @@
 #include "file_manager_module.h"
 #include "gps_module.h"
 #include "gps_screens.h"
+#include "i2c_scanner.h"
 #include "open_thread_module.h"
 #include "ota_module.h"
 #include "sd_card_settings_module.h"
 #include "settings_module.h"
+#include "ssid_spam.h"
 #include "stealth_mode.h"
 #include "warbee_module.h"
 #include "wardriving_module.h"
@@ -39,10 +41,12 @@ typedef enum {
   MENU_ZIGBEE_APPS,
   MENU_THREAD_APPS,
   MENU_GPS,
+  MENU_GPIO_APPS,
   /* WiFi applications */
   MENU_WIFI_ANALIZER,
   MENU_WIFI_DEAUTH,
   MENU_WIFI_DOS,
+  MENU_WIFI_SSID_SPAM,
   /* WiFi analizer items */
   MENU_WIFI_ANALYZER_RUN,
   MENU_WIFI_ANALYZER_SETTINGS,
@@ -75,6 +79,9 @@ typedef enum {
   MENU_GPS_LOCATION,
   MENU_GPS_SPEED,
   MENU_GPS_HELP,
+  /* GPIO applications */
+  MENU_GPIO_I2C_SCANNER,
+  MENU_GPIO_UART_BRIDGE,
   /* Wardriving submenus */
   MENU_GPS_WARDRIVING_START,
   MENU_GPS_WARDRIVING_BEE_START,
@@ -215,6 +222,16 @@ menu_t menus[] = {  //////////////////////////////////
      .entry_cmd = "dos",
      .last_selected_submenu = 0,
      .on_enter_cb = catdos_module_begin,
+     .on_exit_cb = NULL,
+     .is_visible = true},
+  #endif
+  #ifdef CONFIG_WIFI_APP_SSID_SPAM
+    {.display_name = "SSID Spammer",
+     .menu_idx = MENU_WIFI_SSID_SPAM,
+     .parent_idx = MENU_WIFI_APPS,
+     .entry_cmd = "ssid_spam",
+     .last_selected_submenu = 0,
+     .on_enter_cb = ssid_spam_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
@@ -420,6 +437,35 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = gps_screens_show_help,
      .on_exit_cb = NULL,
      .is_visible = true},
+#endif
+#ifdef CONFIG_GPIO_APPS_ENABLE
+    {.display_name = "GPIO",
+     .menu_idx = MENU_GPIO_APPS,
+     .parent_idx = MENU_APPLICATIONS,
+     .last_selected_submenu = 0,
+     .on_enter_cb = NULL,
+     .on_exit_cb = NULL,
+     .is_visible = true},
+  #ifdef CONFIG_GPIO_I2C_SCAN_APP
+    {.display_name = "I2C Scanner",
+     .menu_idx = MENU_GPIO_I2C_SCANNER,
+     .parent_idx = MENU_GPIO_APPS,
+     .entry_cmd = "i2c_scanner",
+     .last_selected_submenu = 0,
+     .on_enter_cb = i2c_scanner_begin,
+     .on_exit_cb = NULL,
+     .is_visible = true},
+  #endif
+  #ifdef CONFIG_GPIO_UART_BRIDGE_APP
+    {.display_name = "UART Bridge",
+     .menu_idx = MENU_GPIO_UART_BRIDGE,
+     .parent_idx = MENU_GPIO_APPS,
+     .entry_cmd = "uart_bridge",
+     .last_selected_submenu = 0,
+     .on_enter_cb = NULL,
+     .on_exit_cb = NULL,
+     .is_visible = true},
+  #endif
 #endif
 #ifdef CONFIG_FILE_MANAGER_ENABLE
     {.display_name = "File Manager",

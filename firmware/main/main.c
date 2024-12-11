@@ -1,10 +1,7 @@
 #include <stdio.h>
-#include "apps/ble/hid_device/hid_module.h"
-#include "apps/ble/trackers/trackers_module.h"
 
 #include "buzzer.h"
 #include "cat_console.h"
-#include "cmd_control.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "flash_fs.h"
@@ -12,13 +9,8 @@
 #include "keyboard_module.h"
 #include "leds.h"
 #include "menus_module.h"
-#include "open_thread.h"
 #include "preferences.h"
 #include "sd_card.h"
-#include "warbee_module.h"
-#include "wardriving_module.h"
-#include "web_file_browser.h"
-#include "wifi_app.h"
 
 #define BUZZER_PIN GPIO_NUM_2
 
@@ -42,6 +34,5 @@ void app_main() {
   menus_module_begin();
   leds_off();
   preferences_put_bool("wifi_connected", false);
-  // warbee_module_begin();
   cat_console_begin();
 }
