@@ -272,6 +272,11 @@ esp_err_t sd_card_read_file(const char* path) {
     return ESP_FAIL;
   }
 
+  if (path == NULL) {
+    ESP_LOGE(TAG, "Path is NULL");
+    return ESP_FAIL;
+  }
+
   uint8_t path_len = strlen(path);
   char full_path[path_len + 1 + strlen(MOUNT_POINT)];
   sprintf(full_path, "%s/%s", MOUNT_POINT, path);
@@ -308,8 +313,31 @@ esp_err_t sd_card_write_file(const char* path, char* data) {
   char full_path[path_len + 1 + strlen(MOUNT_POINT)];
   sprintf(full_path, "%s/%s", MOUNT_POINT, path);
 
-  ESP_LOGI(TAG, "Opening file %s", full_path);
+  ESP_LOGI(TAG, "Opening file w %s", full_path);
   FILE* file = fopen(full_path, "w");
+  if (file == NULL) {
+    ESP_LOGE(TAG, "Failed to open file for writing");
+    return ESP_FAIL;
+  }
+  fprintf(file, data);
+  fclose(file);
+  ESP_LOGI(TAG, "File written");
+
+  return ESP_OK;
+}
+
+esp_err_t sd_card_append_to_file(const char* path, char* data) {
+  if (sd_card_is_not_mounted()) {
+    ESP_LOGE(TAG, "SD card not mounted");
+    return ESP_FAIL;
+  }
+
+  uint8_t path_len = strlen(path);
+  char full_path[path_len + 1 + strlen(MOUNT_POINT)];
+  sprintf(full_path, "%s/%s", MOUNT_POINT, path);
+
+  ESP_LOGI(TAG, "Opening file a %s", full_path);
+  FILE* file = fopen(full_path, "a");
   if (file == NULL) {
     ESP_LOGE(TAG, "Failed to open file for writing");
     return ESP_FAIL;

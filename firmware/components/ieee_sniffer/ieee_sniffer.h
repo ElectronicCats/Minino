@@ -78,4 +78,10 @@ void ieee_sniffer_stop(void);
  * @param channel The channel to set
  */
 void ieee_sniffer_set_channel(int channel);
+
+uint8_t ieee_sniffer_get_channel();
+int8_t ieee_sniffer_get_rssi();
+
+void ieee_sniffer_channel_hop();
+
 #endif  // IEEE_SNIFFER_H

@@ -3,6 +3,7 @@
 #include "animations_task.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
+#include "general_screens.h"
 #include "oled_screen.h"
 #include "wifi_bitmaps.h"
 
@@ -29,6 +30,8 @@ void wifi_screens_module_display_sniffer_cb(sniffer_runtime_t* sniffer) {
                              OLED_DISPLAY_INVERT);
     oled_screen_display_text(channel_str, x_offset, pkts_offset + 1,
                              OLED_DISPLAY_INVERT);
+    free(packets_str);
+    free(channel_str);
   } else {
     ESP_LOGI(TAG_WIFI_SCREENS_MODULE, "sniffer task stopped");
   }
@@ -77,4 +80,8 @@ void wifi_screeens_show_sd_not_found() {
   oled_screen_display_text_center("internal storage", 4, OLED_DISPLAY_NORMAL);
   vTaskDelay(2000 / portTICK_PERIOD_MS);
   oled_screen_clear();
+}
+
+void wifi_screens_show_no_mem() {
+  genera_screen_display_card_information("Out of memory", "free up space");
 }

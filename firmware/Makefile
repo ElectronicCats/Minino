@@ -21,6 +21,11 @@ clean:
 	rm sdkconfig
 	make setup
 
+ff:
+	make test_port
+	idf.py -p $(PORT) erase-flash
+		make flash monitor
+
 all: flash monitor
 
 .PHONY: test_port setup compile flash monitor clean all

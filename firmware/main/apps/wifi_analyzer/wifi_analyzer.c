@@ -25,6 +25,7 @@
 
 static const char* TAG = "wifi_module";
 static bool analizer_initialized = false;
+static bool no_mem = false;
 
 static general_menu_t analyzer_summary_menu;
 static char* wifi_analizer_summary_2[120] = {
@@ -32,6 +33,7 @@ static char* wifi_analizer_summary_2[120] = {
 };
 
 static void wifi_module_input_cb(uint8_t button_name, uint8_t button_event);
+static void wifi_module_summary_exit_cb();
 
 uint16_t get_summary_rows_count() {
   uint8_t num_items = 0;
@@ -48,10 +50,22 @@ uint16_t get_summary_rows_count() {
   return num_items;
 }
 
-void wifi_module_init_sniffer() {
+static void out_of_mem_handler() {
+  no_mem = true;
+  if (analizer_initialized) {
+    wifi_module_analyzer_run_exit();
+  } else {
+    wifi_module_summary_exit_cb();
+  }
+  wifi_screens_show_no_mem();
+  no_mem = false;
+}
+
+esp_err_t wifi_module_init_sniffer() {
   oled_screen_clear();
+  esp_err_t err = ESP_OK;
   if (wifi_sniffer_is_destination_sd()) {
-    esp_err_t err = sd_card_mount();
+    err = sd_card_mount();
     switch (err) {
       case ESP_OK:
         ESP_LOGI(TAG, "SD card mounted");
@@ -71,11 +85,19 @@ void wifi_module_init_sniffer() {
         break;
     }
   }
-  wifi_sniffer_start();
+  err = wifi_sniffer_start();
+  if (err != ESP_OK) {
+    analizer_initialized = false;
+    out_of_mem_handler();
+    return err;
+  }
   led_control_run_effect(led_control_zigbee_scanning);
+  return ESP_OK;
 }
 static void wifi_module_summary_exit_cb() {
-  wifi_sniffer_close_file();
+  if (analizer_initialized) {
+    wifi_sniffer_close_file();
+  }
   analyzer_scenes_main_menu();
 }
 
@@ -112,13 +134,21 @@ void wifi_module_analyzer_destination_exit() {
 }
 
 void wifi_analyzer_run() {
-  wifi_module_init_sniffer();
+  esp_err_t err = wifi_module_init_sniffer();
+  if (err != ESP_OK) {
+    return;
+  }
   menus_module_set_app_state(true, wifi_module_input_cb);
 }
 
 void wifi_analyzer_begin() {
+  if (no_mem) {
+    no_mem = false;
+    return;
+  }
   ESP_LOGI(TAG, "Initializing WiFi analizer module");
-  wifi_sniffer_register_cb(wifi_screens_module_display_sniffer_cb);
+  wifi_sniffer_register_cb(wifi_screens_module_display_sniffer_cb,
+                           out_of_mem_handler);
   wifi_sniffer_register_animation_cbs(wifi_screens_sniffer_animation_start,
                                       wifi_screens_sniffer_animation_stop);
   wifi_sniffer_register_summary_cb(wifi_module_analizer_summary_cb);
