@@ -20,6 +20,7 @@
 #include "ota_module.h"
 #include "sd_card_settings_module.h"
 #include "settings_module.h"
+#include "sleep_mode.h"
 #include "ssid_spam.h"
 #include "stealth_mode.h"
 #include "warbee_module.h"
@@ -105,6 +106,7 @@ typedef enum {
   MENU_SETTINGS_SD_CARD_CHECK_FORMAT,
   MENU_SETTINGS_SD_CARD_FORMAT,
   MENU_STEALTH_MODE,
+  MENU_SLEEP_MODE,
   /* Menu count */
   MENU_COUNT,  // Keep this at the end
 } menu_idx_t;
@@ -568,5 +570,12 @@ menu_t menus[] = {  //////////////////////////////////
      .parent_idx = MENU_SETTINGS,
      .last_selected_submenu = 0,
      .on_enter_cb = stealth_mode_open_menu,
+     .on_exit_cb = NULL,
+     .is_visible = true},
+    {.display_name = "Sleep Mode",
+     .menu_idx = MENU_SLEEP_MODE,
+     .parent_idx = MENU_SETTINGS,
+     .last_selected_submenu = 0,
+     .on_enter_cb = sleep_mode_settings,
      .on_exit_cb = NULL,
      .is_visible = true}};
