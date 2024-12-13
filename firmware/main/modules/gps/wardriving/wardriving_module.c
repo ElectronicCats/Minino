@@ -105,7 +105,7 @@ void wardriving_module_scan_task(void* pvParameters) {
  *
  * @return void
  */
-void update_file_name(char* full_date_time) {
+static void update_file_name(char* full_date_time) {
   sprintf(csv_file_name, "%s_%s.csv", FILE_NAME, full_date_time);
   // Replace " " by "_" and ":" by "-"
   for (int i = 0; i < strlen(csv_file_name); i++) {
@@ -128,7 +128,7 @@ void update_file_name(char* full_date_time) {
  *
  * @return void
  */
-void wardriving_module_save_to_file(gps_t* gps) {
+static void wardriving_module_save_to_file(gps_t* gps) {
   esp_err_t err = sd_card_create_dir(WARFI_DIR_NAME);
 
   if (err != ESP_OK) {

@@ -28,7 +28,7 @@ static uint16_t csv_lines;
 char* csv_file_name = NULL;
 char* csv_file_buffer = NULL;
 
-const char* csv_header = FORMAT_VERSION
+const char* war_bee_csv_header = FORMAT_VERSION
     ",appRelease=" APP_VERSION ",model=" MODEL ",release=" RELEASE
     ",device=" DEVICE ",display=" DISPLAY ",board=" BOARD ",brand=" BRAND
     ",star=" STAR ",body=" BODY ",subBody=" SUB_BODY
@@ -136,7 +136,8 @@ static void warbee_gps_event_handler_cb(gps_t* gps) {
       return;
     }
 
-    sprintf(csv_file_buffer, "%s\n", csv_header);  // Append header to csv file
+    sprintf(csv_file_buffer, "%s\n",
+            war_bee_csv_header);  // Append header to csv file
   }
 
   if (gps->sats_in_use == 0) {
@@ -315,7 +316,7 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
     }
 
     sprintf(csv_file_buffer, "%s\n",
-            csv_header);  // Append header to csv file
+            war_bee_csv_header);  // Append header to csv file
   } else {
     sd_card_append_to_file(csv_file_name, csv_line_buffer);
   }
@@ -347,7 +348,7 @@ void warbee_module_begin() {
   }
 
   sprintf(csv_file_name, "%s.csv", FILE_NAME);
-  sprintf(csv_file_buffer, "%s\n", csv_header);
+  sprintf(csv_file_buffer, "%s\n", war_bee_csv_header);
 
   context_session.session_str = "";
 
