@@ -11,8 +11,7 @@
 #include "menus_module.h"
 #include "preferences.h"
 #include "sd_card.h"
-
-#include "driver/uart.h"
+#include "uart_bridge.h"
 
 #define BAUD_RATE        115200
 #define UART_BUFFER_SIZE 1024
@@ -37,18 +36,8 @@ void app_main() {
   menus_module_begin();
   leds_off();
   preferences_put_bool("wifi_connected", false);
-
-  uart_config_t uart_config = {
-      .baud_rate = BAUD_RATE,
-      .data_bits = UART_DATA_8_BITS,
-      .parity = UART_PARITY_DISABLE,
-      .stop_bits = UART_STOP_BITS_1,
-      .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-  };
-  uart_param_config(UART_NUM_0, &uart_config);
-  uart_set_pin(UART_NUM_0, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE,
-               UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
-  uart_driver_install(UART_NUM_0, UART_BUFFER_SIZE * 2, 0, 0, NULL, 0);
-
-  cat_console_begin();
+  uart_bridge_begin(BAUD_RATE, UART_BUFFER_SIZE);
+  const char* message = "UART bridge initialized";
+  uart_bridge_write(message, strlen(message));
+  cat_console_begin();  // Contains a while(true) loop, it must be at the end
 }
