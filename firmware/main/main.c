@@ -37,7 +37,6 @@ void app_main() {
   menus_module_begin();
   leds_off();
   preferences_put_bool("wifi_connected", false);
-  // cat_console_begin();
 
   uart_config_t uart_config = {
       .baud_rate = BAUD_RATE,
@@ -51,29 +50,5 @@ void app_main() {
                UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
   uart_driver_install(UART_NUM_0, UART_BUFFER_SIZE * 2, 0, 0, NULL, 0);
 
-  uint8_t* data = (uint8_t*) malloc(UART_BUFFER_SIZE);
-  if (data == NULL) {
-    ESP_LOGE(TAG, "Failed to allocate memory for UART data");
-    return;
-  }
-
-  ESP_LOGI(TAG, "Is UART0 initialized: %s",
-           uart_is_driver_installed(UART_NUM_0) ? "true" : "false");
-  ESP_LOGI(TAG, "Is UART1 initialized: %s",
-           uart_is_driver_installed(UART_NUM_1) ? "true" : "false");
-
-  while (true) {
-    // int len = uart_read_bytes(UART_NUM_0, data, UART_BUFFER_SIZE, 20 /
-    // portTICK_PERIOD_MS); if (len > 0) {
-    //   ESP_LOGI(TAG, "Read %d bytes: %s", len, data);
-    // }
-    // printf("Bye, world!\n");
-    ESP_LOGI(TAG, "Bye, world!");
-
-    // Print "Hello world" to UART0
-    const char* data = "Hello, world!\n";
-    uart_write_bytes(UART_NUM_0, data, strlen(data));
-
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-  }
+  cat_console_begin();
 }

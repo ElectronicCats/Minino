@@ -9,11 +9,16 @@ static int IDLE_TIMEOUT_S = 30;
 static const char* TAG = "keyboard";
 static input_callback_t input_callback = NULL;
 esp_timer_handle_t idle_timer;
-static bool is_idle = false;
 static bool lock_input = false;
 
-const char* button_to_name[] = {
+static const char* button_to_name[] = {
     "BOOT", "LEFT", "RIGHT", "UP", "DOWN",
+};
+
+static const char* event_to_name[] = {
+    "PRESS_DOWN",      "PRESS_UP",      "PRESS_REPEAT",   "PRESS_REPEAT_DONE",
+    "SINGLE_CLICK",    "DOUBLE_CLICK",  "MULTIPLE_CLICK", "LONG_PRESS_START",
+    "LONG_PRESS_HOLD", "LONG_PRESS_UP", "PRESS_END",      "NONE_PRESS",
 };
 
 static void button_event_cb(void* arg, void* data);
@@ -74,8 +79,8 @@ static void button_event_cb(void* arg, void* data) {
   // & 0x0F to get the event number without the mask
   uint8_t button_event = ((button_event_t) data) & 0x0F;
   // DO NOT REMOVE THIS LOG
-  ESP_LOGI(TAG, "Button %s event %d", button_to_name[button_name],
-           button_event);
+  ESP_LOGI(TAG, "Button %s event %s", button_to_name[button_name],
+           event_to_name[button_event]);
 
   if (lock_input) {
     return;
