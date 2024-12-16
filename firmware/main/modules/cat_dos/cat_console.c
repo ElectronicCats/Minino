@@ -14,8 +14,6 @@
 #include "cmd_catdos.h"
 #include "cmd_control.h"
 #include "cmd_wifi.h"
-// #include "driver/uart.h"
-// #include "driver/uart_vfs.h"
 #include "esp_console.h"
 #include "esp_log.h"
 #include "esp_system.h"
