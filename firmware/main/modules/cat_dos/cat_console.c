@@ -83,6 +83,7 @@ void cat_console_begin() {
   esp_console_register_help_command();
   register_wifi();
   launch_cmd_register();
+  register_uart_bridge_commands();
 
   // if(show_dos){
   // register_catdos_commands();
