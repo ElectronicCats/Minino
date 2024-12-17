@@ -35,14 +35,16 @@ esp_err_t uart_bridge_begin(int baud_rate, int buffer_size) {
   return ESP_OK;
 }
 
-esp_err_t uart_bridge_read(char* buffer, int buffer_size) {
+esp_err_t uart_bridge_read(char* buffer, int buffer_size, int timeout_ms) {
   int bytes_read = uart_read_bytes(UART_NUM_0, (uint8_t*) buffer, buffer_size,
-                                   1000 / portTICK_PERIOD_MS);
+                                   timeout_ms / portTICK_PERIOD_MS);
   if (bytes_read < 0) {
-    ESP_LOGE(TAG, "Failed to read data from UART (error code: %d)", bytes_read);
+    ESP_LOGE(TAG, "Failed to read data from UART, bytes read: %d", bytes_read);
+    return ESP_FAIL;
+  } else if (bytes_read == 0) {
+    ESP_LOGI(TAG, "No data read from UART");
     return ESP_FAIL;
   }
-
   return ESP_OK;
 }
 

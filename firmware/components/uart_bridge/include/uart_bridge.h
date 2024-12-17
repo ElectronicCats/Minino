@@ -29,7 +29,7 @@ esp_err_t uart_bridge_begin(int baud_rate, int buffer_size);
  *
  * @return ESP_OK on success, ESP_FAIL otherwise.
  */
-esp_err_t uart_bridge_read(char* buffer, int buffer_size);
+esp_err_t uart_bridge_read(char* buffer, int buffer_size, int timeout_ms);
 
 /**
  * @brief Write data to the UART bridge.
