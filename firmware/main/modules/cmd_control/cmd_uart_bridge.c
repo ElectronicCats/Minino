@@ -1,4 +1,5 @@
 #include "argtable3/argtable3.h"
+#include "cat_console.h"
 #include "cmd_control.h"
 #include "esp_console.h"
 #include "esp_log.h"
@@ -8,6 +9,8 @@
 #include "uart_bridge.h"
 
 static const char* TAG = "cmd_uart_bridge";
+
+TaskHandle_t get_messages_task_handle = NULL;
 
 static struct {
   struct arg_str* message;
@@ -25,6 +28,15 @@ typedef struct {
   const char* buffer_size;
   int timeout_ms;
 } get_messages_params_t;
+
+void ctrl_c_callback() {
+  // End get_messages_task
+  if (get_messages_task_handle != NULL) {
+    vTaskDelete(get_messages_task_handle);
+    get_messages_task_handle = NULL;
+    ESP_LOGI(TAG, "get_messages_task ended");
+  }
+}
 
 static void send_message(int argc, char** argv) {
   int nerrors = arg_parse(argc, argv, (void**) &message_args);
@@ -65,6 +77,7 @@ static void get_messages(int argc, char** argv) {
     arg_print_errors(stderr, get_messages_args.end, argv[0]);
     return;
   }
+
   assert(get_messages_args.buffer_size->count == 1);
   assert(get_messages_args.timeout_ms->count == 1);
   const char* buffer_size = get_messages_args.buffer_size->sval[0];
@@ -74,8 +87,11 @@ static void get_messages(int argc, char** argv) {
   params->buffer_size = buffer_size;
   params->timeout_ms = timeout_ms;
 
+  cat_console_register_ctrl_c_handler(&ctrl_c_callback);
+  ESP_LOGI(TAG, "Starting get_messages_task");
   xTaskCreate(get_messages_task, "get_messages_task", 4096, (void*) params, 15,
-              NULL);
+              &get_messages_task_handle);
+  ESP_LOGI(TAG, "get_messages_task started");
 }
 
 void register_uart_bridge_commands() {

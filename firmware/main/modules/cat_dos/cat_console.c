@@ -7,6 +7,7 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 
+#include "cat_console.h"
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -28,8 +29,15 @@
 static const char* TAG = "cat_console";
 #define PROMPT_STR "minino"
 
-static bool show_dos = false;
-static bool running = false;
+static ctrl_c_callback_t ctrl_c_callback = NULL;
+
+void cat_console_register_ctrl_c_handler(ctrl_c_callback_t callback) {
+  ctrl_c_callback = callback;
+}
+
+void unregister_ctrl_c_handler() {
+  ctrl_c_callback = NULL;
+}
 
 static void initialize_nvs(void) {
   esp_err_t err = nvs_flash_init();
@@ -70,11 +78,6 @@ void cat_console_begin() {
 #if !defined(CONFIG_CAT_CONSOLE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
-  // if(running){
-  //   esp_console_deinit();
-  //   running = false;
-  // }
-  // running = true;
   initialize_nvs();
 
   initialize_console();
@@ -84,10 +87,6 @@ void cat_console_begin() {
   register_wifi();
   launch_cmd_register();
   register_uart_bridge_commands();
-
-  // if(show_dos){
-  // register_catdos_commands();
-  // }
 
   /* Prompt to be printed before each line.
    * This can be customized, made dynamic, etc.
@@ -153,6 +152,10 @@ restart:
     }
     /* linenoise allocates line buffer on the heap, so need to free it */
     linenoiseFree(line);
+  }
+  if (ctrl_c_callback) {
+    ctrl_c_callback();
+    unregister_ctrl_c_handler();
   }
   goto restart;
 
