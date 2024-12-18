@@ -119,6 +119,7 @@ void cat_console_begin() {
 #endif  // CONFIG_LOG_COLORS
   }
 
+restart:
   /* Main loop */
   while (true) {
     /* Get a line using linenoise.
@@ -153,6 +154,7 @@ void cat_console_begin() {
     /* linenoise allocates line buffer on the heap, so need to free it */
     linenoiseFree(line);
   }
+  goto restart;
 
   ESP_LOGE(TAG, "Finished console");
   esp_console_deinit();
