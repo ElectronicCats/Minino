@@ -23,17 +23,33 @@ static esp_timer_handle_t afk_timer;
 void sleep_mode_reset_timer();
 
 static void sleep_mode_sleep() {
-  esp_sleep_enable_ext1_wakeup_io((1ULL << WAKEUP_PIN),
-                                  ESP_EXT1_WAKEUP_ANY_LOW);
-  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
-  esp_deep_sleep_start();
+  gpio_wakeup_enable(GPIO_NUM_1, GPIO_INTR_LOW_LEVEL);
+  gpio_wakeup_enable(GPIO_NUM_15, GPIO_INTR_LOW_LEVEL);
+  gpio_wakeup_enable(GPIO_NUM_22, GPIO_INTR_LOW_LEVEL);
+  gpio_wakeup_enable(GPIO_NUM_23, GPIO_INTR_LOW_LEVEL);
+  esp_err_t result = esp_sleep_enable_gpio_wakeup();
+
+  if (result == ESP_OK) {
+    oled_screen_get_last_buffer();
+    oled_screen_clear();
+    esp_light_sleep_start();
+
+    vTaskDelay(pdMS_TO_TICKS(300));
+    sleep_mode_reset_timer();
+    gpio_wakeup_disable(GPIO_NUM_1);
+    gpio_wakeup_disable(GPIO_NUM_15);
+    gpio_wakeup_disable(GPIO_NUM_22);
+    gpio_wakeup_disable(GPIO_NUM_23);
+    oled_screen_set_last_buffer();
+  } else {
+    printf("Error al habilitar el despertar por GPIO\n");
+  }
 }
 
 static void timer_callback() {
   if (menus_module_get_app_state()) {
     return;
   }
-  oled_screen_clear();
   sleep_mode_sleep();
 }
 
