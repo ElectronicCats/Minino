@@ -10,7 +10,7 @@
 
 static const char* TAG = "cmd_uart_bridge";
 
-TaskHandle_t get_messages_task_handle = NULL;
+static bool run_get_messages_task = false;
 
 static struct {
   struct arg_str* message;
@@ -30,12 +30,7 @@ typedef struct {
 } get_messages_params_t;
 
 void ctrl_c_callback() {
-  // End get_messages_task
-  if (get_messages_task_handle != NULL) {
-    vTaskDelete(get_messages_task_handle);
-    get_messages_task_handle = NULL;
-    ESP_LOGI(TAG, "get_messages_task ended");
-  }
+  run_get_messages_task = false;
 }
 
 static void send_message(int argc, char** argv) {
@@ -51,6 +46,12 @@ static void send_message(int argc, char** argv) {
 }
 
 static void get_messages_task(void* args) {
+  if (run_get_messages_task) {
+    ESP_LOGI(TAG, "get_messages_task already running");
+    return;
+  }
+
+  run_get_messages_task = true;
   get_messages_params_t* params = (get_messages_params_t*) args;
   const char* buffer_size = params->buffer_size;
   const int timeout_ms = params->timeout_ms;
@@ -67,8 +68,14 @@ static void get_messages_task(void* args) {
       // Clear buffer
       memset(buffer, 0, sizeof(buffer));
     }
+
+    if (!run_get_messages_task) {
+      break;
+    }
   }
   free(params);
+  ESP_LOGI(TAG, "get_messages_task ended :)");
+  vTaskDelete(NULL);
 }
 
 static void get_messages(int argc, char** argv) {
@@ -90,7 +97,7 @@ static void get_messages(int argc, char** argv) {
   cat_console_register_ctrl_c_handler(&ctrl_c_callback);
   ESP_LOGI(TAG, "Starting get_messages_task");
   xTaskCreate(get_messages_task, "get_messages_task", 4096, (void*) params, 15,
-              &get_messages_task_handle);
+              NULL);
   ESP_LOGI(TAG, "get_messages_task started");
 }
 
