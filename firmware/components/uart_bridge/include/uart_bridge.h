@@ -5,7 +5,7 @@
  *
  * This module provides functions to read and write data from and to the UART0
  * port. The UART0 port is the one that is available on the external pins of the
- * MININO, they are labeled as TX0 and RX0.
+ * MININO, they are labeled as TXD and RXD.
  */
 #pragma once
 

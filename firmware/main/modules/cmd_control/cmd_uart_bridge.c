@@ -79,12 +79,15 @@ static void get_messages(int argc, char** argv) {
 }
 
 void register_uart_bridge_commands() {
-  message_args.message = arg_str1(NULL, NULL, "<message>", "Message to send");
+  message_args.message = arg_str1(NULL, NULL, "<message>",
+                                  "Message to send\n\n"
+                                  "\tExample: print hello\n"
+                                  "\tExample: print \"hello world\"");
   message_args.end = arg_end(1);
 
   esp_console_cmd_t uart_bridge_print_cmd = {
       .command = "print",
-      .help = "Send a message over external UART pins on the MININO",
+      .help = "Send a message over external UART TXD pin on the MININO",
       .hint = NULL,
       .func = &send_message,
       .argtable = &message_args};
@@ -92,13 +95,15 @@ void register_uart_bridge_commands() {
   get_messages_args.buffer_size =
       arg_str1(NULL, NULL, "<buffer_size>",
                "Size in bytes of the buffer to read data into");
-  get_messages_args.timeout_ms = arg_int1(
-      NULL, NULL, "<timeout_ms>", "Timeout in milliseconds for reading data");
+  get_messages_args.timeout_ms =
+      arg_int1(NULL, NULL, "<timeout_ms>",
+               "Timeout in milliseconds for reading data\n\n"
+               "\tExample: get_messages 128 1000");
   get_messages_args.end = arg_end(2);
 
   esp_console_cmd_t uart_bridge_get_messages_cmd = {
       .command = "get_messages",
-      .help = "Get messages from external UART pins on the MININO",
+      .help = "Get messages from external UART RXD pin on the MININO",
       .hint = NULL,
       .func = &get_messages,
       .argtable = &get_messages_args};

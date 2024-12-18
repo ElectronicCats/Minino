@@ -37,7 +37,5 @@ void app_main() {
   leds_off();
   preferences_put_bool("wifi_connected", false);
   uart_bridge_begin(BAUD_RATE, UART_BUFFER_SIZE);
-  const char* message = "UART bridge initialized";
-  uart_bridge_write(message, strlen(message));
   cat_console_begin();  // Contains a while(true) loop, it must be at the end
 }
