@@ -197,6 +197,52 @@ set(EXTRA_COMPONENT_DIRS components/<component_name>)
 
 Your component is now ready to be used in the project.
 
+### Add configuration to enable/disable ESP_LOGs of a specific component/module
+
+1. Add a new configuration option in the `Kconfig.projbuild` file in the `minino_config` component. For example, for the `uart_bridge` component, add the following:
+
+```cmake
+config UART_BRIDGE_DEBUG
+			bool "UART Bridge debug"
+			default false
+			help
+				Enable UART Bridge debug.
+```
+
+> [!IMPORTANT]
+> Add the configuration using alphabetical order.
+
+> Note: Make sure to include the configuration under the right section, for now, there are two sections: `"Modules debug configuration"` `"Components debug configuration"`.
+
+2. Make sure your configuration is visible in the `menuconfig`, run the following command and go to `General project` -> `Debug configuration`:
+
+```bash
+idf.py menuconfig
+```
+
+3. Add the following instruction to the `begin` function or the function where your component/module is initialized:
+
+```c
+#if !defined(CONFIG_MODULE_NAME_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+```
+
+For example, for the `uart_bridge` component, add the following to the `uart_bridge.c` file:
+
+```c
+static const char* TAG = "uart_bridge";
+
+esp_err_t uart_bridge_begin(int baud_rate, int buffer_size) {
+#if !defined(CONFIG_UART_BRIDGE_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+  ...
+}
+```
+
+4. You can now enable/disable the logs of the component/module using the `menuconfig`.
+
 ## WIFI
 
 ### DoS test
