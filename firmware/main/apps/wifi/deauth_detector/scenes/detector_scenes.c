@@ -1,13 +1,52 @@
 #include "detector_scenes.h"
+#include "detector.h"
 
 #include "general_radio_selection.h"
 #include "general_submenu.h"
 #include "menus_module.h"
+#include "oled_screen.h"
 
 void detector_scenes_main_menu();
 void detector_scenes_settings();
 void detector_scenes_channel();
 void detector_scenes_help();
+
+static void detector_scenes_scanning() {
+  oled_screen_clear();
+  oled_screen_display_text_center("Channel | Count", 0, OLED_DISPLAY_NORMAL);
+}
+
+void detector_scenes_show_count(uint16_t count, uint8_t channel) {
+  oled_screen_clear();
+  oled_screen_display_text_center("Scanning", 0, OLED_DISPLAY_NORMAL);
+  char* str = malloc(40);
+  sprintf(str, "Total packets: %d", count);
+  oled_screen_display_text_center(str, 1, OLED_DISPLAY_NORMAL);
+  char* str2 = malloc(40);
+  sprintf(str2, "Channel: %d", channel);
+  oled_screen_display_text_center(str2, 2, OLED_DISPLAY_NORMAL);
+  free(str);
+  free(str2);
+}
+
+void detector_scenes_show_table(uint16_t* deauth_packets_count_list) {
+  oled_screen_clear_buffer();
+  oled_screen_display_text_center("Channel | Count", 0, OLED_DISPLAY_NORMAL);
+  for (int i = 0; i < 14; i += 2) {
+    char* str = malloc(40);
+    if (i + 1 < 14) {  // Verifica que no se salga del rango
+      sprintf(str, "%d: %d  | %d: %d", i + 1, deauth_packets_count_list[i],
+              i + 2, deauth_packets_count_list[i + 1]);
+    } else {  // Caso especial si es el último canal y no hay un par
+      sprintf(str, "%d: %d", i + 1, deauth_packets_count_list[i]);
+    }
+    oled_screen_display_text(
+        str, 0, (i / 2) + 1,
+        OLED_DISPLAY_NORMAL);  // Ajusta la posición vertical
+    free(str);
+  }
+  oled_screen_display_show();
+}
 
 //////////////////////////   Main Menu   //////////////////////////
 static enum { RUN_OPTION, SETTINGS_OPTION, HELP_OPTION } main_menu_options_e;
@@ -16,6 +55,8 @@ static void main_menu_handler(uint8_t selection) {
   switch (selection) {
     case RUN_OPTION:
       // DEAUTH DETECTOR BEGIN
+      deauth_detector_begin();
+      detector_scenes_scanning();
       break;
     case SETTINGS_OPTION:
       detector_scenes_settings();

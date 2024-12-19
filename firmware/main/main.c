@@ -2,7 +2,6 @@
 
 #include "buzzer.h"
 #include "cat_console.h"
-#include "detector.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "flash_fs.h"
@@ -35,6 +34,5 @@ void app_main() {
   menus_module_begin();
   leds_off();
   preferences_put_bool("wifi_connected", false);
-  deauth_detector_begin();
-  // cat_console_begin();
+  cat_console_begin();
 }
