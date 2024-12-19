@@ -102,6 +102,10 @@ static void get_messages(int argc, char** argv) {
 }
 
 void register_uart_bridge_commands() {
+#if !defined(CONFIG_CMD_UART_BRIDGE_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   message_args.message = arg_str1(NULL, NULL, "<message>",
                                   "Message to send\n\n"
                                   "\tExample: print hello\n"

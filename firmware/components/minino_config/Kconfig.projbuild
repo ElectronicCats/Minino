@@ -25,6 +25,12 @@ menu "General project"
 
 		menu "Modules"
 
+			config CMD_UART_BRIDGE_DEBUG
+				bool "CMD UART Bridge debug"
+				default false
+				help
+					Enable CMD UART Bridge debug.
+
 			config CONFIGURATION_DEBUG
 				bool "Configuration debug"
 				default false
