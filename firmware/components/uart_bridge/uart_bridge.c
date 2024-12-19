@@ -63,6 +63,21 @@ esp_err_t uart_bridge_write(const char* buffer, int buffer_size) {
   return ESP_OK;
 }
 
+int custom_esp_log(const char* format, va_list args) {
+  char buffer[256];
+  vsnprintf(buffer, sizeof(buffer), format, args);
+  uart_bridge_write(buffer, strlen(buffer));
+  return 0;
+}
+
+void uart_bridge_set_logs_to_uart() {
+  esp_log_set_vprintf(custom_esp_log);
+}
+
+void uart_bridge_set_logs_to_usb() {
+  esp_log_set_vprintf(&vprintf);
+}
+
 esp_err_t uart_bridge_end() {
   esp_err_t err = uart_driver_delete(UART_NUM_0);
   if (err != ESP_OK) {

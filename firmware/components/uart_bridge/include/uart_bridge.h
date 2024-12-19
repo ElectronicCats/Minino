@@ -42,6 +42,20 @@ esp_err_t uart_bridge_read(char* buffer, int buffer_size, int timeout_ms);
 esp_err_t uart_bridge_write(const char* buffer, int buffer_size);
 
 /**
+ * @brief Set the logs to be sent to the UART bridge.
+ *
+ * @return void
+ */
+void uart_bridge_set_logs_to_uart();
+
+/**
+ * @brief Set the logs to be sent to the USB.
+ *
+ * @return void
+ */
+void uart_bridge_set_logs_to_usb();
+
+/**
  * @brief End the UART bridge.
  *
  * @return ESP_OK on success, ESP_FAIL otherwise.

@@ -22,6 +22,7 @@ void app_main() {
 #if !defined(CONFIG_MAIN_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
+  uart_bridge_begin(BAUD_RATE, UART_BUFFER_SIZE);
   preferences_begin();
 
   bool stealth_mode = preferences_get_bool("stealth_mode", false);
@@ -36,6 +37,5 @@ void app_main() {
   menus_module_begin();
   leds_off();
   preferences_put_bool("wifi_connected", false);
-  uart_bridge_begin(BAUD_RATE, UART_BUFFER_SIZE);
   cat_console_begin();  // Contains a while(true) loop, it must be at the end
 }
