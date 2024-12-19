@@ -23,12 +23,6 @@ menu "General project"
 
 	menu "Modules debug configuration"
 
-		config MAIN_DEBUG
-			bool "Main debug"
-			default false
-			help
-				Enable Main debug.
-
 		config CONFIGURATION_DEBUG
 			bool "Configuration debug"
 			default false
@@ -64,6 +58,12 @@ menu "General project"
 			default false
 			help
 				Enable Keyboard debug.
+
+		config MAIN_DEBUG
+			bool "Main debug"
+			default false
+			help
+				Enable Main debug.
 
 		config MENU_SCREENS_DEBUG
 			bool "Menu screens module debug"
@@ -230,6 +230,12 @@ menu "General project"
 			default false
 			help
 				Enable CMD Sniffer debug.
+
+		config UART_BRIDGE_DEBUG
+			bool "UART Bridge debug"
+			default false
+			help
+				Enable UART Bridge debug.
 
 		config WIFI_SNIFFER_DEBUG
 			bool "WiFi Sniffer debug"

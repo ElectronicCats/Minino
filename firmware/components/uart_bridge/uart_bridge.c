@@ -5,6 +5,10 @@
 static const char* TAG = "uart_bridge";
 
 esp_err_t uart_bridge_begin(int baud_rate, int buffer_size) {
+#if !defined(CONFIG_UART_BRIDGE_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   uart_config_t uart_config = {
       .baud_rate = baud_rate,
       .data_bits = UART_DATA_8_BITS,
