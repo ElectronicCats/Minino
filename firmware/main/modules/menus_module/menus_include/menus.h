@@ -217,7 +217,7 @@ menu_t menus[] = {  //////////////////////////////////
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
-    // #ifdef CONFIG_WIFI_APP_DEAUTH TODO: ADD TO MENUCONFIG
+  #ifdef CONFIG_WIFI_APP_DEAUTH_SCAN
     {.display_name = "Deauth Scan",
      .menu_idx = MENU_WIFI_DEAUTH_SCAN,
      .parent_idx = MENU_WIFI_APPS,
@@ -226,7 +226,7 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = detector_scenes_main_menu,
      .on_exit_cb = NULL,
      .is_visible = true},
-  // #endif
+  #endif
   #ifdef CONFIG_WIFI_APP_DOS
     {.display_name = "DoS",
      .menu_idx = MENU_WIFI_DOS,
