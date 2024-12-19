@@ -167,6 +167,36 @@ The build files will be in the `build_files.zip` file. Now you can create a rele
  python -m esptool --chip esp32c6 -b 460800 --before default_reset --after hard_reset write_flash --flash_mode dio --flash_size 8MB --flash_freq 80m 0x0 bootloader.bin 0x8000 partition-table.bin 0x20000 minino.bin
 ```
 
+## Development process
+
+### Add new menu
+
+#### Menus structure
+
+TODO
+
+#### Steps to add new menu
+
+TODO
+
+### Add a component
+
+To add a new component, follow these steps:
+
+1. Create a component under the `components` directory using the following command:
+
+```bash
+idf.py create-component -C components/ <component_name>
+```
+
+2. Add the component to the `CMakeLists.txt` file in the `main` directory:
+
+```cmake
+set(EXTRA_COMPONENT_DIRS components/<component_name>)
+```
+
+Your component is now ready to be used in the project.
+
 ## WIFI
 
 ### DoS test
