@@ -130,7 +130,9 @@ void register_uart_bridge_commands() {
 
   esp_console_cmd_t uart_bridge_get_messages_cmd = {
       .command = "get_messages",
-      .help = "Get messages from external UART RXD pin on the MININO",
+      .help =
+          "Get messages from external UART RXD pin on the MININO.\n"
+          "Press Ctrl+C to stop reading messages.",
       .hint = NULL,
       .func = &get_messages,
       .argtable = &get_messages_args};
