@@ -10,7 +10,7 @@
 #define WIFI_CHANNEL_SWITCH_INTERVAL 1000
 
 static const char* TAG = "DEAUTH_DETECTOR";
-static uint8_t current_channel = 1;
+static uint8_t current_channel = 99;
 static uint16_t total_deauth_packets_count = 0;
 static uint16_t deauth_packets_count_list[14];
 static bool running = false;
@@ -36,7 +36,7 @@ static void packet_handler(uint8_t* buf, wifi_promiscuous_pkt_type_t type) {
   if (channel_hopping) {
     detector_scenes_show_table(deauth_packets_count_list);
   } else {
-    detector_scenes_show_count(total_deauth_packets_count, rx_ctrl.channel)
+    detector_scenes_show_count(total_deauth_packets_count, rx_ctrl.channel);
   }
 }
 
@@ -85,10 +85,24 @@ void deauth_detector_begin() {
     ESP_LOGE(TAG, "Error starting wifi: %s", esp_err_to_name(err));
     return;
   }
+  uint8_t get_saved_channel =
+      preferences_get_int("det_channel", current_channel);
+  if (get_saved_channel == 99) {
+    channel_hopping = true;
+    current_channel = 1;
+  } else {
+    current_channel = get_saved_channel;
+  }
   esp_wifi_set_channel(current_channel, WIFI_SECOND_CHAN_NONE);
   running = true;
 
   if (channel_hopping) {
     xTaskCreate(channel_hopper, "channel_hopper", 2048, NULL, 10, NULL);
   }
+}
+
+void deauth_detector_stop() {
+  esp_wifi_set_promiscuous(false);
+  esp_wifi_stop();
+  running = false;
 }

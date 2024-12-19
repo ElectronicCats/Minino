@@ -5,6 +5,7 @@
 #include "general_submenu.h"
 #include "menus_module.h"
 #include "oled_screen.h"
+#include "preferences.h"
 
 void detector_scenes_main_menu();
 void detector_scenes_settings();
@@ -17,7 +18,7 @@ static void detector_scenes_scanning() {
 }
 
 void detector_scenes_show_count(uint16_t count, uint8_t channel) {
-  oled_screen_clear();
+  oled_screen_clear_buffer();
   oled_screen_display_text_center("Scanning", 0, OLED_DISPLAY_NORMAL);
   char* str = malloc(40);
   sprintf(str, "Total packets: %d", count);
@@ -27,6 +28,7 @@ void detector_scenes_show_count(uint16_t count, uint8_t channel) {
   oled_screen_display_text_center(str2, 2, OLED_DISPLAY_NORMAL);
   free(str);
   free(str2);
+  oled_screen_display_show();
 }
 
 void detector_scenes_show_table(uint16_t* deauth_packets_count_list) {
@@ -90,6 +92,7 @@ static void settings_handler(uint8_t scan_mode) {
   // TODO: SET SCAN MODE TO "scan_mode"
   switch (scan_mode) {
     case CHANNEL_HOP_OPTION:
+      preferences_put_int("det_channel", 99);
       break;
     case CHANNEL_OPTION:
       detector_scenes_channel();
@@ -122,6 +125,7 @@ static const char* channel_options[] = {
 static void channel_handler(uint8_t channel) {
   // TODO: Set Deauth Detector Channel to "channel"
   // TODO: SAVE "channel" TO FLASH
+  preferences_put_int("det_channel", channel);
 }
 
 static void channel_exit() {
