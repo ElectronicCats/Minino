@@ -34,11 +34,11 @@ void detector_scenes_show_count(uint16_t count, uint8_t channel) {
 
 void detector_scenes_show_table(uint16_t* deauth_packets_count_list) {
   oled_screen_clear_buffer();
-  oled_screen_display_text_center("Channel | Count", 0, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("Channel| Count", 0, 0, OLED_DISPLAY_INVERT);
   for (int i = 0; i < 14; i += 2) {
     char* str = malloc(40);
     if (i + 1 < 14) {  // Verifica que no se salga del rango
-      sprintf(str, "%d: %d  | %d: %d", i + 1, deauth_packets_count_list[i],
+      sprintf(str, "%02d: %d  | %02d: %d", i + 1, deauth_packets_count_list[i],
               i + 2, deauth_packets_count_list[i + 1]);
     } else {  // Caso especial si es el último canal y no hay un par
       sprintf(str, "%d: %d", i + 1, deauth_packets_count_list[i]);
@@ -57,7 +57,6 @@ static const char* main_menu_options[] = {"Run", "Settings", "Help"};
 static void main_menu_handler(uint8_t selection) {
   switch (selection) {
     case RUN_OPTION:
-      // DEAUTH DETECTOR BEGIN
       deauth_detector_begin();
       detector_scenes_scanning();
       break;
@@ -89,8 +88,6 @@ void detector_scenes_main_menu() {
 static enum { CHANNEL_HOP_OPTION, CHANNEL_OPTION } settings_options_e;
 static const char* settings_options[] = {"Channel hop", "Channel"};
 static void settings_handler(uint8_t scan_mode) {
-  // TODO: SAVE "scan_mode" TO FLASH
-  // TODO: SET SCAN MODE TO "scan_mode"
   switch (scan_mode) {
     case CHANNEL_HOP_OPTION:
       preferences_put_int("det_channel", 99);

@@ -91,7 +91,7 @@ void deauth_detector_begin() {
     channel_hopping = true;
     current_channel = 1;
   } else {
-    current_channel = get_saved_channel;
+    current_channel = get_saved_channel + 1;
   }
   esp_wifi_set_channel(current_channel, WIFI_SECOND_CHAN_NONE);
   running = true;
