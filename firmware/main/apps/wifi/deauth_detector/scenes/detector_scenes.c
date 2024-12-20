@@ -2,6 +2,7 @@
 #include "detector.h"
 
 #include "general_radio_selection.h"
+#include "general_scrolling_text.h"
 #include "general_submenu.h"
 #include "menus_module.h"
 #include "oled_screen.h"
@@ -146,6 +147,23 @@ void detector_scenes_channel() {
 
 //////////////////////////   Help Menu   //////////////////////////
 
-static void help_exit() {}
+static const char* help_text =
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod "
+    "tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim "
+    "veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea "
+    "commodo consequat.";
 
-void detector_scenes_help() {}
+static void help_exit() {
+  detector_scenes_main_menu();
+}
+
+void detector_scenes_help() {
+  general_scrolling_text_ctx help;
+  memset(&help, 0, sizeof(help));
+  help.banner = "< Back";
+  help.text = help_text;
+  help.scroll_type = GENERAL_SCROLLING_TEXT_INFINITE;
+  help.window_type = GENERAL_SCROLLING_TEXT_WINDOW;
+  help.exit_cb = help_exit;
+  general_scrolling_text(help);
+}
