@@ -164,7 +164,7 @@ void detector_scenes_help() {
   memset(&help, 0, sizeof(help));
   help.banner = "< Back";
   help.text = help_text;
-  help.scroll_type = GENERAL_SCROLLING_TEXT_INFINITE;
+  help.scroll_type = GENERAL_SCROLLING_TEXT_CLAMPED;
   help.window_type = GENERAL_SCROLLING_TEXT_WINDOW;
   help.exit_cb = help_exit;
   general_scrolling_text(help);

@@ -1,5 +1,6 @@
 #include "general_scrolling_text.h"
 
+#include "bitmaps_general.h"
 #include "keyboard_module.h"
 #include "menus_module.h"
 #include "oled_screen.h"
@@ -97,6 +98,17 @@ static void scroll_text_draw_window() {
   uint16_t end_index = scroll_text_ctx->current_idx + items_per_screen;
   if (end_index > scroll_text_ctx->text_len) {
     end_index = scroll_text_ctx->text_len;
+  }
+
+  if (!(scroll_text_ctx->scroll_type == GENERAL_SCROLLING_TEXT_CLAMPED &&
+        !scroll_text_ctx->current_idx)) {
+    oled_screen_display_bitmap(simple_up_arrow_bmp, 118, 28, 8, 8,
+                               OLED_DISPLAY_NORMAL);
+  }
+  if (!(scroll_text_ctx->scroll_type == GENERAL_SCROLLING_TEXT_CLAMPED &&
+        scroll_text_ctx->current_idx >= scroll_text_ctx->text_len - 1)) {
+    oled_screen_display_bitmap(simple_down_arrow_bmp, 118, 36, 8, 8,
+                               OLED_DISPLAY_NORMAL);
   }
 
   for (uint16_t i = scroll_text_ctx->current_idx; i < end_index; i++) {

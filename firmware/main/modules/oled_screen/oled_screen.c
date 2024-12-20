@@ -141,7 +141,6 @@ void oled_screen_display_selected_item_box() {
 void oled_screen_display_card_border() {
   xSemaphoreTake(oled_mutex, portMAX_DELAY);
   oled_driver_draw_modal_box(&dev, 0, 3);
-  oled_driver_show_buffer(&dev);
   xSemaphoreGive(oled_mutex);
 }
 
