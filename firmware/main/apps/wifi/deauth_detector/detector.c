@@ -7,14 +7,18 @@
 #include "freertos/task.h"
 #include "preferences.h"
 
+#include "menus_module.h"
+
 #define WIFI_CHANNEL_SWITCH_INTERVAL 1000
 
 static const char* TAG = "DEAUTH_DETECTOR";
 static uint8_t current_channel = 99;
 static uint16_t total_deauth_packets_count = 0;
 static uint16_t deauth_packets_count_list[14];
-static bool running = false;
+static volatile bool running = false;
 static bool channel_hopping = false;
+
+void deauth_detector_stop();
 
 static void packet_handler(uint8_t* buf, wifi_promiscuous_pkt_type_t type) {
   wifi_promiscuous_pkt_t* p = (wifi_promiscuous_pkt_t*) buf;
@@ -49,17 +53,20 @@ static void channel_hopper(void* pvParameters) {
     ESP_LOGI(TAG, "Switching to channel: %d", current_channel);
   }
   vTaskDelete(NULL);
-  running = false;
-  for (int i = 0; i < 13; i++) {
-    free(deauth_packets_count_list[i]);
+}
+
+static void deauth_detector_input_cb(uint8_t button_name,
+                                     uint8_t button_event) {
+  printf("FUNC: %s -> LINE: %d\n", __func__, __LINE__);
+  if (button_event != BUTTON_PRESS_DOWN || button_name != BUTTON_LEFT) {
+    return;
   }
+  printf("FUNC: %s -> LINE: %d\n", __func__, __LINE__);
+  deauth_detector_stop();
 }
 
 void deauth_detector_begin() {
-  for (int i = 0; i < 13; i++) {
-    deauth_packets_count_list[i] = malloc(sizeof(uint16_t));
-    deauth_packets_count_list[i] = 0;
-  }
+  memset(deauth_packets_count_list, 0, sizeof(deauth_packets_count_list));
   esp_err_t err = esp_netif_init();
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   err = esp_wifi_init(&cfg);
@@ -99,10 +106,12 @@ void deauth_detector_begin() {
   if (channel_hopping) {
     xTaskCreate(channel_hopper, "channel_hopper", 2048, NULL, 10, NULL);
   }
+  menus_module_set_app_state(true, deauth_detector_input_cb);
 }
 
 void deauth_detector_stop() {
-  esp_wifi_set_promiscuous(false);
   esp_wifi_stop();
+  esp_wifi_set_promiscuous(false);
   running = false;
+  detector_scenes_main_menu();
 }
