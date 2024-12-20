@@ -133,6 +133,8 @@ static void button_up_handler() {
   if (scroll_text_ctx->current_idx == 0) {
     if (scroll_text_ctx->scroll_type == GENERAL_SCROLLING_TEXT_INFINITE) {
       scroll_text_ctx->current_idx = scroll_text_ctx->text_len - 1;
+    } else {
+      return;
     }
   } else {
     scroll_text_ctx->current_idx--;
@@ -142,11 +144,13 @@ static void button_up_handler() {
 
 static void button_down_handler() {
   if (scroll_text_ctx->current_idx >= scroll_text_ctx->text_len - 1) {
-    if (scroll_text_ctx->scroll_type == GENERAL_SCROLLING_TEXT_INFINITE) {
-      scroll_text_ctx->current_idx = 0;
-    }
     if (scroll_text_ctx->finish_cb) {
       scroll_text_ctx->finish_cb();
+    }
+    if (scroll_text_ctx->scroll_type == GENERAL_SCROLLING_TEXT_INFINITE) {
+      scroll_text_ctx->current_idx = 0;
+    } else {
+      return;
     }
   } else {
     scroll_text_ctx->current_idx++;
