@@ -66,6 +66,7 @@ static void deauth_detector_input_cb(uint8_t button_name,
 }
 
 void deauth_detector_begin() {
+  menus_module_set_app_state(true, deauth_detector_input_cb);
   memset(deauth_packets_count_list, 0, sizeof(deauth_packets_count_list));
   esp_err_t err = esp_netif_init();
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -85,7 +86,7 @@ void deauth_detector_begin() {
     return;
   }
   esp_wifi_set_promiscuous(true);
-  esp_wifi_set_promiscuous_rx_cb(&packet_handler);
+  esp_wifi_set_promiscuous_rx_cb(packet_handler);
 
   err = esp_wifi_start();
   if (err != ESP_OK) {
@@ -94,15 +95,13 @@ void deauth_detector_begin() {
   }
   uint8_t get_saved_channel =
       preferences_get_int("det_channel", current_channel);
-  current_channel = get_saved_channel == 99 ? 1 : get_saved_channel + 1;
   channel_hopping = get_saved_channel == 99;
+  current_channel = channel_hopping ? 1 : get_saved_channel + 1;
   esp_wifi_set_channel(current_channel, WIFI_SECOND_CHAN_NONE);
   running = true;
-
   if (channel_hopping) {
     xTaskCreate(channel_hopper, "channel_hopper", 2048, NULL, 10, NULL);
   }
-  menus_module_set_app_state(true, deauth_detector_input_cb);
 }
 
 void deauth_detector_stop() {

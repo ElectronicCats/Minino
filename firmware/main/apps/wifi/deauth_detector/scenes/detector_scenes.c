@@ -22,13 +22,11 @@ void detector_scenes_show_count(uint16_t count, uint8_t channel) {
   oled_screen_clear_buffer();
   oled_screen_display_text_center("Scanning", 0, OLED_DISPLAY_NORMAL);
   char* str = malloc(40);
-  sprintf(str, "Total packets: %d", count);
+  sprintf(str, "Packets: %d", count);
   oled_screen_display_text_center(str, 1, OLED_DISPLAY_NORMAL);
-  char* str2 = malloc(40);
-  sprintf(str2, "Channel: %d", channel);
-  oled_screen_display_text_center(str2, 2, OLED_DISPLAY_NORMAL);
+  sprintf(str, "Channel: %d", channel);
+  oled_screen_display_text_center(str, 2, OLED_DISPLAY_NORMAL);
   free(str);
-  free(str2);
   oled_screen_display_show();
 }
 
