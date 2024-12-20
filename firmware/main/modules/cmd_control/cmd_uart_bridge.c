@@ -101,7 +101,7 @@ static void uart_bridge(int argc, char** argv) {
   ESP_LOGI(TAG, "uart_bridge_task started");
 }
 
-void register_uart_bridge_commands() {
+void cmd_control_register_uart_bridge_commands() {
 #if !defined(CONFIG_CMD_UART_BRIDGE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif

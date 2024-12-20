@@ -2,6 +2,8 @@
 
 #include <stdio.h>
 
-void launch_cmd_register();
+void cmd_control_register_launch_cmd_();
 
-void register_uart_bridge_commands();
+void cmd_control_register_uart_bridge_commands();
+
+void cmd_control_register_system_commands();

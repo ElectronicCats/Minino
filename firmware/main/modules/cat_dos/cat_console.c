@@ -85,8 +85,9 @@ void cat_console_begin() {
   /* Register commands */
   esp_console_register_help_command();
   register_wifi();
-  launch_cmd_register();
-  register_uart_bridge_commands();
+  cmd_control_register_launch_cmd_();
+  cmd_control_register_uart_bridge_commands();
+  cmd_control_register_system_commands();
 
   /* Prompt to be printed before each line.
    * This can be customized, made dynamic, etc.
