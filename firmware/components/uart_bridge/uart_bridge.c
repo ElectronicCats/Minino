@@ -1,21 +1,26 @@
+#include "uart_bridge.h"
 #include <string.h>
-#include "driver/uart.h"
 #include "esp_log.h"
 
 static const char* TAG = "uart_bridge";
 
-esp_err_t uart_bridge_begin(int baud_rate, int buffer_size) {
+uart_bridge_config_t uart_bridge_config;
+
+esp_err_t uart_bridge_begin(uart_config_t uart_config, int buffer_size) {
 #if !defined(CONFIG_UART_BRIDGE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
 
-  uart_config_t uart_config = {
-      .baud_rate = baud_rate,
-      .data_bits = UART_DATA_8_BITS,
-      .parity = UART_PARITY_DISABLE,
-      .stop_bits = UART_STOP_BITS_1,
-      .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-  };
+  uart_bridge_config.buffer_size = buffer_size;
+  uart_bridge_config.uart_config = uart_config;
+
+  // uart_config_t uart_config = {
+  //     .baud_rate = baud_rate,
+  //     .data_bits = UART_DATA_8_BITS,
+  //     .parity = UART_PARITY_DISABLE,
+  //     .stop_bits = UART_STOP_BITS_1,
+  //     .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+  // };
 
   esp_err_t err = uart_param_config(UART_NUM_0, &uart_config);
   if (err != ESP_OK) {
@@ -63,7 +68,7 @@ esp_err_t uart_bridge_write(const char* buffer, int buffer_size) {
   return ESP_OK;
 }
 
-int custom_esp_log(const char* format, va_list args) {
+int custom_log(const char* format, va_list args) {
   char buffer[256];
   vsnprintf(buffer, sizeof(buffer), format, args);
   uart_bridge_write(buffer, strlen(buffer));
@@ -71,11 +76,15 @@ int custom_esp_log(const char* format, va_list args) {
 }
 
 void uart_bridge_set_logs_to_uart() {
-  esp_log_set_vprintf(custom_esp_log);
+  esp_log_set_vprintf(custom_log);
 }
 
 void uart_bridge_set_logs_to_usb() {
   esp_log_set_vprintf(&vprintf);
+}
+
+uart_bridge_config_t uart_bridge_get_config() {
+  return uart_bridge_config;
 }
 
 esp_err_t uart_bridge_end() {

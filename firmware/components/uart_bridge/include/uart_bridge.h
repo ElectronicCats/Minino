@@ -9,17 +9,23 @@
  */
 #pragma once
 
+#include "driver/uart.h"
 #include "esp_err.h"
+
+typedef struct {
+  int buffer_size;
+  uart_config_t uart_config;
+} uart_bridge_config_t;
 
 /**
  * @brief Initialize the UART bridge.
  *
- * @param baud_rate The baud rate to use.
+ * @param uart_config The UART configuration.
  * @param buffer_size The size of the UART buffer.
  *
  * @return ESP_OK on success, ESP_FAIL otherwise.
  */
-esp_err_t uart_bridge_begin(int baud_rate, int buffer_size);
+esp_err_t uart_bridge_begin(uart_config_t uart_config, int buffer_size);
 
 /**
  * @brief Read data from the UART bridge.
@@ -54,6 +60,8 @@ void uart_bridge_set_logs_to_uart();
  * @return void
  */
 void uart_bridge_set_logs_to_usb();
+
+uart_bridge_config_t uart_bridge_get_config();
 
 /**
  * @brief End the UART bridge.
