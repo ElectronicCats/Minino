@@ -7,7 +7,7 @@
 	(title_block
 		(title "Minimo")
 		(date "2024-01-17")
-		(rev "1.2")
+		(rev "1.5")
 		(company "ElectronicCats")
 		(comment 1 "Andres Sabas")
 		(comment 2 "Edgar Capuchino")
@@ -13299,7 +13299,7 @@
 				)
 			)
 		)
-		(property "Value" "0.5A"
+		(property "Value" "750mA"
 			(at 268.478 29.3624 0)
 			(effects
 				(font
