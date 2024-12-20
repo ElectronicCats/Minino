@@ -115,7 +115,9 @@ void detector_scenes_settings() {
   settings.select_cb = settings_handler;
   settings.style = RADIO_SELECTION_OLD_STYLE;
   settings.exit_cb = settings_exit;
-  settings.current_option = 0;  // TODO: GET "scan_mode" FROM FLASH
+  uint8_t get_saved_channel = preferences_get_int("det_channel", 99);
+  settings.current_option =
+      get_saved_channel == 99 ? CHANNEL_HOP_OPTION : CHANNEL_OPTION;
   general_radio_selection(settings);
 }
 
@@ -124,8 +126,6 @@ static const char* channel_options[] = {
     "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
 };
 static void channel_handler(uint8_t channel) {
-  // TODO: Set Deauth Detector Channel to "channel"
-  // TODO: SAVE "channel" TO FLASH
   preferences_put_int("det_channel", channel);
 }
 
@@ -141,7 +141,9 @@ void detector_scenes_channel() {
   settings.select_cb = channel_handler;
   settings.style = RADIO_SELECTION_OLD_STYLE;
   settings.exit_cb = channel_exit;
-  settings.current_option = 0;  // TODO: GET "channel" FROM FLASH
+  uint8_t get_saved_channel = preferences_get_int("det_channel", 99);
+  settings.current_option = get_saved_channel == 99 ? 0 : get_saved_channel;
+  preferences_put_int("det_channel", settings.current_option);
   general_radio_selection(settings);
 }
 
