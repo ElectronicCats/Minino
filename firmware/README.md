@@ -185,7 +185,8 @@ Welcome to the Minino Console.
 Type 'help' to get the list of commands.
 Use UP/DOWN arrows to navigate through command history.
 Press TAB when typing command name to auto-complete.
-Press Enter or Ctrl+C will terminate the console environment.
+Press Enter or Ctrl+C will terminate the current
+command.
 minino> save AP_NAME PASSWORD
 ```
 
@@ -196,7 +197,8 @@ Welcome to the Minino Console.
 Type 'help' to get the list of commands.
 Use UP/DOWN arrows to navigate through command history.
 Press TAB when typing command name to auto-complete.
-Press Enter or Ctrl+C will terminate the console environment.
+Press Enter or Ctrl+C will terminate the current
+command.
 minino> web_config IP_VICTIM PORT_VICTIM _PATH_VICTIM
 ```
 In this case our victim server are our pc so the command will be like this: `web_config 192.168.0.178 8000 /`

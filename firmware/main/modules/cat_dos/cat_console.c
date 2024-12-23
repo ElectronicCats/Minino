@@ -100,7 +100,8 @@ void cat_console_begin() {
       "Type 'help' to get the list of commands.\n"
       "Use UP/DOWN arrows to navigate through command history.\n"
       "Press TAB when typing command name to auto-complete.\n"
-      "Press Enter or Ctrl+C will terminate the console environment.\n");
+      "Press Enter or Ctrl+C will terminate the current\n"
+      "command.\n");
 
   /* Figure out if the terminal supports escape sequences */
   int probe_status = linenoiseProbe();
