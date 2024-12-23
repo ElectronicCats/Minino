@@ -1,9 +1,0 @@
-menu "LEDs Configuration"
-	
-	config LEDS_COMPONENT_ENABLED
-		bool "Enable LEDs component"
-		default true
-		help
-			Enable the LEDs component.
-
-endmenu

@@ -7,6 +7,7 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 
+#include "cat_console.h"
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -14,8 +15,6 @@
 #include "cmd_catdos.h"
 #include "cmd_control.h"
 #include "cmd_wifi.h"
-// #include "driver/uart.h"
-// #include "driver/uart_vfs.h"
 #include "esp_console.h"
 #include "esp_log.h"
 #include "esp_system.h"
@@ -30,8 +29,15 @@
 static const char* TAG = "cat_console";
 #define PROMPT_STR "minino"
 
-static bool show_dos = false;
-static bool running = false;
+static ctrl_c_callback_t ctrl_c_callback = NULL;
+
+void cat_console_register_ctrl_c_handler(ctrl_c_callback_t callback) {
+  ctrl_c_callback = callback;
+}
+
+void unregister_ctrl_c_handler() {
+  ctrl_c_callback = NULL;
+}
 
 static void initialize_nvs(void) {
   esp_err_t err = nvs_flash_init();
@@ -72,11 +78,6 @@ void cat_console_begin() {
 #if !defined(CONFIG_CAT_CONSOLE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
-  // if(running){
-  //   esp_console_deinit();
-  //   running = false;
-  // }
-  // running = true;
   initialize_nvs();
 
   initialize_console();
@@ -84,11 +85,9 @@ void cat_console_begin() {
   /* Register commands */
   esp_console_register_help_command();
   register_wifi();
-  launch_cmd_register();
-
-  // if(show_dos){
-  // register_catdos_commands();
-  // }
+  cmd_control_register_launch_cmd();
+  cmd_control_register_uart_bridge_commands();
+  cmd_control_register_system_commands();
 
   /* Prompt to be printed before each line.
    * This can be customized, made dynamic, etc.
@@ -120,6 +119,7 @@ void cat_console_begin() {
 #endif  // CONFIG_LOG_COLORS
   }
 
+restart:
   /* Main loop */
   while (true) {
     /* Get a line using linenoise.
@@ -154,6 +154,11 @@ void cat_console_begin() {
     /* linenoise allocates line buffer on the heap, so need to free it */
     linenoiseFree(line);
   }
+  if (ctrl_c_callback) {
+    ctrl_c_callback();
+    unregister_ctrl_c_handler();
+  }
+  goto restart;
 
   ESP_LOGE(TAG, "Finished console");
   esp_console_deinit();

@@ -3,6 +3,7 @@
 #include <string.h>
 #include "bitmaps_general.h"
 #include "buzzer.h"
+#include "esp_log.h"
 #include "led_events.h"
 #include "menus_screens.h"
 #include "modals_module.h"
@@ -18,6 +19,8 @@
   #define SCREEN_WIDTH  128
   #define SCREEN_HEIGHT 32
 #endif
+
+static const char* TAG = "menus_module";
 
 static menus_manager_t* menus_ctx;
 static void menus_input_cb(uint8_t button_name, uint8_t button_event);
@@ -45,6 +48,7 @@ static uint8_t get_menu_idx_over_cmd(char* entry_cmd) {
       return i;
     }
   }
+  ESP_LOGE(TAG, "Menu not found for command: %s", entry_cmd);
   return 0;
 }
 
@@ -246,6 +250,7 @@ bool menus_module_get_app_state() {
 
 void menus_module_set_menu(menu_idx_t menu_idx) {
   if (!menus_ctx->submenus_count) {
+    ESP_LOGE(TAG, "No submenus available");
     return;
   }
   screen_saver_stop();
