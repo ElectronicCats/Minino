@@ -23,7 +23,7 @@ static int launch_app(int argc, char** argv) {
   return 0;
 }
 
-void cmd_control_register_launch_cmd_() {
+void cmd_control_register_launch_cmd() {
   message_args.app = arg_str1(NULL, NULL, "<app>", "Name of the app to launch");
   message_args.end = arg_end(1);
 

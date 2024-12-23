@@ -16,6 +16,7 @@
 #include "gps_module.h"
 #include "gps_screens.h"
 #include "i2c_scanner.h"
+#include "logs_output.h"
 #include "open_thread_module.h"
 #include "ota_module.h"
 #include "sd_card_settings_module.h"
@@ -98,6 +99,7 @@ typedef enum {
   MENU_FILE_MANAGER_LOCAL,
   MENU_FILE_MANAGER_WEB,
   MENU_SETTINGS_SYSTEM,
+  MENU_SETTINGS_LOGS_OUTPUT,
   MENU_SETTINGS_TIME_ZONE,
   MENU_SETTINGS_WIFI,
   MENU_SETTINGS_SD_CARD,
@@ -517,6 +519,13 @@ menu_t menus[] = {  //////////////////////////////////
      .parent_idx = MENU_SETTINGS,
      .last_selected_submenu = 0,
      .on_enter_cb = NULL,
+     .on_exit_cb = NULL,
+     .is_visible = true},
+    {.display_name = "Logs Output",
+     .menu_idx = MENU_SETTINGS_LOGS_OUTPUT,
+     .parent_idx = MENU_SETTINGS_SYSTEM,
+     .last_selected_submenu = 0,
+     .on_enter_cb = logs_output,
      .on_exit_cb = NULL,
      .is_visible = true},
 #ifdef CONFIG_GPS_APPS_ENABLE
