@@ -10,17 +10,11 @@ static char* logs_output_options[] = {
     "UART TXD/RXD",
 };
 
-// Same order as logs_output_options
-typedef enum {
-  USB,
-  UART,
-} logs_output_option_t;
-
 uint8_t logs_output_get_option() {
   return preferences_get_uchar("logs_output", USB);
 }
 
-void logs_output_set_logs_output(logs_output_option_t selected_option) {
+void logs_output_set_output(logs_output_option_t selected_option) {
   switch (selected_option) {
     case USB:
       uart_bridge_set_logs_to_usb();
@@ -41,7 +35,7 @@ void logs_output() {
       .banner = "Logs Output",
       .current_option = logs_output_get_option(),
       .options_count = sizeof(logs_output_options) / sizeof(char*),
-      .select_cb = logs_output_set_logs_output,
+      .select_cb = logs_output_set_output,
       .exit_cb = menus_module_exit_app,
       .style = RADIO_SELECTION_OLD_STYLE,
   };

@@ -33,6 +33,7 @@ void app_main() {
 
   uart_bridge_begin(uart_config, UART_BUFFER_SIZE);
   preferences_begin();
+  logs_output_set_output(preferences_get_uchar("logs_output", USB));
 
   bool stealth_mode = preferences_get_bool("stealth_mode", false);
   if (!stealth_mode) {
