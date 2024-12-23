@@ -145,10 +145,8 @@ void detector_scenes_channel() {
 //////////////////////////   Help Menu   //////////////////////////
 
 static const char* help_text =
-    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod "
-    "tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim "
-    "veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea "
-    "commodo consequat.";
+    "Detect deauth packets in the air and display the count of packets per "
+    "channel.";
 
 static void help_exit() {
   detector_scenes_main_menu();
