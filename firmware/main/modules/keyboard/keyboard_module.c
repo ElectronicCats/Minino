@@ -8,7 +8,7 @@ static int IDLE_TIMEOUT_S = 30;
 
 static const char* TAG = "keyboard";
 static input_callback_t input_callback = NULL;
-esp_timer_handle_t idle_timer;
+static esp_timer_handle_t idle_timer;
 static bool is_idle = false;
 static bool lock_input = false;
 

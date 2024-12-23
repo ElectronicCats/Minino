@@ -13,7 +13,7 @@ static int IDLE_TIMEOUT_S = 30;
 static const char* TAG = "screen_saver";
 
 static volatile bool screen_saver_running;
-esp_timer_handle_t screen_savar_idle_timer2;
+static esp_timer_handle_t screen_saver_idle_timer;
 
 void screen_saver_run();
 
@@ -88,13 +88,13 @@ void screen_saver_set_idle_timeout(uint8_t timeout_seconds) {
 bool screen_saver_get_idle_state() {
   bool idle = screen_saver_running;
   screen_saver_stop();
-  esp_timer_stop(screen_savar_idle_timer2);
-  esp_timer_start_once(screen_savar_idle_timer2, IDLE_TIMEOUT_S * 1000 * 1000);
+  esp_timer_stop(screen_saver_idle_timer);
+  esp_timer_start_once(screen_saver_idle_timer, IDLE_TIMEOUT_S * 1000 * 1000);
   return idle;
 }
 
 void screen_saver_begin() {
   esp_timer_create_args_t timer_args = {
       .callback = timer_callback, .arg = NULL, .name = "idle_timer"};
-  esp_err_t err = esp_timer_create(&timer_args, &screen_savar_idle_timer2);
+  esp_err_t err = esp_timer_create(&timer_args, &screen_saver_idle_timer);
 }

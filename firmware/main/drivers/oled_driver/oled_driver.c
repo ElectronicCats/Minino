@@ -62,7 +62,7 @@ void oled_driver_set_buffer(oled_driver_t* dev, uint8_t* buffer) {
   int index = 0;
   for (int page = 0; page < dev->_pages; page++) {
     memcpy(&dev->_page[page]._segs, &buffer[index], dev->_width);
-    index = index + dev->_width;
+    index += dev->_width;
   }
 }
 
@@ -70,7 +70,7 @@ void oled_driver_get_buffer(oled_driver_t* dev, uint8_t* buffer) {
   int index = 0;
   for (int page = 0; page < dev->_pages; page++) {
     memcpy(&buffer[index], &dev->_page[page]._segs, dev->_width);
-    index = index + dev->_width;
+    index += dev->_width;
   }
 }
 
