@@ -54,6 +54,7 @@ Minino can operate in 6 different technologies:
 - [x] WiFi deauther
 - [x] DOS Attack (Control with Console and Minino)
 - [x] Analyzer
+- [x] SSID Spammer
 - [ ] Wireshark integration
 ### BLE
 - [x] BLE ADV Sniffer (Wireshark Integration)
@@ -74,8 +75,9 @@ Minino can operate in 6 different technologies:
 
 ### Matter
 - [ ] Matter protocol support
+- [ ] Matter Spoof
 - [ ] Matter CLI
-
+      
 ### Tools
 - [x] OTA Firmware Update
 - [x] GPS Location
@@ -84,7 +86,8 @@ Minino can operate in 6 different technologies:
 - [x] SD
 - [x] File Manager Web (Local AP and WIFI access)
 - [x] File Manager Local
-- [ ] I2C Scanner
+- [x] Serial CMD Commander
+- [x] I2C Scanner
 - [ ] UART2
 
 ### Settings

@@ -16,7 +16,7 @@
 
 #include "wardriving_common.h"
 
-#define FILE_NAME DIR_NAME "/Minino"
+#define FILE_NAME WARFI_DIR_NAME "/Warfi"
 
 #define WIFI_SCAN_REFRESH_RATE_MS   3000
 #define DISPLAY_REFRESH_RATE_SEC    2
@@ -105,7 +105,7 @@ void wardriving_module_scan_task(void* pvParameters) {
  *
  * @return void
  */
-void update_file_name(char* full_date_time) {
+static void update_file_name(char* full_date_time) {
   sprintf(csv_file_name, "%s_%s.csv", FILE_NAME, full_date_time);
   // Replace " " by "_" and ":" by "-"
   for (int i = 0; i < strlen(csv_file_name); i++) {
@@ -128,11 +128,11 @@ void update_file_name(char* full_date_time) {
  *
  * @return void
  */
-void wardriving_module_save_to_file(gps_t* gps) {
-  esp_err_t err = sd_card_create_dir(DIR_NAME);
+static void wardriving_module_save_to_file(gps_t* gps) {
+  esp_err_t err = sd_card_create_dir(WARFI_DIR_NAME);
 
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to create %s directory", DIR_NAME);
+    ESP_LOGE(TAG, "Failed to create %s directory", WARFI_DIR_NAME);
     return;
   }
 

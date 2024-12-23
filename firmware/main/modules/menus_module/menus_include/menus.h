@@ -11,6 +11,7 @@
 #include "analyzer_scenes.h"
 #include "catdos_module.h"
 #include "deauth_module.h"
+#include "detector_scenes.h"
 #include "display_settings.h"
 #include "file_manager_module.h"
 #include "gps_module.h"
@@ -46,6 +47,7 @@ typedef enum {
   /* WiFi applications */
   MENU_WIFI_ANALIZER,
   MENU_WIFI_DEAUTH,
+  MENU_WIFI_DEAUTH_SCAN,
   MENU_WIFI_DOS,
   MENU_WIFI_SSID_SPAM,
   /* WiFi analizer items */
@@ -214,6 +216,16 @@ menu_t menus[] = {  //////////////////////////////////
      .entry_cmd = "deauth",
      .last_selected_submenu = 0,
      .on_enter_cb = deauth_module_begin,
+     .on_exit_cb = NULL,
+     .is_visible = true},
+  #endif
+  #ifdef CONFIG_WIFI_APP_DEAUTH_SCAN
+    {.display_name = "Deauth Scan",
+     .menu_idx = MENU_WIFI_DEAUTH_SCAN,
+     .parent_idx = MENU_WIFI_APPS,
+     .entry_cmd = "deauth_scan",
+     .last_selected_submenu = 0,
+     .on_enter_cb = detector_scenes_main_menu,
      .on_exit_cb = NULL,
      .is_visible = true},
   #endif
