@@ -244,6 +244,7 @@ void cmd_control_register_uart_bridge_commands() {
       .command = "print",
       .help = "Send a message over external UART TXD pin on the MININO",
       .hint = NULL,
+      .category = "GPIO",
       .func = &send_message,
       .argtable = &message_args};
 
@@ -257,10 +258,11 @@ void cmd_control_register_uart_bridge_commands() {
   uart_bridge_args.end = arg_end(2);
 
   esp_console_cmd_t uart_bridge_uart_bridge_cmd = {
-      .command = "uart_bridge",
+      .command = "uart_bridge_start",
       .help =
           "Get messages from external UART RXD pin on the MININO.\n"
           "Press Ctrl+C to stop reading messages.",
+      .category = "GPIO",
       .hint = NULL,
       .func = &uart_bridge,
       .argtable = &uart_bridge_args};
@@ -269,6 +271,7 @@ void cmd_control_register_uart_bridge_commands() {
       .command = "uart_bridge_get_config",
       .help = "Print the UART bridge configuration",
       .hint = NULL,
+      .category = "GPIO",
       .func = &print_uart_bridge_config,
       .argtable = NULL};
 
@@ -314,11 +317,20 @@ void cmd_control_register_uart_bridge_commands() {
       .command = "uart_bridge_set_config",
       .help = "Set the UART bridge configuration",
       .hint = NULL,
+      .category = "GPIO",
       .func = &uart_bridge_set_config,
       .argtable = &uart_bridge_config_args};
+
+  esp_console_cmd_t uart_bridge_main_cmd = {.command = "uart_bridge",
+                                            .help = "UART bridge commands",
+                                            .hint = NULL,
+                                            .category = "default",
+                                            .func = NULL,
+                                            .argtable = NULL};
 
   ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_print_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_uart_bridge_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_print_config_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_set_config_cmd));
+  // ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_main_cmd));
 }

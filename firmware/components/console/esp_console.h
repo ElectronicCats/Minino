@@ -194,6 +194,12 @@ typedef struct {
    */
   const char* hint;
   /**
+   * Category of the command, used for grouping commands in help output.
+   * If set to NULL, the command will be listed in the default category.
+   * The pointer must be valid until the call to esp_console_deinit.
+   */
+  const char* category;
+  /**
    * Pointer to a function which implements the command.
    * @note: Setting both \c func and \c func_w_context is not allowed.
    */

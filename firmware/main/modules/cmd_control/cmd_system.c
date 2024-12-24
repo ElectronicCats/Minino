@@ -4,6 +4,8 @@
 #include "esp_flash.h"
 #include "esp_system.h"
 
+static char* category = "System";
+
 uint8_t print_free_heap() {
   printf("Free heap size: %d bytes or %d KB\n",
          heap_caps_get_free_size(MALLOC_CAP_8BIT),
@@ -114,12 +116,14 @@ void cmd_control_register_system_commands() {
   esp_console_cmd_t restart = {.command = "reset",
                                .help = "Restart the device",
                                .hint = NULL,
+                               .category = category,
                                .func = &esp_restart,
                                .argtable = NULL};
 
   esp_console_cmd_t get_free_heap = {.command = "get_free_heap",
                                      .help = "Get the free heap size",
                                      .hint = NULL,
+                                     .category = category,
                                      .func = &print_free_heap,
                                      .argtable = NULL};
 
@@ -133,12 +137,14 @@ void cmd_control_register_system_commands() {
   esp_console_cmd_t get_chip_info = {.command = "get_chip_info",
                                      .help = "Get the chip information",
                                      .hint = NULL,
+                                     .category = category,
                                      .func = &print_chip_info,
                                      .argtable = NULL};
 
   esp_console_cmd_t get_reset_reason = {.command = "get_reset_reason",
                                         .help = "Get the reset reason",
                                         .hint = NULL,
+                                        .category = category,
                                         .func = &print_reset_reason,
                                         .argtable = NULL};
 

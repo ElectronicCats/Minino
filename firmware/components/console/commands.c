@@ -32,6 +32,12 @@ typedef struct cmd_item_ {
    * May be NULL.
    */
   char* hint;
+  /**
+   * Category of the command, used for grouping commands in help output.
+   * If set to NULL, the command will be listed in the default category.
+   * The pointer must be valid until the call to esp_console_deinit.
+   */
+  const char* category;
   esp_console_cmd_func_t
       func;  //!< pointer to the command handler (without user context)
   esp_console_cmd_func_with_context_t
@@ -139,6 +145,12 @@ esp_err_t esp_console_cmd_register(const esp_console_cmd_t* cmd) {
     item->context = cmd->context;
   }
 
+  if (cmd->category) {
+    item->category = cmd->category;
+  } else {
+    item->category = "default";
+  }
+
   cmd_item_t* last;
   cmd_item_t* it;
 #if CONFIG_CONSOLE_SORTED_HELP
@@ -243,8 +255,6 @@ static struct {
 } help_args;
 
 static void print_arg_help(cmd_item_t* it) {
-  printf("hola\n");
-  return;
   /* First line: command name and hint
    * Pad all the hints to the same column
    */
@@ -274,16 +284,70 @@ static int help_command(int argc, char** argv) {
   cmd_item_t* it;
   int ret_value = 1;
 
-  if (help_args.help_cmd->count == 0) {
-    /* Print summary of each command */
-    SLIST_FOREACH(it, &s_cmd_list, next) {
-      if (it->help == NULL) {
-        continue;
+  char* categories_list[32];
+  int categories_count = 0;
+  SLIST_FOREACH(it, &s_cmd_list, next) {
+    bool found = false;
+    for (int i = 0; i < categories_count; i++) {
+      if (strcmp(it->category, categories_list[i]) == 0) {
+        found = true;
+        break;
       }
-      print_arg_help(it);
+    }
+    if (!found) {
+      categories_list[categories_count++] = (char*) it->category;
+    }
+  }
+
+  if (help_args.help_cmd->count == 0) {
+    // Print a list of all the categories without duplicates
+    printf(
+        "Type 'help <category>' to get help for all commands in a category\n"
+        "Type 'help all' to get help for all commands\n"
+        "Available categories:\n");
+    for (int i = 0; i < categories_count; i++) {
+      printf("  %s\n", categories_list[i]);
     }
     ret_value = 0;
   } else {
+    // Check if the given command is "all"
+    if (strcmp(help_args.help_cmd->sval[0], "all") == 0) {
+      // Print a summary of help for all commands
+      for (int i = 0; i < categories_count; i++) {
+        printf("Category: %s\n", categories_list[i]);
+        SLIST_FOREACH(it, &s_cmd_list, next) {
+          if (strcmp(it->category, categories_list[i]) == 0) {
+            printf("  %s\n", it->command);
+          }
+        }
+      }
+      return 0;
+    }
+
+    // Check if the given command is a category
+    bool found_category = false;
+    SLIST_FOREACH(it, &s_cmd_list, next) {
+      if (strcmp(help_args.help_cmd->sval[0], it->category) == 0) {
+        found_category = true;
+        ret_value = 0;
+      }
+    }
+
+    // Print a summary of help for all commands in the given category
+    printf("Type 'help <command>' to get help for a specific command\n");
+    if (found_category) {
+      for (int i = 0; i < categories_count; i++) {
+        if (strcmp(categories_list[i], help_args.help_cmd->sval[0]) == 0) {
+          SLIST_FOREACH(it, &s_cmd_list, next) {
+            if (strcmp(it->category, help_args.help_cmd->sval[0]) == 0) {
+              printf("  %s\n", it->command);
+            }
+          }
+        }
+      }
+      return 0;
+    }
+
     /* Print summary of given command */
     bool found_command = false;
     SLIST_FOREACH(it, &s_cmd_list, next) {
@@ -320,6 +384,7 @@ esp_err_t esp_console_register_help_command(void) {
       .help =
           "Print the summary of all registered commands if no arguments "
           "are given, otherwise print summary of given command.",
+      "Use 'help all' to print help for all commands",
       .func = &help_command,
       .argtable = &help_args};
   return esp_console_cmd_register(&command);
