@@ -35,7 +35,7 @@ static struct {
 
 // Structure to hold parameters for uart_bridge_task
 typedef struct {
-  const char* buffer_size;
+  int buffer_size;
   int timeout_ms;
 } uart_bridge_params_t;
 
@@ -63,13 +63,13 @@ static void uart_bridge_task(void* args) {
 
   run_uart_bridge_task = true;
   uart_bridge_params_t* params = (uart_bridge_params_t*) args;
-  const char* buffer_size = params->buffer_size;
+  const int buffer_size = params->buffer_size;
   const int timeout_ms = params->timeout_ms;
 
-  ESP_LOGI(TAG, "Buffer size: %s", buffer_size);
+  ESP_LOGI(TAG, "Buffer size: %d", buffer_size);
   ESP_LOGI(TAG, "Timeout: %d", timeout_ms);
 
-  char buffer[atoi(buffer_size)];
+  char buffer[buffer_size];
   while (true) {
     esp_err_t err = uart_bridge_read(buffer, sizeof(buffer), timeout_ms);
     if (err == ESP_OK) {
@@ -89,16 +89,9 @@ static void uart_bridge_task(void* args) {
 }
 
 static void uart_bridge(int argc, char** argv) {
-  int nerrors = arg_parse(argc, argv, (void**) &uart_bridge_args);
-  if (nerrors != 0) {
-    arg_print_errors(stderr, uart_bridge_args.end, argv[0]);
-    return;
-  }
-
-  assert(uart_bridge_args.buffer_size->count == 1);
-  assert(uart_bridge_args.timeout_ms->count == 1);
-  const char* buffer_size = uart_bridge_args.buffer_size->sval[0];
-  const int timeout_ms = *uart_bridge_args.timeout_ms->ival;
+  // TODO: Add a command to change these values
+  const int buffer_size = 1024;
+  const int timeout_ms = 100;
 
   uart_bridge_params_t* params = malloc(sizeof(uart_bridge_params_t));
   params->buffer_size = buffer_size;
@@ -248,24 +241,16 @@ void cmd_control_register_uart_bridge_commands() {
       .func = &send_message,
       .argtable = &message_args};
 
-  uart_bridge_args.buffer_size =
-      arg_str1(NULL, NULL, "<buffer_size>",
-               "Size in bytes of the buffer to read data into");
-  uart_bridge_args.timeout_ms =
-      arg_int1(NULL, NULL, "<timeout_ms>",
-               "Timeout in milliseconds for reading data\n\n"
-               "\tExample: uart_bridge 128 1000");
-  uart_bridge_args.end = arg_end(2);
-
   esp_console_cmd_t uart_bridge_uart_bridge_cmd = {
-      .command = "uart_bridge_start",
+      .command = "uart_bridge",
       .help =
           "Get messages from external UART RXD pin on the MININO.\n"
-          "Press Ctrl+C to stop reading messages.",
+          "Press Ctrl+C to stop reading messages.\n"
+          "\tExample: uart_bridge 128 1000",
       .category = "GPIO",
       .hint = NULL,
       .func = &uart_bridge,
-      .argtable = &uart_bridge_args};
+      .argtable = NULL};
 
   esp_console_cmd_t uart_bridge_print_config_cmd = {
       .command = "uart_bridge_get_config",
@@ -321,16 +306,8 @@ void cmd_control_register_uart_bridge_commands() {
       .func = &uart_bridge_set_config,
       .argtable = &uart_bridge_config_args};
 
-  esp_console_cmd_t uart_bridge_main_cmd = {.command = "uart_bridge",
-                                            .help = "UART bridge commands",
-                                            .hint = NULL,
-                                            .category = "default",
-                                            .func = NULL,
-                                            .argtable = NULL};
-
   ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_print_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_uart_bridge_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_print_config_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_set_config_cmd));
-  // ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_main_cmd));
 }
