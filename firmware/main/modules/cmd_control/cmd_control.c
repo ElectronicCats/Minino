@@ -24,7 +24,38 @@ static int launch_app(int argc, char** argv) {
 }
 
 void cmd_control_register_launch_cmd() {
-  message_args.app = arg_str1(NULL, NULL, "<app>", "Name of the app to launch");
+  message_args.app = arg_str1(NULL, NULL, "<app>",
+                              "Name of the app to LAUNCH\n"
+                              "analyzer\n"
+                              "deauth\n"
+                              "deauth_scan\n"
+                              "dos\n"
+                              "ssid_spam\n"
+                              "trakers_scan\n"
+                              "spam\n"
+                              "hid\n"
+                              "adv\n"
+                              "switch\n"
+                              "light\n"
+                              "zigbee_sniffer\n"
+                              "broadcast\n"
+                              "thread_sniffer\n"
+                              "thread_sniffer_run\n"
+                              "i2c_scanner\n"
+                              "uart_bridge\n"
+                              "file_manager\n"
+                              "ota\n"
+                              "display_config_module_begin\n"
+                              "logs_output\n"
+                              "wifi_settings_begin\n"
+                              "update_sd_card_info\n"
+                              "sd_card_settings_verify_sd_card\n"
+                              "stealth_mode_open_menu\n"
+                              "sleep_mode_settings"
+
+                              "\n\n"
+                              "Example: launch analyzer\n"
+                              "Example: launch i2c_scanner");
   message_args.end = arg_end(1);
 
   esp_console_cmd_t launch_cmd = {.command = "launch",
