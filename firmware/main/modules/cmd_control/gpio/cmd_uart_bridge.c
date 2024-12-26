@@ -9,7 +9,7 @@
 #include "uart_bridge.h"
 
 static const char* TAG = "cmd_uart_bridge";
-
+static char* category = "GPIO";
 static bool run_uart_bridge_task = false;
 
 static struct {
@@ -237,7 +237,7 @@ void cmd_control_register_uart_bridge_commands() {
       .command = "print",
       .help = "Send a message over external UART TXD pin on the MININO",
       .hint = NULL,
-      .category = "GPIO",
+      .category = category,
       .func = &send_message,
       .argtable = &message_args};
 
@@ -247,7 +247,7 @@ void cmd_control_register_uart_bridge_commands() {
           "Get messages from external UART RXD pin on the MININO.\n"
           "Press Ctrl+C to stop reading messages.\n"
           "\tExample: uart_bridge 128 1000",
-      .category = "GPIO",
+      .category = category,
       .hint = NULL,
       .func = &uart_bridge,
       .argtable = NULL};
@@ -256,7 +256,7 @@ void cmd_control_register_uart_bridge_commands() {
       .command = "uart_bridge_get_config",
       .help = "Print the UART bridge configuration",
       .hint = NULL,
-      .category = "GPIO",
+      .category = category,
       .func = &print_uart_bridge_config,
       .argtable = NULL};
 
@@ -302,7 +302,7 @@ void cmd_control_register_uart_bridge_commands() {
       .command = "uart_bridge_set_config",
       .help = "Set the UART bridge configuration",
       .hint = NULL,
-      .category = "GPIO",
+      .category = category,
       .func = &uart_bridge_set_config,
       .argtable = &uart_bridge_config_args};
 

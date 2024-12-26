@@ -4,7 +4,7 @@
 #include "esp_flash.h"
 #include "esp_system.h"
 
-static char* category = "System";
+static char* category = "Minino";
 
 uint8_t print_free_heap() {
   printf("Free heap size: %d bytes or %d KB\n",
@@ -130,6 +130,7 @@ void cmd_control_register_system_commands() {
   esp_console_cmd_t get_min_free_heap = {
       .command = "get_min_free_heap",
       .help = "Get the minimum free heap size",
+      .category = category,
       .hint = NULL,
       .func = &print_min_free_heap,
       .argtable = NULL};
@@ -143,6 +144,7 @@ void cmd_control_register_system_commands() {
 
   esp_console_cmd_t get_reset_reason = {.command = "get_reset_reason",
                                         .help = "Get the reset reason",
+                                        .category = category,
                                         .hint = NULL,
                                         .category = category,
                                         .func = &print_reset_reason,

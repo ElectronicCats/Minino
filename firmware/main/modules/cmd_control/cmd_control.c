@@ -29,6 +29,7 @@ void cmd_control_register_launch_cmd() {
 
   esp_console_cmd_t launch_cmd = {.command = "launch",
                                   .help = "Launch an app",
+                                  .category = "Minino",
                                   .hint = NULL,
                                   .func = &launch_app,
                                   .argtable = &message_args};

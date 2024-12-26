@@ -360,30 +360,35 @@ void register_wifi(void) {
   const esp_console_cmd_t join_cmd = {
       .command = "join",
       .help = "Join WiFi AP as a station, credentials are not saved",
+      .category = "WiFi",
       .hint = NULL,
       .func = &connect,
       .argtable = &join_args};
 
   esp_console_cmd_t save_cmd = {.command = "save",
                                 .help = "Save WiFi AP credentials and join",
+                                .category = "WiFi",
                                 .hint = NULL,
                                 .func = &cmd_wifi_save_credentials,
                                 .argtable = &join_args};
 
   esp_console_cmd_t show_cmd = {.command = "list",
                                 .help = "Show saved WiFi AP credentials",
+                                .category = "WiFi",
                                 .hint = NULL,
                                 .func = &cmd_wifi_show_aps,
                                 .argtable = NULL};
 
   esp_console_cmd_t delete_cmd = {.command = "delete",
                                   .help = "Delete saved WiFi AP credentials",
+                                  .category = "WiFi",
                                   .hint = NULL,
                                   .func = &cmd_wifi_delete_crendentials,
                                   .argtable = &delete_args};
 
   esp_console_cmd_t connect_cmd = {.command = "connect",
                                    .help = "Connect to a saved WiFi AP",
+                                   .category = "WiFi",
                                    .hint = NULL,
                                    .func = &cmd_wifi_connect_index,
                                    .argtable = &connect_args};
