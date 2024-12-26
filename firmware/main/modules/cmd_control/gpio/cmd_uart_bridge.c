@@ -33,6 +33,36 @@ static struct {
   struct arg_end* end;
 } uart_bridge_config_args;
 
+static struct {
+  struct arg_int* buffer_size;
+  struct arg_end* end;
+} uart_bridge_config_buffer_size_args;
+
+static struct {
+  struct arg_int* baud_rate;
+  struct arg_end* end;
+} uart_bridge_config_baud_rate_args;
+
+static struct {
+  struct arg_int* data_bits;
+  struct arg_end* end;
+} uart_bridge_config_data_bits_args;
+
+static struct {
+  struct arg_int* parity;
+  struct arg_end* end;
+} uart_bridge_config_parity_args;
+
+static struct {
+  struct arg_int* stop_bits;
+  struct arg_end* end;
+} uart_bridge_config_stop_bits_args;
+
+static struct {
+  struct arg_int* flow_ctrl;
+  struct arg_end* end;
+} uart_bridge_config_flow_ctrl_args;
+
 // Structure to hold parameters for uart_bridge_task
 typedef struct {
   int buffer_size;
@@ -222,6 +252,152 @@ uint8_t uart_bridge_set_config(int argc, char** argv) {
   return 0;
 }
 
+static uint8_t uart_bridge_set_buffer_size(int argc, char** argv) {
+  int nerrors =
+      arg_parse(argc, argv, (void**) &uart_bridge_config_buffer_size_args);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, uart_bridge_config_buffer_size_args.end, argv[0]);
+    return 1;
+  }
+
+  assert(uart_bridge_config_buffer_size_args.buffer_size->count == 1);
+
+  const int buffer_size =
+      *uart_bridge_config_buffer_size_args.buffer_size->ival;
+
+  uart_bridge_config_t config = uart_bridge_get_config();
+  config.buffer_size = buffer_size;
+
+  esp_err_t err = uart_bridge_begin(config.uart_config, buffer_size);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to set UART bridge buffer size (error code: %d)",
+             err);
+    return 1;
+  }
+
+  return 0;
+}
+
+static uint8_t uart_bridge_set_baud_rate(int argc, char** argv) {
+  int nerrors =
+      arg_parse(argc, argv, (void**) &uart_bridge_config_baud_rate_args);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, uart_bridge_config_baud_rate_args.end, argv[0]);
+    return 1;
+  }
+
+  assert(uart_bridge_config_baud_rate_args.baud_rate->count == 1);
+
+  const int baud_rate = *uart_bridge_config_baud_rate_args.baud_rate->ival;
+
+  uart_bridge_config_t config = uart_bridge_get_config();
+  config.uart_config.baud_rate = baud_rate;
+
+  esp_err_t err = uart_bridge_begin(config.uart_config, config.buffer_size);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to set UART bridge baud rate (error code: %d)", err);
+    return 1;
+  }
+
+  return 0;
+}
+
+static uint8_t uart_bridge_set_data_bits(int argc, char** argv) {
+  int nerrors =
+      arg_parse(argc, argv, (void**) &uart_bridge_config_data_bits_args);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, uart_bridge_config_data_bits_args.end, argv[0]);
+    return 1;
+  }
+
+  assert(uart_bridge_config_data_bits_args.data_bits->count == 1);
+
+  const int data_bits = *uart_bridge_config_data_bits_args.data_bits->ival;
+
+  uart_bridge_config_t config = uart_bridge_get_config();
+  config.uart_config.data_bits = data_bits;
+
+  esp_err_t err = uart_bridge_begin(config.uart_config, config.buffer_size);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to set UART bridge data bits (error code: %d)", err);
+    return 1;
+  }
+
+  return 0;
+}
+
+static uint8_t uart_bridge_set_parity(int argc, char** argv) {
+  int nerrors = arg_parse(argc, argv, (void**) &uart_bridge_config_parity_args);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, uart_bridge_config_parity_args.end, argv[0]);
+    return 1;
+  }
+
+  assert(uart_bridge_config_parity_args.parity->count == 1);
+
+  const int parity = *uart_bridge_config_parity_args.parity->ival;
+
+  uart_bridge_config_t config = uart_bridge_get_config();
+  config.uart_config.parity = parity;
+
+  esp_err_t err = uart_bridge_begin(config.uart_config, config.buffer_size);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to set UART bridge parity (error code: %d)", err);
+    return 1;
+  }
+
+  return 0;
+}
+
+static uint8_t uart_bridge_set_stop_bits(int argc, char** argv) {
+  int nerrors =
+      arg_parse(argc, argv, (void**) &uart_bridge_config_stop_bits_args);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, uart_bridge_config_stop_bits_args.end, argv[0]);
+    return 1;
+  }
+
+  assert(uart_bridge_config_stop_bits_args.stop_bits->count == 1);
+
+  const int stop_bits = *uart_bridge_config_stop_bits_args.stop_bits->ival;
+
+  uart_bridge_config_t config = uart_bridge_get_config();
+  config.uart_config.stop_bits = stop_bits;
+
+  esp_err_t err = uart_bridge_begin(config.uart_config, config.buffer_size);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to set UART bridge stop bits (error code: %d)", err);
+    return 1;
+  }
+
+  return 0;
+}
+
+static uint8_t uart_bridge_set_flow_ctrl(int argc, char** argv) {
+  int nerrors =
+      arg_parse(argc, argv, (void**) &uart_bridge_config_flow_ctrl_args);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, uart_bridge_config_flow_ctrl_args.end, argv[0]);
+    return 1;
+  }
+
+  assert(uart_bridge_config_flow_ctrl_args.flow_ctrl->count == 1);
+
+  const int flow_ctrl = *uart_bridge_config_flow_ctrl_args.flow_ctrl->ival;
+
+  uart_bridge_config_t config = uart_bridge_get_config();
+  config.uart_config.flow_ctrl = flow_ctrl;
+
+  esp_err_t err = uart_bridge_begin(config.uart_config, config.buffer_size);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to set UART bridge flow control (error code: %d)",
+             err);
+    return 1;
+  }
+
+  return 0;
+}
+
 void cmd_control_register_uart_bridge_commands() {
 #if !defined(CONFIG_CMD_UART_BRIDGE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
@@ -245,8 +421,7 @@ void cmd_control_register_uart_bridge_commands() {
       .command = "uart_bridge",
       .help =
           "Get messages from external UART RXD pin on the MININO.\n"
-          "Press Ctrl+C to stop reading messages.\n"
-          "\tExample: uart_bridge 128 1000",
+          "Press Ctrl+C to stop reading messages.\n",
       .category = category,
       .hint = NULL,
       .func = &uart_bridge,
@@ -306,8 +481,112 @@ void cmd_control_register_uart_bridge_commands() {
       .func = &uart_bridge_set_config,
       .argtable = &uart_bridge_config_args};
 
+  uart_bridge_config_buffer_size_args.buffer_size =
+      arg_int1(NULL, NULL, "<buffer_size>",
+               "Size in bytes of the buffer to read data into\n"
+               "\tExample: 1024");
+  uart_bridge_config_buffer_size_args.end = arg_end(1);
+
+  esp_console_cmd_t uart_bridge_set_buffer_size_cmd = {
+      .command = "uart_bridge_set_buffer_size",
+      .help = "Set the buffer size of the UART bridge",
+      .hint = NULL,
+      .category = category,
+      .func = &uart_bridge_set_buffer_size,
+      .argtable = &uart_bridge_config_buffer_size_args};
+
+  uart_bridge_config_baud_rate_args.baud_rate =
+      arg_int1(NULL, NULL, "<baud_rate>",
+               "Baud rate\n"
+               "\tFree to choose, but common values are:\n"
+               "\t9600, 115200, 230400, 460800, 921600");
+  uart_bridge_config_baud_rate_args.end = arg_end(1);
+
+  esp_console_cmd_t uart_bridge_set_baud_rate_cmd = {
+      .command = "uart_bridge_set_baud_rate",
+      .help = "Set the baud rate of the UART bridge",
+      .hint = NULL,
+      .category = category,
+      .func = &uart_bridge_set_baud_rate,
+      .argtable = &uart_bridge_config_baud_rate_args};
+
+  uart_bridge_config_data_bits_args.data_bits =
+      arg_int1(NULL, NULL, "<data_bits>",
+               "Data bits\n"
+               "\tOptions:\n"
+               "\t0: 5 bits\n"
+               "\t1: 6 bits\n"
+               "\t2: 7 bits\n"
+               "\t3: 8 bits");
+  uart_bridge_config_data_bits_args.end = arg_end(1);
+
+  esp_console_cmd_t uart_bridge_set_data_bits_cmd = {
+      .command = "uart_bridge_set_data_bits",
+      .help = "Set the data bits of the UART bridge",
+      .hint = NULL,
+      .category = category,
+      .func = &uart_bridge_set_data_bits,
+      .argtable = &uart_bridge_config_data_bits_args};
+
+  uart_bridge_config_parity_args.parity = arg_int1(NULL, NULL, "<parity>",
+                                                   "Parity\n"
+                                                   "\tOptions:\n"
+                                                   "\t0: disable\n"
+                                                   "\t2: odd\n"
+                                                   "\t3: even");
+  uart_bridge_config_parity_args.end = arg_end(1);
+
+  esp_console_cmd_t uart_bridge_set_parity_cmd = {
+      .command = "uart_bridge_set_parity",
+      .help = "Set the parity of the UART bridge",
+      .hint = NULL,
+      .category = category,
+      .func = &uart_bridge_set_parity,
+      .argtable = &uart_bridge_config_parity_args};
+
+  uart_bridge_config_stop_bits_args.stop_bits =
+      arg_int1(NULL, NULL, "<stop_bits>",
+               "Stop bits\n"
+               "\tOptions:\n"
+               "\t1: 1 bit\n"
+               "\t2: 1.5 bits\n"
+               "\t3: 2 bits");
+  uart_bridge_config_stop_bits_args.end = arg_end(1);
+
+  esp_console_cmd_t uart_bridge_set_stop_bits_cmd = {
+      .command = "uart_bridge_set_stop_bits",
+      .help = "Set the stop bits of the UART bridge",
+      .hint = NULL,
+      .category = category,
+      .func = &uart_bridge_set_stop_bits,
+      .argtable = &uart_bridge_config_stop_bits_args};
+
+  uart_bridge_config_flow_ctrl_args.flow_ctrl =
+      arg_int1(NULL, NULL, "<flow_ctrl>",
+               "Flow control\n"
+               "\tOptions:\n"
+               "\t0: disable\n"
+               "\t1: enable RX hardware flow control (rts)\n"
+               "\t2: enable TX hardware flow control (cts)\n"
+               "\t3: enable hardware flow control");
+  uart_bridge_config_flow_ctrl_args.end = arg_end(1);
+
+  esp_console_cmd_t uart_bridge_set_flow_ctrl_cmd = {
+      .command = "uart_bridge_set_flow_ctrl",
+      .help = "Set the flow control of the UART bridge",
+      .hint = NULL,
+      .category = category,
+      .func = &uart_bridge_set_flow_ctrl,
+      .argtable = &uart_bridge_config_flow_ctrl_args};
+
   ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_print_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_uart_bridge_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_print_config_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_set_config_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_set_buffer_size_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_set_baud_rate_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_set_data_bits_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_set_parity_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_set_stop_bits_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_set_flow_ctrl_cmd));
 }
