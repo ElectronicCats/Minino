@@ -10,6 +10,7 @@
 #include "leds.h"
 #include "menus_module.h"
 #include "preferences.h"
+#include "resistor_detector.h"
 #include "sd_card.h"
 #include "uart_bridge.h"
 
@@ -19,6 +20,7 @@
 
 static const char* TAG = "main";
 void app_main() {
+  resistor_detector(CONFIG_GPIO_RIGHT_BUTTON);
 #if !defined(CONFIG_MAIN_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
