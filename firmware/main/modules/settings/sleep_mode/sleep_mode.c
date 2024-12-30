@@ -68,7 +68,7 @@ void sleep_mode_begin() {
   esp_timer_create_args_t timer_args = {
       .callback = timer_callback, .arg = NULL, .name = "afk_timer"};
   esp_err_t err = esp_timer_create(&timer_args, &afk_timer);
-  AFK_TIMEOUT_S = preferences_get_short(AFK_TIME_MEM, 10);
+  AFK_TIMEOUT_S = preferences_get_short(AFK_TIME_MEM, 300);
   sleep_mode_reset_timer();
 }
 
