@@ -302,6 +302,8 @@ static int help_command(int argc, char** argv) {
   if (help_args.help_cmd->count == 0) {
     // Print a list of all the categories without duplicates
     printf(
+        "Recommended terminal emulator apps: Minicom (Linux/macOS), PuTTY "
+        "(Windows)\n"
         "Type 'help <category>' to get help for all commands in a category\n"
         "Type 'help all' to get help for all commands\n"
         "Available categories:\n");
