@@ -3,12 +3,14 @@
 #include <string.h>
 #include "bitmaps_general.h"
 #include "buzzer.h"
+#include "esp_log.h"
 #include "led_events.h"
 #include "menus_screens.h"
 #include "modals_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
 #include "screen_saver.h"
+#include "sleep_mode.h"
 
 #ifdef CONFIG_RESOLUTION_128X64
   #define SCREEN_WIDTH  128
@@ -18,11 +20,13 @@
   #define SCREEN_HEIGHT 32
 #endif
 
+static const char* TAG = "menus_module";
+
 static menus_manager_t* menus_ctx;
 static void menus_input_cb(uint8_t button_name, uint8_t button_event);
-static app_state2_t app_state2 = {.in_app = false,
-                                  .input_callback = NULL,
-                                  .input_last_callback = NULL};
+static app_state2_t app_state = {.in_app = false,
+                                 .input_callback = NULL,
+                                 .input_last_callback = NULL};
 static TaskHandle_t screen_saver_task = NULL;
 static bool screen_saver_running = false;
 
@@ -44,6 +48,7 @@ static uint8_t get_menu_idx_over_cmd(char* entry_cmd) {
       return i;
     }
   }
+  ESP_LOGE(TAG, "Menu not found for command: %s", entry_cmd);
   return 0;
 }
 
@@ -139,19 +144,19 @@ static void menus_input_cb(uint8_t button_name, uint8_t button_event) {
     return;
   }
 
-  if (app_state2.in_app) {
-    if (app_state2.input_callback) {
-      app_state2.input_callback(button_name, button_event);
+  if (app_state.in_app) {
+    if (app_state.input_callback) {
+      app_state.input_callback(button_name, button_event);
       return;
     }
-    app_state2.in_app = false;
+    app_state.in_app = false;
     return;
   }
 
   if (button_event != BUTTON_PRESS_DOWN) {
     return;
   }
-
+  sleep_mode_reset_timer();
   if (screen_saver_get_idle_state()) {
     display_menus();
     return;
@@ -193,6 +198,7 @@ static void get_reset_menu() {
     show_logo();
   } else {
     preferences_put_int("MENUNUMBER", MENU_MAIN);
+    sleep_mode_reset_timer();
     screen_saver_get_idle_state();
     refresh_menus();
   }
@@ -206,14 +212,15 @@ void menus_module_disable_input() {
 }
 
 void menus_module_set_app_state(bool in_app, input_callback_t input_cb) {
-  app_state2.in_app = in_app;
-  app_state2.input_last_callback = app_state2.input_callback;
-  app_state2.input_callback = input_cb;
+  app_state.in_app = in_app;
+  app_state.input_last_callback = app_state.input_callback;
+  app_state.input_callback = input_cb;
+  sleep_mode_reset_timer();
   screen_saver_get_idle_state();
 }
 
 void menus_module_set_app_state_last() {
-  app_state2.input_callback = app_state2.input_last_callback;
+  app_state.input_callback = app_state.input_last_callback;
 }
 
 void menus_module_restart() {
@@ -228,6 +235,7 @@ void menus_module_reset() {
 
 void menus_module_exit_app() {
   menus_module_set_app_state(false, menus_input_cb);
+  sleep_mode_reset_timer();
   screen_saver_get_idle_state();
   navigation_exit();
 }
@@ -237,11 +245,12 @@ menu_idx_t menus_module_get_current_menu() {
 }
 
 bool menus_module_get_app_state() {
-  return app_state2.in_app;
+  return app_state.in_app;
 }
 
 void menus_module_set_menu(menu_idx_t menu_idx) {
   if (!menus_ctx->submenus_count) {
+    ESP_LOGE(TAG, "No submenus available");
     return;
   }
   screen_saver_stop();
@@ -277,6 +286,7 @@ void menus_module_begin() {
   menus_ctx = calloc(1, sizeof(menus_manager_t));
   menus_ctx->menus_count = sizeof(menus) / sizeof(menu_t);
   screen_saver_begin();
+  sleep_mode_begin();
   keyboard_module_set_input_callback(menus_input_cb);
   oled_screen_begin();
   get_reset_menu();

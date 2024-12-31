@@ -1,9 +1,0 @@
-menu "Buzzer Configuration"
-	
-	config BUZZER_COMPONENT_ENABLED
-		bool "Enable buzzer component"
-		default true
-		help
-			Enable the buzzer component.
-
-endmenu

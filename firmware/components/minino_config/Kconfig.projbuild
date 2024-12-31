@@ -21,784 +21,842 @@ menu "General project"
 		help
 			Firmware version.
 
-	menu "Modules debug configuration"
+	menu "Debug"
 
-		config MAIN_DEBUG
-			bool "Main debug"
-			default false
-			help
-				Enable Main debug.
+		menu "Modules"
 
-		config CONFIGURATION_DEBUG
-			bool "Configuration debug"
-			default false
-			help
-				Enable Configuration debug.
+			config CMD_UART_BRIDGE_DEBUG
+				bool "CMD UART Bridge debug"
+				default false
+				help
+					Enable CMD UART Bridge debug.
 
-		config BLE_MODULE_DEBUG
-			bool "BLE module debug"
-			default false
-			help
-				Enable BLE module debug.
+			config CONFIGURATION_DEBUG
+				bool "Configuration debug"
+				default false
+				help
+					Enable Configuration debug.
 
-		config CAT_CONSOLE_DEBUG
-			bool "Cat console debug"
-			default false
-			help
-				Enable Cat console debug.
+			config BLE_MODULE_DEBUG
+				bool "BLE module debug"
+				default false
+				help
+					Enable BLE module debug.
 
-		config CATDOS_MODULE_DEBUG
-			bool "Cat DOS module debug"
-			default false
-			help
-				Enable Cat DOS module debug.
+			config CAT_CONSOLE_DEBUG
+				bool "Cat console debug"
+				default false
+				help
+					Enable Cat console debug.
 
-		config GPS_MODULE_DEBUG
-			bool "GPS module debug"
-			default false
-			help
-				Enable GPS module debug.
+			config CATDOS_MODULE_DEBUG
+				bool "Cat DOS module debug"
+				default false
+				help
+					Enable Cat DOS module debug.
 
-		config KEYBOARD_DEBUG
-			bool "Keyboard debug"
-			default false
-			help
-				Enable Keyboard debug.
+			config GPS_MODULE_DEBUG
+				bool "GPS module debug"
+				default false
+				help
+					Enable GPS module debug.
 
-		config MENU_SCREENS_DEBUG
-			bool "Menu screens module debug"
-			default false
-			help
-				Enable Menu screens module debug.
+			config KEYBOARD_DEBUG
+				bool "Keyboard debug"
+				default false
+				help
+					Enable Keyboard debug.
 
-		config OLED_DRIVER_DEBUG
-			bool "OLED driver debug"
-			default false
-			help
-				Enable OLED driver debug.
+			config MAIN_DEBUG
+				bool "Main debug"
+				default false
+				help
+					Enable Main debug.
 
-		config OLED_MODULE_DEBUG
-			bool "OLED module debug"
-			default false
-			help
-				Enable OLED module debug.
+			config MENU_SCREENS_DEBUG
+				bool "Menu screens module debug"
+				default false
+				help
+					Enable Menu screens module debug.
 
-		config OPEN_THREAD_MODULE_DEBUG
-			bool "OpenThread module debug"
-			default false
-			help
-				Enable OpenThread module debug.
+			config OLED_DRIVER_DEBUG
+				bool "OLED driver debug"
+				default false
+				help
+					Enable OLED driver debug.
 
-		config SETTINGS_MODULE_DEBUG
-			bool "Settings module debug"
-			default false
-			help
-				Enable Settings module debug.
+			config OLED_MODULE_DEBUG
+				bool "OLED module debug"
+				default false
+				help
+					Enable OLED module debug.
 
-		config WARDRIVING_MODULE_DEBUG
-			bool "Wardriving module debug"
-			default false
-			help
-				Enable Wardriving module debug.
+			config OPEN_THREAD_MODULE_DEBUG
+				bool "OpenThread module debug"
+				default false
+				help
+					Enable OpenThread module debug.
 
-		config WEB_FILE_BROWSER_DEBUG
-			bool "Web file browser debug"
-			default false
-			help
-				Enable Web file browser debug.
+			config SETTINGS_MODULE_DEBUG
+				bool "Settings module debug"
+				default false
+				help
+					Enable Settings module debug.
 
-		config WIFI_MODULE_DEBUG
-			bool "WiFi module debug"
-			default false
-			help
-				Enable WiFi module debug.
+			config WARDRIVING_MODULE_DEBUG
+				bool "Wardriving module debug"
+				default false
+				help
+					Enable Wardriving module debug.
 
-		config ZIGBEE_MODULE_DEBUG
-			bool "Zigbee module debug"
-			default false
-			help
-				Enable Zigbee module debug.
+			config WEB_FILE_BROWSER_DEBUG
+				bool "Web file browser debug"
+				default false
+				help
+					Enable Web file browser debug.
+
+			config WIFI_MODULE_DEBUG
+				bool "WiFi module debug"
+				default false
+				help
+					Enable WiFi module debug.
+
+			config ZIGBEE_MODULE_DEBUG
+				bool "Zigbee module debug"
+				default false
+				help
+					Enable Zigbee module debug.
+
+		endmenu
+
+			menu "Components"
+
+				config BT_GATTC_DEBUG
+					bool "BT GATTC debug"
+					default false
+					help
+						Enable BT GATTC debug.
+
+				config BT_GATTS_DEBUG
+					bool "BT GATTS debug"
+					default false
+					help
+						Enable BT GATTS debug.
+
+				config BT_SPAM_APP_DEBUG
+					bool "BT Spam app debug"
+					default false
+					help
+						Enable BT Spam app debug.
+
+				config CAPTIVE_PORTAL_DEBUG
+					bool "Captive Portal debug"
+					default false
+					help
+						Enable Captive Portal debug.
+
+				config CMD_SNIFFER_DEBUG
+					bool "CMD Sniffer debug"
+					default false
+					help
+						Enable CMD Sniffer debug.
+
+				config CMD_PCAP_DEBUG
+					bool "CMD PCAP debug"
+					default false
+					help
+						Enable CMD PCAP debug.
+
+				config CMD_WIFI_DEBUG
+					bool "CMD WiFi debug"
+					default false
+					help
+						Enable CMD WiFi debug.
+
+				config DNS_SERVER_DEBUG
+					bool "DNS Server debug"
+					default false
+					help
+						Enable DNS Server debug.
+
+				config IEEE_SNIFFER_DEBUG
+					bool "IEEE Sniffer debug"
+					default false
+					help
+						Enable IEEE Sniffer debug.
+
+				config LEDC_CONTROLLER_DEBUG
+					bool "LEDC Controller debug"
+					default false
+					help
+						Enable LEDC Controller debug.
+
+				config NMEA_PARSER_DEBUG
+					bool "NMEA Parser debug"
+					default false
+					help
+						Enable NMEA Parser debug.
+
+				config OPEN_THREAD_DEBUG
+					bool "Open Thread debug"
+					default false
+					help
+						Enable Open Thread debug.
+
+				config PREFERENCES_DEBUG
+					bool "Preferences debug"
+					default false
+					help
+						Enable Preferences debug.
+
+				config SD_CARD_DEBUG
+					bool "SD Card debug"
+					default false
+					help
+						Enable SD Card debug.
+
+				config TRACKERS_SCANNER_DEBUG
+					bool "Trackers Scanner debug"
+					default false
+					help
+						Enable Trackers Scanner debug.
+
+				config UART_BRIDGE_DEBUG
+					bool "UART Bridge debug"
+					default false
+					help
+						Enable UART Bridge debug.
+
+				config WIFI_ATTACKS_DEBUG
+					bool "WiFi Attacks debug"
+					default false
+					help
+						Enable WiFi Attacks debug.
+
+				config WIFI_CONTROLLER_DEBUG
+					bool "WiFi Controller debug"
+					default false
+					help
+						Enable WiFi Controller debug.
+
+				config WIFI_SCANNER_DEBUG
+					bool "WiFi Scanner debug"
+					default false
+					help
+						Enable WiFi Scanner debug.
+
+				config WIFI_SNIFFER_DEBUG
+					bool "WiFi Sniffer debug"
+					default false
+					help
+						Enable WiFi Sniffer debug.
+
+				config ZIGBEE_SWITCH_DEBUG
+					bool "Zigbee Switch debug"
+					default false
+					help
+						Enable Zigbee Switch debug.
+
+			endmenu
 
 	endmenu
 
-	menu "Components debug configuration"
+	menu "GPS Configuration"
 
-		config BT_GATTC_DEBUG
-			bool "BT GATTC debug"
-			default false
-			help
-				Enable BT GATTC debug.
+    orsource "$IDF_PATH/examples/common_components/env_caps/$IDF_TARGET/Kconfig.env_caps"
 
-		config BT_GATTS_DEBUG
-			bool "BT GATTS debug"
-			default false
-			help
-				Enable BT GATTS debug.
+    config NMEA_PARSER_UART_RXD
+        int "UART RXD pin number"
+        range ENV_GPIO_RANGE_MIN ENV_GPIO_IN_RANGE_MAX
+        default 4
+        help
+            GPIO number for UART RX pin. See UART documentation for more information
+            about available pin numbers for UART.
 
-		config BT_SPAM_APP_DEBUG
-			bool "BT Spam app debug"
-			default false
-			help
-				Enable BT Spam app debug.
+    config NMEA_PARSE_UART_BAUDRATE
+        int "UART Baudrate"
+        range 0 115200
+        default 115200
+        help
+            Baudrate of UART.
 
-		config CMD_WIFI_DEBUG
-			bool "CMD WiFi debug"
-			default false
-			help
-				Enable CMD WiFi debug.
+    config NMEA_PARSER_RING_BUFFER_SIZE
+        int "NMEA Parser Ring Buffer Size"
+        range 0 2048
+        default 1024
+        help
+            Size of the ring buffer used for UART Rx channel.
 
-		config DNS_SERVER_DEBUG
-			bool "DNS Server debug"
-			default false
-			help
-				Enable DNS Server debug.
+    config NMEA_PARSER_TASK_STACK_SIZE
+        int "NMEA Parser Task Stack Size"
+        range 0 4096
+        default 3072
+        help
+            Stack size of NMEA Parser task.
 
-		config IEEE_SNIFFER_DEBUG
-			bool "IEEE Sniffer debug"
-			default false
-			help
-				Enable IEEE Sniffer debug.
+    config NMEA_PARSER_TASK_PRIORITY
+        int "NMEA Parser Task Priority"
+        range 0 24
+        default 2
+        help
+            Priority of NMEA Parser task.
 
-		config LEDC_CONTROLLER_DEBUG
-			bool "LEDC Controller debug"
-			default false
-			help
-				Enable LEDC Controller debug.
+    	menu "NMEA Statement Support"
+        comment "At least one statement must be selected"
+        config NMEA_STATEMENT_GGA
+            bool "GGA Statement"
+            default y
+            help
+                Enabling this option will parse the following parameter from GGA statement:
 
-		config NMEA_PARSER_DEBUG
-			bool "NMEA Parser debug"
-			default false
-			help
-				Enable NMEA Parser debug.
+                - Latitude, Longitude, Altitude;
+                - Number of satellites in use, fix status (no fix, GPS, DGPS), UTC time;
 
-		config OPEN_THREAD_DEBUG
-			bool "Open Thread debug"
-			default false
-			help
-				Enable Open Thread debug.
+        config NMEA_STATEMENT_GSA
+            bool "GSA Statement"
+            default y
+            help
+                Enabling this option will parse the following parameter from GSA statement:
 
-		config PREFERENCES_DEBUG
-			bool "Preferences debug"
-			default false
-			help
-				Enable Preferences debug.
+                - Position/Vertical/Horizontal dilution of precision;
+                - Fix mode (no fix, 2D, 3D fix);
+                - IDs of satellites in use;
 
-		config SD_CARD_DEBUG
-			bool "SD Card debug"
-			default false
-			help
-				Enable SD Card debug.
+        config NMEA_STATEMENT_GSV
+            bool "GSV Statement"
+            default y
+            help
+                Enabling this option will parse the following parameter from GSV statement:
 
-		config TRACKERS_SCANNER_DEBUG
-			bool "Trackers Scanner debug"
-			default false
-			help
-				Enable Trackers Scanner debug.
+                - Number of satellites in view;
+                - Optional details of each satellite in view;
 
-		config WIFI_ATTACKS_DEBUG
-			bool "WiFi Attacks debug"
-			default false
-			help
-				Enable WiFi Attacks debug.
+        config NMEA_STATEMENT_RMC
+            bool "RMC Statement"
+            default y
+            help
+                Enabling this option will parse the following parameter from RMC statement:
 
-		config CAPTIVE_PORTAL_DEBUG
-			bool "Captive Portal debug"
-			default false
-			help
-				Enable Captive Portal debug.
+                - Validity of GPS signal;
+                - Ground speed (knots) and course over ground (degrees);
+                - Magnetic variation;
+                - UTC date;
 
-		config WIFI_CONTROLLER_DEBUG
-			bool "WiFi Controller debug"
-			default false
-			help
-				Enable WiFi Controller debug.
+        config NMEA_STATEMENT_GLL
+            bool "GLL Statement"
+            default y
+            help
+                Enabling this option will parse the following parameter from GLL statement:
 
-		config WIFI_SCANNER_DEBUG
-			bool "WiFi Scanner debug"
-			default false
-			help
-				Enable WiFi Scanner debug.
+                - Latitude, Longitude;
+                - UTC time;
 
-		config CMD_PCAP_DEBUG
-			bool "CMD PCAP debug"
-			default false
-			help
-				Enable CMD PCAP debug.
+        config NMEA_STATEMENT_VTG
+            bool "VTG Statement"
+            default y
+            help
+                Enabling this option will parse the following parameter from VTG statement:
 
-		config CMD_SNIFFER_DEBUG
-			bool "CMD Sniffer debug"
-			default false
-			help
-				Enable CMD Sniffer debug.
+                - Ground speed (knots, km/h) and course over ground (degrees);
+                - Magnetic variation;
 
-		config WIFI_SNIFFER_DEBUG
-			bool "WiFi Sniffer debug"
-			default false
-			help
-				Enable WiFi Sniffer debug.
-
-		config ZIGBEE_SWITCH_DEBUG
-			bool "Zigbee Switch debug"
-			default false
-			help
-				Enable Zigbee Switch debug.
+    endmenu
 
 	endmenu
 
-endmenu
+	menu "OLED Screen Configuration"
 
-menu "OLED Screen Configuration"
+		config GPIO_RANGE_MAX
+			int
+			default 33 if IDF_TARGET_ESP32
+			default 46 if IDF_TARGET_ESP32S2
+			default 48 if IDF_TARGET_ESP32S3
+			default 18 if IDF_TARGET_ESP32C2
+			default 19 if IDF_TARGET_ESP32C3
+			default 30 if IDF_TARGET_ESP32C6
 
-	config GPIO_RANGE_MAX
-		int
-		default 33 if IDF_TARGET_ESP32
-		default 46 if IDF_TARGET_ESP32S2
-		default 48 if IDF_TARGET_ESP32S3
-		default 18 if IDF_TARGET_ESP32C2
-		default 19 if IDF_TARGET_ESP32C3
-		default 30 if IDF_TARGET_ESP32C6
-
-	choice INTERFACE
-		prompt "Interface"
-		default I2C_INTERFACE
-		help
-			Select Interface.
-		config I2C_INTERFACE
-			bool "I2C Interface"
+		choice INTERFACE
+			prompt "Interface"
+			default I2C_INTERFACE
 			help
-				I2C Interface.
-		config SPI_INTERFACE
-			bool "SPI Interface"
+				Select Interface.
+			config I2C_INTERFACE
+				bool "I2C Interface"
+				help
+					I2C Interface.
+			config SPI_INTERFACE
+				bool "SPI Interface"
+				help
+					SPI Interface.
+		endchoice
+
+		choice DRIVER
+			prompt "Driver"
+			default SSD1306 if BOARD_BADGE
+			default SH1106 if BOARD_MININO
 			help
-				SPI Interface.
-	endchoice
+				Select Driver.
+			config SSD1306
+				bool "SSD1306"
+				help
+					SSD1306 Driver.
+			config SH1106
+				bool "SH1106"
+				help
+					SH1106 Driver.
+		endchoice
 
-	choice DRIVER
-		prompt "Driver"
-		default SSD1306 if BOARD_BADGE
-		default SH1106 if BOARD_MININO
-		help
-			Select Driver.
-		config SSD1306
-			bool "SSD1306"
+		choice RESOLUTION
+			prompt "Panel resolution"
+			default RESOLUTION_128X32 if BOARD_BADGE
+			default RESOLUTION_128X64 if BOARD_MININO
 			help
-				SSD1306 Driver.
-		config SH1106
-			bool "SH1106"
+				Select Panel resolution.
+			config RESOLUTION_128X32
+				bool "128x32 Panel"
+				help
+					Panel is 128x32.
+			config RESOLUTION_128X64
+				bool "128x64 Panel"
+				help
+					Panel is 128x64.
+		endchoice
+
+		config FLIP
+			bool "Flip upside down"
+			default false
 			help
-				SH1106 Driver.
-	endchoice
+				Flip upside down.
 
-	choice RESOLUTION
-		prompt "Panel resolution"
-		default RESOLUTION_128X32 if BOARD_BADGE
-		default RESOLUTION_128X64 if BOARD_MININO
-		help
-			Select Panel resolution.
-		config RESOLUTION_128X32
-			bool "128x32 Panel"
+		config SCL_GPIO
+			depends on I2C_INTERFACE
+			int "SCL GPIO number"
+			range 0 GPIO_RANGE_MAX
+			default 22 if IDF_TARGET_ESP32
+			default 12 if IDF_TARGET_ESP32S2
+			default 12 if IDF_TARGET_ESP32S3
+			default 7 if IDF_TARGET_ESP32C6
+			default  6 # C3 and others
 			help
-				Panel is 128x32.
-		config RESOLUTION_128X64
-			bool "128x64 Panel"
+				GPIO number (IOxx) to I2C SCL.
+				Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to I2C.
+				GPIOs 35-39 are input-only so cannot be used as outputs.
+
+		config SDA_GPIO
+			depends on I2C_INTERFACE
+			int "SDA GPIO number"
+			range 0 GPIO_RANGE_MAX
+			default 21 if IDF_TARGET_ESP32
+			default 11 if IDF_TARGET_ESP32S2
+			default 11 if IDF_TARGET_ESP32S3
+			default 6 if IDF_TARGET_ESP32C6
+			default  5 # C3 and others
 			help
-				Panel is 128x64.
-	endchoice
+				GPIO number (IOxx) to I2C SDA.
+				Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to I2C.
+				GPIOs 35-39 are input-only so cannot be used as outputs.
 
-	config FLIP
-		bool "Flip upside down"
-		default false
-		help
-			Flip upside down.
-
-	config SCL_GPIO
-		depends on I2C_INTERFACE
-		int "SCL GPIO number"
-		range 0 GPIO_RANGE_MAX
-		default 22 if IDF_TARGET_ESP32
-		default 12 if IDF_TARGET_ESP32S2
-		default 12 if IDF_TARGET_ESP32S3
-		default 7 if IDF_TARGET_ESP32C6
-		default  6 # C3 and others
-		help
-			GPIO number (IOxx) to I2C SCL.
-			Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to I2C.
-			GPIOs 35-39 are input-only so cannot be used as outputs.
-
-	config SDA_GPIO
-		depends on I2C_INTERFACE
-		int "SDA GPIO number"
-		range 0 GPIO_RANGE_MAX
-		default 21 if IDF_TARGET_ESP32
-		default 11 if IDF_TARGET_ESP32S2
-		default 11 if IDF_TARGET_ESP32S3
-		default 6 if IDF_TARGET_ESP32C6
-		default  5 # C3 and others
-		help
-			GPIO number (IOxx) to I2C SDA.
-			Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to I2C.
-			GPIOs 35-39 are input-only so cannot be used as outputs.
-
-	config MOSI_GPIO
-		depends on SPI_INTERFACE
-		int "MOSI GPIO number"
-		range 0 GPIO_RANGE_MAX
-		default 23 if IDF_TARGET_ESP32
-		default 35 if IDF_TARGET_ESP32S2
-		default 35 if IDF_TARGET_ESP32S3
-		default  1 # C3 and others
-		help
-			GPIO number (IOxx) to SPI MOSI.
-			Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to MOSI.
-			On the ESP32, GPIOs 35-39 are input-only so cannot be used as outputs.
-			On the ESP32-S2, GPIO 46 is input-only so cannot be used as outputs.
-
-	config SCLK_GPIO
-		depends on SPI_INTERFACE
-		int "SCLK GPIO number"
-		range 0 GPIO_RANGE_MAX
-		default 18 if IDF_TARGET_ESP32
-		default 36 if IDF_TARGET_ESP32S2
-		default 36 if IDF_TARGET_ESP32S3
-		default  2 # C3 and others
-		help
-			GPIO number (IOxx) to SPI SCLK.
-			Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to SCLK.
-			On the ESP32, GPIOs 35-39 are input-only so cannot be used as outputs.
-			On the ESP32-S2, GPIO 46 is input-only so cannot be used as outputs.
-
-	config CS_GPIO
-		depends on SPI_INTERFACE
-		int "CS GPIO number"
-		range 0 GPIO_RANGE_MAX
-		default  5 if IDF_TARGET_ESP32
-		default 34 if IDF_TARGET_ESP32S2
-		default 34 if IDF_TARGET_ESP32S3
-		default 10 # C3 and others
-		help
-			GPIO number (IOxx) to SPI CS.
-			Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to CS.
-			GPIOs 35-39 are input-only so cannot be used as outputs.
-
-	config DC_GPIO
-		depends on SPI_INTERFACE
-		int "DC GPIO number"
-		range 0 GPIO_RANGE_MAX
-		default  4 if IDF_TARGET_ESP32
-		default 37 if IDF_TARGET_ESP32S2
-		default 37 if IDF_TARGET_ESP32S3
-		default  3 # C3 and others
-		help
-			GPIO number (IOxx) to SPI DC.
-			Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to DC.
-			GPIOs 35-39 are input-only so cannot be used as outputs.
-
-	config RESET_GPIO
-		int "RESET GPIO number"
-		range -1 GPIO_RANGE_MAX
-		default 15 if IDF_TARGET_ESP32
-		default 38 if IDF_TARGET_ESP32S2
-		default 38 if IDF_TARGET_ESP32S3
-		default -1 if IDF_TARGET_ESP32C6
-		default  4 # C3 and others
-		help
-			GPIO number (IOxx) to RESET.
-			When it is -1, RESET isn't performed.
-			Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to RESET.
-			GPIOs 35-39 are input-only so cannot be used as outputs.
-
-	choice I2C_PORT
-		depends on I2C_INTERFACE
-		prompt "I2C port that controls this bus"
-		default I2C_PORT_0
-		help
-			Select I2C port that controls this bus.
-		config I2C_PORT_0
-			bool "I2C_PORT_0"
+		config MOSI_GPIO
+			depends on SPI_INTERFACE
+			int "MOSI GPIO number"
+			range 0 GPIO_RANGE_MAX
+			default 23 if IDF_TARGET_ESP32
+			default 35 if IDF_TARGET_ESP32S2
+			default 35 if IDF_TARGET_ESP32S3
+			default  1 # C3 and others
 			help
-				Use I2C_PORT_0.
-		config I2C_PORT_1
-			depends on IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
-			bool "I2C_PORT_1"
+				GPIO number (IOxx) to SPI MOSI.
+				Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to MOSI.
+				On the ESP32, GPIOs 35-39 are input-only so cannot be used as outputs.
+				On the ESP32-S2, GPIO 46 is input-only so cannot be used as outputs.
+
+		config SCLK_GPIO
+			depends on SPI_INTERFACE
+			int "SCLK GPIO number"
+			range 0 GPIO_RANGE_MAX
+			default 18 if IDF_TARGET_ESP32
+			default 36 if IDF_TARGET_ESP32S2
+			default 36 if IDF_TARGET_ESP32S3
+			default  2 # C3 and others
 			help
-				Use I2C_PORT_1.
-	endchoice
+				GPIO number (IOxx) to SPI SCLK.
+				Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to SCLK.
+				On the ESP32, GPIOs 35-39 are input-only so cannot be used as outputs.
+				On the ESP32-S2, GPIO 46 is input-only so cannot be used as outputs.
 
-	choice SPI_HOST
-		depends on SPI_INTERFACE
-		prompt "SPI peripheral that controls this bus"
-		default SPI2_HOST
-		help
-			Select SPI peripheral that controls this bus.
-		config SPI2_HOST
-			bool "SPI2_HOST"
+		config CS_GPIO
+			depends on SPI_INTERFACE
+			int "CS GPIO number"
+			range 0 GPIO_RANGE_MAX
+			default  5 if IDF_TARGET_ESP32
+			default 34 if IDF_TARGET_ESP32S2
+			default 34 if IDF_TARGET_ESP32S3
+			default 10 # C3 and others
 			help
-				Use SPI2_HOST. This is also called HSPI_HOST.
-		config SPI3_HOST
-			depends on IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
-			bool "SPI3_HOST"
+				GPIO number (IOxx) to SPI CS.
+				Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to CS.
+				GPIOs 35-39 are input-only so cannot be used as outputs.
+
+		config DC_GPIO
+			depends on SPI_INTERFACE
+			int "DC GPIO number"
+			range 0 GPIO_RANGE_MAX
+			default  4 if IDF_TARGET_ESP32
+			default 37 if IDF_TARGET_ESP32S2
+			default 37 if IDF_TARGET_ESP32S3
+			default  3 # C3 and others
 			help
-				USE SPI3_HOST. This is also called VSPI_HOST
-	endchoice
+				GPIO number (IOxx) to SPI DC.
+				Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to DC.
+				GPIOs 35-39 are input-only so cannot be used as outputs.
 
-endmenu
+		config RESET_GPIO
+			int "RESET GPIO number"
+			range -1 GPIO_RANGE_MAX
+			default 15 if IDF_TARGET_ESP32
+			default 38 if IDF_TARGET_ESP32S2
+			default 38 if IDF_TARGET_ESP32S3
+			default -1 if IDF_TARGET_ESP32C6
+			default  4 # C3 and others
+			help
+				GPIO number (IOxx) to RESET.
+				When it is -1, RESET isn't performed.
+				Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to RESET.
+				GPIOs 35-39 are input-only so cannot be used as outputs.
 
-menu "Keyboard Configuration"
+		choice I2C_PORT
+			depends on I2C_INTERFACE
+			prompt "I2C port that controls this bus"
+			default I2C_PORT_0
+			help
+				Select I2C port that controls this bus.
+			config I2C_PORT_0
+				bool "I2C_PORT_0"
+				help
+					Use I2C_PORT_0.
+			config I2C_PORT_1
+				depends on IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+				bool "I2C_PORT_1"
+				help
+					Use I2C_PORT_1.
+		endchoice
 
-	config GPIO_RANGE_MAX
-		int
-		default 33 if IDF_TARGET_ESP32
-		default 46 if IDF_TARGET_ESP32S2
-		default 48 if IDF_TARGET_ESP32S3
-		default 18 if IDF_TARGET_ESP32C2
-		default 19 if IDF_TARGET_ESP32C3
-		default 30 if IDF_TARGET_ESP32C6
-		default 27 if IDF_TARGET_ESP32H2
-	config BOOT_BUTTON
-		int "GPIO BOOT Button Pin"
-		range 0 GPIO_RANGE_MAX
-		default 9 if IDF_TARGET_ESP32C6
-		help
-			Select the GPIO pin number for the BOOT button.
-	config GPIO_LEFT_BUTTON
-		int "GPIO LEFT Button Pin"
-		range 0 GPIO_RANGE_MAX
-		default 1 if BOARD_BADGE
-		default 22 if BOARD_MININO
-		help
-			Select the GPIO pin number for the LEFT button.
-	config GPIO_RIGHT_BUTTON
-		int "GPIO RIGHT Button Pin"
-		range 0 GPIO_RANGE_MAX
-		default 15 if BOARD_BADGE
-		default 1 if BOARD_MININO
-		help
-			Select the GPIO pin number for the RIGHT button.
-	config GPIO_UP_BUTTON
-		int "GPIO UP Button Pin"
-		range 0 GPIO_RANGE_MAX
-		default 22 if BOARD_BADGE
-		default 15 if BOARD_MININO
-		help
-			Select the GPIO pin number for the UP button.
-	config GPIO_DOWN_BUTTON
-		int "GPIO DOWN Button Pin"
-		range 0 GPIO_RANGE_MAX
-		default 23
-		help
-			Select the GPIO pin number for the DOWN button.
-endmenu
+		choice SPI_HOST
+			depends on SPI_INTERFACE
+			prompt "SPI peripheral that controls this bus"
+			default SPI2_HOST
+			help
+				Select SPI peripheral that controls this bus.
+			config SPI2_HOST
+				bool "SPI2_HOST"
+				help
+					Use SPI2_HOST. This is also called HSPI_HOST.
+			config SPI3_HOST
+				depends on IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
+				bool "SPI3_HOST"
+				help
+					USE SPI3_HOST. This is also called VSPI_HOST
+		endchoice
 
-menu "Frequency Configuration"
+	endmenu
 
-    choice EXAMPLE_MAX_CPU_FREQ
-        prompt "Maximum CPU frequency"
-        default EXAMPLE_MAX_CPU_FREQ_80 if !IDF_TARGET_ESP32H2
-        default EXAMPLE_MAX_CPU_FREQ_96 if IDF_TARGET_ESP32H2
-        depends on PM_ENABLE
-        help
-            Maximum CPU frequency to use for dynamic frequency scaling.
+	menu "Keyboard Configuration"
 
-        config EXAMPLE_MAX_CPU_FREQ_80
-            bool "80 MHz"
-        config EXAMPLE_MAX_CPU_FREQ_96
-            bool "96 MHz"
-            depends on IDF_TARGET_ESP32H2
-        config EXAMPLE_MAX_CPU_FREQ_120
-            bool "120 MHz"
-            depends on IDF_TARGET_ESP32C2
-        config EXAMPLE_MAX_CPU_FREQ_160
-            bool "160 MHz"
-            depends on !IDF_TARGET_ESP32C2
-        config EXAMPLE_MAX_CPU_FREQ_240
-            bool "240 MHz"
-            depends on IDF_TARGET_ESP32 || IDF_TARGET_ESP32S2 || IDF_TARGET_ESP32S3
-    endchoice
+		config GPIO_RANGE_MAX
+			int
+			default 33 if IDF_TARGET_ESP32
+			default 46 if IDF_TARGET_ESP32S2
+			default 48 if IDF_TARGET_ESP32S3
+			default 18 if IDF_TARGET_ESP32C2
+			default 19 if IDF_TARGET_ESP32C3
+			default 30 if IDF_TARGET_ESP32C6
+			default 27 if IDF_TARGET_ESP32H2
+		config BOOT_BUTTON
+			int "GPIO BOOT Button Pin"
+			range 0 GPIO_RANGE_MAX
+			default 9 if IDF_TARGET_ESP32C6
+			help
+				Select the GPIO pin number for the BOOT button.
+		config GPIO_LEFT_BUTTON
+			int "GPIO LEFT Button Pin"
+			range 0 GPIO_RANGE_MAX
+			default 1 if BOARD_BADGE
+			default 22 if BOARD_MININO
+			help
+				Select the GPIO pin number for the LEFT button.
+		config GPIO_RIGHT_BUTTON
+			int "GPIO RIGHT Button Pin"
+			range 0 GPIO_RANGE_MAX
+			default 15 if BOARD_BADGE
+			default 1 if BOARD_MININO
+			help
+				Select the GPIO pin number for the RIGHT button.
+		config GPIO_UP_BUTTON
+			int "GPIO UP Button Pin"
+			range 0 GPIO_RANGE_MAX
+			default 22 if BOARD_BADGE
+			default 15 if BOARD_MININO
+			help
+				Select the GPIO pin number for the UP button.
+		config GPIO_DOWN_BUTTON
+			int "GPIO DOWN Button Pin"
+			range 0 GPIO_RANGE_MAX
+			default 23
+			help
+				Select the GPIO pin number for the DOWN button.
+	endmenu
 
-    config EXAMPLE_MAX_CPU_FREQ_MHZ
-        int
-        default 80 if EXAMPLE_MAX_CPU_FREQ_80
-        default 96 if EXAMPLE_MAX_CPU_FREQ_96
-        default 120 if EXAMPLE_MAX_CPU_FREQ_120
-        default 160 if EXAMPLE_MAX_CPU_FREQ_160
-        default 240 if EXAMPLE_MAX_CPU_FREQ_240
+	menu "Enable Apps & Features"
 
-    choice EXAMPLE_MIN_CPU_FREQ
-        prompt "Minimum CPU frequency"
-        default EXAMPLE_MIN_CPU_FREQ_10M if !IDF_TARGET_ESP32H2
-        default EXAMPLE_MIN_CPU_FREQ_32M if IDF_TARGET_ESP32H2
-        depends on PM_ENABLE
-        help
-            Minimum CPU frequency to use for dynamic frequency scaling.
-            Should be set to XTAL frequency or XTAL frequency divided by integer.
+		menu "Hardware components"
+	
+			config LEDS_COMPONENT_ENABLED
+				bool "Enable LEDs component"
+				default true
+				help
+					Enable the LEDs component.
+	
+			config BUZZER_COMPONENT_ENABLED
+				bool "Enable buzzer component"
+				default true
+				help
+					Enable the buzzer component.
 
-        config EXAMPLE_MIN_CPU_FREQ_40M
-            bool "40 MHz (use with 40MHz XTAL)"
-            depends on XTAL_FREQ_40 || XTAL_FREQ_AUTO || ESP32_XTAL_FREQ_40 || ESP32_XTAL_FREQ_AUTO || !IDF_TARGET_ESP32
-        config EXAMPLE_MIN_CPU_FREQ_20M
-            bool "20 MHz (use with 40MHz XTAL)"
-            depends on XTAL_FREQ_40 || XTAL_FREQ_AUTO || ESP32_XTAL_FREQ_40 || ESP32_XTAL_FREQ_AUTO || !IDF_TARGET_ESP32
-        config EXAMPLE_MIN_CPU_FREQ_10M
-            bool "10 MHz (use with 40MHz XTAL)"
-            depends on XTAL_FREQ_40 || XTAL_FREQ_AUTO || ESP32_XTAL_FREQ_40 || ESP32_XTAL_FREQ_AUTO || !IDF_TARGET_ESP32
-        config EXAMPLE_MIN_CPU_FREQ_26M
-            bool "26 MHz (use with 26MHz XTAL)"
-            depends on XTAL_FREQ_26 || XTAL_FREQ_AUTO || ESP32_XTAL_FREQ_26 || ESP32_XTAL_FREQ_AUTO
-        config EXAMPLE_MIN_CPU_FREQ_13M
-            bool "13 MHz (use with 26MHz XTAL)"
-            depends on XTAL_FREQ_26 || XTAL_FREQ_AUTO || ESP32_XTAL_FREQ_26 || ESP32_XTAL_FREQ_AUTO
-        config EXAMPLE_MIN_CPU_FREQ_32M
-            bool "32 MHz (use with 32MHz XTAL)"
-            depends on IDF_TARGET_ESP32H2
-            depends on XTAL_FREQ_32 || XTAL_FREQ_AUTO
-    endchoice
+		endmenu
 
-    config EXAMPLE_MIN_CPU_FREQ_MHZ
-        int
-        default 40 if EXAMPLE_MIN_CPU_FREQ_40M
-        default 20 if EXAMPLE_MIN_CPU_FREQ_20M
-        default 10 if EXAMPLE_MIN_CPU_FREQ_10M
-        default 26 if EXAMPLE_MIN_CPU_FREQ_26M
-        default 13 if EXAMPLE_MIN_CPU_FREQ_13M
-        default 32 if EXAMPLE_MIN_CPU_FREQ_32M
-endmenu
+		menu "Apps"
 
-menu "Apps & Features"
-################################# WIFI ###################################
-config WIFI_APPS_ENABLE
-    bool "Enable WiFi Apps"
-    default true
-    help
-      Enable or disable all WiFi applications.
+			################################# WIFI ###################################
+			config WIFI_APPS_ENABLE
+					bool "Enable WiFi Apps"
+					default true
+					help
+						Enable or disable all WiFi applications.
 
-if WIFI_APPS_ENABLE
+			if WIFI_APPS_ENABLE
 
-config WIFI_APP_ANALYZER
-    bool "Enable Analyzer App"
-    default true
-    help
-      Enable or disable the WiFi Analyzer application.
+			config WIFI_APP_ANALYZER
+					bool "Enable Analyzer App"
+					default true
+					help
+						Enable or disable the WiFi Analyzer application.
 
-config WIFI_APP_DEAUTH
-    bool "Enable Deauth App"
-    default true
-    help
-      Enable or disable the WiFi Deauth application.
+			config WIFI_APP_DEAUTH
+					bool "Enable Deauth App"
+					default true
+					help
+						Enable or disable the WiFi Deauth application.
 
-config WIFI_APP_DOS
-    bool "Enable DoS App"
-    default true
-    help
-      Enable or disable the WiFi DoS application.
+			config WIFI_APP_DOS
+					bool "Enable DoS App"
+					default true
+					help
+						Enable or disable the WiFi DoS application.
 
-config WIFI_APP_SSID_SPAM
-    bool "Enable SSID Spammer App"
-    default true
-    help
-      Enable or disable the WiFi SSID Spammer application.
+			config WIFI_APP_SSID_SPAM
+					bool "Enable SSID Spammer App"
+					default true
+					help
+						Enable or disable the WiFi SSID Spammer application.
 
-endif # WIFI_APPS_ENABLE
+			endif # WIFI_APPS_ENABLE
 
-############################### BLUETOOTH #################################
+			############################### BLUETOOTH #################################
 
-config BLUETOOTH_APPS_ENABLE
-    bool "Enable Bluetooth Apps"
-    default true
-    help
-      Enable or disable all Bluetooth applications.
+			config BLUETOOTH_APPS_ENABLE
+					bool "Enable Bluetooth Apps"
+					default true
+					help
+						Enable or disable all Bluetooth applications.
 
-if BLUETOOTH_APPS_ENABLE
+			if BLUETOOTH_APPS_ENABLE
 
-config BLUETOOTH_APP_TRAKERS
-    bool "Enable Trakers App"
-    default true
-    help
-      Enable or disable the Bluetooth Trakers application.
+			config BLUETOOTH_APP_TRAKERS
+					bool "Enable Trakers App"
+					default true
+					help
+						Enable or disable the Bluetooth Trakers application.
 
-config BLUETOOTH_APP_SPAM
-    bool "Enable Spam App"
-    default true
-    help
-      Enable or disable the Bluetooth Spam application.
+			config BLUETOOTH_APP_SPAM
+					bool "Enable Spam App"
+					default true
+					help
+						Enable or disable the Bluetooth Spam application.
 
-config BLUETOOTH_APP_HID
-	bool "Enable HID App"
-	default true
-	help
-		Enable or disable the Bluetooth HID application.
-config BLUETOOTH_APP_ADV
-	bool "Enable ADV Scanner App"
-	default true
-	help
-		Enable or disable the Bluetooth ADV Scanner application.
-endif # BLUETOOTH_APPS_ENABLE
-################################# ZIGBEE ###################################
+			config BLUETOOTH_APP_HID
+				bool "Enable HID App"
+				default true
+				help
+					Enable or disable the Bluetooth HID application.
+			config BLUETOOTH_APP_ADV
+				bool "Enable ADV Scanner App"
+				default true
+				help
+					Enable or disable the Bluetooth ADV Scanner application.
+			endif # BLUETOOTH_APPS_ENABLE
+			################################# ZIGBEE ###################################
 
-config ZIGBEE_APPS_ENABLE
-    bool "Enable Zigbee Apps"
-    default true
-    help
-      Enable or disable all Zigbee applications.
+			config ZIGBEE_APPS_ENABLE
+					bool "Enable Zigbee Apps"
+					default true
+					help
+						Enable or disable all Zigbee applications.
 
-if ZIGBEE_APPS_ENABLE
+			if ZIGBEE_APPS_ENABLE
 
-config ZIGBEE_APP_SPOOFING
-    bool "Enable Spoofing App"
-    default true
-    help
-      Enable or disable the Zigbee Spoofing application.
+			config ZIGBEE_APP_SPOOFING
+					bool "Enable Spoofing App"
+					default true
+					help
+						Enable or disable the Zigbee Spoofing application.
 
-if ZIGBEE_APP_SPOOFING
+			if ZIGBEE_APP_SPOOFING
 
-config ZIGBEE_APP_SPOOFING_SWITCH
-    bool "Enable Spoofing Switch App"
-    default true
-    help
-      Enable or disable the Zigbee Spoofing Switch application.
+			config ZIGBEE_APP_SPOOFING_SWITCH
+					bool "Enable Spoofing Switch App"
+					default true
+					help
+						Enable or disable the Zigbee Spoofing Switch application.
 
-config ZIGBEE_APP_SNIFFER_LIGHT
-    bool "Enable Spoofing Light App"
-    default true
-    help
-      Enable or disable the Zigbee Spoofing Light application.
-endif # ZIGBEE_APP_SPOOFING
+			config ZIGBEE_APP_SNIFFER_LIGHT
+					bool "Enable Spoofing Light App"
+					default true
+					help
+						Enable or disable the Zigbee Spoofing Light application.
+			endif # ZIGBEE_APP_SPOOFING
 
-config ZIGBEE_APP_SNIFFER
-    bool "Enable Sniffer App"
-    default true
-    help
-      Enable or disable the Zigbee Sniffer application.
-endif # ZIGBEE_APPS_ENABLE
+			config ZIGBEE_APP_SNIFFER
+					bool "Enable Sniffer App"
+					default true
+					help
+						Enable or disable the Zigbee Sniffer application.
+			endif # ZIGBEE_APPS_ENABLE
 
-################################# THREAD ###################################
+			################################# THREAD ###################################
 
-config THREAD_APPS_ENABLE
-    bool "Enable Thread Apps"
-    default true
-    help
-      Enable or disable all Thread applications.
+			config THREAD_APPS_ENABLE
+					bool "Enable Thread Apps"
+					default true
+					help
+						Enable or disable all Thread applications.
 
-if THREAD_APPS_ENABLE
+			if THREAD_APPS_ENABLE
 
-config THREAD_APP_BROADCAST
-    bool "Enable Boradcast App"
-    default true
-    help
-      Enable or disable the Thread Broadcast application.
+			config THREAD_APP_BROADCAST
+					bool "Enable Boradcast App"
+					default true
+					help
+						Enable or disable the Thread Broadcast application.
 
-config THREAD_APP_SNIFFER
-    bool "Enable Sniffer App"
-    default true
-    help
-      Enable or disable the Thread Sniffer application.
-endif # THREAD_APPS_ENABLE
+			config THREAD_APP_SNIFFER
+					bool "Enable Sniffer App"
+					default true
+					help
+						Enable or disable the Thread Sniffer application.
+			endif # THREAD_APPS_ENABLE
 
-################################# GPS ###################################
+			################################# GPS ###################################
 
-config GPS_APPS_ENABLE
-    bool "Enable GPS Apps"
-    default true
-    help
-      Enable or disable all GPS applications.
+			config GPS_APPS_ENABLE
+					bool "Enable GPS Apps"
+					default true
+					help
+						Enable or disable all GPS applications.
 
-if GPS_APPS_ENABLE
+			if GPS_APPS_ENABLE
 
-config GPS_APP_WARDRIVING
-    bool "Enable Wardriving App"
-    default true
-    help
-      Enable or disable the GPS Wardriving application.
+			config GPS_APP_WARDRIVING
+					bool "Enable Wardriving App"
+					default true
+					help
+						Enable or disable the GPS Wardriving application.
 
-config GPS_APP_WARDRIVING_ZB
-	bool "Enable Wardriving Zigbee App"
-	default true
-	help
-		Enable or disable the GPS Wardriving Zigbee application.
-endif # GPS_APPS_ENABLE
+			config GPS_APP_WARDRIVING_ZB
+				bool "Enable Wardriving Zigbee App"
+				default true
+				help
+					Enable or disable the GPS Wardriving Zigbee application.
+			endif # GPS_APPS_ENABLE
 
-################################# GPIO ###################################
+			################################# GPIO ###################################
 
-config GPIO_APPS_ENABLE
-    bool "Enable GPIO Apps"
-    default true
-    help
-      Enable or disable all GPIO applications.
+			config GPIO_APPS_ENABLE
+					bool "Enable GPIO Apps"
+					default true
+					help
+						Enable or disable all GPIO applications.
 
-if GPIO_APPS_ENABLE
+			if GPIO_APPS_ENABLE
 
-config GPIO_I2C_SCAN_APP
-    bool "Enable I2C Scanner App"
-    default true
-    help
-      Enable or disable the I2C Scanner application.
+			config GPIO_I2C_SCAN_APP
+					bool "Enable I2C Scanner App"
+					default true
+					help
+						Enable or disable the I2C Scanner application.
 
-config GPIO_UART_BRIDGE_APP
-    bool "Enable UART Bridge App"
-    default true
-    help
-      Enable or disable the UART Bridge application.
-endif # GPIO_APPS_ENABLE
+			config GPIO_UART_BRIDGE_APP
+					bool "Enable UART Bridge App"
+					default true
+					help
+						Enable or disable the UART Bridge application.
+			endif # GPIO_APPS_ENABLE
 
-################################# OTA ###################################
+			################################# OTA ###################################
 
-config OTA_ENABLE
-    bool "Enable OTA feature"
-    default true
-    help
-      Enable or disable OTA feature.
+			config OTA_ENABLE
+					bool "Enable OTA feature"
+					default true
+					help
+						Enable or disable OTA feature.
 
-########################### FILE MANAGER #############################
+			########################### FILE MANAGER #############################
 
-config FILE_MANAGER_ENABLE
-    bool "Enable File Manager Features"
-    default true
-    help
-      Enable or disable all File Manager Features.
+			config FILE_MANAGER_ENABLE
+					bool "Enable File Manager Features"
+					default true
+					help
+						Enable or disable all File Manager Features.
 
-if FILE_MANAGER_ENABLE
+			if FILE_MANAGER_ENABLE
 
-config FILE_MANAGER_LOCAL
-    bool "Enable Local File Manager"
-    default true
-    help
-      Enable or disable the Local File Manager feature.
+			config FILE_MANAGER_LOCAL
+					bool "Enable Local File Manager"
+					default true
+					help
+						Enable or disable the Local File Manager feature.
 
-config FILE_MANAGER_WEB
-    bool "Enable Web File Manager"
-    default true
-    help
-      Enable or disable the Web File Manager Feature.
-endif # FILE_MANAGER_ENABLE
+			config FILE_MANAGER_WEB
+					bool "Enable Web File Manager"
+					default true
+					help
+						Enable or disable the Web File Manager Feature.
+			endif # FILE_MANAGER_ENABLE
 
-########################### SD CARD #############################
+			########################### Screen Savers ############################
 
-config SD_CARD
-    bool "Enable SD Card Menus"
-    default true
-    help
-      Enable or disable SD Card Menus.
+			menu "Screen Saver"
+				config SCREEN_SAVER_LETTERS
+						bool "Letters"
+						default true
+				config SCREEN_SAVER_FACE
+						bool "Face"
+						default true
+				config SCREEN_SAVER_PWNLABS
+						bool "PwnLabs"
+						default true
+				config SCREEN_SAVER_EC
+						bool "EC"
+						default true
+				config SCREEN_SAVER_MINI_FACE
+						bool "Mini Face"
+						default true
+				config SCREEN_SAVER_BABY_DRAGON
+						bool "Baby Dragon"
+						default true									
+			endmenu
 
-endmenu
+		endmenu
+	
+	endmenu
 
-########################### Screen Savers ############################
-
-menu "Screen Saver"
-	config SCREEN_SAVER_LETTERS
-    	bool "Letters"
-    	default true
-	config SCREEN_SAVER_FACE
-    	bool "Face"
-    	default true
-	config SCREEN_SAVER_PWNLABS
-    	bool "PwnLabs"
-    	default true
-	config SCREEN_SAVER_EC
-    	bool "EC"
-    	default true
-	config SCREEN_SAVER_MINI_FACE
-    	bool "Mini Face"
-    	default true
-	config SCREEN_SAVER_BABY_DRAGON
-    	bool "Baby Dragon"
-    	default true									
 endmenu

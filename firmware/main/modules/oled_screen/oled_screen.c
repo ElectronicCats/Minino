@@ -11,6 +11,8 @@ static const char* TAG = "OLED_DRIVER";
 oled_driver_t dev;
 SemaphoreHandle_t oled_mutex;
 
+uint8_t* last_buffer = NULL;
+
 void oled_screen_begin() {
 #if !defined(CONFIG_OLED_MODULE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
@@ -48,6 +50,24 @@ void oled_screen_begin() {
   ESP_LOGI(TAG, "PANEL: 128x32");
   oled_driver_init(&dev, 128, 32);
 #endif
+}
+
+void oled_screen_get_last_buffer() {
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
+  last_buffer = (uint8_t*) malloc(dev._pages * dev._width * sizeof(uint8_t));
+  oled_driver_get_buffer(&dev, last_buffer);
+  xSemaphoreGive(oled_mutex);
+}
+
+void oled_screen_set_last_buffer() {
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
+  if (last_buffer != NULL) {
+    oled_driver_set_buffer(&dev, last_buffer);
+    oled_driver_show_buffer(&dev);
+    free(last_buffer);
+    last_buffer = NULL;
+  }
+  xSemaphoreGive(oled_mutex);
 }
 
 void oled_screen_clear() {
@@ -141,7 +161,6 @@ void oled_screen_display_selected_item_box() {
 void oled_screen_display_card_border() {
   xSemaphoreTake(oled_mutex, portMAX_DELAY);
   oled_driver_draw_modal_box(&dev, 0, 3);
-  oled_driver_show_buffer(&dev);
   xSemaphoreGive(oled_mutex);
 }
 

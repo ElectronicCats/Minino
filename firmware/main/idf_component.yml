@@ -16,6 +16,8 @@ dependencies:
     path: ../components/ble_hid
   espressif/iperf:
     version: "~0.1.1"
+  espressif/console:
+    path: ../components/console
 
   # # Put list of dependencies here
   # # For components maintained by Espressif:

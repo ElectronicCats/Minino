@@ -62,7 +62,7 @@ void oled_driver_set_buffer(oled_driver_t* dev, uint8_t* buffer) {
   int index = 0;
   for (int page = 0; page < dev->_pages; page++) {
     memcpy(&dev->_page[page]._segs, &buffer[index], dev->_width);
-    index = index + dev->_width;
+    index += dev->_width;
   }
 }
 
@@ -70,7 +70,7 @@ void oled_driver_get_buffer(oled_driver_t* dev, uint8_t* buffer) {
   int index = 0;
   for (int page = 0; page < dev->_pages; page++) {
     memcpy(&buffer[index], &dev->_page[page]._segs, dev->_width);
-    index = index + dev->_width;
+    index += dev->_width;
   }
 }
 
@@ -773,7 +773,7 @@ void oled_driver_draw_modal_box(oled_driver_t* dev,
   int page = initial_page;
   int x = pos_x;
   int y = page * 8 - y_offset;  // 13
-  int width = x + dev->_width - 4;
+  int width = x + dev->_width - 3;
   int height = y + height_offset;  //- 6; // 15
 
   oled_driver_draw_rect(dev, x, y, width, height, 0);
