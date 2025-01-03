@@ -59,7 +59,7 @@ Minino can operate in 6 different technologies:
 - [ ] Wireshark integration
 
 ### BLE
-- [ ] BLE ADV Sniffer (Wireshark Integration)
+- [x] BLE ADV Sniffer (Wireshark Integration)
 - [x] BLE Spammer
 - [x] BLE Spoffing (HID device, audio control)
 - [x] BLE Trackers Scanner (AirTags, Tile, etc)
@@ -101,8 +101,10 @@ Minino can operate in 6 different technologies:
 - [x] Change time screensaver
 - [x] Stealth mode (Disable animation, leds and sound) 
 - [x] APP selection
-- [ ] - [x] Light Sleep Mode
+- [x] Light Sleep Mode
 - [ ] Deep Sleep Mode
+
+
 Inspired by projects such as [Amini Project](https://github.com/Ocelot-Offensive-Security/Arsenal) and [USBNugget](https://github.com/HakCat-Tech/USB-Nugget).
 
 ## How to build the firmware
