@@ -84,6 +84,13 @@ static size_t hex_string_to_binary(const char* hex_string,
   return buf_size;
 }
 
+void openthread_set_channel(uint8_t channel){
+  esp_openthread_lock_acquire(portMAX_DELAY);
+  otInstance* instance = esp_openthread_get_instance();
+  otLinkSetChannel(instance, channel);
+  esp_openthread_lock_release();
+}
+
 esp_err_t openthread_set_dataset(uint8_t channel, uint16_t panid) {
   esp_openthread_lock_acquire(portMAX_DELAY);
   otInstance* instance = esp_openthread_get_instance();
