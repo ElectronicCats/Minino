@@ -48,6 +48,6 @@ void app_main() {
   menus_module_begin();
   leds_off();
   preferences_put_bool("wifi_connected", false);
-  warthread_module_begin();
+  // warthread_module_begin();
   cat_console_begin();  // Contains a while(true) loop, it must be at the end
 }
