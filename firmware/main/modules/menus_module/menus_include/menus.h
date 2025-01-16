@@ -28,11 +28,11 @@
 #include "warbee_module.h"
 #include "wardriving_module.h"
 #include "wardriving_screens_module.h"
+#include "warthread_module.h"
 #include "web_file_browser_module.h"
 #include "wifi_analyzer.h"
 #include "wifi_settings.h"
 #include "zigbee_module.h"
-#include "warthread_module.h"
 
 typedef enum {
   MENU_MAIN = 0,
@@ -419,7 +419,7 @@ menu_t menus[] = {  //////////////////////////////////
      .on_exit_cb = warbee_module_exit,
      .is_visible = true},
     #endif
-     #ifdef CONFIG_GPS_APP_WARDRIVING_TH
+    #ifdef CONFIG_GPS_APP_WARDRIVING_TH
     {.display_name = "Thread Start",
      .menu_idx = MENU_GPS_WARDRIVING_THREAD_START,
      .parent_idx = MENU_GPS_WARDRIVING,

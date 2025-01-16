@@ -1,22 +1,20 @@
 #include "warthread_module.h"
 #include <string.h>
 #include "esp_log.h"
+#include "esp_mac.h"
 #include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 #include "freertos/queue.h"
+#include "freertos/task.h"
 #include "general_submenu.h"
 #include "gps_module.h"
 #include "menus_module.h"
 #include "oled_screen.h"
-#include "radio_selector.h"
-#include "sd_card.h"
-#include "wardriving_common.h"
-#include "wardriving_screens_module.h"
 #include "open_thread.h"
 #include "radio_selector.h"
-#include "esp_mac.h"
+#include "sd_card.h"
 #include "thread_sniffer_bitmaps.h"
-
+#include "wardriving_common.h"
+#include "wardriving_screens_module.h"
 
 #define FILE_NAME WARTH_DIR_NAME "/WarThread"
 
@@ -109,16 +107,14 @@ static void thread_gps_event_handler_cb(gps_t* gps) {
     context_session.session_str = get_str_date_time(gps);
     context_session.session_records_count = 0;
     update_file_name(context_session.session_str);
-    ESP_LOGI(TAG, "Creating Session File: %s",
-             context_session.session_str);
+    ESP_LOGI(TAG, "Creating Session File: %s", context_session.session_str);
     sd_card_write_file(csv_file_name, csv_file_buffer);
     csv_lines = CSV_HEADER_LINES;
     free(csv_file_buffer);
 
     ESP_LOGI(TAG, "Free heap size before allocation: %" PRIu32 " bytes",
              esp_get_free_heap_size());
-    ESP_LOGI(TAG, "Allocating %d bytes for csv_file_buffer",
-             CSV_FILE_SIZE);
+    ESP_LOGI(TAG, "Allocating %d bytes for csv_file_buffer", CSV_FILE_SIZE);
     csv_file_buffer = malloc(CSV_FILE_SIZE);
     if (csv_file_buffer == NULL) {
       ESP_LOGE(TAG, "Failed to allocate memory for csv_file_buffer");
@@ -146,8 +142,7 @@ static void thread_gps_event_handler_cb(gps_t* gps) {
   }
 }
 
-
-static void warthread_packet_handler(const otRadioFrame* aFrame, bool aIsTx){
+static void warthread_packet_handler(const otRadioFrame* aFrame, bool aIsTx) {
   ESP_LOGI(TAG, "Packet received");
 
   if (gps_ctx->sats_in_use == 0) {
@@ -211,11 +206,11 @@ static void warthread_packet_handler(const otRadioFrame* aFrame, bool aIsTx){
 }
 
 void warthread_module_begin() {
-  ESP_LOGI(TAG, "Thread module begin");  
+  ESP_LOGI(TAG, "Thread module begin");
   if (wardriving_module_verify_sd_card() != ESP_OK) {
     return;
   }
-  
+
   csv_lines = CSV_HEADER_LINES;
   ESP_LOGI(TAG, "Free heap size before allocation: %" PRIu32 " bytes",
            esp_get_free_heap_size());
@@ -252,7 +247,6 @@ void warthread_module_begin() {
 
   menus_module_set_app_state(true, thread_module_cb_event);
 }
-
 
 void warthread_module_exit() {
   sd_card_read_file(csv_file_name);
