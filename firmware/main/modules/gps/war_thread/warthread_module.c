@@ -89,12 +89,12 @@ static void thread_gps_event_handler_cb(gps_t* gps) {
 
   gps_ctx = gps;
 
-  ESP_LOGI(TAG,
-           "Satellites in use: %d, signal: %s \r\n"
-           "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
-           "\t\t\t\t\t\tlongitude = %.05f°E\r\n",
-           gps->sats_in_use, gps_module_get_signal_strength(gps), gps->latitude,
-           gps->longitude);
+  // ESP_LOGI(TAG,
+  //          "Satellites in use: %d, signal: %s \r\n"
+  //          "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
+  //          "\t\t\t\t\t\tlongitude = %.05f°E\r\n",
+  //          gps->sats_in_use, gps_module_get_signal_strength(gps),
+  //          gps->latitude, gps->longitude);
 
   if (strcmp(context_session.session_str, "") == 0) {
     esp_err_t err = sd_card_create_dir(WARTH_DIR_NAME);
@@ -126,7 +126,7 @@ static void thread_gps_event_handler_cb(gps_t* gps) {
   }
 
   if (gps->sats_in_use == 0) {
-    ESP_LOGW(TAG, "No GPS signal");
+    // ESP_LOGW(TAG, "No GPS signal");
     wardriving_screens_module_no_gps_signal();
     vTaskSuspend(scanning_thread_animation_task_handle);
     running_thread_scanner_animation = false;
@@ -144,6 +144,42 @@ static void thread_gps_event_handler_cb(gps_t* gps) {
 
 static void warthread_packet_handler(const otRadioFrame* aFrame, bool aIsTx) {
   ESP_LOGI(TAG, "Packet received");
+  ESP_LOG_BUFFER_HEX(TAG, aFrame->mPsdu, aFrame->mLength);
+  printf("\n");
+
+  uint8_t position = 0;
+  // Frame Control Field
+  uint16_t frame_control_field = *((uint16_t*) &aFrame->mPsdu[position]);
+  position += sizeof(uint16_t);
+  uint8_t sequence_number = *((uint8_t*) &aFrame->mPsdu[position]);
+  position += sizeof(uint8_t);
+  uint16_t destination_pan = *((uint16_t*) &aFrame->mPsdu[position]);
+  position += sizeof(uint16_t);
+  uint16_t destination = *((uint16_t*) &aFrame->mPsdu[position]);
+  position += sizeof(uint16_t);
+  uint8_t extd_source[8] = {0};
+  char* dst_addr_str = malloc(24);
+  for (uint8_t idx = 0; idx < sizeof(extd_source); idx++) {
+    extd_source[idx] = aFrame->mPsdu[position + sizeof(extd_source) - 1 - idx];
+  }
+  position += sizeof(extd_source);
+  sprintf(dst_addr_str, ZB_ADDRESS_FORMAT, extd_source[0], extd_source[1],
+          extd_source[2], extd_source[3], extd_source[4], extd_source[5],
+          extd_source[6], extd_source[7]);
+
+  switch (frame_control_field) {
+    case 0xd841:
+    case 0x9869:
+      ESP_LOGI(TAG, "IEEE or MLE");
+      printf("FCF: 0x%04x\n", frame_control_field);
+      printf("Sequence Number: %d\n", sequence_number);
+      printf("Destination PAN: 0x%04x\n", destination_pan);
+      printf("Destination: 0x%04x\n", destination);
+      printf("Extended Source: %s\n", dst_addr_str);
+      break;
+    default:
+      break;
+  }
 
   if (gps_ctx->sats_in_use == 0) {
     ESP_LOGW(TAG, "No GPS signa dont savel");
@@ -155,6 +191,7 @@ static void warthread_packet_handler(const otRadioFrame* aFrame, bool aIsTx) {
   if (csv_lines == CSV_HEADER_LINES) {
     ESP_LOGI("Warbee", "CSV Full");
   }
+
   // "Source,DestinationPAN,Channel,RSSI,"
   sprintf(csv_line_buffer, "%f,%f,%f,%f,%s,%s,%s\n",
           // CurrentLatitude
@@ -201,8 +238,6 @@ static void warthread_packet_handler(const otRadioFrame* aFrame, bool aIsTx) {
   context_session.session_records_count++;
   ESP_LOGI(TAG, "Packet count %d", context_session.session_records_count);
   free(csv_line_buffer);
-  ESP_LOG_BUFFER_HEX(TAG, aFrame->mPsdu, aFrame->mLength);
-  printf("\n");
 }
 
 void warthread_module_begin() {
