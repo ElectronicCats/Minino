@@ -7,6 +7,7 @@
 #include "freertos/task.h"
 #include "general_submenu.h"
 #include "gps_module.h"
+#include "lwip/def.h"
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "open_thread.h"
@@ -17,6 +18,12 @@
 #include "wardriving_screens_module.h"
 
 #define FILE_NAME WARTH_DIR_NAME "/WarThread"
+
+#define THREAD_FCF_MLE_PACKET    0xd841
+#define THREAD_FCF_IEEE_PACKET   0x9869
+#define THREAD_FCF_BEACON_PACKET 0xc000
+#define PROTOCOL_TYPE_IEEE       "IEEE 802.15.4"
+#define PROTOCOL_TYPE_MLE        "MLE"
 
 static const char* TAG = "warthread";
 
@@ -148,7 +155,8 @@ static void warthread_packet_handler(const otRadioFrame* aFrame, bool aIsTx) {
   printf("\n");
 
   uint8_t position = 0;
-  // Frame Control Field
+  char* protocol_type = malloc(24);
+  // IEEE 802.15.4 Base Frame
   uint16_t frame_control_field = *((uint16_t*) &aFrame->mPsdu[position]);
   position += sizeof(uint16_t);
   uint8_t sequence_number = *((uint8_t*) &aFrame->mPsdu[position]);
@@ -167,18 +175,51 @@ static void warthread_packet_handler(const otRadioFrame* aFrame, bool aIsTx) {
           extd_source[2], extd_source[3], extd_source[4], extd_source[5],
           extd_source[6], extd_source[7]);
 
-  switch (frame_control_field) {
-    case 0xd841:
-    case 0x9869:
-      ESP_LOGI(TAG, "IEEE or MLE");
-      printf("FCF: 0x%04x\n", frame_control_field);
-      printf("Sequence Number: %d\n", sequence_number);
-      printf("Destination PAN: 0x%04x\n", destination_pan);
-      printf("Destination: 0x%04x\n", destination);
-      printf("Extended Source: %s\n", dst_addr_str);
-      break;
-    default:
-      break;
+  uint8_t fcs = *((uint8_t*) &aFrame->mPsdu[position]);
+  position += sizeof(uint8_t);
+
+  // printf("FCF: 0x%04x\n", frame_control_field);
+  // printf("Sequence Number: %d\n", sequence_number);
+  // printf("Destination PAN: 0x%04x\n", destination_pan);
+  // printf("Destination: 0x%04x\n", destination);
+  // printf("Extended Source: %s\n", dst_addr_str);
+  // printf("FCS: 0x%04x\n", fcs);
+  if (frame_control_field == THREAD_FCF_IEEE_PACKET) {
+    strcpy(protocol_type, PROTOCOL_TYPE_IEEE);
+  } else if (frame_control_field == THREAD_FCF_MLE_PACKET) {
+    strcpy(protocol_type, PROTOCOL_TYPE_MLE);
+    // 2 bytes from IPHC Header offset
+    position += sizeof(uint8_t);
+    uint8_t mle_destination = *((uint8_t*) &aFrame->mPsdu[position]);
+    position += sizeof(uint8_t);
+    // Multicast destination 0x01
+    if (mle_destination == 0x01) {
+      printf("Destination: Multicast ff02::1 (%02x)\n", mle_destination);
+    } else {
+      printf("Destination: Unknown (%02x)\n", mle_destination);
+    }
+    // Header Compresion offset
+    position += sizeof(uint8_t);
+    uint16_t mle_udp_source_port =
+        lwip_ntohs(*((uint16_t*) &aFrame->mPsdu[position]));
+    position += sizeof(uint16_t);
+    uint16_t mle_udp_destination_port =
+        lwip_ntohs(*((uint16_t*) &aFrame->mPsdu[position]));
+    position += sizeof(uint16_t);
+    uint16_t mle_udp_checksum =
+        lwip_ntohs(*((uint16_t*) &aFrame->mPsdu[position]));
+    position += sizeof(uint16_t);
+    printf("UDP Source port: %d\n", mle_udp_source_port);
+    printf("UDP Destination port: %d\n", mle_udp_destination_port);
+    printf("UDP Checksum: 0x%04x\n", mle_udp_checksum);
+
+  } else {
+    return;
+  }
+  printf("%s\n", protocol_type);
+
+  if (gps_ctx->sats_in_use == NULL) {
+    ESP_LOGE(TAG, "ERROR in sat in use");
   }
 
   if (gps_ctx->sats_in_use == 0) {
@@ -237,7 +278,12 @@ static void warthread_packet_handler(const otRadioFrame* aFrame, bool aIsTx) {
 
   context_session.session_records_count++;
   ESP_LOGI(TAG, "Packet count %d", context_session.session_records_count);
-  free(csv_line_buffer);
+  if (csv_line_buffer != NULL) {
+    free(csv_line_buffer);
+  }
+  if (protocol_type != NULL) {
+    free(protocol_type);
+  }
 }
 
 void warthread_module_begin() {
