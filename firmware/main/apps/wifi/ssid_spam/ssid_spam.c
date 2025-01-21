@@ -8,14 +8,23 @@
 #include "string.h"
 
 #include "animations_task.h"
+#include "general_screens.h"
 #include "keyboard_module.h"
 #include "menus_module.h"
 #include "ssid_spam_screens.h"
+
+#include "general_submenu.h"
+#include "led_events.h"
+#include "menus_module.h"
 
 esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx,
                             const void* buffer,
                             int len,
                             bool en_sys_seq);
+
+static void ssid_spam_main_cb(uint8_t button_name, uint8_t button_event);
+static void ssid_spam_input_cb(uint8_t button_name, uint8_t button_event);
+static void ssid_spam_init();
 
 static uint8_t beacon_raw[] = {
     0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xba, 0xde,
@@ -36,6 +45,46 @@ static char* ssids[] = {
 #define BSSID_OFFSET       16
 #define SEQNUM_OFFSET      22
 #define TOTAL_LINES        (sizeof(ssids) / sizeof(char*))
+
+static uint8_t current_item = 0;
+static char* ssids_main_list[2] = {"List SSID", "Start"};
+
+static const general_menu_t spam_menu_main = {
+    .menu_items = ssids_main_list,
+    .menu_count = 2,
+    .menu_level = GENERAL_TREE_APP_MENU,
+};
+
+static char* ssids_list[1] = {"Never Gonna"};
+
+void spam_start_attack() {
+  ssid_spam_screens_running();
+  animations_task_run(ssid_spam_animation, 200, NULL);
+  ssid_spam_init();
+  menus_module_set_app_state(true, ssid_spam_input_cb);
+}
+
+void spam_main_menu() {
+  general_register_menu(&spam_menu_main);
+  led_control_run_effect(led_control_pulse_leds);
+  general_screen_display_menu(current_item);
+  menus_module_set_app_state(true, ssid_spam_main_cb);
+}
+
+static void spam_reset_menu() {
+  current_item = 0;
+}
+
+static void list_ssid_cb(uint8_t selection) {}
+
+void spam_display_list_ssid() {
+  general_submenu_menu_t spam_menu_list_ssid;
+  spam_menu_list_ssid.options = ssids_list;
+  spam_menu_list_ssid.options_count = 1;
+  spam_menu_list_ssid.select_cb = list_ssid_cb;
+  spam_menu_list_ssid.exit_cb = spam_main_menu;
+  general_submenu(spam_menu_list_ssid);
+}
 
 static void spam_task(void* pvParameter) {
   uint8_t line = 0;
@@ -111,7 +160,7 @@ static void ssid_spam_input_cb(uint8_t button_name, uint8_t button_event) {
   }
   switch (button_name) {
     case BUTTON_LEFT:
-      menus_module_restart();
+      spam_main_menu();
       break;
     case BUTTON_RIGHT:
       break;
@@ -124,9 +173,39 @@ static void ssid_spam_input_cb(uint8_t button_name, uint8_t button_event) {
   }
 }
 
+static void ssid_spam_main_cb(uint8_t button_name, uint8_t button_event) {
+  if (button_event != BUTTON_PRESS_DOWN) {
+    return;
+  }
+  switch (button_name) {
+    case BUTTON_LEFT:
+      menus_module_restart();
+      break;
+    case BUTTON_RIGHT:
+      if (current_item == SPAM_LIST_SSID) {
+        spam_display_list_ssid();
+        break;
+      } else if (current_item == SPAM_START) {
+        spam_start_attack();
+      }
+      break;
+    case BUTTON_UP:
+      current_item = current_item-- == 0 ? SPAM_COUNT - 1 : current_item;
+      general_screen_display_menu(current_item);
+      break;
+    case BUTTON_DOWN:
+      current_item = ++current_item > SPAM_COUNT - 1 ? 0 : current_item;
+      general_screen_display_menu(current_item);
+      break;
+    default:
+      break;
+  }
+}
+
 void ssid_spam_begin() {
-  ssid_spam_screens_running();
-  animations_task_run(ssid_spam_animation, 200, NULL);
-  ssid_spam_init();
-  menus_module_set_app_state(true, ssid_spam_input_cb);
+  spam_main_menu();
+  // ssid_spam_screens_running();
+  // animations_task_run(ssid_spam_animation, 200, NULL);
+  // ssid_spam_init();
+  // menus_module_set_app_state(true, ssid_spam_input_cb);
 }
