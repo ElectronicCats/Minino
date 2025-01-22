@@ -1,6 +1,7 @@
 #include "ssid_spam.h"
 
 #include "esp_event.h"
+#include "esp_log.h"
 #include "esp_system.h"
 #include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
@@ -13,9 +14,12 @@
 #include "menus_module.h"
 #include "ssid_spam_screens.h"
 
+#include "general_flash_storage.h"
 #include "general_submenu.h"
 #include "led_events.h"
 #include "menus_module.h"
+
+static const char* TAG = "ssid_spam";
 
 esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx,
                             const void* buffer,
@@ -55,7 +59,7 @@ static const general_menu_t spam_menu_main = {
     .menu_level = GENERAL_TREE_APP_MENU,
 };
 
-static char* ssids_list[1] = {"Never Gonna"};
+// char* ssids_list[99] = {};
 
 void spam_start_attack() {
   ssid_spam_screens_running();
@@ -71,6 +75,11 @@ void spam_main_menu() {
   menus_module_set_app_state(true, ssid_spam_main_cb);
 }
 
+// static void spam_get_ssid_flash(){
+//   storage_contex_t* list = malloc(sizeof(storage_contex_t) * 99);
+//   flash_storage_get_list(GENFLASH_STORAGE_SPAM, &list);
+// }
+
 static void spam_reset_menu() {
   current_item = 0;
 }
@@ -78,9 +87,20 @@ static void spam_reset_menu() {
 static void list_ssid_cb(uint8_t selection) {}
 
 void spam_display_list_ssid() {
+  storage_contex_t list[99];
+  uint8_t list_count = 0;
+  char* ssids_list[99] = {"Hola"};
+
+  // Obtener la lista de subelementos
+  flash_storage_get_list(GENFLASH_STORAGE_SPAM, list, &list_count);
+  for (int i = 0; i < list_count; i++) {
+    ESP_LOGI(TAG, "List: %s", list[i].item_storage_name);
+    ssids_list[i] = list[i].item_storage_name;
+  }
+
   general_submenu_menu_t spam_menu_list_ssid;
   spam_menu_list_ssid.options = ssids_list;
-  spam_menu_list_ssid.options_count = 1;
+  spam_menu_list_ssid.options_count = list_count;
   spam_menu_list_ssid.select_cb = list_ssid_cb;
   spam_menu_list_ssid.exit_cb = spam_main_menu;
   general_submenu(spam_menu_list_ssid);
@@ -138,7 +158,7 @@ static void ssid_spam_init() {
   ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
-  wifi_config_t ap_config = {.ap = {.ssid = "esp32-beaconspam",
+  wifi_config_t ap_config = {.ap = {.ssid = "NotSuspisiusCat",
                                     .ssid_len = 0,
                                     .password = "dummypassword",
                                     .channel = 1,

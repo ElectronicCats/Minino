@@ -273,3 +273,87 @@ cleanup:
   free(tree_subitem);
   free(tree_subitem_val);
 }
+
+void flash_storage_get_list(char* main_tree,
+                            storage_contex_t* list_storage,
+                            uint8_t* list_count) {
+  char* idx_main_item = malloc(MAX_NVS_CHARS);
+  char* main_item = malloc(MAX_NVS_CHARS);
+  char* idx_subitem = malloc(MAX_NVS_CHARS);
+  char* idx_subitem_count = malloc(MAX_NVS_CHARS);
+  char* tree_subitem = malloc(MAX_NVS_CHARS);
+  char* tree_subitem_val = malloc(MAX_LEN_STRING);
+  if (!idx_main_item || !main_item || !idx_subitem || !idx_subitem_count ||
+      !tree_subitem || !tree_subitem_val) {
+    ESP_LOGE(TAG, "Failed to allocate memory for temporary buffers");
+    goto cleanup;
+  }
+
+  esp_err_t err;
+  uint16_t main_count = preferences_get_ushort(FS_TREE_MAIN_COUNT, 0);
+
+  for (int i = 0; i < main_count; i++) {
+    sprintf(idx_main_item, "%d%s", i, FS_TREE_MAIN_PREFIX);
+    err = preferences_get_string(idx_main_item, main_item, MAX_LEN_STRING);
+    if (err != ESP_OK) {
+      ESP_LOGW(TAG, "Main item not found: %s", esp_err_to_name(err));
+      continue;
+    }
+    if (strcmp(main_tree, main_item) == 0) {
+      break;
+    }
+  }
+  sprintf(idx_subitem_count, "%sc", main_item);
+  uint16_t subitem_count = preferences_get_ushort(idx_subitem_count, 0);
+
+  if (subitem_count == 0) {
+    ESP_LOGW(TAG, "No subitems found.");
+    goto cleanup;
+  }
+
+  uint8_t counter_items = 0;
+
+  for (int j = 0; j < subitem_count; j++) {
+    sprintf(idx_subitem, "%d%s", j, idx_main_item);
+    err = preferences_get_string(idx_subitem, tree_subitem, MAX_LEN_STRING);
+    if (err != ESP_OK) {
+      ESP_LOGW(TAG, "Subitem not found: %s", esp_err_to_name(err));
+      continue;
+    }
+    sprintf(tree_subitem_val, "%sv", idx_subitem);
+    err = preferences_get_string(tree_subitem_val, tree_subitem_val,
+                                 MAX_LEN_STRING);
+    if (err != ESP_OK) {
+      ESP_LOGW(TAG, "Subitem value not found: %s", esp_err_to_name(err));
+      continue;
+    }
+
+    storage_contex_t* item = malloc(sizeof(storage_contex_t));
+    if (!item) {
+      ESP_LOGE(TAG, "Failed to allocate memory for storage_contex_t");
+      break;
+    }
+    item->main_storage_name = strdup(main_tree);
+    item->item_storage_name = strdup(tree_subitem);
+    item->items_storage_value = strdup(tree_subitem_val);
+
+    if (!item->main_storage_name || !item->item_storage_name ||
+        !item->items_storage_value) {
+      ESP_LOGE(TAG, "Failed to allocate memory for strings");
+      free(item);
+      break;
+    }
+
+    list_storage[counter_items++] = *item;
+  }
+
+  *list_count = counter_items;
+
+cleanup:
+  free(idx_main_item);
+  free(main_item);
+  free(idx_subitem);
+  free(idx_subitem_count);
+  free(tree_subitem);
+  free(tree_subitem_val);
+}

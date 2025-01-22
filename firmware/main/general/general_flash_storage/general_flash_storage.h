@@ -1,7 +1,7 @@
 #pragma once
 #include "esp_err.h"
 
-#define GENERAL_FLASH_STORAGE_COUNT_LIMIT 99
+#define GENFLASH_STORAGE_SPAM "spam"
 
 typedef struct {
   char* main_storage_name;
@@ -22,3 +22,7 @@ void flash_storage_show_list(char* main_tree);
   @param char subitem - The name of the subitem to delete
 */
 void flash_storage_delete_list_item(char* main_tree, char* subitem);
+
+void flash_storage_get_list(char* main_tree,
+                            storage_contex_t* list_storage,
+                            uint8_t* list_count);
