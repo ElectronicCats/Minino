@@ -48,7 +48,9 @@ void app_main() {
   menus_module_begin();
   leds_off();
   preferences_put_bool("wifi_connected", false);
-  char* values[UART_BUFFER_SIZE] = {"Gonana live forever"};
+  char* values[UART_BUFFER_SIZE] = {
+      " Bury all your secrets in my skin, Come away with innocence, and leave "
+      "me with my sins"};
   storage_contex_t new_ssid;
   new_ssid.main_storage_name = "spam";
   new_ssid.item_storage_name = "Nevergonna";

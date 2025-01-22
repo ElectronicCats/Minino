@@ -26,3 +26,5 @@ void flash_storage_delete_list_item(char* main_tree, char* subitem);
 void flash_storage_get_list(char* main_tree,
                             storage_contex_t* list_storage,
                             uint8_t* list_count);
+
+storage_contex_t* flash_storage_get_item(char* main_tree, char* subitem);

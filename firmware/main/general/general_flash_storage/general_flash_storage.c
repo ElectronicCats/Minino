@@ -357,3 +357,63 @@ cleanup:
   free(tree_subitem);
   free(tree_subitem_val);
 }
+
+storage_contex_t* flash_storage_get_item(char* main_tree, char* subitem) {
+  char* idx_main_item = malloc(MAX_NVS_CHARS);
+  char* main_item = malloc(MAX_NVS_CHARS);
+  char* idx_subitem = malloc(MAX_NVS_CHARS);
+  char* idx_subitem_count = malloc(MAX_NVS_CHARS);
+  char* tree_subitem_str = malloc(MAX_NVS_CHARS);
+  char* tree_subitem = malloc(MAX_NVS_CHARS);
+  char* tree_subitem_val = malloc(MAX_LEN_STRING);
+  esp_err_t err;
+
+  uint16_t main_count = preferences_get_ushort(FS_TREE_MAIN_COUNT, 0);
+
+  for (int i = 0; i < main_count; i++) {
+    sprintf(idx_main_item, "%d%s", i, FS_TREE_MAIN_PREFIX);
+    err = preferences_get_string(idx_main_item, main_item, MAX_LEN_STRING);
+    if (err != ESP_OK) {
+      ESP_LOGW(TAG, "No item found: %s", esp_err_to_name(err));
+      continue;
+    }
+    if (strcmp(main_tree, main_item) == 0) {
+      break;
+    }
+  }
+
+  sprintf(idx_subitem_count, "%sc", main_item);
+  uint16_t subitem_count = preferences_get_ushort(idx_subitem_count, 0);
+  for (int j = 0; j < subitem_count; j++) {
+    sprintf(idx_subitem, "%d%s", j, idx_main_item);
+    err = preferences_get_string(idx_subitem, tree_subitem, MAX_LEN_STRING);
+    if (err != ESP_OK) {
+      ESP_LOGW(TAG, "No item found: %s", esp_err_to_name(err));
+      continue;
+    }
+    if (strcmp(tree_subitem, subitem) == 0) {
+      sprintf(tree_subitem_str, "%sv", idx_subitem);
+      err = preferences_get_string(tree_subitem_str, tree_subitem_val,
+                                   MAX_LEN_STRING);
+      if (err != ESP_OK) {
+        ESP_LOGW(TAG, "No item found: %s", esp_err_to_name(err));
+        continue;
+      }
+      ESP_LOGI(TAG, "Subitem: %s:%s", tree_subitem, tree_subitem_val);
+    }
+  }
+
+  storage_contex_t* item_ctx = malloc(sizeof(storage_contex_t));
+  item_ctx->main_storage_name = main_tree;
+  item_ctx->item_storage_name = tree_subitem;
+  item_ctx->items_storage_value = tree_subitem_val;
+
+  free(idx_main_item);
+  free(main_item);
+  free(idx_subitem_count);
+  free(idx_subitem);
+  free(tree_subitem);
+  free(tree_subitem_str);
+  free(tree_subitem_val);
+  return item_ctx;
+}
