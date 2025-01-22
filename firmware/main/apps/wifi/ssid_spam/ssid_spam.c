@@ -160,6 +160,7 @@ static void ssid_spam_input_cb(uint8_t button_name, uint8_t button_event) {
   }
   switch (button_name) {
     case BUTTON_LEFT:
+      animations_task_stop();
       spam_main_menu();
       break;
     case BUTTON_RIGHT:
@@ -204,8 +205,4 @@ static void ssid_spam_main_cb(uint8_t button_name, uint8_t button_event) {
 
 void ssid_spam_begin() {
   spam_main_menu();
-  // ssid_spam_screens_running();
-  // animations_task_run(ssid_spam_animation, 200, NULL);
-  // ssid_spam_init();
-  // menus_module_set_app_state(true, ssid_spam_input_cb);
 }
