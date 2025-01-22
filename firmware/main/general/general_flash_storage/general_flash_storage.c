@@ -185,3 +185,91 @@ void flash_storage_save_list_items(storage_contex_t* storage_context) {
 
   flash_storage_save_subitem(storage_context);
 }
+
+void flash_storage_delete_list_item(char* main_tree, char* subitem) {
+  char* idx_main_item = malloc(MAX_NVS_CHARS);
+  char* main_item = malloc(MAX_NVS_CHARS);
+  char* idx_subitem = malloc(MAX_NVS_CHARS);
+  char* idx_subitem_count = malloc(MAX_NVS_CHARS);
+  char* tree_subitem = malloc(MAX_NVS_CHARS);
+  char* tree_subitem_val = malloc(MAX_LEN_STRING);
+  esp_err_t err;
+
+  uint16_t main_count = preferences_get_ushort(FS_TREE_MAIN_COUNT, 0);
+
+  for (int i = 0; i < main_count; i++) {
+    sprintf(idx_main_item, "%d%s", i, FS_TREE_MAIN_PREFIX);
+    err = preferences_get_string(idx_main_item, main_item, MAX_LEN_STRING);
+    if (err != ESP_OK) {
+      ESP_LOGW(TAG, "Main item not found: %s", esp_err_to_name(err));
+      continue;
+    }
+    if (strcmp(main_tree, main_item) == 0) {
+      break;
+    }
+  }
+  sprintf(idx_subitem_count, "%sc", main_item);
+  uint16_t subitem_count = preferences_get_ushort(idx_subitem_count, 0);
+
+  if (subitem_count == 0) {
+    ESP_LOGW(TAG, "No subitems to delete.");
+    goto cleanup;
+  }
+
+  storage_contex_t* list = malloc(sizeof(storage_contex_t) * subitem_count);
+  uint8_t counter_items = 0;
+
+  for (int j = 0; j < subitem_count; j++) {
+    sprintf(idx_subitem, "%d%s", j, idx_main_item);
+    err = preferences_get_string(idx_subitem, tree_subitem, MAX_LEN_STRING);
+    if (err != ESP_OK) {
+      ESP_LOGW(TAG, "Subitem not found: %s", esp_err_to_name(err));
+      continue;
+    }
+    if (strcmp(tree_subitem, subitem) == 0) {
+      ESP_LOGI(TAG, "Deleting subitem: %s", tree_subitem);
+      continue;
+    }
+    sprintf(tree_subitem_val, "%sv", idx_subitem);
+    err = preferences_get_string(tree_subitem_val, tree_subitem_val,
+                                 MAX_LEN_STRING);
+    if (err != ESP_OK) {
+      ESP_LOGW(TAG, "Subitem value not found: %s", esp_err_to_name(err));
+      continue;
+    }
+
+    list[counter_items].main_storage_name = strdup(main_tree);
+    list[counter_items].item_storage_name = strdup(tree_subitem);
+    list[counter_items].items_storage_value = strdup(tree_subitem_val);
+    counter_items++;
+  }
+
+  for (int j = 0; j < subitem_count; j++) {
+    sprintf(idx_subitem, "%d%s", j, idx_main_item);
+    sprintf(tree_subitem_val, "%sv", idx_subitem);
+    preferences_remove(tree_subitem_val);
+    preferences_remove(idx_subitem);
+  }
+
+  err = preferences_put_ushort(idx_subitem_count, 0);
+  if (err != ESP_OK) {
+    ESP_LOGW(TAG, "Error updating subitem count: %s", esp_err_to_name(err));
+    goto cleanup;
+  }
+
+  for (int j = 0; j < counter_items; j++) {
+    flash_storage_save_subitem(&list[j]);
+    free(list[j].item_storage_name);
+    free(list[j].items_storage_value);
+  }
+
+  free(list);
+
+cleanup:
+  free(idx_main_item);
+  free(main_item);
+  free(idx_subitem);
+  free(idx_subitem_count);
+  free(tree_subitem);
+  free(tree_subitem_val);
+}
