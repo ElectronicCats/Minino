@@ -85,6 +85,7 @@ void cat_console_begin() {
   /* Register commands */
   esp_console_register_help_command();
   register_wifi();
+  cmd_spamssid_register_commands();
   cmd_control_register_launch_cmd();
   cmd_control_register_uart_bridge_commands();
   cmd_control_register_system_commands();

@@ -206,6 +206,7 @@ static void ssid_spam_input_cb(uint8_t button_name, uint8_t button_event) {
     case BUTTON_LEFT:
       animations_task_stop();
       spam_main_menu();
+      menus_module_restart();
       break;
     case BUTTON_RIGHT:
       break;

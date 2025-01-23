@@ -1,7 +1,8 @@
 #pragma once
 #include "esp_err.h"
 
-#define GENFLASH_STORAGE_SPAM "spam"
+#define GENFLASH_STORAGE_SPAM        "spam"
+#define GENFLASH_STORAGE_MAX_LEN_STR 1024
 
 typedef struct {
   char* main_storage_name;
