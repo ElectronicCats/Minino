@@ -16,6 +16,111 @@
 static const char* TAG = "flash_storage";
 static esp_err_t err;
 
+static bool flash_storage_exist_subitem(char* main_tree, char* subitem) {
+  char* idx_main_item = malloc(MAX_NVS_CHARS);
+  char* main_item = malloc(MAX_NVS_CHARS);
+  char* idx_subitem = malloc(MAX_NVS_CHARS);
+  char* idx_subitem_count = malloc(MAX_NVS_CHARS);
+  char* tree_subitem_str = malloc(MAX_NVS_CHARS);
+  char* tree_subitem = malloc(MAX_NVS_CHARS);
+  char* tree_subitem_val = malloc(MAX_LEN_STRING);
+  esp_err_t err;
+
+  bool return_val = false;
+
+  uint16_t main_count = preferences_get_ushort(FS_TREE_MAIN_COUNT, 0);
+
+  for (int i = 0; i < main_count; i++) {
+    sprintf(idx_main_item, "%d%s", i, FS_TREE_MAIN_PREFIX);
+    err = preferences_get_string(idx_main_item, main_item, MAX_LEN_STRING);
+    if (err != ESP_OK) {
+      ESP_LOGW(TAG, "No item found: %s", esp_err_to_name(err));
+      continue;
+    }
+    if (strcmp(main_tree, main_item) == 0) {
+      break;
+    }
+  }
+
+  sprintf(idx_subitem_count, "%sc", main_item);
+  uint16_t subitem_count = preferences_get_ushort(idx_subitem_count, 0);
+  for (int j = 0; j < subitem_count; j++) {
+    sprintf(idx_subitem, "%d%s", j, idx_main_item);
+    err = preferences_get_string(idx_subitem, tree_subitem, MAX_LEN_STRING);
+    if (err != ESP_OK) {
+      ESP_LOGW(TAG, "No item found: %s", esp_err_to_name(err));
+      continue;
+    }
+    if (strcmp(tree_subitem, subitem) == 0) {
+      return_val = true;
+      break;
+    }
+  }
+
+  free(idx_main_item);
+  free(main_item);
+  free(idx_subitem_count);
+  free(idx_subitem);
+  free(tree_subitem);
+  free(tree_subitem_str);
+  free(tree_subitem_val);
+  return return_val;
+}
+
+static void flash_storage_update_subitem(storage_contex_t* storage_context) {
+  char* idx_main_item = malloc(MAX_NVS_CHARS);
+  char* main_item = malloc(MAX_NVS_CHARS);
+  char* idx_subitem = malloc(MAX_NVS_CHARS);
+  char* idx_subitem_count = malloc(MAX_NVS_CHARS);
+  char* tree_subitem_str = malloc(MAX_NVS_CHARS);
+  char* tree_subitem = malloc(MAX_NVS_CHARS);
+  char* tree_subitem_val = malloc(MAX_LEN_STRING);
+  esp_err_t err;
+
+  uint16_t main_count = preferences_get_ushort(FS_TREE_MAIN_COUNT, 0);
+
+  for (int i = 0; i < main_count; i++) {
+    sprintf(idx_main_item, "%d%s", i, FS_TREE_MAIN_PREFIX);
+    err = preferences_get_string(idx_main_item, main_item, MAX_LEN_STRING);
+    if (err != ESP_OK) {
+      ESP_LOGW(TAG, "No item found: %s", esp_err_to_name(err));
+      continue;
+    }
+    if (strcmp(storage_context->main_storage_name, main_item) == 0) {
+      break;
+    }
+  }
+
+  sprintf(idx_subitem_count, "%sc", main_item);
+  uint16_t subitem_count = preferences_get_ushort(idx_subitem_count, 0);
+  for (int j = 0; j < subitem_count; j++) {
+    sprintf(idx_subitem, "%d%s", j, idx_main_item);
+    err = preferences_get_string(idx_subitem, tree_subitem, MAX_LEN_STRING);
+    if (err != ESP_OK) {
+      ESP_LOGW(TAG, "No item found: %s", esp_err_to_name(err));
+      continue;
+    }
+    if (strcmp(tree_subitem, storage_context->item_storage_name) == 0) {
+      sprintf(tree_subitem_str, "%sv", idx_subitem);
+      err = preferences_put_string(tree_subitem_str,
+                                   storage_context->items_storage_value);
+      if (err != ESP_OK) {
+        ESP_LOGW(TAG, "No item found: %s", esp_err_to_name(err));
+        continue;
+      }
+      break;
+    }
+  }
+
+  free(idx_main_item);
+  free(main_item);
+  free(idx_subitem_count);
+  free(idx_subitem);
+  free(tree_subitem);
+  free(tree_subitem_str);
+  free(tree_subitem_val);
+}
+
 static bool flash_storage_exist_main_item(char* base_name) {
   char* idx_main_item = malloc(MAX_NVS_CHARS);
   char* main_item = malloc(MAX_NVS_CHARS);
@@ -68,6 +173,13 @@ static void flash_storage_save_subitem(storage_contex_t* storage_context) {
   char* idx_subitem_count = malloc(MAX_NVS_CHARS);
   char* main_subitem = malloc(MAX_NVS_CHARS);
   char* main_subitem_val = malloc(MAX_LEN_STRING);
+
+  if (flash_storage_exist_subitem(storage_context->main_storage_name,
+                                  storage_context->item_storage_name)) {
+    ESP_LOGI(TAG, "Updating subitem: %s", storage_context->item_storage_name);
+    flash_storage_update_subitem(storage_context);
+    return;
+  }
 
   // First get the main item for the class
   uint16_t main_count = preferences_get_ushort(FS_TREE_MAIN_COUNT, 0);
@@ -159,7 +271,7 @@ void flash_storage_show_list(char* main_tree) {
       ESP_LOGW(TAG, "No item found: %s", esp_err_to_name(err));
       continue;
     }
-    ESP_LOGI(TAG, "Subitem: %s:%s", tree_subitem, tree_subitem_val);
+    printf("[%d] %s:%s\n", j, tree_subitem, tree_subitem_val);
   }
 
   free(idx_main_item);

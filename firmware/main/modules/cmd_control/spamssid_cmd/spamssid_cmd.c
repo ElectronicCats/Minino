@@ -39,9 +39,7 @@ static void get_ssid() {
 static void show_ssid() {
   get_ssid();
 
-  for (int i = 0; i < list_count; i++) {
-    printf("[%d] %s\n", i, spam_ssids_list[i]);
-  }
+  flash_storage_show_list(GENFLASH_STORAGE_SPAM);
 }
 
 static int show_ssid_cmd(int argc, char** argv) {
