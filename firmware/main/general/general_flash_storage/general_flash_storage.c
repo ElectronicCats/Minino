@@ -172,9 +172,6 @@ void flash_storage_show_list(char* main_tree) {
 }
 
 void flash_storage_save_list_items(storage_contex_t* storage_context) {
-  uint16_t main_count = preferences_get_ushort(FS_TREE_MAIN_COUNT, 0);
-  uint16_t subitems_count = preferences_get_ushort(FS_TREE_SUBITEM_COUNT, 0);
-
   if (!flash_storage_exist_main_item(storage_context->main_storage_name)) {
     err = flash_storage_save_main_item(storage_context->main_storage_name);
     if (err != ESP_OK) {

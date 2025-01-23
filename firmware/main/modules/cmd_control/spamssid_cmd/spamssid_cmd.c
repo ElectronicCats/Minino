@@ -24,13 +24,23 @@ static int delete_ssid_cmd(int argc, char** argv);
 static int show_ssid_cmd(int argc, char** argv);
 static void show_ssid();
 
-static void show_ssid() {
+static char* spam_ssids_list[99] = {};
+static uint8_t list_count = 0;
+
+static void get_ssid() {
   storage_contex_t list[99];
-  uint8_t list_count = 0;
 
   flash_storage_get_list(GENFLASH_STORAGE_SPAM, list, &list_count);
   for (int i = 0; i < list_count; i++) {
-    printf("[%d] %s\n", i, list[i].item_storage_name);
+    spam_ssids_list[i] = list[i].item_storage_name;
+  }
+}
+
+static void show_ssid() {
+  get_ssid();
+
+  for (int i = 0; i < list_count; i++) {
+    printf("[%d] %s\n", i, spam_ssids_list[i]);
   }
 }
 
@@ -40,31 +50,19 @@ static int show_ssid_cmd(int argc, char** argv) {
 }
 
 static int delete_ssid_cmd(int argc, char** argv) {
-  ESP_LOGI("ssid", "Here 0");
   int nerrors = arg_parse(argc, argv, (void**) &ssdi_delete_args);
   if (nerrors != 0) {
     arg_print_errors(stderr, ssdi_delete_args.end, argv[0]);
     return 1;
   }
-  ESP_LOGI("ssid", "Here 1");
-  int index = atoi(ssdi_delete_args.idx->sval[0]);
-  char* ssids_list[99] = {NULL};
-
-  storage_contex_t list[99];
-  uint8_t list_count = 0;
-  ESP_LOGI("ssid", "Here 2");
-  flash_storage_get_list(GENFLASH_STORAGE_SPAM, list, &list_count);
-  for (int i = 0; i < list_count; i++) {
-    ssids_list[i] = list[i].item_storage_name;
-  }
-  ESP_LOGI("ssid", "Here 1");
-  if (index < 0 || index >= list_count) {
+  int spam_idx = atoi(ssdi_delete_args.idx->sval[0]);
+  get_ssid();
+  if (spam_idx < 0 || spam_idx >= (int) list_count) {
     ESP_LOGW(__func__, "Index out of range");
     return 1;
   }
-  ESP_LOGI("ssid", "Delete index %d %s", index, ssids_list[index]);
-
-  flash_storage_delete_list_item(GENFLASH_STORAGE_SPAM, ssids_list[index]);
+  flash_storage_delete_list_item(GENFLASH_STORAGE_SPAM,
+                                 spam_ssids_list[spam_idx]);
   show_ssid();
   return 0;
 }
@@ -119,7 +117,7 @@ void cmd_spamssid_register_commands() {
       .argtable = NULL,
   };
 
-  ESP_ERROR_CHECK(esp_console_cmd_register(&spamssid_save_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&spamssid_delete_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&spamssid_save_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&spamssid_show_cmd));
 }
