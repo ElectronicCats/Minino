@@ -280,3 +280,11 @@ DestinationPAN,Destination,ExtendedSource,Channel,UDPSource,UDPDestination,Proto
 0xb24b,0xffff,a2:e7:b5:59:69:77:cc:ed,11,19788,19788,MLE,4.130068,4.130068,0.000000,1.500000,,,Thread
 0xb24b,0xffff,ae:27:c5:e6:1e:d7:3c:e3,11,19788,19788,MLE,4.130068,4.130068,0.000000,1.500000,,,Thread
 ```
+
+
+# Change log
+
+## v1.1.7.0
+### Added
+- SSID spam command: Now you can use custom ssid attacks
+- Wardriving thread protocol
