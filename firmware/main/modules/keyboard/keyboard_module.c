@@ -1,7 +1,6 @@
 #include "keyboard_module.h"
 #include "esp_log.h"
 #include "esp_timer.h"
-#include "general_sounds.h"
 #include "menus_module.h"
 #include "preferences.h"
 
@@ -82,10 +81,6 @@ static void button_event_cb(void* arg, void* data) {
   // DO NOT REMOVE THIS LOG
   ESP_LOGI(TAG, "Button %s event %s", button_to_name[button_name],
            event_to_name[button_event]);
-
-  if (!preferences_get_bool("stealth_mode", false)) {
-    general_sound_play(PLAY_PULSE);
-  }
 
   if (lock_input) {
     return;
