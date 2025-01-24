@@ -29,9 +29,11 @@ static const char* TAG = "warthread";
 
 static TaskHandle_t thread_task_sniffer = NULL;
 static TaskHandle_t scanning_thread_animation_task_handle = NULL;
+static TaskHandle_t scanning_thread_channel_task_handle = NULL;
 static thread_module_t context_session;
 static gps_t* gps_ctx;
 static bool running_thread_scanner_animation = false;
+static bool running_thread_channel_hopp = false;
 static uint8_t current_channel = 11;
 
 static uint16_t csv_lines;
@@ -65,6 +67,20 @@ static void wardriving_screens_thread_animation_task() {
                                OLED_DISPLAY_NORMAL);
     idx = ++idx > 3 ? 0 : idx;
     vTaskDelay(500 / portTICK_PERIOD_MS);
+  }
+  vTaskDelete(NULL);
+}
+
+static void wardriving_thread_channel_hopp_task() {
+  running_thread_channel_hopp = true;
+  while (running_thread_channel_hopp) {
+    openthread_set_dataset(current_channel, 0x1234);
+    vTaskDelay(3000 / portTICK_PERIOD_MS);
+    current_channel++;
+    if (current_channel > 26) {
+      current_channel = 11;
+    }
+    ESP_LOGI(TAG, "Channging channel: %d", current_channel);
   }
   vTaskDelete(NULL);
 }
@@ -302,6 +318,8 @@ void warthread_module_begin() {
               "scanning_wifi_animation_task", 4096, NULL, 5,
               &scanning_thread_animation_task_handle);
   vTaskSuspend(scanning_thread_animation_task_handle);
+  xTaskCreate(wardriving_thread_channel_hopp_task, "task_channel_hop", 4096,
+              NULL, 5, &scanning_thread_channel_task_handle);
   gps_module_register_cb(thread_gps_event_handler_cb);
   gps_module_start_scan();
 
@@ -311,6 +329,7 @@ void warthread_module_begin() {
 }
 
 void warthread_module_exit() {
+  running_thread_channel_hopp = false;
   sd_card_read_file(csv_file_name);
   sd_card_unmount();
   free(csv_file_buffer);
