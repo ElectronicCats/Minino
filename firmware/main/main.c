@@ -47,5 +47,6 @@ void app_main() {
   menus_module_begin();
   leds_off();
   preferences_put_bool("wifi_connected", false);
+
   cat_console_begin();  // Contains a while(true) loop, it must be at the end
 }
