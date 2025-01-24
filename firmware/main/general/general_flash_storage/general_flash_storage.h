@@ -10,6 +10,8 @@ typedef struct {
   char* items_storage_value;
 } storage_contex_t;
 
+void flash_storage_begin();
+
 /* @brief Save the value in flash as the form of tree
   @param storage_contex_t* storage_context - The struct with the context to save
 */

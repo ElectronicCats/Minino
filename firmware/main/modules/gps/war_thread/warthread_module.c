@@ -24,6 +24,7 @@
 #define THREAD_FCF_BEACON_PACKET 0xc000
 #define PROTOCOL_TYPE_IEEE       "IEEE 802.15.4"
 #define PROTOCOL_TYPE_MLE        "MLE"
+#define THREAD_CHANNEL_TIME      3000
 
 static const char* TAG = "warthread";
 
@@ -75,7 +76,7 @@ static void wardriving_thread_channel_hopp_task() {
   running_thread_channel_hopp = true;
   while (running_thread_channel_hopp) {
     openthread_set_dataset(current_channel, 0x1234);
-    vTaskDelay(3000 / portTICK_PERIOD_MS);
+    vTaskDelay(THREAD_CHANNEL_TIME / portTICK_PERIOD_MS);
     current_channel++;
     if (current_channel > 26) {
       current_channel = 11;
@@ -202,7 +203,7 @@ static void warthread_packet_handler(const otRadioFrame* aFrame, bool aIsTx) {
     strcpy(protocol_type, PROTOCOL_TYPE_MLE);
     // 2 bytes from IPHC Header offset
     position += sizeof(uint8_t);
-    uint8_t mle_destination = *((uint8_t*) &aFrame->mPsdu[position]);
+    // uint8_t mle_destination = *((uint8_t*) &aFrame->mPsdu[position]);
     position += sizeof(uint8_t);
     // Header Compresion offset
     position += sizeof(uint8_t);
@@ -312,7 +313,7 @@ void warthread_module_begin() {
   radio_selector_set_thread();
   openthread_init();
   vTaskDelay(pdMS_TO_TICKS(200));
-  openthread_set_dataset(11, 0x1234);
+  openthread_set_dataset(current_channel, 0x1234);
 
   xTaskCreate(wardriving_screens_thread_animation_task,
               "scanning_wifi_animation_task", 4096, NULL, 5,
