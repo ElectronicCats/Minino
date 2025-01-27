@@ -281,6 +281,145 @@ DestinationPAN,Destination,ExtendedSource,Channel,UDPSource,UDPDestination,Proto
 0xb24b,0xffff,ae:27:c5:e6:1e:d7:3c:e3,11,19788,19788,MLE,4.130068,4.130068,0.000000,1.500000,,,Thread
 ```
 
+# Wardriving Thread test
+# Openthread - Install example
+## ESP-IDF
+### Get the repo
+```shell
+git clone https://github.com/espressif/esp-idf
+cd esp-idf
+git submodule update --init --recursive
+./install.sh
+./export.sh
+```
+
+### Load the example
+```shell
+cd examples/openthread/ot_cli
+idf.py set-target esp32h2
+idf.py -p {PORT} erase-flash flash monitor
+```
+
+> Some configuration with the developer board can not working with the USB connection, then use the serial interface
+
+## OT Border Router - Commissioner
+
+```shell
+> dataset init new
+
+Done
+> dataset
+
+Active Timestamp: 1
+Channel: 13
+Channel Mask: 0x07fff800
+Ext PAN ID: 5313f58f402c1819
+Mesh Local Prefix: fd96:26d8:408f:b50e::/64
+Network Key: 15766f59ec0a271e69bcdf5343e185af
+Network Name: OpenThread-2102
+PAN ID: 0x2102
+PSKc: 004e5d0799d448f8ec7b30eafab082e7
+Security Policy: 672 onrc 0
+Done
+> dataset commit active
+
+Done
+> ifconfig up
+
+Done
+I (350303) OT_STATE: netif up
+> thread start
+
+I(361183) OPENTHREAD:[N] Mle-----------: Role disabled -> detached
+Done
+> I(361643) OPENTHREAD:[N] Mle-----------: Attach attempt 1, AnyPartition reattaching with Active Dataset
+I(368243) OPENTHREAD:[N] RouterTable---: Allocate router id 12
+I(368243) OPENTHREAD:[N] Mle-----------: RLOC16 fffe -> 3000
+I(368243) OPENTHREAD:[N] Mle-----------: Role detached -> leader
+I(368263) OPENTHREAD:[N] Mle-----------: Partition ID 0x52de31e6
+# After a moment, check the device state, when the state is 'Leader' then the network it is ready
+> state
+leader
+Done
+>
+```
+
+**Commands**:
+- `dataset init new`: Create a new network
+- `dataset`: Show the network details
+- `dataset commit active`: Setting up the configuration and set as active
+- `ifconfig up`: Activate the phy interface
+- `thread start`: Activate the thread service
+- `state`: Show the device status
+
+## OT End device
+```shell
+> dataset networkkey 15766f59ec0a271e69bcdf5343e185af
+
+Done
+> dataset commit active
+
+Done
+> ifconfig up
+
+Done
+I (2479103) OT_STATE: netif up
+> thread start
+
+I(2484933) OPENTHREAD:[N] Mle-----------: Role disabled -> detached
+Done
+> I(2485463) OPENTHREAD:[N] Mle-----------: Attach attempt 1, AnyPartition reattaching with Active Dataset
+I(2492073) OPENTHREAD:[N] Mle-----------: Attach attempt 1 unsuccessful, will try again in 0.284 seconds
+I(2492373) OPENTHREAD:[N] Mle-----------: Attach attempt 2, AnyPartition
+I(2494743) OPENTHREAD:[N] Mle-----------: Delay processing Announce - channel 13, panid 0x2102
+I(2495013) OPENTHREAD:[N] Mle-----------: Processing Announce - channel 13, panid 0x2102
+I(2495013) OPENTHREAD:[N] Mle-----------: Role detached -> disabled
+I(2495023) OPENTHREAD:[N] Mle-----------: Role disabled -> detached
+I(2495493) OPENTHREAD:[N] Mle-----------: Attach attempt 1, AnyPartition
+I(2496323) OPENTHREAD:[N] Mle-----------: RLOC16 fffe -> 3001
+I(2496323) OPENTHREAD:[N] Mle-----------: Role detached -> child
+> state
+
+child
+Done
+```
+
+**Commands**:
+- `dataset networkkey`: Set the networkkey with the Border Route entwork
+- `dataset commit active`: Setting up the configuration and set as active
+- `ifconfig up`: Activate the phy interface
+- `thread start`: Activate the thread service
+- `state`: Show the device status
+
+## View UDP Packets
+In the OT Border Router:
+```shell
+> udp open
+
+Done
+> udp bind :: 20617
+
+Done
+> ipaddr
+
+fd96:26d8:408f:b50e:0:ff:fe00:fc00       # Routing Locator (RLOC)
+fd96:26d8:408f:b50e:0:ff:fe00:3000
+fd96:26d8:408f:b50e:4bff:b763:4835:9104  # Mesh-Local EID (ML-EID)
+fe80:0:0:0:28ef:a315:c3a7:f8a0           # Link-Local Address (LLA)
+Done
+```
+
+In the End device:
+```shell
+udp open
+udp send fd96:26d8:408f:b50e:4bff:b763:4835:9104 20617 CatsRules
+```
+
+The Border Router recived:
+```shell
+> 9 bytes from fd96:26d8:408f:b50e:bca0:8fb6:ed5a:4a27 49154 CatsRules
+```
+
 
 # Change log
 
@@ -288,3 +427,4 @@ DestinationPAN,Destination,ExtendedSource,Channel,UDPSource,UDPDestination,Proto
 ### Added
 - SSID spam command: Now you can use custom ssid attacks
 - Wardriving thread protocol
+- Flash storage module to handle list of values
