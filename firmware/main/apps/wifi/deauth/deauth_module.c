@@ -55,10 +55,9 @@ static void deauth_handle_attacks();
 
 static void scanning_task() {
   uint8_t scan_count = 0;
-  while (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 2) &&
-         scan_count < SCAN_RETRIES) {
+  while (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 2)) {
     wifi_scanner_module_scan();
-    vTaskDelay(5000 / portTICK_PERIOD_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
     scan_count++;
   }
   ap_records = wifi_scanner_get_ap_records();

@@ -21,20 +21,25 @@
 #define ESP_ZB_PRIMARY_CHANNEL_MASK \
   (1l << 13) /* Zigbee primary channel mask use in the example */
 
-#define ESP_ZB_ZC_CONFIG()                            \
-  {                                                   \
-    .esp_zb_role = ESP_ZB_DEVICE_TYPE_COORDINATOR,    \
-    .install_code_policy = INSTALLCODE_POLICY_ENABLE, \
-    .nwk_cfg.zczr_cfg = {                             \
-        .max_children = MAX_CHILDREN,                 \
-    },                                                \
+#define ESP_ZB_ZC_CONFIG()                              \
+  {                                                     \
+      .esp_zb_role = ESP_ZB_DEVICE_TYPE_COORDINATOR,    \
+      .install_code_policy = INSTALLCODE_POLICY_ENABLE, \
+      .nwk_cfg.zczr_cfg =                               \
+          {                                             \
+              .max_children = MAX_CHILDREN,             \
+          },                                            \
   }
 
-#define ESP_ZB_DEFAULT_RADIO_CONFIG() \
-  { .radio_mode = ZB_RADIO_MODE_NATIVE, }
+#define ESP_ZB_DEFAULT_RADIO_CONFIG()     \
+  {                                       \
+      .radio_mode = ZB_RADIO_MODE_NATIVE, \
+  }
 
-#define ESP_ZB_DEFAULT_HOST_CONFIG() \
-  { .host_connection_mode = ZB_HOST_CONNECTION_MODE_NONE, }
+#define ESP_ZB_DEFAULT_HOST_CONFIG()                        \
+  {                                                         \
+      .host_connection_mode = ZB_HOST_CONNECTION_MODE_NONE, \
+  }
 
 typedef enum {
   CREATING_NETWORK = 0,

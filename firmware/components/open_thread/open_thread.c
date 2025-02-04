@@ -84,6 +84,13 @@ static size_t hex_string_to_binary(const char* hex_string,
   return buf_size;
 }
 
+void openthread_set_channel(uint8_t channel) {
+  esp_openthread_lock_acquire(portMAX_DELAY);
+  otInstance* instance = esp_openthread_get_instance();
+  otLinkSetChannel(instance, channel);
+  esp_openthread_lock_release();
+}
+
 esp_err_t openthread_set_dataset(uint8_t channel, uint16_t panid) {
   esp_openthread_lock_acquire(portMAX_DELAY);
   otInstance* instance = esp_openthread_get_instance();
@@ -346,6 +353,7 @@ void openthread_init() {
 #if !defined(CONFIG_OPEN_THREAD_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
+  esp_log_level_set(TAG, ESP_LOG_NONE);
 
   esp_vfs_eventfd_config_t eventfd_config = {
       .max_fds = 3,

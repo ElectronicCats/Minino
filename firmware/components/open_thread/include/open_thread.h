@@ -35,5 +35,5 @@ otError openthread_ipmaddr_unsubscribe(const char* address);
 
 otError openthread_enable_promiscous_mode();
 otError openthread_disable_promiscous_mode();
-
+void openthread_set_channel(uint8_t channel);
 void openthread_factory_reset();

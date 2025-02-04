@@ -151,6 +151,33 @@ void oled_screen_draw_rect(int x, int y, int width, int height, bool invert) {
   xSemaphoreGive(oled_mutex);
 }
 
+void oled_screen_draw_line(int x1, int y1, int x2, int y2, bool invert) {
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
+  oled_driver_draw_line(&dev, x1, y2, x2, y2, invert);
+  xSemaphoreGive(oled_mutex);
+}
+
+void oled_screen_draw_vline(int x, int y, int height, bool invert) {
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
+  oled_driver_draw_vline(&dev, x, y, height, invert);
+  xSemaphoreGive(oled_mutex);
+}
+
+void oled_screen_draw_hline(int x, int y, int width, bool invert) {
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
+  oled_driver_draw_hline(&dev, x, y, width, invert);
+  xSemaphoreGive(oled_mutex);
+}
+
+void oled_screen_draw_box(int x, int y, int width, int height, bool invert) {
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
+  while (height != 0) {
+    oled_driver_draw_hline(&dev, x, y++, width, invert);
+    height--;
+  }
+  xSemaphoreGive(oled_mutex);
+}
+
 /// @brief Display a box around the selected item
 void oled_screen_display_selected_item_box() {
   xSemaphoreTake(oled_mutex, portMAX_DELAY);

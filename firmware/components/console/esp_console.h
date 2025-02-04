@@ -35,11 +35,12 @@ typedef struct {
  * @brief Default console configuration value
  *
  */
-#define ESP_CONSOLE_CONFIG_DEFAULT()                                        \
-  {                                                                         \
-    .max_cmdline_length = 256, .max_cmdline_args = 32,                      \
-    .heap_alloc_caps = MALLOC_CAP_DEFAULT, .hint_color = 39, .hint_bold = 0 \
-  }
+#define ESP_CONSOLE_CONFIG_DEFAULT()      \
+  {.max_cmdline_length = 256,             \
+   .max_cmdline_args = 32,                \
+   .heap_alloc_caps = MALLOC_CAP_DEFAULT, \
+   .hint_color = 39,                      \
+   .hint_bold = 0}
 
 /**
  * @brief Parameters for console REPL (Read Eval Print Loop)
@@ -62,11 +63,15 @@ typedef struct {
  * @brief Default console repl configuration value
  *
  */
-#define ESP_CONSOLE_REPL_CONFIG_DEFAULT()                                      \
-  {                                                                            \
-    .max_history_len = 32, .history_save_path = NULL, .task_stack_size = 4096, \
-    .task_priority = 2, .task_core_id = tskNO_AFFINITY, .prompt = NULL,        \
-    .max_cmdline_length = 0,                                                   \
+#define ESP_CONSOLE_REPL_CONFIG_DEFAULT() \
+  {                                       \
+      .max_history_len = 32,              \
+      .history_save_path = NULL,          \
+      .task_stack_size = 4096,            \
+      .task_priority = 2,                 \
+      .task_core_id = tskNO_AFFINITY,     \
+      .prompt = NULL,                     \
+      .max_cmdline_length = 0,            \
   }
 
 #if CONFIG_ESP_CONSOLE_UART_DEFAULT || CONFIG_ESP_CONSOLE_UART_CUSTOM
@@ -82,19 +87,20 @@ typedef struct {
 } esp_console_dev_uart_config_t;
 
   #if CONFIG_ESP_CONSOLE_UART_CUSTOM
-    #define ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT()       \
-      {                                                 \
-        .channel = CONFIG_ESP_CONSOLE_UART_NUM,         \
-        .baud_rate = CONFIG_ESP_CONSOLE_UART_BAUDRATE,  \
-        .tx_gpio_num = CONFIG_ESP_CONSOLE_UART_TX_GPIO, \
-        .rx_gpio_num = CONFIG_ESP_CONSOLE_UART_RX_GPIO, \
+    #define ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT()         \
+      {                                                   \
+          .channel = CONFIG_ESP_CONSOLE_UART_NUM,         \
+          .baud_rate = CONFIG_ESP_CONSOLE_UART_BAUDRATE,  \
+          .tx_gpio_num = CONFIG_ESP_CONSOLE_UART_TX_GPIO, \
+          .rx_gpio_num = CONFIG_ESP_CONSOLE_UART_RX_GPIO, \
       }
   #else
-    #define ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT()                         \
-      {                                                                   \
-        .channel = CONFIG_ESP_CONSOLE_UART_NUM,                           \
-        .baud_rate = CONFIG_ESP_CONSOLE_UART_BAUDRATE, .tx_gpio_num = -1, \
-        .rx_gpio_num = -1,                                                \
+    #define ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT()        \
+      {                                                  \
+          .channel = CONFIG_ESP_CONSOLE_UART_NUM,        \
+          .baud_rate = CONFIG_ESP_CONSOLE_UART_BAUDRATE, \
+          .tx_gpio_num = -1,                             \
+          .rx_gpio_num = -1,                             \
       }
   #endif  // CONFIG_ESP_CONSOLE_UART_CUSTOM
 #endif    // CONFIG_ESP_CONSOLE_UART_DEFAULT || CONFIG_ESP_CONSOLE_UART_CUSTOM
@@ -110,7 +116,8 @@ typedef struct {
 } esp_console_dev_usb_cdc_config_t;
 
   #define ESP_CONSOLE_DEV_CDC_CONFIG_DEFAULT() \
-    {}
+    {                                          \
+    }
 #endif  // CONFIG_ESP_CONSOLE_USB_CDC || (defined __DOXYGEN__ &&
         // SOC_USB_OTG_SUPPORTED)
 
@@ -126,7 +133,8 @@ typedef struct {
 } esp_console_dev_usb_serial_jtag_config_t;
 
   #define ESP_CONSOLE_DEV_USB_SERIAL_JTAG_CONFIG_DEFAULT() \
-    {}
+    {                                                      \
+    }
 #endif  // CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG || (defined __DOXYGEN__ &&
         // SOC_USB_SERIAL_JTAG_SUPPORTED)
 

@@ -6,6 +6,7 @@
 #include "esp_timer.h"
 #include "flash_fs.h"
 #include "flash_fs_screens.h"
+#include "general_flash_storage.h"
 #include "keyboard_module.h"
 #include "leds.h"
 #include "menus_module.h"
@@ -47,5 +48,7 @@ void app_main() {
   menus_module_begin();
   leds_off();
   preferences_put_bool("wifi_connected", false);
+  flash_storage_begin();
+
   cat_console_begin();  // Contains a while(true) loop, it must be at the end
 }

@@ -775,7 +775,13 @@ menu "General project"
 				bool "Enable Wardriving Zigbee App"
 				default true
 				help
-					Enable or disable the GPS Wardriving Zigbee application.
+					Enable or disable the GPS Wardriving Zigbee application
+
+			config GPS_APP_WARDRIVING_TH
+			bool "Enable Wardriving Thread App"
+				default true
+				help
+					Enable or disable the GPS Wardriving Thread application.
 			endif # GPS_APPS_ENABLE
 
 			################################# GPIO ###################################

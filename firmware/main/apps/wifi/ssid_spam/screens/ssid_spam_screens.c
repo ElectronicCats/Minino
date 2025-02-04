@@ -1,6 +1,7 @@
 #include "ssid_spam_screens.h"
 
 #include "bitmaps_general.h"
+#include "general_flash_storage.h"
 #include "oled_screen.h"
 
 void ssid_spam_animation() {
