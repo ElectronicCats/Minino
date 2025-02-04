@@ -15,6 +15,10 @@ static void knob_exit() {
 }
 
 static void knob_draw_cb() {
+  uint8_t page = 3;
+#ifdef CONFIG_RESOLUTION_128X64
+  page = 4;
+#endif
   oled_screen_clear_buffer();
 
   oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
@@ -25,7 +29,7 @@ static void knob_draw_cb() {
   oled_screen_display_text_center(str, 2, OLED_DISPLAY_NORMAL);
 
   sprintf(str, "%s: %d", knob_ctx->var_lbl, knob_ctx->value);
-  oled_screen_display_text_center(str, 4, OLED_DISPLAY_INVERT);
+  oled_screen_display_text_center(str, page, OLED_DISPLAY_INVERT);
 
   oled_screen_display_show();
 }
