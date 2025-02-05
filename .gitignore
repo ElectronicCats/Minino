@@ -38,10 +38,11 @@ hardware/minino-backups/
 /**/build-noota/
 /**/managed_components/
 /**/minino-*.zip
+/**/build*/
 
 # IDF sdkconfig
-/**/sdkconfig
-/**/sdkconfig.old
+# /**/sdkconfig
+# /**/sdkconfig.old
 /**/dependencies.lock
 
 # CPL file in csv

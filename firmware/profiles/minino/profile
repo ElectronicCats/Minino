@@ -1,0 +1,1 @@
+-B build-minino -DSDKCONFIG=build-minino/sdkconfig -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.minino;sdkconfig.version"

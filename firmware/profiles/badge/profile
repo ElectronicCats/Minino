@@ -1,0 +1,1 @@
+-B build-badge -DSDKCONFIG=build-badge/sdkconfig -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.badge;sdkconfig.version"

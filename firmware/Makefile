@@ -1,31 +1,44 @@
-test_port:
-	@if [ -z "$(PORT)" ]; then echo "PORT is not set, please set PORT using export, example: 'export PORT=/dev/ttyACM0'"; exit 1; fi
+MICRO_TYPE?=esp32c6
+BOARD?=minino
 
-setup:
-	idf.py set-target esp32c6
-	pre-commit install
+ifdef PORT
+	BOARD_SERIAL=${PORT}
+else
+	BOARD_SERIAL=/dev/ttyACM0
+endif
+
+
+ifneq ($(BOARD), badge)
+ifneq ($(BOARD), minino)
+$(error Board not found: $(BOARD). Please use our supported boards: minino, badge)
+endif
+endif
+
+ifdef OTA
+ifneq ($(BOARD), minino)
+$(error Board not support OTA yet)
+endif
+endif
+
+.PHONY: compile load monitor
+
+IDFPY_FLAGS += -B build_${BOARD} @profiles/$(BOARD)/profile
+
+define RUN_IDF_PY
+	idf.py $(IDFPY_FLAGS) $(1)
+endef
+
+build:
+	idf.py fullclean
+	idf.py set-target $(MICRO_TYPE)
+	$(call RUN_IDF_PY, build)
 
 compile:
-	idf.py build
+	$(call RUN_IDF_PY, build)
 
-flash:
-	make test_port
-	idf.py -p $(PORT) flash
+load:
+	make compile BOARD=$(BOARD)
+	$(call RUN_IDF_PY, -p $(PORT) flash)
 
 monitor:
-	make test_port
-	idf.py -p $(PORT) monitor
-
-clean:
-	rm -rf build/ managed_components/
-	rm sdkconfig
-	make setup
-
-ff:
-	make test_port
-	idf.py -p $(PORT) erase-flash
-		make flash monitor
-
-all: flash monitor
-
-.PHONY: test_port setup compile flash monitor clean all
+	$(call RUN_IDF_PY, -p $(PORT) monitor)
