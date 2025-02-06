@@ -565,12 +565,12 @@ static void catdos_module_show_target() {
   oled_screen_display_text_center("Endpoint", 5, OLED_DISPLAY_NORMAL);
   oled_screen_display_text_center(endpoint, 6, OLED_DISPLAY_NORMAL);
 #else
-  char str[17];
-  snprintf(str, 17, "H: %s", host);
+  char str[35];
+  snprintf(str, "H: %s", host);
   oled_screen_display_text_center(str, 1, OLED_DISPLAY_NORMAL);
-  snprintf(str, 17, "P: %s", port);
+  snprintf(str, "P: %s", port);
   oled_screen_display_text_center(str, 2, OLED_DISPLAY_NORMAL);
-  snprintf(str, 17, "EP: %s", endpoint);
+  snprintf(str, "EP: %s", endpoint);
   oled_screen_display_text_center(str, 3, OLED_DISPLAY_NORMAL);
 #endif
 }

@@ -609,19 +609,46 @@ menu "General project"
 	menu "Enable Apps & Features"
 
 		menu "Hardware components"
-	
-			config LEDS_COMPONENT_ENABLED
-				bool "Enable LEDs component"
-				default true
-				help
-					Enable the LEDs component.
-	
-			config BUZZER_COMPONENT_ENABLED
-				bool "Enable buzzer component"
-				default true
-				help
-					Enable the buzzer component.
-
+			################################# GPS ###################################
+			menu "GPS"	
+				config GPS_ENABLED
+					bool "Enable GPS"
+					default true
+					help
+						Enable GPS.
+			endmenu
+			################################# SD ###################################
+			menu "SD"	
+				config SD_ENABLED
+					bool "Enable SD"
+					default true
+					help
+						Enable SD.
+			endmenu
+			################################# LEDs ###################################
+			menu "LEDs"
+				config LEDS_COMPONENT_ENABLED
+					bool "Enable LEDs component"
+					default true
+					help
+						Enable the LEDs component.
+			endmenu
+			################################# Buzzer ###################################
+			menu "Buzzer"
+				config BUZZER_COMPONENT_ENABLED
+					bool "Enable buzzer component"
+					default true
+					help
+						Enable the buzzer component.
+				if BUZZER_COMPONENT_ENABLED
+					config BUZZER_PIN
+						int "Buzzer GPIO Pin"
+						range 0 GPIO_RANGE_MAX
+						default 2 if BOARD_MININO
+						help
+							Select the GPIO pin number for the Buzzer.
+				endif # BUZZER_COMPONENT_ENABLED
+			endmenu
 		endmenu
 
 		menu "Apps"

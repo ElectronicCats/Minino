@@ -386,7 +386,7 @@ menu_t menus[] = {  //////////////////////////////////
      .is_visible = true},
   #endif
 #endif
-#ifdef CONFIG_GPS_APPS_ENABLE
+#if CONFIG_GPS_APPS_ENABLE && CONFIG_GPS_ENABLED
     {.display_name = "GPS",
      .menu_idx = MENU_GPS,
      .parent_idx = MENU_APPLICATIONS,
@@ -553,7 +553,7 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = logs_output,
      .on_exit_cb = NULL,
      .is_visible = true},
-#ifdef CONFIG_GPS_APPS_ENABLE
+#if CONFIG_GPS_APPS_ENABLE && CONFIG_GPS_ENABLED
     {.display_name = "Time zone",
      .menu_idx = MENU_SETTINGS_TIME_ZONE,
      .parent_idx = MENU_SETTINGS_SYSTEM,

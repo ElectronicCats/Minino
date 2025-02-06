@@ -16,7 +16,7 @@
 
 #define BAUD_RATE        115200
 #define UART_BUFFER_SIZE 1024
-#define BUZZER_PIN       GPIO_NUM_2
+#define BUZZER_PIN       CONFIG_BUZZER_PIN
 
 static const char* TAG = "main";
 void app_main() {
