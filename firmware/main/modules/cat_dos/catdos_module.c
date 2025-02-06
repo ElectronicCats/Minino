@@ -557,12 +557,22 @@ static void catdos_module_show_target() {
     catdos_state = CATDOS_STATE_ATTACK;
   }
   oled_screen_display_text_center("Target", 0, OLED_DISPLAY_INVERT);
+#ifdef CONFIG_RESOLUTION_128X64
   oled_screen_display_text_center("Host", 1, OLED_DISPLAY_NORMAL);
   oled_screen_display_text_center(host, 2, OLED_DISPLAY_NORMAL);
   oled_screen_display_text_center("Port", 3, OLED_DISPLAY_NORMAL);
   oled_screen_display_text_center(port, 4, OLED_DISPLAY_NORMAL);
   oled_screen_display_text_center("Endpoint", 5, OLED_DISPLAY_NORMAL);
   oled_screen_display_text_center(endpoint, 6, OLED_DISPLAY_NORMAL);
+#else
+  char str[17];
+  snprintf(str, 17, "H: %s", host);
+  oled_screen_display_text_center(str, 1, OLED_DISPLAY_NORMAL);
+  snprintf(str, 17, "P: %s", port);
+  oled_screen_display_text_center(str, 2, OLED_DISPLAY_NORMAL);
+  snprintf(str, 17, "EP: %s", endpoint);
+  oled_screen_display_text_center(str, 3, OLED_DISPLAY_NORMAL);
+#endif
 }
 
 static void catdos_module_connect_wifi() {
