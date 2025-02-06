@@ -20,9 +20,13 @@ $(error Board not support OTA yet)
 endif
 endif
 
-.PHONY: compile load monitor
+.PHONY: compile load monitor build
 
+ifeq ($(OTA), 1)
+IDFPY_FLAGS += -B build_${BOARD}_ota @profiles/$(BOARD)_ota/profile
+else
 IDFPY_FLAGS += -B build_${BOARD} @profiles/$(BOARD)/profile
+endif
 
 define RUN_IDF_PY
 	idf.py $(IDFPY_FLAGS) $(1)

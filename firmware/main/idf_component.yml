@@ -18,7 +18,9 @@ dependencies:
     version: "~0.1.1"
   espressif/console:
     path: ../components/console
-
+  trackers_scanner:
+    path: trackers_scanner
+    git: https://github.com/JahazielLem/esp_components.git
   # # Put list of dependencies here
   # # For components maintained by Espressif:
   # component: "~1.0.0"
