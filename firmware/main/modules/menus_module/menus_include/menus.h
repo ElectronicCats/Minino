@@ -386,7 +386,7 @@ menu_t menus[] = {  //////////////////////////////////
      .is_visible = true},
   #endif
 #endif
-#if CONFIG_GPS_APPS_ENABLE && CONFIG_GPS_ENABLED
+#if CONFIG_GPS_APPS_ENABLE && CONFIG_GPS_ENABLED && CONFIG_SD_ENABLED
     {.display_name = "GPS",
      .menu_idx = MENU_GPS,
      .parent_idx = MENU_APPLICATIONS,
@@ -562,6 +562,7 @@ menu_t menus[] = {  //////////////////////////////////
      .on_exit_cb = NULL,
      .is_visible = true},
 #endif
+#if CONFIG_SD_ENABLED
     {.display_name = "SD card",
      .menu_idx = MENU_SETTINGS_SD_CARD,
      .parent_idx = MENU_SETTINGS_SYSTEM,
@@ -569,6 +570,7 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = NULL,
      .on_exit_cb = NULL,
      .is_visible = true},
+#endif
     {.display_name = "WiFi",
      .menu_idx = MENU_SETTINGS_WIFI,
      .parent_idx = MENU_SETTINGS_SYSTEM,

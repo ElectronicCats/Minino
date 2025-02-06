@@ -613,7 +613,7 @@ menu "General project"
 			menu "GPS"	
 				config GPS_ENABLED
 					bool "Enable GPS"
-					default true
+					default true if BOARD_MININO
 					help
 						Enable GPS.
 			endmenu
@@ -621,7 +621,7 @@ menu "General project"
 			menu "SD"	
 				config SD_ENABLED
 					bool "Enable SD"
-					default true
+					default true if BOARD_MININO
 					help
 						Enable SD.
 			endmenu
