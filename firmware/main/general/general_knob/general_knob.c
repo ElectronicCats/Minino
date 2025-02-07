@@ -7,9 +7,8 @@
 static general_knob_ctx_t* knob_ctx = NULL;
 
 static void knob_exit() {
-  menus_module_exit_app();
-  if (knob_ctx->value_handler) {
-    knob_ctx->value_handler(knob_ctx->value);
+  if (knob_ctx->exit_cb) {
+    knob_ctx->exit_cb();
     free(knob_ctx);
   }
 }
@@ -79,6 +78,7 @@ void general_knob(general_knob_ctx_t ctx) {
   knob_ctx->var_lbl = ctx.var_lbl;
   knob_ctx->help_lbl = ctx.help_lbl;
   knob_ctx->value_handler = ctx.value_handler;
+  knob_ctx->exit_cb = ctx.exit_cb;
 
   menus_module_set_app_state(true, knob_input_cb);
   knob_draw_cb();

@@ -22,7 +22,7 @@
 #include "ota_module.h"
 #include "sd_card_settings_module.h"
 #include "settings_module.h"
-#include "sleep_mode.h"
+#include "sleep_mode_scenes.h"
 #include "ssid_spam.h"
 #include "stealth_mode.h"
 #include "warbee_module.h"
@@ -610,6 +610,6 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_SLEEP_MODE,
      .parent_idx = MENU_SETTINGS,
      .last_selected_submenu = 0,
-     .on_enter_cb = sleep_mode_settings,
+     .on_enter_cb = sleep_mode_scenes_main,
      .on_exit_cb = NULL,
      .is_visible = true}};
