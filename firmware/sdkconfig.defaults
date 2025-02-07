@@ -1,5 +1,23 @@
 CONFIG_PROJECT_VERSION="1.1.6.0"
 
+#-------------------------------------------------------------------------------------------#
+#------------------------------ UNCOMMENT YOUR BOARD TYPE ----------------------------------#
+
+#CONFIG_BOARD_MININO=y                                             # Board Minino
+CONFIG_BOARD_BSIDES=y                                             # Board BSides
+#CONFIG_BOARD_DRAGONJAR=y                                          # Board DragonJar
+#CONFIG_BOARD_EKOPARTY=y                                           # Board EkoParty
+#CONFIG_BOARD_BUGCON=y                                             # Board BugCon
+
+#------------------------- --------- UNCOMMENT IF MININO BOARD -----------------------------#
+#CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y                                  # Serial flasher 8MB
+#CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"           # Partitions 8MB OTA
+
+#----------------------------------- UNCOMMENT IF BADGE BOARD ------------------------------#
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y                                  # Serial flasher 4MB
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions_badge.csv"     # Partitions 4MB No OT
+#-------------------------------------------------------------------------------------------#
+
 # Enable support for power management
 CONFIG_PM_ENABLE=y
 # Enable tickless idle mode
@@ -133,23 +151,9 @@ CONFIG_FILE_MANAGER_WEB=y
 #
 CONFIG_OPENTHREAD_ENABLED=y
 CONFIG_PARTITION_TABLE_CUSTOM=y
-CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
-CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
 CONFIG_PARTITION_TABLE_OFFSET=0x8000
 CONFIG_PARTITION_TABLE_MD5=y
 # end of Partition Table
-
-#
-# Buzzer Configuration
-#
-CONFIG_BUZZER_COMPONENT_ENABLED=y
-# end of Buzzer Configuration
-
-#
-# LEDs Configuration
-#
-CONFIG_LEDS_COMPONENT_ENABLED=y
-# end of LEDs Configuration
 
 #
 # Screen Savers Configuration
