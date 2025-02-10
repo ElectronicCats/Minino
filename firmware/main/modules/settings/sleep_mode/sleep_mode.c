@@ -12,8 +12,9 @@
 #include "oled_screen.h"
 #include "preferences.h"
 
-#define WAKEUP_PIN   GPIO_NUM_1
-#define AFK_TIME_MEM "afk_time"
+#define WAKEUP_PIN            GPIO_NUM_1
+#define AFK_TIME_MEM          "afk_time"
+#define SLEEP_MODE_ENABLE_MEM "sleep_enable"
 
 #define GPS_POWER_PIN GPIO_NUM_8
 
