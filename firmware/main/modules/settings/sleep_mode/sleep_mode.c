@@ -26,6 +26,7 @@ static esp_timer_handle_t afk_timer;
 void sleep_mode_reset_timer();
 
 static void sleep_mode_sleep_2() {
+  oled_screen_clear();
   esp_sleep_enable_ext1_wakeup((1ULL << WAKEUP_PIN), ESP_EXT1_WAKEUP_ANY_LOW);
   rtc_gpio_pullup_en(GPIO_NUM_1);
   esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
@@ -61,7 +62,7 @@ static void timer_callback() {
   if (menus_module_get_app_state() || !sleep_mode_enabled) {
     return;
   }
-  sleep_mode_sleep_2();
+  sleep_mode_sleep();
 }
 
 void sleep_mode_reset_timer() {
