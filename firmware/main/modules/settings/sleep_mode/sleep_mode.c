@@ -20,12 +20,13 @@
 
 static int AFK_TIMEOUT_S = 300;
 static bool sleep_mode_enabled = false;
+static bool sleep_mode = SLEEP_LIGHT_MODE;
 static const char* TAG = "sleep_mode";
 static esp_timer_handle_t afk_timer;
 
 void sleep_mode_reset_timer();
 
-static void sleep_mode_sleep_2() {
+static void sleep_mode_deep_sleep() {
   oled_screen_clear();
   esp_sleep_enable_ext1_wakeup((1ULL << WAKEUP_PIN), ESP_EXT1_WAKEUP_ANY_LOW);
   rtc_gpio_pullup_en(GPIO_NUM_1);
@@ -34,7 +35,7 @@ static void sleep_mode_sleep_2() {
   esp_deep_sleep_start();
 }
 
-static void sleep_mode_sleep() {
+static void sleep_mode_light_sleep() {
   gpio_wakeup_enable(LEFT_BUTTON_PIN, GPIO_INTR_LOW_LEVEL);
   gpio_wakeup_enable(RIGHT_BUTTON_PIN, GPIO_INTR_LOW_LEVEL);
   gpio_wakeup_enable(UP_BUTTON_PIN, GPIO_INTR_LOW_LEVEL);
@@ -62,7 +63,11 @@ static void timer_callback() {
   if (menus_module_get_app_state() || !sleep_mode_enabled) {
     return;
   }
-  sleep_mode_sleep();
+  if (sleep_mode == SLEEP_LIGHT_MODE) {
+    sleep_mode_light_sleep();
+  } else {
+    sleep_mode_deep_sleep();
+  }
 }
 
 void sleep_mode_reset_timer() {
@@ -91,4 +96,8 @@ void sleep_mode_begin() {
   AFK_TIMEOUT_S = preferences_get_short(AFK_TIME_MEM, 300);
   sleep_mode_enabled = preferences_get_bool(SLEEP_MODE_ENABLE_MEM, true);
   sleep_mode_reset_timer();
+}
+
+void sleep_mode_set_mode(sleep_modes_e mode) {
+  sleep_mode = mode;
 }

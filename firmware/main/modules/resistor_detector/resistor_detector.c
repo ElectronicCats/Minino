@@ -7,10 +7,11 @@
 #define SAMPLE_COUNT    50
 #define SAMPLE_DELAY_MS 5
 #define C_DISCHARGE_MS  5
+#define TRUE_THRESHOLD  0.8
 
 static const char* TAG = "Resistor_check";
 
-esp_err_t resistor_detector(gpio_num_t gpio_num) {
+bool resistor_detector(gpio_num_t gpio_num) {
   gpio_config_t temp_config = {.pin_bit_mask = (1ULL << gpio_num),
                                .mode = GPIO_MODE_OUTPUT,
                                .pull_up_en = 0,
@@ -29,7 +30,7 @@ esp_err_t resistor_detector(gpio_num_t gpio_num) {
 
   if (ret != ESP_OK) {
     ESP_LOGE(TAG, "Error configurando GPIO %d", gpio_num);
-    return ret;
+    return false;
   }
 
   int high_count = 0;
@@ -47,12 +48,17 @@ esp_err_t resistor_detector(gpio_num_t gpio_num) {
     vTaskDelay(pdMS_TO_TICKS(5));
   }
 
-  printf("UP: %d | DOWN: %d\n", high_count, low_count);
+  // printf("UP: %d | DOWN: %d\n", high_count, low_count);
 
   if (ret != ESP_OK) {
     ESP_LOGE(TAG, "Error restaurando configuración GPIO %d", gpio_num);
-    return ret;
+    return false;
   }
-
-  return ESP_OK;
+  if (high_count > SAMPLE_COUNT * TRUE_THRESHOLD) {
+    // printf("RES DETECTED\n");
+    return true;
+  } else {
+    // printf("RES NO DETECTED\n");
+    return false;
+  }
 }

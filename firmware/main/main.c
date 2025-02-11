@@ -13,6 +13,7 @@
 #include "preferences.h"
 #include "resistor_detector.h"
 #include "sd_card.h"
+#include "sleep_mode.h"
 #include "uart_bridge.h"
 
 #define BAUD_RATE        115200
@@ -21,7 +22,7 @@
 
 static const char* TAG = "main";
 void app_main() {
-  resistor_detector(CONFIG_GPIO_RIGHT_BUTTON);
+  sleep_mode_set_mode(resistor_detector(CONFIG_GPIO_RIGHT_BUTTON));
 #if !defined(CONFIG_MAIN_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
