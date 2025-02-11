@@ -3,6 +3,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#define AFK_TIMEOUT_DEFAULT_S 300
+
 typedef enum {
   SLEEP_LIGHT_MODE,
   SLEEP_DEEP_MODE,

@@ -71,9 +71,9 @@ void sleep_mode_scenes_enable() {
 void sleep_mode_scenes_time() {
   general_knob_ctx_t knob = {0};
   knob.min = 10;
-  knob.max = 300;
+  knob.max = 900;
   knob.step = 10;
-  knob.value = preferences_get_short(AFK_TIME_MEM, 10);
+  knob.value = preferences_get_short(AFK_TIME_MEM, AFK_TIMEOUT_DEFAULT_S);
   knob.var_lbl = "Sleep Time";
   knob.help_lbl = "Time in Seconds";
   knob.value_handler = sleep_mode_set_afk_timeout;
