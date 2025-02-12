@@ -67,7 +67,7 @@ void led_control_stop(void) {
 }
 
 void led_control_run_effect(effect_control effect_function) {
-#ifndef LEDS_COMPONENT_ENABLED
+#ifndef CONFIG_LEDS_COMPONENT_ENABLED
   return;
 #endif
   // effect_function();
