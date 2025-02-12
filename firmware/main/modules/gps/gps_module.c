@@ -1,6 +1,8 @@
 #include "esp_log.h"
 #include "stdint.h"
 
+#include "general_notification.h"
+#include "gps_hw.h"
 #include "gps_module.h"
 #include "gps_screens.h"
 #include "menus_module.h"
@@ -205,4 +207,25 @@ static void gps_module_general_data_input_cb(uint8_t button_name,
   }
   gps_module_stop_read();
   menus_module_exit_app();
+}
+
+void gps_module_check_state() {
+  if (gps_hw_get_state()) {
+    return;
+  }
+
+  // gps_hw_on();
+
+  general_notification_ctx_t notification = {0};
+  notification.head = "GPS is Disabled";
+  notification.body = "Enable it from: Settings - System - GPS";
+  notification.on_exit = menus_module_exit_app;
+
+  general_notification_handler(notification);
+}
+
+void gps_module_reset_state() {
+  // if (gps_hw_get_state() && !preferences_get_bool(GPS_ENABLED_MEM, false)) {
+  //   gps_hw_off();
+  // }
 }

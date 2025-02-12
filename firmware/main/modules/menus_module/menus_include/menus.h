@@ -392,8 +392,8 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_GPS,
      .parent_idx = MENU_APPLICATIONS,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .on_enter_cb = gps_module_check_state,
+     .on_exit_cb = gps_module_reset_state,
      .is_visible = true},
   #ifdef CONFIG_GPS_APP_WARDRIVING
     {.display_name = "Wardriving",
