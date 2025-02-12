@@ -6,6 +6,7 @@
 #include "gps_module.h"
 #include "menus_module.h"
 #include "preferences.h"
+#include "resistor_detector.h"
 
 static uint8_t last_main_selection = 0;
 
@@ -14,23 +15,23 @@ void gps_settings_state_menu();
 void gps_settings_time_zone();
 
 typedef enum {
-  GPS_ENABLE_DISABLE,
   GPS_TIME_ZONE,
+  GPS_ENABLE_DISABLE,  // MUST EVER BE THE LAST ITEM
 } main_options_e;
 
 static const char* main_options[] = {
-    "Enable/Disable",
     "Time Zone",
+    "Enable/Disable",  // MUST EVER BE THE LAST ITEM
 };
 
 static void main_handler(uint8_t selection) {
   last_main_selection = selection;
   switch (selection) {
-    case GPS_ENABLE_DISABLE:
-      gps_settings_state_menu();
-      break;
     case GPS_TIME_ZONE:
       gps_settings_time_zone();
+      break;
+    case GPS_ENABLE_DISABLE:
+      gps_settings_state_menu();
       break;
     default:
       break;
@@ -38,9 +39,10 @@ static void main_handler(uint8_t selection) {
 }
 
 void gps_settings_main_menu() {
+  bool res = resistor_detector_get_result();
   general_submenu_menu_t main = {0};
   main.options = main_options;
-  main.options_count = sizeof(main_options) / sizeof(char*);
+  main.options_count = sizeof(main_options) / sizeof(char*) - !res;
   main.selected_option = last_main_selection;
   main.select_cb = main_handler;
   main.exit_cb = menus_module_exit_app;

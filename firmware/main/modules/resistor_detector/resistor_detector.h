@@ -7,3 +7,4 @@
 #include "esp_system.h"
 
 bool resistor_detector(gpio_num_t gpio_num);
+bool resistor_detector_get_result();

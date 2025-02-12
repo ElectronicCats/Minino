@@ -11,6 +11,8 @@
 
 static const char* TAG = "Resistor_check";
 
+static bool res_detected = false;
+
 bool resistor_detector(gpio_num_t gpio_num) {
   gpio_config_t temp_config = {.pin_bit_mask = (1ULL << gpio_num),
                                .mode = GPIO_MODE_OUTPUT,
@@ -52,13 +54,20 @@ bool resistor_detector(gpio_num_t gpio_num) {
 
   if (ret != ESP_OK) {
     ESP_LOGE(TAG, "Error restaurando configuración GPIO %d", gpio_num);
+    res_detected = false;
     return false;
   }
   if (high_count > SAMPLE_COUNT * TRUE_THRESHOLD) {
     // printf("RES DETECTED\n");
+    res_detected = true;
     return true;
   } else {
     // printf("RES NO DETECTED\n");
+    res_detected = false;
     return false;
   }
+}
+
+bool resistor_detector_get_result() {
+  return res_detected;
 }
