@@ -7,6 +7,7 @@
 #include "flash_fs.h"
 #include "flash_fs_screens.h"
 #include "general_flash_storage.h"
+#include "gps_hw.h"
 #include "keyboard_module.h"
 #include "leds.h"
 #include "menus_module.h"
@@ -22,6 +23,8 @@
 
 static const char* TAG = "main";
 void app_main() {
+  preferences_begin();
+  gps_hw_init();
   sleep_mode_set_mode(resistor_detector(CONFIG_GPIO_RIGHT_BUTTON));
 #if !defined(CONFIG_MAIN_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
@@ -36,7 +39,6 @@ void app_main() {
   };
 
   uart_bridge_begin(uart_config, UART_BUFFER_SIZE);
-  preferences_begin();
   logs_output_set_output(preferences_get_uchar("logs_output", USB));
 
   bool stealth_mode = preferences_get_bool("stealth_mode", false);
