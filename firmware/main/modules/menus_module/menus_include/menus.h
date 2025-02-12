@@ -16,6 +16,7 @@
 #include "file_manager_module.h"
 #include "gps_module.h"
 #include "gps_screens.h"
+#include "gps_settings.h"
 #include "i2c_scanner.h"
 #include "logs_output.h"
 #include "open_thread_module.h"
@@ -105,7 +106,7 @@ typedef enum {
   MENU_FILE_MANAGER_WEB,
   MENU_SETTINGS_SYSTEM,
   MENU_SETTINGS_LOGS_OUTPUT,
-  MENU_SETTINGS_TIME_ZONE,
+  MENU_SETTINGS_GPS,
   MENU_SETTINGS_WIFI,
   MENU_SETTINGS_SD_CARD,
   MENU_SETTINGS_SD_CARD_INFO,
@@ -554,11 +555,11 @@ menu_t menus[] = {  //////////////////////////////////
      .on_exit_cb = NULL,
      .is_visible = true},
 #if CONFIG_GPS_APPS_ENABLE && CONFIG_GPS_ENABLED
-    {.display_name = "Time zone",
-     .menu_idx = MENU_SETTINGS_TIME_ZONE,
+    {.display_name = "GPS",
+     .menu_idx = MENU_SETTINGS_GPS,
      .parent_idx = MENU_SETTINGS_SYSTEM,
      .last_selected_submenu = 0,
-     .on_enter_cb = settings_module_time_zone,
+     .on_enter_cb = gps_settings_main_menu,
      .on_exit_cb = NULL,
      .is_visible = true},
 #endif

@@ -5,7 +5,6 @@
 #include "esp_log.h"
 #include "file_manager_module.h"
 #include "general_radio_selection.h"
-#include "gps_module.h"
 #include "menus_module.h"
 #include "modals_module.h"
 #include "modules/settings/wifi/wifi_settings.h"
@@ -18,15 +17,6 @@
 #include "web_file_browser_module.h"
 
 static const char* TAG = "settings_module";
-
-char* gps_time_zone_options_2[] = {
-    "UTC-12",   "UTC-11",   "UTC-10",    "UTC-9:30", "UTC-9",    "UTC-8",
-    "UTC-7",    "UTC-6",    "UTC-5",     "UTC-4",    "UTC-3:30", "UTC-3",
-    "UTC-2",    "UTC-1",    "UTC+0",     "UTC+1",    "UTC+2",    "UTC+3",
-    "UTC+3:30", "UTC+4",    "UTC+4:30",  "UTC+5",    "UTC+5:30", "UTC+5:45",
-    "UTC+6",    "UTC+6:30", "UTC+7",     "UTC+8",    "UTC+8:45", "UTC+9",
-    "UTC+9:30", "UTC+10",   "UTC+10:30", "UTC+11",   "UTC+12",   "UTC+12:45",
-    "UTC+13",   "UTC+14"};
 
 char* sd_card_info_2[6];
 general_menu_t SD_inf = {.menu_count = 6,
@@ -74,16 +64,4 @@ void update_sd_card_info() {
   sd_card_unmount();
   general_register_scrolling_menu(&SD_inf);
   general_screen_display_scrolling_text_handler(menus_module_exit_app);
-}
-
-void settings_module_time_zone() {
-  general_radio_selection_menu_t time_zone;
-  time_zone.banner = "Select Time Zone";
-  time_zone.exit_cb = menus_module_exit_app;
-  time_zone.options = gps_time_zone_options_2;
-  time_zone.options_count = 38;
-  time_zone.style = RADIO_SELECTION_OLD_STYLE;
-  time_zone.current_option = gps_module_get_time_zone();
-  time_zone.select_cb = gps_module_set_time_zone;
-  general_radio_selection(time_zone);
 }

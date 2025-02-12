@@ -40,6 +40,6 @@ void gps_hw_off() {
   gps_enabled = false;
 }
 
-bool get_gps_enabled() {
+bool gps_hw_get_state() {
   return gps_enabled;
 }
