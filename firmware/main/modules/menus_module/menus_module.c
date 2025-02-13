@@ -223,6 +223,11 @@ void menus_module_set_app_state_last() {
   app_state.input_callback = app_state.input_last_callback;
 }
 
+void menus_module_set_default_input() {
+  app_state.in_app = false;
+  app_state.input_callback = menus_input_cb;
+}
+
 void menus_module_restart() {
   menus_module_set_reset_screen(menus_ctx->parent_menu_idx);
   esp_restart();

@@ -39,7 +39,7 @@ static void main_handler(uint8_t selection) {
 }
 
 void sleep_mode_scenes_main() {
-  general_submenu_menu_t main;
+  general_submenu_menu_t main = {0};
   main.options = main_options;
   main.options_count = sizeof(main_options) / sizeof(char*);
   main.selected_option = last_main_selection;

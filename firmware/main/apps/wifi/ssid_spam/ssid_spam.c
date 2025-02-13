@@ -121,7 +121,7 @@ void spam_display_list_ssid() {
     ssids_list[i] = list[i].item_storage_name;
   }
 
-  general_submenu_menu_t spam_menu_list_ssid;
+  general_submenu_menu_t spam_menu_list_ssid = {0};
   spam_menu_list_ssid.options = ssids_list;
   spam_menu_list_ssid.options_count = list_count;
   spam_menu_list_ssid.select_cb = list_ssid_cb;

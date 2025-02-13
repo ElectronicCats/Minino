@@ -9,6 +9,7 @@
 void gps_hw_init();
 void gps_hw_on();
 void gps_hw_off();
+void gsp_hw_save_state();
 bool gps_hw_get_state();
 
 #endif  // _GPS_HW_H_

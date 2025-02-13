@@ -14,4 +14,4 @@ typedef struct {
   void* exit_cb;
 } general_submenu_menu_t;
 
-void general_submenu(general_submenu_menu_t radio_selection_menu);
+void general_submenu(general_submenu_menu_t submenu);

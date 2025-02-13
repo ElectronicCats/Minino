@@ -49,7 +49,7 @@ static void main_menu_exit_handler() {
 
 void analyzer_scenes_main_menu() {
   current_scene = ANALYZER_MAIN_SCENE;
-  general_submenu_menu_t main_menu;
+  general_submenu_menu_t main_menu = {0};
   main_menu.options = analizer_main_options;
   main_menu.options_count = sizeof(analizer_main_options) / sizeof(char*);
   main_menu.select_cb = main_menu_selection_handler;
@@ -85,7 +85,7 @@ static void settings_exit_handler() {
 
 void analyzer_scenes_settings() {
   current_scene = ANALYZER_SETTINGS_OPTION;
-  general_submenu_menu_t settings_menu;
+  general_submenu_menu_t settings_menu = {0};
   settings_menu.options = analizer_settings_options;
   settings_menu.options_count =
       sizeof(analizer_settings_options) / sizeof(char*);
