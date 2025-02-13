@@ -61,8 +61,13 @@ static void wardriving_screens_zigbee_animation_task() {
 }
 
 static esp_err_t wardriving_module_verify_sd_card() {
-  ESP_LOGI("Warbee", "Verifying SD card");
+  ESP_LOGI(TAG, "Verifying SD card");
   esp_err_t err = sd_card_mount();
+  if (err == ESP_ERR_NOT_SUPPORTED) {
+    wardriving_screens_module_format_sd_card();
+  } else if (err != ESP_OK) {
+    wardriving_screens_module_no_sd_card();
+  }
   return err;
 }
 
