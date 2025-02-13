@@ -35,6 +35,7 @@ static thread_module_t context_session;
 static gps_t* gps_ctx;
 static bool running_thread_scanner_animation = false;
 static bool running_thread_channel_hopp = false;
+static bool running = false;
 static uint8_t current_channel = 11;
 
 static uint16_t csv_lines;
@@ -312,6 +313,7 @@ void warthread_module_begin() {
     ESP_LOGE(TAG, "Failed to allocate memory for csv_file_name");
     return;
   }
+  running = true;
 
   sprintf(csv_file_name, "%s.csv", FILE_NAME);
   sprintf(csv_file_buffer, "%s\n", warthread_csv_header);
@@ -331,16 +333,25 @@ void warthread_module_begin() {
   gps_module_start_scan();
 
   openthread_enable_promiscous_mode(&warthread_packet_handler);
-
-  
 }
 
 void warthread_module_exit() {
   running_thread_channel_hopp = false;
   sd_card_read_file(csv_file_name);
   sd_card_unmount();
-  free(csv_file_buffer);
-  free(csv_file_name);
+
+  if (csv_file_buffer) {
+    free(csv_file_buffer);
+    csv_file_buffer = NULL;
+  }
+  if (csv_file_name) {
+    free(csv_file_name);
+    csv_file_name = NULL;
+  }
+
+  if (!running) {
+    return;
+  }
   vTaskDelay(pdMS_TO_TICKS(500));
   openthread_disable_promiscous_mode();
   vTaskDelay(pdMS_TO_TICKS(500));

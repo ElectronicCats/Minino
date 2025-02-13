@@ -333,7 +333,6 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
 
 void warbee_module_begin() {
   menus_module_set_app_state(true, warbee_module_cb_event);
-  
   if (wardriving_module_verify_sd_card() != ESP_OK) {
     return;
   }
@@ -369,8 +368,6 @@ void warbee_module_begin() {
   vTaskSuspend(scanning_zigbee_animation_task_handle);
   gps_module_register_cb(warbee_gps_event_handler_cb);
   gps_module_start_scan();
-
-  
 }
 
 void warbee_module_exit() {
@@ -378,6 +375,12 @@ void warbee_module_exit() {
   ieee_sniffer_stop();
   sd_card_read_file(csv_file_name);
   sd_card_unmount();
-  free(csv_file_buffer);
-  free(csv_file_name);
+  if (csv_file_buffer) {
+    free(csv_file_buffer);
+    csv_file_buffer = NULL;
+  }
+  if (csv_file_name) {
+    free(csv_file_name);
+    csv_file_name = NULL;
+  }
 }
