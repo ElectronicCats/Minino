@@ -87,3 +87,6 @@ void gps_module_general_data_run();
 
 char* get_full_date_time(gps_t* gps);
 char* get_str_date_time(gps_t* gps);
+
+void gps_module_check_state();
+void gps_module_reset_state();

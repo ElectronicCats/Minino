@@ -7,14 +7,17 @@
 static general_knob_ctx_t* knob_ctx = NULL;
 
 static void knob_exit() {
-  menus_module_exit_app();
-  if (knob_ctx->value_handler) {
-    knob_ctx->value_handler(knob_ctx->value);
+  if (knob_ctx->exit_cb) {
+    knob_ctx->exit_cb();
     free(knob_ctx);
   }
 }
 
 static void knob_draw_cb() {
+  uint8_t page = 3;
+#ifdef CONFIG_RESOLUTION_128X64
+  page = 4;
+#endif
   oled_screen_clear_buffer();
 
   oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
@@ -25,7 +28,7 @@ static void knob_draw_cb() {
   oled_screen_display_text_center(str, 2, OLED_DISPLAY_NORMAL);
 
   sprintf(str, "%s: %d", knob_ctx->var_lbl, knob_ctx->value);
-  oled_screen_display_text_center(str, 4, OLED_DISPLAY_INVERT);
+  oled_screen_display_text_center(str, page, OLED_DISPLAY_INVERT);
 
   oled_screen_display_show();
 }
@@ -75,6 +78,7 @@ void general_knob(general_knob_ctx_t ctx) {
   knob_ctx->var_lbl = ctx.var_lbl;
   knob_ctx->help_lbl = ctx.help_lbl;
   knob_ctx->value_handler = ctx.value_handler;
+  knob_ctx->exit_cb = ctx.exit_cb;
 
   menus_module_set_app_state(true, knob_input_cb);
   knob_draw_cb();
