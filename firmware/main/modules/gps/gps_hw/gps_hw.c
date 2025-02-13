@@ -40,6 +40,13 @@ void gps_hw_off() {
   gps_enabled = false;
 }
 
+void gsp_hw_save_state() {
+#ifndef CONFIG_GPS_ENABLED
+  return;
+#endif
+  preferences_put_bool(GPS_ENABLED_MEM, gps_enabled);
+}
+
 bool gps_hw_get_state() {
   return gps_enabled;
 }

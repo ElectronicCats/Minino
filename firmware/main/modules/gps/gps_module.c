@@ -2,10 +2,12 @@
 #include "stdint.h"
 
 #include "general_notification.h"
+#include "general_radio_selection.h"
 #include "gps_hw.h"
 #include "gps_module.h"
 #include "gps_screens.h"
 #include "menus_module.h"
+#include "modals_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
 #include "wardriving_module.h"
@@ -18,6 +20,8 @@ static const char* TAG = "gps_module";
 nmea_parser_handle_t nmea_hdl = NULL;
 gps_event_callback_t gps_event_callback = NULL;
 static bool is_uart_installed = false;
+
+void gps_module_check_state();
 
 /**
  * @brief Signal strength levels based on the number of satellites in use
@@ -209,23 +213,58 @@ static void gps_module_general_data_input_cb(uint8_t button_name,
   menus_module_exit_app();
 }
 
+static const char* gps_states[] = {
+    "Disabled",
+    "Enabled",
+};
+
+static void state_handler(uint8_t state) {
+  if (state) {
+    gps_hw_on();
+  } else {
+    gps_hw_off();
+  }
+  gsp_hw_save_state();
+}
+
+static void gps_settings_exit_cb() {
+  if (gps_hw_get_state()) {
+    menus_module_set_default_input();
+    menus_module_refresh();
+  } else {
+    menus_module_exit_app();
+  }
+}
+
+static void gps_settings_state_menu() {
+  general_radio_selection_menu_t state = {0};
+  state.banner = "GPS State";
+  state.options = gps_states;
+  state.options_count = sizeof(gps_states) / sizeof(char*);
+  state.current_option = gps_hw_get_state();
+  state.select_cb = state_handler;
+  state.style = RADIO_SELECTION_OLD_STYLE;
+  state.exit_cb = gps_settings_exit_cb;
+
+  general_radio_selection(state);
+}
+
 void gps_module_check_state() {
   if (gps_hw_get_state()) {
     return;
   }
 
-  // gps_hw_on();
-
   general_notification_ctx_t notification = {0};
   notification.head = "GPS is Disabled";
-  notification.body = "Enable it from: Settings - System - GPS";
-  notification.on_exit = menus_module_exit_app;
+  notification.body = "Enable it first";
+  notification.duration_ms = 2000;
+  general_notification(notification);
 
-  general_notification_handler(notification);
+  gps_settings_state_menu();
 }
 
 void gps_module_reset_state() {
-  // if (gps_hw_get_state() && !preferences_get_bool(GPS_ENABLED_MEM, false)) {
-  //   gps_hw_off();
-  // }
+  if (gps_hw_get_state() && !preferences_get_bool(GPS_ENABLED_MEM, false)) {
+    gps_hw_off();
+  }
 }
