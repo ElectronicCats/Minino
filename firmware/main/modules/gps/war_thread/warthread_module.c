@@ -289,6 +289,7 @@ static void warthread_packet_handler(const otRadioFrame* aFrame, bool aIsTx) {
 }
 
 void warthread_module_begin() {
+  menus_module_set_app_state(true, thread_module_cb_event);
   ESP_LOGI(TAG, "Thread module begin");
   if (wardriving_module_verify_sd_card() != ESP_OK) {
     return;
@@ -331,7 +332,7 @@ void warthread_module_begin() {
 
   openthread_enable_promiscous_mode(&warthread_packet_handler);
 
-  menus_module_set_app_state(true, thread_module_cb_event);
+  
 }
 
 void warthread_module_exit() {

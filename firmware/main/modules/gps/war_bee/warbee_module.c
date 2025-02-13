@@ -332,6 +332,8 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
 }
 
 void warbee_module_begin() {
+  menus_module_set_app_state(true, warbee_module_cb_event);
+  
   if (wardriving_module_verify_sd_card() != ESP_OK) {
     return;
   }
@@ -368,7 +370,7 @@ void warbee_module_begin() {
   gps_module_register_cb(warbee_gps_event_handler_cb);
   gps_module_start_scan();
 
-  menus_module_set_app_state(true, warbee_module_cb_event);
+  
 }
 
 void warbee_module_exit() {
