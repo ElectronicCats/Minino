@@ -71,7 +71,7 @@ static int save_ssid_cmd(int argc, char** argv) {
     arg_print_errors(stderr, ssdi_save_args.end, argv[0]);
     return 1;
   }
-  if (strlen(ssdi_save_args.name->sval[0]) > 17){
+  if (strlen(ssdi_save_args.name->sval[0]) > 17) {
     ESP_LOGE(__func__, "SSID name character limit exceded.");
     printf("[ERROR] SSID name characters limit exceded");
     return 1;
@@ -86,8 +86,9 @@ static int save_ssid_cmd(int argc, char** argv) {
 }
 
 void cmd_spamssid_register_commands() {
-  ssdi_save_args.name = arg_str0(NULL, "name", "<n>",
-                                 "Name of the SSID spam (Max 17 characteres, NOT USE SPACES)");
+  ssdi_save_args.name =
+      arg_str0(NULL, "name", "<n>",
+               "Name of the SSID spam (Max 17 characteres, NOT USE SPACES)");
   ssdi_save_args.value = arg_str1(
       NULL, NULL, "<value>", "Words of the spam comma separed for each SSID");
   ssdi_save_args.end = arg_end(2);
