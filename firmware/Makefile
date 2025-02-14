@@ -28,4 +28,8 @@ ff:
 
 all: flash monitor
 
+binmerge:
+	idf.py build && cd build && esptool.py --chip esp32c6 merge_bin -o MininoBin.bin @flash_args
+
+
 .PHONY: test_port setup compile flash monitor clean all
