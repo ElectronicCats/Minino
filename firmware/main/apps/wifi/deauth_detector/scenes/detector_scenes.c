@@ -74,7 +74,7 @@ static void main_menu_exit() {
 }
 
 void detector_scenes_main_menu() {
-  general_submenu_menu_t main_menu;
+  general_submenu_menu_t main_menu = {0};
   main_menu.options = main_menu_options;
   main_menu.options_count = sizeof(main_menu_options) / sizeof(char*);
   main_menu.select_cb = main_menu_handler;

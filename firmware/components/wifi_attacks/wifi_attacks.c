@@ -78,6 +78,7 @@ static void wifi_attack_brod_send_deauth_frame(wifi_ap_record_t* ap_target) {
 }
 
 static void wifi_attack_rogueap(const wifi_ap_record_t* ap_record) {
+  esp_wifi_set_mode(WIFI_MODE_AP);
   running_rogueap_attack = true;
   ESP_LOGI(TAG_WIFI_ATTACK_MODULE, "Configuring Rogue AP SSID: %s",
            ap_record->ssid);

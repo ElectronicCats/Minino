@@ -6,19 +6,26 @@
 #include "esp_timer.h"
 #include "flash_fs.h"
 #include "flash_fs_screens.h"
+#include "general_flash_storage.h"
+#include "gps_hw.h"
 #include "keyboard_module.h"
 #include "leds.h"
 #include "menus_module.h"
 #include "preferences.h"
+#include "resistor_detector.h"
 #include "sd_card.h"
+#include "sleep_mode.h"
 #include "uart_bridge.h"
 
 #define BAUD_RATE        115200
 #define UART_BUFFER_SIZE 1024
-#define BUZZER_PIN       GPIO_NUM_2
+#define BUZZER_PIN       CONFIG_BUZZER_PIN
 
 static const char* TAG = "main";
 void app_main() {
+  preferences_begin();
+  gps_hw_init();
+  sleep_mode_set_mode(resistor_detector(CONFIG_GPIO_RIGHT_BUTTON));
 #if !defined(CONFIG_MAIN_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
@@ -32,7 +39,6 @@ void app_main() {
   };
 
   uart_bridge_begin(uart_config, UART_BUFFER_SIZE);
-  preferences_begin();
   logs_output_set_output(preferences_get_uchar("logs_output", USB));
 
   bool stealth_mode = preferences_get_bool("stealth_mode", false);
@@ -47,5 +53,7 @@ void app_main() {
   menus_module_begin();
   leds_off();
   preferences_put_bool("wifi_connected", false);
+  flash_storage_begin();
+
   cat_console_begin();  // Contains a while(true) loop, it must be at the end
 }

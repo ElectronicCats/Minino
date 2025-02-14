@@ -16,18 +16,20 @@
 #include "file_manager_module.h"
 #include "gps_module.h"
 #include "gps_screens.h"
+#include "gps_settings.h"
 #include "i2c_scanner.h"
 #include "logs_output.h"
 #include "open_thread_module.h"
 #include "ota_module.h"
 #include "sd_card_settings_module.h"
 #include "settings_module.h"
-#include "sleep_mode.h"
+#include "sleep_mode_scenes.h"
 #include "ssid_spam.h"
 #include "stealth_mode.h"
 #include "warbee_module.h"
 #include "wardriving_module.h"
 #include "wardriving_screens_module.h"
+#include "warthread_module.h"
 #include "web_file_browser_module.h"
 #include "wifi_analyzer.h"
 #include "wifi_settings.h"
@@ -89,6 +91,7 @@ typedef enum {
   /* Wardriving submenus */
   MENU_GPS_WARDRIVING_START,
   MENU_GPS_WARDRIVING_BEE_START,
+  MENU_GPS_WARDRIVING_THREAD_START,
   MENU_GPS_WARDRIVING_HELP,
   /* About submenus */
   MENU_ABOUT_VERSION,
@@ -103,7 +106,7 @@ typedef enum {
   MENU_FILE_MANAGER_WEB,
   MENU_SETTINGS_SYSTEM,
   MENU_SETTINGS_LOGS_OUTPUT,
-  MENU_SETTINGS_TIME_ZONE,
+  MENU_SETTINGS_GPS,
   MENU_SETTINGS_WIFI,
   MENU_SETTINGS_SD_CARD,
   MENU_SETTINGS_SD_CARD_INFO,
@@ -384,13 +387,13 @@ menu_t menus[] = {  //////////////////////////////////
      .is_visible = true},
   #endif
 #endif
-#ifdef CONFIG_GPS_APPS_ENABLE
+#if CONFIG_GPS_APPS_ENABLE && CONFIG_GPS_ENABLED && CONFIG_SD_ENABLED
     {.display_name = "GPS",
      .menu_idx = MENU_GPS,
      .parent_idx = MENU_APPLICATIONS,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
+     .on_enter_cb = gps_module_check_state,
+     .on_exit_cb = gps_module_reset_state,
      .is_visible = true},
   #ifdef CONFIG_GPS_APP_WARDRIVING
     {.display_name = "Wardriving",
@@ -415,6 +418,15 @@ menu_t menus[] = {  //////////////////////////////////
      .last_selected_submenu = 0,
      .on_enter_cb = warbee_module_begin,
      .on_exit_cb = warbee_module_exit,
+     .is_visible = true},
+    #endif
+    #ifdef CONFIG_GPS_APP_WARDRIVING_TH
+    {.display_name = "Thread Start",
+     .menu_idx = MENU_GPS_WARDRIVING_THREAD_START,
+     .parent_idx = MENU_GPS_WARDRIVING,
+     .last_selected_submenu = 0,
+     .on_enter_cb = warthread_module_begin,
+     .on_exit_cb = warthread_module_exit,
      .is_visible = true},
     #endif
     {.display_name = "Help",
@@ -542,15 +554,16 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = logs_output,
      .on_exit_cb = NULL,
      .is_visible = true},
-#ifdef CONFIG_GPS_APPS_ENABLE
-    {.display_name = "Time zone",
-     .menu_idx = MENU_SETTINGS_TIME_ZONE,
+#if CONFIG_GPS_APPS_ENABLE && CONFIG_GPS_ENABLED
+    {.display_name = "GPS",
+     .menu_idx = MENU_SETTINGS_GPS,
      .parent_idx = MENU_SETTINGS_SYSTEM,
      .last_selected_submenu = 0,
-     .on_enter_cb = settings_module_time_zone,
+     .on_enter_cb = gps_settings_main_menu,
      .on_exit_cb = NULL,
      .is_visible = true},
 #endif
+#if CONFIG_SD_ENABLED
     {.display_name = "SD card",
      .menu_idx = MENU_SETTINGS_SD_CARD,
      .parent_idx = MENU_SETTINGS_SYSTEM,
@@ -558,6 +571,7 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = NULL,
      .on_exit_cb = NULL,
      .is_visible = true},
+#endif
     {.display_name = "WiFi",
      .menu_idx = MENU_SETTINGS_WIFI,
      .parent_idx = MENU_SETTINGS_SYSTEM,
@@ -597,6 +611,6 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_SLEEP_MODE,
      .parent_idx = MENU_SETTINGS,
      .last_selected_submenu = 0,
-     .on_enter_cb = sleep_mode_settings,
+     .on_enter_cb = sleep_mode_scenes_main,
      .on_exit_cb = NULL,
      .is_visible = true}};

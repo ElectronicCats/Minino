@@ -19,7 +19,8 @@
 #define WARFI_DIR_NAME     "warfi"
 #define MAC_ADDRESS_FORMAT "%02x:%02x:%02x:%02x:%02x:%02x"
 #define EMPTY_MAC_ADDRESS  "00:00:00:00:00:00"
-
+// Thread
+#define WARTH_DIR_NAME "thread"
 // CSV file properties
 #define CSV_LINE_SIZE    150  // Got it from real time tests
 #define CSV_HEADER_LINES 2    // Check `csv_header` variable

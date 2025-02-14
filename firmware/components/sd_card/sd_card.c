@@ -164,6 +164,9 @@ void sd_card_begin() {
 }
 
 esp_err_t sd_card_mount() {
+#ifndef CONFIG_SD_ENABLED
+  return ESP_ERR_NOT_SUPPORTED;
+#endif
   ESP_LOGI(TAG, "Mounting SD Card...");
   esp_err_t err = ESP_OK;
   if (sd_card_is_mounted()) {
@@ -181,6 +184,10 @@ esp_err_t sd_card_mount() {
 }
 
 esp_err_t sd_card_unmount() {
+  if (sd_card_is_not_mounted()) {
+    ESP_LOGE(TAG, "SD card not mounted");
+    return ESP_OK;
+  }
   return unmount();
 }
 

@@ -1,4 +1,22 @@
-CONFIG_PROJECT_VERSION="1.1.6.0"
+CONFIG_PROJECT_VERSION="1.1.7.0"
+
+#-------------------------------------------------------------------------------------------#
+#------------------------------ UNCOMMENT YOUR BOARD TYPE ----------------------------------#
+
+CONFIG_BOARD_MININO=y                                             # Board Minino
+#CONFIG_BOARD_BSIDES=y                                             # Board BSides
+#CONFIG_BOARD_DRAGONJAR=y                                          # Board DragonJar
+#CONFIG_BOARD_EKOPARTY=y                                           # Board EkoParty
+#CONFIG_BOARD_BUGCON=y                                             # Board BugCon
+
+#------------------------- --------- UNCOMMENT IF MININO BOARD -----------------------------#
+CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y                                  # Serial flasher 8MB
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"           # Partitions 8MB OTA
+
+#---------------------------------- UNCOMMENT IF 4MB FLASH BOARD ---------------------------#
+#CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y                                  # Serial flasher 4MB
+#CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions_badge.csv"     # Partitions 4MB No OTA
+#-------------------------------------------------------------------------------------------#
 
 # Enable support for power management
 CONFIG_PM_ENABLE=y
@@ -55,7 +73,7 @@ CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU0=n
 #
 # Serial flasher config
 #
-CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
+#CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
 
 # FatFS
 CONFIG_FATFS_LFN_HEAP=y
@@ -116,6 +134,7 @@ CONFIG_THREAD_APP_SNIFFER=y
 CONFIG_GPS_APPS_ENABLE=y
 CONFIG_GPS_APP_WARDRIVING=y
 CONFIG_GPS_APP_WARDRIVING_ZB=y
+CONFIG_GPS_APP_WARDRIVING_TH=y
 ## GPIO ##
 CONFIG_GPIO_APPS_ENABLE=y
 CONFIG_GPIO_I2C_SCAN_APP=y
@@ -132,23 +151,9 @@ CONFIG_FILE_MANAGER_WEB=y
 #
 CONFIG_OPENTHREAD_ENABLED=y
 CONFIG_PARTITION_TABLE_CUSTOM=y
-CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
-CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
 CONFIG_PARTITION_TABLE_OFFSET=0x8000
 CONFIG_PARTITION_TABLE_MD5=y
 # end of Partition Table
-
-#
-# Buzzer Configuration
-#
-CONFIG_BUZZER_COMPONENT_ENABLED=y
-# end of Buzzer Configuration
-
-#
-# LEDs Configuration
-#
-CONFIG_LEDS_COMPONENT_ENABLED=y
-# end of LEDs Configuration
 
 #
 # Screen Savers Configuration
@@ -160,3 +165,6 @@ CONFIG_SCREEN_SAVER_EC=y
 CONFIG_SCREEN_SAVER_MINI_FACE=y
 CONFIG_SCREEN_SAVER_BABY_DRAGON=y
 # end of Screen Savers Configuration
+
+# UART
+CONFIG_UART_ISR_IN_IRAM=y

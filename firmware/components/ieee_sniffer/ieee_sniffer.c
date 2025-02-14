@@ -129,6 +129,9 @@ void ieee_sniffer_channel_hop() {
 }
 
 void ieee_sniffer_stop(void) {
+  if (!running) {
+    return;
+  }
   running = false;
   err = esp_ieee802154_disable();
   if (err != ESP_OK) {

@@ -23,10 +23,10 @@ static void gps_screens_update_date_and_time(gps_t* gps) {
   oled_screen_clear_buffer();
   sprintf(str, "Signal: %s   ", gps_module_get_signal_strength(gps));
   oled_screen_display_text(str, 0, 0, OLED_DISPLAY_NORMAL);
-  sprintf(str, "Date: %d/%d/%d", gps->date.year, gps->date.month,
+  sprintf(str, "Date: %d/%02d/%02d", gps->date.year, gps->date.month,
           gps->date.day);
   oled_screen_display_text(str, 0, 2, OLED_DISPLAY_NORMAL);
-  sprintf(str, "Time: %d:%d:%d", gps->tim.hour, gps->tim.minute,
+  sprintf(str, "Time: %02d:%02d:%02d", gps->tim.hour, gps->tim.minute,
           gps->tim.second);
   oled_screen_display_text(str, 0, 3, OLED_DISPLAY_NORMAL);
   oled_screen_display_show();

@@ -8,25 +8,38 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#include "general_knob.h"
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
 
-#define WAKEUP_PIN   GPIO_NUM_1
-#define AFK_TIME_MEM "afk_time"
+#define WAKEUP_PIN            GPIO_NUM_1
+#define AFK_TIME_MEM          "afk_time"
+#define SLEEP_MODE_ENABLE_MEM "sleep_enable"
 
-static int AFK_TIMEOUT_S = 10;
+#define GPS_POWER_PIN GPIO_NUM_8
+
+static int AFK_TIMEOUT_S = AFK_TIMEOUT_DEFAULT_S;
+static bool sleep_mode_enabled = false;
+static bool sleep_mode = SLEEP_LIGHT_MODE;
 static const char* TAG = "sleep_mode";
 static esp_timer_handle_t afk_timer;
 
 void sleep_mode_reset_timer();
 
-static void sleep_mode_sleep() {
-  gpio_wakeup_enable(GPIO_NUM_1, GPIO_INTR_LOW_LEVEL);
-  gpio_wakeup_enable(GPIO_NUM_15, GPIO_INTR_LOW_LEVEL);
-  gpio_wakeup_enable(GPIO_NUM_22, GPIO_INTR_LOW_LEVEL);
-  gpio_wakeup_enable(GPIO_NUM_23, GPIO_INTR_LOW_LEVEL);
+static void sleep_mode_deep_sleep() {
+  oled_screen_clear();
+  esp_sleep_enable_ext1_wakeup((1ULL << WAKEUP_PIN), ESP_EXT1_WAKEUP_ANY_LOW);
+  rtc_gpio_pullup_en(GPIO_NUM_1);
+  esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+  rtc_gpio_hold_en(GPIO_NUM_1);
+  esp_deep_sleep_start();
+}
+
+static void sleep_mode_light_sleep() {
+  gpio_wakeup_enable(LEFT_BUTTON_PIN, GPIO_INTR_LOW_LEVEL);
+  gpio_wakeup_enable(RIGHT_BUTTON_PIN, GPIO_INTR_LOW_LEVEL);
+  gpio_wakeup_enable(UP_BUTTON_PIN, GPIO_INTR_LOW_LEVEL);
+  gpio_wakeup_enable(DOWN_BUTTON_PIN, GPIO_INTR_LOW_LEVEL);
   esp_err_t result = esp_sleep_enable_gpio_wakeup();
 
   if (result == ESP_OK) {
@@ -36,10 +49,10 @@ static void sleep_mode_sleep() {
 
     vTaskDelay(pdMS_TO_TICKS(300));
     sleep_mode_reset_timer();
-    gpio_wakeup_disable(GPIO_NUM_1);
-    gpio_wakeup_disable(GPIO_NUM_15);
-    gpio_wakeup_disable(GPIO_NUM_22);
-    gpio_wakeup_disable(GPIO_NUM_23);
+    gpio_wakeup_disable(LEFT_BUTTON_PIN);
+    gpio_wakeup_disable(RIGHT_BUTTON_PIN);
+    gpio_wakeup_disable(UP_BUTTON_PIN);
+    gpio_wakeup_disable(DOWN_BUTTON_PIN);
     oled_screen_set_last_buffer();
   } else {
     printf("Error al habilitar el despertar por GPIO\n");
@@ -47,10 +60,14 @@ static void sleep_mode_sleep() {
 }
 
 static void timer_callback() {
-  if (menus_module_get_app_state()) {
+  if (menus_module_get_app_state() || !sleep_mode_enabled) {
     return;
   }
-  sleep_mode_sleep();
+  if (sleep_mode == SLEEP_LIGHT_MODE) {
+    sleep_mode_light_sleep();
+  } else {
+    sleep_mode_deep_sleep();
+  }
 }
 
 void sleep_mode_reset_timer() {
@@ -64,23 +81,23 @@ void sleep_mode_set_afk_timeout(int16_t timeout_seconds) {
   preferences_put_short(AFK_TIME_MEM, AFK_TIMEOUT_S);
 }
 
+void sleep_mode_set_enabled(bool enabled) {
+  sleep_mode_enabled = enabled;
+  preferences_put_bool(SLEEP_MODE_ENABLE_MEM, sleep_mode_enabled);
+  if (!sleep_mode_enabled) {
+    esp_timer_stop(afk_timer);
+  }
+};
+
 void sleep_mode_begin() {
   esp_timer_create_args_t timer_args = {
       .callback = timer_callback, .arg = NULL, .name = "afk_timer"};
   esp_err_t err = esp_timer_create(&timer_args, &afk_timer);
-  AFK_TIMEOUT_S = preferences_get_short(AFK_TIME_MEM, 300);
+  AFK_TIMEOUT_S = preferences_get_short(AFK_TIME_MEM, AFK_TIMEOUT_DEFAULT_S);
+  sleep_mode_enabled = preferences_get_bool(SLEEP_MODE_ENABLE_MEM, true);
   sleep_mode_reset_timer();
 }
 
-void sleep_mode_settings() {
-  general_knob_ctx_t knob;
-  knob.min = 10;
-  knob.max = 300;
-  knob.step = 10;
-  knob.value = preferences_get_short(AFK_TIME_MEM, 10);
-  knob.var_lbl = "Sleep Time";
-  knob.help_lbl = "Time in Seconds";
-  knob.value_handler = sleep_mode_set_afk_timeout;
-
-  general_knob(knob);
+void sleep_mode_set_mode(sleep_modes_e mode) {
+  sleep_mode = mode;
 }

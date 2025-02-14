@@ -34,7 +34,7 @@ static void adv_type_selection(uint8_t selection) {
 }
 
 void adv_scanner_display_filter() {
-  general_submenu_menu_t adv_menu_filter;
+  general_submenu_menu_t adv_menu_filter = {0};
   adv_menu_filter.options = scan_filter_items;
   adv_menu_filter.options_count = 4;
   adv_menu_filter.select_cb = adv_filter_selection;
@@ -43,7 +43,7 @@ void adv_scanner_display_filter() {
 }
 
 void adv_scanner_display_type() {
-  general_submenu_menu_t adv_menu_type;
+  general_submenu_menu_t adv_menu_type = {0};
   adv_menu_type.options = scan_type_items;
   adv_menu_type.options_count = 2;
   adv_menu_type.select_cb = adv_type_selection;
