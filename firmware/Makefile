@@ -28,10 +28,17 @@ ff:
 
 all: flash monitor
 
+
 binmerge:
-	idf.py build && cd build && esptool.py --chip esp32c6 merge_bin -o MininoBin.bin @flash_args
+	cd build-minino && esptool.py --chip esp32c6 merge_bin -o MininoBin.bin @flash_args
 
 BOARDS = minino bSides dragonJar ekoParty bugCon
+
+mergebins:
+	$(foreach board, $(BOARDS), cd build-$(board) && esptool.py --chip esp32c6 merge_bin -o $(board)Bin.bin @flash_args; cd ..;)
+
+clean_builds:
+	$(foreach board, $(BOARDS), rm -rf build-$(board);)
 
 builds:
 	$(foreach board, $(BOARDS), rm -rf build-$(board);)

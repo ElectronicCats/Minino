@@ -13,5 +13,5 @@ CONFIG_BOARD_BUGCON=y                                             # Board BugCon
 
 #---------------------------------- UNCOMMENT IF 4MB FLASH BOARD ---------------------------#
 CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y                                  # Serial flasher 4MB
-CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions_badge.csv"     # Partitions 4MB No OTA
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions_4MB.csv"     # Partitions 4MB No OTA
 #-------------------------------------------------------------------------------------------#
