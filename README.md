@@ -55,12 +55,16 @@ Minino can operate in 6 different technologies:
 - [x] DOS Attack (Control with Console and Minino)
 - [x] Analyzer
 - [x] SSID Spammer
+- [x] WiFi deauthentication detector
 - [ ] Wireshark integration
+
 ### BLE
 - [x] BLE ADV Sniffer (Wireshark Integration)
 - [x] BLE Spammer
 - [x] BLE Spoffing (HID device, audio control)
 - [x] BLE Trackers Scanner (AirTags, Tile, etc)
+- [x] Wireshark integration
+
 ### Zigbee
 - [x] Zigbee sniffer
 - [x] Zigbee spoofing (Switch End Device)
@@ -75,26 +79,31 @@ Minino can operate in 6 different technologies:
 
 ### Matter
 - [ ] Matter protocol support
-- [ ] Matter Spoof
 - [ ] Matter CLI
-      
+- [ ] Matter Spoof
+
 ### Tools
 - [x] OTA Firmware Update
 - [x] GPS Location
 - [x] GPS Speed
 - [x] GPS Time
+- [ ] GPS Sleep
 - [x] SD
 - [x] File Manager Web (Local AP and WIFI access)
 - [x] File Manager Local
 - [x] Serial CMD Commander
 - [x] I2C Scanner
-- [ ] UART2
+- [x] UART bridge via Minino console (UART2)
+
 
 ### Settings
 - [x] Change screensaver
 - [x] Change time screensaver
 - [x] Stealth mode (Disable animation, leds and sound) 
 - [x] APP selection
+- [x] Light Sleep Mode
+- [ ] Deep Sleep Mode
+
 
 Inspired by projects such as [Amini Project](https://github.com/Ocelot-Offensive-Security/Arsenal) and [USBNugget](https://github.com/HakCat-Tech/USB-Nugget).
 

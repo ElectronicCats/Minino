@@ -255,8 +255,8 @@ void gps_module_check_state() {
   }
 
   general_notification_ctx_t notification = {0};
-  notification.head = "GPS is Disabled";
-  notification.body = "Enable it first";
+  notification.head = "GPS Disabled";
+  notification.body = "Enable it    first";
   notification.duration_ms = 2000;
   general_notification(notification);
 

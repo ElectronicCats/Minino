@@ -3,7 +3,7 @@
 # This script is used to get the build files needed to flash the badge using the esptool.py script.
 
 PROJECT_NAME="minino"
-CONFIG_FILE="sdkconfig"
+CONFIG_FILE="sdkconfig.defaults"
 OTA_BUILD_DIR="build-ota"
 NO_OTA_BUILD_DIR="build-noota"
 TEMPORARY_BUILD_DIR="build_files"

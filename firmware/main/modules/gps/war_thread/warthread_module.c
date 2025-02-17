@@ -35,6 +35,7 @@ static thread_module_t context_session;
 static gps_t* gps_ctx;
 static bool running_thread_scanner_animation = false;
 static bool running_thread_channel_hopp = false;
+static bool running = false;
 static uint8_t current_channel = 11;
 
 static uint16_t csv_lines;
@@ -89,6 +90,11 @@ static void wardriving_thread_channel_hopp_task() {
 static esp_err_t wardriving_module_verify_sd_card() {
   ESP_LOGI(TAG, "Verifying SD card");
   esp_err_t err = sd_card_mount();
+  if (err == ESP_ERR_NOT_SUPPORTED) {
+    wardriving_screens_module_format_sd_card();
+  } else if (err != ESP_OK) {
+    wardriving_screens_module_no_sd_card();
+  }
   return err;
 }
 
@@ -284,6 +290,7 @@ static void warthread_packet_handler(const otRadioFrame* aFrame, bool aIsTx) {
 }
 
 void warthread_module_begin() {
+  menus_module_set_app_state(true, thread_module_cb_event);
   ESP_LOGI(TAG, "Thread module begin");
   if (wardriving_module_verify_sd_card() != ESP_OK) {
     return;
@@ -306,6 +313,7 @@ void warthread_module_begin() {
     ESP_LOGE(TAG, "Failed to allocate memory for csv_file_name");
     return;
   }
+  running = true;
 
   sprintf(csv_file_name, "%s.csv", FILE_NAME);
   sprintf(csv_file_buffer, "%s\n", warthread_csv_header);
@@ -325,16 +333,25 @@ void warthread_module_begin() {
   gps_module_start_scan();
 
   openthread_enable_promiscous_mode(&warthread_packet_handler);
-
-  menus_module_set_app_state(true, thread_module_cb_event);
 }
 
 void warthread_module_exit() {
   running_thread_channel_hopp = false;
   sd_card_read_file(csv_file_name);
   sd_card_unmount();
-  free(csv_file_buffer);
-  free(csv_file_name);
+
+  if (csv_file_buffer) {
+    free(csv_file_buffer);
+    csv_file_buffer = NULL;
+  }
+  if (csv_file_name) {
+    free(csv_file_name);
+    csv_file_name = NULL;
+  }
+
+  if (!running) {
+    return;
+  }
   vTaskDelay(pdMS_TO_TICKS(500));
   openthread_disable_promiscous_mode();
   vTaskDelay(pdMS_TO_TICKS(500));

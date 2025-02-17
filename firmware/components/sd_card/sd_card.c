@@ -184,6 +184,10 @@ esp_err_t sd_card_mount() {
 }
 
 esp_err_t sd_card_unmount() {
+  if (sd_card_is_not_mounted()) {
+    ESP_LOGE(TAG, "SD card not mounted");
+    return ESP_OK;
+  }
   return unmount();
 }
 
