@@ -49,3 +49,8 @@ minino-all-pos.csv
 
 # Gerber
 /**/MININO_GERBER
+/firmware/build-bSides
+/firmware/build-bugCon
+/firmware/build-dragonJar
+/firmware/build-ekoParty
+/firmware/build-minino

@@ -31,5 +31,14 @@ all: flash monitor
 binmerge:
 	idf.py build && cd build && esptool.py --chip esp32c6 merge_bin -o MininoBin.bin @flash_args
 
+BOARDS = minino bSides dragonJar ekoParty bugCon
+
+builds:
+	$(foreach board, $(BOARDS), rm -rf build-$(board);)
+	$(foreach board, $(BOARDS), $(call RUN_IDF_PY, -B build-$(board) @profiles/$(board)/profile, build);)
+
+define RUN_IDF_PY
+	idf.py $(1) $(2)
+endef
 
 .PHONY: test_port setup compile flash monitor clean all

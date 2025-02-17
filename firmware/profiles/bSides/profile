@@ -1,0 +1,1 @@
+-B build-bSides -DSDKCONFIG=build-bSides/sdkconfig -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.version;sdkconfig.bSides"
