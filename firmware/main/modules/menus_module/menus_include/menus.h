@@ -204,7 +204,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = NULL,
      .on_exit_cb = NULL,
      .is_visible = true},
-  #ifdef CONFIG_WIFI_APP_ANALYZER
     {.display_name = "Analyzer",
      .menu_idx = MENU_WIFI_ANALIZER,
      .parent_idx = MENU_WIFI_APPS,
@@ -213,8 +212,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = analyzer_scenes_main_menu,
      .on_exit_cb = NULL,
      .is_visible = true},
-  #endif
-  #ifdef CONFIG_WIFI_APP_DEAUTH
     {.display_name = "Deauth",
      .menu_idx = MENU_WIFI_DEAUTH,
      .parent_idx = MENU_WIFI_APPS,
@@ -223,8 +220,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = deauth_module_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
-  #endif
-  #ifdef CONFIG_WIFI_APP_DEAUTH_SCAN
     {.display_name = "Deauth Scan",
      .menu_idx = MENU_WIFI_DEAUTH_SCAN,
      .parent_idx = MENU_WIFI_APPS,
@@ -233,8 +228,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = detector_scenes_main_menu,
      .on_exit_cb = NULL,
      .is_visible = true},
-  #endif
-  #ifdef CONFIG_WIFI_APP_DOS
     {.display_name = "DoS",
      .menu_idx = MENU_WIFI_DOS,
      .parent_idx = MENU_WIFI_APPS,
@@ -243,8 +236,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = catdos_module_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
-  #endif
-  #ifdef CONFIG_WIFI_APP_SSID_SPAM
     {.display_name = "SSID Spammer",
      .menu_idx = MENU_WIFI_SSID_SPAM,
      .parent_idx = MENU_WIFI_APPS,
@@ -253,7 +244,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = ssid_spam_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
-  #endif
 #endif
 #ifdef CONFIG_BLUETOOTH_APPS_ENABLE
     {.display_name = "Bluetooth",
@@ -263,7 +253,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = NULL,
      .on_exit_cb = NULL,
      .is_visible = true},
-  #ifdef CONFIG_BLUETOOTH_APP_TRAKERS
     {.display_name = "Trakers scan",
      .menu_idx = MENU_BLUETOOTH_TRAKERS_SCAN,
      .parent_idx = MENU_BLUETOOTH_APPS,
@@ -272,8 +261,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = trackers_module_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
-  #endif
-  #ifdef CONFIG_BLUETOOTH_APP_SPAM
     {.display_name = "Spam",
      .menu_idx = MENU_BLUETOOTH_SPAM,
      .parent_idx = MENU_BLUETOOTH_APPS,
@@ -282,8 +269,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = ble_module_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
-  #endif
-  #ifdef CONFIG_BLUETOOTH_APP_HID
     {.display_name = "HID",
      .menu_idx = MENU_BLUETOOTH_HID,
      .parent_idx = MENU_BLUETOOTH_APPS,
@@ -292,8 +277,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = hid_module_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
-  #endif
-  #ifdef CONFIG_BLUETOOTH_APP_ADV
     {.display_name = "ADV Scanner",
      .menu_idx = MENU_BLUETOOTH_ADV,
      .parent_idx = MENU_BLUETOOTH_APPS,
@@ -301,7 +284,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = adv_scanner_module_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
-  #endif
 #endif
 #ifdef CONFIG_ZIGBEE_APPS_ENABLE
     {.display_name = "Zigbee",
@@ -311,7 +293,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = NULL,
      .on_exit_cb = NULL,
      .is_visible = true},
-  #ifdef CONFIG_ZIGBEE_APP_SPOOFING
     {.display_name = "Spoofing",
      .menu_idx = MENU_ZIGBEE_SPOOFING,
      .parent_idx = MENU_ZIGBEE_APPS,
@@ -319,7 +300,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = NULL,
      .on_exit_cb = NULL,
      .is_visible = true},
-    #ifdef CONFIG_ZIGBEE_APP_SPOOFING_SWITCH
     {.display_name = "Switch",
      .menu_idx = MENU_ZIGBEE_SWITCH,
      .parent_idx = MENU_ZIGBEE_SPOOFING,
@@ -328,8 +308,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = zigbee_module_switch_enter,
      .on_exit_cb = NULL,
      .is_visible = true},
-    #endif
-    #ifdef CONFIG_ZIGBEE_APP_SNIFFER_LIGHT
     {.display_name = "Light",
      .menu_idx = MENU_ZIGBEE_LIGHT,
      .parent_idx = MENU_ZIGBEE_SPOOFING,
@@ -337,10 +315,7 @@ menu_t menus[] = {  //////////////////////////////////
      .last_selected_submenu = 0,
      .on_enter_cb = NULL,
      .on_exit_cb = NULL,
-     .is_visible = true},
-    #endif
-  #endif
-  #ifdef CONFIG_ZIGBEE_APP_SNIFFER
+     .is_visible = false},
     {.display_name = "Sniffer",
      .menu_idx = MENU_ZIGBEE_SNIFFER,
      .parent_idx = MENU_ZIGBEE_APPS,
@@ -349,7 +324,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = zigbee_module_sniffer_enter,
      .on_exit_cb = NULL,
      .is_visible = true},
-  #endif
 #endif
 #ifdef CONFIG_THREAD_APPS_ENABLE
     {.display_name = "Thread",
@@ -359,7 +333,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = NULL,
      .on_exit_cb = NULL,
      .is_visible = true},
-  #ifdef CONFIG_THREAD_APP_BROADCAST
     {.display_name = "Broadcast",
      .menu_idx = MENU_THREAD_BROADCAST,
      .parent_idx = MENU_THREAD_APPS,
@@ -368,8 +341,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = open_thread_module_broadcast_enter,
      .on_exit_cb = open_thread_module_exit,
      .is_visible = true},
-  #endif
-  #ifdef CONFIG_THREAD_APP_SNIFFER
     {.display_name = "Sniffer",
      .menu_idx = MENU_THREAD_SNIFFER,
      .parent_idx = MENU_THREAD_APPS,
@@ -385,7 +356,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = open_thread_module_sniffer_run,
      .on_exit_cb = NULL,
      .is_visible = true},
-  #endif
 #endif
 #if CONFIG_GPS_APPS_ENABLE && CONFIG_GPS_ENABLED && CONFIG_SD_ENABLED
     {.display_name = "GPS",
@@ -395,7 +365,8 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = gps_module_check_state,
      .on_exit_cb = gps_module_reset_state,
      .is_visible = true},
-  #ifdef CONFIG_GPS_APP_WARDRIVING
+  #if CONFIG_WIFI_APPS_ENABLE || CONFIG_ZIGBEE_APPS_ENABLE || \
+      CONFIG_THREAD_APPS_ENABLE
     {.display_name = "Wardriving",
      .menu_idx = MENU_GPS_WARDRIVING,
      .parent_idx = MENU_GPS,
@@ -404,6 +375,7 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = wardriving_module_begin,
      .on_exit_cb = wardriving_module_end,
      .is_visible = true},
+    #if CONFIG_WIFI_APPS_ENABLE
     {.display_name = "AP Start",
      .menu_idx = MENU_GPS_WARDRIVING_START,
      .parent_idx = MENU_GPS_WARDRIVING,
@@ -411,7 +383,8 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = wardriving_module_start_scan,
      .on_exit_cb = wardriving_module_stop_scan,
      .is_visible = true},
-    #ifdef CONFIG_GPS_APP_WARDRIVING_ZB
+    #endif
+    #ifdef CONFIG_ZIGBEE_APPS_ENABLE
     {.display_name = "Zigbee Start",
      .menu_idx = MENU_GPS_WARDRIVING_BEE_START,
      .parent_idx = MENU_GPS_WARDRIVING,
@@ -420,7 +393,7 @@ menu_t menus[] = {  //////////////////////////////////
      .on_exit_cb = warbee_module_exit,
      .is_visible = true},
     #endif
-    #ifdef CONFIG_GPS_APP_WARDRIVING_TH
+    #ifdef CONFIG_THREAD_APPS_ENABLE
     {.display_name = "Thread Start",
      .menu_idx = MENU_GPS_WARDRIVING_THREAD_START,
      .parent_idx = MENU_GPS_WARDRIVING,
