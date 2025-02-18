@@ -54,5 +54,4 @@ minino-all-pos.csv
 /firmware/build-dragonJar
 /firmware/build-ekoParty
 /firmware/build-minino
-/firmware/minino-release-1.1.7.0
-/firmware/minino-release-1.1.8.0
+/firmware/minino-release-*
