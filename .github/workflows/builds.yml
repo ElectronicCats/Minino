@@ -33,7 +33,7 @@ jobs:
           path: './firmware'
           command: "./get_builds.sh 1.1.7.0"
   
-  # release:
+  # release:  
   #   needs: build
   #   runs-on: ubuntu-latest
   #   steps:
