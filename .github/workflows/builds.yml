@@ -1,4 +1,7 @@
 on:
+  push:
+    branches:
+    - make_builds
   workflow_dispatch:
 
 permissions:
