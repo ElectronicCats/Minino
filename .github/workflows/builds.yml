@@ -1,0 +1,55 @@
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+name: Build
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+          fetch-tags: true
+          fetch-depth: 0
+  
+      - name: Add version
+        run: git describe --tags | sed 's/-[^-]*$//' > version.txt
+  
+      - name: esp-idf build
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.3.2-dev
+          target: esp32c6
+          path: './firmware'
+          command: "./get_builds.sh 1.1.7.0"
+  
+  # release:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Download Firmware ZIP Files
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: minino-noota-firmware-zip
+  #         path: ./release/
+      
+  #     - name: Download OTA Firmware ZIP Files
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: minino-ota-firmware-zip
+  #         path: ./release/
+
+  #     - name: Release Firmware
+  #       uses: ncipollo/release-action@v1
+  #       if: startsWith(github.ref, 'refs/tags/') 
+  #       with:
+  #         artifacts: release/minino-noota-firmware.zip,release/minino-ota-firmware.zip
+  #         generateReleaseNotes: true
+  #         allowUpdates: true
