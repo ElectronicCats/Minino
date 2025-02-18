@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash test
 PROJECT_NAME="minino"
 CONFIG_FILE="sdkconfig.version"
 
