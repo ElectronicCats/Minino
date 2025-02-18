@@ -1,8 +1,14 @@
 #!/bin/bash
-
 PROJECT_NAME="minino"
 CONFIG_FILE="sdkconfig.version"
-PROJECT_VERSION=$(grep '^CONFIG_PROJECT_VERSION=' "$CONFIG_FILE" | cut -d'=' -f2 | tr -d '"')
+
+if [ -z "$1" ]; then
+  echo "Version parameter is missing. Example: ./get_builds.sh 1.1.7.0"
+  exit 1
+fi
+PROJECT_VERSION="$1"
+sed -i "s/^CONFIG_PROJECT_VERSION=.*/CONFIG_PROJECT_VERSION=\"$PROJECT_VERSION\"/" "$CONFIG_FILE"
+
 
 MININO_BUILD_DIR="build-minino"
 BSIDES_BUILD_DIR="build-bSides"
@@ -26,5 +32,5 @@ cp $DRAGONJAR_BUILD_DIR/dragonJarBin.bin $FINAL_BUILD_DIR
 cp $EKOPARTY_BUILD_DIR/ekoPartyBin.bin $FINAL_BUILD_DIR
 cp $BUGCON_BUILD_DIR/bugConBin.bin $FINAL_BUILD_DIR
 
-# make clean_builds
+make clean_builds
 
