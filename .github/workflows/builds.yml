@@ -1,19 +1,19 @@
+name: Create Release on Tag
+
 on:
   push:
-    branches:
-    - make_builds
-  workflow_dispatch:
+    tags:
+      - 'v*.*.*.*'
 
 permissions:
   contents: write
-
-name: Build
 
 jobs:
   build:
     strategy:
       fail-fast: true
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
@@ -21,38 +21,45 @@ jobs:
           submodules: 'recursive'
           fetch-tags: true
           fetch-depth: 0
-  
-      - name: Add version
-        run: git describe --tags | sed 's/-[^-]*$//' > version.txt
+
+      - name: Extract tag version
+        id: extract_tag
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
   
       - name: esp-idf build
         uses: espressif/esp-idf-ci-action@v1
         with:
-          esp_idf_version: v5.3.2-dev
+          esp_idf_version: v5.3.2
           target: esp32c6
           path: './firmware'
-          command: "./get_builds.sh 1.1.7.0"
-  
-  # release:
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Download Firmware ZIP Files
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: minino-noota-firmware-zip
-  #         path: ./release/
-      
-  #     - name: Download OTA Firmware ZIP Files
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: minino-ota-firmware-zip
-  #         path: ./release/
+          command: "./get_builds.sh ${{ env.TAG_NAME }}"
 
-  #     - name: Release Firmware
-  #       uses: ncipollo/release-action@v1
-  #       if: startsWith(github.ref, 'refs/tags/') 
-  #       with:
-  #         artifacts: release/minino-noota-firmware.zip,release/minino-ota-firmware.zip
-  #         generateReleaseNotes: true
-  #         allowUpdates: true
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: minino-release-${{ env.TAG_NAME }}
+          path: ./firmware/minino-release-${{ env.TAG_NAME }}
+
+  
+  release:  
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Extract tag version
+        id: extract_tag
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Download release files
+        uses: actions/download-artifact@v4
+        with:
+          name: minino-release-${{ env.TAG_NAME }}
+          path: ./release/
+
+      - name: Release Firmware
+        uses: ncipollo/release-action@v1
+        if: startsWith(github.ref, 'refs/tags/') 
+        with:
+          artifacts: release/*
+          generateReleaseNotes: true
+          allowUpdates: true
