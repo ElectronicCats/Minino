@@ -37,7 +37,13 @@ hardware/minino-backups/
 /**/build-ota/
 /**/build-noota/
 /**/managed_components/
-/**/minino-*.zip
+/firmware/build-bSides
+/firmware/build-bugCon
+/firmware/build-dragonJar
+/firmware/build-ekoParty
+/firmware/build-minino
+/firmware/minino-release-*
+/**/minino-release-*.zip
 
 # IDF sdkconfig
 /**/sdkconfig
@@ -49,9 +55,3 @@ minino-all-pos.csv
 
 # Gerber
 /**/MININO_GERBER
-/firmware/build-bSides
-/firmware/build-bugCon
-/firmware/build-dragonJar
-/firmware/build-ekoParty
-/firmware/build-minino
-/firmware/minino-release-*

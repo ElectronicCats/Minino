@@ -1,0 +1,1 @@
+-B build-bugcon -DSDKCONFIG=build-bugcon/sdkconfig -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.version;sdkconfig.bugcon"
