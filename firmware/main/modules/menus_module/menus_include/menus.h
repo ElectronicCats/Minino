@@ -447,7 +447,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = NULL,
      .on_exit_cb = NULL,
      .is_visible = true},
-  #ifdef CONFIG_GPIO_I2C_SCAN_APP
     {.display_name = "I2C Scanner",
      .menu_idx = MENU_GPIO_I2C_SCANNER,
      .parent_idx = MENU_GPIO_APPS,
@@ -456,8 +455,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = i2c_scanner_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
-  #endif
-  #ifdef CONFIG_GPIO_UART_BRIDGE_APP
     {.display_name = "UART Bridge",
      .menu_idx = MENU_GPIO_UART_BRIDGE,
      .parent_idx = MENU_GPIO_APPS,
@@ -466,7 +463,6 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = NULL,
      .on_exit_cb = NULL,
      .is_visible = true},
-  #endif
 #endif
 #ifdef CONFIG_FILE_MANAGER_ENABLE
     {.display_name = "File Manager",
