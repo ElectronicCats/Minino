@@ -12,12 +12,28 @@ dependencies:
     path: ../components/openthread
   OTA:
     path: ../components/OTA
-  ble_hid:
-    path: ../components/ble_hid
   espressif/iperf:
     version: "~0.1.1"
   espressif/console:
     path: ../components/console
+  ble_hid:
+    path: ble_hid
+    git: https://github.com/ElectronicCats/minino_components.git
+  ble_scann:
+    path: ble_scann
+    git: https://github.com/ElectronicCats/minino_components.git
+  bt_gattc:
+    path: bt_gattc
+    git: https://github.com/ElectronicCats/minino_components.git
+  bt_gatts:
+    path: bt_gatts
+    git: https://github.com/ElectronicCats/minino_components.git
+  bt_spam:
+    path: bt_spam
+    git: https://github.com/ElectronicCats/minino_components.git
+  trackers_scanner:
+    path: trackers_scanner
+    git: https://github.com/ElectronicCats/minino_components.git
 
   # # Put list of dependencies here
   # # For components maintained by Espressif:
