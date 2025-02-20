@@ -47,7 +47,7 @@ jobs:
       - name: Upload CHANGELOG artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CHANGELOG.md
+          name: CHANGELOG
           path: ./ChangeLog.md
   
   release:  
@@ -65,16 +65,16 @@ jobs:
           name: minino-release-${{ env.TAG_NAME }}
           path: ./release/
 
-      - name: Download release files
+      - name: Download Change Log
         uses: actions/download-artifact@v4
         with:
-          name: CHANGELOG.md
+          name: CHANGELOG
           path: ./
 
       - name: Read CHANGELOG
         id: changelog
         run: |
-          changelog_content=$(cat ./CHANGELOG.md)
+          changelog_content=$(cat ./CHANGELOG)
           echo "CHANGELOG_CONTENT=$changelog_content" >> $GITHUB_ENV
 
       - name: Release Firmware
