@@ -44,7 +44,7 @@ jobs:
       - name: Generate ChangeLog
         run: ./change change
 
-      - name: Upload release artifact
+      - name: Upload CHANGELOG artifact
         uses: actions/upload-artifact@v4
         with:
           name: CHANGELOG
@@ -69,7 +69,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: CHANGELOG
-          path: ./release/
+          path: ./
+
+      - name: Read CHANGELOG
+        id: changelog
+        run: |
+          changelog_content=$(cat ./CHANGELOG.md)
+          echo "CHANGELOG_CONTENT=$changelog_content" >> $GITHUB_ENV
 
       - name: Release Firmware
         uses: ncipollo/release-action@v1
@@ -80,7 +86,7 @@ jobs:
           allowUpdates: true
           draft: true
           body: |
-            $(cat ./release/CHANGELOG.md)
+            ${{ env.CHANGELOG_CONTENT }}
             # Flashing release
             ## Minino
             ### Table for [ESP Tool](https://espressif.github.io/esptool-js/)
