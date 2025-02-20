@@ -33,13 +33,22 @@ jobs:
           target: esp32c6
           path: './firmware'
           command: "./get_builds.sh ${{ env.TAG_NAME }}"
-
+        
+          
       - name: Upload release artifact
         uses: actions/upload-artifact@v4
         with:
           name: minino-release-${{ env.TAG_NAME }}
           path: ./firmware/minino-release-${{ env.TAG_NAME }}
+            
+      - name: Generate ChangeLog
+        run: ./change change
 
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CHANGELOG
+          path: ./ChangeLog.md
   
   release:  
     needs: build
@@ -56,6 +65,12 @@ jobs:
           name: minino-release-${{ env.TAG_NAME }}
           path: ./release/
 
+      - name: Download release files
+        uses: actions/download-artifact@v4
+        with:
+          name: CHANGELOG
+          path: ./release/
+
       - name: Release Firmware
         uses: ncipollo/release-action@v1
         if: startsWith(github.ref, 'refs/tags/') 
@@ -65,6 +80,7 @@ jobs:
           allowUpdates: true
           draft: true
           body: |
+            $(cat ./release/CHANGELOG.md)
             # Flashing release
             ## Minino
             ### Table for [ESP Tool](https://espressif.github.io/esptool-js/)

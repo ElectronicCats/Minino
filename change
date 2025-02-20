@@ -397,49 +397,23 @@ all_command() {
         tag_command && post_command
 }
 
-get_latest_tag() {
-    latest_tag=$(git describe --tags --abbrev=0)
-    
-    # Si quieres usar la fecha de creación para determinar el tag más reciente
-    # latest_tag=$(git tag --sort=-creatordate | head -n 1)
-
-    echo $latest_tag
-}
-
+# Función para generar el changelog
 generate_changelog() {
-    # Obtener el último tag
-    latest_tag=$(git describe --tags --abbrev=0)
-
-    # Verificar si se ha encontrado un tag
+    tags=$(git tag --sort=creatordate)
+    latest_tag=$(echo "$tags" | tail -n 2 | head -n 1)
+    echo "$latest_tag"
     if [ -z "$latest_tag" ]; then
-        echo "No se encontró ningún tag en el repositorio."
+        echo "No TAGs found"
         return 1
     fi
-
-    # Obtener los commits desde el último tag hasta HEAD
-    commits=$(git log "$latest_tag"..HEAD --oneline --no-merges)
-
-    # Verificar si hay commits nuevos
-    if [ -z "$commits" ]; then
-        echo "No hay commits nuevos desde el último tag."
-        return 1
-    fi
-
-    # Crear el changelog
-    changelog_file="CHANGELOG.md"
-    echo "## Changelog desde el tag $latest_tag" > $changelog_file
-    echo "### Fecha: $(date)" >> $changelog_file
+    commit_range="$latest_tag..HEAD"
+    changelog_file="ChangeLog.md"
+    echo "## The News!!!" > $changelog_file
     echo "" >> $changelog_file
-    echo "### Commits recientes:" >> $changelog_file
-
-    # Usar echo y un pipe en lugar de <<< para procesar cada commit
-    echo "$commits" | while IFS= read -r commit; do
-        echo "- $commit" >> $changelog_file
-    done
+    format_commits "$commit_range" >> $changelog_file
 
     echo "Changelog generado en $changelog_file"
 }
-
 
 change() {
     latest_tag=$(get_latest_tag)
