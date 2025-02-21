@@ -75,7 +75,7 @@ jobs:
         id: changelog
         run: |
           changelog_content=$(cat ./changelog/ChangeLog.md)
-          echo "CHANGELOG_CONTENT=$changelog_content" >> $GITHUB_ENV
+          echo "CHANGELOG_CONTENT=$(echo "$changelog_content" | sed 's/"/\\"/g')" >> $GITHUB_ENV
 
       - name: Release Firmware
         uses: ncipollo/release-action@v1
