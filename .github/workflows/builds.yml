@@ -71,12 +71,6 @@ jobs:
           name: changelog-${{ env.TAG_NAME }}
           path: ./changelog/
 
-      - name: Read CHANGELOG
-        id: changelog
-        run: |
-          changelog_content=$(cat ./changelog/ChangeLog.md)
-          printf "%s" "$changelog_content" >> $GITHUB_ENV
-
       - name: Release Firmware
         uses: ncipollo/release-action@v1
         if: startsWith(github.ref, 'refs/tags/') 
@@ -86,7 +80,7 @@ jobs:
           allowUpdates: true
           draft: true
           body: |
-            ${{ env.changelog_content }}
+            $(cat ./changelog/ChangeLog.md)
             # Flashing release
             ## Minino
             ### Table for [ESP Tool](https://espressif.github.io/esptool-js/)
