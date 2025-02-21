@@ -48,6 +48,21 @@ void wifi_driver_ap_start(wifi_config_t* wifi_ap_config) {
     wifi_driver_init_apsta();
   }
 
+  wifi_country_t config = {
+      .cc = "JP",
+      .schan = 1,
+      .nchan = 14,
+      .policy = WIFI_COUNTRY_POLICY_AUTO,
+  };
+  err = esp_wifi_set_country(&config);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_DRIVER,
+             "Error setting WiFi Country code configuration: %s",
+             esp_err_to_name(err));
+    ESP_LOGI(TAG_WIFI_DRIVER, "%s", wifi_ap_config->ap.ssid);
+    return;
+  }
+
   err = esp_wifi_set_config(ESP_IF_WIFI_AP, wifi_ap_config);
   if (err != ESP_OK) {
     ESP_LOGE(TAG_WIFI_DRIVER,
