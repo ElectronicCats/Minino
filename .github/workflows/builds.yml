@@ -74,8 +74,7 @@ jobs:
       - name: Read CHANGELOG
         id: changelog
         run: |
-          changelog_content=$(cat ./changelog/ChangeLog.md)
-          echo "CHANGELOG_CONTENT=$(echo "$changelog_content" | sed 's/"/\\"/g')" >> $GITHUB_ENV
+           echo "::set-output name=changelog_content::$(cat ./changelog/ChangeLog.md)"
 
       - name: Release Firmware
         uses: ncipollo/release-action@v1
@@ -86,7 +85,7 @@ jobs:
           allowUpdates: true
           draft: true
           body: |
-            ${{ env.CHANGELOG_CONTENT }}
+            ${{ steps.changelog.outputs.changelog_content }}
             # Flashing release
             ## Minino
             ### Table for [ESP Tool](https://espressif.github.io/esptool-js/)
