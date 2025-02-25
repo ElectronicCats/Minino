@@ -12,13 +12,13 @@
 static int IDLE_TIMEOUT_S = 30;
 static const char* TAG = "screen_saver";
 
-static volatile bool screen_saver_running;
+static volatile bool is_running;
 static esp_timer_handle_t screen_saver_idle_timer;
 
 void screen_saver_run();
 
 static void timer_callback() {
-  if (menus_module_get_app_state() || screen_saver_running) {
+  if (menus_module_get_app_state() || is_running) {
     return;
   }
 
@@ -39,7 +39,7 @@ static void show_splash_screen() {
   epd_bitmap_t* logo;
   logo = screen_savers[get_logo];
 
-  screen_saver_running = true;
+  is_running = true;
   int w_screen_space = SCREEN_WIDTH2 - logo->width;
   int h_screen_space = SCREEN_HEIGHT2 - logo->height;
   h_screen_space = h_screen_space == 0 ? 2 : h_screen_space;
@@ -53,7 +53,7 @@ static void show_splash_screen() {
 #endif
   static int x_direction = 1;
 
-  while (screen_saver_running) {
+  while (is_running) {
     oled_screen_display_bitmap(logo->bitmap, start_x_position, start_y_position,
                                logo->width, logo->height, OLED_DISPLAY_NORMAL);
 
@@ -78,7 +78,7 @@ void screen_saver_run() {
 }
 
 void screen_saver_stop() {
-  screen_saver_running = false;
+  is_running = false;
 }
 
 void screen_saver_set_idle_timeout(uint8_t timeout_seconds) {
@@ -86,7 +86,7 @@ void screen_saver_set_idle_timeout(uint8_t timeout_seconds) {
 }
 
 bool screen_saver_get_idle_state() {
-  bool idle = screen_saver_running;
+  bool idle = is_running;
   screen_saver_stop();
   esp_timer_stop(screen_saver_idle_timer);
   esp_timer_start_once(screen_saver_idle_timer, IDLE_TIMEOUT_S * 1000 * 1000);
@@ -97,4 +97,8 @@ void screen_saver_begin() {
   esp_timer_create_args_t timer_args = {
       .callback = timer_callback, .arg = NULL, .name = "idle_timer"};
   esp_err_t err = esp_timer_create(&timer_args, &screen_saver_idle_timer);
+}
+
+bool screen_saver_is_running() {
+  return is_running;
 }

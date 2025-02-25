@@ -11,6 +11,7 @@
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
+#include "screen_saver.h"
 
 #define WAKEUP_PIN            GPIO_NUM_1
 #define AFK_TIME_MEM          "afk_time"
@@ -43,6 +44,9 @@ static void sleep_mode_light_sleep() {
   esp_err_t result = esp_sleep_enable_gpio_wakeup();
 
   if (result == ESP_OK) {
+    if (screen_saver_is_running()) {
+      oled_screen_clear();
+    }
     oled_screen_get_last_buffer();
     oled_screen_clear();
     esp_light_sleep_start();

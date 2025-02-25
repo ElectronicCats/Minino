@@ -8,3 +8,4 @@ void screen_saver_stop();
 void screen_saver_begin();
 bool screen_saver_get_idle_state();
 void screen_saver_set_idle_timeout(uint8_t timeout_seconds);
+bool screen_saver_is_running();
