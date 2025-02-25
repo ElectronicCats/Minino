@@ -1,0 +1,1 @@
+-B build-ekoparty -DSDKCONFIG=build-ekoparty/sdkconfig -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.version;sdkconfig.ekoparty"

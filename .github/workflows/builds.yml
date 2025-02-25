@@ -1,0 +1,127 @@
+name: Create Release on Tag
+
+on:
+  push:
+    tags:
+      - 'v*.*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          submodules: 'recursive'
+          fetch-tags: true
+          fetch-depth: 0
+
+      - name: Extract tag version
+        id: extract_tag
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+  
+      - name: esp-idf build
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.3.2
+          target: esp32c6
+          path: './firmware'
+          command: "./get_builds.sh ${{ env.TAG_NAME }}"
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: minino-release-${{ env.TAG_NAME }}
+          path: ./firmware/minino-release-${{ env.TAG_NAME }}
+
+  
+  release:  
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Extract tag version
+        id: extract_tag
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Download release files
+        uses: actions/download-artifact@v4
+        with:
+          name: minino-release-${{ env.TAG_NAME }}
+          path: ./release/
+
+      - name: Release Firmware
+        uses: ncipollo/release-action@v1
+        if: startsWith(github.ref, 'refs/tags/') 
+        with:
+          artifacts: release/*
+          generateReleaseNotes: true
+          allowUpdates: true
+          draft: true
+          body: |
+            # Flashing release
+            ## Minino
+            ### Table for [ESP Tool](https://espressif.github.io/esptool-js/)
+            | Flash Address | File                       |
+            |---------------|----------------------------|
+            | 0x0           | minino_${{ env.TAG_NAME }}.bin |
+
+            ### Command
+
+            ```bash
+            python -m esptool --chip esp32c6 -b 460800 --before default_reset --after hard_reset write_flash --flash_mode dio --flash_size 8MB --flash_freq 80m 0x0 minino_${{ env.TAG_NAME }}.bin
+            ```
+
+            ## BSides
+            ### Table for [ESP Tool](https://espressif.github.io/esptool-js/)
+            | Flash Address | File                       |
+            |---------------|----------------------------|
+            | 0x0           | bsides_${{ env.TAG_NAME }}.bin |
+
+            ### Command
+
+            ```bash
+            python -m esptool --chip esp32c6 -b 460800 --before default_reset --after hard_reset write_flash --flash_mode dio --flash_size 4MB --flash_freq 80m 0x0 bsides_${{ env.TAG_NAME }}.bin
+            ```
+
+            ## DragonJar
+            ### Table for [ESP Tool](https://espressif.github.io/esptool-js/)
+            | Flash Address | File                       |
+            |---------------|----------------------------|
+            | 0x0           | dragonjar_${{ env.TAG_NAME }}.bin |
+
+            ### Command
+
+            ```bash
+            python -m esptool --chip esp32c6 -b 460800 --before default_reset --after hard_reset write_flash --flash_mode dio --flash_size 4MB --flash_freq 80m 0x0 dragonjar_${{ env.TAG_NAME }}.bin
+            ```
+
+            ## EkoParty
+            ### Table for [ESP Tool](https://espressif.github.io/esptool-js/)
+            | Flash Address | File                       |
+            |---------------|----------------------------|
+            | 0x0           | ekoparty_${{ env.TAG_NAME }}.bin |
+
+            ### Command
+
+            ```bash
+            python -m esptool --chip esp32c6 -b 460800 --before default_reset --after hard_reset write_flash --flash_mode dio --flash_size 4MB --flash_freq 80m 0x0 ekoparty_${{ env.TAG_NAME }}.bin
+            ```
+
+            ## BugCon
+            ### Table for [ESP Tool](https://espressif.github.io/esptool-js/)
+            | Flash Address | File                       |
+            |---------------|----------------------------|
+            | 0x0           | bugcon_${{ env.TAG_NAME }}.bin |
+
+            ### Command
+
+            ```bash
+            python -m esptool --chip esp32c6 -b 460800 --before default_reset --after hard_reset write_flash --flash_mode dio --flash_size 4MB --flash_freq 80m 0x0 bugcon_${{ env.TAG_NAME }}.bin
+            ```
