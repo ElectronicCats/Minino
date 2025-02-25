@@ -32,7 +32,7 @@
 #include "warthread_module.h"
 #include "web_file_browser_module.h"
 #include "wifi_analyzer.h"
-#include "wifi_settings.h"
+#include "wifi_settings_scenes.h"
 #include "zigbee_module.h"
 
 typedef enum {
@@ -545,7 +545,7 @@ menu_t menus[] = {  //////////////////////////////////
      .menu_idx = MENU_SETTINGS_WIFI,
      .parent_idx = MENU_SETTINGS_SYSTEM,
      .last_selected_submenu = 0,
-     .on_enter_cb = wifi_settings_begin,
+     .on_enter_cb = wifi_settings_scenes_main,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Info",
