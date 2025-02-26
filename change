@@ -1,0 +1,484 @@
+#!/bin/sh
+
+version="0.15.2"
+log_file="CHANGELOG.md"
+xdg_data_home=${XDG_DATA_HOME:-$HOME/.local/share}
+auth_dir="$xdg_data_home/change/"
+auth_file="$auth_dir/auth"
+
+usage() {
+    echo "usage: change [COMMAND [ARGS]]
+
+change [--bump PATH]
+    updates an existing $log_file
+    optional: --bump passes the newest version as an arg to a script at PATH
+
+change init
+    creates a $log_file with the first version
+
+change tag [-p]
+    tags the latest local commit with the lastest $log_file version
+    optional: -p also pushes that tag
+
+change auth [--token TOKEN]
+    prompts you for a personal access token for posting releases
+    optional: --token uses TOKEN instead of asking for it interactively
+
+change post [--dry-run]
+    posts a GitHub release for the latest version in $log_file
+    optional: --dry-run prints url, version, and body without sending
+
+change all [--bump PATH]
+    runs 'change' then opens $log_file in \$EDITOR
+    commits and pushes the $log_file
+    runs 'change tag -p' then 'change post'
+    optional: --bump passes the newest version as an arg to a script at PATH
+
+change version
+    prints which version of the change tool is being used"
+}
+
+#### Tags ####
+
+semver_select() {
+    # para versión completa usar: '\1\2.\3.\4.\5'
+    groups=$1
+
+    sed -En "s,^(v)?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*)?(\+[0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*)?$,$groups,p"
+}
+
+
+filter_semver() {
+    semver_select '\1\2.\3.\4.\5'
+}
+
+semver_git_tags() {
+    git tag --list --sort='-v:refname' | filter_semver
+}
+
+tag_exists() {
+    tag=$1
+    semver_git_tags | grep -q "^$tag$"
+}
+
+latest_inc_major() {
+    latest=$(semver_git_tags | head -1)
+    major=$(echo "$latest" | semver_select '\2')
+    echo "$latest" | semver_select "\1$((major + 1)).0.0"
+}
+
+latest_inc_minor() {
+    latest=$(semver_git_tags | head -1)
+    minor=$(echo "$latest" | semver_select '\3')
+    echo "$latest" | semver_select "\1\2.$((minor + 1)).0"
+}
+
+latest_inc_patch() {
+    latest=$(semver_git_tags | head -1)
+    patch=$(echo "$latest" | semver_select '\4')
+    echo "$latest" | semver_select "\1\2.\3.$((patch + 1))"
+}
+
+rm_tag_prefix() {
+    tag=$1
+    echo "${tag#v}"
+}
+
+tag_date_or_today() {
+    tag=$1
+    date=$(git log -1 --pretty=format:'%ci' "$tag" -- 2>/dev/null | cut -d' ' -f1) || date=''
+    [ "$date" ] && echo "$date" && return
+    date +%F
+}
+
+top_log_tag() {
+    sed -En 's,^\[Unreleased\]:.*/(.*)\.\.\.HEAD$,\1,p' $log_file
+}
+
+#### URLs ####
+
+remote_url() {
+    git ls-remote --get-url 2>/dev/null
+}
+
+remote_url_clean() {
+    remote_url | sed -E \
+        -e 's,\.git$,,' \
+        -e 's,^https://.*@(.*),https://\1,' \
+        -e 's,^git@(.*):(.*),https://\1/\2,'
+}
+
+#### Commits ####
+
+grep_commits_major() {
+    flags='-e' # use '-v' for inverse or '-q' for quiet
+    [ "$1" ] && flags="${1}e"
+
+    grep "$flags" '^[A-Za-z]*!: ' \
+        -e '^[A-Za-z]*(.*)!: ' \
+        -e '^[*-] *[A-Za-z]*!: ' \
+        -e '^[*-] *[A-Za-z]*(.*)!: ' \
+        -e '^BREAKING[ -]CHANGE: ' \
+        -e '^[*-] *BREAKING[ -]CHANGE: ' \
+        -e '^BREAKING[ -]CHANGE'
+}
+
+grep_commits_minor() {
+    flags='-e' # use '-v' for inverse or '-q' for quiet
+    [ "$1" ] && flags="${1}e"
+
+    grep -i "$flags" '^feat: ' \
+        -e '^feat(.*): ' \
+        -e '^[*-] *feat: ' \
+        -e '^[*-] *feat(.*): '
+}
+
+grep_commits_patch() {
+    flags='-e' # use '-v' for inverse or '-q' for quiet
+    [ "$1" ] && flags="${1}e"
+
+    grep -i "$flags" '^fix: ' \
+        -e '^fix(.*): ' \
+        -e '^[*-] *fix: ' \
+        -e '^[*-] *fix(.*): '
+}
+
+grep_conv_commits() {
+    grep -e '^[A-Za-z]*: ' -e '^[A-Za-z]*(.*): ' \
+        -e '^[*-] *[A-Za-z]*: ' -e '^[*-] *[A-Za-z]*(.*): ' \
+        -e '^[A-Za-z]*!: ' -e '^[A-Za-z]*(.*)!: ' \
+        -e '^[*-] *[A-Za-z]*!: ' -e '^[*-] *[A-Za-z]*(.*)!: ' \
+        -e '^BREAKING[ -]CHANGE: ' -e '^[*-] *BREAKING[ -]CHANGE: ' \
+        -e '^BREAKING[ -]CHANGE'
+}
+
+fmt_conv_type() {
+    sed -E \
+        -e 's,^[A-Za-z]*: (.*$),\1,g' \
+        -e 's,^[A-Za-z]*\((.*)\): (.*$),\2 for \1,g' \
+        -e 's,^[*-] *[A-Za-z]*: (.*$),\1,g' \
+        -e 's,^[*-] *[A-Za-z]*\((.*)\): (.*$),\2 for \1,g' \
+        -e 's,^[A-Za-z]*!: (.*$),\1,g' \
+        -e 's,^[A-Za-z]*\((.*)\)!: (.*$),\2 for \1,g' \
+        -e 's,^[*-] *[A-Za-z]*!: (.*$),\1,g' \
+        -e 's,^[*-] *[A-Za-z]*\((.*)\)!: (.*$),\2 for \1,g' \
+        -e 's,^BREAKING[ -]CHANGE: (.*$),\1,g' \
+        -e 's,^[*-] *BREAKING[ -]CHANGE: (.*$),\1,g' \
+        -e 's,^BREAKING[ -]CHANGE,a breaking change,g'
+}
+
+fmt_commits() {
+    while read -r commit; do
+        char=$(echo "$commit" | cut -c1 | tr '[:lower:]' '[:upper:]')
+        rest=$(echo "$commit" | cut -c2- | sed -E 's,(.*[^.!?])$,\1.,')
+        echo "- $char$rest"
+    done
+    printf '\n'
+}
+
+next_commit_range() {
+    next_tag=$1
+
+    top_tag=$(top_log_tag)
+    range="$top_tag.."
+    tag_exists "$next_tag" && range="$top_tag..$next_tag"
+
+    echo "$range"
+}
+
+format_commits() {
+    commit_range=$1
+
+    sub=$(git log --pretty=format:'%s' "$commit_range")
+    bod=$(git log --pretty=format:'%b' "$commit_range" | grep_conv_commits)
+    list=$(printf '%s\n%s' "$sub" "$bod")
+
+    dep=$(echo "$list" | grep_commits_major)
+    list=$(echo "$list" | grep_commits_major -v)
+
+    feat=$(echo "$list" | grep_commits_minor)
+    list=$(echo "$list" | grep_commits_minor -v)
+
+    fix=$(echo "$list" | grep_commits_patch)
+    list=$(echo "$list" | grep_commits_patch -v)
+
+    [ "$dep" ] && echo '### BREAKING CHANGE' && echo "$dep" | fmt_conv_type | fmt_commits
+    [ "$feat" ] && echo '### Added' && echo "$feat" | fmt_conv_type | fmt_commits
+    [ "$fix" ] && echo '### Fixed' && echo "$fix" | fmt_conv_type | fmt_commits
+    [ "$list" ] && echo '### Changed' && echo "$list" | fmt_conv_type | fmt_commits
+}
+
+#### Utils ####
+
+calc_new_tag() {
+    latest_changes=$1
+
+    echo "$latest_changes" | grep_commits_major -q && latest_inc_major && return
+    echo "$latest_changes" | grep_commits_minor -q && latest_inc_minor && return
+    echo "$latest_changes" | grep_commits_patch -q && latest_inc_patch && return
+}
+
+unlogged_tags() {
+    top_tag=$(top_log_tag)
+    tag_exists "$top_tag" || return 0
+    semver_git_tags | sed -n "/^$top_tag$/q;p" | sort -V
+
+    latest_tag=$(semver_git_tags | head -1)
+    unlogged_commits=$(git log --pretty=format:'%B' "$latest_tag..")
+    [ ! "$unlogged_commits" ] && return
+    calc_new_tag "$unlogged_commits"
+}
+
+initial_log() {
+    oldest_tag=$1
+
+    oldest_ver=$(rm_tag_prefix "$oldest_tag")
+    date=$(tag_date_or_today "$oldest_tag")
+
+    echo "# Changelog
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [$oldest_ver] - $date"
+
+    format_commits "$oldest_tag"
+
+    echo "[Unreleased]: $repo_url/compare/$oldest_tag...HEAD
+[$oldest_ver]: $repo_url/releases/tag/$oldest_tag"
+}
+
+add_to_log() {
+    next_tag=$1
+
+    top_tag=$(top_log_tag)
+    top_ver=$(rm_tag_prefix "$top_tag")
+    next_ver=$(rm_tag_prefix "$next_tag")
+    date=$(tag_date_or_today "$next_tag")
+    repo_url=$(remote_url_clean)
+    commit_range=$(next_commit_range "$next_tag")
+
+    sed -n "/^## \[$top_ver\] - [1-9][0-9-]*$/q;p" $log_file
+    echo "## [$next_ver] - $date"
+    format_commits "$commit_range"
+    sed -n "/^## \[$top_ver\] - [1-9][0-9-]*$/,/^\[Unreleased\]: https:[^ ]*$/p;" $log_file |
+        sed '$d'
+    echo "[Unreleased]: $repo_url/compare/$next_tag...HEAD"
+    echo "[$next_ver]: $repo_url/compare/$top_tag...$next_tag"
+    sed -n "/^\[$top_ver\]: https:[^ ]*$/,\$p" $log_file
+}
+
+bump_version() {
+    [ ! "$bump_script" ] && return
+    [ ! -f "$bump_script" ] && echo "script not found: $bump_script" >&2 && return 1
+
+    top_tag=$(top_log_tag)
+    [ -x "$bump_script" ] &&
+        echo "executing $bump_script $top_tag" && "$bump_script" "$top_tag"
+    [ ! -x "$bump_script" ] &&
+        echo "executing sh $bump_script $top_tag" && sh "$bump_script" "$top_tag"
+}
+
+startup_checks() {
+    [ ! -f $log_file ] && echo "could not find $log_file" >&2 && return 1
+    [ ! -d .git ] && echo 'the current directory does not contain .git' >&2 && return 1
+    remote_url >/dev/null && return
+    echo 'cannot find remote url for this repo' >&2 && return 1
+}
+
+#### Commands ####
+
+tag_command() {
+    startup_checks || return 1
+    top_tag=$(top_log_tag)
+    repo_url=$(remote_url)
+
+    git tag "$top_tag" || return 1
+    echo "tagged latest commit as $top_tag"
+
+    [ ! "$push_tag" ] &&
+        printf 'to push the latest tag use:\n\tgit push %s %s\n' "$repo_url" "$top_tag" &&
+        printf 'to push all local tags use:\n\tgit push %s --tags\n' "$repo_url" &&
+        return
+
+    git push --quiet "$repo_url" "$top_tag" || return 1
+    echo "pushed $top_tag to $repo_url"
+}
+
+auth_command() {
+    [ ! "$token" ] && echo 'enter a personal access token' && printf 'token: ' && read -r token
+    [ ! "$token" ] && echo 'invalid token' >&2 && return 1
+    [ ! -d "$auth_dir" ] && mkdir -p "$auth_dir"
+    echo "$token" | base64 >"$auth_file" && echo 'git auth saved'
+}
+
+post_command() {
+    startup_checks || return 1
+    [ ! -e "$auth_file" ] && echo 'you need to save a token with the auth command' >&2 && return 1
+
+    auth_token=$(<"$auth_file" base64 --decode)
+    top_tag=$(top_log_tag)
+    top_ver=$(rm_tag_prefix "$top_tag")
+    api_url=$(remote_url_clean | sed -E 's|^(.*)(github.com)|\1api.\2/repos|')
+
+    link=$(grep "^\[$top_ver\]: https:[^ ]*$" $log_file)
+    entry=$(sed -n "/^## \[$top_ver\] - [1-9][0-9-]*$/,/^## \[..*\] - [1-9][0-9-]*$/p" $log_file |
+        sed '$d')
+
+    body=$(printf '%s\n\n%s\n' "$entry" "$link" |
+        sed -E -e 's,(["\]),\\\1,g' -e 's,$,\\n,' | tr -d '\n')
+
+    [ "$dry_run" ] && printf '%s\n%s\n%s\n' "$api_url" "$top_tag" "$body" && return
+
+    curl -L -X POST "$api_url/releases" \
+        -H "Authorization: token $auth_token" \
+        -H 'Accept: application/vnd.github+json' \
+        -d "{\"tag_name\": \"$top_tag\", \"name\": \"$top_tag\", \"body\": \"$body\" }"
+}
+
+init_command() {
+    [ ! -d .git ] && echo 'the current directory does not contain .git' >&2 && return 1
+    [ -e $log_file ] && echo "$log_file already exists" >&2 && return 1
+
+    oldest_tag=$(semver_git_tags | tail -n 1)
+    [ ! "$oldest_tag" ] && echo 'could not find any valid version tags' >&2 && return 2
+
+    repo_url=$(remote_url_clean)
+    [ ! "$repo_url" ] && echo 'remote url is not set for this repo' >&2 && return 1
+
+    initial_log "$oldest_tag" >$log_file
+
+    [ ! -s $log_file ] && echo "something went wrong while creating $log_file" >&2 && return 1
+    echo "created $log_file"
+}
+
+update_command() {
+    startup_checks || return 1
+    tags=$(unlogged_tags)
+    [ ! "$tags" ] && echo 'no new versions to add' && return 1
+
+    echo "$tags" | while read -r next_tag; do
+        new_log=$(add_to_log "$next_tag") || new_log=''
+
+        [ ! "$new_log" ] && echo "something went wrong processing $next_tag" && return 1
+
+        echo "$new_log" >$log_file
+        echo "added $next_tag to $log_file"
+    done
+    [ $? = 1 ] && return 1
+
+    [ "$command" ] && return 0
+    bump_version
+}
+
+all_command() {
+    backup=$(cat $log_file)
+    update_command || return 1
+
+    old_last_changed=$(stat -qf '%Sc' $log_file)
+    ${EDITOR:-vi} $log_file
+    new_last_changed=$(stat -qf '%Sc' $log_file)
+
+    [ "$old_last_changed" = "$new_last_changed" ] &&
+        echo "no manual edits were made to $log_file" >&2 &&
+        printf 'do you want cancel? (Y/n) ' >&2 &&
+        read -r response &&
+        [ "$response" != 'n' ] &&
+        echo "$backup" >$log_file &&
+        return
+
+    bump_version
+    push_tag='true'
+    git add $log_file &&
+        git commit --quiet -m 'docs: update changelog' && git push --quiet &&
+        tag_command && post_command
+}
+
+# Función para generar el changelog
+generate_changelog() {
+    tags=$(git tag --sort=creatordate)
+    latest_tag=$(echo "$tags" | tail -n 2 | head -n 1)
+    echo "$latest_tag"
+    if [ -z "$latest_tag" ]; then
+        echo "No TAGs found"
+        return 1
+    fi
+    commit_range="$latest_tag..HEAD"
+    changelog_file="ChangeLog.md"
+    echo "## The News!!!" > $changelog_file
+    echo "" >> $changelog_file
+    format_commits "$commit_range" >> $changelog_file
+
+    echo "Changelog generado en $changelog_file"
+}
+
+change() {
+    latest_tag=$(get_latest_tag)
+    echo "El tag más reciente es: $latest_tag"
+    # next_tag=$1
+
+    # # Obtener el tag más reciente (top_tag)
+    # top_tag=$(top_log_tag)
+    # top_ver=$(rm_tag_prefix "$top_tag")
+    # next_ver=$(rm_tag_prefix "$next_tag")
+    # date=$(tag_date_or_today "$next_tag")
+    # repo_url=$(remote_url_clean)
+
+    # # Definir el rango de commits entre el top_tag y el next_tag
+    # commit_range=$(next_commit_range "$top_tag")
+
+    # # Crear el nuevo archivo de changelog
+    # new_log_file="changelog_$next_ver.md"
+
+    # # Agregar el encabezado al nuevo archivo
+    # echo "## [$next_ver] - $date" > $new_log_file
+
+    # # Formatear y agregar los commits del rango entre top_tag y next_tag
+    # format_commits "$commit_range" >> $new_log_file
+
+    # # Agregar el bloque "Unreleased" con el enlace correspondiente
+    # echo "[Unreleased]: $repo_url/compare/$next_tag...HEAD" >> $new_log_file
+    # echo "[$next_ver]: $repo_url/compare/$top_tag...$next_tag" >> $new_log_file
+
+    # # Obtener y agregar la parte del archivo original log_file desde el tag más reciente hasta el final
+    # sed -n "/^## \[$next_ver\] - [1-9][0-9-]*$/,/^\[Unreleased\]: https:[^ ]*$/p;" $log_file |
+    #     sed '$d' >> $new_log_file
+}
+
+#### Args ####
+
+command=$1
+[ "${command#-}" != "$command" ] && command=''
+[ "$command" ] && shift
+
+while [ $# != 0 ]; do
+    case $1 in
+    '-p') push_tag='true' ;;
+    '--dry-run') dry_run='true' ;;
+    '--bump') bump_script="$2" && shift ;;
+    '--bump='*) bump_script="${1#*=}" ;;
+    '--token') token="$2" && shift ;;
+    '--token='*) token="${1#*=}" ;;
+    '--help' | '-h') usage && exit ;;
+    '--version' | '-v') echo "$version" && exit ;;
+    *) echo "invalid argument: $1" >&2 && exit 1 ;;
+    esac
+
+    shift
+done
+
+case $command in
+'') update_command ;;
+'change') generate_changelog ;;
+'init') init_command ;;
+'auth') auth_command ;;
+'tag') tag_command ;;
+'post') post_command ;;
+'all') all_command ;;
+'help') usage ;;
+'version') echo "$version" ;;
+*) echo "invalid command: $command" >&2 && exit 1 ;;
+esac

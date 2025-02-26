@@ -1,0 +1,1 @@
+-B build-dragonjar -DSDKCONFIG=build-dragonjar/sdkconfig -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.version;sdkconfig.dragonjar"

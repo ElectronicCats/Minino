@@ -1,0 +1,17 @@
+#-------------------------------------------------------------------------------------------#
+#------------------------------ UNCOMMENT YOUR BOARD TYPE ----------------------------------#
+
+#CONFIG_BOARD_MININO=y                                             # Board Minino
+#CONFIG_BOARD_BSIDES=y                                             # Board BSides
+CONFIG_BOARD_DRAGONJAR=y                                          # Board DragonJar
+#CONFIG_BOARD_EKOPARTY=y                                           # Board EkoParty
+#CONFIG_BOARD_BUGCON=y                                             # Board BugCon
+
+#------------------------- --------- UNCOMMENT IF MININO BOARD -----------------------------#
+#CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y                                  # Serial flasher 8MB
+#CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"           # Partitions 8MB OTA
+
+#---------------------------------- UNCOMMENT IF 4MB FLASH BOARD ---------------------------#
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y                                  # Serial flasher 4MB
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions_4MB.csv"     # Partitions 4MB No OTA
+#-------------------------------------------------------------------------------------------#

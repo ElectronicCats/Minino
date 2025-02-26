@@ -8,6 +8,7 @@
 #include "modals_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
+#include "wifi_settings_scenes.h"
 
 #define TAG_CONFIG_MODULE "CONFIG_MODULE"
 
@@ -117,7 +118,8 @@ static void config_module_wifi_display_connected() {
   modals_module_show_banner("Connected");
   vTaskDelay(2000 / portTICK_PERIOD_MS);
   cmd_wifi_unregister_callback();
-  menus_module_exit_app();
+  // menus_module_exit_app();
+  wifi_settings_scenes_main();
 }
 
 static void config_module_wifi_handle_connection(bool state) {
@@ -242,7 +244,8 @@ static void only_exit_input_cb(uint8_t button_name, uint8_t button_event) {
   }
   if (button_name == BUTTON_LEFT) {
     cmd_wifi_unregister_callback();
-    menus_module_exit_app();
+    // menus_module_exit_app();
+    wifi_settings_scenes_main();
   }
 }
 static void config_module_state_machine(uint8_t button_name,
@@ -257,7 +260,8 @@ static void config_module_state_machine(uint8_t button_name,
   switch (button_name) {
     case BUTTON_LEFT:
       cmd_wifi_unregister_callback();
-      menus_module_exit_app();
+      // menus_module_exit_app();
+      wifi_settings_scenes_main();
       break;
     case BUTTON_RIGHT:
       ESP_LOGI(TAG_CONFIG_MODULE, "Selected item: %d", selected_item);
