@@ -13,6 +13,7 @@
 #include "deauth_module.h"
 #include "detector_scenes.h"
 #include "display_settings.h"
+#include "drone_id_scenes.h"
 #include "file_manager_module.h"
 #include "gps_module.h"
 #include "gps_screens.h"
@@ -53,6 +54,7 @@ typedef enum {
   MENU_WIFI_DEAUTH_SCAN,
   MENU_WIFI_DOS,
   MENU_WIFI_SSID_SPAM,
+  MENU_WIFI_ODRONE_ID,
   /* WiFi analizer items */
   MENU_WIFI_ANALYZER_RUN,
   MENU_WIFI_ANALYZER_SETTINGS,
@@ -242,6 +244,14 @@ menu_t menus[] = {  //////////////////////////////////
      .entry_cmd = "ssid_spam",
      .last_selected_submenu = 0,
      .on_enter_cb = ssid_spam_begin,
+     .on_exit_cb = NULL,
+     .is_visible = true},
+    {.display_name = "Drone ID",
+     .menu_idx = MENU_WIFI_ODRONE_ID,
+     .parent_idx = MENU_WIFI_APPS,
+     .entry_cmd = "drone_id",
+     .last_selected_submenu = 0,
+     .on_enter_cb = drone_id_scenes_main,
      .on_exit_cb = NULL,
      .is_visible = true},
 #endif
