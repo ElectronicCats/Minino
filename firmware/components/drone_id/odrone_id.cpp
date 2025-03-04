@@ -1,10 +1,13 @@
 #include "odrone_id.h"
 
+#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
 #include "location.h"
 #include "spoofer.h"
+
+#define TAG "odrone_id"
 
 static int num_spoofers = 16;
 static Spoofer spoofers[16];
@@ -23,9 +26,12 @@ void odrone_id_begin(uint8_t num_drones,
                      uint8_t channel,
                      float latitude,
                      float longitude) {
+  ESP_LOGI(TAG,
+           "Launching app with coordinates: Latitude = %f, Longitude = %f\n",
+           latitude, longitude);
   for (int i = 0; i < num_drones; i++) {
     spoofers[i].init();
-    spoofers[i].updateLocation(LATITUDE, LONGITUDE);
+    spoofers[i].updateLocation(latitude, longitude);
   }
   xTaskCreate(&spoofing_task, "spoofing_task", 4096, NULL, 5, NULL);
 }
