@@ -7,7 +7,10 @@
 extern "C" {
 #endif
 
-void odrone_id_begin();
+void odrone_id_begin(uint8_t num_drones,
+                     uint8_t channel,
+                     float latitude,
+                     float longitude);
 
 #ifdef __cplusplus
 }

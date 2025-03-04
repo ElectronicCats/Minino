@@ -19,8 +19,11 @@ static void spoofing_task(void* pvParameters) {
 }
 
 extern "C" {
-void odrone_id_begin() {
-  for (int i = 0; i < num_spoofers; i++) {
+void odrone_id_begin(uint8_t num_drones,
+                     uint8_t channel,
+                     float latitude,
+                     float longitude) {
+  for (int i = 0; i < num_drones; i++) {
     spoofers[i].init();
     spoofers[i].updateLocation(LATITUDE, LONGITUDE);
   }
