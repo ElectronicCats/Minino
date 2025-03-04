@@ -4,7 +4,7 @@
 #include "general_submenu.h"
 
 static uint8_t last_submenu_selection =
-    0;  // Varaible to store the last selected option
+    0;  // Variable to store the last selected option
 
 typedef enum {
   SUBMENU_OPTION_1,
