@@ -21,6 +21,7 @@ static const char* main_menu_options[] = {
 };
 
 static void main_handler(uint8_t option) {
+  last_main_selection = option;
   switch (option) {
     case RUN_OPTION:
       drone_id_begin();
