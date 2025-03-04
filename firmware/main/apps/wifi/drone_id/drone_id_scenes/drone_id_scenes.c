@@ -44,6 +44,27 @@ void drone_id_scenes_main() {
   general_submenu(main);
 }
 
+typedef enum {
+  SETTINGS_NUM_DRONES_OPTION,
+  SETTINGS_CHANNEL_OPTION,
+  SETTINGS_LOCATION_OPTION,
+  SETTINGS_HELP_OPTION,
+} settings_options_e;
+
+static const char* settings_options[] = {"Num of Drones", "Channel", "Location",
+                                         "Help"};
+
+void drone_id_scenes_settings() {
+  general_submenu_menu_t settings = {0};
+
+  settings.options = settings_options;
+  settings.options_count = sizeof(settings_options) / sizeof(char*);
+  settings.select_cb = NULL;
+  settings.exit_cb = drone_id_scenes_main;
+
+  general_submenu(settings);
+}
+
 void drone_id_scenes_help() {
   general_scrolling_text_ctx help = {0};
   help.banner = "Drone ID Hep";

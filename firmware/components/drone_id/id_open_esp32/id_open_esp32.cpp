@@ -82,6 +82,8 @@ esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx,
     #define SSID     "MINI Drone"
 static const char* password = PASSWORD;
 
+static bool wifi_initialized = false;
+
   #endif  // WIFI
 
   #if ID_OD_BT
@@ -143,6 +145,11 @@ void init2(char* ssid,
   text[0] = text[63] = 0;
 
   #if ID_OD_WIFI
+  if (!wifi_initialized) {
+    wifi_initialized = true;
+  } else {
+    return;
+  }
 
   // Inicializa NVS
   esp_err_t ret = nvs_flash_init();
@@ -155,7 +162,7 @@ void init2(char* ssid,
 
   // Inicializa la pila TCP/IP y el manejador de eventos
   ESP_ERROR_CHECK(esp_netif_init());
-  ESP_ERROR_CHECK(esp_event_loop_create_default());
+  esp_event_loop_create_default();
 
   // Crea una interfaz de red Wi-Fi en modo AP
   esp_netif_create_default_wifi_ap();

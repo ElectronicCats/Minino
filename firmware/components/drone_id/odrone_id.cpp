@@ -6,7 +6,7 @@
 #include "location.h"
 #include "spoofer.h"
 
-static int num_spoofers = 1;
+static int num_spoofers = 16;
 static Spoofer spoofers[16];
 
 static void spoofing_task(void* pvParameters) {
@@ -20,7 +20,6 @@ static void spoofing_task(void* pvParameters) {
 
 extern "C" {
 void odrone_id_begin() {
-  printf("ODRONE ID BEGIN\n");
   for (int i = 0; i < num_spoofers; i++) {
     spoofers[i].init();
     spoofers[i].updateLocation(LATITUDE, LONGITUDE);

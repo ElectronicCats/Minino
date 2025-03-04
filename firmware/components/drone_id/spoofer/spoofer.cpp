@@ -3,7 +3,6 @@
 #include "esp_timer.h"
 
 void Spoofer::init() {
-  printf("SPOOFER INIT\n");
   // time things
   memset(&clock_tm, 0, sizeof(struct tm));
   clock_tm.tm_hour = 10;
