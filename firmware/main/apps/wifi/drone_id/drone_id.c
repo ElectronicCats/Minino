@@ -11,3 +11,7 @@ void drone_id_begin() {
   float longitude = prefs->longitude;
   odrone_id_begin(num_drones, channel, latitude, longitude);
 }
+
+void drone_id_set_wifi_ap(uint8_t channel) {
+  odrone_id_set_wifi_ap(channel);
+}

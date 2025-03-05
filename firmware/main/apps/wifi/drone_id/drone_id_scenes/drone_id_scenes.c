@@ -128,6 +128,10 @@ void drone_id_scenes_settings_num_drones() {
   general_knob(num_drones);
 }
 
+static void drone_channel_handler(uint8_t channel) {
+  drone_id_preferences_set_channel(channel);
+  drone_id_set_wifi_ap(channel);
+}
 void drone_id_scenes_settings_channel() {
   general_knob_ctx_t channel = {0};
   channel.help_lbl = "Channel Settings";
@@ -135,7 +139,7 @@ void drone_id_scenes_settings_channel() {
   channel.min = 1;
   channel.max = 11;
   channel.value = drone_id_preferences_get()->channel;
-  channel.value_handler = drone_id_preferences_set_channel;
+  channel.value_handler = drone_channel_handler;
   channel.step = 1;
   channel.exit_cb = drone_id_scenes_settings;
 

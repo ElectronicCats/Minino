@@ -134,6 +134,32 @@ void construct2() {
  *
  */
 
+void set_wifi_ap(char* ssid, uint8_t wifi_channel) {
+  #if ID_OD_WIFI
+  if (!wifi_initialized) {
+    return;
+  }
+  wifi_config_t wifi_manager_config = {0};
+  strcpy((char*) wifi_manager_config.ap.ssid, ssid);
+  strcpy((char*) wifi_manager_config.ap.password, password);
+  wifi_manager_config.ap.ssid_len = strlen(ssid);
+  wifi_manager_config.ap.channel = (uint8_t) wifi_channel;
+  wifi_manager_config.ap.authmode = WIFI_AUTH_WPA2_PSK;
+  wifi_manager_config.ap.ssid_hidden = 0;
+  wifi_manager_config.ap.max_connection = 4;
+  wifi_manager_config.ap.beacon_interval = 1000;
+  // Si no se establece una contraseña, el modo de autenticación se configura
+  // como abierto
+  if (strlen(PASSWORD) == 0) {
+    wifi_manager_config.ap.authmode = WIFI_AUTH_OPEN;
+  }
+
+  // Establece el modo Wi-Fi en AP y aplica la configuración
+  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+  ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_manager_config));
+  #endif
+}
+
 void init2(char* ssid,
            int ssid_length,
            uint8_t* WiFi_mac_addr,
@@ -176,28 +202,13 @@ void init2(char* ssid,
   // ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL));
 
   // Configuración del punto de acceso
-  wifi_config_t wifi_manager_config = {0};
-  strcpy((char*) wifi_manager_config.ap.ssid, ssid);
-  strcpy((char*) wifi_manager_config.ap.password, password);
-  wifi_manager_config.ap.ssid_len = strlen(ssid);
-  wifi_manager_config.ap.channel = (uint8_t) wifi_channel;
-  wifi_manager_config.ap.authmode = WIFI_AUTH_WPA2_PSK;
-  wifi_manager_config.ap.ssid_hidden = 0;
-  wifi_manager_config.ap.max_connection = 4;
-  wifi_manager_config.ap.beacon_interval = 1000;
-  // Si no se establece una contraseña, el modo de autenticación se configura
-  // como abierto
-  if (strlen(PASSWORD) == 0) {
-    wifi_manager_config.ap.authmode = WIFI_AUTH_OPEN;
-  }
 
-  // Establece el modo Wi-Fi en AP y aplica la configuración
-  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
-  ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_manager_config));
+  set_wifi_ap(ssid, wifi_channel);
+
   ESP_ERROR_CHECK(esp_wifi_start());
 
   // Establece la potencia de transmisión máxima
-  int8_t wifi_power =
+  const int8_t wifi_power =
       78;  // Potencia máxima en unidades de 0.25 dBm (78 * 0.25 = 19.5 dBm)
   ESP_ERROR_CHECK(esp_wifi_set_max_tx_power(wifi_power));
 

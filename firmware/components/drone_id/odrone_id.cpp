@@ -22,6 +22,10 @@ static void spoofing_task(void* pvParameters) {
 }
 
 extern "C" {
+void odrone_id_set_wifi_ap(uint8_t channel) {
+  set_wifi_ap("Mini Drone", channel);
+}
+
 void odrone_id_begin(uint8_t num_drones,
                      uint8_t channel,
                      float latitude,
@@ -33,6 +37,7 @@ void odrone_id_begin(uint8_t num_drones,
     spoofers[i].init();
     spoofers[i].updateLocation(latitude, longitude);
   }
+  odrone_id_set_wifi_ap(channel);
   xTaskCreate(&spoofing_task, "spoofing_task", 4096, NULL, 5, NULL);
 }
 }
