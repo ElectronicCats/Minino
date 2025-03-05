@@ -74,7 +74,7 @@ void drone_id_preferences_set_location_source(
 
 void drone_id_preferences_set_latitude(float latitude) {
   if (!drone_pref_ptr) {
-    preferences_not_initialized();
+    preferences_put_float(LATITUDE_MEM, latitude);
     return;
   }
   drone_pref_ptr->latitude = latitude;
@@ -83,7 +83,7 @@ void drone_id_preferences_set_latitude(float latitude) {
 
 void drone_id_preferences_set_longitude(float longitude) {
   if (!drone_pref_ptr) {
-    preferences_not_initialized();
+    preferences_put_float(LONGITUDE_MEM, longitude);
     return;
   }
   drone_pref_ptr->longitude = longitude;
