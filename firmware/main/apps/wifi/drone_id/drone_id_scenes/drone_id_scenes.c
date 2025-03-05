@@ -74,8 +74,8 @@ typedef enum {
   SETTINGS_HELP_OPTION,
 } settings_options_e;
 
-static const char* settings_options[] = {"Num of Drones", "Channel", "Location",
-                                         "Help"};
+static const char* settings_options[] = {"Num of Drones", "Channel",
+                                         "Location Src", "Help"};
 
 static void settings_handler(uint8_t option) {
   last_settings_selection = option;
@@ -155,7 +155,7 @@ static const char* location_options[] = {"GPS", "Manual"};
 
 void drone_id_scenes_settings_location() {
   general_radio_selection_menu_t location = {0};
-  location.banner = "Location Settings";
+  location.banner = "Location Src";
   location.options = location_options;
   location.options_count = sizeof(location_options) / sizeof(char*);
   location.current_option = drone_id_preferences_get()->location_source;

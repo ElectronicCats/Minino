@@ -1,5 +1,6 @@
 #include "drone_id.h"
 
+#include "drone_id_anim.h"
 #include "drone_id_preferences.h"
 #include "gps_module.h"
 #include "odrone_id.h"
@@ -19,6 +20,7 @@ void drone_id_begin() {
     gps_module_register_cb(gps_event_handler_cb);
     gps_module_start_scan();
   }
+  drone_anim_scan();
 }
 
 void drone_id_set_location_source(uint8_t location_source) {

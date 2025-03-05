@@ -68,6 +68,12 @@ void oled_screen_display_text_center(char* text, int page, bool invert);
  */
 void oled_screen_clear_line(int x, int page, bool invert);
 
+void oled_screen_buffer_bitmap(const uint8_t* bitmap,
+                               int x,
+                               int y,
+                               int width,
+                               int height,
+                               bool invert);
 /**
  * @brief Display a bitmap on the OLED display
  *
