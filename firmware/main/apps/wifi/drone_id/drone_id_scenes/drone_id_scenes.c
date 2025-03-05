@@ -114,6 +114,11 @@ void drone_id_scenes_settings() {
   general_submenu(settings);
 }
 
+static void drone_num_handler(uint8_t num_drones) {
+  drone_id_preferences_set_num_drones(num_drones);
+  drone_id_set_num_spoofers(num_drones);
+}
+
 void drone_id_scenes_settings_num_drones() {
   general_knob_ctx_t num_drones = {0};
   num_drones.help_lbl = "Drone ID Settings";
@@ -121,7 +126,7 @@ void drone_id_scenes_settings_num_drones() {
   num_drones.min = 1;
   num_drones.max = 16;
   num_drones.value = drone_id_preferences_get()->num_drones;
-  num_drones.value_handler = drone_id_preferences_set_num_drones;
+  num_drones.value_handler = drone_num_handler;
   num_drones.step = 1;
   num_drones.exit_cb = drone_id_scenes_settings;
 

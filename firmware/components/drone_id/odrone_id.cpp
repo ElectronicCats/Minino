@@ -22,8 +22,18 @@ static void spoofing_task(void* pvParameters) {
 }
 
 extern "C" {
+void odrone_id_set_num_spoofers(uint8_t num_drones) {
+  num_spoofers = num_drones;
+}
+
 void odrone_id_set_wifi_ap(uint8_t channel) {
   set_wifi_ap("Mini Drone", channel);
+}
+
+void odrone_id_set_location(float latitude, float longitude) {
+  for (int i = 0; i < num_spoofers; i++) {
+    spoofers[i].updateLocation(latitude, longitude);
+  }
 }
 
 void odrone_id_begin(uint8_t num_drones,
@@ -33,7 +43,8 @@ void odrone_id_begin(uint8_t num_drones,
   ESP_LOGI(TAG,
            "Launching app with coordinates: Latitude = %f, Longitude = %f\n",
            latitude, longitude);
-  for (int i = 0; i < num_drones; i++) {
+  num_spoofers = num_drones;
+  for (int i = 0; i < 16; i++) {
     spoofers[i].init();
     spoofers[i].updateLocation(latitude, longitude);
   }
