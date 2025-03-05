@@ -36,7 +36,9 @@ void drone_id_cmd_register_location_cmd() {
 
   esp_console_cmd_t drone_set_location_cmd = {
       .command = "drone_set_location",
-      .help = "Set drone location EX: drone_set_location 37.7749 -122.4194",
+      .help =
+          "\nSet drone location Example: drone_set_location -- 37.7749 "
+          "-122.4194\nIt's important to use '--' to avoid parsing errors\n",
       .category = "Drone",
       .hint = NULL,
       .func = &set_drone_location,

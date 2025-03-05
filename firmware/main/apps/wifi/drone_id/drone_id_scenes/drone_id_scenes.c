@@ -160,7 +160,7 @@ void drone_id_scenes_settings_location() {
   location.options_count = sizeof(location_options) / sizeof(char*);
   location.current_option = drone_id_preferences_get()->location_source;
   location.style = RADIO_SELECTION_OLD_STYLE;
-  location.select_cb = drone_id_preferences_set_location_source;
+  location.select_cb = drone_id_set_location_source;
   location.exit_cb = drone_id_scenes_settings;
 
   general_radio_selection(location);
