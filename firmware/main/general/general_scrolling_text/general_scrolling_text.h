@@ -26,4 +26,5 @@ typedef struct {
 } general_scrolling_text_ctx;
 
 void general_scrolling_text(general_scrolling_text_ctx ctx);
+void general_scrolling_text_array(general_scrolling_text_ctx ctx);
 uint16_t general_scrolling_text_get_current_idx();

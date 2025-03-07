@@ -18,8 +18,14 @@ void drone_id_scenes_settings_help();
 
 void drone_id_scenes_help();
 
+static uint8_t current_menu = 0;
+
 static uint8_t last_main_selection = 0;
 static uint8_t last_settings_selection = 0;
+
+uint8_t drone_id_scenes_get_current() {
+  return current_menu;
+}
 
 ////////////////////////// MAIN //////////////////////////
 
@@ -39,6 +45,7 @@ static void main_handler(uint8_t option) {
   last_main_selection = option;
   switch (option) {
     case RUN_OPTION:
+      current_menu = DRONE_SCENES_RUN;
       drone_id_begin();
       break;
     case SETTINGS_OPTION:
@@ -63,6 +70,7 @@ void drone_id_scenes_main() {
   main.exit_cb = menus_module_restart;
 
   general_submenu(main);
+  current_menu = DRONE_SCENES_MAIN;
 }
 
 ////////////////////////// SETTINGS //////////////////////////
@@ -112,6 +120,7 @@ void drone_id_scenes_settings() {
   settings.exit_cb = settings_exit_cb;
 
   general_submenu(settings);
+  current_menu = DRONE_SCENES_SETTINGS;
 }
 
 static void drone_num_handler(uint8_t num_drones) {
@@ -131,6 +140,7 @@ void drone_id_scenes_settings_num_drones() {
   num_drones.exit_cb = drone_id_scenes_settings;
 
   general_knob(num_drones);
+  current_menu = DRONE_SCENES_SETTINGS_NUM_DRONES;
 }
 
 static void drone_channel_handler(uint8_t channel) {
@@ -149,6 +159,7 @@ void drone_id_scenes_settings_channel() {
   channel.exit_cb = drone_id_scenes_settings;
 
   general_knob(channel);
+  current_menu = DRONE_SCENES_SETTINGS_CHANNEL;
 }
 
 static const char* location_options[] = {"GPS", "Manual"};
@@ -164,28 +175,70 @@ void drone_id_scenes_settings_location() {
   location.exit_cb = drone_id_scenes_settings;
 
   general_radio_selection(location);
+  current_menu = DRONE_SCENES_SETTINGS_LOCATION_SRC;
 }
+
+static const char* settings_help_txt[] = {"Num of Drones:",
+                                          "Set the number",
+                                          "of drones to",
+                                          "spoof",
+                                          "",
+                                          "Channel:",
+                                          "Set the wifi",
+                                          "channel to use",
+                                          "",
+                                          "Location Src:",
+                                          "Set the source",
+                                          "of location to",
+                                          "gps or manual"
+                                          "",
+                                          "You can set",
+                                          "the manual",
+                                          "location by",
+                                          "using the",
+                                          "`drone_set_",
+                                          "location'",
+                                          "command"};
 
 void drone_id_scenes_settings_help() {
   general_scrolling_text_ctx help = {0};
   help.banner = "Settings Help";
-  help.text = "Choose the number of drones and the wifi channel to use.";
+  help.text_arr = settings_help_txt;
+  help.text_len = sizeof(settings_help_txt) / sizeof(char*);
   help.scroll_type = GENERAL_SCROLLING_TEXT_CLAMPED;
   help.window_type = GENERAL_SCROLLING_TEXT_WINDOW;
-  help.exit_cb = drone_id_scenes_main;
+  help.exit_cb = drone_id_scenes_settings;
 
-  general_scrolling_text(help);
+  general_scrolling_text_array(help);
+  current_menu = DRONE_SCENES_SETTINGS_HELP;
 }
 
 ////////////////////////// HELP //////////////////////////
 
+static const char* help_txt[] = {"This app allows", "you to spoof",
+                                 "drone IDs",       "using ESP32",
+                                 "wifi features",   "",
+                                 "You can set",     "the number",
+                                 "of drones,",      "the wifi",
+                                 "channel and",     "the location",
+                                 "source.",         "",
+                                 "Please note",     "that this app",
+                                 "if for",          "educational",
+                                 "purposes only.",  "",
+                                 "Familiarizing",   "with (FAA) laws",
+                                 "is crucial to",   "avoid legal",
+                                 "consequences."};
+
 void drone_id_scenes_help() {
   general_scrolling_text_ctx help = {0};
   help.banner = "Drone ID Help";
-  help.text = "Drone ID Help";
+  help.text_arr = help_txt;
+  help.text_len = sizeof(help_txt) / sizeof(char*);
   help.scroll_type = GENERAL_SCROLLING_TEXT_CLAMPED;
   help.window_type = GENERAL_SCROLLING_TEXT_WINDOW;
   help.exit_cb = drone_id_scenes_main;
 
-  general_scrolling_text(help);
+  // general_scrolling_text(help);
+  general_scrolling_text_array(help);
+  current_menu = DRONE_SCENES_HELP;
 }
