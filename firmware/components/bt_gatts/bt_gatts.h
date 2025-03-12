@@ -1,4 +1,5 @@
 
+#include <string.h>
 #include "esp_bt.h"
 #include "esp_bt_defs.h"
 #include "esp_bt_main.h"
