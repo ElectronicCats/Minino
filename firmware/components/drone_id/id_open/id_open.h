@@ -58,7 +58,7 @@
 
 // National/regional specific RIDs.
 
-  #define ID_JAPAN 0  // Experimental
+// #define ID_JAPAN 0  // Experimental
 
   #if (ID_JAPAN) && (ID_OD_WIFI_NAN || USE_BEACON_FUNC || !ID_OD_WIFI_BEACON)
     #warning "National IDs will only work with WIFI_BEACON"

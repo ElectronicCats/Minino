@@ -59,6 +59,7 @@
   #pragma GCC diagnostic warning "-Wunused-variable"
 
   #include "esp_err.h"
+  #include "esp_log.h"
   #include "id_open.h"
 
   #if ID_OD_WIFI
@@ -83,6 +84,7 @@ esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx,
 static const char* password = PASSWORD;
 
 static bool wifi_initialized = false;
+static bool _read_only;
 
   #endif  // WIFI
 
@@ -202,8 +204,20 @@ void init2(char* ssid,
   // ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL));
 
   // Configuración del punto de acceso
-
-  set_wifi_ap(ssid, wifi_channel);
+  nvs_handle_t _nvs_handler;
+  esp_err_t _return_err = nvs_open(
+      "storage", _read_only ? NVS_READONLY : NVS_READWRITE, &_nvs_handler);
+  uint8_t value;
+  _return_err = nvs_get_u8(_nvs_handler, "channel_dr", &value);
+  if (_return_err == ESP_ERR_NVS_NOT_FOUND) {
+    if (wifi_channel >= 13) {
+      value = 1;
+    } else {
+      value = wifi_channel;
+    }
+  }
+  wifi_channel = value;
+  set_wifi_ap(ssid, value);
 
   ESP_ERROR_CHECK(esp_wifi_start());
 
