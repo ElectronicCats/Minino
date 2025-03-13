@@ -214,7 +214,11 @@ void init2(char* ssid,
   uint8_t value;
   _return_err = nvs_get_u8(_nvs_handler, "channel_dr", &value);
   if (_return_err == ESP_ERR_NVS_NOT_FOUND) {
-    value = wifi_channel;
+    if (wifi_channel >= 13) {
+      value = 1;
+    } else {
+      value = wifi_channel;
+    }
   }
   wifi_channel = value;
   set_wifi_ap(ssid, value);
