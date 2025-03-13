@@ -141,10 +141,6 @@ void set_wifi_ap(char* ssid, uint8_t wifi_channel) {
   if (!wifi_initialized) {
     return;
   }
-  ESP_LOGW("set_wifi_ap", "Channel %d", wifi_channel);
-  // if(wifi_channel >= 13){
-  //   wifi_channel
-  // }
   wifi_config_t wifi_manager_config = {0};
   strcpy((char*) wifi_manager_config.ap.ssid, ssid);
   strcpy((char*) wifi_manager_config.ap.password, password);
