@@ -290,6 +290,7 @@ menu_t menus[] = {  //////////////////////////////////
     {.display_name = "ADV Scanner",
      .menu_idx = MENU_BLUETOOTH_ADV,
      .parent_idx = MENU_BLUETOOTH_APPS,
+     .entry_cmd = "adv",
      .last_selected_submenu = 0,
      .on_enter_cb = adv_scanner_module_begin,
      .on_exit_cb = NULL,

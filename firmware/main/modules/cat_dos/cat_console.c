@@ -27,6 +27,7 @@
 #include "soc/soc_caps.h"
 
 #include "drone_id_cmd.h"
+#include "menus_module_cmd.h"
 
 static const char* TAG = "cat_console";
 #define PROMPT_STR "minino"
@@ -88,7 +89,7 @@ void cat_console_begin() {
   esp_console_register_help_command();
   register_wifi();
   cmd_spamssid_register_commands();
-  cmd_control_register_launch_cmd();
+  menus_module_cmd_register_cmds();
   cmd_control_register_uart_bridge_commands();
   cmd_control_register_system_commands();
   drone_id_cmd_register_location_cmd();
