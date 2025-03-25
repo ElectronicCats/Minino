@@ -5,7 +5,7 @@
 #include "esp_wifi.h"
 #include "opendroneid.h"
 
-#define MAX_DRONEID_PACKETS 10
+#define MAX_DRONEID_PACKETS 5
 
 void droneid_scanner_screen_main(void);
 void droneid_scanner_update_list(uint8_t* mac);
