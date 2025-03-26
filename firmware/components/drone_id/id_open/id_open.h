@@ -20,7 +20,7 @@
 
   #if defined(ARDUINO_ARCH_ESP32) || 1
 
-    #define ID_OD_WIFI_NAN    0
+    #define ID_OD_WIFI_NAN    1
     #define ID_OD_WIFI_BEACON 1
     #define ID_OD_BT          0  // ASTM F3411-19 / ASD-STAN 4709-002.
 
