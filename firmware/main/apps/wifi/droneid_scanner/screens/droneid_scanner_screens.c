@@ -42,7 +42,6 @@ static void droneid_scanner_main(uint8_t button_name, uint8_t button_event) {
       droneid_scanner_show_list();
       break;
     case BUTTON_RIGHT:
-      ESP_LOGI("SCREENS", "Current position %d", current_position);
       drone_selected = droneid_list[current_position];
       droneid_scanner_show_details();
       menus_module_set_app_state(true, droneid_scanner_details_handler);
@@ -100,9 +99,7 @@ static void droneid_scanner_details_handler(uint8_t button_name,
 
 static void droneid_scanner_show_details() {
   in_details = true;
-  ESP_LOGI("SCREEN", "OpID: %d", drone_selected->auth_type);
-  ESP_LOGI("SCREEN", "Lat: %f", drone_selected->base_lat_d);
-  ESP_LOGI("SCREEN", "Lon: %f", drone_selected->base_long_d);
+
   char auth_type[18];
   char loc_lat[18];
   char loc_lon[18];
@@ -162,7 +159,6 @@ void droneid_scanner_update_list(uint8_t* mac, uav_data* uas_data) {
     }
   }
   if (!found) {
-    ESP_LOGI("DRONESCREENS", "MAC: %02x:%02x:%02x", mac[0], mac[1], mac[2]);
     if (droneid_list_str[num_drones] != NULL) {
       free(droneid_list_str[num_drones]);
       droneid_list_str[num_drones] = NULL;
