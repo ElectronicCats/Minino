@@ -3,57 +3,10 @@
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "odid_wifi.h"
-#include "opendroneid.h"
-
-#define BEACON_OFFSET        36
-#define BEACON_PACKET_OFFSET 7
 
 static const char* TAG = "DroneidScanner";
 
 static ODID_UAS_Data UAS_data;
-
-typedef struct {
-  uint8_t mac[6];
-  uint8_t padding[1];
-  int8_t rssi;
-  char op_id[ODID_ID_SIZE + 1];
-  char uav_id[ODID_ID_SIZE + 1];
-  double lat_d;
-  double long_d;
-  double base_lat_d;
-  double base_long_d;
-  int altitude_msl;
-  int height_agl;
-  int speed;
-  int heading;
-  int speed_vertical;
-  int altitude_pressure;
-  int horizontal_accuracy;
-  int vertical_accuracy;
-  int baro_accuracy;
-  int speed_accuracy;
-  int timestamp;
-  int status;
-  int height_type;
-  int operator_location_type;
-  int classification_type;
-  int area_count;
-  int area_radius;
-  int area_ceiling;
-  int area_floor;
-  int operator_altitude_geo;
-  uint32_t system_timestamp;
-  int operator_id_type;
-  uint8_t ua_type;
-  uint8_t auth_type;
-  uint8_t auth_page;
-  uint8_t auth_length;
-  uint32_t auth_timestamp;
-  char auth_data[ODID_AUTH_PAGE_NONZERO_DATA_SIZE + 1];
-
-  uint8_t desc_type;
-  char description[ODID_STR_SIZE + 1];
-} uav_data;
 
 static void store_mac(uav_data* uav, uint8_t* payload) {
   memcpy(uav->mac, &payload[10], 6);
@@ -145,12 +98,11 @@ static void callback(uint8_t* buf, wifi_promiscuous_pkt_type_t type) {
 
   static const uint8_t nan_dest[6] = {0x51, 0x6f, 0x9a, 0x01, 0x00, 0x00};
   if (memcmp(nan_dest, &payload[4], 6) == 0) {
-    int payload_type = payload[BEACON_OFFSET];
-    ESP_LOGI(TAG, "NAN packet detected");
+    // ESP_LOGI(TAG, "NAN packet detected");
     if (odid_wifi_receive_message_pack_nan_action_frame(
             &UAS_data, (char*) currentUAV->op_id, payload, packet_len) == 0) {
       parse_odid(currentUAV, &UAS_data);
-      droneid_scanner_update_list(currentUAV->mac);
+      droneid_scanner_update_list(currentUAV->mac, currentUAV);
     }
   } else {
     int offset = BEACON_OFFSET;
@@ -169,14 +121,14 @@ static void callback(uint8_t* buf, wifi_promiscuous_pkt_type_t type) {
              (memcmp(&payload[offset + 2], dji_1, sizeof(dji_1)) == 0) ||
              (memcmp(&payload[offset + 2], dji_2, sizeof(dji_2)) == 0) ||
              (memcmp(&payload[offset + 2], dji_3, sizeof(dji_3)) == 0))) {
-          ESP_LOGI(TAG, "ODID packet detected");
+          // ESP_LOGI(TAG, "ODID packet detected");
           int idx = offset + BEACON_PACKET_OFFSET;
           if (idx < packet_len) {
             memset(&UAS_data, 0, sizeof(UAS_data));
             odid_message_process_pack(&UAS_data, &payload[idx],
                                       packet_len - idx);
             parse_odid(currentUAV, &UAS_data);
-            droneid_scanner_update_list(currentUAV->mac);
+            droneid_scanner_update_list(currentUAV->mac, currentUAV);
             parsed = true;
           }
         }
