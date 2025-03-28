@@ -16,13 +16,11 @@ static char* droneid_list_str[MAX_DRONEID_PACKETS] = {NULL};
 static int num_drones = 0;
 static int current_position = 0;
 static uav_data* drone_selected;
-static char* help_txt[DRONEID_SCANNER_COUNT_FIELD] = {
+static char* details_text[DRONEID_SCANNER_COUNT_FIELD] = {
     "Auth", NULL, "Location", NULL, NULL, NULL, NULL};
 
 static void droneid_scanner_show_list();
 static void droneid_scanner_show_details();
-static void droneid_scanner_details_handler(uint8_t button_name,
-                                            uint8_t button_event);
 
 static void droneid_scanner_exit() {
   menus_module_restart();
@@ -43,9 +41,8 @@ static void droneid_scanner_main(uint8_t button_name, uint8_t button_event) {
       break;
     case BUTTON_RIGHT:
       drone_selected = droneid_list[current_position];
-      droneid_scanner_show_details();
-      menus_module_set_app_state(true, droneid_scanner_details_handler);
       current_position = 0;
+      droneid_scanner_show_details();
       break;
     case BUTTON_LEFT:
       droneid_scanner_exit();
@@ -61,40 +58,15 @@ static void droneid_scanner_details_exit_cb() {
 
   menus_module_set_app_state(true, droneid_scanner_main);
 
-  free(help_txt[DRONEID_SCANNER_AUTHTYPE_POS]);
-  free(help_txt[DRONEID_SCANNER_LOCATION_POS]);
-  free(help_txt[DRONEID_SCANNER_LOCATION_POS + 1]);
+  free(details_text[DRONEID_SCANNER_AUTHTYPE_POS]);
+  free(details_text[DRONEID_SCANNER_LOCATION_POS]);
+  free(details_text[DRONEID_SCANNER_LOCATION_POS + 1]);
 
-  help_txt[DRONEID_SCANNER_AUTHTYPE_POS] = NULL;
-  help_txt[DRONEID_SCANNER_LOCATION_POS] = NULL;
-  help_txt[DRONEID_SCANNER_LOCATION_POS + 1] = NULL;
+  details_text[DRONEID_SCANNER_AUTHTYPE_POS] = NULL;
+  details_text[DRONEID_SCANNER_LOCATION_POS] = NULL;
+  details_text[DRONEID_SCANNER_LOCATION_POS + 1] = NULL;
 
   droneid_scanner_show_list();
-}
-
-static void droneid_scanner_details_handler(uint8_t button_name,
-                                            uint8_t button_event) {
-  if (button_event != BUTTON_PRESS_DOWN) {
-    return;
-  }
-  switch (button_name) {
-    case BUTTON_UP:
-      current_position = (current_position - 1 + num_drones) % num_drones;
-      droneid_scanner_show_details();
-      break;
-    case BUTTON_DOWN:
-      current_position = (current_position + 1) % num_drones;
-      droneid_scanner_show_details();
-      break;
-    case BUTTON_RIGHT:
-      break;
-    case BUTTON_LEFT:
-      droneid_scanner_show_list();
-      menus_module_set_app_state(true, droneid_scanner_main);
-      break;
-    default:
-      break;
-  }
 }
 
 static void droneid_scanner_show_details() {
@@ -107,29 +79,24 @@ static void droneid_scanner_show_details() {
   sprintf(loc_lat, "Lat: %f", drone_selected->base_lat_d);
   sprintf(loc_lon, "Lon: %f", drone_selected->base_long_d);
 
-  help_txt[DRONEID_SCANNER_AUTHTYPE_POS] = malloc(strlen(auth_type) + 1);
-  strcpy(help_txt[DRONEID_SCANNER_AUTHTYPE_POS], auth_type);
+  details_text[DRONEID_SCANNER_AUTHTYPE_POS] = malloc(strlen(auth_type) + 1);
+  strcpy(details_text[DRONEID_SCANNER_AUTHTYPE_POS], auth_type);
 
-  help_txt[DRONEID_SCANNER_LOCATION_POS] = malloc(strlen(loc_lat) + 1);
-  strcpy(help_txt[DRONEID_SCANNER_LOCATION_POS], loc_lat);
+  details_text[DRONEID_SCANNER_LOCATION_POS] = malloc(strlen(loc_lat) + 1);
+  strcpy(details_text[DRONEID_SCANNER_LOCATION_POS], loc_lat);
 
-  help_txt[DRONEID_SCANNER_LOCATION_POS + 1] = malloc(strlen(loc_lon) + 1);
-  strcpy(help_txt[DRONEID_SCANNER_LOCATION_POS + 1], loc_lon);
+  details_text[DRONEID_SCANNER_LOCATION_POS + 1] = malloc(strlen(loc_lon) + 1);
+  strcpy(details_text[DRONEID_SCANNER_LOCATION_POS + 1], loc_lon);
 
-  general_scrolling_text_ctx help = {0};
-  help.banner = "Details";
-  help.text_arr = help_txt;
-  help.text_len = DRONEID_SCANNER_COUNT_FIELD;
-  help.scroll_type = GENERAL_SCROLLING_TEXT_CLAMPED;
-  help.window_type = GENERAL_SCROLLING_TEXT_WINDOW;
-  help.exit_cb = droneid_scanner_details_exit_cb;
+  general_scrolling_text_ctx menu_details = {0};
+  menu_details.banner = "Details";
+  menu_details.text_arr = details_text;
+  menu_details.text_len = DRONEID_SCANNER_COUNT_FIELD;
+  menu_details.scroll_type = GENERAL_SCROLLING_TEXT_CLAMPED;
+  menu_details.window_type = GENERAL_SCROLLING_TEXT_WINDOW;
+  menu_details.exit_cb = droneid_scanner_details_exit_cb;
 
-  // general_scrolling_text(help);
-  general_scrolling_text_array(help);
-  // oled_screen_clear();
-  // oled_screen_display_text_center("< Back", 0, OLED_DISPLAY_NORMAL);
-  // oled_screen_display_text("Show details", 0, 1, OLED_DISPLAY_NORMAL);
-  // free(help_txt);
+  general_scrolling_text_array(menu_details);
 }
 
 static void droneid_scanner_show_list() {

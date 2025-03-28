@@ -69,6 +69,8 @@ static void parse_odid(uav_data* UAV, ODID_UAS_Data* UAS_data2) {
 }
 
 static void callback(uint8_t* buf, wifi_promiscuous_pkt_type_t type) {
+  if (type != WIFI_PKT_MGMT)
+    return;
   wifi_promiscuous_pkt_t* p = (wifi_promiscuous_pkt_t*) buf;
   // Get the packet header
   uint8_t* payload = p->payload;
@@ -103,6 +105,7 @@ static void callback(uint8_t* buf, wifi_promiscuous_pkt_type_t type) {
             &UAS_data, (char*) currentUAV->op_id, payload, packet_len) == 0) {
       parse_odid(currentUAV, &UAS_data);
       droneid_scanner_update_list(currentUAV->mac, currentUAV);
+      ESP_LOGI(TAG, "NAN Pkt type: %d", type);
     }
   } else {
     int offset = BEACON_OFFSET;
@@ -130,14 +133,15 @@ static void callback(uint8_t* buf, wifi_promiscuous_pkt_type_t type) {
             parse_odid(currentUAV, &UAS_data);
             droneid_scanner_update_list(currentUAV->mac, currentUAV);
             parsed = true;
+            ESP_LOGI(TAG, "Beacon Pkt type: %d", type);
           }
         }
       }
       offset += payload_len + 2;
     }
   }
-
   free(currentUAV);
+  vTaskDelay(500 / portTICK_PERIOD_MS);
 }
 
 static int droneid_scanner_init_wifi(void) {
@@ -158,6 +162,7 @@ static int droneid_scanner_init_wifi(void) {
     ESP_LOGE(TAG, "Error setting mode: %s", esp_err_to_name(err));
     return err;
   }
+
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_rx_cb(callback);
 
