@@ -12,7 +12,6 @@
 
 static bool in_details = false;
 static uav_data* droneid_list[MAX_DRONEID_PACKETS];
-static char* droneid_list_str[MAX_DRONEID_PACKETS] = {NULL};
 static int num_drones = 0;
 static int current_position = 0;
 static uav_data* drone_selected;
@@ -41,8 +40,12 @@ static void droneid_scanner_main(uint8_t button_name, uint8_t button_event) {
       break;
     case BUTTON_RIGHT:
       drone_selected = droneid_list[current_position];
-      current_position = 0;
+      ESP_LOGW("POS", "CUrrent position: %d", current_position);
+      if (drone_selected == NULL) {
+        ESP_LOGW("ERRRR", "Drone selected null");
+      }
       droneid_scanner_show_details();
+      current_position = 0;
       break;
     case BUTTON_LEFT:
       droneid_scanner_exit();
@@ -53,7 +56,6 @@ static void droneid_scanner_main(uint8_t button_name, uint8_t button_event) {
 }
 
 static void droneid_scanner_details_exit_cb() {
-  current_position = 0;
   in_details = false;
 
   menus_module_set_app_state(true, droneid_scanner_main);
@@ -76,8 +78,8 @@ static void droneid_scanner_show_details() {
   char loc_lat[18];
   char loc_lon[18];
   sprintf(auth_type, "Type: %d", drone_selected->auth_type);
-  sprintf(loc_lat, "Lat: %f", drone_selected->base_lat_d);
-  sprintf(loc_lon, "Lon: %f", drone_selected->base_long_d);
+  sprintf(loc_lat, "Lat: %.2f", drone_selected->base_lat_d);
+  sprintf(loc_lon, "Lon: %.2f", drone_selected->base_long_d);
 
   details_text[DRONEID_SCANNER_AUTHTYPE_POS] = malloc(strlen(auth_type) + 1);
   strcpy(details_text[DRONEID_SCANNER_AUTHTYPE_POS], auth_type);
@@ -105,9 +107,12 @@ static void droneid_scanner_show_list() {
   }
   oled_screen_clear_buffer();
   oled_screen_display_text("< Exit", 0, 0, OLED_DISPLAY_NORMAL);
+  char title[18];
   for (int i = 0; i < num_drones; i++) {
+    sprintf(title, "%02x:%02x:%02x", droneid_list[i]->mac[0],
+            droneid_list[i]->mac[1], droneid_list[i]->mac[2]);
     oled_screen_display_bmp_text(
-        drone_id_bmp_1_16x8, droneid_list_str[i], i + 1, 16, 8,
+        drone_id_bmp_1_16x8, title, i + 1, 16, 8,
         i == current_position ? OLED_DISPLAY_INVERT : OLED_DISPLAY_NORMAL);
   }
   oled_screen_display_show();
@@ -117,25 +122,27 @@ void droneid_scanner_update_list(uint8_t* mac, uav_data* uas_data) {
   bool found = false;
   int tmp = num_drones;
   char temp_mac_str[ODID_ID_SIZE + 1];
+  char temp_dmac_str[ODID_ID_SIZE + 1];
   snprintf(temp_mac_str, sizeof(temp_mac_str), "%02x:%02x:%02x", mac[0], mac[1],
            mac[2]);
   for (int i = 0; i < num_drones; i++) {
-    if (strcmp(droneid_list_str[i], temp_mac_str) == 0) {
+    snprintf(temp_dmac_str, sizeof(temp_dmac_str), "%02x:%02x:%02x",
+             droneid_list[i]->mac[0], droneid_list[i]->mac[1],
+             droneid_list[i]->mac[2]);
+    if (strcmp(temp_dmac_str, temp_mac_str) == 0) {
       found = true;
       break;
     }
   }
   if (!found) {
-    if (droneid_list_str[num_drones] != NULL) {
-      free(droneid_list_str[num_drones]);
-      droneid_list_str[num_drones] = NULL;
+    if (droneid_list[num_drones] != NULL) {
+      free(droneid_list[num_drones]);
     }
 
-    droneid_list_str[num_drones] = (char*) malloc(ODID_ID_SIZE + 1);
-    snprintf(droneid_list_str[num_drones], ODID_ID_SIZE + 1, "%02x:%02x:%02x",
-             mac[0], mac[1], mac[2]);
-
-    droneid_list[num_drones] = uas_data;
+    droneid_list[num_drones] = (uav_data*) malloc(sizeof(uav_data));
+    if (droneid_list[num_drones] != NULL) {
+      memcpy(droneid_list[num_drones], uas_data, sizeof(uav_data));
+    }
     num_drones = (num_drones + 1) % MAX_DRONEID_PACKETS;
   }
 
@@ -146,9 +153,6 @@ void droneid_scanner_update_list(uint8_t* mac, uav_data* uas_data) {
 
 void droneid_scanner_screen_main() {
   menus_module_set_app_state(true, droneid_scanner_main);
-  for (int i = 0; i < MAX_DRONEID_PACKETS; i++) {
-    droneid_list_str[i] = NULL;
-  }
 
   oled_screen_clear();
   oled_screen_display_text_center("Searching for", 1, OLED_DISPLAY_NORMAL);

@@ -104,8 +104,10 @@ static void callback(uint8_t* buf, wifi_promiscuous_pkt_type_t type) {
     if (odid_wifi_receive_message_pack_nan_action_frame(
             &UAS_data, (char*) currentUAV->op_id, payload, packet_len) == 0) {
       parse_odid(currentUAV, &UAS_data);
-      droneid_scanner_update_list(currentUAV->mac, currentUAV);
-      ESP_LOGI(TAG, "NAN Pkt type: %d", type);
+      if (currentUAV->base_lat_d != 0) {
+        droneid_scanner_update_list(currentUAV->mac, currentUAV);
+        ESP_LOGI(TAG, "NAN Pkt type: %.2f", currentUAV->base_lat_d);
+      }
     }
   } else {
     int offset = BEACON_OFFSET;
@@ -131,9 +133,11 @@ static void callback(uint8_t* buf, wifi_promiscuous_pkt_type_t type) {
             odid_message_process_pack(&UAS_data, &payload[idx],
                                       packet_len - idx);
             parse_odid(currentUAV, &UAS_data);
-            droneid_scanner_update_list(currentUAV->mac, currentUAV);
+            if (currentUAV->base_lat_d != 0) {
+              droneid_scanner_update_list(currentUAV->mac, currentUAV);
+              ESP_LOGI(TAG, "Beacon Pkt type: %.2f", currentUAV->base_lat_d);
+            }
             parsed = true;
-            ESP_LOGI(TAG, "Beacon Pkt type: %d", type);
           }
         }
       }
