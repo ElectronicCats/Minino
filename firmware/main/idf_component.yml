@@ -1,11 +1,11 @@
 ## IDF Component Manager Manifest File
 dependencies:
-  espressif/esp-zboss-lib: "^1.2.3"
-  espressif/esp-zigbee-lib: "^1.2.3"
-  espressif/button: "^3.2.0"
+  espressif/esp-zboss-lib: ^1.2.3
+  espressif/esp-zigbee-lib: ^1.2.3
+  espressif/button: ^3.2.0
   ## Required IDF version
   idf:
-    version: ">=4.1.0"
+    version: '>=4.1.0'
   ieee802154:
     path: ../components/ieee802154
   openthread:
@@ -15,7 +15,7 @@ dependencies:
   ble_hid:
     path: ../components/ble_hid
   espressif/iperf:
-    version: "~0.1.1"
+    version: ~0.1.1
   espressif/console:
     path: ../components/console
 
@@ -30,3 +30,4 @@ dependencies:
   #   # `public` flag doesn't have an effect dependencies of the `main` component.
   #   # All dependencies of `main` are public by default.
   #   public: true
+  espressif/esp-modbus: ^2.0.2
