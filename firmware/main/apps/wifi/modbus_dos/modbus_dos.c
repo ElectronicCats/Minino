@@ -14,6 +14,9 @@
 
 static const char* TAG = "MODBUS_TCP";
 
+static esp_netif_t* wifi_netif;
+static volatile bool is_running = false;
+
 int modbus_tcp_connect();
 void modbus_tcp_request(int sock);
 void reading_task();
@@ -57,7 +60,7 @@ void wifi_init() {
   ESP_ERROR_CHECK(esp_netif_init());
   esp_event_loop_create_default();
 
-  esp_netif_create_default_wifi_sta();
+  wifi_netif = esp_netif_create_default_wifi_sta();
 
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -88,6 +91,26 @@ void wifi_init() {
   ESP_ERROR_CHECK(esp_wifi_start());
 
   ESP_LOGI(TAG, "Attempting to connect to WiFi...");
+}
+
+void modbus_dos_stop() {
+  is_running = false;
+  vTaskDelay(pdMS_TO_TICKS(100));
+
+  ESP_ERROR_CHECK(esp_wifi_stop());
+
+  ESP_ERROR_CHECK(esp_event_handler_instance_unregister(
+      WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler));
+  ESP_ERROR_CHECK(esp_event_handler_instance_unregister(
+      IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler));
+
+  ESP_ERROR_CHECK(esp_wifi_deinit());
+
+  esp_netif_destroy_default_wifi(wifi_netif);
+
+  ESP_ERROR_CHECK(esp_event_loop_delete_default());
+
+  ESP_ERROR_CHECK(nvs_flash_deinit());
 }
 
 int modbus_tcp_connect() {
@@ -161,7 +184,8 @@ void modbus_tcp_request(int sock) {
 }
 
 void reading_task() {
-  while (1) {
+  is_running = true;
+  while (is_running) {
     int sock = modbus_tcp_connect();
     if (sock >= 0) {
       modbus_tcp_request(sock);

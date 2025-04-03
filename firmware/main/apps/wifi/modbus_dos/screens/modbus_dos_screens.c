@@ -10,7 +10,9 @@ static void main_screen_input_cb(uint8_t button, uint8_t event) {
   if (button != BUTTON_LEFT || event != BUTTON_PRESS_DOWN) {
     return;
   }
-  modbus_dos_scenes_main();
+  // modbus_dos_stop();
+  // modbus_dos_scenes_main();
+  menus_module_restart();
 }
 
 static void modbus_dos_screens_main_draw_cb() {
