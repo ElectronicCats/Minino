@@ -68,6 +68,12 @@ void oled_screen_display_text_center(char* text, int page, bool invert);
  */
 void oled_screen_clear_line(int x, int page, bool invert);
 
+void oled_screen_buffer_bitmap(const uint8_t* bitmap,
+                               int x,
+                               int y,
+                               int width,
+                               int height,
+                               bool invert);
 /**
  * @brief Display a bitmap on the OLED display
  *
@@ -142,6 +148,13 @@ void oled_screen_draw_line(int x1, int y1, int x2, int y2, bool invert);
 void oled_screen_draw_vline(int x, int y, int height, bool invert);
 void oled_screen_draw_hline(int x, int y, int width, bool invert);
 void oled_screen_draw_box(int x, int y, int width, int height, bool invert);
+
+void oled_screen_display_bmp_text(const uint8_t* bitmap,
+                                  char* text,
+                                  int page,
+                                  int width,
+                                  int height,
+                                  bool invert);
 
 /**
  * @brief Get the number of pages of the OLED display

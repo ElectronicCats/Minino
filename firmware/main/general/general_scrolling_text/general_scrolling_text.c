@@ -112,10 +112,12 @@ static void scroll_text_draw_window() {
   }
 
   for (uint16_t i = scroll_text_ctx->current_idx; i < end_index; i++) {
-    oled_screen_display_text(
-        scroll_text_ctx->text_arr[i], 3,
-        (i - scroll_text_ctx->current_idx) + (1 + screen_title),
-        OLED_DISPLAY_NORMAL);
+    if (scroll_text_ctx->text_arr[i] != NULL) {
+      oled_screen_display_text(
+          scroll_text_ctx->text_arr[i], 3,
+          (i - scroll_text_ctx->current_idx) + (1 + screen_title),
+          OLED_DISPLAY_NORMAL);
+    }
   }
   oled_screen_display_show();
 }
@@ -132,10 +134,12 @@ static void scroll_text_draw() {
 
 static void scroll_text_ctx_free() {
   if (scroll_text_ctx) {
-    for (uint16_t i = 0; i < scroll_text_ctx->text_len; ++i) {
-      free(scroll_text_ctx->text_arr[i]);
+    if (scroll_text_ctx->text) {
+      for (uint16_t i = 0; i < scroll_text_ctx->text_len; ++i) {
+        free(scroll_text_ctx->text_arr[i]);
+      }
+      free(scroll_text_ctx->text_arr);
     }
-    free(scroll_text_ctx->text_arr);
     free(scroll_text_ctx);
     scroll_text_ctx = NULL;
   }
@@ -209,6 +213,21 @@ void general_scrolling_text(general_scrolling_text_ctx ctx) {
   scroll_text_ctx->finish_cb = ctx.finish_cb;
   scroll_text_ctx->text_arr =
       split_text(scroll_text_ctx->text, &scroll_text_ctx->text_len);
+
+  menus_module_set_app_state(true, scrolling_text_input_cb);
+  scroll_text_draw();
+}
+
+void general_scrolling_text_array(general_scrolling_text_ctx ctx) {
+  scroll_text_ctx_free();
+  scroll_text_ctx = calloc(1, sizeof(general_scrolling_text_ctx));
+  scroll_text_ctx->banner = ctx.banner;
+  scroll_text_ctx->window_type = ctx.window_type;
+  scroll_text_ctx->scroll_type = ctx.scroll_type;
+  scroll_text_ctx->exit_cb = ctx.exit_cb;
+  scroll_text_ctx->finish_cb = ctx.finish_cb;
+  scroll_text_ctx->text_arr = ctx.text_arr;
+  scroll_text_ctx->text_len = ctx.text_len;
 
   menus_module_set_app_state(true, scrolling_text_input_cb);
   scroll_text_draw();

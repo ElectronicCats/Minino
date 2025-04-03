@@ -10,10 +10,10 @@
   #define MAX_OPTIONS_NUM 4
 #endif
 
-static general_submenu_menu_t* general_radio_selection_ctx;
+static general_submenu_menu_t* submenu_ctx;
 
 static void list_submenu_options() {
-  general_submenu_menu_t* ctx = general_radio_selection_ctx;
+  general_submenu_menu_t* ctx = submenu_ctx;
   static uint8_t items_offset = 0;
   items_offset = MAX(ctx->selected_option - MAX_OPTIONS_NUM + 2, items_offset);
   items_offset =
@@ -41,30 +41,28 @@ static void input_cb(uint8_t button_name, uint8_t button_event) {
   }
   switch (button_name) {
     case BUTTON_LEFT:
-      void (*exit_cb)() = general_radio_selection_ctx->exit_cb;
-      free(general_radio_selection_ctx);
+      void (*exit_cb)() = submenu_ctx->exit_cb;
+      free(submenu_ctx);
       if (exit_cb) {
         exit_cb();
       }
       break;
     case BUTTON_RIGHT:
-      void (*select_cb)() = general_radio_selection_ctx->select_cb;
+      void (*select_cb)() = submenu_ctx->select_cb;
       if (select_cb) {
-        select_cb(general_radio_selection_ctx->selected_option);
+        select_cb(submenu_ctx->selected_option);
       }
       break;
     case BUTTON_UP:
-      general_radio_selection_ctx->selected_option =
-          general_radio_selection_ctx->selected_option == 0
-              ? general_radio_selection_ctx->options_count - 1
-              : general_radio_selection_ctx->selected_option - 1;
+      submenu_ctx->selected_option = submenu_ctx->selected_option == 0
+                                         ? submenu_ctx->options_count - 1
+                                         : submenu_ctx->selected_option - 1;
       list_submenu_options();
       break;
     case BUTTON_DOWN:
-      general_radio_selection_ctx->selected_option =
-          ++general_radio_selection_ctx->selected_option <
-                  general_radio_selection_ctx->options_count
-              ? general_radio_selection_ctx->selected_option
+      submenu_ctx->selected_option =
+          ++submenu_ctx->selected_option < submenu_ctx->options_count
+              ? submenu_ctx->selected_option
               : 0;
       list_submenu_options();
       break;
@@ -73,13 +71,13 @@ static void input_cb(uint8_t button_name, uint8_t button_event) {
   }
 }
 
-void general_submenu(general_submenu_menu_t radio_selection_menu) {
-  general_radio_selection_ctx = calloc(1, sizeof(general_submenu_menu_t));
-  general_radio_selection_ctx->options = radio_selection_menu.options;
-  general_radio_selection_ctx->options_count =
-      radio_selection_menu.options_count;
-  general_radio_selection_ctx->select_cb = radio_selection_menu.select_cb;
-  general_radio_selection_ctx->exit_cb = radio_selection_menu.exit_cb;
+void general_submenu(general_submenu_menu_t submenu) {
+  submenu_ctx = calloc(1, sizeof(general_submenu_menu_t));
+  submenu_ctx->options = submenu.options;
+  submenu_ctx->options_count = submenu.options_count;
+  submenu_ctx->select_cb = submenu.select_cb;
+  submenu_ctx->exit_cb = submenu.exit_cb;
+  submenu_ctx->selected_option = submenu.selected_option;
   menus_module_set_app_state(true, input_cb);
   list_submenu_options();
 }

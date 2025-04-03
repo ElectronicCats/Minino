@@ -26,6 +26,8 @@
 #include "preferences.h"
 #include "soc/soc_caps.h"
 
+#include "drone_id_cmd.h"
+
 static const char* TAG = "cat_console";
 #define PROMPT_STR "minino"
 
@@ -89,6 +91,7 @@ void cat_console_begin() {
   cmd_control_register_launch_cmd();
   cmd_control_register_uart_bridge_commands();
   cmd_control_register_system_commands();
+  drone_id_cmd_register_location_cmd();
 
   /* Prompt to be printed before each line.
    * This can be customized, made dynamic, etc.
