@@ -1,0 +1,1 @@
+-B build-bsseattle -DSDKCONFIG=build-bsseattle/sdkconfig -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.version;sdkconfig.bsseattle"

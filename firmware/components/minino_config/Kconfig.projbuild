@@ -24,6 +24,10 @@ menu "General project"
 			bool "Badge BugCon"
 			help
 				Badge BugCon.
+		config BOARD_BSSEATTLE
+			bool "Badge BSides Seattle"
+			help
+				Badge BSides Seattle.
 	endchoice
 
 	config PROJECT_VERSION
@@ -420,6 +424,7 @@ menu "General project"
 		choice RESOLUTION
 			prompt "Panel resolution"
 			default RESOLUTION_128X64 if BOARD_MININO
+			default RESOLUTION_128X64 if BOARD_BSSEATTLE
 			default RESOLUTION_128X32 if !BOARD_MININO
 			help
 				Select Panel resolution.
@@ -592,6 +597,7 @@ menu "General project"
 			int "GPIO LEFT Button Pin"
 			range 0 GPIO_RANGE_MAX
 			default 22 if BOARD_MININO
+			default 22 if BOARD_BSSEATTLE
 			default 1 if BOARD_BSIDES
 			default 5 if BOARD_DRAGONJAR
 			default 1 if BOARD_EKOPARTY
@@ -602,6 +608,7 @@ menu "General project"
 			int "GPIO RIGHT Button Pin"
 			range 0 GPIO_RANGE_MAX
 			default 1 if BOARD_MININO
+			default 1 if BOARD_BSSEATTLE
 			default 15 if BOARD_BSIDES
 			default 10 if BOARD_DRAGONJAR
 			default 15 if BOARD_EKOPARTY
@@ -612,6 +619,7 @@ menu "General project"
 			int "GPIO UP Button Pin"
 			range 0 GPIO_RANGE_MAX
 			default 15 if BOARD_MININO
+			default 15 if BOARD_BSSEATTLE
 			default 22 if BOARD_BSIDES
 			default 0 if BOARD_DRAGONJAR
 			default 22 if BOARD_EKOPARTY
@@ -622,6 +630,7 @@ menu "General project"
 			int "GPIO DOWN Button Pin"
 			range 0 GPIO_RANGE_MAX
 			default 23 if BOARD_MININO
+			default 23 if BOARD_BSSEATTLE
 			default 23 if BOARD_BSIDES
 			default 1 if BOARD_DRAGONJAR
 			default 23 if BOARD_EKOPARTY
@@ -669,6 +678,7 @@ menu "General project"
 					default n if BOARD_DRAGONJAR
 					default y if BOARD_EKOPARTY
 					default n if BOARD_BUGCON
+					default n if BOARD_BSSEATTLE
 					help
 						Enable the buzzer component.
 				config BUZZER_PIN
@@ -679,6 +689,7 @@ menu "General project"
 					default -1 if BOARD_DRAGONJAR
 					default 11 if BOARD_EKOPARTY
 					default -1 if BOARD_BUGCON
+					default -1 if BOARD_BSSEATTLE
 					help
 						Select the GPIO pin number for the Buzzer.
 			endmenu
