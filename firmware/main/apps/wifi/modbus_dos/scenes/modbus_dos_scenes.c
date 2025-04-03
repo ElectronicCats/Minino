@@ -4,8 +4,10 @@
 #include "general_scrolling_text.h"
 #include "general_submenu.h"
 #include "menus_module.h"
+
 #include "modbus_dos.h"
 #include "modbus_dos_prefs.h"
+#include "modbus_dos_screens.h"
 
 static uint8_t last_main_selection = 0;
 static uint8_t last_settings_selection = 0;
@@ -31,6 +33,7 @@ static void main_handler(uint8_t option) {
     case MAIN_OPTOINS_RUN:
       if (modbus_dos_prefs_check()) {
         modbus_dos_begin();
+        modbus_dos_screens_main();
       } else {
         conf_missing_notification();
       }
