@@ -25,7 +25,7 @@ typedef enum {
   MAIN_OPTIONS_HELP,
 } main_options_t;
 
-static const char* main_options[] = {"Run", "Settings", "Help"};
+static const char* main_options[] = {"Run", "commands", "Help"};
 
 static void main_handler(uint8_t option) {
   last_main_selection = option;
@@ -131,7 +131,7 @@ void modbus_dos_scenes_settings() {
 
 static const char* help_txt[] = {"You must set",   "the server",
                                  "settings using", "the commands",
-                                 "specified in",   "`settings' menu"};
+                                 "specified in",   "`commands' menu"};
 
 void modbus_dos_scenes_help() {
   general_scrolling_text_ctx help = {0};
