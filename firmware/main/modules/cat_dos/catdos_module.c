@@ -125,7 +125,7 @@ void catdos_module_display_connecting() {
 }
 
 static void catdos_module_display_attack_animation() {
-#TODO : Change this, with the real animation
+  // TODO : Change this, with the real animation
   catdos_module_display_connecting();
 }
 
@@ -271,6 +271,11 @@ static bool catdos_module_display_if_nconnect() {
   return connected;
 }
 
+static void catdos_module_exit_app() {
+  wifi_ap_manager_unregister_callback();
+  menus_module_restart();
+}
+
 static void catdos_module_show_menu() {
   bool wifi_connection = preferences_get_bool("wifi_connected", false);
 
@@ -285,7 +290,7 @@ static void catdos_module_show_menu() {
   main.options_count = sizeof(main_menu_options) / sizeof(char*);
   main.select_cb = catdos_module_set_menu_selector;
   main.selected_option = last_main_selection;
-  main.exit_cb = menus_module_restart;
+  main.exit_cb = catdos_module_exit_app;
 
   general_submenu(main);
 }
