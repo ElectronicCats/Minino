@@ -161,9 +161,9 @@ class ID_OpenDrone {
       #endif
     #endif
 
-    #if ID_OD_BT
+  // #if ID_OD_BT
   uint8_t ble_message[36], counter = 0;
-    #endif
+  // #endif
 
   ODID_UAS_Data UAS_data;
   ODID_BasicID_data* basicID_data;
