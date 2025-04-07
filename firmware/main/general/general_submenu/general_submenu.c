@@ -21,13 +21,18 @@ static void list_submenu_options_modal() {
   items_offset = MIN(ctx->selected_option, items_offset);
   oled_screen_clear_buffer();
   oled_screen_display_card_border();
+  uint8_t modal_offset = 3;
+  if (ctx->modal_title != NULL) {
+    oled_screen_display_text_center(ctx->modal_title, 1, OLED_DISPLAY_NORMAL);
+  }
   char* str = malloc(20);
   for (uint8_t i = 0; i < (MIN(ctx->options_count, MAX_OPTIONS_NUM - 1)); i++) {
     bool is_selected = i + items_offset == ctx->selected_option;
     sprintf(str, "%s", ctx->options[i + items_offset]);
-    oled_screen_display_text(str, is_selected ? 16 : 8, i + 2, is_selected);
+    oled_screen_display_text(str, is_selected ? 16 : 8, i + modal_offset,
+                             is_selected);
     if (is_selected) {
-      oled_screen_display_bitmap(minino_face, 8, (i + 2) * 8, 8, 8,
+      oled_screen_display_bitmap(minino_face, 8, (i + modal_offset) * 8, 8, 8,
                                  OLED_DISPLAY_NORMAL);
     }
   }
@@ -116,5 +121,4 @@ void general_submenu(general_submenu_menu_t submenu) {
   } else {
     list_submenu_options();
   }
-  // list_submenu_options();
 }

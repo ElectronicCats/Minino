@@ -1,4 +1,5 @@
 #include <string.h>
+#include "animations_task.h"
 #include "bitmaps_general.h"
 #include "cmd_wifi.h"
 #include "esp_log.h"
@@ -54,12 +55,32 @@ static void wifi_settings_yn_handler(uint8_t option) {
   wifi_settings_show_list();
 }
 
+static void wifi_settings_connecting_animation() {
+  oled_screen_clear_buffer();
+#ifdef CONFIG_RESOLUTION_128X64
+  uint8_t width = 56;
+  uint8_t height = 56;
+  uint8_t x = (128 - width) / 2;
+#else
+  uint8_t width = 32;
+  uint8_t height = 32;
+  uint8_t x = (64 - width) / 2;
+  // uint8_t x = 0;
+#endif
+
+  static uint8_t idx = 0;
+  oled_screen_display_bitmap(epd_bitmap_wifi_loading[idx], x, 1, width, height,
+                             OLED_DISPLAY_NORMAL);
+  idx = ++idx > 3 ? 0 : idx;
+  oled_screen_display_show();
+}
+
 static void wifi_settings_show_connecting() {
-  oled_screen_clear();
-  oled_screen_display_text_center("Connecting", 1, OLED_DISPLAY_NORMAL);
+  animations_task_run(&wifi_settings_connecting_animation, 100, NULL);
 }
 
 static void wifi_settings_show_connection_cb(bool state) {
+  animations_task_stop();
   general_notification_ctx_t notification = {0};
 
   notification.duration_ms = 2000;
@@ -106,6 +127,7 @@ static void wifi_settings_show_options_list(uint8_t option) {
 }
 
 static void wifi_settings_exit_app() {
+  wifi_ap_manager_unregister_callback();
   wifi_settings_scenes_main();
 }
 
