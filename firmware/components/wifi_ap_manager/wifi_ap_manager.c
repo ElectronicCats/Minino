@@ -163,3 +163,42 @@ int wifi_ap_manager_connect_index_cb(int index, app_callback cb) {
 void wifi_ap_manager_unregister_callback() {
   callback_connection = NULL;
 }
+
+int wifi_ap_manager_delete_ap_by_index(int index) {
+  char wifi_ap[100];
+  char wifi_ssid[100];
+  sprintf(wifi_ap, "wifi%d", index);
+  esp_err_t err = preferences_get_string(wifi_ap, wifi_ssid, 100);
+  if (err != ESP_OK) {
+    ESP_LOGW(__func__, "Error getting AP");
+    printf("Error getting AP");
+    return 1;
+  }
+  char wifi_pass[100];
+  err = preferences_get_string(wifi_ssid, wifi_pass, 100);
+  if (err != ESP_OK) {
+    ESP_LOGW(__func__, "Error getting AP");
+    printf("Error getting AP");
+    return 1;
+  }
+  err = preferences_remove(wifi_ssid);
+  if (err != ESP_OK) {
+    ESP_LOGW(__func__, "Error getting AP");
+    printf("Error getting AP");
+    return 1;
+  }
+  err = preferences_remove(wifi_ap);
+  if (err != ESP_OK) {
+    ESP_LOGW(__func__, "Error getting AP");
+    printf("Error getting AP");
+    return 1;
+  }
+
+  preferences_get_int("count_ap", 0);
+  int count = preferences_get_int("count_ap", 0);
+  if (count > 0) {
+    count--;
+  }
+  preferences_put_int("count_ap", count);
+  return 0;
+}

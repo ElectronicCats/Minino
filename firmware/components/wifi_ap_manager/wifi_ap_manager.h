@@ -24,6 +24,7 @@ int wifi_ap_manager_connect_ap(const char* ssid, const char* pass);
 int wifi_ap_manager_connect_index(int index);
 void wifi_ap_manager_unregister_callback();
 int wifi_ap_manager_connect_index_cb(int index, app_callback cb);
+int wifi_ap_manager_delete_ap_by_index(int index);
 
 #define WIFI_AP_CONFIG()                          \
   {                                               \
