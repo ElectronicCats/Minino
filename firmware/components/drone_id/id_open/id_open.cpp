@@ -170,6 +170,8 @@ ID_OpenDrone::ID_OpenDrone() {
  */
 
 void ID_OpenDrone::init(UTM_parameters* parameters) {
+  bt_mode = true;
+
   int status, i;
   char text[128];
 
@@ -253,7 +255,11 @@ void ID_OpenDrone::init(UTM_parameters* parameters) {
 
   ssid_length = strlen(ssid);
 
-  init2(ssid, ssid_length, WiFi_mac_addr, wifi_channel);
+  init_w(ssid, ssid_length, WiFi_mac_addr, wifi_channel);
+
+  if (bt_mode) {
+    init_ble();
+  }
 
 #if ID_OD_WIFI
 
@@ -657,7 +663,7 @@ int ID_OpenDrone::transmit_wifi(struct UTM_data* utm_data, int prepacked) {
   usecs = micros();
   #endif
 
-  #if ID_OD_WIFI_NAN & 0
+  #if ID_OD_WIFI_NAN
 
   uint8_t buffer[1024];
   static uint8_t send_counter = 0;
@@ -675,7 +681,7 @@ int ID_OpenDrone::transmit_wifi(struct UTM_data* utm_data, int prepacked) {
 
   #endif  // NAN
 
-  #if ID_OD_WIFI_BEACON & 0
+  #if ID_OD_WIFI_BEACON
 
     #if USE_BEACON_FUNC
 
@@ -765,6 +771,9 @@ int ID_OpenDrone::transmit_wifi(struct UTM_data* utm_data, int prepacked) {
  */
 
 int ID_OpenDrone::transmit_ble(uint8_t* odid_msg, int length) {
+  if (!bt_mode) {
+    return 0;
+  }
   msecs = esp_timer_get_time() / 1000;
   ble_interval = msecs - last_ble;
   last_ble = msecs;

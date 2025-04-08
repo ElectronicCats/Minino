@@ -102,7 +102,8 @@
 // Functions in a processor specific file.
 //
 void construct2(void);
-void init2(char*, int, uint8_t*, uint8_t);
+void init_w(char*, int, uint8_t*, uint8_t);
+void init_ble();
 uint8_t* capability(void);
 int tag_rates(uint8_t*, int);
 int tag_ext_rates(uint8_t*, int);
@@ -135,6 +136,8 @@ class ID_OpenDrone {
     #endif
   int transmit_wifi(struct UTM_data*, int);
   int transmit_ble(uint8_t*, int);
+
+  bool bt_mode;
 
   int auth_page = 0, auth_page_count = 0, key_length = 0, iv_length = 0;
   char* UAS_operator;
