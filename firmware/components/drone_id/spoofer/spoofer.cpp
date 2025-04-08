@@ -2,7 +2,7 @@
 
 #include "esp_timer.h"
 
-void Spoofer::init() {
+void Spoofer::init(bool ble_drone) {
   // time things
   memset(&clock_tm, 0, sizeof(struct tm));
   clock_tm.tm_hour = 10;
@@ -18,7 +18,7 @@ void Spoofer::init() {
   utm_parameters.region = 1;
   utm_parameters.EU_category = 1;
   utm_parameters.EU_class = 5;
-  squitter.init(&utm_parameters);
+  squitter.init(&utm_parameters, ble_drone);
   memset(&utm_data, 0, sizeof(utm_data));
 }
 

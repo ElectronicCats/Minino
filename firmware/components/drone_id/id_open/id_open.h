@@ -119,7 +119,7 @@ void odid_initSystemData(ODID_System_data* data);
 class ID_OpenDrone {
  public:
   ID_OpenDrone();
-  void init(struct UTM_parameters*);
+  void init(struct UTM_parameters*, bool ble_drone = false);
   void set_self_id(char*);
   void set_auth(char*);
   void set_auth(uint8_t*, short int, uint8_t);

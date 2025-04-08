@@ -39,7 +39,7 @@ class Spoofer {
   std::string getID();
 
  public:
-  void init();
+  void init(bool ble_drone = false);
   void updateLocation(float latitude, float longitude);
   void update();
 };

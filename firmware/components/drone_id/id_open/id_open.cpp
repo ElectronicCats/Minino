@@ -169,8 +169,8 @@ ID_OpenDrone::ID_OpenDrone() {
  *
  */
 
-void ID_OpenDrone::init(UTM_parameters* parameters) {
-  bt_mode = true;
+void ID_OpenDrone::init(UTM_parameters* parameters, bool ble_drone) {
+  bt_mode = ble_drone;
 
   int status, i;
   char text[128];

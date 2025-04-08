@@ -11,9 +11,14 @@
 
 static int num_spoofers = 16;
 static Spoofer spoofers[16];
+static Spoofer ble_drone;
+static bool add_ble_drone = false;
 
 static void spoofing_task(void* pvParameters) {
   while (1) {
+    if (add_ble_drone) {
+      ble_drone.update();
+    }
     for (int i = 0; i < num_spoofers; i++) {
       spoofers[i].update();
       vTaskDelay(pdMS_TO_TICKS(200 / num_spoofers));
@@ -31,6 +36,9 @@ void odrone_id_set_wifi_ap(uint8_t channel) {
 }
 
 void odrone_id_set_location(float latitude, float longitude) {
+  if (add_ble_drone) {
+    ble_drone.updateLocation(latitude, longitude);
+  }
   for (int i = 0; i < num_spoofers; i++) {
     spoofers[i].updateLocation(latitude, longitude);
   }
@@ -48,7 +56,13 @@ void odrone_id_begin(uint8_t num_drones,
     spoofers[i].init();
     spoofers[i].updateLocation(latitude, longitude);
   }
+  ble_drone.init(true);
+  ble_drone.updateLocation(latitude, longitude);
   odrone_id_set_wifi_ap(channel);
   xTaskCreate(&spoofing_task, "spoofing_task", 4096, NULL, 5, NULL);
+}
+
+void odrone_id_set_ble_drone(bool enable) {
+  add_ble_drone = enable;
 }
 }
