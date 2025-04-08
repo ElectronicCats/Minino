@@ -29,11 +29,12 @@ static void list_submenu_options_modal() {
   for (uint8_t i = 0; i < (MIN(ctx->options_count, MAX_OPTIONS_NUM - 1)); i++) {
     bool is_selected = i + items_offset == ctx->selected_option;
     sprintf(str, "%s", ctx->options[i + items_offset]);
-    oled_screen_display_text(str, is_selected ? 16 : 8, i + modal_offset,
-                             is_selected);
+
     if (is_selected) {
-      oled_screen_display_bitmap(minino_face, 8, (i + modal_offset) * 8, 8, 8,
-                                 OLED_DISPLAY_NORMAL);
+      oled_screen_display_bmp_text(minino_face, str, (i + modal_offset), 8, 8,
+                                   is_selected);
+    } else {
+      oled_screen_display_text(str, 8, i + modal_offset, OLED_DISPLAY_NORMAL);
     }
   }
   oled_screen_display_show();
@@ -85,7 +86,7 @@ static void input_cb(uint8_t button_name, uint8_t button_event) {
       submenu_ctx->selected_option = submenu_ctx->selected_option == 0
                                          ? submenu_ctx->options_count - 1
                                          : submenu_ctx->selected_option - 1;
-      if (submenu_ctx->modal != NULL) {
+      if (submenu_ctx->modal) {
         list_submenu_options_modal();
       } else {
         list_submenu_options();
@@ -96,7 +97,7 @@ static void input_cb(uint8_t button_name, uint8_t button_event) {
           ++submenu_ctx->selected_option < submenu_ctx->options_count
               ? submenu_ctx->selected_option
               : 0;
-      if (submenu_ctx->modal != NULL) {
+      if (submenu_ctx->modal) {
         list_submenu_options_modal();
       } else {
         list_submenu_options();
@@ -115,10 +116,15 @@ void general_submenu(general_submenu_menu_t submenu) {
   submenu_ctx->exit_cb = submenu.exit_cb;
   submenu_ctx->selected_option = submenu.selected_option;
   submenu_ctx->modal = submenu.modal;
+  if (submenu.modal_title != NULL) {
+    submenu_ctx->modal_title = submenu.modal_title;
+  }
   menus_module_set_app_state(true, input_cb);
-  if (submenu_ctx->modal != NULL) {
+  if (submenu.modal != NULL) {
+    submenu_ctx->modal = true;
     list_submenu_options_modal();
   } else {
+    submenu_ctx->modal = false;
     list_submenu_options();
   }
 }

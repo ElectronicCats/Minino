@@ -2,6 +2,7 @@
 #include "animations_task.h"
 #include "bitmaps_general.h"
 #include "cmd_wifi.h"
+#include "deauth_screens.h"
 #include "esp_log.h"
 #include "general/general_screens.h"
 #include "general_notification.h"
@@ -57,10 +58,12 @@ static void wifi_settings_yn_handler(uint8_t option) {
 
 static void wifi_settings_connecting_animation() {
   oled_screen_clear_buffer();
+
 #ifdef CONFIG_RESOLUTION_128X64
-  uint8_t width = 56;
-  uint8_t height = 56;
+  uint8_t width = 32;
+  uint8_t height = 32;
   uint8_t x = (128 - width) / 2;
+  oled_screen_display_text_center("Connecting", 3, OLED_DISPLAY_NORMAL);
 #else
   uint8_t width = 32;
   uint8_t height = 32;
@@ -69,7 +72,7 @@ static void wifi_settings_connecting_animation() {
 #endif
 
   static uint8_t idx = 0;
-  oled_screen_display_bitmap(epd_bitmap_wifi_loading[idx], x, 1, width, height,
+  oled_screen_display_bitmap(wifi_loading[idx], x, 2, width, height,
                              OLED_DISPLAY_NORMAL);
   idx = ++idx > 3 ? 0 : idx;
   oled_screen_display_show();
@@ -100,6 +103,7 @@ static void wifi_settings_selected_handler(uint8_t option) {
       wifi_settings_show_connecting();
       wifi_ap_manager_connect_index_cb(selected_ap,
                                        wifi_settings_show_connection_cb);
+      break;
     }
     case WIFI_OPT_FORGET: {
       general_submenu_menu_t menu_opts = {0};
@@ -109,8 +113,12 @@ static void wifi_settings_selected_handler(uint8_t option) {
       menu_opts.selected_option = 0;
       menu_opts.exit_cb = wifi_settings_show_list;
       menu_opts.modal = true;
+      menu_opts.modal_title = "Are you sure?";
       general_submenu(menu_opts);
+      break;
     }
+    default:
+      break;
   }
 }
 
@@ -123,6 +131,7 @@ static void wifi_settings_show_options_list(uint8_t option) {
   menu_opts.selected_option = 0;
   menu_opts.exit_cb = wifi_settings_show_list;
   menu_opts.modal = true;
+  menu_opts.modal_title = "Options";
   general_submenu(menu_opts);
 }
 

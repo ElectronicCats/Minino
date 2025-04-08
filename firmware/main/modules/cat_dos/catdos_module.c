@@ -10,8 +10,10 @@
 #include <pthread.h>
 #include <string.h>
 #include "animations_task.h"
+#include "bitmaps_general.h"
 #include "cat_console.h"
 #include "cmd_wifi.h"
+#include "deauth_screens.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_wifi.h"
@@ -107,8 +109,8 @@ static const char* settings_help_txt[] = {
 void catdos_module_display_connecting() {
   oled_screen_clear_buffer();
 #ifdef CONFIG_RESOLUTION_128X64
-  uint8_t width = 56;
-  uint8_t height = 56;
+  uint8_t width = 32;
+  uint8_t height = 32;
   uint8_t x = (128 - width) / 2;
 #else
   uint8_t width = 32;
@@ -118,7 +120,7 @@ void catdos_module_display_connecting() {
 #endif
 
   static uint8_t idx = 0;
-  oled_screen_display_bitmap(epd_bitmap_wifi_loading[idx], x, 1, width, height,
+  oled_screen_display_bitmap(wifi_loading[idx], x, 1, width, height,
                              OLED_DISPLAY_NORMAL);
   idx = ++idx > 3 ? 0 : idx;
   oled_screen_display_show();
@@ -260,14 +262,13 @@ void catdos_module_send_attack() {
 
 static bool catdos_module_display_if_nconnect() {
   bool connected = preferences_get_bool("wifi_connected", false);
-  general_notification_ctx_t notification = {0};
-
-  notification.duration_ms = 2000;
-  notification.head = "Wifi";
   if (!connected) {
+    general_notification_ctx_t notification = {0};
+    notification.duration_ms = 2000;
+    notification.head = "Wifi";
     notification.body = "Connect first";
+    general_notification(notification);
   }
-  general_notification(notification);
   return connected;
 }
 
