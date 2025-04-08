@@ -63,7 +63,7 @@ static void wifi_settings_connecting_animation() {
   uint8_t width = 32;
   uint8_t height = 32;
   uint8_t x = (128 - width) / 2;
-  oled_screen_display_text_center("Connecting", 3, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("Connecting", 4, OLED_DISPLAY_NORMAL);
 #else
   uint8_t width = 32;
   uint8_t height = 32;
