@@ -16,10 +16,22 @@ static const char* TAG = "MODBUS_TCP";
 
 static esp_netif_t* wifi_netif;
 static volatile bool is_running = false;
-
-int modbus_tcp_connect();
-void modbus_tcp_request(int sock);
+static int modbus_tcp_connect(uint16_t port, char* ip);
+static void modbus_tcp_request(int sock, uint8_t* pkt, size_t pkt_len);
 void reading_task();
+
+static int skt;
+
+// (ID 1, address 0, 1 register)
+static const uint8_t request[] = {
+    0x00, 0x01,  // Transaction ID
+    0x00, 0x00,  // Protocol ID
+    0x00, 0x06,  // Length
+    0x02,        // Unit ID
+    0x03,        // Function Code (Read Holding Registers)
+    0x00, 0x00,  // Start Address High/Low
+    0x00, 0x01   // Number of Registers High/Low
+};
 
 static void wifi_event_handler(void* arg,
                                esp_event_base_t event_base,
@@ -55,7 +67,7 @@ static void wifi_event_handler(void* arg,
   }
 }
 
-void wifi_init() {
+void wifi_init(char* ssid, char* pass) {
   ESP_ERROR_CHECK(nvs_flash_init());
   ESP_ERROR_CHECK(esp_netif_init());
   esp_event_loop_create_default();
@@ -69,9 +81,6 @@ void wifi_init() {
       WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL));
   ESP_ERROR_CHECK(esp_event_handler_instance_register(
       IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL));
-
-  char* ssid = modubs_dos_prefs_get_prefs()->ssid;
-  char* pass = modubs_dos_prefs_get_prefs()->pass;
 
   wifi_config_t wifi_config = {
       .sta =
@@ -113,7 +122,7 @@ void modbus_dos_stop() {
   ESP_ERROR_CHECK(nvs_flash_deinit());
 }
 
-int modbus_tcp_connect() {
+int modbus_tcp_connect(uint16_t port, char* ip) {
   int sock;
   struct sockaddr_in server_addr;
 
@@ -124,8 +133,8 @@ int modbus_tcp_connect() {
   }
 
   server_addr.sin_family = AF_INET;
-  server_addr.sin_port = htons(modubs_dos_prefs_get_prefs()->port);
-  server_addr.sin_addr.s_addr = inet_addr(modubs_dos_prefs_get_prefs()->ip);
+  server_addr.sin_port = htons(port);
+  server_addr.sin_addr.s_addr = inet_addr(ip);
 
   if (connect(sock, (struct sockaddr*) &server_addr, sizeof(server_addr)) < 0) {
     ESP_LOGE(TAG, "Error connecting to Modbus server");
@@ -137,22 +146,11 @@ int modbus_tcp_connect() {
   return sock;
 }
 
-void modbus_tcp_request(int sock) {
-  // (ID 1, address 0, 1 register)
-  uint8_t request[] = {
-      0x00, 0x01,  // Transaction ID
-      0x00, 0x00,  // Protocol ID
-      0x00, 0x06,  // Length
-      0x01,        // Unit ID
-      0x03,        // Function Code (Read Holding Registers)
-      0x00, 0x00,  // Start Address High/Low
-      0x00, 0x01   // Number of Registers High/Low
-  };
-
+static void modbus_tcp_request(int sock, uint8_t* pkt, size_t pkt_len) {
   int flags = fcntl(sock, F_GETFL, 0);
   fcntl(sock, F_SETFL, flags | O_NONBLOCK);
 
-  if (send(sock, request, sizeof(request), 0) < 0) {
+  if (send(sock, pkt, pkt_len, 0) < 0) {
     ESP_LOGE(TAG, "Error sending Modbus request");
     return;
   }
@@ -185,17 +183,31 @@ void modbus_tcp_request(int sock) {
 
 void reading_task() {
   is_running = true;
-  while (is_running) {
-    int sock = modbus_tcp_connect();
-    if (sock >= 0) {
-      modbus_tcp_request(sock);
-      //   vTaskDelay(500);
-    }
-    close(sock);
+  uint16_t port = modubs_dos_prefs_get_prefs()->port;
+  char* ip = modubs_dos_prefs_get_prefs()->ip;
+  // while (is_running) {
+  skt = modbus_tcp_connect(port, ip);
+  if (skt >= 0) {
+    modbus_tcp_request(skt, request, sizeof(request));
+    //   vTaskDelay(500);
   }
+  close(skt);
+  // }
   vTaskDelete(NULL);
 }
 
 void modbus_dos_begin() {
-  wifi_init();
+  char* ssid = modubs_dos_prefs_get_prefs()->ssid;
+  char* pass = modubs_dos_prefs_get_prefs()->pass;
+  wifi_init(ssid, pass);
+}
+
+void modbus_dos_send_pkt(uint8_t* pkt, size_t pkt_len) {
+  uint16_t port = modubs_dos_prefs_get_prefs()->port;
+  char* ip = modubs_dos_prefs_get_prefs()->ip;
+  int _skt = modbus_tcp_connect(port, ip);
+  if (_skt >= 0) {
+    modbus_tcp_request(_skt, pkt, pkt_len);
+  }
+  close(_skt);
 }
