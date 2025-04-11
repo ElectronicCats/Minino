@@ -140,6 +140,16 @@ static void wifi_settings_exit_app() {
   wifi_settings_scenes_main();
 }
 
+static void wifi_settings_show_no_ap_main() {
+  general_notification_ctx_t notification = {0};
+
+  notification.duration_ms = 2000;
+  notification.head = "Not found";
+  notification.body = "No APs saved";
+  general_notification(notification);
+  wifi_settings_scenes_main();
+}
+
 static void wifi_settings_show_no_ap() {
   general_notification_ctx_t notification = {0};
 
@@ -154,6 +164,7 @@ static void wifi_settings_show_list() {
   aps_count = preferences_get_int("count_ap", 0);
 
   if (aps_count == 0) {
+    wifi_settings_show_no_ap_main();
     return;
   }
   for (int i = 0; i < aps_count; i++) {
