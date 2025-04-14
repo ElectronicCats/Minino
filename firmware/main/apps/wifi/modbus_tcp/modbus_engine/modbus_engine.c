@@ -227,3 +227,16 @@ modbus_engine_t* modbus_engine_get_ctx() {
   ESP_LOGW(TAG, "Modbus Engine is not initialized yet");
   return NULL;
 }
+
+void modbus_engine_print_status() {
+  ESP_LOGI(TAG, "Modbus request");
+  for (int i = 0; i < modbus_engine->request_len; i++) {
+    printf("%02X ", modbus_engine->request[i]);
+  }
+  printf("\n");
+  ESP_LOGI(TAG, "Req Len: %d", modbus_engine->request_len);
+  ESP_LOGI(TAG, "IP: %s", modbus_engine->ip);
+  ESP_LOGI(TAG, "Port: %d", modbus_engine->port);
+  ESP_LOGI(TAG, "Sock: %d", modbus_engine->sock);
+  ESP_LOGI(TAG, "Wifi Connected: %d\n", modbus_engine->wifi_connected);
+}

@@ -21,7 +21,7 @@
 #include "i2c_scanner.h"
 #include "logs_output.h"
 #include "modbus_dos.h"
-#include "modbus_dos_scenes.h"
+#include "modbus_tcp_scenes.h"
 #include "open_thread_module.h"
 #include "ota_module.h"
 #include "sd_card_settings_module.h"
@@ -257,12 +257,12 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = drone_id_scenes_main,
      .on_exit_cb = NULL,
      .is_visible = true},
-    {.display_name = "Modbus DOS",
+    {.display_name = "Modbus TCP",
      .menu_idx = MENU_WIFI_MBDOS_ID,
      .parent_idx = MENU_WIFI_APPS,
-     .entry_cmd = "modbus_dos",
+     .entry_cmd = "modbus_tcp",
      .last_selected_submenu = 0,
-     .on_enter_cb = modbus_dos_scenes_main,
+     .on_enter_cb = modbus_tcp_scenes_entry,
      .on_exit_cb = NULL,
      .is_visible = true},
 #endif

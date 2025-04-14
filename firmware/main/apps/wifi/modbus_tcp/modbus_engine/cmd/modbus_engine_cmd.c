@@ -131,8 +131,8 @@ static int cmd_mb_engine_set_server(int argc, char** argv) {
     return 1;
   }
 
-  modbus_engine_set_server(mb_engine_set_server_args.ip,
-                           mb_engine_set_server_args.port);
+  modbus_engine_set_server(mb_engine_set_server_args.ip->sval[0],
+                           mb_engine_set_server_args.port->ival[0]);
   return 0;
 }
 
@@ -151,6 +151,11 @@ static int cmd_mb_engine_send_req(int argc, char** argv) {
   return 0;
 }
 
+static int cmd_mb_engine_print_status(int argc, char** argv) {
+  modbus_engine_print_status();
+  return 0;
+}
+
 void modbus_engine_cmd_register_cmds() {
   mb_engine_set_req_args.function = arg_str1(NULL, NULL, "<coils / registers>",
                                              "Function: registers or coils");
@@ -166,6 +171,7 @@ void modbus_engine_cmd_register_cmds() {
       .command = "mb_engine_set_req",
       .help = "Generates a Modbus TCP request for multiple writes",
       .hint = NULL,
+      .category = "Modbus",
       .func = &cmd_mb_engine_set_request,
       .argtable = &mb_engine_set_req_args};
 
@@ -173,19 +179,21 @@ void modbus_engine_cmd_register_cmds() {
       arg_str1(NULL, NULL, "<ip>", "Server ip Addr. Ex: 192.168.100.100");
   mb_engine_set_server_args.port =
       arg_int1(NULL, NULL, "<port>", "Server Port, Ex: 502");
-  mb_engine_set_req_args.end = arg_end(3);
+  mb_engine_set_server_args.end = arg_end(3);
 
   const esp_console_cmd_t mb_set_server_cmd = {
       .command = "mb_engine_set_server",
       .help = "Setup the target Modbus Server",
       .hint = NULL,
+      .category = "Modbus",
       .func = &cmd_mb_engine_set_server,
-      .argtable = &mb_engine_set_req_args};
+      .argtable = &mb_engine_set_server_args};
 
   const esp_console_cmd_t mb_connect_cmd = {
       .command = "mb_engine_connect",
       .help = "It connects Minino to the Modbus Server",
       .hint = NULL,
+      .category = "Modbus",
       .func = &cmd_mb_engine_connect,
       .argtable = NULL};
 
@@ -193,6 +201,7 @@ void modbus_engine_cmd_register_cmds() {
       .command = "mb_engine_disconnect",
       .help = "It disconnects Minino from the Modbus Server",
       .hint = NULL,
+      .category = "Modbus",
       .func = &cmd_mb_engine_disconnect,
       .argtable = NULL};
 
@@ -200,11 +209,21 @@ void modbus_engine_cmd_register_cmds() {
       .command = "mb_engine_send_req",
       .help = "Sends a request to the Modbus Server",
       .hint = NULL,
+      .category = "Modbus",
       .func = &cmd_mb_engine_send_req,
+      .argtable = NULL};
+
+  const esp_console_cmd_t mb_print_status_cmd = {
+      .command = "mb_engine_status",
+      .help = "Prints the modbus engine Status",
+      .hint = NULL,
+      .category = "Modbus",
+      .func = &cmd_mb_engine_print_status,
       .argtable = NULL};
 
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_set_req_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_set_server_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_connect_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_send_req_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&mb_print_status_cmd));
 }
