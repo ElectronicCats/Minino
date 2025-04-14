@@ -219,6 +219,9 @@ void modbus_engine_begin() {
   modbus_engine = calloc(1, sizeof(modbus_engine_t));
   modbus_engine->ip = modubs_tcp_prefs_get_prefs()->ip;
   modbus_engine->port = modubs_tcp_prefs_get_prefs()->port;
+  modbus_engine->request_len = modubs_tcp_prefs_get_prefs()->request_len;
+  memcpy(modbus_engine->request, modubs_tcp_prefs_get_prefs()->request,
+         modbus_engine->request_len);
 
   if (!modbus_engine->wifi_connected) {  // TODO: Wifi connection refactor
     char* ssid = modubs_dos_prefs_get_prefs()->ssid;

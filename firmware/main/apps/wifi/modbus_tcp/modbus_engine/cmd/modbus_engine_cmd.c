@@ -9,6 +9,7 @@
 
 #define TAG "Modbus Engine CMD"
 
+#include "modbus_attacks.h"
 #include "modbus_engine.h"
 
 static struct {
@@ -221,9 +222,18 @@ void modbus_engine_cmd_register_cmds() {
       .func = &cmd_mb_engine_print_status,
       .argtable = NULL};
 
+  const esp_console_cmd_t mb_writer_attack_cmd = {
+      .command = "mb_engine_start_writer",
+      .help = "Sends the request in a loop",
+      .hint = NULL,
+      .category = "Modbus",
+      .func = &modbus_attacks_writer,
+      .argtable = NULL};
+
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_set_req_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_set_server_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_connect_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_send_req_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_print_status_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&mb_writer_attack_cmd));
 }
