@@ -9,7 +9,7 @@
 
 #define TAG "Modbus Client CMD"
 
-#include "modbus_dos.h"
+#include "modbus_engine.h"
 
 static struct {
   struct arg_str* function;
@@ -37,7 +37,7 @@ static int cmd_modbus_write(int argc, char** argv) {
   uint8_t function_code =
       get_write_function_code(modbus_write_args.function->sval[0]);
   if (function_code == 0xFF) {
-    printf("Invalid function. Use 'coils' or 'registers'.\n");
+    ESP_LOGE(TAG, "Invalid function. Use 'coils' or 'registers'.\n");
     return 1;
   }
 
@@ -46,7 +46,7 @@ static int cmd_modbus_write(int argc, char** argv) {
   int num_values = modbus_write_args.values->count;
 
   if (num_values == 0) {
-    printf("You must provide at least one value to write.\n");
+    ESP_LOGE(TAG, "You must provide at least one value to write.\n");
     return 1;
   }
 
@@ -108,13 +108,20 @@ static int cmd_modbus_write(int argc, char** argv) {
   request[4] = data_len >> 8;
   request[5] = data_len & 0xFF;
 
-  ESP_LOGI("MODBUS", "Modbus write request generated:");
+  ESP_LOGI(TAG, "Modbus write request generated:");
   for (int i = 0; i < idx; i++) {
     printf("%02X ", request[i]);
   }
   printf("\n");
 
-  modbus_dos_send_pkt(request, idx);
+  // modbus_dos_send_pkt(request, idx);
+  modbus_engine_set_request(request, idx);
+  if (!modbus_engine_connect()) {
+    ESP_LOGE(TAG, "Server Unreachable");
+    return 1;
+  }
+  modbus_engine_send_request();
+  modbus_engine_disconnect();
 
   return 0;
 }

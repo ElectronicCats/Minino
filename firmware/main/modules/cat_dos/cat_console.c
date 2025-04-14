@@ -29,6 +29,8 @@
 #include "drone_id_cmd.h"
 #include "modbus_client_cmd.h"
 #include "modbus_dos_cmd.h"
+#include "modbus_engine.h"
+#include "modbus_engine_cmd.h"
 
 static const char* TAG = "cat_console";
 #define PROMPT_STR "minino"
@@ -96,6 +98,7 @@ void cat_console_begin() {
   drone_id_cmd_register_location_cmd();
   modbus_dos_cmd_register_cmds();
   modbus_client_cmd_register_cmds();
+  modbus_engine_cmd_register_cmds();
 
   /* Prompt to be printed before each line.
    * This can be customized, made dynamic, etc.

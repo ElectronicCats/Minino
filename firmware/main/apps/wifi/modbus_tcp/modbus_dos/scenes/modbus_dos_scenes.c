@@ -8,6 +8,7 @@
 #include "modbus_dos.h"
 #include "modbus_dos_prefs.h"
 #include "modbus_dos_screens.h"
+#include "modbus_engine.h"
 
 static uint8_t last_main_selection = 0;
 static uint8_t last_settings_selection = 0;
@@ -32,7 +33,8 @@ static void main_handler(uint8_t option) {
   switch (option) {
     case MAIN_OPTOINS_RUN:
       if (modbus_dos_prefs_check()) {
-        modbus_dos_begin();
+        // modbus_dos_begin();
+        modbus_engine_begin();
         modbus_dos_screens_main();
       } else {
         conf_missing_notification();

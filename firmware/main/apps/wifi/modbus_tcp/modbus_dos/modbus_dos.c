@@ -67,7 +67,7 @@ static void wifi_event_handler(void* arg,
   }
 }
 
-void wifi_init(char* ssid, char* pass) {
+static void wifi_init(char* ssid, char* pass) {
   ESP_ERROR_CHECK(nvs_flash_init());
   ESP_ERROR_CHECK(esp_netif_init());
   esp_event_loop_create_default();
