@@ -21,3 +21,7 @@ static void writer_task() {
 void modbus_attacks_writer() {
   xTaskCreate(writer_task, "writer_task", 4096, NULL, 10, NULL);
 }
+
+void modbus_attacks_stop_writer() {
+  attacking = false;
+}
