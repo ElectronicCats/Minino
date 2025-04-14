@@ -667,43 +667,10 @@ int ID_OpenDrone::transmit_wifi(struct UTM_data* utm_data, int prepacked) {
     wifi_status = transmit_wifi2(buffer, length);
   }
 
-  if ((Debug_Serial) && ((length < 0) || (wifi_status != 0))) {
-    sprintf(text,
-            "odid_wifi_build_nan_sync_beacon_frame() = %d, transmit_wifi2() = "
-            "%d\r\n",
-            length, (int) wifi_status);
-    Debug_Serial->print(text);
-  }
-
   if ((length = odid_wifi_build_message_pack_nan_action_frame(
            &UAS_data, (char*) WiFi_mac_addr, ++send_counter, buffer,
            sizeof(buffer))) > 0) {
     wifi_status = transmit_wifi2(buffer, length);
-  }
-
-  if (Debug_Serial) {
-    if ((length < 0) || (wifi_status != 0)) {
-      sprintf(text,
-              "odid_wifi_build_message_pack_nan_action_frame() = %d, "
-              "transmit_wifi2() = %d\r\n",
-              length, (int) wifi_status);
-      Debug_Serial->print(text);
-
-    #if DIAGNOSTICS
-
-    } else {
-      sprintf(text, "ID_OpenDrone::%s ... ", __func__);
-      Debug_Serial->print(text);
-
-      for (int i = 0; i < 32; ++i) {
-        sprintf(text, "%02x ", buffer[16 + i]);
-        Debug_Serial->print(text);
-      }
-
-      Debug_Serial->print(" ... \r\n");
-
-    #endif
-    }
   }
 
   #endif  // NAN

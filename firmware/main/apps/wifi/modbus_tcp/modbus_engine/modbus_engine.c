@@ -11,6 +11,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "nvs_flash.h"
+#include "wifi_ap_manager.h"
 
 #include "modbus_dos_prefs.h"
 
@@ -212,6 +213,8 @@ void modbus_engine_begin() {
   modbus_engine = calloc(1, sizeof(modbus_engine_t));
   modbus_engine->ip = modubs_dos_prefs_get_prefs()->ip;
   modbus_engine->port = modubs_dos_prefs_get_prefs()->port;
+
+  modbus_engine->wifi_connected = wifi_ap_manager_is_connect();
 
   if (!modbus_engine->wifi_connected) {
     char* ssid = modubs_dos_prefs_get_prefs()->ssid;
