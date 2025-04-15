@@ -121,7 +121,7 @@ static int cmd_modbus_write(int argc, char** argv) {
     return 1;
   }
   modbus_engine_send_request();
-  modbus_engine_disconnect();
+  // modbus_engine_disconnect();
 
   return 0;
 }

@@ -19,6 +19,24 @@ static const char* TAG = "MODBUS_ENGINE";
 
 static modbus_engine_t* modbus_engine;
 static esp_netif_t* wifi_netif;
+static TaskHandle_t keep_alive_task = NULL;
+
+static void modbus_engine_keep_alive(void* pvParameters) {
+  uint8_t packet[2] = {0x00, 0x01};
+  ESP_LOGI(TAG, "Has socket %d", modbus_engine->sock);
+  int flags = fcntl(modbus_engine->sock, F_GETFL, 0);
+  fcntl(modbus_engine->sock, F_SETFL, flags | O_NONBLOCK);
+
+  while (modbus_engine->sock) {
+    if (send(modbus_engine->sock, packet, 2, 0) < 0) {
+      ESP_LOGI(TAG, "Has socket %d", modbus_engine->sock);
+      ESP_LOGE(TAG, "Error sending Modbus request");
+      modbus_engine_connect();
+    }
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
+  vTaskDelete(keep_alive_task);
+}
 
 static void wifi_event_handler(void* arg,
                                esp_event_base_t event_base,
@@ -140,6 +158,11 @@ int modbus_engine_connect() {
 
   ESP_LOGI(TAG, "TCP connection with Modbus established");
   modbus_engine->sock = sock;
+
+  if (keep_alive_task == NULL) {
+    xTaskCreate(modbus_engine_keep_alive, "keep_alive", 4096, NULL, 5,
+                &keep_alive_task);
+  }
   return sock;
 }
 
@@ -174,7 +197,7 @@ void modbus_engine_send_request() {
   fcntl(modbus_engine->sock, F_SETFL, flags | O_NONBLOCK);
 
   if (send(modbus_engine->sock, modbus_engine->request,
-           modbus_engine->request_len, 0) < 0) {
+           sizeof(modbus_engine->request), 0) < 0) {
     ESP_LOGE(TAG, "Error sending Modbus request");
     return;
   }
