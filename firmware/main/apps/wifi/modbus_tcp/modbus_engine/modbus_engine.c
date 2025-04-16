@@ -181,6 +181,8 @@ void modbus_engine_send_request() {
 
   ESP_LOGI(TAG, "Modbus request sent");
 
+  // TODO: Add a flag to wait response or not
+
   struct timeval timeout = {.tv_sec = 1, .tv_usec = 0};
   fd_set read_fds;
   FD_ZERO(&read_fds);
@@ -224,9 +226,9 @@ void modbus_engine_begin() {
          modbus_engine->request_len);
 
   if (!modbus_engine->wifi_connected) {  // TODO: Wifi connection refactor
-    char* ssid = modubs_dos_prefs_get_prefs()->ssid;
-    char* pass = modubs_dos_prefs_get_prefs()->pass;
-    wifi_init(ssid, pass);
+    // char* ssid = modubs_dos_prefs_get_prefs()->ssid;
+    // char* pass = modubs_dos_prefs_get_prefs()->pass;
+    wifi_init("ssid", "password");  // Hardcoded wifi credentials
   }
 }
 

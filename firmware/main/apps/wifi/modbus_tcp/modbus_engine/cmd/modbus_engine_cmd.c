@@ -163,7 +163,7 @@ static int cmd_mb_engine_start_writer(int argc, char** argv) {
 }
 
 static int cmd_mb_engine_stop_writer(int argc, char** argv) {
-  modbus_attacks_stop_writer();
+  modbus_attacks_stop();
   return 0;
 }
 
@@ -251,6 +251,7 @@ void modbus_engine_cmd_register_cmds() {
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_set_req_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_set_server_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_connect_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&mb_disconnect_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_send_req_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_print_status_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_writer_attack_cmd));
