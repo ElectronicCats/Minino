@@ -216,6 +216,7 @@ modbus_engine_t* modbus_engine_get_ctx() {
 
 void modbus_engine_print_status() {
   if (!modbus_engine) {
+    ESP_LOGW(TAG, "You need to use this with the modbus app open");
     return;
   }
   ESP_LOGI(TAG, "Modbus request");
@@ -227,6 +228,6 @@ void modbus_engine_print_status() {
   ESP_LOGI(TAG, "IP: %s", modbus_engine->ip);
   ESP_LOGI(TAG, "Port: %d", modbus_engine->port);
   ESP_LOGI(TAG, "Sock: %d", modbus_engine->sock);
-  ESP_LOGI(TAG, "Wifi Connected: %d\n", modbus_engine->wifi_connected);
+  ESP_LOGI(TAG, "Wifi Connected: %d", modbus_engine->wifi_connected);
   ESP_LOGI(TAG, "Ip Configured: %d\n", modbus_engine->ip_set);
 }

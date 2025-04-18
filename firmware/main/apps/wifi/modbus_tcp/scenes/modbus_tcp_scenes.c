@@ -71,18 +71,16 @@ static void modbus_tcp_scenes_show_target() {
     show_no_connection_notify();
   }
   if (!mbus_ctx->ip_set) {
-    ESP_LOGW("TAG", "Something went wrong");
     show_no_target_notify();
     return;
   }
-  ESP_LOGW("TAG", "Something went wrong2 %s %d", mbus_ctx->ip, mbus_ctx->port);
   char* body_text[100];
   sprintf(body_text, "IP: %s Port: %d", mbus_ctx->ip, mbus_ctx->port);
   general_notification_ctx_t notification = {0};
   notification.head = "Target";
   notification.body = body_text;
   notification.on_exit = modbus_tcp_scenes_main;
-  general_notification(notification);
+  general_notification_handler(notification);
 }
 
 static void handle_attack_selector(uint8_t option) {
