@@ -26,6 +26,8 @@ void wifi_ap_manager_unregister_callback();
 int wifi_ap_manager_connect_index_cb(int index, app_callback cb);
 int wifi_ap_manager_delete_ap_by_index(int index);
 bool wifi_ap_manager_is_connect();
+void wifi_ap_manager_list_aps();
+int wifi_ap_manager_get_count();
 
 #define WIFI_AP_CONFIG()                          \
   {                                               \

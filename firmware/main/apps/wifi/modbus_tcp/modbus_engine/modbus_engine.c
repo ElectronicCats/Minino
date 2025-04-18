@@ -20,6 +20,24 @@ static const char* TAG = "MODBUS_ENGINE";
 
 static modbus_engine_t* modbus_engine;
 static esp_netif_t* wifi_netif;
+static TaskHandle_t keep_alive_task = NULL;
+
+static void modbus_engine_keep_alive(void* pvParameters) {
+  uint8_t packet[2] = {0x00, 0x01};
+  ESP_LOGI(TAG, "Has socket %d", modbus_engine->sock);
+  int flags = fcntl(modbus_engine->sock, F_GETFL, 0);
+  fcntl(modbus_engine->sock, F_SETFL, flags | O_NONBLOCK);
+
+  while (modbus_engine->sock) {
+    if (send(modbus_engine->sock, packet, 2, 0) < 0) {
+      ESP_LOGI(TAG, "Has socket %d", modbus_engine->sock);
+      ESP_LOGE(TAG, "Error sending Modbus request");
+      modbus_engine_connect();
+    }
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
+  vTaskDelete(keep_alive_task);
+}
 
 static void wifi_event_handler(void* arg,
                                esp_event_base_t event_base,
@@ -84,10 +102,6 @@ static void wifi_init(char* ssid, char* pass) {
 }
 
 void modbus_engine_set_request(uint8_t* request, size_t request_len) {
-  if (!modbus_engine) {
-    ESP_LOGW(TAG, "Please Call modbus_engine_begin() first");
-    return;
-  }
   memcpy(modbus_engine->request, request, request_len);
   modbus_engine->request_len = request_len;
 
@@ -96,7 +110,8 @@ void modbus_engine_set_request(uint8_t* request, size_t request_len) {
 
 void modbus_engine_set_server(char* ip, int port) {
   if (!modbus_engine) {
-    ESP_LOGW(TAG, "Please Call modbus_engine_begin() first");
+    ESP_LOGW(TAG,
+             "First uset the command mb_engine_set_req for setup the request.");
     return;
   }
   strcpy(modbus_engine->ip, ip);
@@ -107,14 +122,16 @@ void modbus_engine_set_server(char* ip, int port) {
 
 int modbus_engine_connect() {
   if (!modbus_engine) {
-    ESP_LOGW(TAG, "Please Call modbus_engine_begin() first");
+    ESP_LOGW(TAG,
+             "First uset the command mb_engine_set_req for setup the request.");
     return -1;
   }
 
-  if (!modbus_engine->wifi_connected) {
+  if (!modbus_engine->wifi_connected && !wifi_ap_manager_is_connect()) {
     ESP_LOGE(TAG, "Wifi is Disconnected");
     return -1;
   }
+  modbus_engine->wifi_connected = true;
 
   if (modbus_engine->sock) {
     modbus_engine_disconnect();
@@ -141,12 +158,18 @@ int modbus_engine_connect() {
 
   ESP_LOGI(TAG, "TCP connection with Modbus established");
   modbus_engine->sock = sock;
+
+  if (keep_alive_task == NULL) {
+    xTaskCreate(modbus_engine_keep_alive, "keep_alive", 4096, NULL, 5,
+                &keep_alive_task);
+  }
   return sock;
 }
 
 void modbus_engine_disconnect() {
   if (!modbus_engine) {
-    ESP_LOGW(TAG, "Please Call modbus_engine_begin() first");
+    ESP_LOGW(TAG,
+             "First uset the command mb_engine_set_req for setup the request.");
     return;
   }
   close(modbus_engine->sock);
@@ -156,7 +179,8 @@ void modbus_engine_disconnect() {
 
 void modbus_engine_send_request() {
   if (!modbus_engine) {
-    ESP_LOGW(TAG, "Please Call modbus_engine_begin() first");
+    ESP_LOGW(TAG,
+             "First uset the command mb_engine_set_req for setup the request.");
     return;
   }
 
@@ -226,11 +250,22 @@ void modbus_engine_begin() {
   memcpy(modbus_engine->request, modubs_tcp_prefs_get_prefs()->request,
          modbus_engine->request_len);
 
-  if (!modbus_engine->wifi_connected) {  // TODO: Wifi connection refactor
+  if (!wifi_ap_manager_is_connect()) {  // TODO: Wifi connection refactor
     // char* ssid = modubs_dos_prefs_get_prefs()->ssid;
     // char* pass = modubs_dos_prefs_get_prefs()->pass;
-    wifi_init("ssid", "password");  // Hardcoded wifi credentials
+    // wifi_init("Hacknet", "password");  // Hardcoded wifi credentials
+    if (wifi_ap_manager_get_count() == 0) {
+      ESP_LOGW(TAG,
+               "Please use command save to add a AP to connect with, then use "
+               "command connect with the index of the AP.");
+      return;
+    }
+    ESP_LOGW(TAG,
+             "Please first use command connect with the index of one of the "
+             "following saved APS or add new one:");
+    wifi_ap_manager_list_aps();
   }
+  modbus_engine->wifi_connected = true;
 }
 
 modbus_engine_t* modbus_engine_get_ctx() {

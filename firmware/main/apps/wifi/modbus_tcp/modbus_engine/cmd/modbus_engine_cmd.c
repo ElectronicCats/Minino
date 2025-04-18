@@ -41,6 +41,12 @@ static int cmd_mb_engine_set_request(int argc, char** argv) {
     return 1;
   }
 
+  modbus_engine_t* mbus_ctx = modbus_engine_get_ctx();
+  if (mbus_ctx == NULL) {
+    modbus_engine_begin();
+    return 1;
+  }
+
   uint8_t function_code =
       get_write_function_code(mb_engine_set_req_args.function->sval[0]);
   if (function_code == 0xFF) {
@@ -182,7 +188,7 @@ void modbus_engine_cmd_register_cmds() {
       .command = "mb_engine_set_req",
       .help = "Generates a Modbus TCP request for multiple writes",
       .hint = NULL,
-      .category = "Modbus",
+      .category = "modbus",
       .func = &cmd_mb_engine_set_request,
       .argtable = &mb_engine_set_req_args};
 
@@ -196,7 +202,7 @@ void modbus_engine_cmd_register_cmds() {
       .command = "mb_engine_set_server",
       .help = "Setup the target Modbus Server",
       .hint = NULL,
-      .category = "Modbus",
+      .category = "modbus",
       .func = &cmd_mb_engine_set_server,
       .argtable = &mb_engine_set_server_args};
 
@@ -204,7 +210,7 @@ void modbus_engine_cmd_register_cmds() {
       .command = "mb_engine_connect",
       .help = "It connects Minino to the Modbus Server",
       .hint = NULL,
-      .category = "Modbus",
+      .category = "modbus",
       .func = &cmd_mb_engine_connect,
       .argtable = NULL};
 
@@ -212,7 +218,7 @@ void modbus_engine_cmd_register_cmds() {
       .command = "mb_engine_disconnect",
       .help = "It disconnects Minino from the Modbus Server",
       .hint = NULL,
-      .category = "Modbus",
+      .category = "modbus",
       .func = &cmd_mb_engine_disconnect,
       .argtable = NULL};
 
@@ -220,7 +226,7 @@ void modbus_engine_cmd_register_cmds() {
       .command = "mb_engine_send_req",
       .help = "Sends a request to the Modbus Server",
       .hint = NULL,
-      .category = "Modbus",
+      .category = "modbus",
       .func = &cmd_mb_engine_send_req,
       .argtable = NULL};
 
@@ -228,7 +234,7 @@ void modbus_engine_cmd_register_cmds() {
       .command = "mb_engine_status",
       .help = "Prints the modbus engine Status",
       .hint = NULL,
-      .category = "Modbus",
+      .category = "modbus",
       .func = &cmd_mb_engine_print_status,
       .argtable = NULL};
 
@@ -236,7 +242,7 @@ void modbus_engine_cmd_register_cmds() {
       .command = "mb_engine_start_writer",
       .help = "Sends the request in a loop",
       .hint = NULL,
-      .category = "Modbus",
+      .category = "modbus",
       .func = &cmd_mb_engine_start_writer,
       .argtable = NULL};
 
@@ -244,7 +250,7 @@ void modbus_engine_cmd_register_cmds() {
       .command = "mb_engine_stop_writer",
       .help = "Stops the writer attack",
       .hint = NULL,
-      .category = "Modbus",
+      .category = "modbus",
       .func = &cmd_mb_engine_stop_writer,
       .argtable = NULL};
 
