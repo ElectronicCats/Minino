@@ -9,6 +9,7 @@ typedef struct {
   size_t request_len;
   char* ip;
   int port;
+  bool ip_set;
 } modbus_tcp_prefs_t;
 
 void modbus_tcp_prefs_begin();

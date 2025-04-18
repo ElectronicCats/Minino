@@ -19,52 +19,20 @@
 static const char* TAG = "MODBUS_ENGINE";
 
 static modbus_engine_t* modbus_engine;
-static esp_netif_t* wifi_netif;
 static TaskHandle_t keep_alive_task = NULL;
 
 static void modbus_engine_keep_alive(void* pvParameters) {
   uint8_t packet[2] = {0x00, 0x01};
-  ESP_LOGI(TAG, "Has socket %d", modbus_engine->sock);
   int flags = fcntl(modbus_engine->sock, F_GETFL, 0);
   fcntl(modbus_engine->sock, F_SETFL, flags | O_NONBLOCK);
 
   while (modbus_engine->sock) {
     if (send(modbus_engine->sock, packet, 2, 0) < 0) {
-      ESP_LOGI(TAG, "Has socket %d", modbus_engine->sock);
-      ESP_LOGE(TAG, "Error sending Modbus request");
       modbus_engine_connect();
     }
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
   vTaskDelete(keep_alive_task);
-}
-
-static void wifi_event_handler(void* arg,
-                               esp_event_base_t event_base,
-                               int32_t event_id,
-                               void* event_data) {
-  if (event_base == WIFI_EVENT) {
-    switch (event_id) {
-      case WIFI_EVENT_STA_START:
-        ESP_LOGI(TAG, "WiFi starting...");
-        modbus_engine->wifi_connected = false;
-        esp_wifi_connect();
-        break;
-      case WIFI_EVENT_STA_DISCONNECTED:
-        ESP_LOGW(TAG, "WiFi disconnected. Retrying...");
-        modbus_engine->wifi_connected = false;
-        esp_wifi_connect();
-        break;
-      case WIFI_EVENT_STA_CONNECTED:
-        ESP_LOGI(TAG, "Connected to WiFi network");
-        break;
-    }
-  } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
-    ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
-    ESP_LOGI(TAG, "Successfully connected. Assigned IP: " IPSTR,
-             IP2STR(&event->ip_info.ip));
-    modbus_engine->wifi_connected = true;
-  }
 }
 
 void modbus_engine_set_request(uint8_t* request, size_t request_len) {
@@ -82,6 +50,7 @@ void modbus_engine_set_server(char* ip, int port) {
   }
   strcpy(modbus_engine->ip, ip);
   modbus_engine->port = port;
+  modbus_engine->ip_set = true;
 
   modbus_tcp_prefs_set_server(modbus_engine->ip, modbus_engine->port);
 }
@@ -95,6 +64,11 @@ int modbus_engine_connect() {
 
   if (!modbus_engine->wifi_connected && !wifi_ap_manager_is_connect()) {
     ESP_LOGE(TAG, "Wifi is Disconnected");
+    return -1;
+  }
+
+  if (!modbus_engine->ip_set) {
+    ESP_LOGW(TAG, "Configure target first");
     return -1;
   }
   modbus_engine->wifi_connected = true;
@@ -213,6 +187,7 @@ void modbus_engine_begin() {
   modbus_engine->ip = modubs_tcp_prefs_get_prefs()->ip;
   modbus_engine->port = modubs_tcp_prefs_get_prefs()->port;
   modbus_engine->request_len = modubs_tcp_prefs_get_prefs()->request_len;
+  modbus_engine->ip_set = modubs_tcp_prefs_get_prefs()->ip_set;
   memcpy(modbus_engine->request, modubs_tcp_prefs_get_prefs()->request,
          modbus_engine->request_len);
 
@@ -240,6 +215,9 @@ modbus_engine_t* modbus_engine_get_ctx() {
 }
 
 void modbus_engine_print_status() {
+  if (!modbus_engine) {
+    return;
+  }
   ESP_LOGI(TAG, "Modbus request");
   for (int i = 0; i < modbus_engine->request_len; i++) {
     printf("%02X ", modbus_engine->request[i]);
@@ -250,4 +228,5 @@ void modbus_engine_print_status() {
   ESP_LOGI(TAG, "Port: %d", modbus_engine->port);
   ESP_LOGI(TAG, "Sock: %d", modbus_engine->sock);
   ESP_LOGI(TAG, "Wifi Connected: %d\n", modbus_engine->wifi_connected);
+  ESP_LOGI(TAG, "Ip Configured: %d\n", modbus_engine->ip_set);
 }

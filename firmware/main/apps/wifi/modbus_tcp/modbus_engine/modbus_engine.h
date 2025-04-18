@@ -11,6 +11,7 @@ typedef struct {
   int port;
   int sock;
   bool wifi_connected;
+  bool ip_set;
 } modbus_engine_t;
 
 void modbus_engine_begin();

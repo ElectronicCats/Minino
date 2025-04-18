@@ -5,10 +5,11 @@
 
 #include "preferences.h"
 
-#define MODBUS_TCP_REQ_MEM         "MBTCPREQ"
-#define MODBUS_TCP_LEN_MEM         "MBTCPLEN"
-#define MODBUS_TCP_SERVER_IP_MEM   "MBTCPIP"
-#define MODBUS_TCP_SERVER_PORT_MEM "MBTCPPORT"
+#define MODBUS_TCP_REQ_MEM           "MBTCPREQ"
+#define MODBUS_TCP_LEN_MEM           "MBTCPLEN"
+#define MODBUS_TCP_SERVER_IP_MEM     "MBTCPIP"
+#define MODBUS_TCP_SERVER_PORT_MEM   "MBTCPPORT"
+#define MODBUS_TCP_SERVER_IP_SET_MEM "MBTCPIPS"
 
 #define MODBUS_TCP_PORT_DEF 502
 
@@ -31,6 +32,9 @@ static void load_prefs() {
 
   mb_tcp_prefs->port =
       preferences_get_int(MODBUS_TCP_SERVER_PORT_MEM, MODBUS_TCP_PORT_DEF);
+
+  mb_tcp_prefs->ip_set =
+      preferences_get_bool(MODBUS_TCP_SERVER_IP_SET_MEM, false);
   preferences_get_string(MODBUS_TCP_SERVER_IP_MEM, mb_tcp_prefs->ip,
                          IP_MAX_LEGHT);
 }
@@ -71,6 +75,9 @@ void modbus_tcp_prefs_set_server(char* ip, int port) {
   strncpy(mb_tcp_prefs->ip, ip, IP_MAX_LEGHT - 1);
   mb_tcp_prefs->ip[IP_MAX_LEGHT - 1] = '\0';
   mb_tcp_prefs->port = port;
+
+  mb_tcp_prefs->ip_set = true;
+  preferences_put_bool(MODBUS_TCP_SERVER_IP_SET_MEM, true);
 
   save_prefs();
 }
