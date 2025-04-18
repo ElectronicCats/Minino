@@ -229,3 +229,25 @@ void wifi_ap_manager_list_aps() {
     printf("[%i][%s] SSID: %s\n", i, wifi_ap, wifi_ssid);
   }
 }
+
+void wifi_ap_manager_get_aps(char** aps_list) {
+  int count = wifi_ap_manager_get_count();
+  if (count == 0) {
+    return;
+  }
+  for (int i = 0; i < count; i++) {
+    char wifi_ap[100];
+    char wifi_ssid[100];
+
+    sprintf(wifi_ap, "wifi%d", i);
+    esp_err_t err = preferences_get_string(wifi_ap, wifi_ssid, 100);
+    if (err != ESP_OK) {
+      continue;
+    }
+    aps_list[i] = malloc(sizeof(wifi_ssid) + 1);
+    if (aps_list[i] != NULL) {
+      aps_list[i] = strdup(wifi_ssid);
+    }
+    printf("[%i][%s] SSID: %s\n", i, wifi_ap, wifi_ssid);
+  }
+}
