@@ -11,6 +11,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "nvs_flash.h"
+#include "wifi_ap_manager.h"
 
 #include "modbus_dos_prefs.h"
 #include "modbus_tcp_prefs.h"

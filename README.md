@@ -1,7 +1,7 @@
 # Minino
 
 ![GitHub release (with filter)](https://img.shields.io/github/v/release/ElectronicCats/Minino?color=%23008000)
-![GitHub actions](https://img.shields.io/github/actions/workflow/status/ElectronicCats/Minino/pre-commit.yml)
+![GitHub actions](https://img.shields.io/github/actions/workflow/status/ElectronicCats/Minino/builds.yml)
 ![Static Badge](https://img.shields.io/badge/made-with_love-blue?color=%23008000)
 
 <p align="center">

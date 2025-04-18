@@ -70,3 +70,16 @@ void wifi_settings_scenes_region() {
 
   general_radio_selection(region);
 }
+
+void wifi_settings_scenes_ssid_selection() {
+  // general_radio_selection_menu_t ssid_submenu = {0};
+  // ssid_submenu.banner = "Select SSID";
+  // ssid_submenu.options = {};
+  // ssid_submenu.options_count = sizeof(wifi_regions) / sizeof(char*);
+  // ssid_submenu.style = RADIO_SELECTION_OLD_STYLE;
+  // ssid_submenu.current_option = 0;
+  // ssid_submenu.select_cb = regions_handler;
+  // ssid_submenu.exit_cb = wifi_settings_scenes_main;
+
+  // general_radio_selection(ssid_submenu);
+}

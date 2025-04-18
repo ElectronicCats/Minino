@@ -64,21 +64,6 @@ static int cmd_catdos_web_set_config(int argc, char** argv) {
   return 0;
 }
 
-// static void cmd_catdos_register_wifi_connect(void) {
-//   connect_args.ssid =
-//       arg_str1(NULL, NULL, "<ssid>", "SSID of AP to connect.");
-//   connect_args.password =
-//       arg_str1(NULL, NULL, "<pass>", "Password of AP to connect.");
-//   connect_args.end = arg_end(2);
-
-//   const esp_console_cmd_t cmd = {.command = "wifi_connect",
-//                                  .help = "Connect to an AP",
-//                                  .hint = NULL,
-//                                  .func = &cmd_catdos_wifi_set_config,
-//                                  .argtable = &connect_args};
-//   ESP_ERROR_CHECK(esp_console_cmd_register(&cmd));
-// }
-
 static void cmd_catdos_register_catdos_web(void) {
   cmd_catdos_web_args.host =
       arg_str1(NULL, NULL, "<host>", "IP address of the target.");

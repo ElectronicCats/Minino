@@ -44,7 +44,7 @@ static void main_menu_selection_handler(uint8_t selection) {
 }
 
 static void main_menu_exit_handler() {
-  menus_module_exit_app();
+  menus_module_reset();
 }
 
 void analyzer_scenes_main_menu() {
