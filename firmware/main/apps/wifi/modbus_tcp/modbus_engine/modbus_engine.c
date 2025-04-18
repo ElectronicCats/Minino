@@ -67,40 +67,6 @@ static void wifi_event_handler(void* arg,
   }
 }
 
-static void wifi_init(char* ssid, char* pass) {
-  ESP_ERROR_CHECK(nvs_flash_init());
-  ESP_ERROR_CHECK(esp_netif_init());
-  esp_event_loop_create_default();
-
-  wifi_netif = esp_netif_create_default_wifi_sta();
-
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-
-  ESP_ERROR_CHECK(esp_event_handler_instance_register(
-      WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL));
-  ESP_ERROR_CHECK(esp_event_handler_instance_register(
-      IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL));
-
-  wifi_config_t wifi_config = {
-      .sta =
-          {
-              .ssid = "",
-              .password = "",
-          },
-  };
-
-  strncpy((char*) wifi_config.sta.ssid, ssid, sizeof(wifi_config.sta.ssid) - 1);
-  strncpy((char*) wifi_config.sta.password, pass,
-          sizeof(wifi_config.sta.password) - 1);
-
-  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-  ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-  ESP_ERROR_CHECK(esp_wifi_start());
-
-  ESP_LOGI(TAG, "Attempting to connect to WiFi...");
-}
-
 void modbus_engine_set_request(uint8_t* request, size_t request_len) {
   memcpy(modbus_engine->request, request, request_len);
   modbus_engine->request_len = request_len;
@@ -250,10 +216,7 @@ void modbus_engine_begin() {
   memcpy(modbus_engine->request, modubs_tcp_prefs_get_prefs()->request,
          modbus_engine->request_len);
 
-  if (!wifi_ap_manager_is_connect()) {  // TODO: Wifi connection refactor
-    // char* ssid = modubs_dos_prefs_get_prefs()->ssid;
-    // char* pass = modubs_dos_prefs_get_prefs()->pass;
-    // wifi_init("Hacknet", "password");  // Hardcoded wifi credentials
+  if (!wifi_ap_manager_is_connect()) {
     if (wifi_ap_manager_get_count() == 0) {
       ESP_LOGW(TAG,
                "Please use command save to add a AP to connect with, then use "
