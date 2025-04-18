@@ -14,6 +14,7 @@
 #include "wifi_ap_manager.h"
 
 #include "modbus_dos_prefs.h"
+#include "modbus_tcp_prefs.h"
 
 static const char* TAG = "MODBUS_ENGINE";
 
@@ -89,6 +90,8 @@ void modbus_engine_set_request(uint8_t* request, size_t request_len) {
   }
   memcpy(modbus_engine->request, request, request_len);
   modbus_engine->request_len = request_len;
+
+  modbus_tcp_prefs_set_req(request, request_len);
 }
 
 void modbus_engine_set_server(char* ip, int port) {
@@ -98,6 +101,8 @@ void modbus_engine_set_server(char* ip, int port) {
   }
   strcpy(modbus_engine->ip, ip);
   modbus_engine->port = port;
+
+  modbus_tcp_prefs_set_server(modbus_engine->ip, modbus_engine->port);
 }
 
 int modbus_engine_connect() {
@@ -177,6 +182,8 @@ void modbus_engine_send_request() {
 
   ESP_LOGI(TAG, "Modbus request sent");
 
+  // TODO: Add a flag to wait response or not
+
   struct timeval timeout = {.tv_sec = 1, .tv_usec = 0};
   fd_set read_fds;
   FD_ZERO(&read_fds);
@@ -209,17 +216,20 @@ static void free_modbus_engine() {
 }
 
 void modbus_engine_begin() {
+  modbus_tcp_prefs_begin();
+
   free_modbus_engine();
   modbus_engine = calloc(1, sizeof(modbus_engine_t));
-  modbus_engine->ip = modubs_dos_prefs_get_prefs()->ip;
-  modbus_engine->port = modubs_dos_prefs_get_prefs()->port;
+  modbus_engine->ip = modubs_tcp_prefs_get_prefs()->ip;
+  modbus_engine->port = modubs_tcp_prefs_get_prefs()->port;
+  modbus_engine->request_len = modubs_tcp_prefs_get_prefs()->request_len;
+  memcpy(modbus_engine->request, modubs_tcp_prefs_get_prefs()->request,
+         modbus_engine->request_len);
 
-  modbus_engine->wifi_connected = wifi_ap_manager_is_connect();
-
-  if (!modbus_engine->wifi_connected) {
-    char* ssid = modubs_dos_prefs_get_prefs()->ssid;
-    char* pass = modubs_dos_prefs_get_prefs()->pass;
-    wifi_init(ssid, pass);
+  if (!modbus_engine->wifi_connected) {  // TODO: Wifi connection refactor
+    // char* ssid = modubs_dos_prefs_get_prefs()->ssid;
+    // char* pass = modubs_dos_prefs_get_prefs()->pass;
+    wifi_init("ssid", "password");  // Hardcoded wifi credentials
   }
 }
 

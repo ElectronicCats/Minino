@@ -9,6 +9,7 @@
 
 #define TAG "Modbus Engine CMD"
 
+#include "modbus_attacks.h"
 #include "modbus_engine.h"
 
 static struct {
@@ -156,6 +157,16 @@ static int cmd_mb_engine_print_status(int argc, char** argv) {
   return 0;
 }
 
+static int cmd_mb_engine_start_writer(int argc, char** argv) {
+  modbus_attacks_writer();
+  return 0;
+}
+
+static int cmd_mb_engine_stop_writer(int argc, char** argv) {
+  modbus_attacks_stop();
+  return 0;
+}
+
 void modbus_engine_cmd_register_cmds() {
   mb_engine_set_req_args.function = arg_str1(NULL, NULL, "<coils / registers>",
                                              "Function: registers or coils");
@@ -221,9 +232,28 @@ void modbus_engine_cmd_register_cmds() {
       .func = &cmd_mb_engine_print_status,
       .argtable = NULL};
 
+  const esp_console_cmd_t mb_writer_attack_cmd = {
+      .command = "mb_engine_start_writer",
+      .help = "Sends the request in a loop",
+      .hint = NULL,
+      .category = "Modbus",
+      .func = &cmd_mb_engine_start_writer,
+      .argtable = NULL};
+
+  const esp_console_cmd_t mb_writer_stop_cmd = {
+      .command = "mb_engine_stop_writer",
+      .help = "Stops the writer attack",
+      .hint = NULL,
+      .category = "Modbus",
+      .func = &cmd_mb_engine_stop_writer,
+      .argtable = NULL};
+
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_set_req_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_set_server_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_connect_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&mb_disconnect_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_send_req_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_print_status_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&mb_writer_attack_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&mb_writer_stop_cmd));
 }
