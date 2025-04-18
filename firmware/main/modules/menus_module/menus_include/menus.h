@@ -272,7 +272,7 @@ menu_t menus[] = {  //////////////////////////////////
      .parent_idx = MENU_WIFI_APPS,
      .entry_cmd = "modbus_tcp",
      .last_selected_submenu = 0,
-     .on_enter_cb = modbus_tcp_scenes_entry,
+     .on_enter_cb = modbus_tcp_scenes_main,
      .on_exit_cb = NULL,
      .is_visible = true},
 #endif

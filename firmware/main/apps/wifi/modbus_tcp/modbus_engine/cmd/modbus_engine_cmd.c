@@ -164,7 +164,7 @@ static int cmd_mb_engine_print_status(int argc, char** argv) {
 }
 
 static int cmd_mb_engine_start_writer(int argc, char** argv) {
-  modbus_attacks_writer();
+  modbus_attacks_writer(NULL);
   return 0;
 }
 

@@ -23,9 +23,15 @@ static char* list_ap[20];
 
 void modbus_tcp_scenes_help();
 
-static void show_cmds_help(char* head, char* body);
-static void show_no_connection_notify();
-static void show_no_target_notify();
+static void modbus_handle_cb_attack(bool state);
+static void modbus_show_cmds_help(char* head, char* body);
+static void modbus_tcp_scenes_ap_connect();
+static void modbus_handle_tcp_attacks();
+static void modbus_tcp_scenes_show_attacks();
+static void modbus_show_no_connection_notify();
+static void modbus_show_no_target_notify();
+static void modbus_show_attacking_notify();
+static void modbus_error_launching_attack_notify();
 
 typedef enum {
   MAIN_OPTIONS_CONNECT,
@@ -40,15 +46,32 @@ typedef enum {
   MBUS_ATTACK_WRITE,
 } mbus_attack_t;
 
+typedef enum {
+  SETTINGS_OPTIONS_CONNECT,
+  SETTINGS_OPTOINS_IP,
+  SETTINGS_OPTIONS_PORT,
+} setting_options_t;
+
+static const char* settings_options[] = {"Connect", "Server IP", "Server Port"};
+
 static const char* main_options[] = {"Connect", "Target", "Run", "Commands",
                                      "Help"};
 static const char* attacks_options[] = {"DoS", "Write Request"};
 
-void modbus_tcp_scenes_entry() {
+static void settings_exit_cb() {
   modbus_tcp_scenes_main();
 }
 
-void catdos_module_display_connecting() {
+static void modbus_tcp_show_exit_dos() {
+  modbus_attacks_stop();
+}
+
+static void main_exit_cb() {
+  wifi_ap_manager_unregister_callback();
+  menus_module_restart();
+}
+
+void modbus_tcp_display_connecting() {
   oled_screen_clear_buffer();
   uint8_t width = 32;
   uint8_t height = 32;
@@ -68,10 +91,10 @@ void catdos_module_display_connecting() {
 static void modbus_tcp_scenes_show_target() {
   modbus_engine_t* mbus_ctx = modbus_engine_get_ctx();
   if (mbus_ctx == NULL) {
-    show_no_connection_notify();
+    modbus_show_no_connection_notify();
   }
   if (!mbus_ctx->ip_set) {
-    show_no_target_notify();
+    modbus_show_no_target_notify();
     return;
   }
   char* body_text[100];
@@ -86,30 +109,59 @@ static void modbus_tcp_scenes_show_target() {
 static void handle_attack_selector(uint8_t option) {
   switch (option) {
     case MBUS_ATTACK_DOS:
-      modbus_attacks_writer();
+      modbus_attacks_writer(modbus_handle_cb_attack);
+      animations_task_run(&modbus_tcp_display_connecting, 100, NULL);
       break;
     case MBUS_ATTACK_WRITE:
-
       break;
     default:
       break;
   }
 }
 
-static void modbus_tcp_scenes_show_attacks() {
-  general_submenu_menu_t submenu = {0};
-  submenu.options = attacks_options;
-  submenu.options_count = sizeof(attacks_options) / sizeof(char*);
-  submenu.select_cb = handle_attack_selector;
-  submenu.selected_option = 0;
-  submenu.exit_cb = modbus_tcp_scenes_main;
-
-  general_submenu(submenu);
+static void main_handler(uint8_t option) {
+  last_main_selection = option;
+  switch (option) {
+    case MAIN_OPTIONS_CONNECT:
+      modbus_tcp_scenes_ap_connect();
+      break;
+    case MAIN_OPTIONS_TARGET:
+      modbus_tcp_scenes_show_target();
+      break;
+    case MAIN_OPTOINS_RUN:
+      modbus_handle_tcp_attacks();
+      break;
+    case MAIN_OPTIONS_SETTINGS:
+      modbus_tcp_scenes_settings();
+      break;
+    case MAIN_OPTIONS_HELP:
+      modbus_tcp_scenes_help();
+      break;
+    default:
+      break;
+  }
 }
 
-static void handle_tcp_attacks() {
+static void settings_handler(uint8_t option) {
+  last_settings_selection = option;
+  switch (option) {
+    case SETTINGS_OPTIONS_CONNECT:
+      modbus_show_cmds_help("Connect", "CMD: connect <index of AP>");
+      break;
+    case SETTINGS_OPTOINS_IP:
+      modbus_show_cmds_help("Server IP", "CMD: mb_dos_set_ip");
+      break;
+    case SETTINGS_OPTIONS_PORT:
+      modbus_show_cmds_help("Server Port", "CMD: mb_dos_set_port");
+      break;
+    default:
+      break;
+  }
+}
+
+static void modbus_handle_tcp_attacks() {
   if (!wifi_ap_manager_is_connect()) {
-    show_no_connection_notify();
+    modbus_show_no_connection_notify();
     return;
   }
   modbus_engine_t* mbus_ctx = modbus_engine_get_ctx();
@@ -120,7 +172,17 @@ static void handle_tcp_attacks() {
   modbus_tcp_scenes_show_attacks();
 }
 
-static void handle_cb_ap_connection(bool state) {
+static void modbus_handle_cb_attack(bool state) {
+  animations_task_stop();
+  if (state) {
+    modbus_show_attacking_notify();
+    modbus_engine_begin();
+  } else {
+    modbus_error_launching_attack_notify();
+  }
+}
+
+static void modbus_handle_cb_ap_connection(bool state) {
   animations_task_stop();
   general_notification_ctx_t notification = {0};
   notification.duration_ms = 2000;
@@ -137,8 +199,26 @@ static void handle_cb_ap_connection(bool state) {
 }
 
 static void handle_tcp_ap_connection(uint8_t option) {
-  animations_task_run(&catdos_module_display_connecting, 100, NULL);
-  wifi_ap_manager_connect_index_cb(option, handle_cb_ap_connection);
+  animations_task_run(&modbus_tcp_display_connecting, 100, NULL);
+  wifi_ap_manager_connect_index_cb(option, modbus_handle_cb_ap_connection);
+}
+
+static void modbus_error_launching_attack_notify() {
+  general_notification_ctx_t notification = {0};
+  notification.duration_ms = 2000;
+  notification.head = "Error";
+  notification.body = "Attack Failed";
+  general_notification(notification);
+  modbus_tcp_scenes_show_attacks();
+}
+
+static void modbus_show_attacking_notify() {
+  general_notification_ctx_t notification = {0};
+  notification.head = "Attac";
+  notification.body = "Running";
+  notification.on_exit = modbus_tcp_show_exit_dos;
+
+  general_notification_handler(notification);
 }
 
 static void wifi_zero_aps() {
@@ -148,6 +228,33 @@ static void wifi_zero_aps() {
   notification.body = "No APs, add with the command save";
   general_notification(notification);
   modbus_tcp_scenes_main();
+}
+
+static void modbus_show_cmds_help(char* head, char* body) {
+  general_notification_ctx_t notification = {0};
+  notification.head = head;
+  notification.body = body;
+  notification.on_exit = modbus_tcp_scenes_settings;
+
+  general_notification_handler(notification);
+}
+
+static void modbus_show_no_target_notify() {
+  general_notification_ctx_t notification = {0};
+  notification.head = "Alert";
+  notification.body = "Configure the target first: mb_engine_set_server";
+  notification.on_exit = modbus_tcp_scenes_main;
+
+  general_notification_handler(notification);
+}
+
+static void modbus_show_no_connection_notify() {
+  general_notification_ctx_t notification = {0};
+  notification.head = "Alert";
+  notification.body = "First connect to an Access Point";
+  notification.on_exit = modbus_tcp_scenes_main;
+
+  general_notification_handler(notification);
 }
 
 void modbus_tcp_scenes_ap_connect() {
@@ -167,33 +274,6 @@ void modbus_tcp_scenes_ap_connect() {
   general_submenu(submenu);
 }
 
-static void main_handler(uint8_t option) {
-  last_main_selection = option;
-  switch (option) {
-    case MAIN_OPTIONS_CONNECT:
-      modbus_tcp_scenes_ap_connect();
-      break;
-    case MAIN_OPTIONS_TARGET:
-      modbus_tcp_scenes_show_target();
-      break;
-    case MAIN_OPTOINS_RUN:
-      handle_tcp_attacks();
-      break;
-    case MAIN_OPTIONS_SETTINGS:
-      modbus_tcp_scenes_settings();
-      break;
-    case MAIN_OPTIONS_HELP:
-      modbus_tcp_scenes_help();
-      break;
-    default:
-      break;
-  }
-}
-
-static void main_exit_cb() {
-  menus_module_restart();
-}
-
 void modbus_tcp_scenes_main() {
   general_submenu_menu_t submenu = {0};
   submenu.options = main_options;
@@ -207,60 +287,15 @@ void modbus_tcp_scenes_main() {
   modbus_dos_prefs_begin();
 }
 
-typedef enum {
-  SETTINGS_OPTIONS_CONNECT,
-  SETTINGS_OPTOINS_IP,
-  SETTINGS_OPTIONS_PORT,
-} setting_options_t;
+static void modbus_tcp_scenes_show_attacks() {
+  general_submenu_menu_t submenu = {0};
+  submenu.options = attacks_options;
+  submenu.options_count = sizeof(attacks_options) / sizeof(char*);
+  submenu.select_cb = handle_attack_selector;
+  submenu.selected_option = 0;
+  submenu.exit_cb = modbus_tcp_scenes_main;
 
-static const char* settings_options[] = {"Connect", "Server IP", "Server Port"};
-
-static void show_cmds_help(char* head, char* body) {
-  general_notification_ctx_t notification = {0};
-  notification.head = head;
-  notification.body = body;
-  notification.on_exit = modbus_tcp_scenes_settings;
-
-  general_notification_handler(notification);
-}
-
-static void show_no_target_notify() {
-  general_notification_ctx_t notification = {0};
-  notification.head = "Alert";
-  notification.body = "Configure the target first: mb_engine_set_server";
-  notification.on_exit = modbus_tcp_scenes_main;
-
-  general_notification_handler(notification);
-}
-
-static void show_no_connection_notify() {
-  general_notification_ctx_t notification = {0};
-  notification.head = "Alert";
-  notification.body = "First connect to an Access Point";
-  notification.on_exit = modbus_tcp_scenes_main;
-
-  general_notification_handler(notification);
-}
-
-static void settings_handler(uint8_t option) {
-  last_settings_selection = option;
-  switch (option) {
-    case SETTINGS_OPTIONS_CONNECT:
-      show_cmds_help("Connect", "CMD: connect <index of AP>");
-      break;
-    case SETTINGS_OPTOINS_IP:
-      show_cmds_help("Server IP", "CMD: mb_dos_set_ip");
-      break;
-    case SETTINGS_OPTIONS_PORT:
-      show_cmds_help("Server Port", "CMD: mb_dos_set_port");
-      break;
-    default:
-      break;
-  }
-}
-
-static void settings_exit_cb() {
-  modbus_tcp_scenes_main();
+  general_submenu(submenu);
 }
 
 void modbus_tcp_scenes_settings() {

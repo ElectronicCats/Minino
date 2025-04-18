@@ -3,7 +3,6 @@
 
 #include <stdio.h>
 
-void modbus_tcp_scenes_entry();
 void modbus_tcp_scenes_main();
 void modbus_tcp_scenes_settings();
 
