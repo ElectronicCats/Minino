@@ -44,9 +44,13 @@ void modbus_engine_set_request(uint8_t* request, size_t request_len) {
 
 void modbus_engine_set_server(char* ip, int port) {
   if (!modbus_engine) {
-    ESP_LOGW(TAG,
-             "First uset the command mb_engine_set_req for setup the request.");
-    return;
+    modbus_engine_begin();
+    if (!modbus_engine) {
+      ESP_LOGW(TAG,
+               "First open the app Modbus TCP, and connect to an Access Point. "
+               "Or use the command to manually setup the modbus engine");
+      return;
+    }
   }
   strcpy(modbus_engine->ip, ip);
   modbus_engine->port = port;
@@ -57,9 +61,12 @@ void modbus_engine_set_server(char* ip, int port) {
 
 int modbus_engine_connect() {
   if (!modbus_engine) {
-    ESP_LOGW(TAG,
-             "First uset the command mb_engine_set_req for setup the request.");
-    return -1;
+    if (!wifi_ap_manager_is_connect()) {
+      ESP_LOGW(TAG, "First connect to Access Point with the connect command.");
+      return -1;
+    }
+
+    modbus_engine_begin();
   }
 
   if (!modbus_engine->wifi_connected && !wifi_ap_manager_is_connect()) {
@@ -125,8 +132,10 @@ void modbus_engine_send_request() {
   }
 
   if (!modbus_engine->sock) {
-    ESP_LOGW(TAG, "Sock is null, call modbus_engine_connect() first");
-    return;
+    if (modbus_engine_connect() < 0) {
+      ESP_LOGW(TAG, "Error connecting with the socket");
+      return;
+    }
   }
 
   if (!modbus_engine->request_len) {
@@ -216,7 +225,7 @@ modbus_engine_t* modbus_engine_get_ctx() {
 
 void modbus_engine_print_status() {
   if (!modbus_engine) {
-    ESP_LOGW(TAG, "You need to use this with the modbus app open");
+    ESP_LOGW(TAG, "You can use this after setup the Access Point.");
     return;
   }
   ESP_LOGI(TAG, "Modbus request");

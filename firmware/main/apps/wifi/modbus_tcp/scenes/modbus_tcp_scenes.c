@@ -24,7 +24,10 @@ static char* list_ap[20];
 void modbus_tcp_scenes_help();
 
 static void modbus_handle_cb_attack(bool state);
+static void modbus_handle_cb_attack_dos(bool state);
+static void modbus_error_launching_attack_write_notify(bool state);
 static void modbus_show_cmds_help(char* head, char* body);
+static void modbus_tcp_scenes_show_attacks_list();
 static void modbus_tcp_scenes_ap_connect();
 static void modbus_handle_tcp_attacks();
 static void modbus_tcp_scenes_show_attacks();
@@ -47,6 +50,11 @@ typedef enum {
 } mbus_attack_t;
 
 typedef enum {
+  MBUS_ATTACK_WRITE_SINGLE,
+  MBUS_ATTACK_WRITE_LOOP,
+} mbus_attack_write_t;
+
+typedef enum {
   SETTINGS_OPTIONS_CONNECT,
   SETTINGS_OPTOINS_IP,
   SETTINGS_OPTIONS_PORT,
@@ -62,8 +70,9 @@ static void settings_exit_cb() {
   modbus_tcp_scenes_main();
 }
 
-static void modbus_tcp_show_exit_dos() {
+static void modbus_tcp_show_exit_attacks() {
   modbus_attacks_stop();
+  modbus_tcp_scenes_show_attacks();
 }
 
 static void main_exit_cb() {
@@ -106,13 +115,29 @@ static void modbus_tcp_scenes_show_target() {
   general_notification_handler(notification);
 }
 
-static void handle_attack_selector(uint8_t option) {
+static void handle_attack_writer_selector(uint8_t option) {
   switch (option) {
-    case MBUS_ATTACK_DOS:
+    case MBUS_ATTACK_WRITE_SINGLE:
+      modbus_error_launching_attack_write_notify(
+          modbus_attacks_writer_single());
+      break;
+    case MBUS_ATTACK_WRITE_LOOP:
       modbus_attacks_writer(modbus_handle_cb_attack);
       animations_task_run(&modbus_tcp_display_connecting, 100, NULL);
       break;
+    default:
+      break;
+  }
+}
+
+static void handle_attack_selector(uint8_t option) {
+  switch (option) {
+    case MBUS_ATTACK_DOS:
+      modbus_attacks_dos(modbus_handle_cb_attack);
+      animations_task_run(&modbus_tcp_display_connecting, 100, NULL);
+      break;
     case MBUS_ATTACK_WRITE:
+      modbus_tcp_scenes_show_attacks_list();
       break;
     default:
       break;
@@ -182,6 +207,16 @@ static void modbus_handle_cb_attack(bool state) {
   }
 }
 
+static void modbus_handle_cb_attack_dos(bool state) {
+  if (state) {
+    modbus_show_attacking_notify();
+    modbus_engine_begin();
+    animations_task_run(&modbus_tcp_display_connecting, 100, NULL);
+  } else {
+    modbus_error_launching_attack_notify();
+  }
+}
+
 static void modbus_handle_cb_ap_connection(bool state) {
   animations_task_stop();
   general_notification_ctx_t notification = {0};
@@ -203,6 +238,20 @@ static void handle_tcp_ap_connection(uint8_t option) {
   wifi_ap_manager_connect_index_cb(option, modbus_handle_cb_ap_connection);
 }
 
+static void modbus_error_launching_attack_write_notify(bool state) {
+  general_notification_ctx_t notification = {0};
+  notification.duration_ms = 2000;
+  if (state) {
+    notification.head = "Done";
+    notification.body = "Attack Sended";
+  } else {
+    notification.head = "Error";
+    notification.body = "Attack Failed";
+  }
+  general_notification(notification);
+  modbus_tcp_scenes_show_attacks_list();
+}
+
 static void modbus_error_launching_attack_notify() {
   general_notification_ctx_t notification = {0};
   notification.duration_ms = 2000;
@@ -214,9 +263,9 @@ static void modbus_error_launching_attack_notify() {
 
 static void modbus_show_attacking_notify() {
   general_notification_ctx_t notification = {0};
-  notification.head = "Attac";
+  notification.head = "Attack";
   notification.body = "Running";
-  notification.on_exit = modbus_tcp_show_exit_dos;
+  notification.on_exit = modbus_tcp_show_exit_attacks;
 
   general_notification_handler(notification);
 }
@@ -275,6 +324,9 @@ void modbus_tcp_scenes_ap_connect() {
 }
 
 void modbus_tcp_scenes_main() {
+  if (wifi_ap_manager_is_connect()) {
+    main_options[0] = "Connected";
+  }
   general_submenu_menu_t submenu = {0};
   submenu.options = main_options;
   submenu.options_count = sizeof(main_options) / sizeof(char*);
@@ -285,6 +337,19 @@ void modbus_tcp_scenes_main() {
   general_submenu(submenu);
 
   modbus_dos_prefs_begin();
+}
+
+static char* attacks_type[] = {"Single", "Loop"};
+
+static void modbus_tcp_scenes_show_attacks_list() {
+  general_submenu_menu_t submenu = {0};
+  submenu.options = attacks_type;
+  submenu.options_count = sizeof(attacks_type) / sizeof(char*);
+  submenu.select_cb = handle_attack_writer_selector;
+  submenu.selected_option = 0;
+  submenu.exit_cb = modbus_tcp_show_exit_attacks;
+
+  general_submenu(submenu);
 }
 
 static void modbus_tcp_scenes_show_attacks() {

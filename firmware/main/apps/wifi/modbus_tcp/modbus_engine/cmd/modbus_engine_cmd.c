@@ -168,7 +168,12 @@ static int cmd_mb_engine_start_writer(int argc, char** argv) {
   return 0;
 }
 
-static int cmd_mb_engine_stop_writer(int argc, char** argv) {
+static int cmd_mb_engine_start_dos(int argc, char** argv) {
+  modbus_attacks_dos(NULL);
+  return 0;
+}
+
+static int cmd_mb_engine_stop_attack(int argc, char** argv) {
   modbus_attacks_stop();
   return 0;
 }
@@ -246,12 +251,20 @@ void modbus_engine_cmd_register_cmds() {
       .func = &cmd_mb_engine_start_writer,
       .argtable = NULL};
 
-  const esp_console_cmd_t mb_writer_stop_cmd = {
-      .command = "mb_engine_stop_writer",
-      .help = "Stops the writer attack",
+  const esp_console_cmd_t mb_dos_attack_cmd = {
+      .command = "mb_engine_start_dos",
+      .help = "Sends the connection and desconnection in a loop",
       .hint = NULL,
       .category = "modbus",
-      .func = &cmd_mb_engine_stop_writer,
+      .func = &cmd_mb_engine_start_dos,
+      .argtable = NULL};
+
+  const esp_console_cmd_t mb_writer_stop_cmd = {
+      .command = "mb_engine_stop_attack",
+      .help = "Stops attack",
+      .hint = NULL,
+      .category = "modbus",
+      .func = &cmd_mb_engine_stop_attack,
       .argtable = NULL};
 
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_set_req_cmd));
@@ -261,5 +274,6 @@ void modbus_engine_cmd_register_cmds() {
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_send_req_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_print_status_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_writer_attack_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&mb_dos_attack_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&mb_writer_stop_cmd));
 }
