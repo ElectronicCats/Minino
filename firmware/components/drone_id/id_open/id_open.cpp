@@ -159,7 +159,7 @@ ID_OpenDrone::ID_OpenDrone() {
   operatorID_data->OperatorIdType = ODID_OPERATOR_ID;
 
   //
-
+  printf("ID_OpenDrone\n");
   construct2();
 
   return;
@@ -169,7 +169,9 @@ ID_OpenDrone::ID_OpenDrone() {
  *
  */
 
-void ID_OpenDrone::init(UTM_parameters* parameters) {
+void ID_OpenDrone::init(UTM_parameters* parameters, bool ble_drone) {
+  bt_mode = ble_drone;
+
   int status, i;
   char text[128];
 
@@ -253,7 +255,11 @@ void ID_OpenDrone::init(UTM_parameters* parameters) {
 
   ssid_length = strlen(ssid);
 
-  init2(ssid, ssid_length, WiFi_mac_addr, wifi_channel);
+  init_w(ssid, ssid_length, WiFi_mac_addr, wifi_channel);
+
+  if (bt_mode) {
+    init_ble();
+  }
 
 #if ID_OD_WIFI
 
@@ -765,11 +771,14 @@ int ID_OpenDrone::transmit_wifi(struct UTM_data* utm_data, int prepacked) {
  */
 
 int ID_OpenDrone::transmit_ble(uint8_t* odid_msg, int length) {
+  if (!bt_mode) {
+    return 0;
+  }
   msecs = esp_timer_get_time() / 1000;
   ble_interval = msecs - last_ble;
   last_ble = msecs;
 
-#if ID_OD_BT
+  // #if ID_OD_BT
 
   int i, j, k, len, status;
   uint8_t* a;
@@ -787,11 +796,11 @@ int ID_OpenDrone::transmit_ble(uint8_t* odid_msg, int length) {
   ble_message[j++] = 0xff;  //
   ble_message[j++] = 0x0d;
 
-  #if 0
+#if 0
   ble_message[j++] = ++counter;
-  #else
+#else
   ble_message[j++] = ++msg_counter[odid_msg[0] >> 4];
-  #endif
+#endif
 
   for (i = 0; (i < length) && (j < sizeof(ble_message)); ++i, ++j) {
     ble_message[j] = odid_msg[i];
@@ -799,7 +808,7 @@ int ID_OpenDrone::transmit_ble(uint8_t* odid_msg, int length) {
 
   status = transmit_ble2(ble_message, len = j);
 
-  #if DIAGNOSTICS && 0
+#if DIAGNOSTICS && 0
 
   char text[64], text2[34];
   static int first = 1;
@@ -834,7 +843,7 @@ int ID_OpenDrone::transmit_ble(uint8_t* odid_msg, int length) {
     Debug_Serial->print("\r\n");
   }
 
-  #endif
+  // #endif
 
 #endif  // BT
 

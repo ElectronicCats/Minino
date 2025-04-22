@@ -53,61 +53,69 @@
 #define DIAGNOSTICS 1
 
 //
+#pragma GCC diagnostic warning "-Wunused-variable"
 
-#if defined(ARDUINO_ARCH_ESP32) || 1
+#include "esp_err.h"
+#include "esp_log.h"
+#include "id_open.h"
 
-  #pragma GCC diagnostic warning "-Wunused-variable"
+#if ID_OD_WIFI
 
-  #include "esp_err.h"
-  #include "esp_log.h"
-  #include "id_open.h"
-
-  #if ID_OD_WIFI
-
-    #include <esp_event.h>
-    #include <esp_event_loop.h>
-    #include <esp_system.h>
-    #include <esp_wifi.h>
-    #include <esp_wifi_types.h>
-    #include <nvs_flash.h>
-    #include <string.h>
+  #include <esp_event.h>
+  #include <esp_event_loop.h>
+  #include <esp_system.h>
+  #include <esp_wifi.h>
+  #include <esp_wifi_types.h>
+  #include <nvs_flash.h>
+  #include <string.h>
 
 esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx,
                             const void* buffer,
                             int len,
                             bool en_sys_seq);
 
-  // esp_err_t event_handler(void*, system_event_t*);
+// esp_err_t event_handler(void*, system_event_t*);
 
-    #define PASSWORD "password"
-    #define SSID     "MINI Drone"
+  #define PASSWORD "password"
+  #define SSID     "MINI Drone"
 static const char* password = PASSWORD;
 
 static bool wifi_initialized = false;
+static bool ble_initialized = false;
 static bool _read_only;
 
-  #endif  // WIFI
+#endif  // WIFI
 
-  #if ID_OD_BT
+// #if ID_OD_BT
 
-    #include "BLEDevice.h"
-    #include "BLEUtils.h"
+#include "esp_gap_ble_api.h"
+#include "esp_gattc_api.h"
+#include "esp_gatts_api.h"
+#include "esp_log.h"
+#include "esp_system.h"
+
+#include "esp_bt.h"
+#include "esp_bt_main.h"
 
 static esp_ble_adv_data_t advData;
 static esp_ble_adv_params_t advParams;
-static BLEUUID service_uuid;
 
-  #endif  // BT
+// #endif  // BT
 
 /*
  *
  */
 
 void construct2() {
-  #if ID_OD_BT
+  // #if ID_OD_BT
+
+  printf("construct2\n");
+  esp_err_t ret = esp_ble_gap_set_device_name("ESP32_Device");
+  if (ret) {
+    ESP_LOGE("BLE", "Set device name failed");
+  }
 
   memset(&advData, 0, sizeof(advData));
-
   advData.set_scan_rsp = false;
   advData.include_name = false;
   advData.include_txpower = false;
@@ -116,18 +124,15 @@ void construct2() {
   advData.flag = (ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT);
 
   memset(&advParams, 0, sizeof(advParams));
-
   advParams.adv_int_min = 0x0020;
   advParams.adv_int_max = 0x0040;
   advParams.adv_type = ADV_TYPE_IND;
   advParams.own_addr_type = BLE_ADDR_TYPE_PUBLIC;
   advParams.channel_map = ADV_CHNL_ALL;
   advParams.adv_filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY;
-  advParams.peer_addr_type = BLE_ADDR_TYPE_PUBLIC;
 
-  service_uuid = BLEUUID("0000fffa-0000-1000-8000-00805f9b34fb");
-
-  #endif  // ID_OD_BT
+  esp_ble_gap_start_advertising(&advParams);
+  // #endif  // ID_OD_BT
 
   return;
 }
@@ -137,7 +142,7 @@ void construct2() {
  */
 
 void set_wifi_ap(char* ssid, uint8_t wifi_channel) {
-  #if ID_OD_WIFI
+#if ID_OD_WIFI
   if (!wifi_initialized) {
     return;
   }
@@ -159,20 +164,20 @@ void set_wifi_ap(char* ssid, uint8_t wifi_channel) {
   // Establece el modo Wi-Fi en AP y aplica la configuración
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_manager_config));
-  #endif
+#endif
 }
 
-void init2(char* ssid,
-           int ssid_length,
-           uint8_t* WiFi_mac_addr,
-           uint8_t wifi_channel) {
+void init_w(char* ssid,
+            int ssid_length,
+            uint8_t* WiFi_mac_addr,
+            uint8_t wifi_channel) {
   int status;
   char text[128];
 
   status = 0;
   text[0] = text[63] = 0;
 
-  #if ID_OD_WIFI
+#if ID_OD_WIFI
   if (!wifi_initialized) {
     wifi_initialized = true;
   } else {
@@ -231,40 +236,53 @@ void init2(char* ssid,
 
   // Desactiva el modo de ahorro de energía
   ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
-    // no default mac addresses
-    // status = esp_read_mac(WiFi_mac_addr,ESP_MAC_WIFI_STA);
+  // no default mac addresses
+  // status = esp_read_mac(WiFi_mac_addr,ESP_MAC_WIFI_STA);
 
-    //   if (Debug_Serial) {
+  //   if (Debug_Serial) {
 
-    //     sprintf(text,"esp_read_mac():  %02x:%02x:%02x:%02x:%02x:%02x\r\n",
-    //             WiFi_mac_addr[0],WiFi_mac_addr[1],WiFi_mac_addr[2],
-    //             WiFi_mac_addr[3],WiFi_mac_addr[4],WiFi_mac_addr[5]);
-    //     Debug_Serial->print(text);
-    // // power <= 72, dbm = power/4, but 78 = 20dbm.
-    //     sprintf(text,"max_tx_power():  %d dBm\r\n",(int) ((wifi_power + 2) /
-    //     4)); Debug_Serial->print(text); sprintf(text,"wifi country:
-    //     %s\r\n",country.cc); Debug_Serial->print(text);
-    //   }
+  //     sprintf(text,"esp_read_mac():  %02x:%02x:%02x:%02x:%02x:%02x\r\n",
+  //             WiFi_mac_addr[0],WiFi_mac_addr[1],WiFi_mac_addr[2],
+  //             WiFi_mac_addr[3],WiFi_mac_addr[4],WiFi_mac_addr[5]);
+  //     Debug_Serial->print(text);
+  // // power <= 72, dbm = power/4, but 78 = 20dbm.
+  //     sprintf(text,"max_tx_power():  %d dBm\r\n",(int) ((wifi_power + 2) /
+  //     4)); Debug_Serial->print(text); sprintf(text,"wifi country:
+  //     %s\r\n",country.cc); Debug_Serial->print(text);
+  //   }
 
-  #endif  // WIFI
+#endif  // WIFI
+  return;
+}
 
-  #if ID_OD_BT
+void init_ble() {
+#if ID_OD_WIFI
+  if (!ble_initialized) {
+    ble_initialized = true;
+  } else {
+    return;
+  }
 
-  int power_db;
-  esp_power_level_t power;
+  esp_err_t ret = nvs_flash_init();
+  if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_INVALID_STATE) {
+    ESP_ERROR_CHECK(nvs_flash_erase());
+    ret = nvs_flash_init();
+  }
+  ESP_ERROR_CHECK(ret);
 
-  BLEDevice::init(ssid);
+  esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
+  ESP_ERROR_CHECK(esp_bt_controller_init(&bt_cfg));
+  ESP_ERROR_CHECK(esp_bt_controller_enable(ESP_BT_MODE_BLE));
 
-  // Using BLEDevice::setPower() seems to have no effect.
-  // ESP_PWR_LVL_N12 ...  ESP_PWR_LVL_N0 ... ESP_PWR_LVL_P9
+  ESP_ERROR_CHECK(esp_bluedroid_init());
+  ESP_ERROR_CHECK(esp_bluedroid_enable());
 
   esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9);
   esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
 
-  power = esp_ble_tx_power_get(ESP_BLE_PWR_TYPE_DEFAULT);
-  power_db = 3 * ((int) power - 4);
-
-  #endif
+  esp_power_level_t power = esp_ble_tx_power_get(ESP_BLE_PWR_TYPE_DEFAULT);
+  int power_db = 3 * ((int) power - 4);
+  ESP_LOGI("TAG", "Power level (dB): %d", power_db);
 
   return;
 }
@@ -342,8 +360,7 @@ int transmit_wifi2(uint8_t* buffer, int length) {
 
 int transmit_ble2(uint8_t* ble_message, int length) {
   esp_err_t ble_status = 0;
-
-  #if ID_OD_BT
+  // #if ID_OD_BT
 
   static int advertising = 0;
 
@@ -356,7 +373,7 @@ int transmit_ble2(uint8_t* ble_message, int length) {
 
   advertising = 1;
 
-  #endif  // BT
+  // #endif  // BT
 
   return (int) ble_status;
 }

@@ -14,6 +14,7 @@ void drone_id_scenes_settings();
 void drone_id_scenes_settings_num_drones();
 void drone_id_scenes_settings_channel();
 void drone_id_scenes_settings_location();
+void drone_id_scenes_settings_ble_drone();
 void drone_id_scenes_settings_help();
 
 void drone_id_scenes_help();
@@ -79,11 +80,12 @@ typedef enum {
   SETTINGS_NUM_DRONES_OPTION,
   SETTINGS_CHANNEL_OPTION,
   SETTINGS_LOCATION_OPTION,
+  SETTINGS_BLE_DRONE_OPTION,
   SETTINGS_HELP_OPTION,
 } settings_options_e;
 
 static const char* settings_options[] = {"Num of Drones", "Channel",
-                                         "Location Src", "Help"};
+                                         "Location Src", "BLE Drone", "Help"};
 
 static void settings_handler(uint8_t option) {
   last_settings_selection = option;
@@ -96,6 +98,9 @@ static void settings_handler(uint8_t option) {
       break;
     case SETTINGS_LOCATION_OPTION:
       drone_id_scenes_settings_location();
+      break;
+    case SETTINGS_BLE_DRONE_OPTION:
+      drone_id_scenes_settings_ble_drone();
       break;
     case SETTINGS_HELP_OPTION:
       drone_id_scenes_settings_help();
@@ -176,6 +181,22 @@ void drone_id_scenes_settings_location() {
 
   general_radio_selection(location);
   current_menu = DRONE_SCENES_SETTINGS_LOCATION_SRC;
+}
+
+static const char* ble_drone_options[] = {"Disabled", "Enabled"};
+
+void drone_id_scenes_settings_ble_drone() {
+  general_radio_selection_menu_t ble_drone = {0};
+  ble_drone.banner = "BLE Drone";
+  ble_drone.options = ble_drone_options;
+  ble_drone.options_count = sizeof(ble_drone_options) / sizeof(char*);
+  ble_drone.current_option = drone_id_preferences_get()->add_ble_drone;
+  ble_drone.style = RADIO_SELECTION_OLD_STYLE;
+  ble_drone.select_cb = drone_id_set_ble_drone;
+  ble_drone.exit_cb = drone_id_scenes_settings;
+
+  general_radio_selection(ble_drone);
+  current_menu = DRONE_SCENES_SETTINGS_BLE_DRONE;
 }
 
 static const char* settings_help_txt[] = {"Num of Drones:",
