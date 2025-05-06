@@ -202,3 +202,52 @@ int wifi_ap_manager_delete_ap_by_index(int index) {
   preferences_put_int("count_ap", count);
   return 0;
 }
+
+bool wifi_ap_manager_is_connect() {
+  return preferences_get_bool("wifi_connected", false);
+}
+
+int wifi_ap_manager_get_count() {
+  return preferences_get_int("count_ap", 0);
+}
+
+void wifi_ap_manager_list_aps() {
+  int count = preferences_get_int("count_ap", 0);
+  if (count == 0) {
+    printf("No saved APs\n");
+    return;
+  }
+  ESP_LOGI(__func__, "Saved APs: %d", count);
+  for (int i = 0; i < count; i++) {
+    char wifi_ap[100];
+    char wifi_ssid[100];
+    sprintf(wifi_ap, "wifi%d", i);
+    esp_err_t err = preferences_get_string(wifi_ap, wifi_ssid, 100);
+    if (err != ESP_OK) {
+      continue;
+    }
+    printf("[%i][%s] SSID: %s\n", i, wifi_ap, wifi_ssid);
+  }
+}
+
+void wifi_ap_manager_get_aps(char** aps_list) {
+  int count = wifi_ap_manager_get_count();
+  if (count == 0) {
+    return;
+  }
+  for (int i = 0; i < count; i++) {
+    char wifi_ap[100];
+    char wifi_ssid[100];
+
+    sprintf(wifi_ap, "wifi%d", i);
+    esp_err_t err = preferences_get_string(wifi_ap, wifi_ssid, 100);
+    if (err != ESP_OK) {
+      continue;
+    }
+    aps_list[i] = malloc(sizeof(wifi_ssid) + 1);
+    if (aps_list[i] != NULL) {
+      aps_list[i] = strdup(wifi_ssid);
+    }
+    printf("[%i][%s] SSID: %s\n", i, wifi_ap, wifi_ssid);
+  }
+}

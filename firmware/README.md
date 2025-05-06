@@ -4,18 +4,42 @@ You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/p
 
 ## Table of contents
 
-- [Prerequisites](#prerequisites)
-- [Development setup](#development-setup)
+- [Developer guide](#developer-guide)
+  - [Table of contents](#table-of-contents)
+  - [Prerequisites](#prerequisites)
+  - [Development setup](#development-setup)
   - [Building the firmware](#building-the-firmware)
-  - [Flashing the firmware](#flashing-the-firmware)
-  - [Monitoring the serial output](#monitoring-the-serial-output)
-  - [Full build process](#full-build-process)
-  - [Cleaning the project](#cleaning-the-project)
-- [Create a release](#create-a-release)
-- [Development process](#development-process)
-  - [Add a new menu](#add-a-new-menu)
-    - [Menus structure](#menus-structure)
-    - [Steps to add a new menu](#steps-to-add-a-new-menu)
+    - [Flashing the firmware](#flashing-the-firmware)
+    - [Monitoring the serial output](#monitoring-the-serial-output)
+    - [Full build process](#full-build-process)
+    - [Cleaning the project](#cleaning-the-project)
+  - [Create a release](#create-a-release)
+    - [Flashing release](#flashing-release)
+      - [OTA](#ota)
+      - [NO OTA](#no-ota)
+  - [Development process](#development-process)
+    - [Add new menu](#add-new-menu)
+  - [WIFI](#wifi)
+    - [DoS test](#dos-test)
+    - [Spam SSID](#spam-ssid)
+    - [Save](#save)
+    - [Delete](#delete)
+- [Wardriving File Formats](#wardriving-file-formats)
+- [Wifi](#wifi-1)
+- [Zigbee](#zigbee)
+- [Thread](#thread)
+- [Wardriving Thread test](#wardriving-thread-test)
+- [Openthread - Install example](#openthread---install-example)
+  - [ESP-IDF](#esp-idf)
+    - [Get the repo](#get-the-repo)
+    - [Load the example](#load-the-example)
+  - [OT Border Router - Commissioner](#ot-border-router---commissioner)
+  - [OT End device](#ot-end-device)
+  - [View UDP Packets](#view-udp-packets)
+  - [Modbus](#modbus)
+- [Change log](#change-log)
+  - [v1.1.7.0](#v1170)
+    - [Added](#added)
 
 ## Prerequisites
 
@@ -420,6 +444,36 @@ The Border Router recived:
 > 9 bytes from fd96:26d8:408f:b50e:bca0:8fb6:ed5a:4a27 49154 CatsRules
 ```
 
+
+## Modbus
+
+> ⚠️ Warning: These commands are based on my specific setup. Your configuration may differ, so make sure to adjust the IP address, request type, registers, and coils according to your environment.
+
+> **Important**: The registers and coils depend on your setup — do not assume mine will work for you.
+
+```bash
+# List the availables Access Point
+list
+# Connect to your Access Point
+connect 0
+# Set the server IP and Port 
+mb_engine_set_server 192.168.0.2500
+# Set the request type
+mb_engine_set_req registers 1 2 1234
+# Connect to the server
+mb_engine_connect
+# Send single attack
+mb_engine_send_req
+# Send loop attack of writer
+mb_engine_start_writer
+# Send dos attack
+mb_engine_start_dos
+# Stop any attack
+mb_engine_stop_attack
+
+```
+
+> For more information you can use the `help` function and the command to view more information about it.
 
 # Change log
 
