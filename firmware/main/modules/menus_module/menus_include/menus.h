@@ -21,6 +21,8 @@
 #include "gps_settings.h"
 #include "i2c_scanner.h"
 #include "logs_output.h"
+#include "modbus_dos.h"
+#include "modbus_tcp_scenes.h"
 #include "open_thread_module.h"
 #include "ota_module.h"
 #include "sd_card_settings_module.h"
@@ -57,6 +59,7 @@ typedef enum {
   MENU_WIFI_SSID_SPAM,
   MENU_WIFI_ODRONE_ID,
   MENU_WIFI_ODRONE_SCANNER,
+  MENU_WIFI_MBDOS_ID,
   /* WiFi analizer items */
   MENU_WIFI_ANALYZER_RUN,
   MENU_WIFI_ANALYZER_SETTINGS,
@@ -262,6 +265,14 @@ menu_t menus[] = {  //////////////////////////////////
      .entry_cmd = "droneid_scanner",
      .last_selected_submenu = 0,
      .on_enter_cb = droneid_scanner_begin,
+     .on_exit_cb = NULL,
+     .is_visible = true},
+    {.display_name = "Modbus TCP",
+     .menu_idx = MENU_WIFI_MBDOS_ID,
+     .parent_idx = MENU_WIFI_APPS,
+     .entry_cmd = "modbus_tcp",
+     .last_selected_submenu = 0,
+     .on_enter_cb = modbus_tcp_scenes_main,
      .on_exit_cb = NULL,
      .is_visible = true},
 #endif

@@ -102,7 +102,8 @@
 // Functions in a processor specific file.
 //
 void construct2(void);
-void init2(char*, int, uint8_t*, uint8_t);
+void init_w(char*, int, uint8_t*, uint8_t);
+void init_ble();
 uint8_t* capability(void);
 int tag_rates(uint8_t*, int);
 int tag_ext_rates(uint8_t*, int);
@@ -118,7 +119,7 @@ void odid_initSystemData(ODID_System_data* data);
 class ID_OpenDrone {
  public:
   ID_OpenDrone();
-  void init(struct UTM_parameters*);
+  void init(struct UTM_parameters*, bool ble_drone = false);
   void set_self_id(char*);
   void set_auth(char*);
   void set_auth(uint8_t*, short int, uint8_t);
@@ -135,6 +136,8 @@ class ID_OpenDrone {
     #endif
   int transmit_wifi(struct UTM_data*, int);
   int transmit_ble(uint8_t*, int);
+
+  bool bt_mode;
 
   int auth_page = 0, auth_page_count = 0, key_length = 0, iv_length = 0;
   char* UAS_operator;
@@ -161,9 +164,9 @@ class ID_OpenDrone {
       #endif
     #endif
 
-    #if ID_OD_BT
+  // #if ID_OD_BT
   uint8_t ble_message[36], counter = 0;
-    #endif
+  // #endif
 
   ODID_UAS_Data UAS_data;
   ODID_BasicID_data* basicID_data;

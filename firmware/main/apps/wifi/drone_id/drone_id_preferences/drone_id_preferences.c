@@ -10,6 +10,7 @@
 #define LOCATION_SOURCE_MEM "loc_src_dr"
 #define LATITUDE_MEM        "lat_dr"
 #define LONGITUDE_MEM       "lon_dr"
+#define ADD_BLE_DRONE_MEM   "add_ble_dr"
 
 drone_id_preferences_t* drone_pref_ptr = NULL;
 
@@ -30,6 +31,8 @@ void drone_id_preferences_begin() {
       LOCATION_SOURCE_MEM, DRONE_PREF_LOCATION_SOURCE_GPS);
   drone_pref_ptr->latitude = preferences_get_float(LATITUDE_MEM, 0.0);
   drone_pref_ptr->longitude = preferences_get_float(LONGITUDE_MEM, 0.0);
+  drone_pref_ptr->add_ble_drone =
+      preferences_get_bool(ADD_BLE_DRONE_MEM, false);
 }
 
 void drone_id_preferences_save() {
@@ -42,6 +45,7 @@ void drone_id_preferences_save() {
   preferences_put_uchar(LOCATION_SOURCE_MEM, drone_pref_ptr->location_source);
   preferences_put_float(LATITUDE_MEM, drone_pref_ptr->latitude);
   preferences_put_float(LONGITUDE_MEM, drone_pref_ptr->longitude);
+  preferences_put_bool(ADD_BLE_DRONE_MEM, drone_pref_ptr->add_ble_drone);
 }
 
 void drone_id_preferences_set_num_drones(uint8_t num_drones) {
@@ -87,6 +91,15 @@ void drone_id_preferences_set_longitude(float longitude) {
     return;
   }
   drone_pref_ptr->longitude = longitude;
+  drone_id_preferences_save();
+}
+
+void drone_id_preferences_set_add_ble_drone(bool add_ble_drone) {
+  if (!drone_pref_ptr) {
+    preferences_not_initialized();
+    return;
+  }
+  drone_pref_ptr->add_ble_drone = add_ble_drone;
   drone_id_preferences_save();
 }
 

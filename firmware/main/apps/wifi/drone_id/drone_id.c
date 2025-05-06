@@ -25,6 +25,8 @@ void drone_id_begin() {
     gps_module_start_scan();
     // oled_screen_set_last_buffer();
   }
+
+  drone_id_set_ble_drone(prefs->add_ble_drone);
   drone_anim_scan();
   drone_id_screens_main();
 }
@@ -32,7 +34,7 @@ void drone_id_begin() {
 void drone_id_set_location_source(uint8_t location_source) {
   drone_id_preferences_t* prefs = drone_id_preferences_get();
   prefs->location_source = location_source;
-  drone_id_preferences_save(prefs);
+  drone_id_preferences_save();
 
   if (location_source == DRONE_PREF_LOCATION_SOURCE_GPS) {
     gps_module_register_cb(gps_event_handler_cb);
@@ -53,4 +55,12 @@ void drone_id_set_wifi_ap(uint8_t channel) {
 
 void drone_id_set_location(float latitude, float longitude) {
   odrone_id_set_location(latitude, longitude);
+}
+
+void drone_id_set_ble_drone(bool ble_drone) {
+  drone_id_preferences_t* prefs = drone_id_preferences_get();
+  prefs->add_ble_drone = ble_drone;
+  drone_id_preferences_save();
+
+  odrone_id_set_ble_drone(ble_drone);
 }

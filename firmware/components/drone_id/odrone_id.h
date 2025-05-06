@@ -17,6 +17,7 @@ void odrone_id_begin(uint8_t num_drones,
 void odrone_id_set_num_spoofers(uint8_t num_drones);
 void odrone_id_set_wifi_ap(uint8_t channel);
 void odrone_id_set_location(float latitude, float longitude);
+void odrone_id_set_ble_drone(bool enable);
 
 #ifdef __cplusplus
 }
