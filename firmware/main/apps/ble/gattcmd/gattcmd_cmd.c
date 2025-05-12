@@ -1,0 +1,101 @@
+#include <string.h>
+#include "argtable3/argtable3.h"
+#include "esp_console.h"
+#include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "gattcmd_module.h"
+
+#define GATTCMD_CMD_NAME "gattcmd_set_client"
+
+static struct {
+  struct arg_str* remote_addr;
+  struct arg_end* end;
+} gattccmd_client_args;
+
+static struct {
+  struct arg_str* gatt;
+  struct arg_str* value;
+  struct arg_end* end;
+} gattccmd_write_args;
+
+static int gattccmd_set_client(int argc, char** argv) {
+  int nerrros = arg_parse(argc, argv, (void**) &gattccmd_client_args);
+  if (nerrros != 0) {
+    arg_print_errors(stderr, gattccmd_client_args.end, GATTCMD_CMD_NAME);
+    return 1;
+  }
+  ESP_LOGI(GATTCMD_CMD_NAME, "Client: %s",
+           gattccmd_client_args.remote_addr->sval[0]);
+  gattcmd_module_set_remote_address(gattccmd_client_args.remote_addr->sval[0]);
+  return 0;
+}
+
+static int gattccmd_write(int argc, char** argv) {
+  int nerrros = arg_parse(argc, argv, (void**) &gattccmd_write_args);
+  if (nerrros != 0) {
+    arg_print_errors(stderr, gattccmd_write_args.end, GATTCMD_CMD_NAME);
+    return 1;
+  }
+  ESP_LOGI(GATTCMD_CMD_NAME, "Write Client: %s",
+           gattccmd_write_args.gatt->sval[0]);
+  gattcmd_module_gatt_write(gattccmd_write_args.gatt->sval[0],
+                            gattccmd_write_args.value->sval[0]);
+  return 0;
+}
+
+static int gattccmd_connect(int argc, char** argv) {
+  gattcmd_module_connect();
+  return 0;
+}
+
+static int gattccmd_disconnect(int argc, char** argv) {
+  gattcmd_module_disconnect();
+  return 0;
+}
+
+void gattccmd_register_cmd() {
+  gattccmd_client_args.remote_addr =
+      arg_str0(NULL, NULL, "<Address>", "BT Address");
+  gattccmd_client_args.end = arg_end(1);
+
+  gattccmd_write_args.gatt =
+      arg_str0(NULL, NULL, "<Gatt Address>", "BT Address");
+  gattccmd_write_args.value = arg_str1(NULL, NULL, "<value>", "BT Address");
+  gattccmd_write_args.end = arg_end(2);
+
+  esp_console_cmd_t gattccmd_set_client_cmd = {
+      .command = GATTCMD_CMD_NAME,
+      .help = "\nSet the client Address",
+      .category = "BT",
+      .hint = NULL,
+      .func = &gattccmd_set_client,
+      .argtable = &gattccmd_client_args};
+
+  esp_console_cmd_t gattccmd_write_cmd = {.command = "gattcmd_write",
+                                          .help = "\nWrite to the GATT Address",
+                                          .category = "BT",
+                                          .hint = NULL,
+                                          .func = &gattccmd_write,
+                                          .argtable = &gattccmd_write_args};
+
+  esp_console_cmd_t gattcmd_connect_cmd = {.command = "gattcmd_connect",
+                                           .help = "Connect to the BLE device",
+                                           .category = "BT",
+                                           .hint = NULL,
+                                           .func = &gattccmd_connect,
+                                           .argtable = NULL};
+
+  esp_console_cmd_t gattcmd_disconnect_cmd = {
+      .command = "gattcmd_disconnect",
+      .help = "Disconnect to the BLE device",
+      .category = "BT",
+      .hint = NULL,
+      .func = &gattccmd_disconnect,
+      .argtable = NULL};
+
+  ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_set_client_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&gattcmd_connect_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&gattcmd_disconnect_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_write_cmd));
+}
