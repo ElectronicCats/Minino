@@ -14,6 +14,7 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "gattcmd_module.h"
+#include "services/gattcmd_enum.h"
 
 #define GATTC_TAG               "GATTC_DEMO"
 #define REMOTE_SERVICE_UUID     0x00FF
@@ -91,7 +92,7 @@ static struct gattc_profile_inst gl_profile_tab[PROFILE_NUM] = {
         {
             .gattc_cb = gattc_profile_event_handler,
             .gattc_if = ESP_GATT_IF_NONE, /* Not get the gatt_if, so initial is
-                                             ESP_GATT_IF_NONE */
+                                              ESP_GATT_IF_NONE */
         },
 };
 
@@ -141,8 +142,7 @@ static void gattc_profile_event_handler(esp_gattc_cb_event_t event,
       }
       ESP_LOGI(GATTC_TAG, "Service discover complete, conn_id %d",
                param->dis_srvc_cmpl.conn_id);
-      // esp_ble_gattc_search_service(gattc_if, param->dis_srvc_cmpl.conn_id,
-      // &remote_filter_service_uuid);
+      /* Discover all the services */
       esp_ble_gattc_search_service(gattc_if, param->dis_srvc_cmpl.conn_id,
                                    NULL);
       esp_gattc_service_elem_t* results;
@@ -376,22 +376,6 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event,
                      "Scan result, device " ESP_BD_ADDR_STR ", name len %u",
                      ESP_BD_ADDR_HEX(scan_result->scan_rst.bda), adv_name_len);
           // ESP_LOG_BUFFER_CHAR(GATTC_TAG, adv_name, adv_name_len);
-
-#if CONFIG_EXAMPLE_DUMP_ADV_DATA_AND_SCAN_RESP
-          if (scan_result->scan_rst.adv_data_len > 0) {
-            ESP_LOGI(GATTC_TAG, "adv data:");
-            esp_log_buffer_hex(GATTC_TAG, &scan_result->scan_rst.ble_adv[0],
-                               scan_result->scan_rst.adv_data_len);
-          }
-          if (scan_result->scan_rst.scan_rsp_len > 0) {
-            ESP_LOGI(GATTC_TAG, "scan resp:");
-            esp_log_buffer_hex(
-                GATTC_TAG,
-                &scan_result->scan_rst
-                     .ble_adv[scan_result->scan_rst.adv_data_len],
-                scan_result->scan_rst.scan_rsp_len);
-          }
-#endif
           // ESP_LOGI(GATTC_TAG, "Locking for %s", remote_device_name);
           if (adv_name != NULL) {
             if (memcmp(target, scan_result->scan_rst.bda, 6) == 0) {
@@ -618,4 +602,13 @@ void gattcmd_module_disconnect() {
   }
   esp_bluedroid_disable();
   ESP_LOGI(GATTC_TAG, "Disconencted");
+}
+
+void gattcmd_module_enum_client(char* saddress) {
+  if (!initialized) {
+    initialized = true;
+    gattcmd_begin();
+  }
+
+  gattcmd_enum_begin(saddress);
 }

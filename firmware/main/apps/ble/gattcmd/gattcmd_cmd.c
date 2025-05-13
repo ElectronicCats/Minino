@@ -19,7 +19,7 @@ static struct {
   struct arg_end* end;
 } gattccmd_write_args;
 
-static int gattccmd_set_client(int argc, char** argv) {
+static int gattccmd_enum_client(int argc, char** argv) {
   int nerrros = arg_parse(argc, argv, (void**) &gattccmd_client_args);
   if (nerrros != 0) {
     arg_print_errors(stderr, gattccmd_client_args.end, GATTCMD_CMD_NAME);
@@ -27,7 +27,7 @@ static int gattccmd_set_client(int argc, char** argv) {
   }
   ESP_LOGI(GATTCMD_CMD_NAME, "Client: %s",
            gattccmd_client_args.remote_addr->sval[0]);
-  gattcmd_module_set_remote_address(gattccmd_client_args.remote_addr->sval[0]);
+  gattcmd_module_enum_client(gattccmd_client_args.remote_addr->sval[0]);
   return 0;
 }
 
@@ -65,11 +65,11 @@ void gattccmd_register_cmd() {
   gattccmd_write_args.end = arg_end(2);
 
   esp_console_cmd_t gattccmd_set_client_cmd = {
-      .command = GATTCMD_CMD_NAME,
-      .help = "\nSet the client Address",
+      .command = "gattcmd_enum",
+      .help = "\nEnum the client Address",
       .category = "BT",
       .hint = NULL,
-      .func = &gattccmd_set_client,
+      .func = &gattccmd_enum_client,
       .argtable = &gattccmd_client_args};
 
   esp_console_cmd_t gattccmd_write_cmd = {.command = "gattcmd_write",
