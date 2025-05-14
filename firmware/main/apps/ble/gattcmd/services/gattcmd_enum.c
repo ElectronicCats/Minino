@@ -14,7 +14,6 @@ static esp_gattc_char_elem_t* char_elem_result = NULL;
 static esp_gattc_descr_elem_t* descr_elem_result = NULL;
 static bool connect = false;
 static bool get_server = false;
-static char remote_device_name[ESP_BLE_ADV_NAME_LEN_MAX] = "ELK-BLEDOM";
 static bool draw_headers = true;
 
 static void gattcmd_enum_gap_cb(esp_gap_ble_cb_event_t event,
@@ -53,6 +52,19 @@ struct gattc_profile_inst {
   uint16_t char_handle;
   esp_bd_addr_t remote_bda;
 };
+
+typedef struct {
+  uint16_t conn_id;
+  uint16_t start_handle;
+  uint16_t end_handle;
+  esp_gatt_id_t srvc_id;
+  esp_gattc_char_elem_t* char_elem_result;
+  uint16_t char_count;
+  esp_gattc_descr_elem_t* descr_elem_result;
+} gattc_profile_table_t;
+
+static gattc_profile_table_t gattc_context[20] = {0};
+static uint16_t gattc_context_count = 0;
 
 static struct gattc_profile_inst enum_gl_profile_tab[GATTCMD_ENUM_PROFILE] = {
     [GATTCMD_ENUM_APP_ID] =
@@ -106,24 +118,29 @@ static void gattcmd_enum_gattc_profile_event_handler(
       esp_ble_gattc_search_service(gattc_if, param->dis_srvc_cmpl.conn_id,
                                    NULL);
       break;
-    case ESP_GATTC_CFG_MTU_EVT:
-      break;
     case ESP_GATTC_SEARCH_RES_EVT: {
       get_server = true;
       enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].service_start_handle =
           p_data->search_res.start_handle;
       enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].service_end_handle =
           p_data->search_res.end_handle;
-      if (draw_headers) {
-        draw_headers = false;
-        printf(
-            "|______________________|________________________________________"
-            "\n");
-        printf("|\t Handles \t| \tService > Characteristics|\n");
-      }
-      printf("|\t %d -> %d \t|\t %x\t\t\t|\n", p_data->search_res.start_handle,
-             p_data->search_res.end_handle,
-             p_data->search_res.srvc_id.uuid.uuid.uuid16);
+
+      gattc_context[gattc_context_count].conn_id = param->dis_srvc_cmpl.conn_id;
+      gattc_context[gattc_context_count].start_handle =
+          p_data->search_res.start_handle;
+      gattc_context[gattc_context_count].end_handle =
+          p_data->search_res.end_handle;
+      gattc_context[gattc_context_count].srvc_id.inst_id =
+          p_data->search_res.srvc_id.inst_id;
+      gattc_context[gattc_context_count].srvc_id.uuid.uuid.uuid16 =
+          p_data->search_res.srvc_id.uuid.uuid.uuid16;
+      gattc_context[gattc_context_count].srvc_id.uuid.uuid.uuid32 =
+          p_data->search_res.srvc_id.uuid.uuid.uuid32;
+      memcpy(gattc_context[gattc_context_count].srvc_id.uuid.uuid.uuid128,
+             p_data->search_res.srvc_id.uuid.uuid.uuid128, ESP_UUID_LEN_128);
+      gattc_context[gattc_context_count].srvc_id.uuid.len =
+          p_data->search_res.srvc_id.uuid.len;
+      gattc_context_count++;
       break;
     }
     case ESP_GATTC_SEARCH_CMPL_EVT:
@@ -139,141 +156,123 @@ static void gattcmd_enum_gattc_profile_event_handler(
       } else {
         ESP_LOGI(GATTCMD_ENUM_TAG, "Unknown service source");
       }
-      printf(
-          "|______________________|________________________________________\n");
-      printf("|\t %d -> %d \t|\t\t\t\t|\n",
-             enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].service_start_handle,
-             enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].service_end_handle);
 
-      if (get_server) {
-        uint16_t count = 0;
-        uint16_t offset = 0;
-        esp_gatt_status_t status = esp_ble_gattc_get_attr_count(
-            gattc_if, p_data->search_cmpl.conn_id, ESP_GATT_DB_CHARACTERISTIC,
-            enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].service_start_handle,
-            enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].service_end_handle,
-            INVALID_HANDLE, &count);
-        if (status != ESP_GATT_OK) {
-          ESP_LOGE(GATTCMD_ENUM_TAG, "esp_ble_gattc_get_attr_count error");
-          break;
+      if (!get_server) {
+        break;
+      }
+      uint16_t idx = 0;
+      for (int i = 0; i < gattc_context_count; i++) {
+        if (gattc_context[i].conn_id ==
+            enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].service_end_handle) {
+          idx = i;
         }
-        if (count > 0) {
-          char_elem_result = (esp_gattc_char_elem_t*) malloc(
-              sizeof(esp_gattc_char_elem_t) * count);
-          if (!char_elem_result) {
-            ESP_LOGE(GATTCMD_ENUM_TAG, "gattc no mem");
+      }
+      uint16_t offset = 0;
+      esp_gatt_status_t status = esp_ble_gattc_get_attr_count(
+          gattc_if, p_data->search_cmpl.conn_id, ESP_GATT_DB_CHARACTERISTIC,
+          enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].service_start_handle,
+          enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].service_end_handle,
+          INVALID_HANDLE, &gattc_context[idx].char_count);
+      if (status != ESP_GATT_OK) {
+        ESP_LOGE(GATTCMD_ENUM_TAG, "esp_ble_gattc_get_attr_count error");
+        break;
+      }
+      if (gattc_context[idx].char_count > 0) {
+        gattc_context[idx].char_elem_result = (esp_gattc_char_elem_t*) malloc(
+            sizeof(esp_gattc_char_elem_t) * gattc_context[idx].char_count);
+        if (!gattc_context[idx].char_elem_result) {
+          ESP_LOGE(GATTCMD_ENUM_TAG, "gattc no mem");
+          break;
+        } else {
+          status = esp_ble_gattc_get_all_char(
+              gattc_if, p_data->search_cmpl.conn_id,
+              enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].service_start_handle,
+              enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].service_end_handle,
+              gattc_context[idx].char_elem_result,
+              &gattc_context[idx].char_count, offset);
+          if (status != ESP_GATT_OK) {
+            ESP_LOGE(GATTCMD_ENUM_TAG, "esp_ble_gattc_get_char_by_uuid error");
+            free(gattc_context[idx].char_elem_result);
+            gattc_context[idx].char_elem_result = NULL;
             break;
-          } else {
-            status = esp_ble_gattc_get_all_char(
-                gattc_if, p_data->search_cmpl.conn_id,
-                enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].service_start_handle,
-                enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].service_end_handle,
-                char_elem_result, &count, offset);
-            if (status != ESP_GATT_OK) {
-              ESP_LOGE(GATTCMD_ENUM_TAG,
-                       "esp_ble_gattc_get_char_by_uuid error");
-              free(char_elem_result);
-              char_elem_result = NULL;
-              break;
-            }
-            for (int i = 0; i < count; i++) {
-              printf(
-                  "|\t %d \t\t|\t %x (%d - %s) |\n",
-                  char_elem_result[i].char_handle,
-                  char_elem_result[i].uuid.uuid.uuid16,
-                  char_elem_result[i].properties,
-                  char_elem_result[i].properties &
-                          (ESP_GATT_CHAR_PROP_BIT_READ |
-                           ESP_GATT_CHAR_PROP_BIT_WRITE)
-                      ? "READ, WRITE"
-                  : char_elem_result[i].properties & ESP_GATT_CHAR_PROP_BIT_READ
-                      ? "READ"
-                  : char_elem_result[i].properties &
-                          ESP_GATT_CHAR_PROP_BIT_WRITE_NR
-                      ? "WRITE NR"
-                  : char_elem_result[i].properties &
-                          ESP_GATT_CHAR_PROP_BIT_WRITE
-                      ? "WRITE"
-                  : char_elem_result[i].properties &
-                          ESP_GATT_CHAR_PROP_BIT_NOTIFY
-                      ? "NOTIFY"
-                  : char_elem_result[i].properties &
-                          ESP_GATT_CHAR_PROP_BIT_INDICATE
-                      ? "INDICATE"
-                      : "Unknown");
-
-              if (char_elem_result[i].properties ==
-                      ESP_GATT_CHAR_PROP_BIT_READ ||
-                  char_elem_result[i].properties == 6) {
-                status = esp_ble_gattc_read_char_descr(
-                    gattc_if, p_data->search_cmpl.conn_id,
-                    char_elem_result[i].char_handle, ESP_GATT_AUTH_REQ_NONE);
-                if (status != ESP_GATT_OK) {
-                  ESP_LOGE(GATTCMD_ENUM_TAG, "Reading char-descr error");
-                  return;
-                }
+          }
+          for (int i = 0; i < gattc_context[idx].char_count; i++) {
+            if (gattc_context[idx].char_elem_result[i].properties ==
+                    ESP_GATT_CHAR_PROP_BIT_READ ||
+                gattc_context[idx].char_elem_result[i].properties == 6) {
+              status = esp_ble_gattc_read_char_descr(
+                  gattc_if, p_data->search_cmpl.conn_id,
+                  gattc_context[idx].char_elem_result[i].char_handle,
+                  ESP_GATT_AUTH_REQ_NONE);
+              if (status != ESP_GATT_OK) {
+                ESP_LOGE(GATTCMD_ENUM_TAG, "Reading char-descr error");
+                return;
               }
             }
           }
-          /* free char_elem_result */
-          free(char_elem_result);
-        } else {
-          ESP_LOGE(GATTCMD_ENUM_TAG, "no char found");
         }
+        /* free gattc_context[idx].char_elem_result */
+        // free(gattc_context[idx].char_elem_result);
+      } else {
+        ESP_LOGE(GATTCMD_ENUM_TAG, "no char found");
       }
       break;
-    case ESP_GATTC_REG_FOR_NOTIFY_EVT:
-    case ESP_GATTC_NOTIFY_EVT:
-      break;
     case ESP_GATTC_READ_CHAR_EVT:
-      ESP_LOGW(GATTCMD_ENUM_TAG, "Targeting Read event %d", event);
+      if (draw_headers) {
+        draw_headers = false;
+        printf(
+            "\n|_______________________|_________________________________|_____"
+            "______|______________________|"
+            "\n");
+        printf(
+            "|\t Handles \t| \tService > Characteristics | Properties| \t Data "
+            "\t|\n");
+      }
+      // printf("| %d\t\t|\t%s\t\t|\n", p_data->read.handle,
+      // p_data->read.value); ESP_LOGI(GATTCMD_ENUM_TAG, "Count service %d",
+      // gattc_context_count);
+      for (int i = 0; i < gattc_context_count; i++) {
+        printf("|\t %04x -> %04x \t| %04x \t\t\t|\t|\t|\n",
+               gattc_context[i].start_handle, gattc_context[i].end_handle,
+               gattc_context[i].srvc_id.uuid.uuid.uuid16);
+        for (int j = 0; j < gattc_context[i].char_count; i++) {
+          printf("|\t %04x \t\t|\t %04x \t\t| %s | %s\n",
+                 gattc_context[i].char_elem_result[j].char_handle,
+                 gattc_context[i].char_elem_result[j].uuid.uuid.uuid16,
+                 gattc_context[i].char_elem_result[j].properties &
+                         (ESP_GATT_CHAR_PROP_BIT_READ |
+                          ESP_GATT_CHAR_PROP_BIT_WRITE)
+                     ? "READ, WRITE"
+                 : gattc_context[i].char_elem_result[j].properties &
+                         ESP_GATT_CHAR_PROP_BIT_READ
+                     ? "READ"
+                 : gattc_context[i].char_elem_result[j].properties &
+                         ESP_GATT_CHAR_PROP_BIT_WRITE
+                     ? "WRITE"
+                 : gattc_context[i].char_elem_result[j].properties &
+                         ESP_GATT_CHAR_PROP_BIT_NOTIFY
+                     ? "NOTIFY"
+                 : gattc_context[i].char_elem_result[j].properties &
+                         ESP_GATT_CHAR_PROP_BIT_INDICATE
+                     ? "INDICATE"
+                     : "Unknown",
+                 p_data->read.value);
+        }
+      }
       break;
     case ESP_GATTC_READ_DESCR_EVT:
       if (p_data->read.status != ESP_GATT_OK) {
         ESP_LOGE(GATTCMD_ENUM_TAG, "Descriptor read failed, status %x",
-                 p_data->write.status);
+                 p_data->read.status);
         break;
       }
-      esp_err_t status =
+      status =
           esp_ble_gattc_read_char(gattc_if, p_data->search_res.conn_id,
                                   p_data->read.handle, ESP_GATT_AUTH_REQ_NONE);
       if (status != ESP_GATT_OK) {
         ESP_LOGE(GATTCMD_ENUM_TAG, "Reading char error");
         return;
       }
-      printf("|\t%d\t\t|\t%s\t\t|\n", p_data->read.handle, p_data->read.value);
-      break;
-    case ESP_GATTC_WRITE_DESCR_EVT:
-      if (p_data->write.status != ESP_GATT_OK) {
-        ESP_LOGE(GATTCMD_ENUM_TAG, "Descriptor write failed, status %x",
-                 p_data->write.status);
-        break;
-      }
-      ESP_LOGI(GATTCMD_ENUM_TAG, "Descriptor write successfully");
-      uint8_t write_char_data[35];
-      for (int i = 0; i < sizeof(write_char_data); ++i) {
-        write_char_data[i] = i % 256;
-      }
-      esp_ble_gattc_write_char(
-          gattc_if, enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].conn_id,
-          enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].char_handle,
-          sizeof(write_char_data), write_char_data, ESP_GATT_WRITE_TYPE_RSP,
-          ESP_GATT_AUTH_REQ_NONE);
-      break;
-    case ESP_GATTC_SRVC_CHG_EVT: {
-      esp_bd_addr_t bda;
-      memcpy(bda, p_data->srvc_chg.remote_bda, sizeof(esp_bd_addr_t));
-      ESP_LOGI(GATTCMD_ENUM_TAG, "Service change from " ESP_BD_ADDR_STR "",
-               ESP_BD_ADDR_HEX(bda));
-      break;
-    }
-    case ESP_GATTC_WRITE_CHAR_EVT:
-      if (p_data->write.status != ESP_GATT_OK) {
-        ESP_LOGE(GATTCMD_ENUM_TAG, "Characteristic write failed, status %x)",
-                 p_data->write.status);
-        break;
-      }
-      ESP_LOGI(GATTCMD_ENUM_TAG, "Characteristic write successfully");
       break;
     case ESP_GATTC_DISCONNECT_EVT:
       connect = false;
@@ -294,52 +293,42 @@ static void gattcmd_enum_gap_cb(esp_gap_ble_cb_event_t event,
   uint8_t adv_name_len = 0;
   switch (event) {
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
-      // the unit of the duration is second
       uint32_t duration = 30;
       esp_ble_gap_start_scanning(duration);
       break;
     }
     case ESP_GAP_BLE_SCAN_START_COMPLETE_EVT:
-      // scan start complete event to indicate scan start successfully or failed
       if (param->scan_start_cmpl.status != ESP_BT_STATUS_SUCCESS) {
         ESP_LOGE(GATTCMD_ENUM_TAG, "Scanning start failed, status %x",
                  param->scan_start_cmpl.status);
         break;
       }
-      ESP_LOGI(GATTCMD_ENUM_TAG, "Scanning start successfully");
-
       break;
     case ESP_GAP_BLE_SCAN_RESULT_EVT: {
       esp_ble_gap_cb_param_t* scan_result = (esp_ble_gap_cb_param_t*) param;
       switch (scan_result->scan_rst.search_evt) {
-        case ESP_GAP_SEARCH_INQ_RES_EVT:
+        case ESP_GAP_SEARCH_INQ_RES_EVT: {
           adv_name = esp_ble_resolve_adv_data_by_type(
               scan_result->scan_rst.ble_adv,
               scan_result->scan_rst.adv_data_len +
                   scan_result->scan_rst.scan_rsp_len,
               ESP_BLE_AD_TYPE_NAME_CMPL, &adv_name_len);
-          if (adv_name_len > 0)
-            ESP_LOGI(GATTCMD_ENUM_TAG,
-                     "Scan result, device " ESP_BD_ADDR_STR ", name len %u",
-                     ESP_BD_ADDR_HEX(scan_result->scan_rst.bda), adv_name_len);
-          // ESP_LOG_BUFFER_CHAR(GATTCMD_ENUM_TAG, adv_name, adv_name_len);
-          // ESP_LOGI(GATTCMD_ENUM_TAG, "Locking for %s", remote_device_name);
-          if (adv_name != NULL) {
-            if (memcmp(target_bda, scan_result->scan_rst.bda, 6) == 0) {
-              ESP_LOGE(GATTCMD_ENUM_TAG, "I Found you");
-              ESP_LOGI(GATTCMD_ENUM_TAG, "Device found %s", remote_device_name);
-              if (connect == false) {
-                connect = true;
-                ESP_LOGI(GATTCMD_ENUM_TAG, "Connect to the remote device");
-                esp_ble_gap_stop_scanning();
-                esp_ble_gattc_open(
-                    enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if,
-                    scan_result->scan_rst.bda,
-                    scan_result->scan_rst.ble_addr_type, true);
+          if (adv_name_len > 0) {
+            if (adv_name != NULL) {
+              if (memcmp(target_bda, scan_result->scan_rst.bda, 6) == 0) {
+                if (connect == false) {
+                  connect = true;
+                  esp_ble_gap_stop_scanning();
+                  esp_ble_gattc_open(
+                      enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if,
+                      scan_result->scan_rst.bda,
+                      scan_result->scan_rst.ble_addr_type, true);
+                }
               }
             }
           }
           break;
+        }
         case ESP_GAP_SEARCH_INQ_CMPL_EVT:
           break;
         default:
