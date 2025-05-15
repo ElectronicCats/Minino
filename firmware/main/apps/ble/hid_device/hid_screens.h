@@ -16,12 +16,16 @@ enum {
   HID_DEVICE_VOL_UP,
   HID_DEVICE_VOL_DOWN,
   HID_DEVICE_PLAY,
+  HID_DEVICE_PAUSE,
+  HID_DEVICE_STOP,
   HID_DEVICE_MUTE,
   HID_DEVICE_NEXT_TRACK,
+  HID_DEVICE_PREV_TRACK,
   HID_DEVICE_COUNT
 } hid_device_item = HID_DEVICE_VOL_UP;
-char* hid_device_items[HID_DEVICE_COUNT] = {"Volumen Up", "Volumen Down",
-                                            "Play/Pause", "Mute", "Next Track"};
+char* hid_device_items[HID_DEVICE_COUNT] = {
+    "Volumen Up", "Volumen Down", "Play",       "Pause",
+    "Stop",       "Mute",         "Next Track", "Previous Track"};
 
 void hid_module_register_menu(menu_tree_t menu);
 void hid_clear_screen();
@@ -31,8 +35,11 @@ void hid_module_display_device_mac();
 void hid_module_display_notify_volumen_up();
 void hid_module_display_notify_volumen_down();
 void hid_module_display_notify_play_pause();
+void hid_module_display_notify_pause();
+void hid_module_display_notify_stop();
 void hid_module_display_notify_mute();
 void hid_module_display_notify_next_track();
+void hid_module_display_notify_prev_track();
 void hid_module_display_device_connection(bool status);
 void hid_module_display_device_pairing();
 void hid_module_display_device_information(char* title, char* body);

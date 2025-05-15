@@ -59,14 +59,26 @@ static void hid_module_cb_event_volumen(uint8_t button_name,
         ble_hid_play(true);
         ble_hid_play(false);
         hid_module_display_notify_play_pause();
-      } else if (current_item == HID_DEVICE_MUTE) {  // Nuevo
+      } else if (current_item == HID_DEVICE_MUTE) {
         ble_hid_mute(true);
         ble_hid_mute(false);
         hid_module_display_notify_mute();
-      } else if (current_item == HID_DEVICE_NEXT_TRACK) {  // Nuevo
+      } else if (current_item == HID_DEVICE_NEXT_TRACK) {
         ble_hid_next_track(true);
         ble_hid_next_track(false);
         hid_module_display_notify_next_track();
+      } else if (current_item == HID_DEVICE_STOP) {
+        ble_hid_stop(true);
+        ble_hid_stop(false);
+        hid_module_display_notify_stop();
+      } else if (current_item == HID_DEVICE_PAUSE) {
+        ble_hid_pause(true);
+        ble_hid_pause(false);
+        hid_module_display_notify_pause();
+      } else if (current_item == HID_DEVICE_PREV_TRACK) {
+        ble_hid_prev_track(true);
+        ble_hid_prev_track(false);
+        hid_module_display_notify_prev_track();
       }
       break;
     default:
