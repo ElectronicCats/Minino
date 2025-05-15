@@ -222,7 +222,7 @@ static void gattcmd_enum_gattc_profile_event_handler(
         draw_headers = false;
         printf(
             "\n|_______________________|_________________________________|_____"
-            "______|______________________|"
+            "______|__________________|"
             "\n");
         printf(
             "|\t Handles \t| \tService > Characteristics | Properties| \t Data "
@@ -232,11 +232,11 @@ static void gattcmd_enum_gattc_profile_event_handler(
       // p_data->read.value); ESP_LOGI(GATTCMD_ENUM_TAG, "Count service %d",
       // gattc_context_count);
       for (int i = 0; i < gattc_context_count; i++) {
-        printf("|\t %04x -> %04x \t| %04x \t\t\t|\t|\t|\n",
+        printf("|\t %04x -> %04x \t| %04x \t\t\t\t\t|\t|\t|\n",
                gattc_context[i].start_handle, gattc_context[i].end_handle,
                gattc_context[i].srvc_id.uuid.uuid.uuid16);
         for (int j = 0; j < gattc_context[i].char_count; i++) {
-          printf("|\t %04x \t\t|\t %04x \t\t| %s | %s\n",
+          printf("|\t %04x \t\t|\t %04x \t\t\t\t| %s | %s\n",
                  gattc_context[i].char_elem_result[j].char_handle,
                  gattc_context[i].char_elem_result[j].uuid.uuid.uuid16,
                  gattc_context[i].char_elem_result[j].properties &
