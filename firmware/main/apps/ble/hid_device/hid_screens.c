@@ -61,6 +61,20 @@ void hid_module_display_notify_play_pause() {
   general_screen_display_menu(hid_current_item);
 }
 
+void hid_module_display_notify_mute() {
+  led_control_run_effect(led_control_pulse_leds);
+  genera_screen_display_notify_information("Notify", "Mute");
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  general_screen_display_menu(hid_current_item);
+}
+
+void hid_module_display_notify_next_track() {
+  led_control_run_effect(led_control_pulse_led_right);
+  genera_screen_display_notify_information("Notify", "Next Track");
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+  general_screen_display_menu(hid_current_item);
+}
+
 void hid_module_display_device_pairing() {
   led_control_run_effect(led_control_ble_spam_breathing);
   genera_screen_display_notify_information("Pairing", "Waiting conn");

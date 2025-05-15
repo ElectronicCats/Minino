@@ -59,6 +59,14 @@ static void hid_module_cb_event_volumen(uint8_t button_name,
         ble_hid_play(true);
         ble_hid_play(false);
         hid_module_display_notify_play_pause();
+      } else if (current_item == HID_DEVICE_MUTE) {  // Nuevo
+        ble_hid_mute(true);
+        ble_hid_mute(false);
+        hid_module_display_notify_mute();
+      } else if (current_item == HID_DEVICE_NEXT_TRACK) {  // Nuevo
+        ble_hid_next_track(true);
+        ble_hid_next_track(false);
+        hid_module_display_notify_next_track();
       }
       break;
     default:
