@@ -140,15 +140,18 @@ static void gattcmd_enum_gattc_profile_event_handler(
       if (draw_headers) {
         draw_headers = false;
         printf(
-            "|__________________|________________________________________\n");
+            "\n|______________|________________________________________|_______"
+            "_________|____________________|\n");
         printf(
-            "| Handles          | Service > Characteristics > Descriptors |\n");
+            "| Handles        | Service > Characteristics > Descriptors| "
+            "Properties     |\t Data             |\n");
         printf(
-            "|__________________|________________________________________\n");
+            "|________________|________________________________________|_______"
+            "_________|____________________|\n");
       }
       printf(
-          "| %04x -> %04x            | UUID: 0x%04x (Service)                "
-          "|\n",
+          "| %04x -> %04x   | %04x (Service)                   \t|\t  "
+          "\t|\t\t\t|\n",
           p_data->search_res.start_handle, p_data->search_res.end_handle,
           p_data->search_res.srvc_id.uuid.uuid.uuid16);
       break;
@@ -167,8 +170,9 @@ static void gattcmd_enum_gattc_profile_event_handler(
         ESP_LOGI(GATTCMD_ENUM_TAG, "Unknown service source");
       }
       printf(
-          "|______________________|________________________________________\n");
-      printf("|\t %04x -> %04x \t|\t\t\t\t|\n",
+          "|________________|_______________________________________|__________"
+          "_____|____________________|\n");
+      printf("| %04x -> %04x \t|\t\t\t\t\t|\t\t|\t\t\t|\n",
              enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].service_start_handle,
              enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].service_end_handle);
 
@@ -206,10 +210,9 @@ static void gattcmd_enum_gattc_profile_event_handler(
             char prop_str[128];
             get_char_properties(char_elem_result[i].properties, prop_str,
                                 sizeof(prop_str));
-            printf("| %04x | UUID: 0x%04x (Char), Handle: %d, Props: %s |\n",
+            printf("|\t %04x  \t| %04x (Char) \t\t\t\t| %s |\t\t\t|\n",
                    char_elem_result[i].char_handle,
-                   char_elem_result[i].uuid.uuid.uuid16,
-                   char_elem_result[i].char_handle, prop_str);
+                   char_elem_result[i].uuid.uuid.uuid16, prop_str);
             if (char_elem_result[i].properties & ESP_GATT_CHAR_PROP_BIT_READ) {
               esp_ble_gattc_read_char(gattc_if, p_data->search_cmpl.conn_id,
                                       char_elem_result[i].char_handle,
@@ -246,11 +249,10 @@ static void gattcmd_enum_gattc_profile_event_handler(
               }
               for (int j = 0; j < desc_count; j++) {
                 printf(
-                    "| %04x | UUID: 0x%04x (Descr), Handle: %d                "
-                    "|\n",
+                    "| %04x \t\t| %04x (Descr)                "
+                    "\t\t|\t\t|\t\t|\n",
                     descr_elem_result[j].handle,
-                    descr_elem_result[j].uuid.uuid.uuid16,
-                    descr_elem_result[j].handle);
+                    descr_elem_result[j].uuid.uuid.uuid16);
                 esp_ble_gattc_read_char_descr(
                     gattc_if, p_data->search_cmpl.conn_id,
                     descr_elem_result[j].handle, ESP_GATT_AUTH_REQ_NONE);
@@ -265,15 +267,15 @@ static void gattcmd_enum_gattc_profile_event_handler(
           ESP_LOGE(GATTCMD_ENUM_TAG, "no char found");
         }
         printf(
-            "|______________________|________________________________________"
-            "\n");
+            "|_______________|______________________________________|__________"
+            "______|____________________|\n");
       }
       break;
     case ESP_GATTC_READ_CHAR_EVT:
       if (p_data->read.status != ESP_GATT_OK) {
         break;
       }
-      printf("| %04x| Char value: %s |\n", p_data->read.handle,
+      printf("|\t %04x\t |\t\t\t\t\t |\t\t| %s |\n", p_data->read.handle,
              p_data->read.value);
       break;
     case ESP_GATTC_READ_DESCR_EVT:
