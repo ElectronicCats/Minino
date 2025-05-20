@@ -6,9 +6,10 @@
 #include "menus_module.h"
 #include "oled_screen.h"
 
-#define DRONEID_SCANNER_AUTHTYPE_POS 1
-#define DRONEID_SCANNER_LOCATION_POS 3
-#define DRONEID_SCANNER_COUNT_FIELD  7
+#define DRONEID_SCANNER_CHANNEL_POS  0
+#define DRONEID_SCANNER_AUTHTYPE_POS 2
+#define DRONEID_SCANNER_LOCATION_POS 4
+#define DRONEID_SCANNER_COUNT_FIELD  8
 
 static bool in_details = false;
 static uav_data* droneid_list[MAX_DRONEID_PACKETS];
@@ -16,7 +17,7 @@ static int num_drones = 0;
 static int current_position = 0;
 static uav_data* drone_selected;
 static char* details_text[DRONEID_SCANNER_COUNT_FIELD] = {
-    "Auth", NULL, "Location", NULL, NULL, NULL, NULL};
+    NULL, "Auth", NULL, "Location", NULL, NULL, NULL, NULL};
 
 static void droneid_scanner_show_list();
 static void droneid_scanner_show_details();
@@ -40,7 +41,6 @@ static void droneid_scanner_main(uint8_t button_name, uint8_t button_event) {
       break;
     case BUTTON_RIGHT:
       drone_selected = droneid_list[current_position];
-      ESP_LOGW("POS", "CUrrent position: %d", current_position);
       if (drone_selected == NULL) {
         ESP_LOGW("ERRRR", "Drone selected null");
       }
@@ -74,12 +74,17 @@ static void droneid_scanner_details_exit_cb() {
 static void droneid_scanner_show_details() {
   in_details = true;
 
+  char channel[18];
   char auth_type[18];
   char loc_lat[18];
   char loc_lon[18];
+  sprintf(channel, "Channel: %d", drone_selected->channel);
   sprintf(auth_type, "Type: %d", drone_selected->auth_type);
-  sprintf(loc_lat, "Lat: %.2f", drone_selected->base_lat_d);
-  sprintf(loc_lon, "Lon: %.2f", drone_selected->base_long_d);
+  sprintf(loc_lat, "Lat: %.2f", drone_selected->lat_d);
+  sprintf(loc_lon, "Lon: %.2f", drone_selected->long_d);
+
+  details_text[DRONEID_SCANNER_CHANNEL_POS] = malloc(strlen(channel) + 1);
+  strcpy(details_text[DRONEID_SCANNER_CHANNEL_POS], channel);
 
   details_text[DRONEID_SCANNER_AUTHTYPE_POS] = malloc(strlen(auth_type) + 1);
   strcpy(details_text[DRONEID_SCANNER_AUTHTYPE_POS], auth_type);
