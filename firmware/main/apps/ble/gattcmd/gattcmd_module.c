@@ -14,7 +14,7 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "gattcmd_module.h"
-#include "services/gattcmd_enum.h"
+#include "services/gattcmd_service.h"
 
 #define GATTC_TAG               "GATTC_DEMO"
 #define REMOTE_SERVICE_UUID     0x00FF
@@ -611,4 +611,13 @@ void gattcmd_module_enum_client(char* saddress) {
   }
 
   gattcmd_enum_begin(saddress);
+}
+
+void gattcmd_module_scan_client() {
+  if (!initialized) {
+    initialized = true;
+    gattcmd_begin();
+  }
+
+  gattcmd_scan_begin();
 }

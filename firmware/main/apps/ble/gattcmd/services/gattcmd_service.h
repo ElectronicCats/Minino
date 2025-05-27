@@ -7,4 +7,5 @@
 #define INVALID_HANDLE       0
 
 void gattcmd_enum_begin(char* saddress);
+void gattcmd_scan_begin();
 #endif
