@@ -3,6 +3,7 @@
 #include "ble_hidd_main.h"
 #include "esp_log.h"
 #include "esp_mac.h"
+#include "general_submenu.h"
 #include "menus_module.h"
 
 static uint16_t current_item = 0;
@@ -17,6 +18,20 @@ static void hid_module_reset_menu() {
   hid_module_register_menu(GENERAL_TREE_APP_MENU);
   hid_module_display_menu(current_item);
   menus_module_set_app_state(true, hid_module_cb_event);
+}
+
+static void hid_module_reset_start_menu() {
+  // ble_scanner_register_cb(NULL);
+  menus_module_reset();
+  hid_module_reset_menu();
+}
+
+void hid_module_display_filter() {
+  general_submenu_menu_t hid_menu_filter = {0};
+  hid_menu_filter.options = hid_device_items;
+  hid_menu_filter.options_count = 4;
+  hid_menu_filter.exit_cb = hid_module_reset_menu;
+  general_submenu(hid_menu_filter);
 }
 
 static void hid_module_cb_connection_handler(bool connection) {
@@ -119,7 +134,12 @@ static void hid_module_cb_event(uint8_t button_name, uint8_t button_event) {
             hid_module_cb_event);
       } else if (current_item == HID_CONFIG_START) {
         current_item = 0;
-        hid_module_register_menu(GENERAL_TREE_APP_SUBMENU);
+        // hid_module_register_menu(GENERAL_TREE_APP_SUBMENU);
+
+        general_screen_display_card_information_handler(
+            "HID", "HID control", hid_module_reset_start_menu,
+            hid_scanner_module_reset_start_menu);
+
         hid_module_display_device_pairing();
         ble_hid_register_callback(hid_module_cb_connection_handler);
         ble_hid_begin();
