@@ -9,6 +9,7 @@ void gattcmd_module_connect();
 void gattcmd_module_disconnect();
 
 void gattcmd_module_enum_client(char* saddress);
+void gattcmd_module_scan_client();
 
 #endif
 

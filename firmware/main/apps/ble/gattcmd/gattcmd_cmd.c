@@ -54,6 +54,11 @@ static int gattccmd_disconnect(int argc, char** argv) {
   return 0;
 }
 
+static int gattccmd_scan(int argc, char** argv) {
+  gattcmd_module_scan_client();
+  return 0;
+}
+
 void gattccmd_register_cmd() {
   gattccmd_client_args.remote_addr =
       arg_str0(NULL, NULL, "<Address>", "BT Address");
@@ -63,6 +68,13 @@ void gattccmd_register_cmd() {
       arg_str0(NULL, NULL, "<Gatt Address>", "BT Address");
   gattccmd_write_args.value = arg_str1(NULL, NULL, "<value>", "BT Address");
   gattccmd_write_args.end = arg_end(2);
+
+  esp_console_cmd_t gattccmd_cmd_scan = {.command = "gattcmd_scan",
+                                         .help = "\nScan the client Address",
+                                         .category = "BT",
+                                         .hint = NULL,
+                                         .func = &gattccmd_scan,
+                                         .argtable = NULL};
 
   esp_console_cmd_t gattccmd_set_client_cmd = {
       .command = "gattcmd_enum",
@@ -94,6 +106,7 @@ void gattccmd_register_cmd() {
       .func = &gattccmd_disconnect,
       .argtable = NULL};
 
+  ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_cmd_scan));
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_set_client_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattcmd_connect_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattcmd_disconnect_cmd));
