@@ -12,7 +12,7 @@ static void hid_module_cb_event(uint8_t button_name, uint8_t button_event);
 static void hid_module_cb_event_volumen(uint8_t button_name,
                                         uint8_t button_event);
 static void hid_module_cb_connection_handler(bool connection);
-
+static void hid_scanner_module_reset_start_menu() {}
 static void hid_module_reset_menu() {
   current_item = 0;
   hid_module_register_menu(GENERAL_TREE_APP_MENU);
@@ -26,10 +26,21 @@ static void hid_module_reset_start_menu() {
   hid_module_reset_menu();
 }
 
+static void cb_selection(uint8_t option) {
+  ESP_LOGI("TAG", "Option %d", option);
+  switch (option) {
+    case HID_DEVICE_VOL_UP:
+      break;
+    default:
+      break;
+  }
+}
+
 void hid_module_display_filter() {
   general_submenu_menu_t hid_menu_filter = {0};
   hid_menu_filter.options = hid_device_items;
-  hid_menu_filter.options_count = 4;
+  hid_menu_filter.options_count = HID_DEVICE_COUNT;
+  hid_menu_filter.select_cb = cb_selection;
   hid_menu_filter.exit_cb = hid_module_reset_menu;
   general_submenu(hid_menu_filter);
 }
@@ -39,6 +50,7 @@ static void hid_module_cb_connection_handler(bool connection) {
   if (!connection) {
     // esp_restart();
   }
+  hid_module_display_filter();
 }
 
 static void hid_module_cb_event_volumen(uint8_t button_name,
@@ -143,7 +155,8 @@ static void hid_module_cb_event(uint8_t button_name, uint8_t button_event) {
         hid_module_display_device_pairing();
         ble_hid_register_callback(hid_module_cb_connection_handler);
         ble_hid_begin();
-        menus_module_set_app_state(true, hid_module_cb_event_volumen);
+        // menus_module_set_app_state(true, hid_module_cb_event_volumen);
+        hid_module_display_filter();
       }
       break;
     case BUTTON_LEFT:
