@@ -5,8 +5,6 @@
 void gattcmd_begin(void);
 void gattcmd_module_set_remote_address(char* saddress);
 void gattcmd_module_gatt_write(char* gatt, char* value);
-void gattcmd_module_connect();
-void gattcmd_module_disconnect();
 
 void gattcmd_module_enum_client(char* saddress);
 void gattcmd_module_scan_client();

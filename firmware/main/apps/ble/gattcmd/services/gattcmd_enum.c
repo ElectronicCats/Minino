@@ -14,7 +14,6 @@ static esp_gattc_char_elem_t* char_elem_result = NULL;
 static esp_gattc_descr_elem_t* descr_elem_result = NULL;
 static bool connect = false;
 static bool get_server = false;
-static char remote_device_name[ESP_BLE_ADV_NAME_LEN_MAX] = "ELK-BLEDOM";
 static bool draw_headers = true;
 
 static void gattcmd_enum_gap_cb(esp_gap_ble_cb_event_t event,
@@ -26,14 +25,6 @@ static void gattcmd_enum_gattc_profile_event_handler(
     esp_gattc_cb_event_t event,
     esp_gatt_if_t gattc_if,
     esp_ble_gattc_cb_param_t* param);
-
-static esp_bt_uuid_t notify_descr_uuid = {
-    .len = ESP_UUID_LEN_16,
-    .uuid =
-        {
-            .uuid16 = ESP_GATT_UUID_CHAR_CLIENT_CONFIG,
-        },
-};
 
 static esp_ble_scan_params_t ble_scan_params = {
     .scan_type = BLE_SCAN_TYPE_ACTIVE,
@@ -323,8 +314,6 @@ static void gattcmd_enum_gap_cb(esp_gap_ble_cb_event_t event,
                  param->scan_start_cmpl.status);
         break;
       }
-      ESP_LOGI(GATTCMD_ENUM_TAG, "Scanning start successfully");
-
       break;
     case ESP_GAP_BLE_SCAN_RESULT_EVT: {
       esp_ble_gap_cb_param_t* scan_result = (esp_ble_gap_cb_param_t*) param;
@@ -336,26 +325,18 @@ static void gattcmd_enum_gap_cb(esp_gap_ble_cb_event_t event,
                   scan_result->scan_rst.scan_rsp_len,
               ESP_BLE_AD_TYPE_NAME_CMPL, &adv_name_len);
           if (adv_name_len > 0)
-            ESP_LOGI(GATTCMD_ENUM_TAG,
-                     "Scan result, device " ESP_BD_ADDR_STR ", name len %u",
-                     ESP_BD_ADDR_HEX(scan_result->scan_rst.bda), adv_name_len);
-          // ESP_LOG_BUFFER_CHAR(GATTCMD_ENUM_TAG, adv_name, adv_name_len);
-          // ESP_LOGI(GATTCMD_ENUM_TAG, "Locking for %s", remote_device_name);
-          if (adv_name != NULL) {
-            if (memcmp(target_bda, scan_result->scan_rst.bda, 6) == 0) {
-              ESP_LOGE(GATTCMD_ENUM_TAG, "I Found you");
-              ESP_LOGI(GATTCMD_ENUM_TAG, "Device found %s", remote_device_name);
-              if (connect == false) {
-                connect = true;
-                ESP_LOGI(GATTCMD_ENUM_TAG, "Connect to the remote device");
-                esp_ble_gap_stop_scanning();
-                esp_ble_gattc_open(
-                    enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if,
-                    scan_result->scan_rst.bda,
-                    scan_result->scan_rst.ble_addr_type, true);
+            if (adv_name != NULL) {
+              if (memcmp(target_bda, scan_result->scan_rst.bda, 6) == 0) {
+                if (connect == false) {
+                  connect = true;
+                  esp_ble_gap_stop_scanning();
+                  esp_ble_gattc_open(
+                      enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if,
+                      scan_result->scan_rst.bda,
+                      scan_result->scan_rst.ble_addr_type, true);
+                }
               }
             }
-          }
           break;
         case ESP_GAP_SEARCH_INQ_CMPL_EVT:
           break;
@@ -379,7 +360,6 @@ static void gattcmd_enum_gap_cb(esp_gap_ble_cb_event_t event,
                  param->adv_stop_cmpl.status);
         break;
       }
-      ESP_LOGI(GATTCMD_ENUM_TAG, "Advertising stop successfully");
       break;
     case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT:
       break;
@@ -458,5 +438,22 @@ void gattcmd_enum_begin(char* saddress) {
   if (local_mtu_ret) {
     ESP_LOGE(GATTCMD_ENUM_TAG, "set local  MTU failed, error code = %x",
              local_mtu_ret);
+  }
+}
+
+void gattcmd_enum_stop() {
+  if (!connect)
+    return;
+  connect = false;
+  get_server = false;
+  esp_err_t err =
+      esp_ble_gattc_close(enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if,
+                          enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].conn_id);
+  if (err != ESP_OK) {
+    ESP_LOGE("GATTCMD_ENUM", "Error: %d", err);
+  }
+  err = esp_ble_gap_disconnect(target_bda);
+  if (err != ESP_OK) {
+    ESP_LOGE("GATTCMD_ENUM", "Error: %d", err);
   }
 }

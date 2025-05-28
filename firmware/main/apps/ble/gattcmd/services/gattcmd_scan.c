@@ -9,6 +9,10 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 
+#define SCAN_DURATION 240
+
+static bool is_scanning = false;
+
 static void gattcmd_scan_gap_cb(esp_gap_ble_cb_event_t event,
                                 esp_ble_gap_cb_param_t* param);
 static void gattcmd_scan_gattc_cb(esp_gattc_cb_event_t event,
@@ -84,9 +88,7 @@ static void gattcmd_scan_gap_cb(esp_gap_ble_cb_event_t event,
   uint8_t adv_name_len = 0;
   switch (event) {
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
-      // the unit of the duration is second
-      uint32_t duration = 30;
-      esp_ble_gap_start_scanning(duration);
+      esp_ble_gap_start_scanning(SCAN_DURATION);
       break;
     }
     case ESP_GAP_BLE_SCAN_START_COMPLETE_EVT:
@@ -96,6 +98,7 @@ static void gattcmd_scan_gap_cb(esp_gap_ble_cb_event_t event,
                  param->scan_start_cmpl.status);
         break;
       }
+      is_scanning = true;
       ESP_LOGI(GATTCMD_ENUM_TAG, "Scanning start successfully");
       printf("|___________________________|____________________|\n");
       printf("|\t ADDRESS \t\t|\t RSSI \t\t|\n");
@@ -104,15 +107,20 @@ static void gattcmd_scan_gap_cb(esp_gap_ble_cb_event_t event,
       esp_ble_gap_cb_param_t* scan_result = (esp_ble_gap_cb_param_t*) param;
       switch (scan_result->scan_rst.search_evt) {
         case ESP_GAP_SEARCH_INQ_RES_EVT:
-          esp_ble_resolve_adv_data_by_type(
+          uint8_t* adv_name = esp_ble_resolve_adv_data_by_type(
               scan_result->scan_rst.ble_adv,
               scan_result->scan_rst.adv_data_len +
                   scan_result->scan_rst.scan_rsp_len,
               ESP_BLE_AD_TYPE_NAME_CMPL, &adv_name_len);
           printf("|___________________________|____________________|\n");
-          printf("|\t" ESP_BD_ADDR_STR "  |\t %d \t\t|\n",
+          printf("|\t" ESP_BD_ADDR_STR " |\t %d \t\t|",
                  ESP_BD_ADDR_HEX(scan_result->scan_rst.bda),
                  scan_result->scan_rst.rssi);
+          if (adv_name != NULL) {
+            printf("<- %s\n", adv_name);
+          } else {
+            printf("\n");
+          }
           break;
         case ESP_GAP_SEARCH_INQ_CMPL_EVT:
           break;
@@ -128,6 +136,7 @@ static void gattcmd_scan_gap_cb(esp_gap_ble_cb_event_t event,
                  param->scan_stop_cmpl.status);
         break;
       }
+      is_scanning = false;
       break;
 
     case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
@@ -210,4 +219,11 @@ void gattcmd_scan_begin(void) {
     ESP_LOGE(GATTCMD_ENUM_TAG, "set local  MTU failed, error code = %x",
              local_mtu_ret);
   }
+}
+
+void gattcmd_scan_stop() {
+  if (!is_scanning)
+    return;
+  is_scanning = false;
+  esp_ble_gap_stop_scanning();
 }

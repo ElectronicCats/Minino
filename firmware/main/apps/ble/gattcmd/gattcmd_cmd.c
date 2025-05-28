@@ -44,16 +44,6 @@ static int gattccmd_write(int argc, char** argv) {
   return 0;
 }
 
-static int gattccmd_connect(int argc, char** argv) {
-  gattcmd_module_connect();
-  return 0;
-}
-
-static int gattccmd_disconnect(int argc, char** argv) {
-  gattcmd_module_disconnect();
-  return 0;
-}
-
 static int gattccmd_scan(int argc, char** argv) {
   gattcmd_module_scan_client();
   return 0;
@@ -91,24 +81,7 @@ void gattccmd_register_cmd() {
                                           .func = &gattccmd_write,
                                           .argtable = &gattccmd_write_args};
 
-  esp_console_cmd_t gattcmd_connect_cmd = {.command = "gattcmd_connect",
-                                           .help = "Connect to the BLE device",
-                                           .category = "BT",
-                                           .hint = NULL,
-                                           .func = &gattccmd_connect,
-                                           .argtable = NULL};
-
-  esp_console_cmd_t gattcmd_disconnect_cmd = {
-      .command = "gattcmd_disconnect",
-      .help = "Disconnect to the BLE device",
-      .category = "BT",
-      .hint = NULL,
-      .func = &gattccmd_disconnect,
-      .argtable = NULL};
-
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_cmd_scan));
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_set_client_cmd));
-  ESP_ERROR_CHECK(esp_console_cmd_register(&gattcmd_connect_cmd));
-  ESP_ERROR_CHECK(esp_console_cmd_register(&gattcmd_disconnect_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_write_cmd));
 }

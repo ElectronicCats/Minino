@@ -8,4 +8,7 @@
 
 void gattcmd_enum_begin(char* saddress);
 void gattcmd_scan_begin();
+
+void gattcmd_scan_stop();
+void gattcmd_enum_stop();
 #endif
