@@ -14,6 +14,7 @@ static struct {
 } gattccmd_client_args;
 
 static struct {
+  struct arg_str* addr;
   struct arg_str* gatt;
   struct arg_str* value;
   struct arg_end* end;
@@ -39,7 +40,8 @@ static int gattccmd_write(int argc, char** argv) {
   }
   ESP_LOGI(GATTCMD_CMD_NAME, "Write Client: %s",
            gattccmd_write_args.gatt->sval[0]);
-  gattcmd_module_gatt_write(gattccmd_write_args.gatt->sval[0],
+  gattcmd_module_gatt_write(gattccmd_write_args.addr->sval[0],
+                            gattccmd_write_args.gatt->sval[0],
                             gattccmd_write_args.value->sval[0]);
   return 0;
 }
@@ -54,10 +56,11 @@ void gattccmd_register_cmd() {
       arg_str0(NULL, NULL, "<Address>", "BT Address");
   gattccmd_client_args.end = arg_end(1);
 
+  gattccmd_write_args.addr = arg_str0(NULL, NULL, "<BT Address>", "BT Address");
   gattccmd_write_args.gatt =
-      arg_str0(NULL, NULL, "<Gatt Address>", "BT Address");
-  gattccmd_write_args.value = arg_str1(NULL, NULL, "<value>", "BT Address");
-  gattccmd_write_args.end = arg_end(2);
+      arg_str1(NULL, NULL, "<GATT Address>", "BT Address");
+  gattccmd_write_args.value = arg_str1(NULL, NULL, "<Value>", "BT Address");
+  gattccmd_write_args.end = arg_end(3);
 
   esp_console_cmd_t gattccmd_cmd_scan = {.command = "gattcmd_scan",
                                          .help = "\nScan the client Address",

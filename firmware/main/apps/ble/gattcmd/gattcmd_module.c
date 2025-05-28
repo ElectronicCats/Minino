@@ -16,30 +16,16 @@
 #include "gattcmd_module.h"
 #include "services/gattcmd_service.h"
 
-#define GATTC_TAG               "GATTC_DEMO"
-#define REMOTE_SERVICE_UUID     0x00FF
-#define REMOTE_NOTIFY_CHAR_UUID 0xFF01
-#define PROFILE_NUM             1
-#define PROFILE_A_APP_ID        0
-#define INVALID_HANDLE          0
+#define GATTC_TAG "GATTC_DEMO"
 
 static esp_bd_addr_t target;
 static bool initialized = false;
 
 void gattcmd_begin(void) {
-  // Initialize NVS.
-  esp_err_t ret = nvs_flash_init();
-  if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
-      ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-    ESP_ERROR_CHECK(nvs_flash_erase());
-    ret = nvs_flash_init();
-  }
-  ESP_ERROR_CHECK(ret);
-
   ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
 
   esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-  ret = esp_bt_controller_init(&bt_cfg);
+  esp_err_t ret = esp_bt_controller_init(&bt_cfg);
   if (ret) {
     ESP_LOGE(GATTC_TAG, "%s initialize controller failed: %s", __func__,
              esp_err_to_name(ret));
@@ -79,34 +65,23 @@ void parse_address_raw(const char* str, uint8_t addr[6]) {
   }
 }
 
-int hex_string_to_bytes(const char* hex_str, uint8_t* output, size_t max_len) {
-  size_t len = strlen(hex_str);
-
-  if (len % 2 != 0)
-    return -1;
-
-  size_t bytes_len = len / 2;
-  if (bytes_len > max_len)
-    return -2;
-
-  for (size_t i = 0; i < bytes_len; i++) {
-    sscanf(hex_str + 2 * i, "%2hhx", &output[i]);
-  }
-
-  return bytes_len;
+uint16_t hex_string_to_uint16(const char* hex_str) {
+  return (uint16_t) strtol(hex_str, NULL, 16);
 }
 
-void gattcmd_module_gatt_write(char* gatt, char* value) {
-  uint8_t gatt_addr[32];
-  uint8_t value_hex[32];
-
-  int len1 = hex_string_to_bytes(gatt, gatt_addr, sizeof(gatt_addr));
-  int len2 = hex_string_to_bytes(value, value_hex, sizeof(value_hex));
-
-  esp_log_buffer_hex(GATTC_TAG, gatt_addr, len1);
-  esp_log_buffer_hex(GATTC_TAG, value_hex, len2);
-
-  ESP_LOGI(GATTC_TAG, "Writting GATT: %s - value: %s", gatt, value);
+void gattcmd_module_gatt_write(char* saddress, char* gatt, char* value) {
+  if (initialized) {
+    gattcmd_scan_stop();
+    gattcmd_enum_stop();
+    gattcmd_write_stop();
+  } else {
+    initialized = true;
+    gattcmd_begin();
+  }
+  ESP_LOGI(GATTC_TAG, "Writting GATT: %s - %s - value: %s", saddress, gatt,
+           value);
+  uint16_t uuid = hex_string_to_uint16(gatt);
+  gattcmd_write_begin(saddress, uuid, value);
 }
 
 void gattcmd_module_set_remote_address(char* saddress) {
@@ -115,9 +90,9 @@ void gattcmd_module_set_remote_address(char* saddress) {
 
 void gattcmd_module_enum_client(char* saddress) {
   if (initialized) {
-    ESP_LOGI(GATTC_TAG, "Stopping scan");
     gattcmd_scan_stop();
     gattcmd_enum_stop();
+    gattcmd_write_stop();
   } else {
     initialized = true;
     gattcmd_begin();
@@ -128,9 +103,9 @@ void gattcmd_module_enum_client(char* saddress) {
 
 void gattcmd_module_scan_client() {
   if (initialized) {
-    ESP_LOGI(GATTC_TAG, "Stopping scan");
     gattcmd_scan_stop();
     gattcmd_enum_stop();
+    gattcmd_write_stop();
   } else {
     initialized = true;
     gattcmd_begin();
