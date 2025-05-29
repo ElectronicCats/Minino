@@ -26,7 +26,8 @@ static bool connect = false;
 static bool get_server = false;
 
 static uint16_t gatt_target_uuid = 0x0000;
-static uint8_t gatt_target_value[32];
+static uint8_t gatt_target_value[64];
+static uint16_t gatt_target_value_len = 0;
 
 static void gattcmd_write_gap_cb(esp_gap_ble_cb_event_t event,
                                  esp_ble_gap_cb_param_t* param);
@@ -79,29 +80,12 @@ int hex_string_to_bytes(const char* hex_str, uint8_t* out_buf, size_t max_len) {
   return (int) (len / 2);
 }
 
-// static int hex_string_to_bytes(const char* hex_str, uint8_t* output, size_t
-// max_len) {
-//   size_t len = strlen(hex_str);
-
-//   if (len % 2 != 0)
-//     return -1;
-
-//   size_t bytes_len = len / 2;
-//   if (bytes_len > max_len)
-//     return -2;
-
-//   for (size_t i = 0; i < bytes_len; i++) {
-//     sscanf(hex_str + 2 * i, "%2hhx", &output[i]);
-//   }
-
-//   return bytes_len;
-// }
-
 static void gattcmd_write_gattc_profile_event_handler(
     esp_gattc_cb_event_t event,
     esp_gatt_if_t gattc_if,
     esp_ble_gattc_cb_param_t* param) {
   esp_ble_gattc_cb_param_t* p_data = (esp_ble_gattc_cb_param_t*) param;
+  ESP_LOGI("TAG", "Event: %d", event);
   switch (event) {
     case ESP_GATTC_REG_EVT:
       esp_err_t scan_ret = esp_ble_gap_set_scan_params(&ble_scan_params);
@@ -148,7 +132,6 @@ static void gattcmd_write_gattc_profile_event_handler(
           p_data->search_res.end_handle;
       break;
     }
-    case ESP_GATTC_WRITE_CHAR_EVT:
     case ESP_GATTC_SEARCH_CMPL_EVT:
       if (p_data->search_cmpl.status != ESP_GATT_OK) {
         ESP_LOGE(GATTCMD_ENUM_TAG, "Service search failed, status %x",
@@ -197,13 +180,11 @@ static void gattcmd_write_gattc_profile_event_handler(
             if (char_elem_result[i].uuid.uuid.uuid16 == gatt_target_uuid) {
               ESP_LOGW("TAG", "WRITE %d %d",
                        char_elem_result[i].uuid.uuid.uuid16, gatt_target_uuid);
-              uint8_t val[] = {0x7e, 0x04, 0x04, 0x00, 0x00,
-                               0x00, 0xff, 0x00, 0xef};
-              esp_ble_gattc_write_char(
-                  gattc_if, p_data->connect.conn_id,
-                  char_elem_result[i].char_handle, sizeof(gatt_target_value),
-                  gatt_target_value, ESP_GATT_WRITE_TYPE_RSP,
-                  ESP_GATT_AUTH_REQ_NONE);
+              esp_ble_gattc_write_char(gattc_if, p_data->connect.conn_id,
+                                       char_elem_result[i].char_handle,
+                                       gatt_target_value_len, gatt_target_value,
+                                       ESP_GATT_WRITE_TYPE_RSP,
+                                       ESP_GATT_AUTH_REQ_NONE);
               break;
             }
           }
@@ -347,9 +328,8 @@ void gattcmd_write_begin(char* saddress,
                          uint16_t target_uuid,
                          char* value_str) {
   parse_address_colon(saddress, target_bda);
-  ESP_LOGI("TAG", "Value %s %d", value_str,
-           hex_string_to_bytes(value_str, gatt_target_value,
-                               sizeof(gatt_target_value)));
+  gatt_target_value_len = hex_string_to_bytes(value_str, gatt_target_value,
+                                              sizeof(gatt_target_value));
   gatt_target_uuid = target_uuid;
   // register the  callback function to the gap module
   esp_err_t ret = esp_ble_gap_register_callback(gattcmd_write_gap_cb);
