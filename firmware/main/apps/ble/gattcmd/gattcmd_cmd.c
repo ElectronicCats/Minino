@@ -26,8 +26,6 @@ static int gattccmd_enum_client(int argc, char** argv) {
     arg_print_errors(stderr, gattccmd_client_args.end, GATTCMD_CMD_NAME);
     return 1;
   }
-  ESP_LOGI(GATTCMD_CMD_NAME, "Client: %s",
-           gattccmd_client_args.remote_addr->sval[0]);
   gattcmd_module_enum_client(gattccmd_client_args.remote_addr->sval[0]);
   return 0;
 }
@@ -38,8 +36,6 @@ static int gattccmd_write(int argc, char** argv) {
     arg_print_errors(stderr, gattccmd_write_args.end, GATTCMD_CMD_NAME);
     return 1;
   }
-  ESP_LOGI(GATTCMD_CMD_NAME, "Write Client: %s",
-           gattccmd_write_args.gatt->sval[0]);
   gattcmd_module_gatt_write(gattccmd_write_args.addr->sval[0],
                             gattccmd_write_args.gatt->sval[0],
                             gattccmd_write_args.value->sval[0]);
@@ -53,19 +49,21 @@ static int gattccmd_scan(int argc, char** argv) {
 
 void gattccmd_register_cmd() {
   gattccmd_client_args.remote_addr =
-      arg_str0(NULL, NULL, "<Address>", "BT Address");
+      arg_str0(NULL, NULL, "<BT Address>", "BT Address");
   gattccmd_client_args.end = arg_end(1);
 
   gattccmd_write_args.addr = arg_str0(NULL, NULL, "<BT Address>", "BT Address");
   gattccmd_write_args.gatt =
-      arg_str1(NULL, NULL, "<GATT Address>", "BT Address");
-  gattccmd_write_args.value = arg_str1(NULL, NULL, "<Value>", "BT Address");
+      arg_str1(NULL, NULL, "<GATT Address>", "GATT Address");
+  gattccmd_write_args.value =
+      arg_str1(NULL, NULL, "<Value>", "Value to write in hex form");
   gattccmd_write_args.end = arg_end(3);
 
   esp_console_cmd_t gattccmd_cmd_scan = {.command = "gattcmd_scan",
                                          .help = "\nScan the client Address",
                                          .category = "BT",
                                          .hint = NULL,
+                                         .help = "Scan for devices",
                                          .func = &gattccmd_scan,
                                          .argtable = NULL};
 
@@ -74,15 +72,20 @@ void gattccmd_register_cmd() {
       .help = "\nEnum the client Address",
       .category = "BT",
       .hint = NULL,
+      .help = "Enum the GATTs and Descriptors",
       .func = &gattccmd_enum_client,
       .argtable = &gattccmd_client_args};
 
-  esp_console_cmd_t gattccmd_write_cmd = {.command = "gattcmd_write",
-                                          .help = "\nWrite to the GATT Address",
-                                          .category = "BT",
-                                          .hint = NULL,
-                                          .func = &gattccmd_write,
-                                          .argtable = &gattccmd_write_args};
+  esp_console_cmd_t gattccmd_write_cmd = {
+      .command = "gattcmd_write",
+      .help = "\nWrite to the GATT Address",
+      .category = "BT",
+      .hint = NULL,
+      .func = &gattccmd_write,
+      .help =
+          "Write to the GATT, the command need a hex value for example: "
+          "gattcmd_write 00:00:00:00:00:00 fff3 7e0404100001ff00ef",
+      .argtable = &gattccmd_write_args};
 
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_cmd_scan));
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_set_client_cmd));
