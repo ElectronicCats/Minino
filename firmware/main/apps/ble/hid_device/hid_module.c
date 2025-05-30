@@ -10,6 +10,7 @@ static uint16_t current_item = 0;
 
 static void hid_module_cb_event(uint8_t button_name, uint8_t button_event);
 static void hid_module_cb_connection_handler(bool connection);
+static void hid_module_display_action_menu();
 
 static void hid_module_reset_menu() {
   current_item = 0;
@@ -69,27 +70,25 @@ static void hid_device_selection(uint8_t selection) {
     default:
       break;
   }
-  hid_module_reset_menu();
+  hid_module_display_action_menu();
 }
 
-void hid_module_display_filter() {
+static void hid_module_display_action_menu() {
   general_submenu_menu_t hid_menu_filter = {0};
   hid_menu_filter.options = hid_device_items;
   hid_menu_filter.options_count = HID_DEVICE_COUNT;
   hid_menu_filter.select_cb = hid_device_selection;
   hid_menu_filter.exit_cb = hid_module_reset_menu;
   general_submenu(hid_menu_filter);
-  menus_module_set_app_state(true, hid_module_cb_event);
 }
 
 static void hid_module_cb_connection_handler(bool connection) {
   hid_module_display_device_connection(connection);
   if (connection) {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
-    hid_module_display_filter();
+    hid_module_display_action_menu();
   } else {
     hid_module_reset_menu();
-    // esp_restart();
   }
 }
 
@@ -132,7 +131,6 @@ static void hid_module_cb_event(uint8_t button_name, uint8_t button_event) {
         hid_module_display_device_pairing();
         ble_hid_register_callback(hid_module_cb_connection_handler);
         ble_hid_begin();
-        // hid_module_display_filter();
       }
       break;
     case BUTTON_LEFT:
