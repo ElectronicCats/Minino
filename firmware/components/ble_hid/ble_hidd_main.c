@@ -213,6 +213,32 @@ void ble_hid_pause(bool press) {
   }
 }
 
+void ble_hid_stop(bool press) {
+  if (sec_conn) {
+    esp_hidd_send_consumer_value(hid_conn_id, HID_CONSUMER_STOP, press);
+  }
+}
+
+void ble_hid_mute(bool press) {
+  if (sec_conn) {
+    esp_hidd_send_consumer_value(hid_conn_id, HID_CONSUMER_MUTE, press);
+  }
+}
+
+void ble_hid_next_track(bool press) {
+  if (sec_conn) {
+    esp_hidd_send_consumer_value(hid_conn_id, HID_CONSUMER_SCAN_NEXT_TRK,
+                                 press);
+  }
+}
+
+void ble_hid_prev_track(bool press) {
+  if (sec_conn) {
+    esp_hidd_send_consumer_value(hid_conn_id, HID_CONSUMER_SCAN_PREV_TRK,
+                                 press);
+  }
+}
+
 void ble_hid_register_callback(hid_event_callback_f callback) {
   hid_event_callback = callback;
 }

@@ -226,21 +226,31 @@ void general_screen_display_menu(uint16_t current_option) {
     return;
   }
 
-  if (current_option == NULL) {
+  if (current_option >= current_menu_ctx->menu_count) {
     current_option = 0;
   }
 
-  for (uint16_t i = 0; i < current_menu_ctx->menu_count; i++) {
-    if (i >= current_menu_ctx->menu_count) {
-      break;
-    }
-    if (i == current_option) {
-      general_screen_display_selected_item(current_menu_ctx->menu_items[i],
-                                           i + ITEMOFFSET);
+  const uint16_t MAX_VISIBLE_ITEMS = 6;
+
+  uint16_t start_index = current_option - (current_option % MAX_VISIBLE_ITEMS);
+  if (current_menu_ctx->menu_count <= MAX_VISIBLE_ITEMS) {
+    start_index = 0;  // No need to scroll if all items fit
+  } else if (start_index + MAX_VISIBLE_ITEMS > current_menu_ctx->menu_count) {
+    start_index = current_menu_ctx->menu_count - MAX_VISIBLE_ITEMS;
+  }
+
+  for (uint16_t i = 0; i < MAX_VISIBLE_ITEMS &&
+                       (start_index + i) < current_menu_ctx->menu_count;
+       i++) {
+    uint16_t item_index = start_index + i;
+    if (item_index == current_option) {
+      general_screen_display_selected_item(
+          current_menu_ctx->menu_items[item_index], i + ITEMOFFSET);
     } else {
-      oled_screen_display_text(current_menu_ctx->menu_items[i], 0,
+      oled_screen_display_text(current_menu_ctx->menu_items[item_index], 0,
                                i + ITEMOFFSET, OLED_DISPLAY_NORMAL);
     }
   }
+
   oled_screen_display_show();
 }
