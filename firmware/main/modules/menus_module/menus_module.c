@@ -291,7 +291,7 @@ void menus_module_begin() {
   menus_ctx = calloc(1, sizeof(menus_manager_t));
   menus_ctx->menus_count = sizeof(menus) / sizeof(menu_t);
   screen_saver_begin();
-  sleep_mode_begin();
+  // sleep_mode_begin();
   keyboard_module_set_input_callback(menus_input_cb);
   oled_screen_begin();
   get_reset_menu();
