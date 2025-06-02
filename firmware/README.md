@@ -37,6 +37,7 @@ You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/p
   - [OT End device](#ot-end-device)
   - [View UDP Packets](#view-udp-packets)
   - [Modbus](#modbus)
+  - [GATTCMD](#gattcmd)
 - [Change log](#change-log)
   - [v1.1.7.0](#v1170)
     - [Added](#added)
@@ -474,6 +475,15 @@ mb_engine_stop_attack
 ```
 
 > For more information you can use the `help` function and the command to view more information about it.
+
+
+## GATTCMD
+A command line for interect with Bluetooth Characteristics
+- `gattcmd_scan`: Scan for MAC Address
+- `gattcmd_enum`: Enum the Characteristics from the device
+- `gattcmd_write`: Write a value in a GATT characteristic
+
+> This app is still under development, we don't test with more secure connection
 
 # Change log
 
