@@ -1,0 +1,9 @@
+FROM espressif/idf:release-v5.3
+
+ARG IDF_INSTALL_TARGETS=esp32c6
+
+# Install ESP32C6 specific toolchain
+RUN cd /opt/esp/idf && \
+    ./install.sh ${IDF_INSTALL_TARGETS} && \
+    rm -rf .git && \
+    echo ". /opt/esp/idf/export.sh" >> ~/.bashrc
