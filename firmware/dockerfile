@@ -1,4 +1,4 @@
-FROM espressif/idf:release-v5.3
+FROM espressif/idf:release-v5.4
 
 ARG IDF_INSTALL_TARGETS=esp32c6
 
@@ -6,4 +6,7 @@ ARG IDF_INSTALL_TARGETS=esp32c6
 RUN cd /opt/esp/idf && \
     ./install.sh ${IDF_INSTALL_TARGETS} && \
     rm -rf .git && \
-    echo ". /opt/esp/idf/export.sh" >> ~/.bashrc
+    echo ". /opt/esp/idf/export.sh" >> ~/.bashrc && \
+    # Create cache directory with proper permissions
+    mkdir -p /home/esp/.cache/Espressif/ComponentManager && \
+    chmod -R 777 /home/esp/.cache

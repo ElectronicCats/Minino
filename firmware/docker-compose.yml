@@ -10,6 +10,6 @@ services:
     stdin_open: true
     working_dir: /project
     command: /bin/bash
-    user: "1000:1000"
+    user: "501:20"
     environment:
       - HOME=/home/esp
