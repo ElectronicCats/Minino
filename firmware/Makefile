@@ -3,7 +3,6 @@ test_port:
 
 setup:
 	idf.py set-target esp32c6
-	pre-commit install
 
 compile:
 	idf.py build
