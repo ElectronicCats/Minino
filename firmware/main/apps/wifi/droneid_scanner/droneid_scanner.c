@@ -1,4 +1,7 @@
 #include <string.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 #include "droneid_scanner_screens.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
@@ -7,12 +10,32 @@
 static const char* TAG = "DroneidScanner";
 
 static ODID_UAS_Data UAS_data;
+static int current_channel = 1;
+
+static void task_change_channel(void) {
+  while (true) {
+    current_channel = (current_channel + 1) % 14;
+    if (current_channel == 0)
+      current_channel++;
+    esp_err_t err =
+        esp_wifi_set_channel(current_channel, WIFI_SECOND_CHAN_NONE);
+    if (err != ESP_OK) {
+      ESP_LOGE(TAG, "Error setting channel: %s", esp_err_to_name(err));
+      continue;
+      ;
+    }
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
+  vTaskDelete(NULL);
+}
 
 static void store_mac(uav_data* uav, uint8_t* payload) {
   memcpy(uav->mac, &payload[10], 6);
 }
 
-static void parse_odid(uav_data* UAV, ODID_UAS_Data* UAS_data2) {
+static bool parse_odid(uav_data* UAV, ODID_UAS_Data* UAS_data2) {
+  if (UAS_data2->Location.Latitude == 0)
+    return false;
   memset(UAV->op_id, 0, sizeof(UAV->op_id));
   memset(UAV->uav_id, 0, sizeof(UAV->uav_id));
   memset(UAV->description, 0, sizeof(UAV->description));
@@ -21,7 +44,9 @@ static void parse_odid(uav_data* UAV, ODID_UAS_Data* UAS_data2) {
   if (UAS_data2->BasicIDValid[0]) {
     strncpy(UAV->uav_id, (char*) UAS_data2->BasicID[0].UASID, ODID_ID_SIZE);
   }
+
   if (UAS_data2->LocationValid) {
+    ESP_LOGI(TAG, "Location: %f", UAS_data2->Location.Latitude);
     UAV->lat_d = UAS_data2->Location.Latitude;
     UAV->long_d = UAS_data2->Location.Longitude;
     UAV->altitude_msl = (int) UAS_data2->Location.AltitudeGeo;
@@ -66,6 +91,8 @@ static void parse_odid(uav_data* UAV, ODID_UAS_Data* UAS_data2) {
     UAV->operator_id_type = UAS_data2->OperatorID.OperatorIdType;
     strncpy(UAV->op_id, (char*) UAS_data2->OperatorID.OperatorId, ODID_ID_SIZE);
   }
+  UAV->channel = current_channel;
+  return true;
 }
 
 static void callback(uint8_t* buf, wifi_promiscuous_pkt_type_t type) {
@@ -103,13 +130,11 @@ static void callback(uint8_t* buf, wifi_promiscuous_pkt_type_t type) {
     // ESP_LOGI(TAG, "NAN packet detected");
     if (odid_wifi_receive_message_pack_nan_action_frame(
             &UAS_data, (char*) currentUAV->op_id, payload, packet_len) == 0) {
-      parse_odid(currentUAV, &UAS_data);
-      if (currentUAV->base_lat_d != 0) {
+      if (parse_odid(currentUAV, &UAS_data)) {
         droneid_scanner_update_list(currentUAV->mac, currentUAV);
-        ESP_LOGI(TAG, "NAN Pkt type: %.2f", currentUAV->base_lat_d);
       }
     }
-  } else {
+  } else if (payload[0] == 0x80) {
     int offset = BEACON_OFFSET;
     bool parsed = false;
     while (offset < packet_len) {
@@ -132,10 +157,8 @@ static void callback(uint8_t* buf, wifi_promiscuous_pkt_type_t type) {
             memset(&UAS_data, 0, sizeof(UAS_data));
             odid_message_process_pack(&UAS_data, &payload[idx],
                                       packet_len - idx);
-            parse_odid(currentUAV, &UAS_data);
-            if (currentUAV->base_lat_d != 0) {
+            if (parse_odid(currentUAV, &UAS_data)) {
               droneid_scanner_update_list(currentUAV->mac, currentUAV);
-              ESP_LOGI(TAG, "Beacon Pkt type: %.2f", currentUAV->base_lat_d);
             }
             parsed = true;
           }
@@ -170,7 +193,7 @@ static int droneid_scanner_init_wifi(void) {
   esp_wifi_set_promiscuous(true);
   esp_wifi_set_promiscuous_rx_cb(callback);
 
-  err = esp_wifi_set_channel(6, WIFI_SECOND_CHAN_NONE);
+  err = esp_wifi_set_channel(current_channel, WIFI_SECOND_CHAN_NONE);
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Error setting channel: %s", esp_err_to_name(err));
     return err;
@@ -193,4 +216,5 @@ void droneid_scanner_begin() {
   }
 
   droneid_scanner_screen_main();
+  xTaskCreate(task_change_channel, "channhop", 4096, NULL, 5, NULL);
 }
