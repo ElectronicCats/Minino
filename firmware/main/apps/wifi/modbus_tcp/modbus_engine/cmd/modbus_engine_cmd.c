@@ -12,6 +12,8 @@
 #include "modbus_attacks.h"
 #include "modbus_engine.h"
 
+static uint16_t transaction_id = 0;
+
 static struct {
   struct arg_str* function;
   struct arg_int* unit_id;
@@ -67,12 +69,12 @@ static int cmd_mb_engine_set_request(int argc, char** argv) {
   int idx = 0;
 
   // MBAP header
-  request[idx++] = 0x00;  // Transaction ID
-  request[idx++] = 0x01;
+  request[idx++] = transaction_id >> 8;  // Transaction ID
+  request[idx++] = transaction_id & 0xFF;
   request[idx++] = 0x00;  // Protocol ID
   request[idx++] = 0x00;
 
-  uint16_t data_len = 7;
+  uint16_t data_len = 0;
   uint8_t byte_count = 0;
 
   request[6] = unit_id;
@@ -80,7 +82,15 @@ static int cmd_mb_engine_set_request(int argc, char** argv) {
   request[8] = address >> 8;
   request[9] = address & 0xFF;
 
-  if (function_code == 0x10) {
+  if (function_code == 0x10 && num_values == 1) {
+    function_code = 0x06;
+    request[7] = function_code;
+    uint16_t val = mb_engine_set_req_args.values->ival[0];
+    request[10] = val >> 8;
+    request[11] = val & 0xFF;
+    idx = 12;
+    data_len = 6;
+  } else if (function_code == 0x10) {
     request[10] = num_values >> 8;
     request[11] = num_values & 0xFF;
     byte_count = num_values * 2;
@@ -93,7 +103,7 @@ static int cmd_mb_engine_set_request(int argc, char** argv) {
       request[idx++] = val & 0xFF;
     }
 
-    data_len += 6 + byte_count;
+    data_len = 6 + byte_count;
 
   } else if (function_code == 0x0F) {
     request[10] = num_values >> 8;
@@ -115,7 +125,7 @@ static int cmd_mb_engine_set_request(int argc, char** argv) {
       request[idx++] = b;
     }
 
-    data_len += 6 + byte_count;
+    data_len = 6 + byte_count;
   }
 
   request[4] = data_len >> 8;
@@ -128,6 +138,7 @@ static int cmd_mb_engine_set_request(int argc, char** argv) {
   printf("\n");
 
   modbus_engine_set_request(request, idx);
+  transaction_id++;
   return 0;
 }
 
