@@ -16,9 +16,10 @@ monitor:
 	idf.py -p $(PORT) monitor
 
 clean:
-	rm -rf build/ managed_components/
-	rm sdkconfig
-	make setup
+	-rm -rf build/ managed_components/
+	-rm sdkconfig
+	-rm dependencies.lock
+	-make setup
 
 ff:
 	make test_port
