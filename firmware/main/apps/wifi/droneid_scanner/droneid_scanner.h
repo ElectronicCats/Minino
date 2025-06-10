@@ -47,6 +47,7 @@ typedef struct {
 
   uint8_t desc_type;
   char description[ODID_STR_SIZE + 1];
+  uint16_t channel;
 } uav_data;
 
 void droneid_scanner_begin(void);
