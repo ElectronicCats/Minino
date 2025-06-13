@@ -9,6 +9,7 @@
 
 #include "adv_scan_module.h"
 #include "analyzer_scenes.h"
+#include "captive_module.h"
 #include "catdos_module.h"
 #include "deauth_module.h"
 #include "detector_scenes.h"
@@ -52,6 +53,7 @@ typedef enum {
   MENU_GPS,
   MENU_GPIO_APPS,
   /* WiFi applications */
+  MENU_WIFI_CAPTIVE,
   MENU_WIFI_ANALIZER,
   MENU_WIFI_DEAUTH,
   MENU_WIFI_DEAUTH_SCAN,
@@ -209,6 +211,14 @@ menu_t menus[] = {  //////////////////////////////////
      .parent_idx = MENU_APPLICATIONS,
      .last_selected_submenu = 0,
      .on_enter_cb = NULL,
+     .on_exit_cb = NULL,
+     .is_visible = true},
+    {.display_name = "Captive",
+     .menu_idx = MENU_WIFI_CAPTIVE,
+     .parent_idx = MENU_WIFI_APPS,
+     .entry_cmd = "captive",
+     .last_selected_submenu = 0,
+     .on_enter_cb = captive_module_main,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Analyzer",

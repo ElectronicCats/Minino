@@ -8,6 +8,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
+#include "freertos/FreeRTOS.h"
 #include "sdmmc_cmd.h"
 
 #define MOUNT_POINT   "/sdcard"
@@ -242,6 +243,18 @@ esp_err_t sd_card_create_dir(const char* dir_name) {
              f_result_to_name[res]);
     return ESP_FAIL;
   }
+}
+
+esp_err_t sd_card_list_files(const char* path) {
+  ESP_LOGE(TAG, "Reading list files");
+  FF_DIR dp;
+  FRESULT res = f_opendir(&dp, path);
+  if (res != FR_OK) {
+    ESP_LOGE(TAG, "Cant open dir");
+    return ESP_FAIL;
+  }
+  f_closedir(&dp);
+  return ESP_OK;
 }
 
 esp_err_t sd_card_create_file(const char* path) {
