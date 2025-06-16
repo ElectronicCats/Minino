@@ -35,6 +35,39 @@ menu "General project"
 		default "1.1.0.0"
 		help
 			Firmware version.
+	
+	menu "WiFi AP Config"
+		config WIFI_AP_NAME
+		string "WIFI Ap Name"
+		default "MININO_AP"
+		help
+			Minino Access Point Name
+		
+		config WIFI_AP_PASSWORD
+		string "WIFI Ap Password"
+		default ""
+		help
+			Minino Access Point Password
+		
+		config WIFI_AP_IP
+		string "WIFI Ap IP"
+		default "192.168.0.1"
+		help
+			Minino Access Point IP
+	
+		config WIFI_AP_GATEWAY
+		string "WIFI Ap GATEWAY"
+		default "192.168.0.1"
+		help
+			Minino Access Point GATEWAY
+
+		config WIFI_AP_NETMASK
+		string "WIFI Ap NETMASK"
+		default "255.255.255.0"
+		help
+			Minino Access Point NETMASK
+
+	endmenu
 
 	menu "Debug"
 

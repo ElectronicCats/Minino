@@ -1,42 +1,33 @@
-
+#include <dirent.h>
 #include <sys/param.h>
-
+#include "captive_screens.h"
+#include "dns_server.h"
 #include "esp_event.h"
+#include "esp_http_server.h"
 #include "esp_log.h"
 #include "esp_mac.h"
-
 #include "esp_netif.h"
 #include "esp_wifi.h"
+#include "files_ops.h"
 #include "lwip/inet.h"
 #include "nvs_flash.h"
-
-#include "dns_server.h"
-#include "esp_http_server.h"
-
-#include <dirent.h>
-#include "files_ops.h"
-
 #include "sd_card.h"
-
-#include "general_notification.h"
-#include "general_radio_selection.h"
-#include "general_submenu.h"
-#include "menus_module.h"
-#include "preferences.h"
 
 #include "captive_module.h"
 
-#define EXAMPLE_ESP_WIFI_SSID "MININO_CAPTIVE"
-#define EXAMPLE_ESP_WIFI_PASS ""
-#define EXAMPLE_MAX_STA_CONN  4
+#define MININO_CAPTIVE_DEFAULT_SSID CONFIG_WIFI_AP_NAME
+#define MININO_CAPTIVE_DEFAULT_PASS ""
+#define MININO_CAPTIVE_MAX_STA_CONN 4
 
 extern const char root_start[] asm("_binary_root_html_start");
 extern const char root_end[] asm("_binary_root_html_end");
 
 static const char* TAG = "example";
 
-static const char* main_menu[] = {"Portals", "Mode", "Run"};
+static char* wifi_list[30];
+
 static const char* modes_menu[] = {"Standalone", "Replicate"};
+
 static uint16_t last_index_selected = 0;
 static httpd_handle_t server = NULL;
 
@@ -44,6 +35,7 @@ typedef enum {
   PORTALS,
   MODE,
   RUN,
+  HELP,
 } main_menu_items_t;
 
 typedef enum { STANDALONE, REPLICATE } mode_types_t;
@@ -62,6 +54,8 @@ typedef struct {
 
 static captive_files_t portals_list = {0};
 static captive_context_t captive_context = {0};
+static wifi_scanner_ap_records_t* ap_records;
+static uint8_t selected_record = 0;
 
 static void captive_module_free_portals_list(void) {
   for (int i = 0; i < portals_list.count; i++) {
@@ -71,39 +65,33 @@ static void captive_module_free_portals_list(void) {
   portals_list.count = 0;
 }
 
-static void wifi_event_handler(void* arg,
-                               esp_event_base_t event_base,
-                               int32_t event_id,
-                               void* event_data) {
-  if (event_id == WIFI_EVENT_AP_STACONNECTED) {
-    wifi_event_ap_staconnected_t* event =
-        (wifi_event_ap_staconnected_t*) event_data;
-    ESP_LOGI(TAG, "station " MACSTR " join, AID=%d", MAC2STR(event->mac),
-             event->aid);
-  } else if (event_id == WIFI_EVENT_AP_STADISCONNECTED) {
-    wifi_event_ap_stadisconnected_t* event =
-        (wifi_event_ap_stadisconnected_t*) event_data;
-    ESP_LOGI(TAG, "station " MACSTR " leave, AID=%d, reason=%d",
-             MAC2STR(event->mac), event->aid, event->reason);
-  }
-}
-
 static void wifi_init_softap(void) {
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-
-  // ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID,
-  // &wifi_event_handler, NULL));
-
   wifi_config_t wifi_config = {
-      .ap = {.ssid = EXAMPLE_ESP_WIFI_SSID,
-             .ssid_len = strlen(EXAMPLE_ESP_WIFI_SSID),
-             .password = EXAMPLE_ESP_WIFI_PASS,
-             .max_connection = EXAMPLE_MAX_STA_CONN,
+      .ap = {.ssid = MININO_CAPTIVE_DEFAULT_SSID,
+             .ssid_len = strlen(MININO_CAPTIVE_DEFAULT_SSID),
+             .password = MININO_CAPTIVE_DEFAULT_PASS,
+             .max_connection = MININO_CAPTIVE_MAX_STA_CONN,
              .authmode = WIFI_AUTH_WPA_WPA2_PSK},
   };
 
-  if (strlen(EXAMPLE_ESP_WIFI_PASS) == 0) {
+  if (preferences_get_int(CAPTIVE_PORTAL_MODE_FS_KEY, 0) == 1) {
+    char* wifi_ssid =
+        malloc(strlen((char*) ap_records->records[selected_record].ssid) + 2);
+    strcpy(wifi_ssid, (char*) ap_records->records[selected_record].ssid);
+    wifi_ssid[strlen((char*) ap_records->records[selected_record].ssid)] = ' ';
+    wifi_ssid[strlen((char*) ap_records->records[selected_record].ssid) + 1] =
+        '\0';
+
+    strncpy((char*) wifi_config.ap.ssid, wifi_ssid, strlen(wifi_ssid));
+    wifi_config.ap.ssid[strlen(wifi_ssid)] = '\0';
+    wifi_config.ap.ssid_len = strlen(wifi_ssid);
+
+    free(wifi_ssid);
+  }
+
+  if (strlen(MININO_CAPTIVE_DEFAULT_PASS) == 0) {
     wifi_config.ap.authmode = WIFI_AUTH_OPEN;
   }
 
@@ -118,9 +106,6 @@ static void wifi_init_softap(void) {
   char ip_addr[16];
   inet_ntoa_r(ip_info.ip.addr, ip_addr, 16);
   ESP_LOGI(TAG, "Set up softAP with IP: %s", ip_addr);
-
-  ESP_LOGI(TAG, "wifi_init_softap finished. SSID:'%s' password:'%s'",
-           EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
 }
 
 static void captive_module_show_default_portal(httpd_req_t* req) {
@@ -142,22 +127,10 @@ static esp_err_t root_get_handler(httpd_req_t* req) {
       return ESP_OK;
     }
   }
-
-  // char* html_file = (char*) malloc(CAPTIVE_PORTAL_MAX_DEFAULT_LEN*2);
-  // err = preferences_get_string(CAPTIVE_PORTAL_FS_KEY,
-  // captive_context.portal;, CAPTIVE_PORTAL_MAX_DEFAULT_LEN); if (err !=
-  // ESP_OK){
-  //   ESP_LOGE("CAPTIVE", "ERROR reading the file name");
-  //   sprintf(captive_context.portal;, CAPTIVE_PORTAL_DEFAULT_NAME);
-  // }
-  ESP_LOGI("CAPTIVE", "Looking the file: %s", (char*) captive_context.portal);
-  // sprintf(captive_context.portal, captive_context.portal;);
-
   httpd_resp_set_type(req, "text/html");
 
   if (strcmp(captive_context.portal, CAPTIVE_PORTAL_DEFAULT_NAME) == 0) {
     captive_module_show_default_portal(req);
-    // free(captive_context.portal;);
     return ESP_OK;
   }
 
@@ -171,22 +144,20 @@ static esp_err_t root_get_handler(httpd_req_t* req) {
 
   sprintf(path, "%s/%s/%s", SD_CARD_PATH, CAPTIVE_PORTAL_PATH_NAME,
           (char*) captive_context.portal);
-  ESP_LOGI("CAPTIVE", "Looking the path: %s", path);
 
   FILE* file = fopen(path, "r");
   if (file == NULL) {
     ESP_LOGE(TAG, "Failed to open file for reading");
+    captive_module_show_default_portal(req);
+    free(path);
     return ESP_FAIL;
   }
-
-  size_t file_size = files_ops_get_file_size_2(path);
-  ESP_LOGI("CAPTIVE", "File size: %d", file_size);
 
   char buffer[512];
   size_t bytes_read;
 
   while ((bytes_read = fread(buffer, 1, sizeof(buffer) - 1, file)) > 0) {
-    buffer[bytes_read] = '\0';  // Null-terminate for httpd_resp_sendstr_chunk
+    buffer[bytes_read] = '\0';
     if (httpd_resp_sendstr_chunk(req, buffer) != ESP_OK) {
       ESP_LOGE(TAG, "Failed to send chunk");
       err = ESP_FAIL;
@@ -202,7 +173,6 @@ static esp_err_t root_get_handler(httpd_req_t* req) {
 
   fclose(file);
   free(path);
-  // free(html_file);
 
   if (err == ESP_OK) {
     httpd_resp_sendstr_chunk(req, NULL);
@@ -215,31 +185,21 @@ static const httpd_uri_t root = {.uri = "/",
                                  .method = HTTP_GET,
                                  .handler = root_get_handler};
 
-// HTTP Error (404) Handler - Redirects all requests to the root page
 esp_err_t http_404_error_handler(httpd_req_t* req, httpd_err_code_t err) {
-  // Set status
   httpd_resp_set_status(req, "302 Temporary Redirect");
-  // Redirect to the "/" root directory
   httpd_resp_set_hdr(req, "Location", "/");
-  // iOS requires content in the response to detect a captive portal, simply
-  // redirecting is not sufficient.
   httpd_resp_send(req, "Redirect to the captive portal", HTTPD_RESP_USE_STRLEN);
 
-  ESP_LOGI(TAG, "Redirecting to root");
   return ESP_OK;
 }
 
 static httpd_handle_t start_webserver(void) {
   httpd_handle_t server = NULL;
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-  config.max_open_sockets = 6;
+  config.max_open_sockets = 6;  // More than 6 will mark as error and don't work
   config.lru_purge_enable = true;
 
-  // Start the httpd server
-  ESP_LOGI(TAG, "Starting server on port: '%d'", config.server_port);
   if (httpd_start(&server, &config) == ESP_OK) {
-    // Set URI handlers
-    ESP_LOGI(TAG, "Registering URI handlers");
     httpd_register_uri_handler(server, &root);
     httpd_register_err_handler(server, HTTPD_404_NOT_FOUND,
                                http_404_error_handler);
@@ -249,17 +209,15 @@ static httpd_handle_t start_webserver(void) {
 
 static void captive_module_disable_wifi() {
   ESP_ERROR_CHECK(esp_wifi_stop());
-  // ESP_ERROR_CHECK(esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID,
-  // &wifi_event_handler));
   ESP_ERROR_CHECK(esp_wifi_deinit());
   esp_netif_t* netif = esp_netif_get_handle_from_ifkey(CAPTIVE_PORTAL_NET_NAME);
   if (netif) {
     esp_netif_destroy(netif);
-    ESP_LOGI("CAPTIVE", "Netif destroyed");
+    ESP_LOGW("CAPTIVE", "Netif destroyed");
   }
   if (server) {
     httpd_stop(server);
-    ESP_LOGI("CAPTIVE", "HTTP server stopped");
+    ESP_LOGW("CAPTIVE", "HTTP server stopped");
   }
 
   ESP_ERROR_CHECK(esp_event_loop_delete_default());
@@ -272,7 +230,13 @@ static void captive_module_wifi_begin() {
   esp_log_level_set("httpd_parse", ESP_LOG_ERROR);
 
   ESP_ERROR_CHECK(esp_netif_init());
-  ESP_ERROR_CHECK(esp_event_loop_create_default());
+  esp_err_t errr = esp_event_loop_create_default();
+  if (errr != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to create event loop: %s",
+             esp_err_to_name(errr));
+    esp_event_loop_delete_default();
+    esp_event_loop_create_default();
+  }
   ESP_ERROR_CHECK(nvs_flash_init());
 
   esp_netif_create_default_wifi_ap();
@@ -310,11 +274,11 @@ static uint16_t captive_module_get_sd_items() {
   char* path = (char*) malloc(CAPTIVE_PORTAL_MAX_DEFAULT_LEN);
   snprintf(path, CAPTIVE_PORTAL_MAX_DEFAULT_LEN, "%s/%s", SD_CARD_PATH,
            CAPTIVE_PORTAL_PATH_NAME);
-  ESP_LOGI("CAPTIVE", "Looking the path: %s", path);
   DIR* dir;
   dir = opendir(path);
   if (dir == NULL) {
     ESP_LOGE("CAPTIVE", "ERROR opening the SD card");
+    free(path);
     return 0;
   }
 
@@ -369,7 +333,6 @@ static void captive_module_show_running() {
 }
 
 static void captive_module_selector_handler(uint8_t option) {
-  ESP_LOGI("CAPTIVE", "Option seletect: %s", portals_list.ent[option]);
   preferences_put_string(CAPTIVE_PORTAL_FS_KEY, portals_list.ent[option]);
   sprintf(captive_context.portal, portals_list.ent[option]);
   captive_module_main();
@@ -377,7 +340,8 @@ static void captive_module_selector_handler(uint8_t option) {
 
 static void captive_module_sd_show_items() {
   captive_module_get_sd_items();
-  if (portals_list.count < CAPTIVE_PORTAL_LIMIT_PORTALS) {
+  if (portals_list.count < CAPTIVE_PORTAL_LIMIT_PORTALS &&
+      portals_list.count == 0) {
     portals_list.ent[portals_list.count] = strdup(CAPTIVE_PORTAL_DEFAULT_NAME);
     if (portals_list.ent[portals_list.count]) {
       portals_list.count++;
@@ -386,14 +350,102 @@ static void captive_module_sd_show_items() {
     }
   }
 
-  ESP_LOGW("CAPTIVE", "Count: %d", portals_list.count);
   general_submenu_menu_t portals = {0};
   portals.options = (char**) portals_list.ent;
   portals.options_count = portals_list.count;
   portals.select_cb = captive_module_selector_handler;
-  portals.selected_option = last_index_selected;
+  portals.selected_option = 0;
   portals.exit_cb = captive_module_main;
   general_submenu(portals);
+}
+
+static void captive_module_ap_list_handler(uint8_t option) {
+  ESP_LOGI("CAPTIVE", "AP Selected: %s", ap_records->records[option].ssid);
+  selected_record = option;
+  captive_module_wifi_begin();
+  captive_module_show_running();
+}
+
+static void captive_module_scan_clean() {
+  if (!ap_records)
+    return;
+
+  for (int i = 0; i < 30; i++) {
+    if (wifi_list[i]) {
+      free(wifi_list[i]);
+      wifi_list[i] = NULL;
+    }
+  }
+  if (ap_records) {
+    wifi_scanner_clear_ap_records();
+    ap_records->count = 0;
+    ap_records = NULL;
+  }
+}
+
+static void captive_module_get_scanned_ap() {
+  if (!ap_records || ap_records->count == 0) {
+    ESP_LOGE(TAG, "No valid AP records");
+    return;
+  }
+
+  for (int i = 0; i < ap_records->count; i++) {
+    if (!wifi_list[i]) {
+      wifi_list[i] = malloc(sizeof(ap_records->records[i].ssid));
+      if (!wifi_list[i]) {
+        ESP_LOGE("CAPTIVE", "Error with malloc");
+        continue;
+      }
+    }
+    memcpy(wifi_list[i], ap_records->records[i].ssid,
+           sizeof(ap_records->records[i].ssid));
+  }
+}
+
+static void captive_module_clean_records() {
+  captive_module_scan_clean();
+  captive_module_main();
+}
+
+// TODO: Check, this recall can be result in Store access fault)
+static void captive_module_show_aps_list() {
+  if (ap_records->count == 0) {
+    captive_module_show_notification_no_ap_records();
+    return;
+  }
+
+  captive_module_get_scanned_ap();
+
+  general_submenu_menu_t ap_list = {0};
+  ap_list.options = wifi_list;
+  ap_list.options_count = ap_records->count - 1;
+  ap_list.selected_option = 0;
+  ap_list.select_cb = captive_module_ap_list_handler;
+  ap_list.exit_cb = captive_module_clean_records;
+
+  general_submenu(ap_list);
+}
+
+static void scanning_task() {
+  uint8_t scan_count = 0;
+  ap_records = wifi_scanner_get_ap_records();
+  while (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 2)) {
+    wifi_scanner_module_scan();
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    scan_count++;
+  }
+
+  ap_records = wifi_scanner_get_ap_records();
+  captive_module_show_aps_list();
+
+  vTaskDelete(NULL);
+}
+
+static void captive_module_run_scan_task() {
+  wifi_scanner_ap_records_t* records = wifi_scanner_get_ap_records();
+  while (records->count < (DEFAULT_SCAN_LIST_SIZE / 2)) {
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
 }
 
 static void captive_module_main_menu_handler(uint8_t option) {
@@ -405,8 +457,17 @@ static void captive_module_main_menu_handler(uint8_t option) {
       captive_module_show_mode_selector();
       break;
     case RUN:
-      captive_module_wifi_begin();
-      captive_module_show_running();
+      if (preferences_get_int(CAPTIVE_PORTAL_MODE_FS_KEY, 0) == 1) {
+        captive_module_scan_clean();
+        xTaskCreate(scanning_task, "wifi_scan", 8096, NULL, 5, NULL);
+        captive_module_run_scan_task();
+      } else {
+        captive_module_wifi_begin();
+        captive_module_show_running();
+      }
+      break;
+    case HELP:
+      captive_module_show_help();
       break;
     default:
       break;
@@ -415,8 +476,8 @@ static void captive_module_main_menu_handler(uint8_t option) {
 
 void captive_module_main(void) {
   general_submenu_menu_t main = {0};
-  main.options = main_menu;
-  main.options_count = sizeof(main_menu) / sizeof(char*);
+  main.options = captive_main_menu;
+  main.options_count = sizeof(captive_main_menu) / sizeof(char*);
   main.select_cb = captive_module_main_menu_handler;
   main.selected_option = last_index_selected;
   main.exit_cb = menus_module_restart;

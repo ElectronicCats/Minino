@@ -10,9 +10,9 @@
 static wifi_scanner_ap_records_t ap_records;
 
 void wifi_scanner_module_scan() {
-#if !defined(CONFIG_WIFI_SCANNER_DEBUG)
-  esp_log_level_set(TAG_WIFI_SCANNER_MODULE, ESP_LOG_NONE);
-#endif
+  // #if !defined(CONFIG_WIFI_SCANNER_DEBUG)
+  //   esp_log_level_set(TAG_WIFI_SCANNER_MODULE, ESP_LOG_NONE);
+  // #endif
   esp_err_t err = esp_event_loop_create_default();
   if (err != ESP_OK) {
     ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to create event loop: %s",
