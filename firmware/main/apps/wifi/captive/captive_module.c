@@ -1,5 +1,6 @@
 #include <dirent.h>
 #include <sys/param.h>
+#include "animations_task.h"
 #include "captive_screens.h"
 #include "dns_server.h"
 #include "esp_event.h"
@@ -9,6 +10,7 @@
 #include "esp_netif.h"
 #include "esp_wifi.h"
 #include "files_ops.h"
+#include "general_animations.h"
 #include "lwip/inet.h"
 #include "nvs_flash.h"
 #include "sd_card.h"
@@ -109,13 +111,12 @@ static void wifi_init_softap(void) {
 }
 
 static void captive_module_show_default_portal(httpd_req_t* req) {
-  ESP_LOGI(TAG, "Serve root");
   const uint32_t root_len = root_end - root_start;
   httpd_resp_send(req, root_start, root_len);
 }
 
 // HTTP GET Handler
-static esp_err_t root_get_handler(httpd_req_t* req) {
+static esp_err_t captive_portal_root_get_handler(httpd_req_t* req) {
   esp_err_t err = ESP_OK;
 
   if (sd_card_is_not_mounted()) {
@@ -181,9 +182,46 @@ static esp_err_t root_get_handler(httpd_req_t* req) {
   return ESP_OK;
 }
 
+static esp_err_t captive_portal_validate_input(httpd_req_t* req) {
+  char* buf;
+  size_t buf_len = httpd_req_get_url_query_len(req) + 1;
+  if (buf_len > 1) {
+    buf = (char*) malloc(buf_len);
+    if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
+      char param[64];
+      if (httpd_query_key_value(buf, CAPTIVE_USER_INPUT1, param,
+                                sizeof(param)) == ESP_OK) {
+        printf("Found URL query parameter -> user1: %s\n", param);
+      }
+      if (httpd_query_key_value(buf, CAPTIVE_USER_INPUT2, param,
+                                sizeof(param)) == ESP_OK) {
+        printf("Found URL query parameter -> user2: %s\n", param);
+      }
+      if (httpd_query_key_value(buf, CAPTIVE_USER_INPUT3, param,
+                                sizeof(param)) == ESP_OK) {
+        printf("Found URL query parameter -> user3: %s\n", param);
+      }
+      if (httpd_query_key_value(buf, CAPTIVE_USER_INPUT4, param,
+                                sizeof(param)) == ESP_OK) {
+        printf("Found URL query parameter -> user4: %s\n", param);
+      }
+    }
+    free(buf);
+  }
+
+  httpd_resp_set_status(req, "200 Done");
+  httpd_resp_set_hdr(req, "Location", "/");
+  httpd_resp_send(req, "Thanks for you data", HTTPD_RESP_USE_STRLEN);
+  return ESP_OK;
+}
+
 static const httpd_uri_t root = {.uri = "/",
                                  .method = HTTP_GET,
-                                 .handler = root_get_handler};
+                                 .handler = captive_portal_root_get_handler};
+
+static const httpd_uri_t get_creds = {.uri = "/validate",
+                                      .method = HTTP_GET,
+                                      .handler = captive_portal_validate_input};
 
 esp_err_t http_404_error_handler(httpd_req_t* req, httpd_err_code_t err) {
   httpd_resp_set_status(req, "302 Temporary Redirect");
@@ -201,6 +239,7 @@ static httpd_handle_t start_webserver(void) {
 
   if (httpd_start(&server, &config) == ESP_OK) {
     httpd_register_uri_handler(server, &root);
+    httpd_register_uri_handler(server, &get_creds);
     httpd_register_err_handler(server, HTTPD_404_NOT_FOUND,
                                http_404_error_handler);
   }
@@ -322,8 +361,9 @@ static void captive_module_show_mode_selector() {
 }
 
 static void captive_module_show_running() {
-  char* body[48];
-  sprintf(body, "%s", (char*) captive_context.portal);
+  char* body[64];
+  sprintf(body, "Using:%s | Waiting for user creds",
+          (char*) captive_context.portal);
 
   general_notification_ctx_t notification = {0};
   notification.head = "Captive Portal";
@@ -436,6 +476,8 @@ static void scanning_task() {
   }
 
   ap_records = wifi_scanner_get_ap_records();
+
+  animations_task_stop();
   captive_module_show_aps_list();
 
   vTaskDelete(NULL);
@@ -460,6 +502,7 @@ static void captive_module_main_menu_handler(uint8_t option) {
       if (preferences_get_int(CAPTIVE_PORTAL_MODE_FS_KEY, 0) == 1) {
         captive_module_scan_clean();
         xTaskCreate(scanning_task, "wifi_scan", 8096, NULL, 5, NULL);
+        animations_task_run(&general_animation_loading, 300, NULL);
         captive_module_run_scan_task();
       } else {
         captive_module_wifi_begin();
