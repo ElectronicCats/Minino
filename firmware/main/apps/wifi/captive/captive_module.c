@@ -29,6 +29,7 @@ static const char* TAG = "example";
 static char* wifi_list[30];
 
 static const char* modes_menu[] = {"Standalone", "Replicate"};
+static const char* config_dump_menu[] = {"Dump to SD", "No dump"};
 
 static uint16_t last_index_selected = 0;
 static httpd_handle_t server = NULL;
@@ -36,6 +37,7 @@ static httpd_handle_t server = NULL;
 typedef enum {
   PORTALS,
   MODE,
+  PREFERENCE,
   RUN,
   HELP,
 } main_menu_items_t;
@@ -241,10 +243,12 @@ static esp_err_t captive_portal_validate_input(httpd_req_t* req) {
     free(buf);
   }
 
-  if (!sd_card_is_not_mounted()) {
-    sd_card_create_dir(CAPTIVE_DATA_PATH);
-    sd_card_create_file(CAPTIVE_DATA_FILENAME);
-    sd_card_append_to_file(CAPTIVE_DATA_FILENAME, str_dump);
+  if (preferences_get_int(CAPTIVE_PORTAL_PREF_FS_KEY, 0) == 0) {
+    if (!sd_card_is_not_mounted()) {
+      sd_card_create_dir(CAPTIVE_DATA_PATH);
+      sd_card_create_file(CAPTIVE_DATA_FILENAME);
+      sd_card_append_to_file(CAPTIVE_DATA_FILENAME, str_dump);
+    }
   }
 
   httpd_resp_set_status(req, "200 Done");
@@ -398,6 +402,23 @@ static void captive_module_show_mode_selector() {
   general_radio_selection(modes);  // Show the radio menu
 }
 
+static void captive_module_preference_selector_handle(uint8_t option) {
+  preferences_put_int(CAPTIVE_PORTAL_PREF_FS_KEY, option);
+}
+
+static void captive_module_show_preference_selector() {
+  general_radio_selection_menu_t preferences = {0};
+  preferences.banner = "Preferences";
+  preferences.options = (char**) config_dump_menu;
+  preferences.options_count = sizeof(config_dump_menu) / sizeof(char*);
+  preferences.select_cb = captive_module_preference_selector_handle;
+  preferences.style = RADIO_SELECTION_OLD_STYLE;
+  preferences.exit_cb = captive_module_main;
+  preferences.current_option =
+      preferences_get_int(CAPTIVE_PORTAL_PREF_FS_KEY, 0);
+  general_radio_selection(preferences);  // Show the radio menu
+}
+
 static void captive_module_show_running() {
   char* body[64];
   sprintf(body, "Using:%s | Waiting for user creds",
@@ -535,6 +556,9 @@ static void captive_module_main_menu_handler(uint8_t option) {
       break;
     case MODE:
       captive_module_show_mode_selector();
+      break;
+    case PREFERENCE:
+      captive_module_show_preference_selector();
       break;
     case RUN:
       if (preferences_get_int(CAPTIVE_PORTAL_MODE_FS_KEY, 0) == 1) {

@@ -38,6 +38,7 @@ You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/p
   - [View UDP Packets](#view-udp-packets)
   - [Modbus](#modbus)
   - [GATTCMD](#gattcmd)
+  - [Captive Portal new version](#captive-portal-new-version)
 - [Change log](#change-log)
   - [v1.1.7.0](#v1170)
     - [Added](#added)
@@ -484,6 +485,10 @@ A command line for interect with Bluetooth Characteristics
 - `gattcmd_write`: Write a value in a GATT characteristic
 
 > This app is still under development, we don't test with more secure connection
+
+
+## Captive Portal new version
+
 
 # Change log
 
