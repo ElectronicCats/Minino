@@ -10,9 +10,9 @@
 static wifi_scanner_ap_records_t ap_records;
 
 void wifi_scanner_module_scan() {
-  // #if !defined(CONFIG_WIFI_SCANNER_DEBUG)
-  //   esp_log_level_set(TAG_WIFI_SCANNER_MODULE, ESP_LOG_NONE);
-  // #endif
+#if !defined(CONFIG_WIFI_SCANNER_DEBUG)
+  esp_log_level_set(TAG_WIFI_SCANNER_MODULE, ESP_LOG_NONE);
+#endif
   esp_err_t err = esp_event_loop_create_default();
   if (err != ESP_OK) {
     ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to create event loop: %s",
@@ -81,4 +81,11 @@ wifi_ap_record_t* wifi_scanner_get_ap_record(unsigned index) {
 void wifi_scanner_clear_ap_records() {
   memset(&ap_records, 0, sizeof(ap_records));
   esp_wifi_clear_ap_list();
+}
+
+void wifi_scanner_show_records_ssid() {
+  printf("Showing list of scanned records:\n");
+  for (int i = 0; i < ap_records.count; i++) {
+    printf("-> %s\n", ap_records.records[i].ssid);
+  }
 }
