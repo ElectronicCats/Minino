@@ -2,7 +2,6 @@
 #include <string.h>
 #include "animations_task.h"
 #include "apps/wifi/deauth/deauth_screens.h"
-#include "captive_portal.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "led_events.h"

@@ -1,6 +1,5 @@
 #include "wifi_analyzer.h"
 
-#include "captive_portal.h"
 #include "catdos_module.h"
 #include "esp_check.h"
 #include "esp_err.h"
