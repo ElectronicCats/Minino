@@ -253,7 +253,6 @@ static void gattcmd_enum_gattc_profile_event_handler(
             }
           }
           free(char_elem_result);
-          descr_elem_result = NULL;
         } else {
           ESP_LOGE(GATTCMD_ENUM_TAG, "no char found");
         }
@@ -286,6 +285,8 @@ static void gattcmd_enum_gattc_profile_event_handler(
     case ESP_GATTC_DISCONNECT_EVT:
       connect = false;
       get_server = false;
+      printf("Disconnected, remote: \n" ESP_BD_ADDR_STR,
+             ESP_BD_ADDR_HEX(p_data->disconnect.remote_bda));
       ESP_LOGI(GATTCMD_ENUM_TAG,
                "Disconnected, remote " ESP_BD_ADDR_STR ", reason 0x%02x",
                ESP_BD_ADDR_HEX(p_data->disconnect.remote_bda),
@@ -352,6 +353,7 @@ static void gattcmd_enum_gap_cb(esp_gap_ble_cb_event_t event,
                  param->scan_stop_cmpl.status);
         break;
       }
+      printf("Scanning stop\n");
       break;
 
     case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
@@ -385,6 +387,8 @@ static void gattcmd_enum_gattc_cb(esp_gattc_cb_event_t event,
     } else {
       ESP_LOGI(GATTCMD_ENUM_TAG, "reg app failed, app_id %04x, status %d",
                param->reg.app_id, param->reg.status);
+      if (param->reg.status == 128)
+        esp_restart();
       return;
     }
   }
@@ -442,18 +446,17 @@ void gattcmd_enum_begin(char* saddress) {
 }
 
 void gattcmd_enum_stop() {
-  if (!connect)
-    return;
+  if (connect) {
+    esp_ble_gattc_close(enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if,
+                        enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].conn_id);
+    esp_ble_gap_disconnect(target_bda);
+  }
+
+  esp_ble_gattc_app_unregister(
+      enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if);
+  esp_ble_gattc_cache_clean(target_bda);
+
   connect = false;
   get_server = false;
-  esp_err_t err =
-      esp_ble_gattc_close(enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if,
-                          enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].conn_id);
-  if (err != ESP_OK) {
-    ESP_LOGE("GATTCMD_ENUM", "Error: %d", err);
-  }
-  err = esp_ble_gap_disconnect(target_bda);
-  if (err != ESP_OK) {
-    ESP_LOGE("GATTCMD_ENUM", "Error: %d", err);
-  }
+  enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if = ESP_GATT_IF_NONE;
 }
