@@ -36,7 +36,7 @@ menu "General project"
 		help
 			Firmware version.
 	
-	menu "WiFi AP Config"
+	menu "WiFi Captive Portal Config"
 		config WIFI_AP_NAME
 		string "WIFI Ap Name"
 		default "MININO_AP"
