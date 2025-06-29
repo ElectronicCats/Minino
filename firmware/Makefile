@@ -3,6 +3,7 @@ test_port:
 
 setup:
 	idf.py set-target esp32c6
+	pre-commit install
 
 compile:
 	idf.py build
@@ -16,10 +17,9 @@ monitor:
 	idf.py -p $(PORT) monitor
 
 clean:
-	-rm -rf build/ managed_components/
-	-rm sdkconfig
-	-rm dependencies.lock
-	-make setup
+	rm -rf build/ managed_components/
+	rm sdkconfig
+	make setup
 
 ff:
 	make test_port
