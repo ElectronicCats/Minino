@@ -38,6 +38,9 @@ You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/p
   - [View UDP Packets](#view-udp-packets)
   - [Modbus](#modbus)
   - [GATTCMD](#gattcmd)
+  - [Captive Portal new version](#captive-portal-new-version)
+    - [Core Features and Functionality](#core-features-and-functionality)
+    - [Building a Custom Captive Portal](#building-a-custom-captive-portal)
 - [Change log](#change-log)
   - [v1.1.7.0](#v1170)
     - [Added](#added)
@@ -48,7 +51,7 @@ You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/p
 > The version you need to install must be [5.3.1](https://github.com/espressif/esp-idf/releases/tag/v5.3.1); we cannot guarantee that a more recent version will compile.
 
 - [Minino](https://electroniccats.com/store/minino/)
-- [ESP-IDF v5.3.1](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html) installed
+- [ESP-IDF v5.3.2](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html) installed
 - [Make](https://www.gnu.org/software/make/) installed
 - [pre-commit](https://pre-commit.com/) installed (optional but recommended)
 
@@ -483,6 +486,45 @@ A command line for interect with Bluetooth Characteristics
 - `gattcmd_write`: Write a value in a GATT characteristic
 
 > This app is still under development, we don't test with more secure connection
+
+
+## Captive Portal new version
+The updated captive portal module enables the Minino device to function as a Wi-Fi Access Point (AP), allowing it to intercept client connections and present a fully customizable web interface. This update brings enhanced flexibility, user data handling, and configuration options, making it easier to create engaging and effective captive experiences.
+
+### Core Features and Functionality
+- **Custom Portals from SD Card**
+You can now store your own HTML-based portals on a microSD card and load them at runtime. This allows for dynamic customization of the captive portal without needing to recompile the firmware.
+- **User Input Logging (Optional Dump to SD)**
+Captured user input from the portal (such as credentials or form data) can be saved to a `.txt` file on the SD card. This behavior can be enabled or disabled from a new Preferences menu in the device interface.
+- **Extended Input Support**
+The portal now supports multiple form input fields. Specifically, you can use up to four predefined input names: user1, user2, user3, and user4. These are mapped to typical use cases like email, password, or custom fields.
+- **Access Point Modes: Standalone and Replicate**
+You can now choose between two operational modes:
+  1. Standalone: Minino creates a Wi-Fi AP using a user-defined SSID.
+  2. Replicate: Minino scans for nearby Wi-Fi networks and clones the SSID of a selected access point (useful for social engineering or penetration testing scenarios).
+- **Custom AP Configuration via Menuconfig**
+The AP name, password, IP configuration, and more can now be set directly through the menuconfig interface—no need to modify the source code.
+
+### Building a Custom Captive Portal
+To create your own portal, use the provided root.html template as a reference. This HTML page includes a form that sends a `GET` request to the `/validate` endpoint:
+``` html
+<form action="/validate" method="get" class="row" style="padding: 1rem;">
+  <label for="user1" style="margin-top: 1rem;">Email</label>
+  <input type="email" name="user1" class="form-control">
+
+  <label for="user2" style="margin-top: 1rem;">Password</label>
+  <input type="password" name="user2" class="form-control">
+
+  <label for="user3" style="margin-top: 1rem;">Custom Field</label>
+  <input type="text" name="user3" class="form-control">
+
+  <label for="user4" style="margin-top: 1rem;">Custom Field</label>
+  <input type="text" name="user4" class="form-control">
+
+  <button type="submit" class="btn" style="margin-top: 1rem;">Send</button>
+</form>
+```
+The form inputs should use the reserved names `user1` through `user4` to ensure the system captures the data correctly.
 
 # Change log
 
