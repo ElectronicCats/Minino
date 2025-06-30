@@ -34,4 +34,5 @@ wifi_ap_record_t* wifi_scanner_get_ap_record(unsigned index);
  */
 void wifi_scanner_module_scan();
 void wifi_scanner_clear_ap_records();
+void wifi_scanner_show_records_ssid();
 #endif  // WIFI_SCANNER_MODULE_H

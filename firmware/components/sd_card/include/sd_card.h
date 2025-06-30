@@ -8,6 +8,8 @@
 #define ESP_ERR_FILE_OPEN_FAILED  ESP_FAIL
 #define ESP_ERR_FILE_WRITE_FAILED ESP_FAIL
 
+#define SD_CARD_PATH "/sdcard"
+
 typedef struct {
   const char* name;
   uint64_t total_space;
@@ -141,3 +143,6 @@ esp_err_t sd_card_write_file(const char* path, char* data);
 sd_card_info_t sd_card_get_info();
 
 esp_err_t sd_card_append_to_file(const char* path, char* data);
+
+esp_err_t sd_card_list_files(const char* path);
+void print_files_in_sd();

@@ -2,7 +2,6 @@
 #include <string.h>
 #include "animations_task.h"
 #include "apps/wifi/deauth/deauth_screens.h"
-#include "captive_portal.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "led_events.h"
@@ -44,8 +43,6 @@ static void deauth_module_cb_event_attacks(uint8_t button_name,
                                            uint8_t button_event);
 static void deauth_module_cb_event_run(uint8_t button_name,
                                        uint8_t button_event);
-static void deauth_module_cb_event_captive_portal(uint8_t button_name,
-                                                  uint8_t button_event);
 
 static void scanning_task();
 static void deauth_run_scan_task();
@@ -64,7 +61,6 @@ static void scanning_task() {
   menu_stadistics.count = ap_records->count;
   animations_task_stop();
 
-  ESP_LOGI("deauth", "Scanning done: %d", ap_records->count);
   deauth_display_menu(current_item, menu_stadistics);
   current_wifi_state.state = DEAUTH_STATE_MENU;
   led_control_stop();
@@ -87,20 +83,12 @@ static void deauth_handle_attacks() {
     case BROADCAST:
     case ROGUE_AP:
     case COMBINED:
-      ESP_LOGI("deauth", "Attack: %d", menu_stadistics.attack);
       deauth_display_attaking_text();
       animations_task_run(&deauth_display_attacking_animation, 200, NULL);
-      ESP_LOGI("deauth", "Attack: %d", menu_stadistics.attack);
       wifi_attack_handle_attacks(menu_stadistics.attack,
                                  &menu_stadistics.selected_ap);
-      ESP_LOGI("deauth", "Attack: %d", menu_stadistics.attack);
       menus_module_set_app_state(true, deauth_module_cb_event_run);
       current_item = 0;
-      break;
-    case CAPTIVEPORTAL:
-      current_item = 0;
-      menus_module_set_app_state(true, deauth_module_cb_event_captive_portal);
-      deauth_display_captive_portals(current_item, menu_stadistics);
       break;
     default:
       break;
@@ -296,44 +284,6 @@ static void deauth_module_cb_event_run(uint8_t button_name,
     case BUTTON_UP:
     case BUTTON_DOWN:
     case BUTTON_RIGHT:
-    default:
-      break;
-  }
-}
-
-static void deauth_module_cb_event_captive_portal(uint8_t button_name,
-                                                  uint8_t button_event) {
-  if (button_event != BUTTON_PRESS_DOWN) {
-    return;
-  }
-  switch (button_name) {
-    case BUTTON_UP:
-      current_item =
-          current_item-- == 0 ? CAPTIVEPORTALCOUNT - 1 : current_item;
-      deauth_display_captive_portals(current_item, menu_stadistics);
-      break;
-    case BUTTON_DOWN:
-      current_item = ++current_item > CAPTIVEPORTALCOUNT - 1 ? 0 : current_item;
-      deauth_display_captive_portals(current_item, menu_stadistics);
-      break;
-    case BUTTON_LEFT:
-      current_item = 0;
-      led_control_stop();
-      captive_portal_stop();
-      menus_module_set_app_state(true, deauth_module_cb_event);
-      deauth_display_menu(current_item, menu_stadistics);
-      break;
-    case BUTTON_RIGHT:
-      led_control_run_effect(led_control_wifi_scanning);
-      captive_portal_set_portal(current_item);
-      captive_portal_set_config_ssid(menu_stadistics.selected_ap);
-      captive_portal_register_cb(deauth_display_captive_portal_creds);
-      deauth_display_captive_waiting();
-      xTaskCreate(captive_portal_begin, "captive_portal_start", 4096, NULL, 5,
-                  NULL);
-      menus_module_set_app_state(true, deauth_module_cb_event_run);
-      current_item = 0;
-      break;
     default:
       break;
   }
