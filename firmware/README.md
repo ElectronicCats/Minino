@@ -474,7 +474,6 @@ mb_engine_start_writer
 mb_engine_start_dos
 # Stop any attack
 mb_engine_stop_attack
-
 ```
 
 > For more information you can use the `help` function and the command to view more information about it.

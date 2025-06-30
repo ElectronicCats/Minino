@@ -40,6 +40,9 @@
 #include "wifi_settings_scenes.h"
 #include "zigbee_module.h"
 
+// Include our header app
+#include "hello_module.h"
+
 typedef enum {
   MENU_MAIN = 0,
   MENU_APPLICATIONS,
@@ -52,6 +55,8 @@ typedef enum {
   MENU_THREAD_APPS,
   MENU_GPS,
   MENU_GPIO_APPS,
+  // Uncomment to add the minino demo to menu
+  // MENU_HELLO,
   /* WiFi applications */
   MENU_WIFI_ANALIZER,
   MENU_WIFI_CAPTIVE,
@@ -205,6 +210,15 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = about_module_display_legal_menu,
      .on_exit_cb = NULL,
      .is_visible = true},
+// Uncomment to show the Demo app
+// {.display_name = "Hello APP",
+//  .menu_idx              = MENU_HELLO,
+//  .parent_idx            = MENU_APPLICATIONS,
+//  .entry_cmd             = "hello",
+//  .last_selected_submenu = 0,
+//  .on_enter_cb           = hello_main,
+//  .on_exit_cb            = NULL,
+//  .is_visible            = true},
 #ifdef CONFIG_WIFI_APPS_ENABLE
     {.display_name = "WiFi",
      .menu_idx = MENU_WIFI_APPS,

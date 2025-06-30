@@ -34,6 +34,7 @@
 #include "modbus_engine_cmd.h"
 
 #include "gattcmd_cmd.h"
+#include "hello_cmd.h"
 
 static const char* TAG = "cat_console";
 #define PROMPT_STR "minino"
@@ -104,6 +105,8 @@ void cat_console_begin() {
   modbus_engine_cmd_register_cmds();
   gattccmd_register_cmd();
   cmd_wifi_list_register_commands();
+  // Uncomment to use the demo app commands
+  // hello_cmd_register();
 
   /* Prompt to be printed before each line.
    * This can be customized, made dynamic, etc.

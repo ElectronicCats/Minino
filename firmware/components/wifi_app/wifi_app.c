@@ -20,7 +20,7 @@ void wifi_ap_init(void) {
     ret = nvs_flash_init();
   }
   ESP_ERROR_CHECK(ret);
-  // esp_log_level_set("wifi", ESP_LOG_NONE);
+  esp_log_level_set("wifi", ESP_LOG_NONE);
 
   ret = esp_event_loop_create_default();
   if (ret != ESP_OK) {
