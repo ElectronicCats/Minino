@@ -78,8 +78,7 @@ void gattcmd_module_gatt_write(char* saddress, char* gatt, char* value) {
     initialized = true;
     gattcmd_begin();
   }
-  ESP_LOGI(GATTC_TAG, "Writting GATT: %s - %s - value: %s", saddress, gatt,
-           value);
+  printf("Writting GATT: %s - %s - value: %s\n", saddress, gatt, value);
   uint16_t uuid = hex_string_to_uint16(gatt);
   gattcmd_write_begin(saddress, uuid, value);
 }
@@ -97,7 +96,7 @@ void gattcmd_module_enum_client(char* saddress) {
     initialized = true;
     gattcmd_begin();
   }
-
+  printf("gattcmd_enum_begin\n");
   gattcmd_enum_begin(saddress);
 }
 
@@ -110,6 +109,5 @@ void gattcmd_module_scan_client() {
     initialized = true;
     gattcmd_begin();
   }
-
   gattcmd_scan_begin();
 }

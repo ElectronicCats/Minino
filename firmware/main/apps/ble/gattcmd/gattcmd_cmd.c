@@ -60,7 +60,6 @@ void gattccmd_register_cmd() {
   gattccmd_write_args.end = arg_end(3);
 
   esp_console_cmd_t gattccmd_cmd_scan = {.command = "gattcmd_scan",
-                                         .help = "\nScan the client Address",
                                          .category = "BT",
                                          .hint = NULL,
                                          .help = "Scan for devices",
@@ -69,7 +68,6 @@ void gattccmd_register_cmd() {
 
   esp_console_cmd_t gattccmd_set_client_cmd = {
       .command = "gattcmd_enum",
-      .help = "\nEnum the client Address",
       .category = "BT",
       .hint = NULL,
       .help = "Enum the GATTs and Descriptors",
@@ -78,7 +76,6 @@ void gattccmd_register_cmd() {
 
   esp_console_cmd_t gattccmd_write_cmd = {
       .command = "gattcmd_write",
-      .help = "\nWrite to the GATT Address",
       .category = "BT",
       .hint = NULL,
       .func = &gattccmd_write,
