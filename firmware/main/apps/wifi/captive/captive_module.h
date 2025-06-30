@@ -10,6 +10,7 @@
 #define CAPTIVE_PORTAL_MODE_FS_KEY     "cpmode"
 #define CAPTIVE_PORTAL_FS_KEY          "cpportal"
 #define CAPTIVE_PORTAL_PREF_FS_KEY     "cpprefs"
+#define CAPTIVE_PORTAL_CHANNEL         "cpchan"
 #define CAPTIVE_PORTAL_NET_NAME        "WIFI_AP_DEF"
 
 // USER INputs

@@ -9,8 +9,8 @@
 #include "preferences.h"
 #include "wifi_scanner.h"
 
-const char* captive_main_menu[] = {"Portals", "Mode", "Preferences", "Run",
-                                   "Help"};
+const char* captive_main_menu[] = {"Portals", "Mode", "Preferences",
+                                   "Channel", "Run",  "Help"};
 const char* no_folder_help[] = {"If you dont have",
                                 "the Portals",
                                 "folder already",
@@ -35,7 +35,13 @@ const char* no_folder_help[] = {"If you dont have",
                                 "",
                                 "configure the",
                                 "preference",
-                                "dump mode"};
+                                "dump mode",
+                                "",
+                                "If you",
+                                "have problems",
+                                "with the AP",
+                                "change the",
+                                "channel."};
 
 void captive_module_show_help();
 void captive_module_show_notification_no_ap_records();

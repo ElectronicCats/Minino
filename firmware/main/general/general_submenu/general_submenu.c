@@ -9,6 +9,7 @@
 #else  // CONFIG_RESOLUTION_128X32
   #define MAX_OPTIONS_NUM 4
 #endif
+#define MAX_OPTION_LEN 29
 
 static general_submenu_menu_t* submenu_ctx;
 
@@ -43,6 +44,12 @@ static void list_submenu_options_modal() {
 
 static void list_submenu_options() {
   general_submenu_menu_t* ctx = submenu_ctx;
+  if (!ctx || !ctx->options || ctx->options_count == 0) {
+    oled_screen_clear_buffer();
+    oled_screen_display_text("Error: No options", 0, 0, OLED_DISPLAY_NORMAL);
+    oled_screen_display_show();
+    return;
+  }
   static uint8_t items_offset = 0;
   items_offset = MAX(ctx->selected_option - MAX_OPTIONS_NUM + 2, items_offset);
   items_offset =
@@ -50,10 +57,20 @@ static void list_submenu_options() {
   items_offset = MIN(ctx->selected_option, items_offset);
   oled_screen_clear_buffer();
   oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
-  char* str = malloc(20);
+
+  char* str = (char*) malloc(MAX_OPTION_LEN + 1);
+  if (!str) {
+    oled_screen_display_show();
+    return;
+  }
   for (uint8_t i = 0; i < (MIN(ctx->options_count, MAX_OPTIONS_NUM - 1)); i++) {
-    bool is_selected = i + items_offset == ctx->selected_option;
-    sprintf(str, "%s", ctx->options[i + items_offset]);
+    uint8_t idx = i + items_offset;
+    if (idx >= ctx->options_count || !ctx->options[idx]) {
+      printf("Invalid option at index %d\n", idx);
+      continue;
+    }
+    bool is_selected = idx == ctx->selected_option;
+    snprintf(str, MAX_OPTION_LEN + 1, "%s", ctx->options[idx]);
     oled_screen_display_text(str, is_selected ? 16 : 0, i + 1, is_selected);
     if (is_selected) {
       oled_screen_display_bitmap(minino_face, 0, (i + 1) * 8, 8, 8,

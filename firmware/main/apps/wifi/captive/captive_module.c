@@ -21,23 +21,27 @@
 #define MININO_CAPTIVE_DEFAULT_PASS ""
 #define MININO_CAPTIVE_MAX_STA_CONN 4
 
+#define MAX_RETRIES 5
+
 extern const char root_start[] asm("_binary_root_html_start");
 extern const char root_end[] asm("_binary_root_html_end");
 
-static const char* TAG = "example";
+static const char* TAG = "captive_portal";
 
-static char* wifi_list[30];
+static char* wifi_list[22];
 
 static const char* modes_menu[] = {"Standalone", "Replicate"};
 static const char* config_dump_menu[] = {"Dump to SD", "No dump"};
 
 static uint16_t last_index_selected = 0;
 static httpd_handle_t server = NULL;
+static uint16_t retries = 0;
 
 typedef enum {
   PORTALS,
   MODE,
   PREFERENCE,
+  CHANNEL,
   RUN,
   HELP,
 } main_menu_items_t;
@@ -95,16 +99,16 @@ static void wifi_init_softap(void) {
 
   if (preferences_get_int(CAPTIVE_PORTAL_MODE_FS_KEY, 0) == 1) {
     char* wifi_ssid =
-        malloc(strlen((char*) ap_records->records[selected_record].ssid) + 2);
+        malloc(strlen((char*) ap_records->records[selected_record].ssid) + 1);
+    if (wifi_ssid == NULL) {
+      ESP_LOGE(TAG, "Failed to allocate memory for wifi_ssid");
+      return;
+    }
     strcpy(wifi_ssid, (char*) ap_records->records[selected_record].ssid);
-    wifi_ssid[strlen((char*) ap_records->records[selected_record].ssid)] = ' ';
-    wifi_ssid[strlen((char*) ap_records->records[selected_record].ssid) + 1] =
-        '\0';
 
-    strncpy((char*) wifi_config.ap.ssid, wifi_ssid, strlen(wifi_ssid));
-    wifi_config.ap.ssid[strlen(wifi_ssid)] = '\0';
+    strncpy((char*) wifi_config.ap.ssid, wifi_ssid,
+            sizeof(wifi_config.ap.ssid));
     wifi_config.ap.ssid_len = strlen(wifi_ssid);
-
     free(wifi_ssid);
   }
 
@@ -115,6 +119,9 @@ static void wifi_init_softap(void) {
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
   ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
   ESP_ERROR_CHECK(esp_wifi_start());
+
+  esp_wifi_set_channel(preferences_get_int(CAPTIVE_PORTAL_CHANNEL, 12) - 1,
+                       WIFI_SECOND_CHAN_NONE);
 
   esp_netif_ip_info_t ip_info;
   esp_netif_get_ip_info(
@@ -134,6 +141,8 @@ static void captive_module_show_default_portal(httpd_req_t* req) {
 static esp_err_t captive_portal_root_get_handler(httpd_req_t* req) {
   esp_err_t err = ESP_OK;
 
+  httpd_resp_set_type(req, "text/html");
+
   if (sd_card_is_not_mounted()) {
     err = sd_card_mount();
     if (err != ESP_OK) {
@@ -143,7 +152,6 @@ static esp_err_t captive_portal_root_get_handler(httpd_req_t* req) {
       return ESP_OK;
     }
   }
-  httpd_resp_set_type(req, "text/html");
 
   if (strcmp(captive_context.portal, CAPTIVE_PORTAL_DEFAULT_NAME) == 0) {
     captive_module_show_default_portal(req);
@@ -257,14 +265,6 @@ static esp_err_t captive_portal_validate_input(httpd_req_t* req) {
   return ESP_OK;
 }
 
-static const httpd_uri_t root = {.uri = "/",
-                                 .method = HTTP_GET,
-                                 .handler = captive_portal_root_get_handler};
-
-static const httpd_uri_t get_creds = {.uri = "/validate",
-                                      .method = HTTP_GET,
-                                      .handler = captive_portal_validate_input};
-
 esp_err_t http_404_error_handler(httpd_req_t* req, httpd_err_code_t err) {
   httpd_resp_set_status(req, "302 Temporary Redirect");
   httpd_resp_set_hdr(req, "Location", "/");
@@ -273,15 +273,40 @@ esp_err_t http_404_error_handler(httpd_req_t* req, httpd_err_code_t err) {
   return ESP_OK;
 }
 
+static esp_err_t captive_portal_detect_handler(httpd_req_t* req) {
+  if (strstr(req->uri, "connectivitycheck") ||
+      strstr(req->uri, "generate_204")) {
+    httpd_resp_set_status(req, "200 OK");
+    httpd_resp_set_type(req, "text/plain");
+    httpd_resp_send(req, "Captive Portal", HTTPD_RESP_USE_STRLEN);
+    return ESP_OK;
+  }
+  return http_404_error_handler(req, HTTPD_404_NOT_FOUND);
+}
+
+static const httpd_uri_t root = {.uri = "/",
+                                 .method = HTTP_GET,
+                                 .handler = captive_portal_root_get_handler};
+
+static const httpd_uri_t get_creds = {.uri = "/validate",
+                                      .method = HTTP_GET,
+                                      .handler = captive_portal_validate_input};
+
+static const httpd_uri_t detect = {.uri = "/*",
+                                   .method = HTTP_GET,
+                                   .handler = captive_portal_detect_handler};
+
 static httpd_handle_t start_webserver(void) {
   httpd_handle_t server = NULL;
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
   config.max_open_sockets = 6;  // More than 6 will mark as error and don't work
   config.lru_purge_enable = true;
+  config.max_resp_headers = 10;
 
   if (httpd_start(&server, &config) == ESP_OK) {
     httpd_register_uri_handler(server, &root);
     httpd_register_uri_handler(server, &get_creds);
+    httpd_register_uri_handler(server, &detect);
     httpd_register_err_handler(server, HTTPD_404_NOT_FOUND,
                                http_404_error_handler);
   }
@@ -458,6 +483,24 @@ static void captive_module_sd_show_items() {
   general_submenu(portals);
 }
 
+static const char* channel_options[] = {
+    "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
+};
+static void captive_module_set_channel(uint8_t selected_item) {
+  preferences_put_int(CAPTIVE_PORTAL_CHANNEL, selected_item + 1);
+}
+void captive_module_set_channel_screen() {
+  general_radio_selection_menu_t channel = {0};
+  channel.banner = "Choose Channel",
+  channel.current_option = preferences_get_int(CAPTIVE_PORTAL_CHANNEL, 12) - 1;
+  channel.options = channel_options;
+  channel.options_count = sizeof(channel_options) / sizeof(char*);
+  channel.select_cb = captive_module_set_channel;
+  channel.exit_cb = captive_module_main;
+  channel.style = RADIO_SELECTION_OLD_STYLE;
+  general_radio_selection(channel);
+}
+
 static void captive_module_ap_list_handler(uint8_t option) {
   ESP_LOGI("CAPTIVE", "AP Selected: %s", ap_records->records[option].ssid);
   selected_record = option;
@@ -469,7 +512,7 @@ static void captive_module_scan_clean() {
   if (!ap_records)
     return;
 
-  for (int i = 0; i < 30; i++) {
+  for (int i = 0; i < 20; i++) {
     if (wifi_list[i]) {
       free(wifi_list[i]);
       wifi_list[i] = NULL;
@@ -506,50 +549,65 @@ static void captive_module_clean_records() {
   captive_module_main();
 }
 
-// TODO: Check, this recall can be result in Store access fault)
 static void captive_module_show_aps_list() {
+  captive_module_get_scanned_ap();
+
   if (ap_records->count == 0) {
     captive_module_show_notification_no_ap_records();
     return;
   }
 
-  captive_module_get_scanned_ap();
+  if (ap_records->count == NULL) {
+    ap_records->count = 0;
+  }
 
   general_submenu_menu_t ap_list = {0};
   ap_list.options = wifi_list;
-  ap_list.options_count = ap_records->count - 1;
+  ap_list.options_count = ap_records->count;
   ap_list.selected_option = 0;
   ap_list.select_cb = captive_module_ap_list_handler;
   ap_list.exit_cb = captive_module_clean_records;
-
   general_submenu(ap_list);
 }
 
 static void scanning_task() {
-  uint8_t scan_count = 0;
   ap_records = wifi_scanner_get_ap_records();
-  while (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 2)) {
+  while ((ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 4)) &
+         (retries < MAX_RETRIES)) {
     wifi_scanner_module_scan();
     vTaskDelay(1000 / portTICK_PERIOD_MS);
-    scan_count++;
+    if (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 4)) {
+      retries++;
+    }
+    if (retries > MAX_RETRIES) {
+      retries = 0;
+      captive_module_main();
+      break;
+    }
   }
 
   ap_records = wifi_scanner_get_ap_records();
 
   animations_task_stop();
-  captive_module_show_aps_list();
+  if (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 4)) {
+    captive_module_main();
+  } else {
+    captive_module_show_aps_list();
+  }
 
   vTaskDelete(NULL);
 }
 
 static void captive_module_run_scan_task() {
   wifi_scanner_ap_records_t* records = wifi_scanner_get_ap_records();
-  while (records->count < (DEFAULT_SCAN_LIST_SIZE / 2)) {
+  while ((records->count < (DEFAULT_SCAN_LIST_SIZE / 4)) &
+         (retries < MAX_RETRIES)) {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 }
 
 static void captive_module_main_menu_handler(uint8_t option) {
+  last_index_selected = option;
   switch (option) {
     case PORTALS:
       captive_module_sd_show_items();
@@ -560,8 +618,12 @@ static void captive_module_main_menu_handler(uint8_t option) {
     case PREFERENCE:
       captive_module_show_preference_selector();
       break;
+    case CHANNEL:
+      captive_module_set_channel_screen();
+      break;
     case RUN:
       if (preferences_get_int(CAPTIVE_PORTAL_MODE_FS_KEY, 0) == 1) {
+        retries = 0;
         captive_module_scan_clean();
         xTaskCreate(scanning_task, "wifi_scan", 8096, NULL, 5, NULL);
         animations_task_run(&general_animation_loading, 300, NULL);
