@@ -526,6 +526,8 @@ To create your own portal, use the provided root.html template as a reference. T
 ```
 The form inputs should use the reserved names `user1` through `user4` to ensure the system captures the data correctly.
 
+The value: `idf.py menuconfig > Component config > HTTP Server > (1024)Max HTTP Request Header Length` will set to 1024 to avoid issues with Android
+
 # Change log
 
 ## v1.1.7.0
