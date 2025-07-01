@@ -18,7 +18,6 @@ set(EXTRA_COMPONENT_DIRS components/ieee802154)
 set(EXTRA_COMPONENT_DIRS components/openthread)
 set(EXTRA_COMPONENT_DIRS components/thread_broadcast)
 set(EXTRA_COMPONENT_DIRS components/radio_selector)
-set(EXTRA_COMPONENT_DIRS components/wifi_captive)
 set(EXTRA_COMPONENT_DIRS components/wifi_app)
 set(EXTRA_COMPONENT_DIRS components/wifi_ap_manager)
 

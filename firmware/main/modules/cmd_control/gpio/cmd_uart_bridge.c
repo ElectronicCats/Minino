@@ -15,7 +15,12 @@ static bool run_uart_bridge_task = false;
 static struct {
   struct arg_str* message;
   struct arg_end* end;
-} message_args;
+} print_args;
+
+static struct {
+  struct arg_str* message;
+  struct arg_end* end;
+} println_args;
 
 static struct {
   struct arg_str* buffer_size;
@@ -73,16 +78,29 @@ void ctrl_c_callback() {
   run_uart_bridge_task = false;
 }
 
-static void send_message(int argc, char** argv) {
-  int nerrors = arg_parse(argc, argv, (void**) &message_args);
+static void uart_bridge_print(int argc, char** argv) {
+  int nerrors = arg_parse(argc, argv, (void**) &print_args);
   if (nerrors != 0) {
-    arg_print_errors(stderr, message_args.end, argv[0]);
+    arg_print_errors(stderr, print_args.end, argv[0]);
     return;
   }
-  assert(message_args.message->count == 1);
-  const char* message = message_args.message->sval[0];
+  assert(print_args.message->count == 1);
+  const char* message = print_args.message->sval[0];
 
   uart_bridge_write(message, strlen(message));
+}
+
+static void uart_bridge_println(int argc, char** argv) {
+  int nerrors = arg_parse(argc, argv, (void**) &print_args);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, print_args.end, argv[0]);
+    return;
+  }
+  assert(print_args.message->count == 1);
+  const char* message = print_args.message->sval[0];
+
+  uart_bridge_write(message, strlen(message));
+  uart_bridge_write("\n", 1);
 }
 
 static void uart_bridge_task(void* args) {
@@ -403,19 +421,35 @@ void cmd_control_register_uart_bridge_commands() {
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
 
-  message_args.message = arg_str1(NULL, NULL, "<message>",
-                                  "Message to send\n\n"
-                                  "\tExample: print hello\n"
-                                  "\tExample: print \"hello world\"");
-  message_args.end = arg_end(1);
+  print_args.message = arg_str1(NULL, NULL, "<message>",
+                                "Message to send\n\n"
+                                "\tExample: print hello\n"
+                                "\tExample: print \"hello world\"");
+  print_args.end = arg_end(1);
 
   esp_console_cmd_t uart_bridge_print_cmd = {
       .command = "print",
       .help = "Send a message over external UART TXD pin on the MININO",
       .hint = NULL,
       .category = category,
-      .func = &send_message,
-      .argtable = &message_args};
+      .func = &uart_bridge_print,
+      .argtable = &print_args};
+
+  println_args.message = arg_str1(NULL, NULL, "<message>",
+                                  "Message to send\n\n"
+                                  "\tExample: println hello\n"
+                                  "\tExample: println \"hello world\"");
+  println_args.end = arg_end(1);
+
+  esp_console_cmd_t uart_bridge_println_cmd = {
+      .command = "println",
+      .help =
+          "Send a message with a newline over external UART TXD pin on the "
+          "MININO",
+      .hint = NULL,
+      .category = category,
+      .func = &uart_bridge_println,
+      .argtable = &println_args};
 
   esp_console_cmd_t uart_bridge_uart_bridge_cmd = {
       .command = "uart_bridge",
@@ -580,6 +614,7 @@ void cmd_control_register_uart_bridge_commands() {
       .argtable = &uart_bridge_config_flow_ctrl_args};
 
   ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_print_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_println_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_uart_bridge_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_print_config_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&uart_bridge_set_config_cmd));

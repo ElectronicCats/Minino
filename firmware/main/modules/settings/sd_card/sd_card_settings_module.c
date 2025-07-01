@@ -1,5 +1,6 @@
 #include "esp_log.h"
 
+#include "general_filedir.h"
 #include "keyboard_module.h"
 #include "menus_module.h"
 #include "sd_card.h"
@@ -69,6 +70,10 @@ void sd_card_settings_format() {
     if (err_format == ESP_OK) {
       state = SD_CARD_SETTINGS_FORMAT_DONE;
       sd_card_settings_screens_module_format_done();
+      if (sd_card_mount() == ESP_OK) {
+        sd_card_create_dir(CAPTIVE_PORTALS_FOLDER_PATH);
+        sd_card_create_dir(CAPTIVE_DATAUSER_PATH);
+      }
     } else {
       state = SD_CARD_SETTINGS_FAILED_FORMAT;
       sd_card_settings_screens_module_failed_format_sd_card();

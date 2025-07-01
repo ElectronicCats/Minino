@@ -82,3 +82,10 @@ void wifi_scanner_clear_ap_records() {
   memset(&ap_records, 0, sizeof(ap_records));
   esp_wifi_clear_ap_list();
 }
+
+void wifi_scanner_show_records_ssid() {
+  printf("\nShowing list of scanned records:\n");
+  for (int i = 0; i < ap_records.count; i++) {
+    printf("[%d] %s\n", ap_records.records[i].rssi, ap_records.records[i].ssid);
+  }
+}
