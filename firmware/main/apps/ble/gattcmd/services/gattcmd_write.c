@@ -28,7 +28,7 @@ static bool connect = false;
 static bool get_server = false;
 
 static uint16_t gatt_target_uuid = 0x0000;
-static uint8_t gatt_target_value[64];
+static uint8_t gatt_target_value[254];
 static uint16_t gatt_target_value_len = 0;
 
 static void gattcmd_write_gap_cb(esp_gap_ble_cb_event_t event,
