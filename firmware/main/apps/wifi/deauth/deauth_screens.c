@@ -9,7 +9,7 @@
 
 #ifdef CONFIG_RESOLUTION_128X64
   #define ITEMOFFSET     2
-  #define ITEMSPERSCREEN 4
+  #define ITEMSPERSCREEN 32
 #else  // CONFIG_RESOLUTION_128X32
   #define ITEMOFFSET     1
   #define ITEMSPERSCREEN 2
@@ -174,55 +174,4 @@ void deauth_display_attacks(uint16_t current_item,
     position = position + ITEMOFFSET;
   }
   oled_screen_display_show();
-}
-
-void deauth_display_captive_portals(uint16_t current_item,
-                                    menu_stadistics_t menu_stadistics) {
-  oled_screen_clear_buffer();
-  oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
-
-  for (uint16_t i = 0; i < CAPTIVEPORTALCOUNT; i++) {
-    if (deauth_attacks_captive_portal[i] == NULL) {
-      break;
-    }
-    char item[18];
-    if (i == menu_stadistics.attack) {
-      snprintf(item, 18, "%s..[SELECTED]", deauth_attacks_captive_portal[i]);
-    } else {
-      snprintf(item, 18, "%s", deauth_attacks_captive_portal[i]);
-    }
-    if (i == current_item) {
-      deauth_display_selected_item(item, i + ITEMOFFSET);
-    } else {
-      oled_screen_display_text(item, 0, i + ITEMOFFSET, OLED_DISPLAY_NORMAL);
-    }
-  }
-  oled_screen_display_show();
-}
-
-void deauth_display_captive_waiting() {
-  oled_screen_clear();
-  oled_screen_display_text_center("WAITING", 0, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("FOR USER", 1, OLED_DISPLAY_NORMAL);
-}
-
-void deauth_display_captive_portal_creds(char* ssid, char* user, char* pass) {
-  oled_screen_clear();
-#ifdef CONFIG_RESOLUTION_128X64
-  oled_screen_display_text_center("Captive Portal", 0, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("SSID", 1, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center(ssid, 2, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("USER", 3, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center(user, 4, OLED_DISPLAY_INVERT);
-  if (strcmp(pass, "") != 0) {
-    oled_screen_display_text_center("PASS", 5, OLED_DISPLAY_NORMAL);
-    oled_screen_display_text_center(pass, 6, OLED_DISPLAY_INVERT);
-  }
-#else  // CONFIG_RESOLUTION_128X32
-  oled_screen_display_text_center(ssid, 0, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center(user, 1, OLED_DISPLAY_INVERT);
-  if (strcmp(pass, "") != 0) {
-    oled_screen_display_text_center(pass, 2, OLED_DISPLAY_INVERT);
-  }
-#endif
 }

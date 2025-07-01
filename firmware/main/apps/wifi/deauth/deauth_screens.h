@@ -8,24 +8,16 @@
 
 char* deauth_menu[] = {"SCAN", "SELECT", "ATTACK", "RUN", NULL};
 int* deauth_menu_count[] = {0, 0};
-char* deauth_attacks[] = {"Broadcast", "Rogue AP", "Combined", "Captive Portal",
-                          NULL};
-char* deauth_attacks_short[] = {"BC", "RAP", "CB", "CAP", NULL};
+char* deauth_attacks[] = {"Broadcast", "Rogue AP", "Combined", NULL};
+char* deauth_attacks_short[] = {"BC", "RAP", "CB", NULL};
 char* deauth_attacks_captive_portal[] = {"Google", "Wifi Pass", NULL};
 enum { SCAN, SELECT, DEAUTH, RUN, MENUCOUNT } deauth_menu_item = SCAN;
 enum {
   BROADCAST,
   ROGUE_AP,
   COMBINED,
-  CAPTIVEPORTAL,
   ATTACKSCOUNT
 } deauth_attacks_item = BROADCAST;
-
-enum {
-  CAPTIVE_GOOGLE,
-  CAPTIVE_WIFI_PASS,
-  CAPTIVEPORTALCOUNT
-} defauth_attacks_captive_portal = CAPTIVE_GOOGLE;
 
 typedef struct {
   uint16_t count;
@@ -108,11 +100,7 @@ void deauth_clear_screen();
 void deauth_display_scanned_ap(wifi_ap_record_t* ap_records,
                                uint16_t scanned_records,
                                uint16_t current_option);
-void deauth_display_captive_portals(uint16_t current_item,
-                                    menu_stadistics_t menu_stadistics);
 
 void deauth_display_warning_not_ap_selected();
 void deauth_display_warning_not_attack_selected();
-void deauth_display_captive_waiting();
-void deauth_display_captive_portal_creds(char* ssid, char* user, char* pass);
 #endif  // DEAUTH_SCREENS_H

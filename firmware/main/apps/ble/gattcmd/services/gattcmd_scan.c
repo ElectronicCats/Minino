@@ -9,7 +9,8 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 
-#define SCAN_DURATION 240
+#define SCAN_DURATION    240
+#define GATTCMD_SCAN_TAG "GATT_SCAN"
 
 static bool is_scanning = false;
 
@@ -60,13 +61,13 @@ static void gattcmd_enum_gattc_profile_event_handler(
     case ESP_GATTC_REG_EVT:
       esp_err_t scan_ret = esp_ble_gap_set_scan_params(&ble_scan_params);
       if (scan_ret) {
-        ESP_LOGE(GATTCMD_ENUM_TAG, "set scan params error, error code = %x",
+        ESP_LOGE(GATTCMD_SCAN_TAG, "set scan params error, error code = %x",
                  scan_ret);
       }
       break;
     case ESP_GATTC_SEARCH_CMPL_EVT:
       if (p_data->search_cmpl.status != ESP_GATT_OK) {
-        ESP_LOGE(GATTCMD_ENUM_TAG, "Service search failed, status %x",
+        ESP_LOGE(GATTCMD_SCAN_TAG, "Service search failed, status %x",
                  p_data->search_cmpl.status);
         break;
       }
@@ -75,7 +76,7 @@ static void gattcmd_enum_gattc_profile_event_handler(
       } else if (p_data->search_cmpl.searched_service_source ==
                  ESP_GATT_SERVICE_FROM_NVS_FLASH) {
       } else {
-        ESP_LOGI(GATTCMD_ENUM_TAG, "Unknown service source");
+        ESP_LOGI(GATTCMD_SCAN_TAG, "Unknown service source");
       }
       break;
     default:
@@ -94,12 +95,12 @@ static void gattcmd_scan_gap_cb(esp_gap_ble_cb_event_t event,
     case ESP_GAP_BLE_SCAN_START_COMPLETE_EVT:
       // scan start complete event to indicate scan start successfully or failed
       if (param->scan_start_cmpl.status != ESP_BT_STATUS_SUCCESS) {
-        ESP_LOGE(GATTCMD_ENUM_TAG, "Scanning start failed, status %x",
+        ESP_LOGE(GATTCMD_SCAN_TAG, "Scanning start failed, status %x",
                  param->scan_start_cmpl.status);
         break;
       }
       is_scanning = true;
-      ESP_LOGI(GATTCMD_ENUM_TAG, "Scanning start successfully");
+      ESP_LOGI(GATTCMD_SCAN_TAG, "Scanning start successfully");
       printf("|___________________________|____________________|\n");
       printf("|\t ADDRESS \t\t|\t RSSI \t\t|\n");
       break;
@@ -132,7 +133,7 @@ static void gattcmd_scan_gap_cb(esp_gap_ble_cb_event_t event,
 
     case ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT:
       if (param->scan_stop_cmpl.status != ESP_BT_STATUS_SUCCESS) {
-        ESP_LOGE(GATTCMD_ENUM_TAG, "Scanning stop failed, status %x",
+        ESP_LOGE(GATTCMD_SCAN_TAG, "Scanning stop failed, status %x",
                  param->scan_stop_cmpl.status);
         break;
       }
@@ -141,16 +142,16 @@ static void gattcmd_scan_gap_cb(esp_gap_ble_cb_event_t event,
 
     case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
       if (param->adv_stop_cmpl.status != ESP_BT_STATUS_SUCCESS) {
-        ESP_LOGE(GATTCMD_ENUM_TAG, "Advertising stop failed, status %x",
+        ESP_LOGE(GATTCMD_SCAN_TAG, "Advertising stop failed, status %x",
                  param->adv_stop_cmpl.status);
         break;
       }
-      ESP_LOGI(GATTCMD_ENUM_TAG, "Advertising stop successfully");
+      ESP_LOGI(GATTCMD_SCAN_TAG, "Advertising stop successfully");
       break;
     case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT:
       break;
     case ESP_GAP_BLE_SET_PKT_LENGTH_COMPLETE_EVT:
-      ESP_LOGI(GATTCMD_ENUM_TAG,
+      ESP_LOGI(GATTCMD_SCAN_TAG,
                "Packet length update, status %d, rx %d, tx %d",
                param->pkt_data_length_cmpl.status,
                param->pkt_data_length_cmpl.params.rx_len,
@@ -169,8 +170,10 @@ static void gattcmd_scan_gattc_cb(esp_gattc_cb_event_t event,
     if (param->reg.status == ESP_GATT_OK) {
       enum_gl_profile_tab[param->reg.app_id].gattc_if = gattc_if;
     } else {
-      ESP_LOGI(GATTCMD_ENUM_TAG, "reg app failed, app_id %04x, status %d",
+      ESP_LOGI(GATTCMD_SCAN_TAG, "reg app failed, app_id %04x, status %d",
                param->reg.app_id, param->reg.status);
+      if (param->reg.status == 128)
+        esp_restart();
       return;
     }
   }
@@ -196,7 +199,7 @@ void gattcmd_scan_begin(void) {
   // register the  callback function to the gap module
   esp_err_t ret = esp_ble_gap_register_callback(gattcmd_scan_gap_cb);
   if (ret) {
-    ESP_LOGE(GATTCMD_ENUM_TAG, "%s gap register failed, error code = %x",
+    ESP_LOGE(GATTCMD_SCAN_TAG, "%s gap register failed, error code = %x",
              __func__, ret);
     return;
   }
@@ -204,19 +207,19 @@ void gattcmd_scan_begin(void) {
   // register the callback function to the gattc module
   ret = esp_ble_gattc_register_callback(gattcmd_scan_gattc_cb);
   if (ret) {
-    ESP_LOGE(GATTCMD_ENUM_TAG, "%s gattc register failed, error code = %x",
+    ESP_LOGE(GATTCMD_SCAN_TAG, "%s gattc register failed, error code = %x",
              __func__, ret);
     return;
   }
 
   ret = esp_ble_gattc_app_register(GATTCMD_ENUM_APP_ID);
   if (ret) {
-    ESP_LOGE(GATTCMD_ENUM_TAG, "%s gattc app register failed, error code = %x",
+    ESP_LOGE(GATTCMD_SCAN_TAG, "%s gattc app register failed, error code = %x",
              __func__, ret);
   }
   esp_err_t local_mtu_ret = esp_ble_gatt_set_local_mtu(500);
   if (local_mtu_ret) {
-    ESP_LOGE(GATTCMD_ENUM_TAG, "set local  MTU failed, error code = %x",
+    ESP_LOGE(GATTCMD_SCAN_TAG, "set local  MTU failed, error code = %x",
              local_mtu_ret);
   }
 }
@@ -225,5 +228,8 @@ void gattcmd_scan_stop() {
   if (!is_scanning)
     return;
   is_scanning = false;
-  esp_ble_gap_stop_scanning();
+  esp_err_t err = esp_ble_gap_stop_scanning();
+  if (err == ESP_OK)
+    esp_ble_gattc_app_unregister(
+        enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if);
 }

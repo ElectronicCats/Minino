@@ -22,15 +22,23 @@ static modbus_engine_t* modbus_engine;
 static TaskHandle_t keep_alive_task = NULL;
 
 static void modbus_engine_keep_alive(void* pvParameters) {
-  uint8_t packet[2] = {0x00, 0x01};
+  uint8_t packet[] = {
+      0x00, 0x01,  // Transaction ID
+      0x00, 0x00,  // Protocol ID
+      0x00, 0x06,  // Length (6 bytes after this)
+      0x01,        // Unit ID
+      0x03,        // Function Code (Read Holding Registers)
+      0x00, 0x00,  // Starting Address
+      0x00, 0x01   // Number of Registers
+  };
   int flags = fcntl(modbus_engine->sock, F_GETFL, 0);
   fcntl(modbus_engine->sock, F_SETFL, flags | O_NONBLOCK);
 
   while (modbus_engine->sock) {
-    if (send(modbus_engine->sock, packet, 2, 0) < 0) {
+    if (send(modbus_engine->sock, packet, sizeof(packet), 0) < 0) {
       modbus_engine_connect();
     }
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
   }
   vTaskDelete(keep_alive_task);
 }
@@ -106,10 +114,10 @@ int modbus_engine_connect() {
   ESP_LOGI(TAG, "TCP connection with Modbus established");
   modbus_engine->sock = sock;
 
-  if (keep_alive_task == NULL) {
-    xTaskCreate(modbus_engine_keep_alive, "keep_alive", 4096, NULL, 5,
-                &keep_alive_task);
-  }
+  // if (keep_alive_task == NULL) {
+  //   xTaskCreate(modbus_engine_keep_alive, "keep_alive", 4096, NULL, 5,
+  //               &keep_alive_task);
+  // }
   return sock;
 }
 
@@ -154,8 +162,6 @@ void modbus_engine_send_request() {
   }
 
   ESP_LOGI(TAG, "Modbus request sent");
-
-  // TODO: Add a flag to wait response or not
 
   struct timeval timeout = {.tv_sec = 1, .tv_usec = 0};
   fd_set read_fds;
