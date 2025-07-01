@@ -61,9 +61,8 @@ static void scanning_task() {
     wifi_scanner_module_scan();
     vTaskDelay(1000 / portTICK_PERIOD_MS);
     scan_count++;
-    // Opcional: Verificar si la tarea debe terminarse
     if (xTaskGetCurrentTaskHandle() == NULL) {
-      break;  // Salir si la tarea fue eliminada
+      break;
     }
   }
   ap_records = wifi_scanner_get_ap_records();
@@ -73,7 +72,7 @@ static void scanning_task() {
   ESP_LOGI("deauth", "Scanning done: %d", ap_records->count);
   deauth_display_menu(current_item, menu_stadistics);
   current_wifi_state.state = DEAUTH_STATE_MENU;
-  scanning_task_handle = NULL;  // Limpiar el handle al finalizar
+  scanning_task_handle = NULL;
   vTaskDelete(NULL);
 }
 
@@ -215,16 +214,14 @@ static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event) {
       }
       break;
     case BUTTON_LEFT:
-      // Detener tarea de escaneo si está en curso
       if (current_wifi_state.state == DEAUTH_STATE_IDLE) {
         if (scanning_task_handle != NULL) {
           vTaskDelete(scanning_task_handle);
           scanning_task_handle = NULL;
         }
-        animations_task_stop();           // Detener animación
-        wifi_scanner_clear_ap_records();  // Limpiar registros de escaneo
-        led_control_stop();               // Detener efectos LED
-        // Reiniciar el módulo de menús
+        animations_task_stop();
+        wifi_scanner_clear_ap_records();
+        led_control_stop();
         menus_module_restart();
         current_item = 0;
         deauth_clear_screen();
