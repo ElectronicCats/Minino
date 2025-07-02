@@ -12,6 +12,7 @@
 #include "esp_gatt_defs.h"
 #include "esp_gattc_api.h"
 #include "esp_log.h"
+#include "esp_mac.h"
 #include "freertos/FreeRTOS.h"
 #include "gattcmd_module.h"
 #include "services/gattcmd_service.h"
@@ -79,6 +80,7 @@ void gattcmd_module_gatt_write(char* saddress, char* gatt, char* value) {
     gattcmd_begin();
   }
   printf("Writting GATT: %s - %s - value: %s\n", saddress, gatt, value);
+
   uint16_t uuid = hex_string_to_uint16(gatt);
   gattcmd_write_begin(saddress, uuid, value);
 }
