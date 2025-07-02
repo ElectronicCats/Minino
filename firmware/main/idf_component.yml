@@ -18,7 +18,9 @@ dependencies:
     version: ~0.1.1
   espressif/console:
     path: ../components/console
-
+  espressif/esp-zigbee-console:
+    version: "1.*"
+    override_path: "../components/esp-zigbee-console"
   # # Put list of dependencies here
   # # For components maintained by Espressif:
   # component: "~1.0.0"

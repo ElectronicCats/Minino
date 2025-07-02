@@ -17,6 +17,8 @@
 #include "sleep_mode.h"
 #include "uart_bridge.h"
 
+#include "zb_cli.h"
+
 #define BAUD_RATE        115200
 #define UART_BUFFER_SIZE 1024
 #define BUZZER_PIN       CONFIG_BUZZER_PIN
@@ -55,5 +57,7 @@ void app_main() {
   preferences_put_bool("wifi_connected", false);
   flash_storage_begin();
 
-  cat_console_begin();  // Contains a while(true) loop, it must be at the end
+  // cat_console_begin();  // Contains a while(true) loop, it must be at the end
+
+  zb_cli_begin();
 }
