@@ -40,5 +40,7 @@
 #endif
 
 void zb_cli_begin(void);
+void zb_cli_stop(void);
+void zb_cli_cmd_register(void);
 
 #endif

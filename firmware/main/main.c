@@ -57,7 +57,7 @@ void app_main() {
   preferences_put_bool("wifi_connected", false);
   flash_storage_begin();
 
-  // cat_console_begin();  // Contains a while(true) loop, it must be at the end
+  cat_console_begin();  // Contains a while(true) loop, it must be at the end
 
-  zb_cli_begin();
+  // zb_cli_begin();
 }

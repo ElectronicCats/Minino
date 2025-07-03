@@ -128,7 +128,7 @@ static esp_err_t esp_zb_console_cmd_register_all(void) {
   extern const esp_zb_cli_cmd_t _esp_zb_cli_cmd_array_start;
   extern const esp_zb_cli_cmd_t _esp_zb_cli_cmd_array_end;
 
-  ESP_LOGI(TAG, "List of ESP Zigbee Console commands:");
+  // ESP_LOGI(TAG, "List of ESP Zigbee Console commands:");
   for (const esp_zb_cli_cmd_t* cmd = &_esp_zb_cli_cmd_array_start;
        cmd != &_esp_zb_cli_cmd_array_end; cmd++) {
     esp_console_cmd_t command = {
@@ -138,7 +138,7 @@ static esp_err_t esp_zb_console_cmd_register_all(void) {
     };
     ESP_RETURN_ON_ERROR(esp_console_cmd_register(&command), TAG,
                         "Unable to register %s cmd", cmd->name);
-    ESP_LOGI(TAG, "  - Command '%s'", cmd->name);
+    // ESP_LOGI(TAG, "  - Command '%s'", cmd->name);
   }
 
   return ESP_OK;
@@ -152,6 +152,7 @@ static esp_err_t esp_zb_console_repl_init(void) {
 
   esp_err_t ret = ESP_OK;
   esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
+  repl_config.prompt = "Minino >";
 
   /* Install console REPL environment */
 #if defined(CONFIG_ESP_CONSOLE_UART_DEFAULT) || \

@@ -6,13 +6,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#include "argtable3/argtable3.h"
+#include "esp_console.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
 
 #include "zb_cli.h"
 
-static const char* TAG = "ESP_ZB_CONSOLE_APP";
+static const char* TAG = "zb_cli";
 
 static void log_nwk_info(const char* status_string) {
   esp_zb_ieee_addr_t extended_pan_id;
@@ -179,6 +181,30 @@ void zb_cli_begin(void) {
   ESP_ERROR_CHECK(esp_zb_console_init());
   ESP_ERROR_CHECK(esp_zb_platform_config(&config));
   xTaskCreate(zb_stack_main_task, "Zigbee_main", 4096, NULL, 5, NULL);
-  ESP_LOGI(TAG, "Start ESP Zigbee Console");
   ESP_ERROR_CHECK(esp_zb_console_start());
+}
+
+void zb_cli_stop() {
+  esp_zb_console_deinit();
+}
+
+void zb_cli_cmd_register(void) {
+  esp_console_cmd_t cmd_start = {
+      .command = "zb_init",
+      .help = "Initialize the Zigbee console",
+      .category = NULL,
+      .hint = NULL,
+      .func = &zb_cli_begin,
+      .argtable = NULL,
+  };
+  esp_console_cmd_t cmd_stop = {
+      .command = "zb_deinit",
+      .help = "Deinitialize the Zigbee console",
+      .category = NULL,
+      .hint = NULL,
+      .func = &zb_cli_stop,
+      .argtable = NULL,
+  };
+  ESP_ERROR_CHECK(esp_console_cmd_register(&cmd_start));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&cmd_stop));
 }

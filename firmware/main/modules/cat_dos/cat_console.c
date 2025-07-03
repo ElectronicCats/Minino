@@ -35,6 +35,7 @@
 
 #include "gattcmd_cmd.h"
 #include "hello_cmd.h"
+#include "zb_cli.h"
 
 static const char* TAG = "cat_console";
 #define PROMPT_STR "minino"
@@ -85,12 +86,13 @@ void show_dos_commands() {
 }
 
 void cat_console_begin() {
-#if !defined(CONFIG_CAT_CONSOLE_DEBUG)
-  esp_log_level_set(TAG, ESP_LOG_NONE);
-#endif
-  initialize_nvs();
+  zb_cli_begin();
+  // #if !defined(CONFIG_CAT_CONSOLE_DEBUG)
+  //   esp_log_level_set(TAG, ESP_LOG_NONE);
+  // #endif
+  //   initialize_nvs();
 
-  initialize_console();
+  //   initialize_console();
 
   /* Register commands */
   esp_console_register_help_command();
@@ -111,75 +113,75 @@ void cat_console_begin() {
   /* Prompt to be printed before each line.
    * This can be customized, made dynamic, etc.
    */
-  const char* prompt = LOG_COLOR_I PROMPT_STR "> " LOG_RESET_COLOR;
+  //   const char* prompt = LOG_COLOR_I PROMPT_STR "> " LOG_RESET_COLOR;
 
-  printf(
-      "\n"
-      "Welcome to the Minino Console.\n"
-      "Type 'help' to get the list of commands.\n"
-      "Use UP/DOWN arrows to navigate through command history.\n"
-      "Press TAB when typing command name to auto-complete.\n"
-      "Press Enter or Ctrl+C will terminate the current\n"
-      "command.\n");
+  //   printf(
+  //       "\n"
+  //       "Welcome to the Minino Console.\n"
+  //       "Type 'help' to get the list of commands.\n"
+  //       "Use UP/DOWN arrows to navigate through command history.\n"
+  //       "Press TAB when typing command name to auto-complete.\n"
+  //       "Press Enter or Ctrl+C will terminate the current\n"
+  //       "command.\n");
 
-  /* Figure out if the terminal supports escape sequences */
-  int probe_status = linenoiseProbe();
-  if (probe_status) { /* zero indicates success */
-    printf(
-        "\n"
-        "Your terminal application does not support escape sequences.\n"
-        "Line editing and history features are disabled.\n"
-        "On Windows, try using Putty instead.\n");
-    linenoiseSetDumbMode(1);
-#if CONFIG_LOG_COLORS
-    /* Since the terminal doesn't support escape sequences,
-     * don't use color codes in the prompt.
-     */
-    prompt = PROMPT_STR "> ";
-#endif  // CONFIG_LOG_COLORS
-  }
+  //   /* Figure out if the terminal supports escape sequences */
+  //   int probe_status = linenoiseProbe();
+  //   if (probe_status) { /* zero indicates success */
+  //     printf(
+  //         "\n"
+  //         "Your terminal application does not support escape sequences.\n"
+  //         "Line editing and history features are disabled.\n"
+  //         "On Windows, try using Putty instead.\n");
+  //     linenoiseSetDumbMode(1);
+  // #if CONFIG_LOG_COLORS
+  //     /* Since the terminal doesn't support escape sequences,
+  //      * don't use color codes in the prompt.
+  //      */
+  //     prompt = PROMPT_STR "> ";
+  // #endif  // CONFIG_LOG_COLORS
+  //   }
 
-restart:
-  /* Main loop */
-  while (true) {
-    /* Get a line using linenoise.
-     * The line is returned when ENTER is pressed.
-     */
-    char* line = linenoise(prompt);
-    if (line == NULL) { /* Break on EOF or error */
-      break;
-    }
-    /* Add the command to the history if not empty*/
-    if (strlen(line) > 0) {
-      linenoiseHistoryAdd(line);
-#if CONFIG_STORE_HISTORY
-      /* Save command history to filesystem */
-      linenoiseHistorySave(HISTORY_PATH);
-#endif
-    }
+  // restart:
+  //   /* Main loop */
+  //   while (true) {
+  //     /* Get a line using linenoise.
+  //      * The line is returned when ENTER is pressed.
+  //      */
+  //     char* line = linenoise(prompt);
+  //     if (line == NULL) { /* Break on EOF or error */
+  //       break;
+  //     }
+  //     /* Add the command to the history if not empty*/
+  //     if (strlen(line) > 0) {
+  //       linenoiseHistoryAdd(line);
+  // #if CONFIG_STORE_HISTORY
+  //       /* Save command history to filesystem */
+  //       linenoiseHistorySave(HISTORY_PATH);
+  // #endif
+  //     }
 
-    /* Try to run the command */
-    int ret;
-    esp_err_t err = esp_console_run(line, &ret);
-    if (err == ESP_ERR_NOT_FOUND) {
-      printf("Command not found\n");
-    } else if (err == ESP_ERR_INVALID_ARG) {
-      // command was empty
-    } else if (err == ESP_OK && ret != ESP_OK) {
-      printf("Command returned non-zero  err code: 0x%x (%s)\n", ret,
-             esp_err_to_name(ret));
-    } else if (err != ESP_OK) {
-      printf("Kitty confused: %s\n", esp_err_to_name(err));
-    }
-    /* linenoise allocates line buffer on the heap, so need to free it */
-    linenoiseFree(line);
-  }
-  if (ctrl_c_callback) {
-    ctrl_c_callback();
-    unregister_ctrl_c_handler();
-  }
-  goto restart;
+  //     /* Try to run the command */
+  //     int ret;
+  //     esp_err_t err = esp_console_run(line, &ret);
+  //     if (err == ESP_ERR_NOT_FOUND) {
+  //       printf("Command not found\n");
+  //     } else if (err == ESP_ERR_INVALID_ARG) {
+  //       // command was empty
+  //     } else if (err == ESP_OK && ret != ESP_OK) {
+  //       printf("Command returned non-zero  err code: 0x%x (%s)\n", ret,
+  //              esp_err_to_name(ret));
+  //     } else if (err != ESP_OK) {
+  //       printf("Kitty confused: %s\n", esp_err_to_name(err));
+  //     }
+  //     /* linenoise allocates line buffer on the heap, so need to free it */
+  //     linenoiseFree(line);
+  //   }
+  //   if (ctrl_c_callback) {
+  //     ctrl_c_callback();
+  //     unregister_ctrl_c_handler();
+  //   }
+  //   goto restart;
 
-  ESP_LOGE(TAG, "Finished console");
-  esp_console_deinit();
+  //   ESP_LOGE(TAG, "Finished console");
+  //   esp_console_deinit();
 }
