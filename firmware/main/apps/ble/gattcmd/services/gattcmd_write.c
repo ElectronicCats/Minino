@@ -30,6 +30,7 @@ static bool get_server = false;
 static uint16_t gatt_target_uuid = 0x0000;
 static uint8_t gatt_target_value[254];
 static uint16_t gatt_target_value_len = 0;
+static uint16_t count = 0;
 
 static void gattcmd_write_gap_cb(esp_gap_ble_cb_event_t event,
                                  esp_ble_gap_cb_param_t* param);
@@ -80,6 +81,35 @@ int hex_string_to_bytes(const char* hex_str, uint8_t* out_buf, size_t max_len) {
     out_buf[i] = (uint8_t) strtol(byte_str, NULL, 16);
   }
   return (int) (len / 2);
+}
+
+static void parse_address_colon_w(const char* str, uint8_t addr[6]) {
+  sscanf(str, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &addr[0], &addr[1], &addr[2],
+         &addr[3], &addr[4], &addr[5]);
+}
+
+void gattcmd_write(char* saddress, uint16_t target_uuid, char* value_str) {
+  parse_address_colon_w(saddress, target_bda);
+  gatt_target_value_len = hex_string_to_bytes(value_str, gatt_target_value,
+                                              sizeof(gatt_target_value));
+  gatt_target_uuid = target_uuid;
+  if (char_elem_result) {
+    for (int i = 0; i < count; i++) {
+      if (char_elem_result[i].uuid.uuid.uuid16 == gatt_target_uuid) {
+        esp_err_t res = esp_ble_gattc_write_char(
+            enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if,
+            enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].conn_id,
+            char_elem_result[i].char_handle, gatt_target_value_len,
+            gatt_target_value, ESP_GATT_WRITE_TYPE_RSP, ESP_GATT_AUTH_REQ_NONE);
+        if (res == ESP_OK) {
+          printf("[" GATTC_WRITE_TAG "] Write done\n");
+        } else {
+          printf("[" GATTC_WRITE_TAG "] Write error: %d\n", res);
+        }
+        break;
+      }
+    }
+  }
 }
 
 static void gattcmd_write_gattc_profile_event_handler(
@@ -147,7 +177,7 @@ static void gattcmd_write_gattc_profile_event_handler(
       }
 
       if (get_server) {
-        uint16_t count = 0;
+        count = 0;
         uint16_t offset = 0;
         esp_gatt_status_t status = esp_ble_gattc_get_attr_count(
             gattc_if, p_data->search_cmpl.conn_id, ESP_GATT_DB_CHARACTERISTIC,
@@ -191,7 +221,6 @@ static void gattcmd_write_gattc_profile_event_handler(
               break;
             }
           }
-          free(char_elem_result);
           descr_elem_result = NULL;
         } else {
           ESP_LOGE(GATTC_WRITE_TAG, "no char found");
@@ -201,6 +230,7 @@ static void gattcmd_write_gattc_profile_event_handler(
     case ESP_GATTC_DISCONNECT_EVT:
       connect = false;
       get_server = false;
+      free(char_elem_result);
       ESP_LOGI(GATTC_WRITE_TAG,
                "Disconnected, remote " ESP_BD_ADDR_STR ", reason 0x%02x",
                ESP_BD_ADDR_HEX(p_data->disconnect.remote_bda),

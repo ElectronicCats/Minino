@@ -55,7 +55,7 @@ void gattcmd_begin(void) {
   }
 }
 
-void parse_address_colon(const char* str, uint8_t addr[6]) {
+static void parse_address_colon(const char* str, uint8_t addr[6]) {
   sscanf(str, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &addr[0], &addr[1], &addr[2],
          &addr[3], &addr[4], &addr[5]);
 }
@@ -71,18 +71,19 @@ uint16_t hex_string_to_uint16(const char* hex_str) {
 }
 
 void gattcmd_module_gatt_write(char* saddress, char* gatt, char* value) {
+  uint16_t uuid = hex_string_to_uint16(gatt);
+
   if (initialized) {
     gattcmd_scan_stop();
     gattcmd_enum_stop();
-    gattcmd_write_stop();
+    // gattcmd_write_stop();
+    gattcmd_write(saddress, uuid, value);
   } else {
     initialized = true;
     gattcmd_begin();
+    printf("Writting GATT: %s - %s - value: %s\n", saddress, gatt, value);
+    gattcmd_write_begin(saddress, uuid, value);
   }
-  printf("Writting GATT: %s - %s - value: %s\n", saddress, gatt, value);
-
-  uint16_t uuid = hex_string_to_uint16(gatt);
-  gattcmd_write_begin(saddress, uuid, value);
 }
 
 void gattcmd_module_set_remote_address(char* saddress) {
