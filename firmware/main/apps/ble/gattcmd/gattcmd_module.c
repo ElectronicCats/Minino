@@ -55,28 +55,13 @@ void gattcmd_begin(void) {
   }
 }
 
-static void parse_address_colon(const char* str, uint8_t addr[6]) {
-  sscanf(str, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &addr[0], &addr[1], &addr[2],
-         &addr[3], &addr[4], &addr[5]);
-}
-
-void parse_address_raw(const char* str, uint8_t addr[6]) {
-  for (int i = 0; i < 6; i++) {
-    sscanf(str + 2 * i, "%2hhx", &addr[i]);
-  }
-}
-
-uint16_t hex_string_to_uint16(const char* hex_str) {
-  return (uint16_t) strtol(hex_str, NULL, 16);
-}
-
 void gattcmd_module_gatt_write(char* saddress, char* gatt, char* value) {
   uint16_t uuid = hex_string_to_uint16(gatt);
 
   if (initialized) {
     gattcmd_scan_stop();
     gattcmd_enum_stop();
-    // gattcmd_write_stop();
+    printf("Writting GATT: %s - %s - value: %s\n", saddress, gatt, value);
     gattcmd_write(saddress, uuid, value);
   } else {
     initialized = true;
@@ -92,9 +77,7 @@ void gattcmd_module_set_remote_address(char* saddress) {
 
 void gattcmd_module_enum_client(char* saddress) {
   if (initialized) {
-    gattcmd_scan_stop();
-    gattcmd_enum_stop();
-    gattcmd_write_stop();
+    gattcmd_module_stop_workers();
   } else {
     initialized = true;
     gattcmd_begin();
@@ -105,12 +88,16 @@ void gattcmd_module_enum_client(char* saddress) {
 
 void gattcmd_module_scan_client() {
   if (initialized) {
-    gattcmd_scan_stop();
-    gattcmd_enum_stop();
-    gattcmd_write_stop();
+    gattcmd_module_stop_workers();
   } else {
     initialized = true;
     gattcmd_begin();
   }
   gattcmd_scan_begin();
+}
+
+void gattcmd_module_stop_workers() {
+  gattcmd_scan_stop();
+  gattcmd_enum_stop();
+  gattcmd_write_stop();
 }

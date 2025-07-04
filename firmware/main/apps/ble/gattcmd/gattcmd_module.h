@@ -9,5 +9,6 @@ void gattcmd_write(char* saddress, uint16_t target_uuid, char* value_str);
 
 void gattcmd_module_enum_client(char* saddress);
 void gattcmd_module_scan_client();
+void gattcmd_module_stop_workers();
 
 #endif

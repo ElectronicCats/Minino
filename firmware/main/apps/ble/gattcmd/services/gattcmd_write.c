@@ -70,26 +70,8 @@ static struct gattc_profile_inst enum_gl_profile_tab[GATTCMD_ENUM_PROFILE] = {
         },
 };
 
-int hex_string_to_bytes(const char* hex_str, uint8_t* out_buf, size_t max_len) {
-  size_t len = strlen(hex_str);
-  if (len % 2 != 0 || len / 2 > max_len) {
-    return -1;
-  }
-
-  for (size_t i = 0; i < len / 2; ++i) {
-    char byte_str[3] = {hex_str[2 * i], hex_str[2 * i + 1], '\0'};
-    out_buf[i] = (uint8_t) strtol(byte_str, NULL, 16);
-  }
-  return (int) (len / 2);
-}
-
-static void parse_address_colon_w(const char* str, uint8_t addr[6]) {
-  sscanf(str, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &addr[0], &addr[1], &addr[2],
-         &addr[3], &addr[4], &addr[5]);
-}
-
 void gattcmd_write(char* saddress, uint16_t target_uuid, char* value_str) {
-  parse_address_colon_w(saddress, target_bda);
+  parse_address_colon(saddress, target_bda);
   gatt_target_value_len = hex_string_to_bytes(value_str, gatt_target_value,
                                               sizeof(gatt_target_value));
   gatt_target_uuid = target_uuid;
@@ -350,11 +332,6 @@ static void gattcmd_write_gattc_cb(esp_gattc_cb_event_t event,
       }
     }
   } while (0);
-}
-
-static void parse_address_colon(const char* str, uint8_t addr[6]) {
-  sscanf(str, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &addr[0], &addr[1], &addr[2],
-         &addr[3], &addr[4], &addr[5]);
 }
 
 void gattcmd_write_begin(char* saddress,
