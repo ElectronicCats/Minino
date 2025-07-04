@@ -1,5 +1,6 @@
 #include <string.h>
 #include "argtable3/argtable3.h"
+#include "cat_console.h"
 #include "esp_console.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
@@ -27,7 +28,9 @@ static int gattccmd_enum_client(int argc, char** argv) {
     arg_print_errors(stderr, gattccmd_client_args.end, GATTCMD_CMD_NAME);
     return 1;
   }
+  cat_console_register_ctrl_c_handler(&gattcmd_module_stop_workers);
   gattcmd_module_enum_client(gattccmd_client_args.remote_addr->sval[0]);
+  // unregister_ctrl_c_handler();
   return 0;
 }
 
@@ -37,14 +40,18 @@ static int gattccmd_write(int argc, char** argv) {
     arg_print_errors(stderr, gattccmd_write_args.end, GATTCMD_CMD_NAME);
     return 1;
   }
+  cat_console_register_ctrl_c_handler(&gattcmd_module_stop_workers);
   gattcmd_module_gatt_write(gattccmd_write_args.addr->sval[0],
                             gattccmd_write_args.gatt->sval[0],
                             gattccmd_write_args.value->sval[0]);
+  // unregister_ctrl_c_handler();
   return 0;
 }
 
 static int gattccmd_scan(int argc, char** argv) {
+  cat_console_register_ctrl_c_handler(&gattcmd_module_stop_workers);
   gattcmd_module_scan_client();
+  // unregister_ctrl_c_handler();
   return 0;
 }
 
@@ -54,7 +61,9 @@ static int gattccmd_stop(int argc, char** argv) {
 }
 
 static int gattccmd_send(int argc, char** argv) {
+  cat_console_register_ctrl_c_handler(&gattcmd_module_stop_workers);
   gatt_read_file();
+  // unregister_ctrl_c_handler();
   return 0;
 }
 

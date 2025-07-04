@@ -56,17 +56,15 @@ void gattcmd_begin(void) {
 void gattcmd_module_gatt_write(char* saddress, char* gatt, char* value) {
   uint16_t uuid = hex_string_to_uint16(gatt);
 
+  printf("Writting GATT: %s - %s - value: %s\n", saddress, gatt, value);
+
   if (initialized) {
     gattcmd_scan_stop();
     gattcmd_enum_stop();
-
-    printf("Writting GATT: %s - %s - value: %s\n", saddress, gatt, value);
     gattcmd_write(saddress, uuid, value);
   } else {
     initialized = true;
     gattcmd_begin();
-
-    printf("Writting GATT: %s - %s - value: %s\n", saddress, gatt, value);
     gattcmd_write_begin(saddress, uuid, value);
   }
 }
@@ -82,7 +80,6 @@ void gattcmd_module_enum_client(char* saddress) {
     initialized = true;
     gattcmd_begin();
   }
-  printf("gattcmd_enum_begin\n");
   gattcmd_enum_begin(saddress);
 }
 
