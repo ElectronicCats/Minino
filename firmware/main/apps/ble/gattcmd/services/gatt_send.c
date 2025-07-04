@@ -15,6 +15,8 @@
 static uint16_t idx = 0;
 static bool configured = false;
 static char values_array[250][128];
+static char uuid_handler[64];
+static char addr_handler[64];
 
 void gatt_read_file() {
   esp_err_t err = sd_card_mount();
@@ -43,14 +45,14 @@ void gatt_read_file() {
         strncpy(values_array[idx], value, sizeof(values_array[idx]) - 1);
         values_array[idx][sizeof(values_array[idx]) - 1] = '\0';
 
-        printf("Addr: %s-", addr);
-        printf("Handle: %s-", handle_str);
-        printf("Value: %s\n", value);
         if (!configured) {
           configured = true;
+          strncpy(uuid_handler, handle_str, sizeof(uuid_handler) - 1);
+          uuid_handler[sizeof(uuid_handler) - 1] = '\0';
+
+          strncpy(addr_handler, addr, sizeof(addr_handler) - 1);
+          addr_handler[sizeof(addr_handler) - 1] = '\0';
         }
-        gattcmd_module_gatt_write(addr, handle_str, value);
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
       }
       idx++;
     } else {
@@ -59,4 +61,10 @@ void gatt_read_file() {
   }
 
   fclose(file);
+  sd_card_unmount();
+
+  for (int i = 0; i < idx; i++) {
+    gattcmd_module_gatt_write(addr_handler, uuid_handler, values_array[i]);
+    vTaskDelay(500 / portTICK_PERIOD_MS);
+  }
 }

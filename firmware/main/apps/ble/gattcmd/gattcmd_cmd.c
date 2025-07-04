@@ -4,6 +4,7 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "gatt_send.h"
 #include "gattcmd_module.h"
 
 #define GATTCMD_CMD_NAME "gattcmd_set_client"
@@ -52,6 +53,11 @@ static int gattccmd_stop(int argc, char** argv) {
   return 0;
 }
 
+static int gattccmd_send(int argc, char** argv) {
+  gatt_read_file();
+  return 0;
+}
+
 void gattccmd_register_cmd() {
   gattccmd_client_args.remote_addr =
       arg_str0(NULL, NULL, "<BT Address>", "BT Address");
@@ -97,8 +103,17 @@ void gattccmd_register_cmd() {
       .help = "Stop the BT scanning and connections services",
       .argtable = NULL};
 
+  esp_console_cmd_t gattccmd_send_cmd = {
+      .command = "gattcmd_send",
+      .category = "BT",
+      .hint = NULL,
+      .func = &gattccmd_send,
+      .help = "Stop the BT scanning and connections services",
+      .argtable = NULL};
+
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_cmd_scan));
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_set_client_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_write_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_stop_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_send_cmd));
 }

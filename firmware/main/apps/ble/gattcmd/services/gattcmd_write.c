@@ -337,10 +337,14 @@ static void gattcmd_write_gattc_cb(esp_gattc_cb_event_t event,
 void gattcmd_write_begin(char* saddress,
                          uint16_t target_uuid,
                          char* value_str) {
+  ESP_LOGE("HERE", "parse_address_colon");
   parse_address_colon(saddress, target_bda);
+  ESP_LOGE("HERE", "hex_string_to_bytes");
   gatt_target_value_len = hex_string_to_bytes(value_str, gatt_target_value,
                                               sizeof(gatt_target_value));
+  ESP_LOGE("HERE", "gatt_target_uuid");
   gatt_target_uuid = target_uuid;
+  ESP_LOGE("HERE", "esp_ble_gap_register_callback");
   // register the  callback function to the gap module
   esp_err_t ret = esp_ble_gap_register_callback(gattcmd_write_gap_cb);
   if (ret) {

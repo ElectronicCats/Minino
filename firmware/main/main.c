@@ -6,7 +6,6 @@
 #include "esp_timer.h"
 #include "flash_fs.h"
 #include "flash_fs_screens.h"
-#include "gatt_send.h"
 #include "general_flash_storage.h"
 #include "gps_hw.h"
 #include "keyboard_module.h"
