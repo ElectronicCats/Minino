@@ -93,8 +93,19 @@ void gattcmd_module_scan_client() {
   gattcmd_scan_begin();
 }
 
+void gattcmd_module_recon() {
+  if (initialized) {
+    gattcmd_module_stop_workers();
+  } else {
+    initialized = true;
+    gattcmd_begin();
+  }
+  gattcmd_recon_begin();
+}
+
 void gattcmd_module_stop_workers() {
   gattcmd_scan_stop();
   gattcmd_enum_stop();
   gattcmd_write_stop();
+  gattcmd_recon_stop();
 }
