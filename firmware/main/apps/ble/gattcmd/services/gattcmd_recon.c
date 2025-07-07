@@ -17,6 +17,8 @@ static esp_gattc_descr_elem_t* descr_elem_result = NULL;
 static bool connect = false;
 static bool get_server = false;
 static bool draw_headers = true;
+static uint16_t desc_count = 0;
+static uint16_t desc_count_readed = 0;
 
 static void gattcmd_recon_gap_cb(esp_gap_ble_cb_event_t event,
                                  esp_ble_gap_cb_param_t* param);
@@ -116,6 +118,12 @@ static void gattcmd_recon_gattc_profile_event_handler(
                  p_data->open.status);
         break;
       }
+      ESP_LOGI(TAG, "Connected to device " ESP_BD_ADDR_STR ", conn_id: %d",
+               ESP_BD_ADDR_HEX(p_data->open.remote_bda), p_data->open.conn_id);
+      enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].conn_id = p_data->open.conn_id;
+      memcpy(enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].remote_bda,
+             p_data->open.remote_bda, sizeof(esp_bd_addr_t));
+      memcpy(target_bda, p_data->open.remote_bda, sizeof(esp_bd_addr_t));
       break;
     case ESP_GATTC_DIS_SRVC_CMPL_EVT:
       if (param->dis_srvc_cmpl.status != ESP_GATT_OK) {
@@ -215,7 +223,6 @@ static void gattcmd_recon_gattc_profile_event_handler(
                                       ESP_GATT_AUTH_REQ_MITM);
             }
 
-            uint16_t desc_count = 0;
             status = esp_ble_gattc_get_attr_count(
                 gattc_if, p_data->search_cmpl.conn_id, ESP_GATT_DB_DESCRIPTOR,
                 char_elem_result[i].char_handle,
@@ -280,6 +287,15 @@ static void gattcmd_recon_gattc_profile_event_handler(
       }
       printf("| %04x| %04x \t\t| %s |\n", p_data->read.handle,
              p_data->read.handle, p_data->read.value);
+      desc_count_readed++;
+      if (desc_count == desc_count_readed) {
+        ESP_LOGW("HERE", "Restart connection");
+        desc_count_readed = 0;
+        connect = false;
+        get_server = false;
+        esp_ble_gattc_close(gattc_if, param->read.conn_id);
+        esp_ble_gap_start_scanning(30);
+      }
       break;
     case ESP_GATTC_SRVC_CHG_EVT: {
       esp_bd_addr_t bda;
@@ -336,6 +352,8 @@ static void gattcmd_recon_gap_cb(esp_gap_ble_cb_event_t event,
               ESP_BLE_AD_TYPE_NAME_CMPL, &adv_name_len);
           if (connect == false) {
             connect = true;
+            printf("Connecting to: " ESP_BD_ADDR_STR "\n",
+                   ESP_BD_ADDR_HEX(scan_result->scan_rst.bda));
             esp_ble_gap_stop_scanning();
             esp_ble_gattc_open(
                 enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if,

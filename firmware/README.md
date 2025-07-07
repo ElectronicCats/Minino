@@ -480,10 +480,14 @@ mb_engine_stop_attack
 
 
 ## GATTCMD
-A command line for interect with Bluetooth Characteristics
+A command line for interact with Bluetooth GATT Characteristics
 - `gattcmd_scan`: Scan for MAC Address
 - `gattcmd_enum`: Enum the Characteristics from the device
 - `gattcmd_write`: Write a value in a GATT characteristic
+- `gattcmd_stop`: Stop all the process, if connection have connection this will disconnect
+
+This module have a CTRL+C interaction, if you are scanning using this key combination the scann will stop.
+
 
 > This app is still under development, we don't test with more secure connection
 
