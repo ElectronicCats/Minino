@@ -353,10 +353,7 @@ esp_err_t sd_card_append_to_file(const char* path, char* data) {
   }
 
   printf("Path: %s\n", path);
-
-  uint16_t path_len = 15;
-  printf("Pathlen aaaaaaaaaa: %d", path_len);
-  char full_path[path_len + 8];
+  char full_path[23];
   sprintf(full_path, "%s/%s", MOUNT_POINT, path);
 
   ESP_LOGI(TAG, "Opening file a %s", full_path);

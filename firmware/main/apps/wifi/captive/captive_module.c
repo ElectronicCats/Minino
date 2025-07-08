@@ -294,21 +294,21 @@ static esp_err_t captive_portal_validate_input(httpd_req_t* req) {
   }
 
   // TODO: FIX This code work but using Sabas123345 as field breaks
-  // if (preferences_get_int(CAPTIVE_PORTAL_PREF_FS_KEY, 0) == 0) {
-  //   if (!sd_card_is_not_mounted()) {
-  //     // esp_err_t err = sd_card_mount();
-  //     // if (err != ESP_OK) {
-  //     //   ESP_LOGE("CAPTIVE", "ERROR mounting the SD card");
-  //     // }else{
-  //       printf("Here 1\n");
-  //       sd_card_create_file(CAPTIVE_DATA_FILENAME);
-  //       printf("Here 2\n");
-  //       sd_card_append_to_file(CAPTIVE_DATA_FILENAME, str_dump);
-  //       printf("Here 3\n");
-  //       // sd_card_unmount();
-  //     // }
-  //   }
-  // }
+  if (preferences_get_int(CAPTIVE_PORTAL_PREF_FS_KEY, 0) == 0) {
+    if (!sd_card_is_not_mounted()) {
+      // esp_err_t err = sd_card_mount();
+      // if (err != ESP_OK) {
+      //   ESP_LOGE("CAPTIVE", "ERROR mounting the SD card");
+      // }else{
+      printf("Here 1\n");
+      //       sd_card_create_file(CAPTIVE_DATA_FILENAME);
+      printf("Here 2\n");
+      sd_card_append_to_file(CAPTIVE_DATA_FILENAME, str_dump);
+      printf("Here 3\n");
+      // sd_card_unmount();
+      // }
+    }
+  }
 
   httpd_resp_set_status(req, "200 Done");
   httpd_resp_set_hdr(req, "Location", "/");
