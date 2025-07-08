@@ -263,7 +263,7 @@ esp_err_t sd_card_create_file(const char* path) {
     return ESP_FAIL;
   }
 
-  uint8_t path_len = strlen(path);
+  uint16_t path_len = strlen(path);
   char full_path[path_len + 1 + strlen(MOUNT_POINT)];
   sprintf(full_path, "%s/%s", MOUNT_POINT, path);
 
@@ -297,7 +297,7 @@ esp_err_t sd_card_read_file(const char* path) {
     return ESP_FAIL;
   }
 
-  uint8_t path_len = strlen(path);
+  uint16_t path_len = strlen(path);
   char full_path[path_len + 1 + strlen(MOUNT_POINT)];
   sprintf(full_path, "%s/%s", MOUNT_POINT, path);
 
@@ -352,8 +352,11 @@ esp_err_t sd_card_append_to_file(const char* path, char* data) {
     return ESP_FAIL;
   }
 
-  uint8_t path_len = strlen(path);
-  char full_path[path_len + 1 + strlen(MOUNT_POINT)];
+  printf("Path: %s\n", path);
+
+  uint16_t path_len = 15;
+  printf("Pathlen aaaaaaaaaa: %d", path_len);
+  char full_path[path_len + 8];
   sprintf(full_path, "%s/%s", MOUNT_POINT, path);
 
   ESP_LOGI(TAG, "Opening file a %s", full_path);

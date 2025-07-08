@@ -70,13 +70,32 @@ static captive_context_t captive_context = {0};
 static wifi_scanner_ap_records_t* ap_records;
 static uint8_t selected_record = 0;
 static user_input_t user_context = {
-    .user1 = "",
-    .user2 = "",
-    .user3 = "",
-    .user4 = "",
+    .user1 = NULL,
+    .user2 = NULL,
+    .user3 = NULL,
+    .user4 = NULL,
 };
 
 static void captive_module_show_running();
+
+static void captive_module_free_user_context(void) {
+  if (user_context.user1 != NULL) {
+    free(user_context.user1);
+    user_context.user1 = NULL;
+  }
+  if (user_context.user2 != NULL) {
+    free(user_context.user2);
+    user_context.user2 = NULL;
+  }
+  if (user_context.user3 != NULL) {
+    free(user_context.user3);
+    user_context.user3 = NULL;
+  }
+  if (user_context.user4 != NULL) {
+    free(user_context.user4);
+    user_context.user4 = NULL;
+  }
+}
 
 static void captive_module_free_portals_list(void) {
   for (int i = 0; i < portals_list.count; i++) {
@@ -144,13 +163,13 @@ static esp_err_t captive_portal_root_get_handler(httpd_req_t* req) {
   httpd_resp_set_type(req, "text/html");
 
   if (sd_card_is_not_mounted()) {
-    err = sd_card_mount();
-    if (err != ESP_OK) {
-      ESP_LOGE("CAPTIVE", "ERROR mounting the SD card");
-      sprintf(captive_context.portal, "Default");
-      captive_module_show_default_portal(req);
-      return ESP_OK;
-    }
+    // err = sd_card_mount();
+    // if (err != ESP_OK) {
+    ESP_LOGE("CAPTIVE", "ERROR mounting the SD card");
+    sprintf(captive_context.portal, "Default");
+    captive_module_show_default_portal(req);
+    return ESP_OK;
+    // }
   }
 
   if (strcmp(captive_context.portal, CAPTIVE_PORTAL_DEFAULT_NAME) == 0) {
@@ -202,6 +221,10 @@ static esp_err_t captive_portal_root_get_handler(httpd_req_t* req) {
     httpd_resp_sendstr_chunk(req, NULL);
   }
 
+  // if(!sd_card_is_not_mounted()){
+  //   sd_card_unmount();
+  // }
+
   return ESP_OK;
 }
 
@@ -216,48 +239,76 @@ static void captive_module_show_user_creds(char* user_str) {
 
 static esp_err_t captive_portal_validate_input(httpd_req_t* req) {
   char* buf;
-  char* str_dump[128];
+  char str_dump[512];
+
+  captive_module_free_user_context();
 
   size_t buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
     buf = (char*) malloc(buf_len);
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
-      char param[64];
+      char param[254];
+      str_dump[0] = '\0';
+
       if (httpd_query_key_value(buf, CAPTIVE_USER_INPUT1, param,
                                 sizeof(param)) == ESP_OK) {
         printf("Found URL query parameter -> user1: %s\n", param);
         user_context.user1 = strdup(param);
+        if (!user_context.user1) {
+          ESP_LOGE(TAG, "Failed to allocate memory for user1");
+        }
       }
       if (httpd_query_key_value(buf, CAPTIVE_USER_INPUT2, param,
                                 sizeof(param)) == ESP_OK) {
         printf("Found URL query parameter -> user2: %s\n", param);
         user_context.user2 = strdup(param);
+        if (!user_context.user2) {
+          ESP_LOGE(TAG, "Failed to allocate memory for user2");
+        }
       }
       if (httpd_query_key_value(buf, CAPTIVE_USER_INPUT3, param,
                                 sizeof(param)) == ESP_OK) {
         printf("Found URL query parameter -> user3: %s\n", param);
         user_context.user3 = strdup(param);
+        if (!user_context.user3) {
+          ESP_LOGE(TAG, "Failed to allocate memory for user3");
+        }
       }
       if (httpd_query_key_value(buf, CAPTIVE_USER_INPUT4, param,
                                 sizeof(param)) == ESP_OK) {
         printf("Found URL query parameter -> user4: %s\n", param);
         user_context.user4 = strdup(param);
+        if (!user_context.user4) {
+          ESP_LOGE(TAG, "Failed to allocate memory for user4");
+        }
       }
-      sprintf(str_dump, "\nuser1: %s\nuser2: %s\nuser3: %s\nuser4: %s\n\n",
-              user_context.user1, user_context.user2, user_context.user3,
-              user_context.user4);
+      snprintf(str_dump, sizeof(str_dump),
+               "\nuser1: %s\nuser2: %s\nuser3: %s\nuser4: %s\n\n",
+               user_context.user1 ? user_context.user1 : "",
+               user_context.user2 ? user_context.user2 : "",
+               user_context.user3 ? user_context.user3 : "",
+               user_context.user4 ? user_context.user4 : "");
       captive_module_show_user_creds(str_dump);
     }
     free(buf);
   }
 
-  if (preferences_get_int(CAPTIVE_PORTAL_PREF_FS_KEY, 0) == 0) {
-    if (!sd_card_is_not_mounted()) {
-      sd_card_create_dir(CAPTIVE_DATA_PATH);
-      sd_card_create_file(CAPTIVE_DATA_FILENAME);
-      sd_card_append_to_file(CAPTIVE_DATA_FILENAME, str_dump);
-    }
-  }
+  // TODO: FIX This code work but using Sabas123345 as field breaks
+  // if (preferences_get_int(CAPTIVE_PORTAL_PREF_FS_KEY, 0) == 0) {
+  //   if (!sd_card_is_not_mounted()) {
+  //     // esp_err_t err = sd_card_mount();
+  //     // if (err != ESP_OK) {
+  //     //   ESP_LOGE("CAPTIVE", "ERROR mounting the SD card");
+  //     // }else{
+  //       printf("Here 1\n");
+  //       sd_card_create_file(CAPTIVE_DATA_FILENAME);
+  //       printf("Here 2\n");
+  //       sd_card_append_to_file(CAPTIVE_DATA_FILENAME, str_dump);
+  //       printf("Here 3\n");
+  //       // sd_card_unmount();
+  //     // }
+  //   }
+  // }
 
   httpd_resp_set_status(req, "200 Done");
   httpd_resp_set_hdr(req, "Location", "/");
@@ -370,11 +421,11 @@ static void captive_module_wifi_begin() {
 static uint16_t captive_module_get_sd_items() {
   esp_err_t err;
   if (sd_card_is_not_mounted()) {
-    err = sd_card_mount();
-    if (err != ESP_OK) {
-      ESP_LOGE("CAPTIVE", "ERROR mounting the SD card");
-      return 0;
-    }
+    // err = sd_card_mount();
+    // if (err != ESP_OK) {
+    //   ESP_LOGE("CAPTIVE", "ERROR mounting the SD card");
+    return 0;
+    // }
   }
 
   char* path = (char*) malloc(CAPTIVE_PORTAL_MAX_DEFAULT_LEN);
@@ -408,6 +459,7 @@ static uint16_t captive_module_get_sd_items() {
 
   free(path);
   closedir(dir);
+  // sd_card_unmount();
   return portals_list.count;
 }
 
@@ -641,12 +693,25 @@ static void captive_module_main_menu_handler(uint8_t option) {
   }
 }
 
+static void exit_main() {
+  if (!sd_card_is_not_mounted()) {
+    sd_card_unmount();
+  }
+  menus_module_restart();
+}
+
 void captive_module_main(void) {
+  if (sd_card_is_not_mounted()) {
+    esp_err_t err = sd_card_mount();
+    if (err != ESP_OK) {
+      ESP_LOGE(TAG, "Error mounting SD card");
+    }
+  }
   general_submenu_menu_t main = {0};
   main.options = captive_main_menu;
   main.options_count = sizeof(captive_main_menu) / sizeof(char*);
   main.select_cb = captive_module_main_menu_handler;
   main.selected_option = last_index_selected;
-  main.exit_cb = menus_module_restart;
+  main.exit_cb = exit_main;
   general_submenu(main);
 }
