@@ -627,7 +627,7 @@ I (1420031) : 0x40818ca6   01                                                |.|
 - **Discover Attributes**: `zcl send_gen disc_attr -d 0xe643 --dst-ep 1 -e 2 -c 4`
 - **Request Active End Point**: `zdo request active_ep -d 0xe643`
 - **Request Neighbors**: `zdo request neighbors -d 0xe643`
-
+zdo request neighbors -d 0x0000
 
 # Change log
 
