@@ -95,13 +95,13 @@ static void ieee_sniffer_configure() {
     return;
   }
   ESP_ERROR_CHECK(esp_ieee802154_set_rx_when_idle(true));
-  uint8_t eui64[8] = {0};
-  esp_read_mac(eui64, ESP_MAC_IEEE802154);
-  uint8_t eui64_rev[8] = {0};
-  for (int i = 0; i < 8; i++) {
-    eui64_rev[7 - i] = eui64[i];
-  }
-  esp_ieee802154_set_extended_address(eui64_rev);
+  // uint8_t eui64[8] = {0};
+  // esp_read_mac(eui64, ESP_MAC_IEEE802154);
+  // uint8_t eui64_rev[8] = {0};
+  // for (int i = 0; i < 8; i++) {
+  //   eui64_rev[7 - i] = eui64[i];
+  // }
+  // esp_ieee802154_set_extended_address(eui64_rev);
   ESP_ERROR_CHECK(esp_ieee802154_receive());
 }
 
