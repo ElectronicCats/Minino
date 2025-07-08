@@ -20,6 +20,8 @@
 
 #include "zb_cli.h"
 
+#include "general_interact_screen.h"
+
 #define ZIGBEE_SNIFFER_FS_CHAN_KEY "zschan"
 
 static char* menu_main_items[] = {"Channel", "Run"};
@@ -54,7 +56,8 @@ static void zigbee_module_display_records_cb(uint8_t* packet,
     packet_count = 0;
   }
   packet_count++;
-  zigbee_screens_display_scanning_text(packet_count);
+  // zigbee_screens_display_scanning_text(packet_count);
+  printf("Packed received\n");
   uart_sender_send_packet(UART_SENDER_PACKET_TYPE_ZIGBEE, packet,
                           packet_length);
 }
@@ -94,14 +97,19 @@ static void zigbee_module_main_handler(uint8_t option) {
       break;
     case ZM_RUN:
       printf("Running");
-      if (!is_running) {
-        led_control_run_effect(led_control_zigbee_scanning);
-        xTaskCreate(ieee_sniffer_begin, "ieee_sniffer_task", 4096, NULL, 5,
-                    &zigbee_task_sniffer);
-        is_running = true;
-      } else {
-        zigbee_module_show_running();
-      }
+      general_interactive_screen_t screen = {0};
+      char* modes_menu[] = {"Campo 1", "Campo 2"};
+      screen.options = (char**) modes_menu;
+      screen.options_count = sizeof(modes_menu) / sizeof(char*);
+      interactive_screen(screen);
+      // if (!is_running) {
+      //   led_control_run_effect(led_control_zigbee_scanning);
+      //   xTaskCreate(ieee_sniffer_begin, "ieee_sniffer_task", 4096, NULL, 5,
+      //               &zigbee_task_sniffer);
+      //   is_running = true;
+      // } else {
+      //   zigbee_module_show_running();
+      // }
       break;
     default:
       break;
@@ -133,9 +141,9 @@ static void zigbee_modue_show_main() {
 void zigbee_module_sniffer_enter() {
   radio_selector_set_zigbee_sniffer();
   zigbee_modue_show_main();
-  zb_cli_stop();
+  // zb_cli_stop();
 
-  // ieee_sniffer_register_cb(zigbee_module_display_records_cb);
+  ieee_sniffer_register_cb(zigbee_module_display_records_cb);
   // zigbee_screens_display_zigbee_sniffer_text();
   // animations_task_run(zigbee_screens_display_scanning_animation, 200, NULL);
   // xTaskCreate(ieee_sniffer_begin, "ieee_sniffer_task", 4096, NULL, 5,
