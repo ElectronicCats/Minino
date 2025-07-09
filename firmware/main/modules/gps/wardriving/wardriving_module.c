@@ -348,6 +348,7 @@ void wardriving_module_stop_scan() {
     scanning_wifi_animation_task_handle = NULL;
     ESP_LOGI(TAG, "Task scanning_wifi_animation_task deleted");
   }
+  wifi_scanned_packets = 0;
 }
 
 void wardriving_module_keyboard_cb(uint8_t button_name, uint8_t button_event) {
