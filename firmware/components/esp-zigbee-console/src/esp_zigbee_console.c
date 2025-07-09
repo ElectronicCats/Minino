@@ -152,7 +152,7 @@ static esp_err_t esp_zb_console_repl_init(void) {
 
   esp_err_t ret = ESP_OK;
   esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
-  repl_config.prompt = "Minino >";
+  repl_config.prompt = "[ZB] Minino >";
 
   /* Install console REPL environment */
 #if defined(CONFIG_ESP_CONSOLE_UART_DEFAULT) || \

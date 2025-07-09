@@ -19,7 +19,7 @@
 
 #include "zb_cli.h"
 
-#define BAUD_RATE        115200
+#define BAUD_RATE        921600
 #define UART_BUFFER_SIZE 1024
 #define BUZZER_PIN       CONFIG_BUZZER_PIN
 
