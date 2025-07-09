@@ -9,19 +9,23 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 
+#define TAG "BLE_RECON"
+
 static esp_bd_addr_t target_bda;
 static esp_gattc_char_elem_t* char_elem_result = NULL;
 static esp_gattc_descr_elem_t* descr_elem_result = NULL;
 static bool connect = false;
 static bool get_server = false;
 static bool draw_headers = true;
+static uint16_t desc_count = 0;
+static uint16_t desc_count_readed = 0;
 
-static void gattcmd_enum_gap_cb(esp_gap_ble_cb_event_t event,
-                                esp_ble_gap_cb_param_t* param);
-static void gattcmd_enum_gattc_cb(esp_gattc_cb_event_t event,
-                                  esp_gatt_if_t gattc_if,
-                                  esp_ble_gattc_cb_param_t* param);
-static void gattcmd_enum_gattc_profile_event_handler(
+static void gattcmd_recon_gap_cb(esp_gap_ble_cb_event_t event,
+                                 esp_ble_gap_cb_param_t* param);
+static void gattcmd_recon_gattc_cb(esp_gattc_cb_event_t event,
+                                   esp_gatt_if_t gattc_if,
+                                   esp_ble_gattc_cb_param_t* param);
+static void gattcmd_recon_gattc_profile_event_handler(
     esp_gattc_cb_event_t event,
     esp_gatt_if_t gattc_if,
     esp_ble_gattc_cb_param_t* param);
@@ -32,7 +36,7 @@ static esp_ble_scan_params_t ble_scan_params = {
     .scan_filter_policy = BLE_SCAN_FILTER_ALLOW_ALL,
     .scan_interval = 0x50,
     .scan_window = 0x30,
-    .scan_duplicate = BLE_SCAN_DUPLICATE_DISABLE};
+    .scan_duplicate = BLE_SCAN_DUPLICATE_ENABLE};
 
 struct gattc_profile_inst {
   esp_gattc_cb_t gattc_cb;
@@ -48,7 +52,7 @@ struct gattc_profile_inst {
 static struct gattc_profile_inst enum_gl_profile_tab[GATTCMD_ENUM_PROFILE] = {
     [GATTCMD_ENUM_APP_ID] =
         {
-            .gattc_cb = gattcmd_enum_gattc_profile_event_handler,
+            .gattc_cb = gattcmd_recon_gattc_profile_event_handler,
             .gattc_if = ESP_GATT_IF_NONE, /* Not get the gatt_if, so initial is
                                               ESP_GATT_IF_NONE */
         },
@@ -79,7 +83,7 @@ static void get_char_properties(uint8_t properties,
     output[len - 2] = '\0';
 }
 
-static void gattcmd_enum_gattc_profile_event_handler(
+static void gattcmd_recon_gattc_profile_event_handler(
     esp_gattc_cb_event_t event,
     esp_gatt_if_t gattc_if,
     esp_ble_gattc_cb_param_t* param) {
@@ -107,10 +111,19 @@ static void gattcmd_enum_gattc_profile_event_handler(
     }
     case ESP_GATTC_OPEN_EVT:
       if (param->open.status != ESP_GATT_OK) {
+        connect = false;
+        get_server = false;
+        esp_ble_gap_start_scanning(30);
         ESP_LOGE(GATTCMD_ENUM_TAG, "Open failed, status %d",
                  p_data->open.status);
         break;
       }
+      ESP_LOGI(TAG, "Connected to device " ESP_BD_ADDR_STR ", conn_id: %d",
+               ESP_BD_ADDR_HEX(p_data->open.remote_bda), p_data->open.conn_id);
+      enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].conn_id = p_data->open.conn_id;
+      memcpy(enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].remote_bda,
+             p_data->open.remote_bda, sizeof(esp_bd_addr_t));
+      memcpy(target_bda, p_data->open.remote_bda, sizeof(esp_bd_addr_t));
       break;
     case ESP_GATTC_DIS_SRVC_CMPL_EVT:
       if (param->dis_srvc_cmpl.status != ESP_GATT_OK) {
@@ -207,10 +220,9 @@ static void gattcmd_enum_gattc_profile_event_handler(
             if (char_elem_result[i].properties & ESP_GATT_CHAR_PROP_BIT_READ) {
               esp_ble_gattc_read_char(gattc_if, p_data->search_cmpl.conn_id,
                                       char_elem_result[i].char_handle,
-                                      ESP_GATT_AUTH_REQ_NONE);
+                                      ESP_GATT_AUTH_REQ_MITM);
             }
 
-            uint16_t desc_count = 0;
             status = esp_ble_gattc_get_attr_count(
                 gattc_if, p_data->search_cmpl.conn_id, ESP_GATT_DB_DESCRIPTOR,
                 char_elem_result[i].char_handle,
@@ -253,6 +265,7 @@ static void gattcmd_enum_gattc_profile_event_handler(
             }
           }
           free(char_elem_result);
+          char_elem_result = NULL;
         } else {
           ESP_LOGE(GATTCMD_ENUM_TAG, "no char found");
         }
@@ -274,6 +287,15 @@ static void gattcmd_enum_gattc_profile_event_handler(
       }
       printf("| %04x| %04x \t\t| %s |\n", p_data->read.handle,
              p_data->read.handle, p_data->read.value);
+      desc_count_readed++;
+      if (desc_count == desc_count_readed) {
+        ESP_LOGW("HERE", "Restart connection");
+        desc_count_readed = 0;
+        connect = false;
+        get_server = false;
+        esp_ble_gattc_close(gattc_if, param->read.conn_id);
+        esp_ble_gap_start_scanning(30);
+      }
       break;
     case ESP_GATTC_SRVC_CHG_EVT: {
       esp_bd_addr_t bda;
@@ -285,7 +307,8 @@ static void gattcmd_enum_gattc_profile_event_handler(
     case ESP_GATTC_DISCONNECT_EVT:
       connect = false;
       get_server = false;
-      printf("Disconnected, remote: \n" ESP_BD_ADDR_STR,
+      esp_ble_gap_start_scanning(30);
+      printf("Disconnected, remote: " ESP_BD_ADDR_STR "\n",
              ESP_BD_ADDR_HEX(p_data->disconnect.remote_bda));
       ESP_LOGI(GATTCMD_ENUM_TAG,
                "Disconnected, remote " ESP_BD_ADDR_STR ", reason 0x%02x",
@@ -297,15 +320,17 @@ static void gattcmd_enum_gattc_profile_event_handler(
   }
 }
 
-static void gattcmd_enum_gap_cb(esp_gap_ble_cb_event_t event,
-                                esp_ble_gap_cb_param_t* param) {
+static void gattcmd_recon_gap_cb(esp_gap_ble_cb_event_t event,
+                                 esp_ble_gap_cb_param_t* param) {
   uint8_t* adv_name = NULL;
   uint8_t adv_name_len = 0;
   switch (event) {
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
       // the unit of the duration is second
       uint32_t duration = 30;
-      esp_ble_gap_start_scanning(duration);
+      connect = false;
+      get_server = false;
+      esp_ble_gap_start_scanning(30);
       break;
     }
     case ESP_GAP_BLE_SCAN_START_COMPLETE_EVT:
@@ -325,19 +350,22 @@ static void gattcmd_enum_gap_cb(esp_gap_ble_cb_event_t event,
               scan_result->scan_rst.adv_data_len +
                   scan_result->scan_rst.scan_rsp_len,
               ESP_BLE_AD_TYPE_NAME_CMPL, &adv_name_len);
-          if (adv_name_len > 0)
-            if (adv_name != NULL) {
-              if (memcmp(target_bda, scan_result->scan_rst.bda, 6) == 0) {
-                if (connect == false) {
-                  connect = true;
-                  esp_ble_gap_stop_scanning();
-                  esp_ble_gattc_open(
-                      enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if,
-                      scan_result->scan_rst.bda,
-                      scan_result->scan_rst.ble_addr_type, true);
-                }
-              }
-            }
+          if (connect == false) {
+            connect = true;
+            printf("Connecting to: " ESP_BD_ADDR_STR "\n",
+                   ESP_BD_ADDR_HEX(scan_result->scan_rst.bda));
+            esp_ble_gap_stop_scanning();
+            esp_ble_gattc_open(
+                enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if,
+                scan_result->scan_rst.bda, scan_result->scan_rst.ble_addr_type,
+                true);
+            // vTaskDelay(15000 / portTICK_PERIOD_MS);
+            esp_ble_auth_req_t auth_req =
+                ESP_LE_AUTH_BOND | ESP_LE_AUTH_REQ_MITM;
+            esp_ble_gap_set_security_param(ESP_BLE_SM_AUTHEN_REQ_MODE,
+                                           &auth_req,
+                                           sizeof(esp_ble_auth_req_t));
+          }
           break;
         case ESP_GAP_SEARCH_INQ_CMPL_EVT:
           break;
@@ -346,7 +374,50 @@ static void gattcmd_enum_gap_cb(esp_gap_ble_cb_event_t event,
       }
       break;
     }
-
+    case ESP_GAP_BLE_AUTH_CMPL_EVT: {
+      ESP_LOGI(TAG, "Auth method: %d", param->ble_security.auth_cmpl.auth_mode);
+      if (param->ble_security.auth_cmpl.success) {
+        switch (param->ble_security.auth_cmpl.auth_mode) {
+          case ESP_LE_AUTH_NO_BOND:
+            ESP_LOGI(TAG, "Pairing: No bonding");
+            break;
+          case ESP_LE_AUTH_BOND:
+            ESP_LOGI(TAG, "Pairing: Bonding");
+            break;
+          case ESP_LE_AUTH_REQ_MITM:
+            ESP_LOGI(TAG, "Pairing: MITM");
+            break;
+          case ESP_LE_AUTH_REQ_SC_ONLY:
+            ESP_LOGI(TAG, "Pairing: Secure Connections Only");
+            break;
+          case ESP_LE_AUTH_REQ_SC_BOND:
+            ESP_LOGI(TAG, "Pairing: Secure Connections with Bonding");
+            break;
+          case ESP_LE_AUTH_REQ_SC_MITM:
+            ESP_LOGI(TAG, "Pairing: Secure Connections with MITM");
+            break;
+          case ESP_LE_AUTH_REQ_SC_MITM_BOND:
+            ESP_LOGI(TAG, "Pairing: Secure Connections with MITM and Bonding");
+            break;
+          default:
+            ESP_LOGI(TAG, "Pairing: Unknown mode");
+            break;
+        }
+      } else {
+        ESP_LOGE(TAG, "Authentication failed, reason: 0x%x",
+                 param->ble_security.auth_cmpl.fail_reason);
+      }
+      esp_ble_gap_disconnect(param->scan_rst.bda);
+      connect = false;
+      get_server = false;
+      break;
+    }
+    case ESP_GAP_BLE_PASSKEY_REQ_EVT:
+      ESP_LOGI(TAG, "Passkey requested. NOT Just Works.");
+      break;
+    case ESP_GAP_BLE_NC_REQ_EVT:
+      ESP_LOGI(TAG, "Numeric comparison requested. NOT Just Works.");
+      break;
     case ESP_GAP_BLE_SCAN_STOP_COMPLETE_EVT:
       if (param->scan_stop_cmpl.status != ESP_BT_STATUS_SUCCESS) {
         ESP_LOGE(GATTCMD_ENUM_TAG, "Scanning stop failed, status %x",
@@ -377,9 +448,9 @@ static void gattcmd_enum_gap_cb(esp_gap_ble_cb_event_t event,
   }
 }
 
-static void gattcmd_enum_gattc_cb(esp_gattc_cb_event_t event,
-                                  esp_gatt_if_t gattc_if,
-                                  esp_ble_gattc_cb_param_t* param) {
+static void gattcmd_recon_gattc_cb(esp_gattc_cb_event_t event,
+                                   esp_gatt_if_t gattc_if,
+                                   esp_ble_gattc_cb_param_t* param) {
   /* If event is register event, store the gattc_if for each profile */
   if (event == ESP_GATTC_REG_EVT) {
     if (param->reg.status == ESP_GATT_OK) {
@@ -410,10 +481,9 @@ static void gattcmd_enum_gattc_cb(esp_gattc_cb_event_t event,
   } while (0);
 }
 
-void gattcmd_enum_begin(char* saddress) {
-  parse_address_colon(saddress, target_bda);
+void gattcmd_recon_begin() {
   // register the  callback function to the gap module
-  esp_err_t ret = esp_ble_gap_register_callback(gattcmd_enum_gap_cb);
+  esp_err_t ret = esp_ble_gap_register_callback(gattcmd_recon_gap_cb);
   if (ret) {
     ESP_LOGE(GATTCMD_ENUM_TAG, "%s gap register failed, error code = %x",
              __func__, ret);
@@ -421,7 +491,7 @@ void gattcmd_enum_begin(char* saddress) {
   }
 
   // register the callback function to the gattc module
-  ret = esp_ble_gattc_register_callback(gattcmd_enum_gattc_cb);
+  ret = esp_ble_gattc_register_callback(gattcmd_recon_gattc_cb);
   if (ret) {
     ESP_LOGE(GATTCMD_ENUM_TAG, "%s gattc register failed, error code = %x",
              __func__, ret);
@@ -440,7 +510,7 @@ void gattcmd_enum_begin(char* saddress) {
   }
 }
 
-void gattcmd_enum_stop() {
+void gattcmd_recon_stop() {
   if (connect) {
     esp_ble_gattc_close(enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if,
                         enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].conn_id);
@@ -449,9 +519,5 @@ void gattcmd_enum_stop() {
 
   esp_ble_gattc_app_unregister(
       enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if);
-  esp_ble_gattc_cache_clean(target_bda);
-
-  connect = false;
-  get_server = false;
   enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if = ESP_GATT_IF_NONE;
 }
