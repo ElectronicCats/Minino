@@ -42,6 +42,7 @@ You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/p
     - [Core Features and Functionality](#core-features-and-functionality)
     - [Building a Custom Captive Portal](#building-a-custom-captive-portal)
 - [Zigbee CLI](#zigbee-cli)
+  - [Important](#important)
   - [Zigbee test connections](#zigbee-test-connections)
   - [Hardware Required](#hardware-required)
   - [Play with All Device Type Example](#play-with-all-device-type-example)
@@ -537,6 +538,10 @@ The form inputs should use the reserved names `user1` through `user4` to ensure 
 The value: `idf.py menuconfig > Component config > HTTP Server > (1024)Max HTTP Request Header Length` will set to 1024 to avoid issues with Android
 
 # Zigbee CLI
+
+## Important
+**To use the CLI you need to enable it in the `Settings -> ZB CLI` to use, if you want to use zigbee apps you need to disable the CLI before use the app like the sniffer.**
+
 ## Zigbee test connections
 This test code shows how to configure Zigbee device and use it as HA Device Types, such as On/Off Switch, Window Covering, Door Lock, On/Off Light Device and so on.
 
