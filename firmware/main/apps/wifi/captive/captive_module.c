@@ -212,13 +212,10 @@ static esp_err_t captive_portal_root_get_handler(httpd_req_t* req) {
   httpd_resp_set_type(req, "text/html");
 
   if (sd_card_is_not_mounted()) {
-    // err = sd_card_mount();
-    // if (err != ESP_OK) {
     ESP_LOGE("CAPTIVE", "ERROR mounting the SD card");
     sprintf(captive_context.portal, "Default");
     captive_module_show_default_portal(req);
     return ESP_OK;
-    // }
   }
 
   if (strcmp(captive_context.portal, CAPTIVE_PORTAL_DEFAULT_NAME) == 0) {
@@ -269,10 +266,6 @@ static esp_err_t captive_portal_root_get_handler(httpd_req_t* req) {
   if (err == ESP_OK) {
     httpd_resp_sendstr_chunk(req, NULL);
   }
-
-  // if(!sd_card_is_not_mounted()){
-  //   sd_card_unmount();
-  // }
 
   return ESP_OK;
 }
@@ -370,26 +363,18 @@ static esp_err_t captive_portal_validate_input(httpd_req_t* req) {
     free(buf);
   }
 
-  // TODO: FIX This code work but using Sabas123345 as field breaks
   if (preferences_get_int(CAPTIVE_PORTAL_PREF_FS_KEY, 0) == 0) {
     if (!sd_card_is_not_mounted()) {
-      // esp_err_t err = sd_card_mount();
-      // if (err != ESP_OK) {
-      //   ESP_LOGE("CAPTIVE", "ERROR mounting the SD card");
-      // }else{
-      printf("Here 1\n");
-      //       sd_card_create_file(CAPTIVE_DATA_FILENAME);
-      printf("Here 2\n");
+      sd_card_create_file(CAPTIVE_DATA_FILENAME);
       sd_card_append_to_file(CAPTIVE_DATA_FILENAME, str_dump);
-      printf("Here 3\n");
-      // sd_card_unmount();
-      // }
     }
   }
 
   httpd_resp_set_status(req, "200 Done");
   httpd_resp_set_hdr(req, "Location", "/");
-  httpd_resp_send(req, "Thanks for you data", HTTPD_RESP_USE_STRLEN);
+  httpd_resp_send(req,
+                  "Thanks for you data, we will send you marketing campaing :)",
+                  HTTPD_RESP_USE_STRLEN);
   return ESP_OK;
 }
 
@@ -498,11 +483,7 @@ static void captive_module_wifi_begin() {
 static uint16_t captive_module_get_sd_items() {
   esp_err_t err;
   if (sd_card_is_not_mounted()) {
-    // err = sd_card_mount();
-    // if (err != ESP_OK) {
-    //   ESP_LOGE("CAPTIVE", "ERROR mounting the SD card");
     return 0;
-    // }
   }
 
   char* path = (char*) malloc(CAPTIVE_PORTAL_MAX_DEFAULT_LEN);
@@ -536,7 +517,6 @@ static uint16_t captive_module_get_sd_items() {
 
   free(path);
   closedir(dir);
-  // sd_card_unmount();
   return portals_list.count;
 }
 
