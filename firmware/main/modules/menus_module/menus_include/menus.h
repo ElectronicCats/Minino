@@ -38,6 +38,7 @@
 #include "web_file_browser_module.h"
 #include "wifi_analyzer.h"
 #include "wifi_settings_scenes.h"
+#include "zbcli_settings.h"
 #include "zigbee_module.h"
 
 // Include our header app
@@ -128,6 +129,7 @@ typedef enum {
   MENU_SETTINGS_SD_CARD_FORMAT,
   MENU_STEALTH_MODE,
   MENU_SLEEP_MODE,
+  MENU_ZB_CLI,
   /* Menu count */
   MENU_COUNT,  // Keep this at the end
 } menu_idx_t;
@@ -636,5 +638,12 @@ menu_t menus[] = {  //////////////////////////////////
      .parent_idx = MENU_SETTINGS,
      .last_selected_submenu = 0,
      .on_enter_cb = sleep_mode_scenes_main,
+     .on_exit_cb = NULL,
+     .is_visible = true},
+    {.display_name = "ZB CLI",
+     .menu_idx = MENU_ZB_CLI,
+     .parent_idx = MENU_SETTINGS,
+     .last_selected_submenu = 0,
+     .on_enter_cb = zbcli_settings_main,
      .on_exit_cb = NULL,
      .is_visible = true}};

@@ -17,7 +17,9 @@
 #include "sleep_mode.h"
 #include "uart_bridge.h"
 
-#define BAUD_RATE        115200
+#include "zb_cli.h"
+
+#define BAUD_RATE        921600
 #define UART_BUFFER_SIZE 1024
 #define BUZZER_PIN       CONFIG_BUZZER_PIN
 
@@ -56,4 +58,6 @@ void app_main() {
   flash_storage_begin();
 
   cat_console_begin();  // Contains a while(true) loop, it must be at the end
+
+  // zb_cli_begin();
 }
