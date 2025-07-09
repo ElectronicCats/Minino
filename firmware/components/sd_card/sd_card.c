@@ -8,6 +8,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
+#include "ff.h"
 #include "freertos/FreeRTOS.h"
 #include "sdmmc_cmd.h"
 
@@ -362,7 +363,19 @@ esp_err_t sd_card_append_to_file(const char* path, char* data) {
     ESP_LOGE(TAG, "Failed to open file for writing");
     return ESP_FAIL;
   }
-  fprintf(file, data);
+  size_t data_len = strlen(data);
+  size_t written = fwrite(data, 1, data_len, file);
+  if (written != data_len) {
+    ESP_LOGE(TAG, "Failed to write all data to file: wrote %d of %d bytes",
+             written, data_len);
+    fclose(file);
+    return ESP_FAIL;
+  }
+  if (fflush(file) != 0) {
+    ESP_LOGE(TAG, "Failed to flush file");
+    fclose(file);
+    return ESP_FAIL;
+  }
   fclose(file);
   ESP_LOGI(TAG, "File written");
 

@@ -78,6 +78,55 @@ static user_input_t user_context = {
 
 static void captive_module_show_running();
 
+static int hex_to_int(char c) {
+  if (c >= '0' && c <= '9')
+    return c - '0';
+  if (c >= 'A' && c <= 'F')
+    return c - 'A' + 10;
+  if (c >= 'a' && c <= 'f')
+    return c - 'a' + 10;
+  return -1;
+}
+
+static char* url_decode(const char* input) {
+  if (!input)
+    return NULL;
+
+  size_t len = strlen(input);
+  char* output = (char*) malloc(len + 1);
+  if (!output) {
+    ESP_LOGE(TAG, "Failed to allocate memory for URL decoding");
+    return NULL;
+  }
+
+  size_t i = 0, j = 0;
+  while (i < len && j < len) {
+    if (input[i] == '%' && i + 2 < len &&
+        isxdigit((unsigned char) input[i + 1]) &&
+        isxdigit((unsigned char) input[i + 2])) {
+      int high = hex_to_int(input[i + 1]);
+      int low = hex_to_int(input[i + 2]);
+      if (high >= 0 && low >= 0) {
+        output[j] = (char) ((high << 4) | low);
+        i += 3;
+      } else {
+        output[j] = input[i];
+        i++;
+      }
+    } else if (input[i] == '+') {
+      output[j] = ' ';
+      i++;
+    } else {
+      output[j] = input[i];
+      i++;
+    }
+    j++;
+  }
+  output[j] = '\0';
+
+  return output;
+}
+
 static void captive_module_free_user_context(void) {
   if (user_context.user1 != NULL) {
     free(user_context.user1);
@@ -252,32 +301,60 @@ static esp_err_t captive_portal_validate_input(httpd_req_t* req) {
 
       if (httpd_query_key_value(buf, CAPTIVE_USER_INPUT1, param,
                                 sizeof(param)) == ESP_OK) {
-        printf("Found URL query parameter -> user1: %s\n", param);
-        user_context.user1 = strdup(param);
+        char* decoded = url_decode(param);
+        if (decoded) {
+          user_context.user1 = strdup(decoded);
+          ESP_LOGI(TAG, "Decoded URL query parameter -> user1: %s",
+                   user_context.user1);
+          free(decoded);
+        } else {
+          user_context.user1 = strdup(param);
+        }
         if (!user_context.user1) {
           ESP_LOGE(TAG, "Failed to allocate memory for user1");
         }
       }
       if (httpd_query_key_value(buf, CAPTIVE_USER_INPUT2, param,
                                 sizeof(param)) == ESP_OK) {
-        printf("Found URL query parameter -> user2: %s\n", param);
-        user_context.user2 = strdup(param);
+        char* decoded = url_decode(param);
+        if (decoded) {
+          user_context.user2 = strdup(decoded);
+          ESP_LOGI(TAG, "Decoded URL query parameter -> user2: %s",
+                   user_context.user2);
+          free(decoded);
+        } else {
+          user_context.user2 = strdup(param);
+        }
         if (!user_context.user2) {
           ESP_LOGE(TAG, "Failed to allocate memory for user2");
         }
       }
       if (httpd_query_key_value(buf, CAPTIVE_USER_INPUT3, param,
                                 sizeof(param)) == ESP_OK) {
-        printf("Found URL query parameter -> user3: %s\n", param);
-        user_context.user3 = strdup(param);
+        char* decoded = url_decode(param);
+        if (decoded) {
+          user_context.user3 = strdup(decoded);
+          ESP_LOGI(TAG, "Decoded URL query parameter -> user3: %s",
+                   user_context.user3);
+          free(decoded);
+        } else {
+          user_context.user3 = strdup(param);
+        }
         if (!user_context.user3) {
           ESP_LOGE(TAG, "Failed to allocate memory for user3");
         }
       }
       if (httpd_query_key_value(buf, CAPTIVE_USER_INPUT4, param,
                                 sizeof(param)) == ESP_OK) {
-        printf("Found URL query parameter -> user4: %s\n", param);
-        user_context.user4 = strdup(param);
+        char* decoded = url_decode(param);
+        if (decoded) {
+          user_context.user4 = strdup(decoded);
+          ESP_LOGI(TAG, "Decoded URL query parameter -> user4: %s",
+                   user_context.user4);
+          free(decoded);
+        } else {
+          user_context.user4 = strdup(param);
+        }
         if (!user_context.user4) {
           ESP_LOGE(TAG, "Failed to allocate memory for user4");
         }
