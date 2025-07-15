@@ -88,7 +88,7 @@ static void ieee_sniffer_configure() {
              esp_err_to_name(err));
     return;
   }
-  err = esp_ieee802154_set_channel(current_channel);
+  err = esp_ieee802154_set_channel(25);
   if (err != ESP_OK) {
     ESP_LOGE(TAG_IEEE_SNIFFER, "Error setting channel: %s",
              esp_err_to_name(err));
