@@ -39,7 +39,7 @@ bool running_wifi_scanner_animation = false;
 uint16_t csv_lines;
 uint16_t wifi_scanned_packets;
 char* csv_file_name = NULL;
-char* csv_file_buffer = NULL;
+static char csv_file_buffer[CSV_FILE_SIZE];
 
 const char* csv_header = FORMAT_VERSION
     ",appRelease=" APP_VERSION ",model=" MODEL ",release=" RELEASE
@@ -154,17 +154,7 @@ static void wardriving_module_save_to_file(gps_t* gps) {
       ESP_LOGW(TAG, "Max CSV lines reached, writing to file");
       sd_card_write_file(csv_file_name, csv_file_buffer);
       csv_lines = CSV_HEADER_LINES;
-      free(csv_file_buffer);
-
-      ESP_LOGI(TAG, "Free heap size before allocation: %" PRIu32 " bytes",
-               esp_get_free_heap_size());
-      ESP_LOGI(TAG, "Allocating %d bytes for csv_file_buffer", CSV_FILE_SIZE);
-      csv_file_buffer = malloc(CSV_FILE_SIZE);
-      if (csv_file_buffer == NULL) {
-        ESP_LOGE(TAG, "Failed to allocate memory for csv_file_buffer");
-        return;
-      }
-
+      memset(csv_file_buffer, 0, CSV_FILE_SIZE);
       sprintf(csv_file_buffer, "%s\n",
               csv_header);  // Append header to csv file
       continue;
@@ -210,9 +200,20 @@ static void wardriving_module_save_to_file(gps_t* gps) {
     free(mac_address_str);
     free(full_date_time);
 
-    // ESP_LOGI(TAG, "CSV Line: %s", csv_line_buffer);
-    // ESP_LOGI(TAG, "Line size %d bytes", strlen(csv_line_buffer));
-    strcat(csv_file_buffer, csv_line_buffer);  // Append line to csv file
+    ESP_LOGI(TAG, "CSV Line: %s", csv_line_buffer);
+    ESP_LOGI(TAG, "Line size %d bytes", strlen(csv_line_buffer));
+    ESP_LOGI(TAG, "CSV file buffer size %d bytes", strlen(csv_file_buffer));
+    if (strlen(csv_file_buffer) + strlen(csv_line_buffer) < CSV_FILE_SIZE - 1) {
+      strcat(csv_file_buffer, csv_line_buffer);  // Append line to csv file
+    } else {
+      ESP_LOGW(TAG, "Buffer would overflow, writing to file and resetting");
+      sd_card_write_file(csv_file_name, csv_file_buffer);
+      memset(csv_file_buffer, 0, CSV_FILE_SIZE);
+      sprintf(csv_file_buffer, "%s\n", csv_header);
+      strcat(csv_file_buffer, csv_line_buffer);
+      csv_lines = CSV_HEADER_LINES + 1;
+      continue;
+    }
     csv_lines++;
     wifi_scanned_packets++;
   }
@@ -285,14 +286,8 @@ void wardriving_module_begin() {
   csv_lines = CSV_HEADER_LINES;
   wifi_scanned_packets = 0;
 
-  ESP_LOGI(TAG, "Free heap size before allocation: %" PRIu32 " bytes",
-           esp_get_free_heap_size());
-  ESP_LOGI(TAG, "Allocating %d bytes for csv_file_buffer", CSV_FILE_SIZE);
-  csv_file_buffer = malloc(CSV_FILE_SIZE);
-  if (csv_file_buffer == NULL) {
-    ESP_LOGE(TAG, "Failed to allocate memory for csv_file_buffer");
-    return;
-  }
+  // Initialize buffer
+  memset(csv_file_buffer, 0, CSV_FILE_SIZE);
 
   csv_file_name = malloc(strlen(FILE_NAME) + 30);
   if (csv_file_name == NULL) {
@@ -306,7 +301,7 @@ void wardriving_module_begin() {
 
 void wardriving_module_end() {
   ESP_LOGI(TAG, "Wardriving module end");
-  free(csv_file_buffer);
+  // free(csv_file_buffer);
   free(csv_file_name);
 }
 
@@ -353,7 +348,6 @@ void wardriving_module_stop_scan() {
     scanning_wifi_animation_task_handle = NULL;
     ESP_LOGI(TAG, "Task scanning_wifi_animation_task deleted");
   }
-  wifi_scanned_packets = 0;
 }
 
 void wardriving_module_keyboard_cb(uint8_t button_name, uint8_t button_event) {
