@@ -41,6 +41,15 @@ You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/p
   - [Captive Portal new version](#captive-portal-new-version)
     - [Core Features and Functionality](#core-features-and-functionality)
     - [Building a Custom Captive Portal](#building-a-custom-captive-portal)
+- [Zigbee CLI](#zigbee-cli)
+  - [Important](#important)
+  - [Zigbee test connections](#zigbee-test-connections)
+  - [Hardware Required](#hardware-required)
+  - [Play with All Device Type Example](#play-with-all-device-type-example)
+    - [Start Node 1 as on\_off\_light](#start-node-1-as-on_off_light)
+    - [Start Node 2 as on\_off\_switch](#start-node-2-as-on_off_switch)
+    - [Control the light using switch](#control-the-light-using-switch)
+  - [Cool commands](#cool-commands)
 - [Change log](#change-log)
   - [v1.1.7.0](#v1170)
     - [Added](#added)
@@ -480,10 +489,14 @@ mb_engine_stop_attack
 
 
 ## GATTCMD
-A command line for interect with Bluetooth Characteristics
+A command line for interact with Bluetooth GATT Characteristics
 - `gattcmd_scan`: Scan for MAC Address
 - `gattcmd_enum`: Enum the Characteristics from the device
 - `gattcmd_write`: Write a value in a GATT characteristic
+- `gattcmd_stop`: Stop all the process, if connection have connection this will disconnect
+
+This module have a CTRL+C interaction, if you are scanning using this key combination the scann will stop.
+
 
 > This app is still under development, we don't test with more secure connection
 
@@ -527,6 +540,103 @@ To create your own portal, use the provided root.html template as a reference. T
 The form inputs should use the reserved names `user1` through `user4` to ensure the system captures the data correctly.
 
 The value: `idf.py menuconfig > Component config > HTTP Server > (1024)Max HTTP Request Header Length` will set to 1024 to avoid issues with Android
+
+# Zigbee CLI
+
+## Important
+**To use the CLI you need to enable it in the `Settings -> ZB CLI` to use, if you want to use zigbee apps you need to disable the CLI before use the app like the sniffer.**
+
+## Zigbee test connections
+This test code shows how to configure Zigbee device and use it as HA Device Types, such as On/Off Switch, Window Covering, Door Lock, On/Off Light Device and so on.
+
+## Hardware Required
+* Minino
+* Another development board with ESP32-H2 SoC as communication peer (loaded with esp_zigbee_all_device_types_app example or other examples).
+
+## Play with All Device Type Example
+This section demonstrate the process to create HA on_off_light and on_off_switch devices.
+
+### Start Node 1 as on_off_light
+
+Create and register the HA standard on_off_light data model:
+
+```bash
+esp> zha add 1 on_off_light
+I (518033) cli_cmd_zha: on_off_light created with endpoint_id 1
+esp> dm register
+esp>
+```
+
+Form the network and open the network for joining:
+
+```bash
+esp> bdb_comm start form
+I (839703) cli_cmd_bdb: ZDO signal: ZDO Config Ready (0x17), status: ESP_FAIL
+I (839703) cli_cmd_bdb: Zigbee stack initialized
+W (842093) cli_cmd_bdb: Network(0x79d0) closed, devices joining not allowed.
+I (842103) cli_cmd_bdb: Formed network successfully (Extended PAN ID: 0x744dbdfffe602dfd, PAN ID: 0x79d0, Channel:11, Short Address: <SHORT_ADDRESS>)
+esp> network open -t 200
+I (860763) cli_cmd_bdb: Network(0x79d0) is open for 200 seconds
+```
+
+### Start Node 2 as on_off_switch
+
+Create and register the HA standard on_off_switch data model:
+
+```bash
+esp> zha add 2 on_off_switch
+I (914051) cli_cmd_zha: on_off_switch created with endpoint_id 2
+esp> dm register
+esp>
+```
+
+Joining the network:
+
+```bash
+esp> bdb_comm start steer
+I (930721) cli_cmd_bdb: ZDO signal: ZDO Config Ready (0x17), status: ESP_FAIL
+I (930721) cli_cmd_bdb: Zigbee stack initialized
+W (933611) cli_cmd_bdb: Network(0x79d0) closed, devices joining not allowed.
+I (933981) cli_cmd_bdb: Network(0x79d0) is open for 180 seconds
+I (933991) cli_cmd_bdb: Joined network successfully (Extended PAN ID: 0x744dbdfffe602dfd, PAN ID: 0x79d0, Channel:11, Short Address: 0x0935)
+```
+
+### Control the light using switch
+
+Get the light on/off status by reading the attribute from the switch:
+
+zcl send_gen read -d 0xe643 --dst-ep 1 -e 2 -c 6 -a 0
+
+
+```bash
+esp> zcl send_gen read -d <SHORT_ADDRESS> --dst-ep 1 -e 2 -c 6 -a 0
+I (1347151) cli_cmd_zcl: Read response: endpoint(2), cluster(0x06)
+I (1347161) cli_cmd_zcl: attribute(0x00), type(0x10), data size(1)
+I (1347171) : 0x40818c02   00                                                |.|
+```
+
+Send "On" command from the switch:
+
+```bash
+esp> zcl send_raw -d <SHORT_ADDRESS> --dst-ep 1 -e 2 -c 6 --cmd 0x01
+W (1405221) ESP_ZB_CONSOLE_APP: Receive Zigbee action(0x1005) callback
+```
+
+Check the light status again:
+
+```bash
+esp> zcl send_gen read -d <SHORT_ADDRESS> --dst-ep 1 -e 2 -c 6 -a 0
+I (1420021) cli_cmd_zcl: Read response: endpoint(2), cluster(0x06)
+I (1420021) cli_cmd_zcl: attribute(0x00), type(0x10), data size(1)
+I (1420031) : 0x40818ca6   01                                                |.|
+```
+## Cool commands
+- **Netowrk discovery**: `network scan -m 0x07fff800`
+- **Network energy detection**: `network ed_scan -m 0x07fff800`
+- **Discover Attributes**: `zcl send_gen disc_attr -d 0xe643 --dst-ep 1 -e 2 -c 4`
+- **Request Active End Point**: `zdo request active_ep -d 0xe643`
+- **Request Neighbors**: `zdo request neighbors -d 0xe643`
+zdo request neighbors -d 0x0000
 
 # Change log
 
