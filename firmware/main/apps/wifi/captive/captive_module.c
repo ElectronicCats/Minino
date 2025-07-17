@@ -370,11 +370,9 @@ static esp_err_t captive_portal_validate_input(httpd_req_t* req) {
     }
   }
 
-  httpd_resp_set_status(req, "200 Done");
+  httpd_resp_set_status(req, "302 Temporary Redirect");
   httpd_resp_set_hdr(req, "Location", "/");
-  httpd_resp_send(req,
-                  "Thanks for you data, we will send you marketing campaing :)",
-                  HTTPD_RESP_USE_STRLEN);
+  httpd_resp_send(req, "Redirect to the captive portal", HTTPD_RESP_USE_STRLEN);
   return ESP_OK;
 }
 
