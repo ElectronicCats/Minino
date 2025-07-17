@@ -157,6 +157,7 @@ static void captive_module_free_portals_list(void) {
 static void wifi_init_softap(void) {
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
   wifi_config_t wifi_config = {
       .ap = {.ssid = MININO_CAPTIVE_DEFAULT_SSID,
              .ssid_len = strlen(MININO_CAPTIVE_DEFAULT_SSID),
@@ -178,6 +179,22 @@ static void wifi_init_softap(void) {
             sizeof(wifi_config.ap.ssid));
     wifi_config.ap.ssid_len = strlen(wifi_ssid);
     free(wifi_ssid);
+  }
+
+  char ap_name[CAPTIVE_PORTAL_MAX_NAME];
+  esp_err_t err = preferences_get_string(CAPTIVE_PORTAL_FS_NAME, ap_name,
+                                         CAPTIVE_PORTAL_MAX_NAME);
+  if (err == ESP_OK) {
+    ESP_LOGW("HERE", "New name: %s", ap_name);
+    char* wifi_name = malloc(strlen((char*) ap_name + 1));
+    if (wifi_name == NULL) {
+      ESP_LOGE(TAG, "Failed to allocate memory for wifi_ssid");
+    } else {
+      strcpy(wifi_name, (char*) ap_name);
+      strncpy((char*) wifi_config.ap.ssid, wifi_name,
+              sizeof(wifi_config.ap.ssid));
+      wifi_config.ap.ssid_len = strlen(wifi_name);
+    }
   }
 
   if (strlen(MININO_CAPTIVE_DEFAULT_PASS) == 0) {
@@ -481,7 +498,6 @@ static void captive_module_wifi_begin() {
 }
 
 static uint16_t captive_module_get_sd_items() {
-  esp_err_t err;
   if (sd_card_is_not_mounted()) {
     return 0;
   }
@@ -755,6 +771,10 @@ static void exit_main() {
     sd_card_unmount();
   }
   menus_module_restart();
+}
+
+void captive_module_change_ap_name(char* name) {
+  preferences_put_string(CAPTIVE_PORTAL_FS_NAME, name);
 }
 
 void captive_module_main(void) {
