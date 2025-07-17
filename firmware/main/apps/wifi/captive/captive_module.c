@@ -36,6 +36,7 @@ static const char* config_dump_menu[] = {"Dump to SD", "No dump"};
 static uint16_t last_index_selected = 0;
 static httpd_handle_t server = NULL;
 static uint16_t retries = 0;
+static char* wifi_ap_name[CAPTIVE_PORTAL_MAX_NAME];
 
 typedef enum {
   PORTALS,
@@ -194,7 +195,6 @@ static void wifi_init_softap(void) {
   esp_err_t err = preferences_get_string(CAPTIVE_PORTAL_FS_NAME, ap_name,
                                          CAPTIVE_PORTAL_MAX_NAME);
   if (err == ESP_OK) {
-    ESP_LOGW("HERE", "New name: %s", ap_name);
     char* wifi_name = malloc(strlen((char*) ap_name + 1));
     if (wifi_name == NULL) {
       ESP_LOGE(TAG, "Failed to allocate memory for wifi_ssid");
@@ -206,6 +206,8 @@ static void wifi_init_softap(void) {
       free(wifi_name);
     }
   }
+
+  strcpy(wifi_ap_name, (char*) wifi_config.ap.ssid);
 
   if (strlen(MININO_CAPTIVE_DEFAULT_PASS) == 0) {
     wifi_config.ap.authmode = WIFI_AUTH_OPEN;
@@ -580,9 +582,9 @@ static void captive_module_show_preference_selector() {
 }
 
 static void captive_module_show_running() {
-  char* body[64];
-  sprintf(body, "Using:%s | Waiting for user creds",
-          (char*) captive_context.portal);
+  char* body[CAPTIVE_PORTAL_MAX_NAME + 84];
+  sprintf(body, "AP Name: %s Using: %s | Waiting for user creds",
+          (char*) wifi_ap_name, (char*) captive_context.portal);
 
   general_notification_ctx_t notification = {0};
   notification.head = "Captive Portal";
