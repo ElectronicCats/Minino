@@ -166,6 +166,15 @@ static void wifi_init_softap(void) {
              .authmode = WIFI_AUTH_WPA_WPA2_PSK},
   };
 
+  uint8_t esp_mac[6] = {0};
+  esp_read_mac(esp_mac, ESP_MAC_WIFI_STA);
+  char* default_name[20];
+  sprintf(default_name, "%s_%02X:%02X", CONFIG_WIFI_AP_NAME, esp_mac[4],
+          esp_mac[5]);
+  strncpy((char*) wifi_config.ap.ssid, default_name,
+          sizeof(wifi_config.ap.ssid));
+  wifi_config.ap.ssid_len = strlen(default_name);
+
   if (preferences_get_int(CAPTIVE_PORTAL_MODE_FS_KEY, 0) == 1) {
     char* wifi_ssid =
         malloc(strlen((char*) ap_records->records[selected_record].ssid) + 1);
@@ -194,6 +203,7 @@ static void wifi_init_softap(void) {
       strncpy((char*) wifi_config.ap.ssid, wifi_name,
               sizeof(wifi_config.ap.ssid));
       wifi_config.ap.ssid_len = strlen(wifi_name);
+      free(wifi_name);
     }
   }
 
