@@ -9,8 +9,8 @@
 #include "preferences.h"
 #include "wifi_scanner.h"
 
-const char* captive_main_menu[] = {"Portals", "Mode", "Preferences",
-                                   "Channel", "Run",  "Help"};
+const char* captive_main_menu[] = {"Portals", "Redirect", "Mode", "Preferences",
+                                   "Channel", "Run",      "Help"};
 const char* no_folder_help[] = {"If you dont have",
                                 "the Portals",
                                 "folder already",
