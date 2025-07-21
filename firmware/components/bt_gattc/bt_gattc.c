@@ -357,7 +357,7 @@ void ble_client_esp_gap_cb(esp_gap_ble_cb_event_t event,
   switch (event) {
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
       // the unit of the duration is second
-      uint32_t duration = 360;
+      uint32_t duration = 600;
       esp_ble_gap_start_scanning(duration);
       break;
     }
@@ -369,7 +369,6 @@ void ble_client_esp_gap_cb(esp_gap_ble_cb_event_t event,
         break;
       }
       ESP_LOGI(TAG_BT_GATTC, "scan start success");
-
       break;
     case ESP_GAP_BLE_SCAN_RESULT_EVT: {
       esp_ble_gap_cb_param_t* scan_result = (esp_ble_gap_cb_param_t*) param;
@@ -440,6 +439,11 @@ void ble_client_esp_gap_cb(esp_gap_ble_cb_event_t event,
           param->update_conn_params.status, param->update_conn_params.min_int,
           param->update_conn_params.max_int, param->update_conn_params.conn_int,
           param->update_conn_params.latency, param->update_conn_params.timeout);
+      break;
+    case ESP_GAP_BLE_SCAN_TIMEOUT_EVT:
+      uint32_t duration = 600;
+      esp_ble_gap_start_scanning(duration);
+      ESP_LOGE("HERE", "Scanning again");
       break;
     default:
       break;

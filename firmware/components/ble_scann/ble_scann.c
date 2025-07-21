@@ -5,13 +5,11 @@
 #include "inttypes.h"
 #include "uart_sender.h"
 
-static TaskHandle_t ble_scan_timer_task = NULL;
 static bluetooth_adv_scanner_cb_t display_records_cb = NULL;
-static int ble_scan_duration = 0;
 static bool ble_scanner_active = false;
-static esp_ble_scan_filter_t ble_scan_filter = BLE_SCAN_FILTER_ALLOW_ALL;
+static esp_ble_scan_filter_t ble_scan_filter =
+    BLE_SCAN_FILTER_ALLOW_UND_RPA_DIR;
 static esp_ble_scan_type_t ble_scan_type = BLE_SCAN_TYPE_ACTIVE;
-static void task_scanner_timer();
 static void handle_bt_gapc_events(esp_gap_ble_cb_event_t event_type,
                                   esp_ble_gap_cb_param_t* param);
 
@@ -42,12 +40,11 @@ void ble_scanner_begin() {
   bt_gattc_set_cb(event_cb);
   bt_gattc_task_begin();
   ble_scanner_active = true;
-  xTaskCreate(task_scanner_timer, "ble_scanner", 4096, NULL, 5,
-              &ble_scan_timer_task);
 }
 
 static void handle_bt_gapc_events(esp_gap_ble_cb_event_t event_type,
                                   esp_ble_gap_cb_param_t* param) {
+  ESP_LOGE("HERE", "event: %d", event_type);
   switch (event_type) {
     case ESP_GAP_BLE_SCAN_RESULT_EVT:
       esp_ble_gap_cb_param_t* scan_result = (esp_ble_gap_cb_param_t*) param;
@@ -62,8 +59,6 @@ static void handle_bt_gapc_events(esp_gap_ble_cb_event_t event_type,
           }
           ESP_LOGI(TAG_BLE_CLIENT_MODULE, "New ADV found");
           break;
-        case ESP_GAP_SEARCH_INQ_CMPL_EVT:
-          break;
         default:
           break;
       }
@@ -77,28 +72,8 @@ void ble_scanner_register_cb(bluetooth_adv_scanner_cb_t callback) {
   display_records_cb = callback;
 }
 
-static void task_scanner_timer() {
-  ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task started");
-  ble_scan_duration = 0;
-  while (ble_scanner_active) {
-    if (ble_scan_duration >= SCANNER_SCAN_DURATION) {
-      ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
-      ble_scanner_stop();
-    }
-    ble_scan_duration++;
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-  }
-}
-
 void ble_scanner_stop() {
   ble_scanner_active = false;
-  ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
-  if (ble_scan_timer_task != NULL) {
-    ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
-    vTaskSuspend(ble_scan_timer_task);
-  }
-  ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
-  ble_scan_duration = 0;
   vTaskDelete(NULL);
   // TODO: When this is called, the BLE stopping bricks the device
   // bt_gattc_task_stop();
