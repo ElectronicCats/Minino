@@ -36,6 +36,7 @@ static const char* config_dump_menu[] = {"Dump to SD", "No dump"};
 static uint16_t last_index_selected = 0;
 static httpd_handle_t server = NULL;
 static uint16_t retries = 0;
+static char* wifi_ap_name[CAPTIVE_PORTAL_MAX_NAME];
 
 typedef enum {
   PORTALS,
@@ -165,6 +166,15 @@ static void wifi_init_softap(void) {
              .authmode = WIFI_AUTH_WPA_WPA2_PSK},
   };
 
+  uint8_t esp_mac[6] = {0};
+  esp_read_mac(esp_mac, ESP_MAC_WIFI_STA);
+  char* default_name[20];
+  sprintf(default_name, "%s_%02X:%02X", CONFIG_WIFI_AP_NAME, esp_mac[4],
+          esp_mac[5]);
+  strncpy((char*) wifi_config.ap.ssid, default_name,
+          sizeof(wifi_config.ap.ssid));
+  wifi_config.ap.ssid_len = strlen(default_name);
+
   if (preferences_get_int(CAPTIVE_PORTAL_MODE_FS_KEY, 0) == 1) {
     char* wifi_ssid =
         malloc(strlen((char*) ap_records->records[selected_record].ssid) + 1);
@@ -179,6 +189,25 @@ static void wifi_init_softap(void) {
     wifi_config.ap.ssid_len = strlen(wifi_ssid);
     free(wifi_ssid);
   }
+
+  char ap_name[CAPTIVE_PORTAL_MAX_NAME];
+  esp_err_t err = preferences_get_string(CAPTIVE_PORTAL_FS_NAME, ap_name,
+                                         CAPTIVE_PORTAL_MAX_NAME);
+  if (err == ESP_OK) {
+    ESP_LOGW("HERE", "New name: %s", ap_name);
+    char* wifi_name = malloc(strlen((char*) ap_name + 1));
+    if (wifi_name == NULL) {
+      ESP_LOGE(TAG, "Failed to allocate memory for wifi_ssid");
+    } else {
+      strcpy(wifi_name, (char*) ap_name);
+      strncpy((char*) wifi_config.ap.ssid, wifi_name,
+              sizeof(wifi_config.ap.ssid));
+      wifi_config.ap.ssid_len = strlen(wifi_name);
+      free(wifi_name);
+    }
+  }
+
+  strcpy(wifi_ap_name, (char*) wifi_config.ap.ssid);
 
   if (strlen(MININO_CAPTIVE_DEFAULT_PASS) == 0) {
     wifi_config.ap.authmode = WIFI_AUTH_OPEN;
@@ -559,7 +588,7 @@ static void captive_module_show_running() {
           (char*) captive_context.portal);
 
   general_notification_ctx_t notification = {0};
-  notification.head = "Captive Portal";
+  notification.head = (char*) wifi_ap_name;
   notification.body = body;
   notification.on_exit = captive_module_disable_wifi;
   general_notification_handler(notification);
@@ -755,6 +784,10 @@ static void exit_main() {
     sd_card_unmount();
   }
   menus_module_restart();
+}
+
+void captive_module_change_ap_name(char* name) {
+  preferences_put_string(CAPTIVE_PORTAL_FS_NAME, name);
 }
 
 void captive_module_main(void) {
