@@ -12,8 +12,6 @@
 #define CAPTIVE_PORTAL_PREF_FS_KEY     "cpprefs"
 #define CAPTIVE_PORTAL_CHANNEL         "cpchan"
 #define CAPTIVE_PORTAL_NET_NAME        "WIFI_AP_DEF"
-#define CAPTIVE_PORTAL_FS_NAME         "cpname"
-#define CAPTIVE_PORTAL_MAX_NAME        100
 
 // USER INputs
 #define CAPTIVE_USER_INPUT1 "user1"
@@ -25,6 +23,5 @@
 #define CAPTIVE_DATA_FILENAME "user_creds.txt"
 
 void captive_module_main(void);
-void captive_module_change_ap_name(char* name);
 
 #endif

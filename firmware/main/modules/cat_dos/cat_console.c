@@ -33,7 +33,6 @@
 #include "modbus_engine.h"
 #include "modbus_engine_cmd.h"
 
-#include "captive_cmd.h"
 #include "gattcmd_cmd.h"
 #include "hello_cmd.h"
 #include "zb_cli.h"
@@ -177,7 +176,6 @@ static void register_commands() {
   modbus_engine_cmd_register_cmds();
   gattccmd_register_cmd();
   cmd_wifi_list_register_commands();
-  captivecmd_register_cmd();
   // Uncomment to use the demo app commands
   // hello_cmd_register();
 }

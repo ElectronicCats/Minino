@@ -36,7 +36,6 @@ static const char* config_dump_menu[] = {"Dump to SD", "No dump"};
 static uint16_t last_index_selected = 0;
 static httpd_handle_t server = NULL;
 static uint16_t retries = 0;
-static char* wifi_ap_name[CAPTIVE_PORTAL_MAX_NAME];
 
 typedef enum {
   PORTALS,
@@ -158,7 +157,6 @@ static void captive_module_free_portals_list(void) {
 static void wifi_init_softap(void) {
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-
   wifi_config_t wifi_config = {
       .ap = {.ssid = MININO_CAPTIVE_DEFAULT_SSID,
              .ssid_len = strlen(MININO_CAPTIVE_DEFAULT_SSID),
@@ -166,15 +164,6 @@ static void wifi_init_softap(void) {
              .max_connection = MININO_CAPTIVE_MAX_STA_CONN,
              .authmode = WIFI_AUTH_WPA_WPA2_PSK},
   };
-
-  uint8_t esp_mac[6] = {0};
-  esp_read_mac(esp_mac, ESP_MAC_WIFI_STA);
-  char* default_name[20];
-  sprintf(default_name, "%s_%02X:%02X", CONFIG_WIFI_AP_NAME, esp_mac[4],
-          esp_mac[5]);
-  strncpy((char*) wifi_config.ap.ssid, default_name,
-          sizeof(wifi_config.ap.ssid));
-  wifi_config.ap.ssid_len = strlen(default_name);
 
   if (preferences_get_int(CAPTIVE_PORTAL_MODE_FS_KEY, 0) == 1) {
     char* wifi_ssid =
@@ -190,24 +179,6 @@ static void wifi_init_softap(void) {
     wifi_config.ap.ssid_len = strlen(wifi_ssid);
     free(wifi_ssid);
   }
-
-  char ap_name[CAPTIVE_PORTAL_MAX_NAME];
-  esp_err_t err = preferences_get_string(CAPTIVE_PORTAL_FS_NAME, ap_name,
-                                         CAPTIVE_PORTAL_MAX_NAME);
-  if (err == ESP_OK) {
-    char* wifi_name = malloc(strlen((char*) ap_name + 1));
-    if (wifi_name == NULL) {
-      ESP_LOGE(TAG, "Failed to allocate memory for wifi_ssid");
-    } else {
-      strcpy(wifi_name, (char*) ap_name);
-      strncpy((char*) wifi_config.ap.ssid, wifi_name,
-              sizeof(wifi_config.ap.ssid));
-      wifi_config.ap.ssid_len = strlen(wifi_name);
-      free(wifi_name);
-    }
-  }
-
-  strcpy(wifi_ap_name, (char*) wifi_config.ap.ssid);
 
   if (strlen(MININO_CAPTIVE_DEFAULT_PASS) == 0) {
     wifi_config.ap.authmode = WIFI_AUTH_OPEN;
@@ -510,6 +481,7 @@ static void captive_module_wifi_begin() {
 }
 
 static uint16_t captive_module_get_sd_items() {
+  esp_err_t err;
   if (sd_card_is_not_mounted()) {
     return 0;
   }
@@ -582,9 +554,9 @@ static void captive_module_show_preference_selector() {
 }
 
 static void captive_module_show_running() {
-  char* body[CAPTIVE_PORTAL_MAX_NAME + 84];
-  sprintf(body, "AP Name: %s Using: %s | Waiting for user creds",
-          (char*) wifi_ap_name, (char*) captive_context.portal);
+  char* body[64];
+  sprintf(body, "Using:%s | Waiting for user creds",
+          (char*) captive_context.portal);
 
   general_notification_ctx_t notification = {0};
   notification.head = "Captive Portal";
@@ -783,10 +755,6 @@ static void exit_main() {
     sd_card_unmount();
   }
   menus_module_restart();
-}
-
-void captive_module_change_ap_name(char* name) {
-  preferences_put_string(CAPTIVE_PORTAL_FS_NAME, name);
 }
 
 void captive_module_main(void) {
