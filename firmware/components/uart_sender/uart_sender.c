@@ -117,8 +117,6 @@ void uart_sender_send_packet_ble(uart_sender_packet_type type,
     return;
   if (packet->scan_rst.search_evt != ESP_GAP_SEARCH_INQ_RES_EVT)
     return;
-  if (packet->scan_rst.ble_adv[5] == 0x0C)
-    return;
 
   uint8_t packet_bytes[2];
   packet_bytes[0] = packet->scan_rst.adv_data_len;
