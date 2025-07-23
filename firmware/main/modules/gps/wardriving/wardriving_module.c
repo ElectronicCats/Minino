@@ -17,9 +17,9 @@
 #include "wardriving_common.h"
 
 #define FILE_NAME                   WARFI_DIR_NAME "/Warfi"
-#define CSV_FILE_SIZE               8192  // Tamaño fijo del búfer, igual que en gps_screens.c
+#define CSV_FILE_SIZE               8192
 #define CSV_HEADER_LINES            1
-#define MAX_CSV_LINES               20  // Líneas máximas antes de escribir en SD
+#define MAX_CSV_LINES               20
 #define WIFI_SCAN_REFRESH_RATE_MS   3000
 #define DISPLAY_REFRESH_RATE_SEC    2
 #define WRITE_FILE_REFRESH_RATE_SEC 5
@@ -42,8 +42,7 @@ uint16_t csv_lines = 0;
 uint16_t wifi_scanned_packets = 0;
 char* csv_file_name = NULL;
 char* csv_file_buffer = NULL;
-bool csv_file_initialized =
-    false;  // Indica si el archivo ya tiene nombre asignado
+bool csv_file_initialized = false;
 
 const char* csv_header = FORMAT_VERSION
     ",appRelease=" APP_VERSION ",model=" MODEL ",release=" RELEASE
@@ -161,8 +160,7 @@ static void wardriving_module_save_to_file(gps_t* gps) {
       ESP_LOGE(TAG, "Failed to write CSV header: %s", esp_err_to_name(err));
       return;
     }
-    csv_file_buffer[0] =
-        '\0';  // Limpiar búfer después de escribir el encabezado
+    csv_file_buffer[0] = '\0';
     csv_file_initialized = true;
     csv_lines = CSV_HEADER_LINES;
   }
@@ -213,7 +211,7 @@ static void wardriving_module_save_to_file(gps_t* gps) {
       if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to append to SD: %s", esp_err_to_name(err));
       }
-      csv_file_buffer[0] = '\0';  // Limpiar búfer
+      csv_file_buffer[0] = '\0';
       csv_lines = CSV_HEADER_LINES;
       strcat(csv_file_buffer, csv_line_buffer);
       csv_lines++;
@@ -279,18 +277,22 @@ void wardriving_module_begin() {
     ESP_LOGE(TAG, "Failed to allocate memory for csv_file_buffer");
     return;
   }
-  csv_file_buffer[0] = '\0';  // Inicializar búfer vacío
+  csv_file_buffer[0] = '\0';
 }
 
 void wardriving_module_end() {
   ESP_LOGI(TAG, "Wardriving module end");
-  if (csv_file_buffer != NULL) {
-    if (csv_file_initialized && csv_file_buffer[0] != '\0') {
-      esp_err_t err = sd_card_append_to_file(csv_file_name, csv_file_buffer);
-      if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to append final data: %s", esp_err_to_name(err));
-      }
+  if (csv_file_buffer != NULL && csv_file_initialized &&
+      csv_file_buffer[0] != '\0') {
+    ESP_LOGI(TAG, "Appending final data to %s", csv_file_name);
+    esp_err_t err = sd_card_append_to_file(csv_file_name, csv_file_buffer);
+    if (err != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to append final data: %s", esp_err_to_name(err));
+    } else {
+      ESP_LOGI(TAG, "Final data appended successfully");
     }
+  }
+  if (csv_file_buffer != NULL) {
     free(csv_file_buffer);
     csv_file_buffer = NULL;
   }
@@ -301,6 +303,12 @@ void wardriving_module_end() {
   csv_file_initialized = false;
   csv_lines = 0;
   wifi_scanned_packets = 0;
+  esp_err_t err = sd_card_unmount();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to unmount SD card: %s", esp_err_to_name(err));
+  } else {
+    ESP_LOGI(TAG, "SD card unmounted successfully");
+  }
 }
 
 void wardriving_module_start_scan() {
@@ -333,7 +341,6 @@ void wardriving_module_stop_scan() {
   gps_module_stop_read();
   gps_module_unregister_cb();
   wifi_driver_deinit();
-  sd_card_unmount();
 
   if (wardriving_module_scan_task_handle != NULL) {
     vTaskDelete(wardriving_module_scan_task_handle);
