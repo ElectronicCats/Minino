@@ -1,5 +1,4 @@
 #include "drone_id_screens.h"
-
 #include "drone_id_preferences.h"
 #include "drone_id_scenes.h"
 #include "menus_module.h"
