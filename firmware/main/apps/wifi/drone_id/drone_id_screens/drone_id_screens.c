@@ -7,6 +7,9 @@
 static void main_screen_input_cb(uint8_t button, uint8_t event) {
   if (button != BUTTON_LEFT && event != BUTTON_PRESS_DOWN) {
     return;
+  } else if (button == BUTTON_UP || button == BUTTON_DOWN ||
+             button == BUTTON_RIGHT) {
+    return;  // No hacer nada
   }
   drone_id_scenes_main();
 }
