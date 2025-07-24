@@ -23,7 +23,7 @@
 #define WIFI_SCAN_REFRESH_RATE_MS   3000
 #define DISPLAY_REFRESH_RATE_SEC    2
 #define WRITE_FILE_REFRESH_RATE_SEC 5
-#define MAX_MAC_TABLE_SIZE          50  // Tamaño máximo de la tabla de MACs
+#define MAX_MAC_TABLE_SIZE          50  // MACs maximum size
 
 typedef enum {
   WARDRIVING_MODULE_STATE_NO_SD_CARD = 0,
@@ -32,9 +32,9 @@ typedef enum {
   WARDRIVING_MODULE_STATE_STOPPED
 } wardriving_module_state_t;
 
-// Estructura para la tabla de MACs
+// MACs table
 typedef struct {
-  uint8_t mac[6];  // Dirección MAC (6 bytes)
+  uint8_t mac[6];  // MAC (6 bytes)
 } mac_entry_t;
 
 static const char* TAG = "wardriving";
@@ -50,10 +50,10 @@ char* csv_file_name = NULL;
 char* csv_file_buffer = NULL;
 bool csv_file_initialized = false;
 
-// Tabla de MACs y variables de control
+// MACs table
 mac_entry_t mac_table[MAX_MAC_TABLE_SIZE];
 uint16_t mac_table_count = 0;
-uint16_t mac_table_head = 0;  // Índice para insertar nuevas MACs (FIFO)
+uint16_t mac_table_head = 0;  // new MACs (FIFO)
 
 const char* csv_header = FORMAT_VERSION
     ",appRelease=" APP_VERSION ",model=" MODEL ",release=" RELEASE
@@ -109,7 +109,7 @@ uint16_t get_frequency(uint8_t primary) {
   return 2412 + 5 * (primary - 1);
 }
 
-// Verifica si una MAC ya está en la tabla
+// MAC in table?
 bool is_mac_in_table(uint8_t* mac) {
   for (uint16_t i = 0; i < mac_table_count; i++) {
     if (memcmp(mac_table[i].mac, mac, 6) == 0) {
@@ -119,13 +119,13 @@ bool is_mac_in_table(uint8_t* mac) {
   return false;
 }
 
-// Añade una MAC a la tabla, eliminando la más antigua si está llena
+// Add MAC to table
 void add_mac_to_table(uint8_t* mac) {
   if (mac_table_count < MAX_MAC_TABLE_SIZE) {
     memcpy(mac_table[mac_table_count].mac, mac, 6);
     mac_table_count++;
   } else {
-    // Reemplazar la MAC más antigua (FIFO)
+    // (FIFO)
     memcpy(mac_table[mac_table_head].mac, mac, 6);
     mac_table_head = (mac_table_head + 1) % MAX_MAC_TABLE_SIZE;
   }
@@ -345,7 +345,7 @@ void wardriving_module_end() {
   csv_file_initialized = false;
   csv_lines = 0;
   wifi_scanned_packets = 0;
-  mac_table_count = 0;  // Reiniciar la tabla de MACs
+  mac_table_count = 0;  // Reset MACs table
   mac_table_head = 0;
   esp_err_t err = sd_card_unmount();
   if (err != ESP_OK) {
