@@ -4,6 +4,8 @@
 # CMakeLists in this exact order for cmake to work correctly
 cmake_minimum_required(VERSION 3.16)
 
+set(EXTRA_COMPONENT_DIRS components/zb_cli)
+set(EXTRA_COMPONENT_DIRS components/esp-zigbee-console)
 set(EXTRA_COMPONENT_DIRS components/oled_driver)
 set(EXTRA_COMPONENT_DIRS components/wifi_sniffer)
 set(EXTRA_COMPONENT_DIRS components/ble_hid)
@@ -18,9 +20,9 @@ set(EXTRA_COMPONENT_DIRS components/ieee802154)
 set(EXTRA_COMPONENT_DIRS components/openthread)
 set(EXTRA_COMPONENT_DIRS components/thread_broadcast)
 set(EXTRA_COMPONENT_DIRS components/radio_selector)
-set(EXTRA_COMPONENT_DIRS components/wifi_captive)
 set(EXTRA_COMPONENT_DIRS components/wifi_app)
 set(EXTRA_COMPONENT_DIRS components/wifi_ap_manager)
+
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 set(PROJECT_VERSION_MAJOR(0))

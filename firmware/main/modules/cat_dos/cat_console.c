@@ -26,6 +26,7 @@
 #include "preferences.h"
 #include "soc/soc_caps.h"
 
+#include "cmd_wifi_list.h"
 #include "drone_id_cmd.h"
 #include "modbus_client_cmd.h"
 #include "modbus_dos_cmd.h"
@@ -33,6 +34,8 @@
 #include "modbus_engine_cmd.h"
 
 #include "gattcmd_cmd.h"
+#include "hello_cmd.h"
+#include "zb_cli.h"
 
 static const char* TAG = "cat_console";
 #define PROMPT_STR "minino"
@@ -82,27 +85,7 @@ void show_dos_commands() {
   register_catdos_commands();
 }
 
-void cat_console_begin() {
-#if !defined(CONFIG_CAT_CONSOLE_DEBUG)
-  esp_log_level_set(TAG, ESP_LOG_NONE);
-#endif
-  initialize_nvs();
-
-  initialize_console();
-
-  /* Register commands */
-  esp_console_register_help_command();
-  register_wifi();
-  cmd_spamssid_register_commands();
-  cmd_control_register_launch_cmd();
-  cmd_control_register_uart_bridge_commands();
-  cmd_control_register_system_commands();
-  drone_id_cmd_register_location_cmd();
-  modbus_dos_cmd_register_cmds();
-  modbus_client_cmd_register_cmds();
-  modbus_engine_cmd_register_cmds();
-  gattccmd_register_cmd();
-
+static void cat_console_default() {
   /* Prompt to be printed before each line.
    * This can be customized, made dynamic, etc.
    */
@@ -177,4 +160,36 @@ restart:
 
   ESP_LOGE(TAG, "Finished console");
   esp_console_deinit();
+}
+
+static void register_commands() {
+  /* Register commands */
+  esp_console_register_help_command();
+  register_wifi();
+  cmd_spamssid_register_commands();
+  cmd_control_register_launch_cmd();
+  cmd_control_register_uart_bridge_commands();
+  cmd_control_register_system_commands();
+  drone_id_cmd_register_location_cmd();
+  modbus_dos_cmd_register_cmds();
+  modbus_client_cmd_register_cmds();
+  modbus_engine_cmd_register_cmds();
+  gattccmd_register_cmd();
+  cmd_wifi_list_register_commands();
+  // Uncomment to use the demo app commands
+  // hello_cmd_register();
+}
+
+void cat_console_begin() {
+#if !defined(CONFIG_CAT_CONSOLE_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+  if (preferences_get_int("ZBCLI", 0) == 1) {
+    zb_cli_begin();
+  } else {
+    initialize_nvs();
+    initialize_console();
+    register_commands();
+    cat_console_default();
+  }
 }

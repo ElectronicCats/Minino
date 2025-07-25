@@ -9,6 +9,7 @@
 
 #include "adv_scan_module.h"
 #include "analyzer_scenes.h"
+#include "captive_module.h"
 #include "catdos_module.h"
 #include "deauth_module.h"
 #include "detector_scenes.h"
@@ -37,7 +38,11 @@
 #include "web_file_browser_module.h"
 #include "wifi_analyzer.h"
 #include "wifi_settings_scenes.h"
+#include "zbcli_settings.h"
 #include "zigbee_module.h"
+
+// Include our header app
+#include "hello_module.h"
 
 typedef enum {
   MENU_MAIN = 0,
@@ -51,8 +56,11 @@ typedef enum {
   MENU_THREAD_APPS,
   MENU_GPS,
   MENU_GPIO_APPS,
+  // Uncomment to add the minino demo to menu
+  // MENU_HELLO,
   /* WiFi applications */
   MENU_WIFI_ANALIZER,
+  MENU_WIFI_CAPTIVE,
   MENU_WIFI_DEAUTH,
   MENU_WIFI_DEAUTH_SCAN,
   MENU_WIFI_DOS,
@@ -122,6 +130,7 @@ typedef enum {
   MENU_SETTINGS_SD_CARD_FORMAT,
   MENU_STEALTH_MODE,
   MENU_SLEEP_MODE,
+  MENU_ZB_CLI,
   /* Menu count */
   MENU_COUNT,  // Keep this at the end
 } menu_idx_t;
@@ -204,6 +213,15 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = about_module_display_legal_menu,
      .on_exit_cb = NULL,
      .is_visible = true},
+// Uncomment to show the Demo app
+// {.display_name = "Hello APP",
+//  .menu_idx              = MENU_HELLO,
+//  .parent_idx            = MENU_APPLICATIONS,
+//  .entry_cmd             = "hello",
+//  .last_selected_submenu = 0,
+//  .on_enter_cb           = hello_main,
+//  .on_exit_cb            = NULL,
+//  .is_visible            = true},
 #ifdef CONFIG_WIFI_APPS_ENABLE
     {.display_name = "WiFi",
      .menu_idx = MENU_WIFI_APPS,
@@ -218,6 +236,14 @@ menu_t menus[] = {  //////////////////////////////////
      .entry_cmd = "analyzer",
      .last_selected_submenu = 0,
      .on_enter_cb = analyzer_scenes_main_menu,
+     .on_exit_cb = NULL,
+     .is_visible = true},
+    {.display_name = "Captive",
+     .menu_idx = MENU_WIFI_CAPTIVE,
+     .parent_idx = MENU_WIFI_APPS,
+     .entry_cmd = "captive",
+     .last_selected_submenu = 0,
+     .on_enter_cb = captive_module_main,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Deauth",
@@ -620,5 +646,12 @@ menu_t menus[] = {  //////////////////////////////////
      .parent_idx = MENU_SETTINGS,
      .last_selected_submenu = 0,
      .on_enter_cb = sleep_mode_scenes_main,
+     .on_exit_cb = NULL,
+     .is_visible = true},
+    {.display_name = "ZB CLI",
+     .menu_idx = MENU_ZB_CLI,
+     .parent_idx = MENU_SETTINGS,
+     .last_selected_submenu = 0,
+     .on_enter_cb = zbcli_settings_main,
      .on_exit_cb = NULL,
      .is_visible = true}};

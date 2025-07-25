@@ -22,7 +22,7 @@ set(modules_src "")
 idf_component_register(
                     SRCS
                     "${modules_src}"
-                    EMBED_FILES modules/web_file_browser/http_server/header.html modules/web_file_browser/http_server/favicon_b.ico
+                    EMBED_FILES modules/web_file_browser/http_server/header.html modules/web_file_browser/http_server/favicon_b.ico apps/wifi/captive/root.html
                     modules/web_file_browser/http_server/style.css
                     INCLUDE_DIRS
                     "${headers_dirs}")

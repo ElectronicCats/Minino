@@ -8,6 +8,7 @@
 #include "preferences.h"
 
 #include "menus_module.h"
+#include "oled_screen.h"
 
 #define WIFI_CHANNEL_SWITCH_INTERVAL 1000
 
@@ -18,16 +19,17 @@ static uint16_t deauth_packets_count_list[14];
 static volatile bool running = false;
 static bool channel_hopping = false;
 
+static TaskHandle_t channel_hopper_handle = NULL;
+
 void deauth_detector_stop();
 
 static void packet_handler(uint8_t* buf, wifi_promiscuous_pkt_type_t type) {
+  static TickType_t last_update = 0;
+  TickType_t current_time = xTaskGetTickCount();
   wifi_promiscuous_pkt_t* p = (wifi_promiscuous_pkt_t*) buf;
-  // Get the packet header
   wifi_pkt_rx_ctrl_t rx_ctrl = p->rx_ctrl;
-  // Get the MAC address
   uint8_t* mac = p->payload;
   uint8_t pkt_type = buf[12];
-  // Check if the packet is a deauth packet
   if (pkt_type == 0xA0 || pkt_type == 0xC0) {
     ESP_LOGI(TAG,
              "Packet received channel: %d from MAC address: "
@@ -37,10 +39,14 @@ static void packet_handler(uint8_t* buf, wifi_promiscuous_pkt_type_t type) {
     total_deauth_packets_count++;
     deauth_packets_count_list[rx_ctrl.channel - 1]++;
   }
-  if (channel_hopping) {
-    detector_scenes_show_table(deauth_packets_count_list);
-  } else {
-    detector_scenes_show_count(total_deauth_packets_count, rx_ctrl.channel);
+  // 500 ms
+  if ((current_time - last_update) * portTICK_PERIOD_MS >= 500) {
+    if (channel_hopping) {
+      detector_scenes_show_table(deauth_packets_count_list);
+    } else {
+      detector_scenes_show_count(total_deauth_packets_count, rx_ctrl.channel);
+    }
+    last_update = current_time;
   }
 }
 
@@ -57,11 +63,14 @@ static void channel_hopper(void* pvParameters) {
 
 static void deauth_detector_input_cb(uint8_t button_name,
                                      uint8_t button_event) {
-  printf("FUNC: %s -> LINE: %d\n", __func__, __LINE__);
-  if (button_event != BUTTON_PRESS_DOWN || button_name != BUTTON_LEFT) {
+  ESP_LOGI(TAG, "Input event: button=%d, event=%d", button_name, button_event);
+  if (button_event != BUTTON_PRESS_DOWN) {
     return;
   }
-  printf("FUNC: %s -> LINE: %d\n", __func__, __LINE__);
+  if (button_name != BUTTON_LEFT) {
+    return;
+  }
+  ESP_LOGI(TAG, "BUTTON_LEFT pressed, stopping detector");
   deauth_detector_stop();
 }
 
@@ -100,13 +109,19 @@ void deauth_detector_begin() {
   esp_wifi_set_channel(current_channel, WIFI_SECOND_CHAN_NONE);
   running = true;
   if (channel_hopping) {
-    xTaskCreate(channel_hopper, "channel_hopper", 2048, NULL, 10, NULL);
+    xTaskCreate(channel_hopper, "channel_hopper", 2048, NULL, 10,
+                &channel_hopper_handle);
   }
 }
 
 void deauth_detector_stop() {
+  running = false;
+  if (channel_hopper_handle != NULL) {
+    vTaskDelete(channel_hopper_handle);
+    channel_hopper_handle = NULL;
+  }
   esp_wifi_stop();
   esp_wifi_set_promiscuous(false);
-  running = false;
+  oled_screen_clear();
   detector_scenes_main_menu();
 }
