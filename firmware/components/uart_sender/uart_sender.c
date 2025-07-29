@@ -103,7 +103,88 @@ bool is_adv_structure_valid(const uint8_t* data, uint8_t len) {
     default:
       if (len < 2)
         return false;
-      break;
   }
   return true;
+}
+
+void uart_sender_send_packet_ble(uart_sender_packet_type type,
+                                 esp_ble_gap_cb_param_t* packet) {
+  uart_sender_init();
+
+  if (packet == NULL)
+    return;
+  if (packet->scan_rst.adv_data_len > sizeof(packet->scan_rst.ble_adv))
+    return;
+  if (packet->scan_rst.search_evt != ESP_GAP_SEARCH_INQ_RES_EVT)
+    return;
+  if (packet->scan_rst.ble_adv[5] == 0x0C)
+    return;
+
+  uint8_t packet_bytes[2];
+  packet_bytes[0] = packet->scan_rst.adv_data_len;
+  packet_bytes[1] = 0x00;
+
+  const uint8_t access_address[4] = {0xD6, 0xBE, 0x89, 0x8E};
+  const uint8_t pdu_type = packet->scan_rst.ble_evt_type & 0x0F;
+  const uint8_t tx_add = packet->scan_rst.ble_addr_type;
+  uint8_t pdu_header = (pdu_type) | ((tx_add & 0x01) << 6);
+
+  uint8_t adv_data[ESP_BLE_ADV_MAX_LEN];
+  uint8_t valid_len = 0;
+  uint8_t index = 0;
+
+  while (index < packet->scan_rst.adv_data_len) {
+    uint8_t len = packet->scan_rst.ble_adv[index];
+    if (len == 0 || (index + len >= packet->scan_rst.adv_data_len))
+      break;
+    if (!is_adv_structure_valid(&packet->scan_rst.ble_adv[index], len + 1))
+      break;
+
+    memcpy(&adv_data[valid_len], &packet->scan_rst.ble_adv[index], len + 1);
+    valid_len += len + 1;
+    index += len + 1;
+
+    if (valid_len >= ESP_BLE_ADV_MAX_LEN)
+      break;
+  }
+
+  uint8_t total_payload_len = 6 + valid_len;  // 6 bytes addr + ADV data
+  uint8_t total_packet_len =
+      BLE_ADDRESS_SIZE + 2 + total_payload_len + 3;  // header + crc
+
+  uint8_t temp_packet[64];  // Tamaño suficiente
+  index = 0;
+
+  memcpy(&temp_packet[index], access_address, BLE_ADDRESS_SIZE);
+  index += BLE_ADDRESS_SIZE;
+  // PDU -> Header 2 bytes
+  // Header
+  temp_packet[index++] = pdu_header;
+  temp_packet[index++] = total_payload_len;
+  // MAC address (6 bytes)
+  memcpy(&temp_packet[index], packet->scan_rst.bda, ESP_BD_ADDR_LEN);
+  index += ESP_BD_ADDR_LEN;
+
+  // Valid ADV Data
+  memcpy(&temp_packet[index], adv_data, valid_len);
+  index += valid_len;
+  // CRC 3 bytes
+  uint32_t crc = calculate_ble_crc24(&temp_packet[BLE_ADDRESS_SIZE],
+                                     2 + total_payload_len);
+  temp_packet[index++] = (crc >> 16) & 0xFF;
+  temp_packet[index++] = (crc >> 8) & 0xFF;
+  temp_packet[index++] = crc & 0xFF;
+
+  printf("@S\xc0");
+  printf("%02x%02x", packet_bytes[0], packet_bytes[1]);
+  printf("\x01\x01\x01\x01\x01\x11");
+  printf("%c", 0x00);
+  printf("%c", 0x00);
+
+  for (int i = 0; i < index; i++) {
+    printf("%c", temp_packet[i]);
+  }
+
+  printf("%c", packet->scan_rst.rssi);
+  printf("\x80@E\n");
 }
