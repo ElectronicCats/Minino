@@ -74,6 +74,7 @@ void gattcmd_module_gatt_write(char* saddress, char* gatt, char* value) {
     gattcmd_scan_stop();
     gattcmd_enum_stop();
     gattcmd_write_stop();
+    gattcmd_recon_stop();
   } else {
     initialized = true;
     gattcmd_begin();
@@ -92,6 +93,7 @@ void gattcmd_module_enum_client(char* saddress) {
     gattcmd_scan_stop();
     gattcmd_enum_stop();
     gattcmd_write_stop();
+    gattcmd_recon_stop();
   } else {
     initialized = true;
     gattcmd_begin();
@@ -105,11 +107,25 @@ void gattcmd_module_scan_client() {
     gattcmd_scan_stop();
     gattcmd_enum_stop();
     gattcmd_write_stop();
+    gattcmd_recon_stop();
   } else {
     initialized = true;
     gattcmd_begin();
   }
   gattcmd_scan_begin();
+}
+
+void gattcmd_module_recon() {
+  if (initialized) {
+    gattcmd_scan_stop();
+    gattcmd_enum_stop();
+    gattcmd_write_stop();
+    gattcmd_recon_stop();
+  } else {
+    initialized = true;
+    gattcmd_begin();
+  }
+  gattcmd_recon_begin();
 }
 
 void gattcmd_module_stop_workers() {

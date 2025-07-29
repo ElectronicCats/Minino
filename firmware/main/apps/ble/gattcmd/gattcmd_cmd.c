@@ -49,6 +49,12 @@ static int gattccmd_scan(int argc, char** argv) {
   return 0;
 }
 
+static int gattccmd_recon(int argc, char** argv) {
+  cat_console_register_ctrl_c_handler(&gattcmd_module_stop_workers);
+  gattcmd_module_recon();
+  return 0;
+}
+
 void gattccmd_register_cmd() {
   gattccmd_client_args.remote_addr =
       arg_str0(NULL, NULL, "<BT Address>", "BT Address");
@@ -86,7 +92,16 @@ void gattccmd_register_cmd() {
           "gattcmd_write 00:00:00:00:00:00 fff3 7e0404100001ff00ef",
       .argtable = &gattccmd_write_args};
 
+  esp_console_cmd_t gattccmd_recon_cmd = {
+      .command = "gattcmd_recon",
+      .category = "BT",
+      .hint = NULL,
+      .func = &gattccmd_recon,
+      .help = "Stop the BT scanning and connections services",
+      .argtable = NULL};
+
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_cmd_scan));
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_set_client_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_write_cmd));
+  ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_recon_cmd));
 }

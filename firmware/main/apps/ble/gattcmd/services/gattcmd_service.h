@@ -11,8 +11,11 @@
 void gattcmd_enum_begin(char* saddress);
 void gattcmd_write_begin(char* saddress, uint16_t target_uuid, char* value_str);
 void gattcmd_scan_begin();
+void gattcmd_recon_begin();
 
 void gattcmd_scan_stop();
 void gattcmd_enum_stop();
 void gattcmd_write_stop();
+void gattcmd_recon_stop();
+
 #endif
