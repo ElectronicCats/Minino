@@ -111,3 +111,7 @@ void gattcmd_module_scan_client() {
   }
   gattcmd_scan_begin();
 }
+
+void gattcmd_module_stop_workers() {
+  gattcmd_scan_stop();
+}

@@ -1,5 +1,6 @@
 #include <string.h>
 #include "argtable3/argtable3.h"
+#include "cat_console.h"
 #include "esp_console.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
@@ -43,6 +44,7 @@ static int gattccmd_write(int argc, char** argv) {
 }
 
 static int gattccmd_scan(int argc, char** argv) {
+  cat_console_register_ctrl_c_handler(&gattcmd_module_stop_workers);
   gattcmd_module_scan_client();
   return 0;
 }
