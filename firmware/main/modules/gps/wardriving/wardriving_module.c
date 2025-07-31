@@ -37,7 +37,7 @@ typedef struct {
   uint8_t mac[6];  // MAC (6 bytes)
 } mac_entry_t;
 
-static const char* TAG = "wardriving";
+static const char* TAG = "wardriving_module";
 wardriving_module_state_t wardriving_module_state =
     WARDRIVING_MODULE_STATE_STOPPED;
 TaskHandle_t wardriving_module_scan_task_handle = NULL;
@@ -187,6 +187,7 @@ static void wardriving_module_save_to_file(gps_t* gps) {
       ESP_LOGE(TAG, "Failed to initialize file name");
       return;
     }
+
     snprintf(csv_file_buffer, CSV_FILE_SIZE, "%s\n", csv_header);
     err = sd_card_append_to_file(csv_file_name, csv_file_buffer);
     if (err != ESP_OK) {
@@ -216,6 +217,19 @@ static void wardriving_module_save_to_file(gps_t* gps) {
     if (mac_address_str == NULL) {
       continue;
     }
+
+    char sanitized_ssid[33];
+    strncpy(sanitized_ssid, (const char*) ap_records->records[i].ssid, 32);
+    sanitized_ssid[32] = '\0';
+    char *src = sanitized_ssid, *dst = sanitized_ssid;
+    while (*src) {
+      if (*src != ',') {
+        *dst++ = *src;
+      }
+      src++;
+    }
+    *dst = '\0';
+
     char* full_date_time = get_full_date_time(gps);
     if (full_date_time == NULL) {
       free(mac_address_str);
@@ -230,7 +244,7 @@ static void wardriving_module_save_to_file(gps_t* gps) {
 
     snprintf(csv_line_buffer, CSV_LINE_SIZE,
              "%s,%s,%s,%s,%d,%u,%d,%f,%f,%f,%f,%s,%s,%s\n", mac_address_str,
-             ap_records->records[i].ssid, auth_mode_str, full_date_time,
+             sanitized_ssid, auth_mode_str, full_date_time,
              ap_records->records[i].primary,
              get_frequency(ap_records->records[i].primary),
              ap_records->records[i].rssi, gps->latitude, gps->longitude,
@@ -324,16 +338,13 @@ void wardriving_module_begin() {
 
 void wardriving_module_end() {
   ESP_LOGI(TAG, "Wardriving module end");
-  if (csv_file_buffer != NULL && csv_file_initialized &&
-      csv_file_buffer[0] != '\0') {
-    ESP_LOGI(TAG, "Appending final data to %s", csv_file_name);
-    esp_err_t err = sd_card_append_to_file(csv_file_name, csv_file_buffer);
-    if (err != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to append final data: %s", esp_err_to_name(err));
-    } else {
-      ESP_LOGI(TAG, "Final data appended successfully");
-    }
+  esp_err_t err = sd_card_unmount();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to unmount SD card: %s", esp_err_to_name(err));
+  } else {
+    ESP_LOGI(TAG, "SD card unmounted successfully");
   }
+
   if (csv_file_buffer != NULL) {
     free(csv_file_buffer);
     csv_file_buffer = NULL;
@@ -341,17 +352,6 @@ void wardriving_module_end() {
   if (csv_file_name != NULL) {
     free(csv_file_name);
     csv_file_name = NULL;
-  }
-  csv_file_initialized = false;
-  csv_lines = 0;
-  wifi_scanned_packets = 0;
-  mac_table_count = 0;  // Reset MACs table
-  mac_table_head = 0;
-  esp_err_t err = sd_card_unmount();
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to unmount SD card: %s", esp_err_to_name(err));
-  } else {
-    ESP_LOGI(TAG, "SD card unmounted successfully");
   }
 }
 
@@ -398,7 +398,22 @@ void wardriving_module_stop_scan() {
     ESP_LOGI(TAG, "Task scanning_wifi_animation_task deleted");
   }
 
-  wardriving_module_end();
+  if (csv_file_buffer != NULL && csv_file_initialized &&
+      csv_file_buffer[0] != '\0') {
+    ESP_LOGI(TAG, "Appending final data to %s", csv_file_name);
+    esp_err_t err = sd_card_append_to_file(csv_file_name, csv_file_buffer);
+    if (err != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to append final data: %s", esp_err_to_name(err));
+    } else {
+      ESP_LOGI(TAG, "Final data appended successfully");
+    }
+  }
+
+  csv_file_initialized = false;
+  csv_lines = 0;
+  wifi_scanned_packets = 0;
+  mac_table_count = 0;  // Reset MACs table
+  mac_table_head = 0;
 }
 
 void wardriving_module_keyboard_cb(uint8_t button_name, uint8_t button_event) {
