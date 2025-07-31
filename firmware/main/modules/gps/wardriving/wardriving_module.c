@@ -231,6 +231,19 @@ static void wardriving_module_save_to_file(gps_t* gps) {
     if (mac_address_str == NULL) {
       continue;
     }
+
+    char sanitized_ssid[33];
+    strncpy(sanitized_ssid, (const char*) ap_records->records[i].ssid, 32);
+    sanitized_ssid[32] = '\0';
+    char *src = sanitized_ssid, *dst = sanitized_ssid;
+    while (*src) {
+      if (*src != ',') {
+        *dst++ = *src;
+      }
+      src++;
+    }
+    *dst = '\0';
+
     char* full_date_time = get_full_date_time(gps);
     if (full_date_time == NULL) {
       free(mac_address_str);
@@ -245,7 +258,7 @@ static void wardriving_module_save_to_file(gps_t* gps) {
 
     snprintf(csv_line_buffer, CSV_LINE_SIZE,
              "%s,%s,%s,%s,%d,%u,%d,%f,%f,%f,%f,%s,%s,%s\n", mac_address_str,
-             ap_records->records[i].ssid, auth_mode_str, full_date_time,
+             sanitized_ssid, auth_mode_str, full_date_time,
              ap_records->records[i].primary,
              get_frequency(ap_records->records[i].primary),
              ap_records->records[i].rssi, gps->latitude, gps->longitude,
