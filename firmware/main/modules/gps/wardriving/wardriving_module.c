@@ -23,7 +23,8 @@
 #define WIFI_SCAN_REFRESH_RATE_MS   3000
 #define DISPLAY_REFRESH_RATE_SEC    2
 #define WRITE_FILE_REFRESH_RATE_SEC 5
-#define MAX_MAC_TABLE_SIZE          50  // MACs maximum size
+#define MAX_MAC_TABLE_SIZE          100
+#define MAC_TIMEOUT_SEC             30
 
 typedef enum {
   WARDRIVING_MODULE_STATE_NO_SD_CARD = 0,
@@ -32,9 +33,9 @@ typedef enum {
   WARDRIVING_MODULE_STATE_STOPPED
 } wardriving_module_state_t;
 
-// MACs table
 typedef struct {
-  uint8_t mac[6];  // MAC (6 bytes)
+  uint8_t mac[6];      // MAC (6 bytes)
+  uint32_t timestamp;  // last time seen
 } mac_entry_t;
 
 static const char* TAG = "wardriving_module";
@@ -53,7 +54,7 @@ bool csv_file_initialized = false;
 // MACs table
 mac_entry_t mac_table[MAX_MAC_TABLE_SIZE];
 uint16_t mac_table_count = 0;
-uint16_t mac_table_head = 0;  // new MACs (FIFO)
+uint16_t mac_table_head = 0;
 
 const char* csv_header = FORMAT_VERSION
     ",appRelease=" APP_VERSION ",model=" MODEL ",release=" RELEASE
@@ -109,24 +110,37 @@ uint16_t get_frequency(uint8_t primary) {
   return 2412 + 5 * (primary - 1);
 }
 
-// MAC in table?
-bool is_mac_in_table(uint8_t* mac) {
+// MAC in list?
+bool is_mac_in_table(uint8_t* mac, uint32_t current_time) {
   for (uint16_t i = 0; i < mac_table_count; i++) {
     if (memcmp(mac_table[i].mac, mac, 6) == 0) {
-      return true;
+      if (current_time - mac_table[i].timestamp < MAC_TIMEOUT_SEC) {
+        return true;  // MAC found
+      } else {
+        // Update timestamp
+        mac_table[i].timestamp = current_time;
+        return false;  // new MAC
+      }
     }
   }
   return false;
 }
 
-// Add MAC to table
-void add_mac_to_table(uint8_t* mac) {
+// Update MAC in table
+void add_mac_to_table(uint8_t* mac, uint32_t current_time) {
+  for (uint16_t i = 0; i < mac_table_count; i++) {
+    if (memcmp(mac_table[i].mac, mac, 6) == 0) {
+      mac_table[i].timestamp = current_time;  // Update timestamp
+      return;
+    }
+  }
   if (mac_table_count < MAX_MAC_TABLE_SIZE) {
     memcpy(mac_table[mac_table_count].mac, mac, 6);
+    mac_table[mac_table_count].timestamp = current_time;
     mac_table_count++;
   } else {
-    // (FIFO)
     memcpy(mac_table[mac_table_head].mac, mac, 6);
+    mac_table[mac_table_head].timestamp = current_time;
     mac_table_head = (mac_table_head + 1) % MAX_MAC_TABLE_SIZE;
   }
 }
@@ -156,18 +170,22 @@ static void update_file_name(gps_t* gps) {
   snprintf(csv_file_name, strlen(FILE_NAME) + 30, "%s_%s.csv", FILE_NAME,
            full_date_time);
   for (int i = 0; i < strlen(csv_file_name); i++) {
-    if (csv_file_name[i] == ' ') {
+    if (csv_file_name[i] == ' ')
       csv_file_name[i] = '_';
-    }
-    if (csv_file_name[i] == ':') {
+    if (csv_file_name[i] == ':')
       csv_file_name[i] = '-';
-    }
   }
   free(full_date_time);
 }
 
 static void wardriving_module_save_to_file(gps_t* gps) {
   if (gps->sats_in_use == 0) {
+    static uint32_t no_signal_counter = 0;
+    no_signal_counter++;
+    if (no_signal_counter >= 10) {  // No signal message
+      wardriving_screens_module_no_gps_signal();
+      no_signal_counter = 0;
+    }
     ESP_LOGW(TAG, "No GPS signal, skipping save");
     return;
   }
@@ -187,7 +205,6 @@ static void wardriving_module_save_to_file(gps_t* gps) {
       ESP_LOGE(TAG, "Failed to initialize file name");
       return;
     }
-
     snprintf(csv_file_buffer, CSV_FILE_SIZE, "%s\n", csv_header);
     err = sd_card_append_to_file(csv_file_name, csv_file_buffer);
     if (err != ESP_OK) {
@@ -200,15 +217,12 @@ static void wardriving_module_save_to_file(gps_t* gps) {
   }
 
   wifi_scanner_ap_records_t* ap_records = wifi_scanner_get_ap_records();
-  char* csv_line_buffer = malloc(CSV_LINE_SIZE);
-  if (csv_line_buffer == NULL) {
-    ESP_LOGE(TAG, "Failed to allocate memory for csv_line_buffer");
-    return;
-  }
+  char csv_line_buffer[CSV_LINE_SIZE];
+  uint32_t current_time = esp_timer_get_time() / 1000000;
 
   for (int i = 0; i < ap_records->count; i++) {
-    if (is_mac_in_table(ap_records->records[i].bssid)) {
-      // ESP_LOGI(TAG, "Skipping duplicate MAC");
+    if (is_mac_in_table(ap_records->records[i].bssid, current_time)) {
+      ESP_LOGD(TAG, "Skipping duplicate MAC");
       continue;
     }
 
@@ -250,7 +264,7 @@ static void wardriving_module_save_to_file(gps_t* gps) {
              ap_records->records[i].rssi, gps->latitude, gps->longitude,
              gps->altitude, GPS_ACCURACY, "", "", "WIFI");
 
-    add_mac_to_table(ap_records->records[i].bssid);
+    add_mac_to_table(ap_records->records[i].bssid, current_time);
 
     free(mac_address_str);
     free(full_date_time);
@@ -272,7 +286,6 @@ static void wardriving_module_save_to_file(gps_t* gps) {
       wifi_scanned_packets++;
     }
   }
-  free(csv_line_buffer);
 }
 
 void wardriving_gps_event_handler_cb(gps_t* gps) {
@@ -353,6 +366,11 @@ void wardriving_module_end() {
     free(csv_file_name);
     csv_file_name = NULL;
   }
+  csv_file_initialized = false;
+  csv_lines = 0;
+  wifi_scanned_packets = 0;
+  mac_table_count = 0;
+  mac_table_head = 0;
 }
 
 void wardriving_module_start_scan() {
@@ -412,7 +430,7 @@ void wardriving_module_stop_scan() {
   csv_file_initialized = false;
   csv_lines = 0;
   wifi_scanned_packets = 0;
-  mac_table_count = 0;  // Reset MACs table
+  mac_table_count = 0;
   mac_table_head = 0;
 }
 
