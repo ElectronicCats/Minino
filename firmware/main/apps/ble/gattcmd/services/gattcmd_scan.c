@@ -9,7 +9,7 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 
-#define SCAN_DURATION    60
+#define SCAN_DURATION    240
 #define GATTCMD_SCAN_TAG "GATT_SCAN"
 
 static bool is_scanning = false;

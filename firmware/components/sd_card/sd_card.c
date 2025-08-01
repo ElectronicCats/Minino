@@ -8,7 +8,6 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
-#include "ff.h"
 #include "freertos/FreeRTOS.h"
 #include "sdmmc_cmd.h"
 
@@ -264,7 +263,7 @@ esp_err_t sd_card_create_file(const char* path) {
     return ESP_FAIL;
   }
 
-  uint16_t path_len = strlen(path);
+  uint8_t path_len = strlen(path);
   char full_path[path_len + 1 + strlen(MOUNT_POINT)];
   sprintf(full_path, "%s/%s", MOUNT_POINT, path);
 
@@ -298,7 +297,7 @@ esp_err_t sd_card_read_file(const char* path) {
     return ESP_FAIL;
   }
 
-  uint16_t path_len = strlen(path);
+  uint8_t path_len = strlen(path);
   char full_path[path_len + 1 + strlen(MOUNT_POINT)];
   sprintf(full_path, "%s/%s", MOUNT_POINT, path);
 
@@ -353,8 +352,8 @@ esp_err_t sd_card_append_to_file(const char* path, char* data) {
     return ESP_FAIL;
   }
 
-  printf("Path: %s\n", path);
-  char full_path[23];
+  uint8_t path_len = strlen(path);
+  char full_path[path_len + 1 + strlen(MOUNT_POINT)];
   sprintf(full_path, "%s/%s", MOUNT_POINT, path);
 
   ESP_LOGI(TAG, "Opening file a %s", full_path);
@@ -363,19 +362,7 @@ esp_err_t sd_card_append_to_file(const char* path, char* data) {
     ESP_LOGE(TAG, "Failed to open file for writing");
     return ESP_FAIL;
   }
-  size_t data_len = strlen(data);
-  size_t written = fwrite(data, 1, data_len, file);
-  if (written != data_len) {
-    ESP_LOGE(TAG, "Failed to write all data to file: wrote %d of %d bytes",
-             written, data_len);
-    fclose(file);
-    return ESP_FAIL;
-  }
-  if (fflush(file) != 0) {
-    ESP_LOGE(TAG, "Failed to flush file");
-    fclose(file);
-    return ESP_FAIL;
-  }
+  fprintf(file, data);
   fclose(file);
   ESP_LOGI(TAG, "File written");
 

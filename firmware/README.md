@@ -489,17 +489,12 @@ mb_engine_stop_attack
 
 
 ## GATTCMD
-A command line for interact with Bluetooth GATT Characteristics
+A command line for interect with Bluetooth Characteristics
 - `gattcmd_scan`: Scan for MAC Address
 - `gattcmd_enum`: Enum the Characteristics from the device
 - `gattcmd_write`: Write a value in a GATT characteristic
-- `gattcmd_stop`: Stop all the process, if connection have connection this will disconnect
 
-This module have a CTRL+C interaction, if you are scanning using this key combination the scann will stop.
-
-
-> This app is still under development, we don't test with more secure connection
-
+> This app is still under development, all the testing have been done with devices with no encription for gatt writing.
 
 ## Captive Portal new version
 The updated captive portal module enables the Minino device to function as a Wi-Fi Access Point (AP), allowing it to intercept client connections and present a fully customizable web interface. This update brings enhanced flexibility, user data handling, and configuration options, making it easier to create engaging and effective captive experiences.

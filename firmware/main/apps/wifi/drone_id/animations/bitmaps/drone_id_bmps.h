@@ -18,5 +18,4 @@ const unsigned char drone_id_bmp_3_16x8[] = {0x00, 0x00, 0x20, 0x04, 0xfb, 0xdf,
 const bitmap_t drone_id_bitmaps[3] = {{drone_id_bmp_1_16x8, 16, 8},
                                       {drone_id_bmp_2_16x8, 16, 8},
                                       {drone_id_bmp_3_16x8, 16, 8}};
-
 #endif  // _TAMA_BMPS_H_

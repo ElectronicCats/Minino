@@ -357,7 +357,7 @@ void ble_client_esp_gap_cb(esp_gap_ble_cb_event_t event,
   switch (event) {
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
       // the unit of the duration is second
-      uint32_t duration = 360;
+      uint32_t duration = SCAN_DURATION;
       esp_ble_gap_start_scanning(duration);
       break;
     }

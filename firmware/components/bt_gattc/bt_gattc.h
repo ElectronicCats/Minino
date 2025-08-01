@@ -16,7 +16,7 @@
   #define DEVICE_PROFILE          0
   #define INVALID_HANDLE          0
   #define MAX_REMOTE_DEVICE_NAME  20
-  #define SCAN_DURATION           60
+  #define SCAN_DURATION           600
 
 struct gattc_profile_inst {
   esp_gattc_cb_t gattc_cb;

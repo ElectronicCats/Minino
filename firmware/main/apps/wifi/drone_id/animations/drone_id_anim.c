@@ -8,7 +8,7 @@
 
 #include "drone_id_bmps.h"
 
-////////////////////// DRONE ANIM /////////////////////
+////////////////////// DRONE ANIM //////////////////////
 const uint16_t drone_anim_order[] = {0, 1, 2, 1};
 const uint32_t drone_anim_durations_ms[] = {50, 50, 50, 50};
 
