@@ -12,7 +12,6 @@
 #include "esp_gatt_defs.h"
 #include "esp_gattc_api.h"
 #include "esp_log.h"
-#include "esp_mac.h"
 #include "freertos/FreeRTOS.h"
 #include "gattcmd_module.h"
 #include "services/gattcmd_service.h"
@@ -24,8 +23,8 @@ static bool initialized = false;
 
 void gattcmd_begin(void) {
   ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
-  esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
 
+  esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
   esp_err_t ret = esp_bt_controller_init(&bt_cfg);
   if (ret) {
     ESP_LOGE(GATTC_TAG, "%s initialize controller failed: %s", __func__,
@@ -39,18 +38,35 @@ void gattcmd_begin(void) {
              esp_err_to_name(ret));
     return;
   }
+
   ret = esp_bluedroid_init();
   if (ret) {
     ESP_LOGE(GATTC_TAG, "%s init bluetooth failed: %s", __func__,
              esp_err_to_name(ret));
     return;
   }
+
   ret = esp_bluedroid_enable();
   if (ret) {
     ESP_LOGE(GATTC_TAG, "%s enable bluetooth failed: %s", __func__,
              esp_err_to_name(ret));
     return;
   }
+}
+
+void parse_address_colon(const char* str, uint8_t addr[6]) {
+  sscanf(str, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &addr[0], &addr[1], &addr[2],
+         &addr[3], &addr[4], &addr[5]);
+}
+
+void parse_address_raw(const char* str, uint8_t addr[6]) {
+  for (int i = 0; i < 6; i++) {
+    sscanf(str + 2 * i, "%2hhx", &addr[i]);
+  }
+}
+
+uint16_t hex_string_to_uint16(const char* hex_str) {
+  return (uint16_t) strtol(hex_str, NULL, 16);
 }
 
 void gattcmd_module_gatt_write(char* saddress, char* gatt, char* value) {

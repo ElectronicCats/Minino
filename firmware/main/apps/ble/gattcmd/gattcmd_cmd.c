@@ -5,7 +5,6 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "gatt_send.h"
 #include "gattcmd_module.h"
 
 #define GATTCMD_CMD_NAME "gattcmd_set_client"
@@ -28,7 +27,6 @@ static int gattccmd_enum_client(int argc, char** argv) {
     arg_print_errors(stderr, gattccmd_client_args.end, GATTCMD_CMD_NAME);
     return 1;
   }
-  cat_console_register_ctrl_c_handler(&gattcmd_module_stop_workers);
   gattcmd_module_enum_client(gattccmd_client_args.remote_addr->sval[0]);
   return 0;
 }
@@ -39,7 +37,6 @@ static int gattccmd_write(int argc, char** argv) {
     arg_print_errors(stderr, gattccmd_write_args.end, GATTCMD_CMD_NAME);
     return 1;
   }
-  cat_console_register_ctrl_c_handler(&gattcmd_module_stop_workers);
   gattcmd_module_gatt_write(gattccmd_write_args.addr->sval[0],
                             gattccmd_write_args.gatt->sval[0],
                             gattccmd_write_args.value->sval[0]);
@@ -49,17 +46,6 @@ static int gattccmd_write(int argc, char** argv) {
 static int gattccmd_scan(int argc, char** argv) {
   cat_console_register_ctrl_c_handler(&gattcmd_module_stop_workers);
   gattcmd_module_scan_client();
-  return 0;
-}
-
-static int gattccmd_stop(int argc, char** argv) {
-  gattcmd_module_stop_workers();
-  return 0;
-}
-
-static int gattccmd_send(int argc, char** argv) {
-  cat_console_register_ctrl_c_handler(&gattcmd_module_stop_workers);
-  gatt_read_file();
   return 0;
 }
 
@@ -106,22 +92,6 @@ void gattccmd_register_cmd() {
           "gattcmd_write 00:00:00:00:00:00 fff3 7e0404100001ff00ef",
       .argtable = &gattccmd_write_args};
 
-  esp_console_cmd_t gattccmd_stop_cmd = {
-      .command = "gattcmd_stop",
-      .category = "BT",
-      .hint = NULL,
-      .func = &gattccmd_stop,
-      .help = "Stop the BT scanning and connections services",
-      .argtable = NULL};
-
-  esp_console_cmd_t gattccmd_send_cmd = {
-      .command = "gattcmd_send",
-      .category = "BT",
-      .hint = NULL,
-      .func = &gattccmd_send,
-      .help = "Stop the BT scanning and connections services",
-      .argtable = NULL};
-
   esp_console_cmd_t gattccmd_recon_cmd = {
       .command = "gattcmd_recon",
       .category = "BT",
@@ -133,7 +103,5 @@ void gattccmd_register_cmd() {
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_cmd_scan));
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_set_client_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_write_cmd));
-  ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_stop_cmd));
-  ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_send_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_recon_cmd));
 }
