@@ -2,6 +2,7 @@
 #define __GATTCMD_ENUM_H
 
 #include <stdint.h>
+#include <stdio.h>
 
 #define GATTCMD_ENUM_TAG     "GATT_ENUM"
 #define GATTCMD_ENUM_PROFILE 1
