@@ -21,6 +21,11 @@ static struct {
   struct arg_end* end;
 } gattccmd_write_args;
 
+static struct {
+  struct arg_str* remote_addr;
+  struct arg_end* end;
+} gattccmd_recon_args;
+
 static int gattccmd_enum_client(int argc, char** argv) {
   int nerrros = arg_parse(argc, argv, (void**) &gattccmd_client_args);
   if (nerrros != 0) {
@@ -51,7 +56,20 @@ static int gattccmd_scan(int argc, char** argv) {
 
 static int gattccmd_recon(int argc, char** argv) {
   cat_console_register_ctrl_c_handler(&gattcmd_module_stop_workers);
-  gattcmd_module_recon();
+
+  int nerrors = arg_parse(argc, argv, (void**) &gattccmd_recon_args);
+  if (nerrors != 0) {
+    arg_print_errors(stderr, gattccmd_recon_args.end, "gattcmd_recon");
+    return 1;
+  }
+
+  const char* bt_addr = NULL;
+  if (gattccmd_recon_args.remote_addr->count > 0) {
+    bt_addr = gattccmd_recon_args.remote_addr->sval[0];
+  }
+
+  cat_console_register_ctrl_c_handler(&gattcmd_module_stop_workers);
+  gattcmd_module_recon(bt_addr);  // bt_addr is NULL if not specified
   return 0;
 }
 
@@ -66,6 +84,10 @@ void gattccmd_register_cmd() {
   gattccmd_write_args.value =
       arg_str1(NULL, NULL, "<Value>", "Value to write in hex form");
   gattccmd_write_args.end = arg_end(3);
+
+  gattccmd_recon_args.remote_addr =
+      arg_str0(NULL, NULL, "[BT Address]", "Optional target BT address");
+  gattccmd_recon_args.end = arg_end(1);
 
   esp_console_cmd_t gattccmd_cmd_scan = {.command = "gattcmd_scan",
                                          .category = "BT",
@@ -98,7 +120,7 @@ void gattccmd_register_cmd() {
       .hint = NULL,
       .func = &gattccmd_recon,
       .help = "Stop the BT scanning and connections services",
-      .argtable = NULL};
+      .argtable = &gattccmd_recon_args};
 
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_cmd_scan));
   ESP_ERROR_CHECK(esp_console_cmd_register(&gattccmd_set_client_cmd));

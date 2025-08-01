@@ -19,17 +19,9 @@ static bool get_server = false;
 static bool draw_headers = true;
 static uint16_t desc_count = 0;
 static uint16_t desc_count_readed = 0;
+static bool recon_match_all = true;
+static esp_bd_addr_t recon_target_bda = {0};
 char last_name[64] = "(unknown)";
-
-static void gattcmd_recon_gap_cb(esp_gap_ble_cb_event_t event,
-                                 esp_ble_gap_cb_param_t* param);
-static void gattcmd_recon_gattc_cb(esp_gattc_cb_event_t event,
-                                   esp_gatt_if_t gattc_if,
-                                   esp_ble_gattc_cb_param_t* param);
-static void gattcmd_recon_gattc_profile_event_handler(
-    esp_gattc_cb_event_t event,
-    esp_gatt_if_t gattc_if,
-    esp_ble_gattc_cb_param_t* param);
 
 static esp_ble_scan_params_t ble_scan_params = {
     .scan_type = BLE_SCAN_TYPE_ACTIVE,
@@ -50,6 +42,18 @@ struct gattc_profile_inst {
   esp_bd_addr_t remote_bda;
 };
 
+static void gattcmd_recon_gap_cb(esp_gap_ble_cb_event_t event,
+                                 esp_ble_gap_cb_param_t* param);
+static void gattcmd_recon_gattc_cb(esp_gattc_cb_event_t event,
+                                   esp_gatt_if_t gattc_if,
+                                   esp_ble_gattc_cb_param_t* param);
+static void gattcmd_recon_gattc_profile_event_handler(
+    esp_gattc_cb_event_t event,
+    esp_gatt_if_t gattc_if,
+    esp_ble_gattc_cb_param_t* param);
+const char* get_device_name(void);
+static bool parse_address_colon(const char* str, uint8_t addr[6]);
+
 static struct gattc_profile_inst enum_gl_profile_tab[GATTCMD_ENUM_PROFILE] = {
     [GATTCMD_ENUM_APP_ID] =
         {
@@ -59,8 +63,13 @@ static struct gattc_profile_inst enum_gl_profile_tab[GATTCMD_ENUM_PROFILE] = {
         },
 };
 
-const char* get_device_name() {
+const char* get_device_name(void) {
   return (last_name[0]) ? last_name : "(unknown)";
+}
+
+static bool parse_address_colon(const char* str, uint8_t addr[6]) {
+  return sscanf(str, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &addr[0], &addr[1],
+                &addr[2], &addr[3], &addr[4], &addr[5]) == 6;
 }
 
 static void get_char_properties(uint8_t properties,
@@ -103,7 +112,7 @@ static void gattcmd_recon_gattc_profile_event_handler(
       break;
     case ESP_GATTC_CONNECT_EVT: {
       ESP_LOGI(TAG, "Connected to device: " ESP_BD_ADDR_STR ", Name: %s",
-               ESP_BD_ADDR_HEX(p_data->connect.remote_bda), get_device_name());
+               ESP_BD_ADDR_HEX(p_data->connect.remote_bda), last_name);
       enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].conn_id =
           p_data->connect.conn_id;
       memcpy(enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].remote_bda,
@@ -357,6 +366,12 @@ static void gattcmd_recon_gap_cb(esp_gap_ble_cb_event_t event,
       esp_ble_gap_cb_param_t* scan_result = (esp_ble_gap_cb_param_t*) param;
       switch (scan_result->scan_rst.search_evt) {
         case ESP_GAP_SEARCH_INQ_RES_EVT:
+          if (!recon_match_all &&
+              memcmp(scan_result->scan_rst.bda, recon_target_bda,
+                     ESP_BD_ADDR_LEN) != 0) {
+            // If targeting a specific address, and this isn't it — skip
+            return;
+          }
           // Try complete name first
           adv_name = esp_ble_resolve_adv_data(scan_result->scan_rst.ble_adv,
                                               ESP_BLE_AD_TYPE_NAME_CMPL,
@@ -521,7 +536,19 @@ static void gattcmd_recon_gattc_cb(esp_gattc_cb_event_t event,
   } while (0);
 }
 
-void gattcmd_recon_begin() {
+void gattcmd_recon_begin(const char* bt_addr_str) {
+  if (bt_addr_str) {
+    if (!parse_address_colon(bt_addr_str, recon_target_bda)) {
+      ESP_LOGE(TAG, "Invalid BT address in recon_begin");
+      return;
+    }
+    recon_match_all = false;
+    ESP_LOGI(TAG, "Recon begin with filter: " ESP_BD_ADDR_STR,
+             ESP_BD_ADDR_HEX(recon_target_bda));
+  } else {
+    recon_match_all = true;
+    ESP_LOGI(TAG, "Recon begin: scanning all devices");
+  }
   // register the  callback function to the gap module
   esp_err_t ret = esp_ble_gap_register_callback(gattcmd_recon_gap_cb);
   if (ret) {

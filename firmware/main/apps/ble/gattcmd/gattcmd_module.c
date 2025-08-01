@@ -54,9 +54,9 @@ void gattcmd_begin(void) {
   }
 }
 
-void parse_address_colon(const char* str, uint8_t addr[6]) {
-  sscanf(str, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &addr[0], &addr[1], &addr[2],
-         &addr[3], &addr[4], &addr[5]);
+static bool parse_address_colon(const char* str, uint8_t addr[6]) {
+  return sscanf(str, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &addr[0], &addr[1],
+                &addr[2], &addr[3], &addr[4], &addr[5]) == 6;
 }
 
 void parse_address_raw(const char* str, uint8_t addr[6]) {
@@ -115,7 +115,7 @@ void gattcmd_module_scan_client() {
   gattcmd_scan_begin();
 }
 
-void gattcmd_module_recon() {
+void gattcmd_module_recon(const char* bt_addr) {
   if (initialized) {
     gattcmd_scan_stop();
     gattcmd_enum_stop();
@@ -125,7 +125,20 @@ void gattcmd_module_recon() {
     initialized = true;
     gattcmd_begin();
   }
-  gattcmd_recon_begin();
+  bool match_all = (bt_addr == NULL);
+  esp_bd_addr_t target_addr;
+
+  if (!match_all) {
+    if (!parse_address_colon(bt_addr, target_addr)) {
+      ESP_LOGE(GATTC_TAG, "Invalid BT address: %s", bt_addr);
+      return;
+    }
+    ESP_LOGI(GATTC_TAG, "Starting recon for specific device: " ESP_BD_ADDR_STR,
+             ESP_BD_ADDR_HEX(target_addr));
+  } else {
+    ESP_LOGI(GATTC_TAG, "Starting recon for all nearby devices");
+  }
+  gattcmd_recon_begin(bt_addr);
 }
 
 void gattcmd_module_stop_workers() {
