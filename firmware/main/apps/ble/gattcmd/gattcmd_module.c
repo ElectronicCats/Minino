@@ -130,4 +130,7 @@ void gattcmd_module_recon() {
 
 void gattcmd_module_stop_workers() {
   gattcmd_scan_stop();
+  gattcmd_recon_stop();
+  gattcmd_write_stop();
+  gattcmd_enum_stop();
 }
