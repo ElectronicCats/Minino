@@ -494,8 +494,7 @@ A command line for interect with Bluetooth Characteristics
 - `gattcmd_enum`: Enum the Characteristics from the device
 - `gattcmd_write`: Write a value in a GATT characteristic
 
-> This app is still under development, we don't test with more secure connection
-
+> This app is still under development, all the testing have been done with devices with no encription for gatt writing.
 
 ## Captive Portal new version
 The updated captive portal module enables the Minino device to function as a Wi-Fi Access Point (AP), allowing it to intercept client connections and present a fully customizable web interface. This update brings enhanced flexibility, user data handling, and configuration options, making it easier to create engaging and effective captive experiences.
