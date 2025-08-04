@@ -1,7 +1,9 @@
 #include <string.h>
+#include "esp_event.h"  // Añadido para manejar el bucle de eventos
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "esp_wifi.h"  // Añadido para funciones de desinicialización de WiFi
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -9,12 +11,11 @@
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "sd_card.h"
+#include "wardriving_common.h"
 #include "wardriving_module.h"
 #include "wardriving_screens_module.h"
 #include "wifi_controller.h"
 #include "wifi_scanner.h"
-
-#include "wardriving_common.h"
 
 #define FILE_NAME                   WARFI_DIR_NAME "/Warfi"
 #define CSV_FILE_SIZE               8192
@@ -34,8 +35,8 @@ typedef enum {
 } wardriving_module_state_t;
 
 typedef struct {
-  uint8_t mac[6];      // MAC (6 bytes)
-  uint32_t timestamp;  // last time seen
+  uint8_t mac[6];
+  uint32_t timestamp;
 } mac_entry_t;
 
 static const char* TAG = "wardriving_module";
@@ -51,7 +52,6 @@ char* csv_file_name = NULL;
 char* csv_file_buffer = NULL;
 bool csv_file_initialized = false;
 
-// MACs table
 mac_entry_t mac_table[MAX_MAC_TABLE_SIZE];
 uint16_t mac_table_count = 0;
 uint16_t mac_table_head = 0;
@@ -110,27 +110,24 @@ uint16_t get_frequency(uint8_t primary) {
   return 2412 + 5 * (primary - 1);
 }
 
-// MAC in list?
 bool is_mac_in_table(uint8_t* mac, uint32_t current_time) {
   for (uint16_t i = 0; i < mac_table_count; i++) {
     if (memcmp(mac_table[i].mac, mac, 6) == 0) {
       if (current_time - mac_table[i].timestamp < MAC_TIMEOUT_SEC) {
-        return true;  // MAC found
+        return true;
       } else {
-        // Update timestamp
         mac_table[i].timestamp = current_time;
-        return false;  // new MAC
+        return false;
       }
     }
   }
   return false;
 }
 
-// Update MAC in table
 void add_mac_to_table(uint8_t* mac, uint32_t current_time) {
   for (uint16_t i = 0; i < mac_table_count; i++) {
     if (memcmp(mac_table[i].mac, mac, 6) == 0) {
-      mac_table[i].timestamp = current_time;  // Update timestamp
+      mac_table[i].timestamp = current_time;
       return;
     }
   }
@@ -182,7 +179,7 @@ static void wardriving_module_save_to_file(gps_t* gps) {
   if (gps->sats_in_use == 0) {
     static uint32_t no_signal_counter = 0;
     no_signal_counter++;
-    if (no_signal_counter >= 10) {  // No signal message
+    if (no_signal_counter >= 10) {
       wardriving_screens_module_no_gps_signal();
       no_signal_counter = 0;
     }
@@ -231,19 +228,6 @@ static void wardriving_module_save_to_file(gps_t* gps) {
     if (mac_address_str == NULL) {
       continue;
     }
-
-    char sanitized_ssid[33];
-    strncpy(sanitized_ssid, (const char*) ap_records->records[i].ssid, 32);
-    sanitized_ssid[32] = '\0';
-    char *src = sanitized_ssid, *dst = sanitized_ssid;
-    while (*src) {
-      if (*src != ',') {
-        *dst++ = *src;
-      }
-      src++;
-    }
-    *dst = '\0';
-
     char* full_date_time = get_full_date_time(gps);
     if (full_date_time == NULL) {
       free(mac_address_str);
@@ -258,7 +242,7 @@ static void wardriving_module_save_to_file(gps_t* gps) {
 
     snprintf(csv_line_buffer, CSV_LINE_SIZE,
              "%s,%s,%s,%s,%d,%u,%d,%f,%f,%f,%f,%s,%s,%s\n", mac_address_str,
-             sanitized_ssid, auth_mode_str, full_date_time,
+             ap_records->records[i].ssid, auth_mode_str, full_date_time,
              ap_records->records[i].primary,
              get_frequency(ap_records->records[i].primary),
              ap_records->records[i].rssi, gps->latitude, gps->longitude,
@@ -351,7 +335,27 @@ void wardriving_module_begin() {
 
 void wardriving_module_end() {
   ESP_LOGI(TAG, "Wardriving module end");
-  esp_err_t err = sd_card_unmount();
+
+  // Desinicializar el bucle de eventos si existe
+  esp_err_t err = esp_event_loop_delete_default();
+  if (err == ESP_OK) {
+    ESP_LOGI(TAG, "Default event loop deleted successfully");
+  } else if (err != ESP_ERR_INVALID_STATE) {  // Ignorar si no existe
+    ESP_LOGE(TAG, "Failed to delete default event loop: %s",
+             esp_err_to_name(err));
+  }
+
+  // Desinicializar el adaptador TCP/IP
+  err = esp_netif_deinit();
+  if (err == ESP_OK) {
+    ESP_LOGI(TAG, "TCP/IP adapter deinitialized successfully");
+  } else if (err != ESP_ERR_NOT_SUPPORTED) {  // Ignorar si no está soportado
+    ESP_LOGE(TAG, "Failed to deinitialize TCP/IP adapter: %s",
+             esp_err_to_name(err));
+  }
+
+  // Desmontar la tarjeta SD
+  err = sd_card_unmount();
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Failed to unmount SD card: %s", esp_err_to_name(err));
   } else {
@@ -402,6 +406,8 @@ void wardriving_module_stop_scan() {
   wardriving_module_state = WARDRIVING_MODULE_STATE_STOPPED;
   gps_module_stop_read();
   gps_module_unregister_cb();
+
+  // Desinicializar el controlador WiFi
   wifi_driver_deinit();
 
   if (wardriving_module_scan_task_handle != NULL) {
@@ -427,11 +433,7 @@ void wardriving_module_stop_scan() {
     }
   }
 
-  csv_file_initialized = false;
-  csv_lines = 0;
-  wifi_scanned_packets = 0;
-  mac_table_count = 0;
-  mac_table_head = 0;
+  wardriving_module_end();
 }
 
 void wardriving_module_keyboard_cb(uint8_t button_name, uint8_t button_event) {
