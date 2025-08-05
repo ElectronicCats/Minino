@@ -573,6 +573,10 @@ static uint16_t captive_module_get_sd_redirect() {
     if (ent->d_name[0] == '.') {
       continue;
     }
+    const char* ext = strrchr(ent->d_name, '.');
+    if (!ext || strcmp(ext, ".html") != 0) {
+      continue;
+    }
     redirect_list.ent[redirect_list.count] =
         (char*) malloc(strlen(ent->d_name));
     if (!redirect_list.ent[redirect_list.count]) {
@@ -612,6 +616,10 @@ static uint16_t captive_module_get_sd_portals() {
   portals_list.count = 0;
   while ((ent = readdir(dir)) != NULL) {
     if (ent->d_name[0] == '.') {
+      continue;
+    }
+    const char* ext = strrchr(ent->d_name, '.');
+    if (!ext || strcmp(ext, ".html") != 0) {
       continue;
     }
     portals_list.ent[portals_list.count] = (char*) malloc(strlen(ent->d_name));
