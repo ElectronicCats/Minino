@@ -353,8 +353,7 @@ esp_err_t sd_card_append_to_file(const char* path, char* data) {
     return ESP_FAIL;
   }
 
-  printf("Path: %s\n", path);
-  char full_path[23];
+  char full_path[64];
   sprintf(full_path, "%s/%s", MOUNT_POINT, path);
 
   ESP_LOGI(TAG, "Opening file a %s", full_path);

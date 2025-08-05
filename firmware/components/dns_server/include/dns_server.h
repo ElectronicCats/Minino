@@ -14,8 +14,6 @@ extern "C" {
   #define DNS_SERVER_MAX_ITEMS 1
 #endif
 
-#include "esp_netif_ip_addr.h"
-
 #define DNS_SERVER_CONFIG_SINGLE(queried_name, netif_key) \
   {                                                       \
     .num_of_entries = 1, .item = {                        \

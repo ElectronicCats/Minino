@@ -1,8 +1,38 @@
 #include "gps_screens.h"
+#include "esp_log.h"
+#include "sd_card.h"
 
 #include "general_screens.h"
 #include "menus_module.h"
 #include "oled_screen.h"
+
+static char* gps_route_file_name = NULL;
+static char* gps_route_file_buffer = NULL;
+static uint16_t gps_route_lines = 0;
+static bool gps_route_recording = false;
+static uint16_t gps_route_points_saved = 0;
+
+static const char* TAG = "route";
+
+#define GPS_ROUTE_DIR_NAME          "/GPS_Route"
+#define GPS_ROUTE_FILE_SIZE         8192
+#define GPS_ROUTE_CSV_HEADER_LINES  1
+#define GPS_ROUTE_MAX_CSV_LINES     20  // Reducir para escribir más frecuentemente
+#define GPS_ROUTE_SAVE_INTERVAL_SEC 5
+const char* gps_route_gpx_header =
+    "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+    "<gpx version=\"1.1\" creator=\"MININO-GPS\">\n"
+    "  <metadata>\n"
+    "    <name>Minino Trail</name>\n"
+    "    <time>%s</time>\n"
+    "  </metadata>\n"
+    "  <trk>\n"
+    "    <name>Minino Track</name>\n"
+    "    <trkseg>\n";
+const char* gps_route_gpx_footer =
+    "    </trkseg>\n"
+    "  </trk>\n"
+    "</gpx>\n";
 
 char* gps_help[] = {
     "Verify your",    "time zone if", "the time is not",
@@ -51,6 +81,187 @@ static void gps_screens_update_location(gps_t* gps) {
   free(str);
 }
 
+static void gps_screens_save_location(gps_t* gps) {
+  static uint32_t counter = 0;
+  counter++;
+
+  if (gps == NULL || gps->sats_in_use == 0) {
+    oled_screen_clear();
+    oled_screen_display_text_center("No GPS Signal", 3, OLED_DISPLAY_NORMAL);
+    oled_screen_display_show();
+    return;
+  }
+
+  if (!gps_route_recording) {
+    gps_route_recording = true;
+    gps_route_lines = GPS_ROUTE_CSV_HEADER_LINES;
+    gps_route_points_saved = 0;
+
+    esp_err_t err = sd_card_mount();
+    if (err != ESP_OK) {
+      oled_screen_clear();
+      oled_screen_display_text_center("No SD Card", 2, OLED_DISPLAY_NORMAL);
+      oled_screen_display_text_center("detected!", 3, OLED_DISPLAY_NORMAL);
+      oled_screen_display_show();
+      gps_route_recording = false;
+      return;
+    }
+
+    err = sd_card_create_dir(GPS_ROUTE_DIR_NAME);
+    if (err != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to create %s directory: %s", GPS_ROUTE_DIR_NAME,
+               esp_err_to_name(err));
+      sd_card_unmount();
+      gps_route_recording = false;
+      return;
+    }
+
+    gps_route_file_name = malloc(strlen(GPS_ROUTE_DIR_NAME) + 30);
+    if (gps_route_file_name == NULL) {
+      ESP_LOGE(TAG, "Failed to allocate memory for gps_route_file_name");
+      sd_card_unmount();
+      gps_route_recording = false;
+      return;
+    }
+
+    gps_route_file_buffer = malloc(GPS_ROUTE_FILE_SIZE);
+    if (gps_route_file_buffer == NULL) {
+      ESP_LOGE(TAG, "Failed to allocate memory for gps_route_file_buffer");
+      free(gps_route_file_name);
+      sd_card_unmount();
+      gps_route_recording = false;
+      return;
+    }
+
+    char* full_date_time = get_full_date_time(gps);
+    if (full_date_time == NULL) {
+      ESP_LOGE(TAG, "Failed to get full date time");
+      free(gps_route_file_name);
+      free(gps_route_file_buffer);
+      sd_card_unmount();
+      gps_route_recording = false;
+      return;
+    }
+
+    snprintf(gps_route_file_name, strlen(GPS_ROUTE_DIR_NAME) + 30,
+             "%s/Route_%s.gpx", GPS_ROUTE_DIR_NAME, full_date_time);
+    for (int i = 0; i < strlen(gps_route_file_name); i++) {
+      if (gps_route_file_name[i] == ' ')
+        gps_route_file_name[i] = '_';
+      if (gps_route_file_name[i] == ':')
+        gps_route_file_name[i] = '-';
+    }
+
+    char iso_time[32];
+    snprintf(iso_time, sizeof(iso_time), "%04d-%02d-%02dT%02d:%02d:%02dZ",
+             gps->date.year, gps->date.month, gps->date.day, gps->tim.hour,
+             gps->tim.minute, gps->tim.second);
+
+    snprintf(gps_route_file_buffer, GPS_ROUTE_FILE_SIZE, gps_route_gpx_header,
+             iso_time);
+    esp_err_t err_header =
+        sd_card_append_to_file(gps_route_file_name, gps_route_file_buffer);
+    if (err_header != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to write GPX header: %s",
+               esp_err_to_name(err_header));
+      free(gps_route_file_name);
+      free(gps_route_file_buffer);
+      sd_card_unmount();
+      gps_route_recording = false;
+      return;
+    }
+    gps_route_file_buffer[0] =
+        '\0';  // Limpiar buffer después de escribir el encabezado
+    free(full_date_time);
+  }
+
+  char* str = (char*) malloc(20);
+  if (str == NULL) {
+    ESP_LOGE(TAG, "Failed to allocate memory for display string");
+    return;
+  }
+  oled_screen_clear_buffer();
+  snprintf(str, 20, "Points: %u", gps_route_points_saved);
+  oled_screen_display_text(str, 0, 0, OLED_DISPLAY_NORMAL);
+  snprintf(str, 20, "Lat: %.05f", gps->latitude);
+  oled_screen_display_text(str, 0, 2, OLED_DISPLAY_NORMAL);
+  snprintf(str, 20, "Lon: %.05f", gps->longitude);
+  oled_screen_display_text(str, 0, 3, OLED_DISPLAY_NORMAL);
+  oled_screen_display_show();
+  free(str);
+
+  if (counter % GPS_ROUTE_SAVE_INTERVAL_SEC == 0) {
+    if (gps->sats_in_use == 0) {
+      oled_screen_clear();
+      oled_screen_display_text_center("No GPS Signal", 3, OLED_DISPLAY_NORMAL);
+      oled_screen_display_show();
+      return;
+    }
+
+    char* gpx_line_buffer = malloc(256);
+    if (gpx_line_buffer == NULL) {
+      ESP_LOGE(TAG, "Failed to allocate memory for gpx_line_buffer");
+      return;
+    }
+
+    char iso_time[32];
+    snprintf(iso_time, sizeof(iso_time), "%04d-%02d-%02dT%02d:%02d:%02dZ",
+             gps->date.year, gps->date.month, gps->date.day, gps->tim.hour,
+             gps->tim.minute, gps->tim.second);
+
+    snprintf(gpx_line_buffer, 256,
+             "      <trkpt lat=\"%.05f\" lon=\"%.05f\">\n"
+             "        <ele>%.02f</ele>\n"
+             "        <time>%s</time>\n"
+             "      </trkpt>\n",
+             gps->latitude, gps->longitude, gps->altitude, iso_time);
+
+    if (strlen(gps_route_file_buffer) + strlen(gpx_line_buffer) <
+        GPS_ROUTE_FILE_SIZE) {
+      strcat(gps_route_file_buffer, gpx_line_buffer);
+      gps_route_lines++;
+      gps_route_points_saved++;
+    } else {
+      ESP_LOGW(TAG, "Buffer full, appending to SD");
+      esp_err_t err =
+          sd_card_append_to_file(gps_route_file_name, gps_route_file_buffer);
+      if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to append to SD: %s", esp_err_to_name(err));
+      }
+      gps_route_file_buffer[0] = '\0';  // Limpiar buffer
+      gps_route_lines = GPS_ROUTE_CSV_HEADER_LINES;
+    }
+    free(gpx_line_buffer);
+  }
+}
+
+void gps_screens_stop_route_recording() {
+  if (gps_route_recording) {
+    // Escribir cualquier punto pendiente en el buffer
+    if (gps_route_file_buffer[0] != '\0') {
+      esp_err_t err =
+          sd_card_append_to_file(gps_route_file_name, gps_route_file_buffer);
+      if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to append final points: %s",
+                 esp_err_to_name(err));
+      }
+    }
+    // Escribir el pie de página GPX
+    esp_err_t err =
+        sd_card_append_to_file(gps_route_file_name, gps_route_gpx_footer);
+    if (err != ESP_OK) {
+      ESP_LOGE(TAG, "Failed to append GPX footer: %s", esp_err_to_name(err));
+    }
+    free(gps_route_file_buffer);
+    free(gps_route_file_name);
+    sd_card_unmount();
+    gps_route_recording = false;
+    gps_route_points_saved = 0;
+    gps_route_lines = 0;
+    ESP_LOGI(TAG, "Route recording stopped, SD card unmounted");
+  }
+}
+
 static void gps_screens_update_speed(gps_t* gps) {
   char* str = (char*) malloc(20);
   oled_screen_clear_buffer();
@@ -79,6 +290,9 @@ void gps_screens_update_handler(gps_t* gps) {
       break;
     case MENU_GPS_SPEED:
       gps_screens_update_speed(gps);
+      break;
+    case MENU_GPS_ROUTE:
+      gps_screens_save_location(gps);
       break;
     default:
       return;

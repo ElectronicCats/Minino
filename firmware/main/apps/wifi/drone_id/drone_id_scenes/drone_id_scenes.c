@@ -1,5 +1,4 @@
 #include "drone_id_scenes.h"
-
 #include "drone_id.h"
 #include "drone_id_preferences.h"
 #include "general_knob.h"

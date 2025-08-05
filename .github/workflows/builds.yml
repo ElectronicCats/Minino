@@ -21,6 +21,15 @@ jobs:
           submodules: 'recursive'
           fetch-tags: true
           fetch-depth: 0
+      
+      - name: Extract tag version (without 'v' prefix)
+        id: extract_tag_wv
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+
+      - name: Update Kconfig.projbuild version
+        run: |
+          FILE=firmware/components/minino_config/Kconfig.projbuild
+          sed -i "s/^default \".*\"/default \"${{ env.TAG_NAME }}\"/" $FILE
 
       - name: Extract tag version
         id: extract_tag
