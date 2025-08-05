@@ -687,7 +687,7 @@ static void captive_module_portal_selector_handler(uint8_t option) {
 }
 
 static void captive_module_sd_show_portals() {
-  uint16_t captive_module_get_sd_portals();
+  captive_module_get_sd_portals();
   if (portals_list.count < CAPTIVE_PORTAL_LIMIT_PORTALS &&
       portals_list.count == 0) {
     portals_list.ent[portals_list.count] = strdup(CAPTIVE_PORTAL_DEFAULT_NAME);
@@ -708,7 +708,7 @@ static void captive_module_sd_show_portals() {
 }
 
 static void captive_module_sd_show_redirect() {
-  uint16_t captive_module_get_sd_redirect();
+  captive_module_get_sd_redirect();
   if (redirect_list.count < CAPTIVE_PORTAL_LIMIT_PORTALS &&
       redirect_list.count == 0) {
     redirect_list.ent[redirect_list.count] =
@@ -860,6 +860,7 @@ static void captive_module_main_menu_handler(uint8_t option) {
       break;
     case REDIRECT:
       captive_module_sd_show_redirect();
+      break;
     case MODE:
       captive_module_show_mode_selector();
       break;
