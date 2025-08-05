@@ -53,10 +53,14 @@ static void transfer_state(uint8_t* status) {
 }
 
 static void transfer_result(bool result) {
-  oled_screen_clear_line(0, 5, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text(" File Transfer  ", 0, 6, OLED_DISPLAY_NORMAL);
+  oled_screen_clear();
+  oled_screen_clear_line(0, 3, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text(" File Transfer  ", 0, 4, OLED_DISPLAY_NORMAL);
   oled_screen_display_text(result ? "     Succed     " : "     Failed     ", 0,
-                           7, OLED_DISPLAY_NORMAL);
+                           5, OLED_DISPLAY_NORMAL);
+
+  vTaskDelay(1000 / portTICK_PERIOD_MS);
+  show_ready();
 }
 
 void web_file_browse_show_event_handler(uint8_t event, void* context) {

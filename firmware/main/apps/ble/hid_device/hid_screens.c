@@ -44,56 +44,56 @@ void hid_module_display_notify_volumen_up() {
   led_control_run_effect(led_control_pulse_led_right);
   genera_screen_display_notify_information("Notify", "Volumen Up");
   vTaskDelay(500 / portTICK_PERIOD_MS);
-  general_screen_display_menu(hid_current_item);
+  // general_screen_display_menu(hid_current_item);
 }
 
 void hid_module_display_notify_volumen_down() {
   led_control_run_effect(led_control_pulse_led_left);
   genera_screen_display_notify_information("Notify", "Volumen Down");
   vTaskDelay(500 / portTICK_PERIOD_MS);
-  general_screen_display_menu(hid_current_item);
+  // general_screen_display_menu(hid_current_item);
 }
 
 void hid_module_display_notify_play_pause() {
   led_control_run_effect(led_control_ble_tracking);
   genera_screen_display_notify_information("Notify", "Play");
   vTaskDelay(500 / portTICK_PERIOD_MS);
-  general_screen_display_menu(hid_current_item);
+  // general_screen_display_menu(hid_current_item);
 }
 
 void hid_module_display_notify_pause() {
   led_control_run_effect(led_control_pulse_leds);
   genera_screen_display_notify_information("Notify", "Pause");
   vTaskDelay(500 / portTICK_PERIOD_MS);
-  general_screen_display_menu(hid_current_item);
+  // general_screen_display_menu(hid_current_item);
 }
 
 void hid_module_display_notify_stop() {
   led_control_run_effect(led_control_pulse_leds);
   genera_screen_display_notify_information("Notify", "Stop");
   vTaskDelay(500 / portTICK_PERIOD_MS);
-  general_screen_display_menu(hid_current_item);
+  // general_screen_display_menu(hid_current_item);
 }
 
 void hid_module_display_notify_mute() {
   led_control_run_effect(led_control_pulse_leds);
   genera_screen_display_notify_information("Notify", "Mute");
   vTaskDelay(500 / portTICK_PERIOD_MS);
-  general_screen_display_menu(hid_current_item);
+  // general_screen_display_menu(hid_current_item);
 }
 
 void hid_module_display_notify_next_track() {
   led_control_run_effect(led_control_pulse_led_right);
   genera_screen_display_notify_information("Notify", "Next Track");
   vTaskDelay(500 / portTICK_PERIOD_MS);
-  general_screen_display_menu(hid_current_item);
+  // general_screen_display_menu(hid_current_item);
 }
 
 void hid_module_display_notify_prev_track() {
   led_control_run_effect(led_control_pulse_led_left);
   genera_screen_display_notify_information("Notify", "Previous Track");
   vTaskDelay(500 / portTICK_PERIOD_MS);
-  general_screen_display_menu(hid_current_item);
+  // general_screen_display_menu(hid_current_item);
 }
 
 void hid_module_display_device_pairing() {

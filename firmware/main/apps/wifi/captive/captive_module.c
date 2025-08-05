@@ -10,6 +10,8 @@
 #include "esp_netif.h"
 #include "esp_wifi.h"
 #include "files_ops.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "general_animations.h"
 #include "lwip/inet.h"
 #include "nvs_flash.h"
@@ -25,6 +27,8 @@
 
 extern const char root_start[] asm("_binary_root_html_start");
 extern const char root_end[] asm("_binary_root_html_end");
+extern const char redirect_start[] asm("_binary_redirect_html_start");
+extern const char redirect_end[] asm("_binary_redirect_html_end");
 
 static const char* TAG = "captive_portal";
 
@@ -36,9 +40,11 @@ static const char* config_dump_menu[] = {"Dump to SD", "No dump"};
 static uint16_t last_index_selected = 0;
 static httpd_handle_t server = NULL;
 static uint16_t retries = 0;
+static char* wifi_ap_name[CAPTIVE_PORTAL_MAX_NAME];
 
 typedef enum {
   PORTALS,
+  REDIRECT,
   MODE,
   PREFERENCE,
   CHANNEL,
@@ -51,6 +57,7 @@ typedef enum { STANDALONE, REPLICATE } mode_types_t;
 typedef struct {
   mode_types_t mode;
   char* portal[48];
+  char* redirect[48];
 } captive_context_t;
 
 typedef struct {
@@ -66,6 +73,7 @@ typedef struct {
 } captive_files_t;
 
 static captive_files_t portals_list = {0};
+static captive_files_t redirect_list = {0};
 static captive_context_t captive_context = {0};
 static wifi_scanner_ap_records_t* ap_records;
 static uint8_t selected_record = 0;
@@ -146,6 +154,14 @@ static void captive_module_free_user_context(void) {
   }
 }
 
+static void captive_module_free_redirect_list(void) {
+  for (int i = 0; i < redirect_list.count; i++) {
+    free(redirect_list.ent[i]);
+    redirect_list.ent[i] = NULL;
+  }
+  redirect_list.count = 0;
+}
+
 static void captive_module_free_portals_list(void) {
   for (int i = 0; i < portals_list.count; i++) {
     free(portals_list.ent[i]);
@@ -165,6 +181,15 @@ static void wifi_init_softap(void) {
              .authmode = WIFI_AUTH_WPA_WPA2_PSK},
   };
 
+  uint8_t esp_mac[6] = {0};
+  esp_read_mac(esp_mac, ESP_MAC_WIFI_STA);
+  char* default_name[20];
+  sprintf(default_name, "%s_%02X:%02X", CONFIG_WIFI_AP_NAME, esp_mac[4],
+          esp_mac[5]);
+  strncpy((char*) wifi_config.ap.ssid, default_name,
+          sizeof(wifi_config.ap.ssid));
+  wifi_config.ap.ssid_len = strlen(default_name);
+
   if (preferences_get_int(CAPTIVE_PORTAL_MODE_FS_KEY, 0) == 1) {
     char* wifi_ssid =
         malloc(strlen((char*) ap_records->records[selected_record].ssid) + 1);
@@ -179,6 +204,25 @@ static void wifi_init_softap(void) {
     wifi_config.ap.ssid_len = strlen(wifi_ssid);
     free(wifi_ssid);
   }
+
+  char ap_name[CAPTIVE_PORTAL_MAX_NAME];
+  esp_err_t err = preferences_get_string(CAPTIVE_PORTAL_FS_NAME, ap_name,
+                                         CAPTIVE_PORTAL_MAX_NAME);
+  if (err == ESP_OK) {
+    ESP_LOGW("HERE", "New name: %s", ap_name);
+    char* wifi_name = malloc(strlen((char*) ap_name + 1));
+    if (wifi_name == NULL) {
+      ESP_LOGE(TAG, "Failed to allocate memory for wifi_ssid");
+    } else {
+      strcpy(wifi_name, (char*) ap_name);
+      strncpy((char*) wifi_config.ap.ssid, wifi_name,
+              sizeof(wifi_config.ap.ssid));
+      wifi_config.ap.ssid_len = strlen(wifi_name);
+      free(wifi_name);
+    }
+  }
+
+  strcpy(wifi_ap_name, (char*) wifi_config.ap.ssid);
 
   if (strlen(MININO_CAPTIVE_DEFAULT_PASS) == 0) {
     wifi_config.ap.authmode = WIFI_AUTH_OPEN;
@@ -203,6 +247,11 @@ static void wifi_init_softap(void) {
 static void captive_module_show_default_portal(httpd_req_t* req) {
   const uint32_t root_len = root_end - root_start;
   httpd_resp_send(req, root_start, root_len);
+}
+
+static void captive_module_show_default_redirect(httpd_req_t* req) {
+  const uint32_t root_len = redirect_end - redirect_start;
+  httpd_resp_send(req, redirect_start, root_len);
 }
 
 // HTTP GET Handler
@@ -370,8 +419,8 @@ static esp_err_t captive_portal_validate_input(httpd_req_t* req) {
     }
   }
 
-  httpd_resp_set_status(req, "200 Done");
-  httpd_resp_set_hdr(req, "Location", "/");
+  httpd_resp_set_status(req, "302 Temporary Redirect");
+  httpd_resp_set_hdr(req, "Location", "/redirect");
   httpd_resp_send(req,
                   "Thanks for you data, we will send you marketing campaing :)",
                   HTTPD_RESP_USE_STRLEN);
@@ -397,6 +446,19 @@ static esp_err_t captive_portal_detect_handler(httpd_req_t* req) {
   return http_404_error_handler(req, HTTPD_404_NOT_FOUND);
 }
 
+static esp_err_t captive_portal_redirect_handler(httpd_req_t* req) {
+  esp_err_t err = ESP_OK;
+
+  httpd_resp_set_type(req, "text/html");
+  captive_module_show_default_redirect(req);
+
+  vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+  httpd_resp_set_status(req, "302 Temporary Redirect");
+  httpd_resp_set_hdr(req, "Location", "/");
+  return err;
+}
+
 static const httpd_uri_t root = {.uri = "/",
                                  .method = HTTP_GET,
                                  .handler = captive_portal_root_get_handler};
@@ -409,6 +471,11 @@ static const httpd_uri_t detect = {.uri = "/*",
                                    .method = HTTP_GET,
                                    .handler = captive_portal_detect_handler};
 
+static const httpd_uri_t redirect = {
+    .uri = "/redirect",
+    .method = HTTP_GET,
+    .handler = captive_portal_redirect_handler};
+
 static httpd_handle_t start_webserver(void) {
   httpd_handle_t server = NULL;
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -420,6 +487,7 @@ static httpd_handle_t start_webserver(void) {
     httpd_register_uri_handler(server, &root);
     httpd_register_uri_handler(server, &get_creds);
     httpd_register_uri_handler(server, &detect);
+    httpd_register_uri_handler(server, &redirect);
     httpd_register_err_handler(server, HTTPD_404_NOT_FOUND,
                                http_404_error_handler);
   }
@@ -480,7 +548,51 @@ static void captive_module_wifi_begin() {
   }
 }
 
-static uint16_t captive_module_get_sd_items() {
+static uint16_t captive_module_get_sd_redirect() {
+  if (sd_card_is_not_mounted()) {
+    return 0;
+  }
+
+  char* path = (char*) malloc(CAPTIVE_PORTAL_MAX_DEFAULT_LEN);
+  snprintf(path, CAPTIVE_PORTAL_MAX_DEFAULT_LEN, "%s/%s", SD_CARD_PATH,
+           CAPTIVE_PORTAL_REDIRECT_PATH_NAME);
+  DIR* dir;
+  dir = opendir(path);
+  if (dir == NULL) {
+    ESP_LOGE("CAPTIVE", "ERROR opening the SD card");
+    free(path);
+    return 0;
+  }
+
+  captive_module_free_redirect_list();
+
+  struct dirent* ent;
+  rewinddir(dir);
+  redirect_list.count = 0;
+  while ((ent = readdir(dir)) != NULL) {
+    if (ent->d_name[0] == '.') {
+      continue;
+    }
+    const char* ext = strrchr(ent->d_name, '.');
+    if (!ext || strcmp(ext, ".html") != 0) {
+      continue;
+    }
+    redirect_list.ent[redirect_list.count] =
+        (char*) malloc(strlen(ent->d_name));
+    if (!redirect_list.ent[redirect_list.count]) {
+      ESP_LOGE("CAPTIVE", "Failed to allocate memory for dirent name");
+      continue;
+    }
+    strcpy(redirect_list.ent[redirect_list.count], ent->d_name);
+    redirect_list.count++;
+  }
+
+  free(path);
+  closedir(dir);
+  return redirect_list.count;
+}
+
+static uint16_t captive_module_get_sd_portals() {
   esp_err_t err;
   if (sd_card_is_not_mounted()) {
     return 0;
@@ -504,6 +616,10 @@ static uint16_t captive_module_get_sd_items() {
   portals_list.count = 0;
   while ((ent = readdir(dir)) != NULL) {
     if (ent->d_name[0] == '.') {
+      continue;
+    }
+    const char* ext = strrchr(ent->d_name, '.');
+    if (!ext || strcmp(ext, ".html") != 0) {
       continue;
     }
     portals_list.ent[portals_list.count] = (char*) malloc(strlen(ent->d_name));
@@ -559,20 +675,27 @@ static void captive_module_show_running() {
           (char*) captive_context.portal);
 
   general_notification_ctx_t notification = {0};
-  notification.head = "Captive Portal";
+  notification.head = (char*) wifi_ap_name;
   notification.body = body;
   notification.on_exit = captive_module_disable_wifi;
   general_notification_handler(notification);
 }
 
-static void captive_module_selector_handler(uint8_t option) {
+static void captive_module_redirect_selector_handler(uint8_t option) {
+  preferences_put_string(CAPTIVE_PORTAL_REDIRECT_FS_KEY,
+                         redirect_list.ent[option]);
+  sprintf(captive_context.redirect, redirect_list.ent[option]);
+  captive_module_main();
+}
+
+static void captive_module_portal_selector_handler(uint8_t option) {
   preferences_put_string(CAPTIVE_PORTAL_FS_KEY, portals_list.ent[option]);
   sprintf(captive_context.portal, portals_list.ent[option]);
   captive_module_main();
 }
 
-static void captive_module_sd_show_items() {
-  captive_module_get_sd_items();
+static void captive_module_sd_show_portals() {
+  captive_module_get_sd_portals();
   if (portals_list.count < CAPTIVE_PORTAL_LIMIT_PORTALS &&
       portals_list.count == 0) {
     portals_list.ent[portals_list.count] = strdup(CAPTIVE_PORTAL_DEFAULT_NAME);
@@ -586,7 +709,29 @@ static void captive_module_sd_show_items() {
   general_submenu_menu_t portals = {0};
   portals.options = (char**) portals_list.ent;
   portals.options_count = portals_list.count;
-  portals.select_cb = captive_module_selector_handler;
+  portals.select_cb = captive_module_portal_selector_handler;
+  portals.selected_option = 0;
+  portals.exit_cb = captive_module_main;
+  general_submenu(portals);
+}
+
+static void captive_module_sd_show_redirect() {
+  captive_module_get_sd_redirect();
+  if (redirect_list.count < CAPTIVE_PORTAL_LIMIT_PORTALS &&
+      redirect_list.count == 0) {
+    redirect_list.ent[redirect_list.count] =
+        strdup(CAPTIVE_PORTAL_REDIRECT_DEFAULT_NAME);
+    if (redirect_list.ent[redirect_list.count]) {
+      redirect_list.count++;
+    } else {
+      ESP_LOGE("CAPTIVE", "Failed to allocate memory for default redirect");
+    }
+  }
+
+  general_submenu_menu_t portals = {0};
+  portals.options = (char**) redirect_list.ent;
+  portals.options_count = redirect_list.count;
+  portals.select_cb = captive_module_redirect_selector_handler;
   portals.selected_option = 0;
   portals.exit_cb = captive_module_main;
   general_submenu(portals);
@@ -719,7 +864,10 @@ static void captive_module_main_menu_handler(uint8_t option) {
   last_index_selected = option;
   switch (option) {
     case PORTALS:
-      captive_module_sd_show_items();
+      captive_module_sd_show_portals();
+      break;
+    case REDIRECT:
+      captive_module_sd_show_redirect();
       break;
     case MODE:
       captive_module_show_mode_selector();
@@ -755,6 +903,10 @@ static void exit_main() {
     sd_card_unmount();
   }
   menus_module_restart();
+}
+
+void captive_module_change_ap_name(char* name) {
+  preferences_put_string(CAPTIVE_PORTAL_FS_NAME, name);
 }
 
 void captive_module_main(void) {

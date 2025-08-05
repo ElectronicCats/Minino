@@ -410,6 +410,11 @@ static void gattcmd_enum_gattc_cb(esp_gattc_cb_event_t event,
   } while (0);
 }
 
+static void parse_address_colon(const char* str, uint8_t addr[6]) {
+  sscanf(str, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &addr[0], &addr[1], &addr[2],
+         &addr[3], &addr[4], &addr[5]);
+}
+
 void gattcmd_enum_begin(char* saddress) {
   parse_address_colon(saddress, target_bda);
   // register the  callback function to the gap module

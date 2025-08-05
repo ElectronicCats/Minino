@@ -13,7 +13,7 @@ static void hid_module_cb_connection_handler(bool connection);
 static void hid_module_display_action_menu();
 
 static void hid_module_reset_menu() {
-  current_item = 0;
+  // current_item = 0;
   hid_module_register_menu(GENERAL_TREE_APP_MENU);
   hid_module_display_menu(current_item);
   menus_module_set_app_state(true, hid_module_cb_event);
@@ -70,7 +70,14 @@ static void hid_device_selection(uint8_t selection) {
     default:
       break;
   }
-  hid_module_display_action_menu();
+
+  general_submenu_menu_t hid_menu_filter = {0};
+  hid_menu_filter.options = hid_device_items;
+  hid_menu_filter.options_count = HID_DEVICE_COUNT;
+  hid_menu_filter.select_cb = hid_device_selection;
+  hid_menu_filter.exit_cb = hid_module_reset_menu;
+  hid_menu_filter.selected_option = selection;
+  general_submenu(hid_menu_filter);
 }
 
 static void hid_module_display_action_menu() {
