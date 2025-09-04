@@ -48,10 +48,46 @@ void gps_screens_show_help() {
   general_screen_display_scrolling_text_handler(menus_module_exit_app);
 }
 
+void gps_screen_running_test(void) {
+  oled_screen_clear_buffer();
+  oled_screen_display_text_center("Running", 0, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("TEST", 1, OLED_DISPLAY_NORMAL);
+  oled_screen_display_show();
+}
+
+static void gps_screens_test(gps_t* gps) {
+  char* str = (char*) malloc(20);
+  char* str2 = (char*) malloc(20);
+  oled_screen_clear_buffer();
+  uint8_t sats = gps_module_get_signal_strength(gps);
+  if (gps->sats_in_use == 0) {
+    sprintf(str, "GPS OK");
+    sprintf(str2, "  ");
+  } else {
+    sprintf(str, "Signal: %s   ", gps_module_get_signal_strength(gps));
+    sprintf(str2, "Sats: %d", gps->sats_in_use);
+  }
+
+  oled_screen_display_text(str, 0, 0, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("UTC Date-Time", 1, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text(str2, 0, 2, OLED_DISPLAY_NORMAL);
+
+  sprintf(str, "Date: %d/%02d/%02d", gps->date.year, gps->date.month,
+          gps->date.day);
+  oled_screen_display_text(str, 0, 3, OLED_DISPLAY_NORMAL);
+  sprintf(str, "Time: %02d:%02d:%02d", gps->tim.hour, gps->tim.minute,
+          gps->tim.second);
+  oled_screen_display_text(str, 0, 4, OLED_DISPLAY_NORMAL);
+  oled_screen_display_show();
+  free(str);
+  free(str2);
+}
+
 static void gps_screens_update_date_and_time(gps_t* gps) {
   char* str = (char*) malloc(20);
   oled_screen_clear_buffer();
   sprintf(str, "Signal: %s   ", gps_module_get_signal_strength(gps));
+  oled_screen_display_text_center("UTC Date-Time", 0, OLED_DISPLAY_NORMAL);
   oled_screen_display_text(str, 0, 0, OLED_DISPLAY_NORMAL);
   sprintf(str, "Date: %d/%02d/%02d", gps->date.year, gps->date.month,
           gps->date.day);
@@ -293,6 +329,9 @@ void gps_screens_update_handler(gps_t* gps) {
       break;
     case MENU_GPS_ROUTE:
       gps_screens_save_location(gps);
+      break;
+    case MENU_GPS_TEST:
+      gps_screens_test(gps);
       break;
     default:
       return;

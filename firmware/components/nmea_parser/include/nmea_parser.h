@@ -87,7 +87,8 @@ typedef enum {
   STATEMENT_RMC,         /*!< RMC */
   STATEMENT_GSV,         /*!< GSV */
   STATEMENT_GLL,         /*!< GLL */
-  STATEMENT_VTG          /*!< VTG */
+  STATEMENT_VTG,         /*!< VTG */
+  STATEMENT_ZDA          /*!< ZDA */
 } nmea_statement_t;
 
 /**

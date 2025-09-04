@@ -1,6 +1,8 @@
 #include "esp_log.h"
 #include "stdint.h"
 
+#include "animations_task.h"
+#include "general_animations.h"
 #include "general_notification.h"
 #include "general_radio_selection.h"
 #include "gps_hw.h"
@@ -72,10 +74,48 @@ static void gps_event_handler(void* event_handler_arg,
   }
 }
 
+static void gps_test_event_handler(void* event_handler_arg,
+                                   esp_event_base_t event_base,
+                                   int32_t event_id,
+                                   void* event_data) {
+  switch (event_id) {
+    case GPS_UPDATE:
+      /* update GPS information */
+      gps_module_get_instance(event_data);
+      break;
+    case GPS_UNKNOWN:
+      /* print unknown statements */
+      ESP_LOGW(TAG, "Unknown statement:%s", (char*) event_data);
+      break;
+    default:
+      break;
+  }
+}
+
+void gps_module_reset_test(void) {
+  gps_screen_running_test();
+  vTaskDelay(2000 / portTICK_PERIOD_MS);
+  animations_task_run(&general_animation_loading, 300, NULL);
+  for (int i = 0; i < 5; i++) {
+    /* NMEA parser configuration */
+    nmea_parser_config_t config = NMEA_PARSER_CONFIG_DEFAULT();
+    /* init NMEA parser library */
+    nmea_hdl = nmea_parser_init(&config);
+    nmea_parser_add_handler(nmea_hdl, gps_test_event_handler, NULL);
+    vTaskDelay(3000 / portTICK_PERIOD_MS);
+    nmea_parser_remove_handler(nmea_hdl, gps_test_event_handler);
+    /* deinit NMEA parser library */
+    nmea_parser_deinit(nmea_hdl);
+    vTaskDelay(3000 / portTICK_PERIOD_MS);
+  }
+  animations_task_stop();
+  gps_module_start_scan();
+}
+
 void gps_module_start_scan() {
-#if !defined(CONFIG_GPS_MODULE_DEBUG)
-  esp_log_level_set(TAG, ESP_LOG_NONE);
-#endif
+  // #if !defined(CONFIG_GPS_MODULE_DEBUG)
+  //   esp_log_level_set(TAG, ESP_LOG_NONE);
+  // #endif
   if (is_uart_installed) {
     return;
   }
@@ -151,14 +191,14 @@ gps_t* gps_module_get_instance(void* event_data) {
   gps->date.day = day;
 
   ESP_LOGI(TAG,
-           "%d/%d/%d %d:%d:%d => \r\n"
-           "\t\t\t\t\t\tSats in use: %d\r\n"
-           "\t\t\t\t\t\tSats in view: %d\r\n"
-           "\t\t\t\t\t\tValid: %s\r\n"
-           "\t\t\t\t\t\tlatitude   = %.05f°N\r\n"
-           "\t\t\t\t\t\tlongitude = %.05f°E\r\n"
-           "\t\t\t\t\t\taltitude   = %.02fm\r\n"
-           "\t\t\t\t\t\tspeed      = %.02fm/s",
+           "%d/%d/%d %d:%d:%d => "
+           " Sats in use: %d"
+           " Sats in view: %d"
+           " Valid: %s"
+           " latitude   = %.05f°N"
+           " longitude = %.05f°E"
+           " altitude   = %.02fm"
+           " speed      = %.02fm/s",
            gps->date.year, gps->date.month, gps->date.day, gps->tim.hour,
            gps->tim.minute, gps->tim.second, gps->sats_in_use,
            gps->sats_in_view, gps->valid ? "true" : "false", gps->latitude,
@@ -197,6 +237,11 @@ void gps_module_register_cb(gps_event_callback_t callback) {
 
 void gps_module_unregister_cb() {
   gps_event_callback = NULL;
+}
+
+void gps_module_on_test_enter(void) {
+  menus_module_set_app_state(true, gps_module_general_data_input_cb);
+  gps_module_reset_test();
 }
 
 void gps_module_general_data_run() {

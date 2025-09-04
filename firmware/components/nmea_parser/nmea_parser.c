@@ -355,6 +355,32 @@ static void parse_vtg(esp_gps_t* esp_gps) {
 #endif
 
 /**
+ * @brief Parse ZDA statements
+ *
+ * @param esp_gps esp_gps_t type object
+ */
+static void parse_zda(esp_gps_t* esp_gps) {
+  /* Process ZDA statement */
+  switch (esp_gps->item_num) {
+    case 1: /* Process UTC time */
+      parse_utc_time(esp_gps);
+      break;
+    case 2: /* Process date */
+      esp_gps->parent.date.day =
+          convert_two_digit2number(esp_gps->item_str + 0);
+      esp_gps->parent.date.month =
+          convert_two_digit2number(esp_gps->item_str + 2);
+      esp_gps->parent.date.year =
+          convert_two_digit2number(esp_gps->item_str + 4);
+      ESP_LOGE("GAT", "%d/%02d/%02d", esp_gps->parent.date.year,
+               esp_gps->parent.date.month, esp_gps->parent.date.day);
+      break;
+    default:
+      break;
+  }
+}
+
+/**
  * @brief Parse received item
  *
  * @param esp_gps esp_gps_t type object
@@ -396,7 +422,9 @@ static esp_err_t parse_item(esp_gps_t* esp_gps) {
       esp_gps->cur_statement = STATEMENT_VTG;
     }
 #endif
-    else {
+    else if (strstr(esp_gps->item_str, "ZDA")) {
+      esp_gps->cur_statement = STATEMENT_ZDA;
+    } else {
       esp_gps->cur_statement = STATEMENT_UNKNOWN;
     }
     goto out;
@@ -435,7 +463,9 @@ static esp_err_t parse_item(esp_gps_t* esp_gps) {
     parse_vtg(esp_gps);
   }
 #endif
-  else {
+  else if (esp_gps->cur_statement == STATEMENT_ZDA) {
+    parse_zda(esp_gps);
+  } else {
     err = ESP_FAIL;
   }
 out:
@@ -527,6 +557,9 @@ static esp_err_t gps_decode(esp_gps_t* esp_gps, size_t len) {
             esp_gps->parsed_statement |= 1 << STATEMENT_VTG;
             break;
 #endif
+          case STATEMENT_ZDA:
+            esp_gps->parsed_statement |= 1 << STATEMENT_ZDA;
+            break;
           default:
             break;
         }

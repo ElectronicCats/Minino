@@ -90,3 +90,6 @@ char* get_str_date_time(gps_t* gps);
 
 void gps_module_check_state();
 void gps_module_reset_state();
+
+void gps_module_reset_test(void);
+void gps_module_on_test_enter(void);
