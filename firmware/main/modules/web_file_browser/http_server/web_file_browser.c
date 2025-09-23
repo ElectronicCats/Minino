@@ -28,6 +28,7 @@ static esp_err_t favicon_handler(httpd_req_t* req);
 static esp_err_t list_root_paths_handler(httpd_req_t* req);
 static esp_err_t list_files_handler(httpd_req_t* req);
 static esp_err_t download_get_handler(httpd_req_t* req);
+static esp_err_t delete_get_handler(httpd_req_t* req);
 static esp_err_t style_css_handler(httpd_req_t* req);
 
 const char* mount_path = NULL;
@@ -81,6 +82,11 @@ static httpd_handle_t web_file_browser_start(void) {
                                  .method = HTTP_GET,
                                  .handler = download_get_handler,
                                  .user_ctx = NULL};
+    httpd_uri_t file_delete = {.uri = "/delete",
+                               .method = HTTP_GET,
+                               .handler = delete_get_handler,
+                               .user_ctx = NULL};
+
     httpd_uri_t favicon_ico = {.uri = "/favicon_b.ico",
                                .method = HTTP_GET,
                                .handler = favicon_handler,
@@ -93,6 +99,7 @@ static httpd_handle_t web_file_browser_start(void) {
     httpd_register_uri_handler(http_server_handle, &root_server);
     httpd_register_uri_handler(http_server_handle, &file_server);
     httpd_register_uri_handler(http_server_handle, &file_download);
+    httpd_register_uri_handler(http_server_handle, &file_delete);
     httpd_register_uri_handler(http_server_handle, &favicon_ico);
     httpd_register_uri_handler(http_server_handle, &style_css);
     web_file_browser_show_event(WEB_FILE_BROWSER_READY_EV, NULL);
@@ -179,7 +186,12 @@ static void send_files(DIR* dir, char* path, httpd_req_t* req) {
       httpd_resp_sendstr_chunk(req, ent->d_name);
       httpd_resp_sendstr_chunk(req, "</a> (");
       httpd_resp_sendstr_chunk(req, size_str);
-      httpd_resp_sendstr_chunk(req, ")<br>");
+      httpd_resp_sendstr_chunk(req, ") <a href=\"/delete?path=");
+      httpd_resp_sendstr_chunk(req, filepath);
+      httpd_resp_sendstr_chunk(
+          req,
+          "\" onclick=\"return confirm('Are you sure you want to permanently "
+          "remove this file?');\">❌</a><br>");
     }
     free(filepath);
     free(size_str);
@@ -251,6 +263,49 @@ esp_err_t list_files_handler(httpd_req_t* req) {
   printf("----------------------------------------\n");
   printf("----------------------------------------\n");
 
+  return ESP_OK;
+}
+
+static esp_err_t delete_get_handler(httpd_req_t* req) {
+  size_t buf_len = 300;
+  char* buf = (char*) malloc(buf_len);
+
+  esp_err_t err = httpd_req_get_url_query_str(req, buf, buf_len);
+  if (err != ESP_OK) {
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Failed To Get Query:");
+    free(buf);
+    return ESP_FAIL;
+  }
+
+  size_t filepath_len = 200;
+  char* filepath = (char*) malloc(filepath_len);
+  err = httpd_query_key_value(buf, "path", filepath, filepath_len);
+  if (err != ESP_OK) {
+    printf("ERR: %s\n", esp_err_to_name(err));
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid Parameters");
+    free(filepath);
+    free(buf);
+    return ESP_FAIL;
+  }
+
+  httpd_query_key_value(buf, "path", filepath, filepath_len);
+  for (int i = 0; i < filepath[i]; i++) {
+    // Convert to original name with spaces
+    if (filepath[i] == '+')
+      filepath[i] = ' ';
+  }
+
+  if (remove(filepath) == 0) {
+    httpd_resp_set_status(req, "302 Temporary Redirect");
+    httpd_resp_set_hdr(req, "Location", "/");
+    httpd_resp_send(req, "Redirect to the main list", HTTPD_RESP_USE_STRLEN);
+  } else {
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR,
+                        "Failed to delete file");
+  }
+
+  free(filepath);
+  free(buf);
   return ESP_OK;
 }
 
