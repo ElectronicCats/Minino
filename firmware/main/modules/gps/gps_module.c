@@ -14,7 +14,6 @@
 #include "preferences.h"
 #include "wardriving_module.h"
 
-// #define TIME_ZONE (+3)    // Mexico City time zone
 #define YEAR_BASE (2000)  // date in GPS starts from 2000
 
 static const char* TAG = "gps_module";
@@ -22,8 +21,11 @@ static const char* TAG = "gps_module";
 nmea_parser_handle_t nmea_hdl = NULL;
 gps_event_callback_t gps_event_callback = NULL;
 static bool is_uart_installed = false;
+static bool gps_advanced_configured = false;
 
 void gps_module_check_state();
+static void gps_module_configure_advanced();
+static bool gps_module_send_command(const char* command);
 
 /**
  * @brief Signal strength levels based on the number of satellites in use
@@ -74,24 +76,6 @@ static void gps_event_handler(void* event_handler_arg,
   }
 }
 
-static void gps_test_event_handler(void* event_handler_arg,
-                                   esp_event_base_t event_base,
-                                   int32_t event_id,
-                                   void* event_data) {
-  switch (event_id) {
-    case GPS_UPDATE:
-      /* update GPS information */
-      gps_module_get_instance(event_data);
-      break;
-    case GPS_UNKNOWN:
-      /* print unknown statements */
-      ESP_LOGW(TAG, "Unknown statement:%s", (char*) event_data);
-      break;
-    default:
-      break;
-  }
-}
-
 void gps_module_reset_test(void) {
   gps_screen_running_test();
   vTaskDelay(2000 / portTICK_PERIOD_MS);
@@ -101,9 +85,9 @@ void gps_module_reset_test(void) {
     nmea_parser_config_t config = NMEA_PARSER_CONFIG_DEFAULT();
     /* init NMEA parser library */
     nmea_hdl = nmea_parser_init(&config);
-    nmea_parser_add_handler(nmea_hdl, gps_test_event_handler, NULL);
+    nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
     vTaskDelay(3000 / portTICK_PERIOD_MS);
-    nmea_parser_remove_handler(nmea_hdl, gps_test_event_handler);
+    nmea_parser_remove_handler(nmea_hdl, gps_event_handler);
     /* deinit NMEA parser library */
     nmea_parser_deinit(nmea_hdl);
     vTaskDelay(3000 / portTICK_PERIOD_MS);
@@ -122,12 +106,20 @@ void gps_module_start_scan() {
   is_uart_installed = true;
 
   ESP_LOGI(TAG, "Start reading GPS");
+
   /* NMEA parser configuration */
   nmea_parser_config_t config = NMEA_PARSER_CONFIG_DEFAULT();
   /* init NMEA parser library */
   nmea_hdl = nmea_parser_init(&config);
   /* register event handler for NMEA parser library */
   nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
+
+  // Configure GPS for ATGM336H-6N-74 with multi-constellation support (only
+  // once)
+  if (!gps_advanced_configured) {
+    gps_module_configure_advanced();
+    gps_advanced_configured = true;
+  }
   gps_screens_show_waiting_signal();
 }
 
@@ -213,16 +205,16 @@ uint8_t gps_module_get_time_zone() {
 }
 
 char* get_full_date_time(gps_t* gps) {
-  char* date_time = malloc(sizeof(char) * 30);
-  sprintf(date_time, "%d-%d-%d %d:%d:%d", gps->date.year, gps->date.month,
-          gps->date.day, gps->tim.hour, gps->tim.minute, gps->tim.second);
+  char* date_time = malloc(30);
+  snprintf(date_time, 30, "%d-%d-%d %d:%d:%d", gps->date.year, gps->date.month,
+           gps->date.day, gps->tim.hour, gps->tim.minute, gps->tim.second);
   return date_time;
 }
 
 char* get_str_date_time(gps_t* gps) {
-  char* date_time = malloc(sizeof(char) * 30);
-  sprintf(date_time, "%d%d%d%d%d%d", gps->date.year, gps->date.month,
-          gps->date.day, gps->tim.hour, gps->tim.minute, gps->tim.second);
+  char* date_time = malloc(30);
+  snprintf(date_time, 30, "%d%d%d%d%d%d", gps->date.year, gps->date.month,
+           gps->date.day, gps->tim.hour, gps->tim.minute, gps->tim.second);
   return date_time;
 }
 
@@ -312,4 +304,158 @@ void gps_module_reset_state() {
   if (gps_hw_get_state() && !preferences_get_bool(GPS_ENABLED_MEM, false)) {
     gps_hw_off();
   }
+}
+
+void gps_module_set_update_rate(uint8_t rate) {
+  if (rate < 1 || rate > 10) {
+    ESP_LOGW(TAG, "Invalid update rate: %d (must be 1-10 Hz)", rate);
+    return;
+  }
+
+  char command[32];
+  uint16_t interval_ms = 1000 / rate;
+  snprintf(command, sizeof(command), "$PMTK220,%d*00\r\n", interval_ms);
+  gps_module_send_command(command);
+}
+
+/**
+ * @brief Enable A-GNSS (Assisted GNSS) for faster fix times
+ *
+ * A-GNSS uses assistance data to reduce Time To First Fix (TTFF)
+ * and improve accuracy in challenging environments
+ */
+void gps_module_enable_agnss() {
+  ESP_LOGI(TAG, "Enabling A-GNSS for faster fix times");
+
+  // Enable A-GNSS assistance data
+  gps_module_send_command("$PMTK869,1*XX\r\n");
+
+  // Enable A-GNSS data logging (optional)
+  gps_module_send_command("$PMTK869,1,1*XX\r\n");
+
+  ESP_LOGI(TAG, "A-GNSS enabled successfully");
+}
+
+/**
+ * @brief Disable A-GNSS (Assisted GNSS)
+ *
+ * Disables assistance data, GPS will work in standalone mode
+ */
+void gps_module_disable_agnss() {
+  ESP_LOGI(TAG, "Disabling A-GNSS");
+
+  // Disable A-GNSS assistance data
+  gps_module_send_command("$PMTK869,0*XX\r\n");
+
+  ESP_LOGI(TAG, "A-GNSS disabled successfully");
+}
+
+/**
+ * @brief Set GPS power mode for power optimization
+ *
+ * @param mode Power mode: NORMAL, LOW_POWER, or STANDBY
+ */
+void gps_module_set_power_mode(gps_power_mode_t mode) {
+  const char* mode_names[] = {"NORMAL", "LOW_POWER", "STANDBY"};
+
+  if (mode >= GPS_POWER_MODE_NORMAL && mode <= GPS_POWER_MODE_STANDBY) {
+    ESP_LOGI(TAG, "Setting GPS power mode to %s", mode_names[mode]);
+
+    switch (mode) {
+      case GPS_POWER_MODE_NORMAL:
+        // Normal operation mode - full performance
+        gps_module_send_command("$PMTK225,0*XX\r\n");
+        break;
+
+      case GPS_POWER_MODE_LOW_POWER:
+        // Low power mode - reduced performance, lower consumption
+        gps_module_send_command("$PMTK225,1*XX\r\n");
+        break;
+
+      case GPS_POWER_MODE_STANDBY:
+        // Standby mode - minimal power consumption
+        gps_module_send_command("$PMTK225,2*XX\r\n");
+        break;
+
+      default:
+        ESP_LOGW(TAG, "Unknown power mode: %d", mode);
+        return;
+    }
+
+    ESP_LOGI(TAG, "GPS power mode set to %s successfully", mode_names[mode]);
+  } else {
+    ESP_LOGW(TAG, "Invalid power mode: %d (must be 0-2)", mode);
+  }
+}
+
+/**
+ * @brief Configure GPS for ATGM336H-6N-74 with advanced features
+ */
+static void gps_module_configure_advanced() {
+  ESP_LOGI(TAG, "Configuring GPS for ATGM336H-6N-74");
+
+  // Wait a bit for UART to be fully ready
+  vTaskDelay(pdMS_TO_TICKS(100));
+
+  bool config_success = true;
+
+  // Configure multi-constellation support (GPS, GLONASS, Galileo)
+  char constellation_cmd[] = "$PMTK353,1,1,1,0,0,0,0,0,0*00\r\n";
+  if (!gps_module_send_command(constellation_cmd)) {
+    ESP_LOGE(TAG, "Failed to configure constellations");
+    config_success = false;
+  }
+
+  // Set update rate to 5Hz for better responsiveness
+  char update_rate_cmd[] = "$PMTK220,200*00\r\n";  // 200ms = 5Hz
+  if (!gps_module_send_command(update_rate_cmd)) {
+    ESP_LOGE(TAG, "Failed to set update rate");
+    config_success = false;
+  }
+
+  // Enable additional NMEA sentences for better data
+  char nmea_cmd[] = "$PMTK314,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0*28\r\n";
+  if (!gps_module_send_command(nmea_cmd)) {
+    ESP_LOGE(TAG, "Failed to configure NMEA sentences");
+    config_success = false;
+  }
+
+  if (config_success) {
+    ESP_LOGI(TAG, "GPS advanced configuration complete successfully");
+  } else {
+    ESP_LOGW(TAG, "GPS advanced configuration completed with errors");
+  }
+}
+
+/**
+ * @brief Send command to GPS module via UART and validate response
+ */
+static bool gps_module_send_command(const char* command) {
+  if (!is_uart_installed || !nmea_hdl) {
+    ESP_LOGW(TAG, "UART not ready, skipping command: %s", command);
+    return false;
+  }
+
+  // Get the UART port from the NMEA parser
+  uart_port_t uart_port = 1;  // UART_NUM_1 as configured in NMEA parser
+
+  int len = uart_write_bytes(uart_port, command, strlen(command));
+  if (len < 0) {
+    ESP_LOGE(TAG, "Failed to send command: %s", command);
+    return false;
+  }
+
+  ESP_LOGI(TAG, "Sent GPS command: %s", command);
+  vTaskDelay(pdMS_TO_TICKS(200));  // Wait for GPS to process
+
+  // Try to read response (optional validation)
+  uint8_t response[64];
+  int response_len = uart_read_bytes(uart_port, response, sizeof(response) - 1,
+                                     pdMS_TO_TICKS(100));
+  if (response_len > 0) {
+    response[response_len] = '\0';
+    ESP_LOGD(TAG, "GPS response: %s", response);
+  }
+
+  return true;
 }

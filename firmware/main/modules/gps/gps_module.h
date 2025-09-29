@@ -5,6 +5,21 @@
 #define GPS_ACCURACY \
   1.5  // According to the ZHONGKEWEI ATGM336H-6N-74 datasheet
 
+// GPS advanced types (integrated)
+typedef struct {
+  uint8_t sats_in_view;
+  uint8_t sats_in_use;
+  float hdop;
+  float vdop;
+  float pdop;
+} gps_stats_t;
+
+typedef enum {
+  GPS_POWER_MODE_NORMAL,
+  GPS_POWER_MODE_LOW_POWER,
+  GPS_POWER_MODE_STANDBY
+} gps_power_mode_t;
+
 // Callback
 typedef void (*gps_event_callback_t)(gps_t* gps);
 
@@ -93,3 +108,9 @@ void gps_module_reset_state();
 
 void gps_module_reset_test(void);
 void gps_module_on_test_enter(void);
+
+// Advanced GPS functions for ATGM336H-6N-74
+void gps_module_set_update_rate(uint8_t rate);
+void gps_module_enable_agnss();
+void gps_module_disable_agnss();
+void gps_module_set_power_mode(gps_power_mode_t mode);
