@@ -25,6 +25,7 @@ static bool gps_advanced_configured = false;
 
 void gps_module_check_state();
 static void gps_module_configure_advanced();
+static void gps_module_configure_updaterate(void);
 static bool gps_module_send_command(const char* command);
 
 /**
@@ -76,6 +77,45 @@ static void gps_event_handler(void* event_handler_arg,
   }
 }
 
+static void gps_sats_event_handler(void* event_handler_arg,
+                                   esp_event_base_t event_base,
+                                   int32_t event_id,
+                                   void* event_data) {
+  switch (event_id) {
+    case GPS_UPDATE:
+      /* update GPS information */
+      gps_module_get_instance(event_data);
+      break;
+    case GPS_UNKNOWN:
+      /* print unknown statements */
+      ESP_LOGW(TAG, "Unknown statement:%s", (char*) event_data);
+      break;
+    default:
+      break;
+  }
+}
+
+static void configure_gps_options(void) {
+  // Configure GPS for ATGM336H-6N-74 with multi-constellation support (only
+  // once)
+  if (!gps_advanced_configured) {
+    if (preferences_get_int(ADVANCED_OPTIONS_PREF_KEY, 0) == 1) {
+      gps_module_configure_advanced();
+      gps_advanced_configured = true;
+    }
+  }
+
+  gps_module_configure_updaterate();
+
+  uint16_t agnss_option = preferences_get_int(AGNSS_OPTIONS_PREF_KEY, 0);
+  if (agnss_option == 0) {
+    gps_module_disable_agnss();
+  } else {
+    gps_module_enable_agnss();
+  }
+  gps_module_set_power_mode(preferences_get_int(POWER_OPTIONS_PREF_KEY, 0));
+}
+
 void gps_module_reset_test(void) {
   gps_screen_running_test();
   vTaskDelay(2000 / portTICK_PERIOD_MS);
@@ -85,9 +125,9 @@ void gps_module_reset_test(void) {
     nmea_parser_config_t config = NMEA_PARSER_CONFIG_DEFAULT();
     /* init NMEA parser library */
     nmea_hdl = nmea_parser_init(&config);
-    nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
+    nmea_parser_add_handler(nmea_hdl, gps_sats_event_handler, NULL);
     vTaskDelay(3000 / portTICK_PERIOD_MS);
-    nmea_parser_remove_handler(nmea_hdl, gps_event_handler);
+    nmea_parser_remove_handler(nmea_hdl, gps_sats_event_handler);
     /* deinit NMEA parser library */
     nmea_parser_deinit(nmea_hdl);
     vTaskDelay(3000 / portTICK_PERIOD_MS);
@@ -114,12 +154,8 @@ void gps_module_start_scan() {
   /* register event handler for NMEA parser library */
   nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
 
-  // Configure GPS for ATGM336H-6N-74 with multi-constellation support (only
-  // once)
-  if (!gps_advanced_configured) {
-    gps_module_configure_advanced();
-    gps_advanced_configured = true;
-  }
+  configure_gps_options();
+
   gps_screens_show_waiting_signal();
 }
 
@@ -392,6 +428,14 @@ void gps_module_set_power_mode(gps_power_mode_t mode) {
   }
 }
 
+static void gps_module_configure_updaterate(void) {
+  // Set update rate to 5Hz for better responsiveness
+  char update_rate_cmd[] = "$PMTK220,200*00\r\n";  // 200ms = 5Hz
+  if (!gps_module_send_command(update_rate_cmd)) {
+    ESP_LOGE(TAG, "Failed to set update rate");
+  }
+}
+
 /**
  * @brief Configure GPS for ATGM336H-6N-74 with advanced features
  */
@@ -407,13 +451,6 @@ static void gps_module_configure_advanced() {
   char constellation_cmd[] = "$PMTK353,1,1,1,0,0,0,0,0,0*00\r\n";
   if (!gps_module_send_command(constellation_cmd)) {
     ESP_LOGE(TAG, "Failed to configure constellations");
-    config_success = false;
-  }
-
-  // Set update rate to 5Hz for better responsiveness
-  char update_rate_cmd[] = "$PMTK220,200*00\r\n";  // 200ms = 5Hz
-  if (!gps_module_send_command(update_rate_cmd)) {
-    ESP_LOGE(TAG, "Failed to set update rate");
     config_success = false;
   }
 
