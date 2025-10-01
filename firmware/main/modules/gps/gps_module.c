@@ -231,6 +231,10 @@ void gps_module_unregister_cb() {
   gps_event_callback = NULL;
 }
 
+void gps_module_on_config_enter() {
+  gps_screens_show_config();
+}
+
 void gps_module_on_test_enter(void) {
   menus_module_set_app_state(true, gps_module_general_data_input_cb);
   gps_module_reset_test();

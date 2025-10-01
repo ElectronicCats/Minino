@@ -108,6 +108,7 @@ void gps_module_reset_state();
 
 void gps_module_reset_test(void);
 void gps_module_on_test_enter(void);
+void gps_module_on_config_enter(void);
 
 // Advanced GPS functions for ATGM336H-6N-74
 void gps_module_set_update_rate(uint8_t rate);

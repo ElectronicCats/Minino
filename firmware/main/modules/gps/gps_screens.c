@@ -2,9 +2,13 @@
 #include "esp_log.h"
 #include "sd_card.h"
 
+#include "general_radio_selection.h"
 #include "general_screens.h"
+#include "general_scrolling_text.h"
+#include "general_submenu.h"
 #include "menus_module.h"
 #include "oled_screen.h"
+#include "preferences.h"
 
 static char* gps_route_file_name = NULL;
 static char* gps_route_file_buffer = NULL;
@@ -13,6 +17,9 @@ static bool gps_route_recording = false;
 static uint16_t gps_route_points_saved = 0;
 
 static const char* TAG = "route";
+
+static const char* config_menu_options[] = {"AGNSS", "Power mode", "Advanced"};
+static uint16_t last_config_selection = 0;
 
 #define GPS_ROUTE_DIR_NAME          "/GPS_Route"
 #define GPS_ROUTE_FILE_SIZE         8192
@@ -42,6 +49,12 @@ char* gps_help[] = {
 const general_menu_t gps_help_menu = {.menu_count = 9,
                                       .menu_items = gps_help,
                                       .menu_level = GENERAL_TREE_APP_MENU};
+
+typedef enum {
+  CONFIG_AGNSS,
+  CONFIG_POWWER,
+  CONFIG_ADVANCED
+} config_menu_options_t;
 
 void gps_screens_show_help() {
   general_register_scrolling_menu(&gps_help_menu);
@@ -313,6 +326,26 @@ void gps_screens_show_waiting_signal() {
   oled_screen_clear_buffer();
   oled_screen_display_text_center("Waiting Signal", 0, OLED_DISPLAY_NORMAL);
   oled_screen_display_show();
+}
+
+static void config_main_handler(uint8_t option) {
+  last_config_selection = option;
+  switch (option) {
+    case CONFIG_AGNSS:
+      ESP_LOGI("HERE", "AGNSS");
+    default:
+      break;
+  }
+}
+
+void gps_screens_show_config(void) {
+  general_submenu_menu_t main = {0};
+  main.options = config_menu_options;
+  main.options_count = sizeof(config_menu_options) / sizeof(char*);
+  main.select_cb = config_main_handler;
+  main.selected_option = last_config_selection;
+  main.exit_cb = menus_module_restart;
+  general_submenu(main);
 }
 
 void gps_screens_update_handler(gps_t* gps) {
