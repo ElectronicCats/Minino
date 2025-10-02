@@ -134,6 +134,7 @@ void gps_module_reset_test(void) {
   }
   animations_task_stop();
   gps_module_start_scan();
+  animations_task_run(&general_animation_loading_on_line, 300, 6);
 }
 
 void gps_module_start_scan() {

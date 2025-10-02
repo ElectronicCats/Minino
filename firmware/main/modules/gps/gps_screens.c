@@ -98,6 +98,7 @@ static void gps_screens_test(gps_t* gps) {
           gps->tim.second);
   oled_screen_display_text(str, 0, 4, OLED_DISPLAY_NORMAL);
   oled_screen_display_show();
+
   free(str);
   free(str2);
 }
