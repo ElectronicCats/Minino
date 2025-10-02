@@ -18,10 +18,12 @@ static uint16_t gps_route_points_saved = 0;
 
 static const char* TAG = "route";
 
-static const char* config_menu_options[] = {"AGNSS", "Power mode", "Advanced"};
+static const char* config_menu_options[] = {"AGNSS", "Power mode", "Advanced",
+                                            "Update Rate"};
 static const char* agnss_options[] = {"Disable", "Enable"};
 static const char* power_options[] = {"Normal", "LOW_POWER", "STANDBY"};
 static const char* advanced_options[] = {"Disable", "Enable"};
+static const char* update_rate_options[] = {"1 Hz", "5 Hz", "10 Hz"};
 static uint16_t last_config_selection = 0;
 
 #define GPS_ROUTE_DIR_NAME          "/GPS_Route"
@@ -56,7 +58,8 @@ const general_menu_t gps_help_menu = {.menu_count = 9,
 typedef enum {
   CONFIG_AGNSS,
   CONFIG_POWWER,
-  CONFIG_ADVANCED
+  CONFIG_ADVANCED,
+  CONFIG_URATE
 } config_menu_options_t;
 
 void gps_screens_show_help() {
@@ -343,7 +346,7 @@ static void gps_screens_show_agnss(void) {
   settings.select_cb = agnss_radio_handler;
   settings.style = RADIO_SELECTION_OLD_STYLE;
   settings.exit_cb = gps_screens_show_config;
-  settings.current_option = preferences_get_int(AGNSS_OPTIONS_PREF_KEY, 0);
+  settings.current_option = preferences_get_int(AGNSS_OPTIONS_PREF_KEY, 1);
   general_radio_selection(settings);
 }
 
@@ -375,7 +378,23 @@ static void gps_screens_show_advanced(void) {
   settings.select_cb = advanced_radio_handler;
   settings.style = RADIO_SELECTION_OLD_STYLE;
   settings.exit_cb = gps_screens_show_config;
-  settings.current_option = preferences_get_int(ADVANCED_OPTIONS_PREF_KEY, 0);
+  settings.current_option = preferences_get_int(ADVANCED_OPTIONS_PREF_KEY, 1);
+  general_radio_selection(settings);
+}
+
+static void update_rate_radio_handler(uint16_t option) {
+  preferences_put_int(URATE_OPTIONS_PREF_KEY, option);
+}
+
+static void gps_screens_show_urate(void) {
+  general_radio_selection_menu_t settings = {0};
+  settings.banner = "Update Rate";
+  settings.options = update_rate_options;
+  settings.options_count = sizeof(update_rate_options) / sizeof(char*);
+  settings.select_cb = update_rate_radio_handler;
+  settings.style = RADIO_SELECTION_OLD_STYLE;
+  settings.exit_cb = gps_screens_show_config;
+  settings.current_option = preferences_get_int(URATE_OPTIONS_PREF_KEY, 1);
   general_radio_selection(settings);
 }
 
@@ -390,6 +409,9 @@ static void config_main_handler(uint8_t option) {
       break;
     case CONFIG_ADVANCED:
       gps_screens_show_advanced();
+      break;
+    case CONFIG_URATE:
+      gps_screens_show_urate();
       break;
     default:
       break;

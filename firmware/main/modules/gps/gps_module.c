@@ -99,7 +99,7 @@ static void configure_gps_options(void) {
   // Configure GPS for ATGM336H-6N-74 with multi-constellation support (only
   // once)
   if (!gps_advanced_configured) {
-    if (preferences_get_int(ADVANCED_OPTIONS_PREF_KEY, 0) == 1) {
+    if (preferences_get_int(ADVANCED_OPTIONS_PREF_KEY, 1) == 1) {
       gps_module_configure_advanced();
       gps_advanced_configured = true;
     }
@@ -107,7 +107,7 @@ static void configure_gps_options(void) {
 
   gps_module_configure_updaterate();
 
-  uint16_t agnss_option = preferences_get_int(AGNSS_OPTIONS_PREF_KEY, 0);
+  uint16_t agnss_option = preferences_get_int(AGNSS_OPTIONS_PREF_KEY, 1);
   if (agnss_option == 0) {
     gps_module_disable_agnss();
   } else {
@@ -430,7 +430,22 @@ void gps_module_set_power_mode(gps_power_mode_t mode) {
 
 static void gps_module_configure_updaterate(void) {
   // Set update rate to 5Hz for better responsiveness
-  char update_rate_cmd[] = "$PMTK220,200*00\r\n";  // 200ms = 5Hz
+  char update_rate_cmd[128];
+  uint32_t update_rate = preferences_get_int(URATE_OPTIONS_PREF_KEY, 1);
+  if (update_rate == GPS_UPDATE_RATE_1HZ) {
+    sprintf(update_rate_cmd, "$PMTK220,1000*00\r\n");  // 1000ms = 1Hz
+    ESP_LOGI(TAG, "Change update rate to: 1 HZ");
+  } else if (update_rate == GPS_UPDATE_RATE_5HZ) {
+    sprintf(update_rate_cmd, "$PMTK220,200*00\r\n");  // 200ms = 5Hz
+    ESP_LOGI(TAG, "Change update rate to: 5 HZ");
+  } else if (update_rate == GPS_UPDATE_RATE_10HZ) {
+    sprintf(update_rate_cmd, "$PMTK220,100*00\r\n");  // 100ms = 10Hz
+    ESP_LOGI(TAG, "Change update rate to: 10 HZ");
+  } else {
+    ESP_LOGE(TAG, "Not supported");
+    return;
+  }
+
   if (!gps_module_send_command(update_rate_cmd)) {
     ESP_LOGE(TAG, "Failed to set update rate");
   }

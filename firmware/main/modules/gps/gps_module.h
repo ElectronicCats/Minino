@@ -20,6 +20,12 @@ typedef enum {
   GPS_POWER_MODE_STANDBY
 } gps_power_mode_t;
 
+enum {
+  GPS_UPDATE_RATE_1HZ,
+  GPS_UPDATE_RATE_5HZ,
+  GPS_UPDATE_RATE_10HZ,
+};
+
 // Callback
 typedef void (*gps_event_callback_t)(gps_t* gps);
 
