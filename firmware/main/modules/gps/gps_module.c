@@ -117,7 +117,9 @@ static void configure_gps_options(void) {
 }
 
 void gps_module_reset_test(void) {
+  animations_task_run(&general_animation_loading_on_line, 300, 6);
   gps_screen_running_test();
+  animations_task_stop();
   vTaskDelay(2000 / portTICK_PERIOD_MS);
   animations_task_run(&general_animation_loading, 300, NULL);
   for (int i = 0; i < 5; i++) {
@@ -134,7 +136,6 @@ void gps_module_reset_test(void) {
   }
   animations_task_stop();
   gps_module_start_scan();
-  animations_task_run(&general_animation_loading_on_line, 300, 6);
 }
 
 void gps_module_start_scan() {
