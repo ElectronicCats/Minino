@@ -727,8 +727,9 @@ nmea_parser_handle_t nmea_parser_init(const nmea_parser_config_t* config) {
     ESP_LOGE(TAG, "config uart parameter failed");
     goto err_uart_config;
   }
-  if (uart_set_pin(esp_gps->uart_port, UART_PIN_NO_CHANGE, config->uart.rx_pin,
-                   UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE) != ESP_OK) {
+  if (uart_set_pin(esp_gps->uart_port, CONFIG_NMEA_PARSER_UART_TXD,
+                   config->uart.rx_pin, UART_PIN_NO_CHANGE,
+                   UART_PIN_NO_CHANGE) != ESP_OK) {
     ESP_LOGE(TAG, "config uart gpio failed");
     goto err_uart_config;
   }

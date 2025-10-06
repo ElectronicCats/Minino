@@ -17,3 +17,20 @@ void general_animation_loading() {
   idx = (idx + 1) % 4;
   oled_screen_display_show();
 }
+
+void general_animation_loading_on_line(uint8_t line) {
+  oled_screen_clear_line(16, line, OLED_DISPLAY_NORMAL);
+  oled_screen_display_show();
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+#ifdef CONFIG_RESOLUTION_128X32
+  oled_screen_display_bitmap(epd_bitmap_loading_32[idx], 8, 16, 32, 32,
+                             OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("Loading", 48, 2, OLED_DISPLAY_NORMAL);
+#else
+  oled_screen_display_bitmap(minino_face, 8, line * 8, 8, 8,
+                             OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("Running", 32, line, OLED_DISPLAY_NORMAL);
+#endif
+  oled_screen_display_show();
+  vTaskDelay(500 / portTICK_PERIOD_MS);
+}
