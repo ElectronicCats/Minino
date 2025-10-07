@@ -321,6 +321,14 @@ menu "General project"
             GPIO number for UART RX pin. See UART documentation for more information
             about available pin numbers for UART.
 
+    config NMEA_PARSER_UART_TXD
+        int "UART TXD pin number"
+        range ENV_GPIO_RANGE_MIN ENV_GPIO_OUT_RANGE_MAX
+        default 5
+        help
+            GPIO number for UART TX pin. See UART documentation for more information
+            about available pin numbers for UART.
+
     config NMEA_PARSE_UART_BAUDRATE
         int "UART Baudrate"
         range 0 115200
@@ -330,24 +338,27 @@ menu "General project"
 
     config NMEA_PARSER_RING_BUFFER_SIZE
         int "NMEA Parser Ring Buffer Size"
-        range 0 2048
-        default 1024
+        range 0 8192
+        default 2048
         help
             Size of the ring buffer used for UART Rx channel.
+            For ATGM336H-6N-74: Use 2048 for 1Hz, 4096 for 5Hz, 8192 for 10Hz update rate.
 
     config NMEA_PARSER_TASK_STACK_SIZE
         int "NMEA Parser Task Stack Size"
-        range 0 4096
-        default 3072
+        range 0 8192
+        default 4096
         help
             Stack size of NMEA Parser task.
+            For ATGM336H-6N-74 with multi-constellation: Recommended 4096-6144.
 
     config NMEA_PARSER_TASK_PRIORITY
         int "NMEA Parser Task Priority"
         range 0 24
-        default 2
+        default 3
         help
             Priority of NMEA Parser task.
+            For ATGM336H-6N-74: Higher priority (3-4) improves fix time and accuracy.
 
     	menu "NMEA Statement Support"
         comment "At least one statement must be selected"
