@@ -352,7 +352,17 @@ void gps_module_set_update_rate(uint8_t rate) {
 
   char command[32];
   uint16_t interval_ms = 1000 / rate;
-  snprintf(command, sizeof(command), "$PMTK220,%d*00\r\n", interval_ms);
+
+  // Calculate correct checksum for dynamic rate
+  uint8_t checksum = 0;
+  char temp[24];
+  snprintf(temp, sizeof(temp), "PMTK220,%d", interval_ms);
+  for (int i = 0; temp[i] != '\0'; i++) {
+    checksum ^= temp[i];
+  }
+
+  snprintf(command, sizeof(command), "$PMTK220,%d*%02X\r\n", interval_ms,
+           checksum);
   gps_module_send_command(command);
 }
 
@@ -366,10 +376,10 @@ void gps_module_enable_agnss() {
   ESP_LOGI(TAG, "Enabling A-GNSS for faster fix times");
 
   // Enable A-GNSS assistance data
-  gps_module_send_command("$PMTK869,1*XX\r\n");
+  gps_module_send_command("$PMTK869,1*28\r\n");
 
   // Enable A-GNSS data logging (optional)
-  gps_module_send_command("$PMTK869,1,1*XX\r\n");
+  gps_module_send_command("$PMTK869,1,1*35\r\n");
 
   ESP_LOGI(TAG, "A-GNSS enabled successfully");
 }
@@ -383,7 +393,7 @@ void gps_module_disable_agnss() {
   ESP_LOGI(TAG, "Disabling A-GNSS");
 
   // Disable A-GNSS assistance data
-  gps_module_send_command("$PMTK869,0*XX\r\n");
+  gps_module_send_command("$PMTK869,0*29\r\n");
 
   ESP_LOGI(TAG, "A-GNSS disabled successfully");
 }
@@ -402,17 +412,17 @@ void gps_module_set_power_mode(gps_power_mode_t mode) {
     switch (mode) {
       case GPS_POWER_MODE_NORMAL:
         // Normal operation mode - full performance
-        gps_module_send_command("$PMTK225,0*XX\r\n");
+        gps_module_send_command("$PMTK225,0*2B\r\n");
         break;
 
       case GPS_POWER_MODE_LOW_POWER:
         // Low power mode - reduced performance, lower consumption
-        gps_module_send_command("$PMTK225,1*XX\r\n");
+        gps_module_send_command("$PMTK225,1*2A\r\n");
         break;
 
       case GPS_POWER_MODE_STANDBY:
         // Standby mode - minimal power consumption
-        gps_module_send_command("$PMTK225,2*XX\r\n");
+        gps_module_send_command("$PMTK225,2*29\r\n");
         break;
 
       default:
@@ -431,13 +441,13 @@ static void gps_module_configure_updaterate(void) {
   char update_rate_cmd[128];
   uint32_t update_rate = preferences_get_int(URATE_OPTIONS_PREF_KEY, 1);
   if (update_rate == GPS_UPDATE_RATE_1HZ) {
-    sprintf(update_rate_cmd, "$PMTK220,1000*00\r\n");  // 1000ms = 1Hz
+    sprintf(update_rate_cmd, "$PMTK220,1000*1F\r\n");  // 1000ms = 1Hz
     ESP_LOGI(TAG, "Change update rate to: 1 HZ");
   } else if (update_rate == GPS_UPDATE_RATE_5HZ) {
-    sprintf(update_rate_cmd, "$PMTK220,200*00\r\n");  // 200ms = 5Hz
+    sprintf(update_rate_cmd, "$PMTK220,200*2C\r\n");  // 200ms = 5Hz
     ESP_LOGI(TAG, "Change update rate to: 5 HZ");
   } else if (update_rate == GPS_UPDATE_RATE_10HZ) {
-    sprintf(update_rate_cmd, "$PMTK220,100*00\r\n");  // 100ms = 10Hz
+    sprintf(update_rate_cmd, "$PMTK220,100*2F\r\n");  // 100ms = 10Hz
     ESP_LOGI(TAG, "Change update rate to: 10 HZ");
   } else {
     ESP_LOGE(TAG, "Not supported");
@@ -461,7 +471,7 @@ static void gps_module_configure_advanced() {
   bool config_success = true;
 
   // Configure multi-constellation support (GPS, GLONASS, Galileo)
-  char constellation_cmd[] = "$PMTK353,1,1,1,0,0,0,0,0,0*00\r\n";
+  char constellation_cmd[] = "$PMTK353,1,1,1,0,0,0,0,0,0*2A\r\n";
   if (!gps_module_send_command(constellation_cmd)) {
     ESP_LOGE(TAG, "Failed to configure constellations");
     config_success = false;
