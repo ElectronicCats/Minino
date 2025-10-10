@@ -470,8 +470,8 @@ static void gps_module_configure_advanced() {
 
   bool config_success = true;
 
-  // Configure multi-constellation support (GPS, GLONASS, Galileo)
-  char constellation_cmd[] = "$PMTK353,1,1,1,0,0,0,0,0,0*2A\r\n";
+  // Configure multi-constellation support (GPS, GLONASS, Galileo, BeiDou, QZSS)
+  char constellation_cmd[] = "$PMTK353,1,1,1,1,1,0,0,0,0*2A\r\n";
   if (!gps_module_send_command(constellation_cmd)) {
     ESP_LOGE(TAG, "Failed to configure constellations");
     config_success = false;
