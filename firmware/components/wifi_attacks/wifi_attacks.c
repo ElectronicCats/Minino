@@ -39,7 +39,7 @@ int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3) {
  *
  * @param ap_target target AP to attack
  */
-static void wifi_attack_brod_send_deauth_frame(wifi_ap_record_t* ap_target);
+static void wifi_attack_brod_send_deauth_frame(void* args);
 /**
  * @brief Start the Rogue AP  attack
  *
@@ -47,7 +47,7 @@ static void wifi_attack_brod_send_deauth_frame(wifi_ap_record_t* ap_target);
  *
  * @param ap_record target AP that will be cloned/duplicated
  */
-static void wifi_attack_rogueap(const wifi_ap_record_t* ap_record);
+static void wifi_attack_rogueap(void* args);
 
 static void attack_brodcast_send_raw_frame(const uint8_t* frame_buffer,
                                            int size) {
@@ -60,7 +60,10 @@ static void attack_brodcast_send_raw_frame(const uint8_t* frame_buffer,
   }
 }
 
-static void wifi_attack_brod_send_deauth_frame(wifi_ap_record_t* ap_target) {
+static void wifi_attack_brod_send_deauth_frame(void* args) {
+  
+  wifi_ap_record_t* ap_target = (wifi_ap_record_t*) args;
+
   ESP_LOGI(TAG_WIFI_ATTACK_MODULE, "Starting broadcast attack: %s",
            ap_target->ssid);
 
@@ -77,7 +80,10 @@ static void wifi_attack_brod_send_deauth_frame(wifi_ap_record_t* ap_target) {
   free(deauth_frame);
 }
 
-static void wifi_attack_rogueap(const wifi_ap_record_t* ap_record) {
+static void wifi_attack_rogueap(void* args) {
+
+  const wifi_ap_record_t* ap_record = (const wifi_ap_record_t*) args;
+
   esp_wifi_set_mode(WIFI_MODE_AP);
   running_rogueap_attack = true;
   ESP_LOGI(TAG_WIFI_ATTACK_MODULE, "Configuring Rogue AP SSID: %s",
