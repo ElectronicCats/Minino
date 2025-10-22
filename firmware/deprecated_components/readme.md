@@ -1,0 +1,2 @@
+# Deprecated components
+At the moment, the components you find here on this folder are deprecated because they are not compatible with the esp-idf 5.5.1 version, but at the future they will be updated.

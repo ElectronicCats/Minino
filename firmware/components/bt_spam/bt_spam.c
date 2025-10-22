@@ -141,7 +141,7 @@ static void start_adv_timer_callback() {
 
   display_records_cb(long_names_devices[adv_index]);
   esp_err_t err = esp_ble_gap_config_adv_data_raw(
-      &long_devices_raw[adv_index], sizeof(long_devices_raw[adv_index]));
+      long_devices_raw[adv_index], sizeof(long_devices_raw[adv_index]));
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Error setting adv data: %s", esp_err_to_name(err));
     return;
