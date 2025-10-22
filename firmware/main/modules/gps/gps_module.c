@@ -84,7 +84,7 @@ static void gps_sats_event_handler(void* event_handler_arg,
   switch (event_id) {
     case GPS_UPDATE:
       /* update GPS information */
-      gps_module_get_instance(event_data);
+      (void) gps_module_get_instance(event_data);
       break;
     case GPS_UNKNOWN:
       /* print unknown statements */
