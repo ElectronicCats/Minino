@@ -180,7 +180,7 @@ void bt_spam_app_main() {
   ESP_ERROR_CHECK(esp_ble_gap_register_callback(esp_gap_cb));
   ESP_ERROR_CHECK(esp_ble_gap_set_device_name("NotSuspiciousDevice"));
   // configure the adv data
-  ESP_ERROR_CHECK(esp_ble_gap_config_adv_data_raw(&adv_raw_data, 17));
+  ESP_ERROR_CHECK(esp_ble_gap_config_adv_data_raw(adv_raw_data, 17));
   vTaskDelay(500 / portTICK_PERIOD_MS);
 
   running_task = true;
