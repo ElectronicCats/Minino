@@ -394,7 +394,7 @@ err:
   return ret;
 }
 
-int do_pcap_cmd(int argc, char** argv) {
+int do_pcap_cmd(int argc, char* argv[]) {
   int ret = 0;
   int nerrors = arg_parse(argc, argv, (void**) &pcap_args);
   if (nerrors != 0) {
