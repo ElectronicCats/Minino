@@ -35,7 +35,7 @@ typedef enum {
   HELP_OPTION,
 } main_menu_options_t;
 
-static const char* main_menu_options[] = {
+char* main_menu_options[] = {
     "Run",
     "Settings",
     "Help",
@@ -235,7 +235,7 @@ void drone_id_scenes_settings_help() {
 
 ////////////////////////// HELP //////////////////////////
 
-static const char* help_txt[] = {"This app allows", "you to spoof",
+static char* help_txt[] = {"This app allows", "you to spoof",
                                  "drone IDs",       "using ESP32",
                                  "wifi features",   "",
                                  "You can set",     "the number",
