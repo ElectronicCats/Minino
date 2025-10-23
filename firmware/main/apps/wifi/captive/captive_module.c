@@ -670,12 +670,14 @@ static void captive_module_show_preference_selector() {
 }
 
 static void captive_module_show_running() {
-  char* body[64];
-  sprintf(body, "Using:%s | Waiting for user creds",
-          (char*) captive_context.portal);
+  
+  // Here I increse the size of the body, I dont know if it is the necessary size but
+  // it is necessary to incrase if it receive 
+  char body[128];
+  sprintf(body, "Using:%s | Waiting for user creds", captive_context.portal);
 
   general_notification_ctx_t notification = {0};
-  notification.head = (char*) wifi_ap_name;
+  notification.head = wifi_ap_name;
   notification.body = body;
   notification.on_exit = captive_module_disable_wifi;
   general_notification_handler(notification);
@@ -707,7 +709,7 @@ static void captive_module_sd_show_portals() {
   }
 
   general_submenu_menu_t portals = {0};
-  portals.options = (char**) portals_list.ent;
+  portals.options = (const char**) portals_list.ent;
   portals.options_count = portals_list.count;
   portals.select_cb = captive_module_portal_selector_handler;
   portals.selected_option = 0;
@@ -729,7 +731,7 @@ static void captive_module_sd_show_redirect() {
   }
 
   general_submenu_menu_t portals = {0};
-  portals.options = (char**) redirect_list.ent;
+  portals.options = (const char**) redirect_list.ent;
   portals.options_count = redirect_list.count;
   portals.select_cb = captive_module_redirect_selector_handler;
   portals.selected_option = 0;
@@ -737,7 +739,7 @@ static void captive_module_sd_show_redirect() {
   general_submenu(portals);
 }
 
-static const char* channel_options[] = {
+static char* channel_options[] = {
     "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
 };
 static void captive_module_set_channel(uint8_t selected_item) {
@@ -811,12 +813,12 @@ static void captive_module_show_aps_list() {
     return;
   }
 
-  if (ap_records->count == NULL) {
+  if (!ap_records->count) {
     ap_records->count = 0;
   }
 
   general_submenu_menu_t ap_list = {0};
-  ap_list.options = wifi_list;
+  ap_list.options = (const char**) wifi_list;
   ap_list.options_count = ap_records->count;
   ap_list.selected_option = 0;
   ap_list.select_cb = captive_module_ap_list_handler;
