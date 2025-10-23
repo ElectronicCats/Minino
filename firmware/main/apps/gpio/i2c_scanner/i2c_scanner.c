@@ -53,7 +53,7 @@ void imprimir_direcciones(uint8_t* found_addresses, size_t num_addresses) {
 
 static void show_scan_result(size_t num_nodes) {
   general_submenu_menu_t result = {0};
-  result.options = nodes_arr;
+  result.options = (const char**) nodes_arr;
   result.options_count = num_nodes;
   result.exit_cb = menus_module_restart;
   general_submenu(result);

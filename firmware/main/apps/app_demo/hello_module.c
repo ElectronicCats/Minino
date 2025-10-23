@@ -117,7 +117,7 @@ static void hello_show_notify_timed() {
  * This function is called when the user selects an option in the radio menu.
  * It saves the selected option into flash memory.
  */
-static void hello_radio_handler(uint16_t option) {
+static void hello_radio_handler(uint8_t option) {
   /* Save the value of the selected option into the flash,
   we use a key to create a relation between the key and user selection*/
   preferences_put_int(RADIO_SELECTOR_KEY, option);
