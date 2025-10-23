@@ -62,7 +62,12 @@ static void scanning_task() {
       break;
     }
   }
-  ap_records = wifi_scanner_get_ap_records();
+
+  // This assigment is the same, the struct returned from 
+  // wifi_scanner_get_ap_records is the same size of 
+  // scanned_ap_records_t
+  ap_records = (scanned_ap_records_t*) wifi_scanner_get_ap_records();
+
   menu_stadistics.count = ap_records->count;
   animations_task_stop();
   led_control_stop();
