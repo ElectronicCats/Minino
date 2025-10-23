@@ -40,7 +40,7 @@ static const char* config_dump_menu[] = {"Dump to SD", "No dump"};
 static uint16_t last_index_selected = 0;
 static httpd_handle_t server = NULL;
 static uint16_t retries = 0;
-static char* wifi_ap_name[CAPTIVE_PORTAL_MAX_NAME];
+static char wifi_ap_name[CAPTIVE_PORTAL_MAX_NAME];
 
 typedef enum {
   PORTALS,
@@ -56,8 +56,8 @@ typedef enum { STANDALONE, REPLICATE } mode_types_t;
 
 typedef struct {
   mode_types_t mode;
-  char* portal[48];
-  char* redirect[48];
+  char portal[48];
+  char redirect[48];
 } captive_context_t;
 
 typedef struct {
@@ -183,7 +183,7 @@ static void wifi_init_softap(void) {
 
   uint8_t esp_mac[6] = {0};
   esp_read_mac(esp_mac, ESP_MAC_WIFI_STA);
-  char* default_name[20];
+  char default_name[20];
   sprintf(default_name, "%s_%02X:%02X", CONFIG_WIFI_AP_NAME, esp_mac[4],
           esp_mac[5]);
   strncpy((char*) wifi_config.ap.ssid, default_name,

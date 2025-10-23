@@ -22,7 +22,7 @@ void adv_scanner_display_record(esp_ble_gap_cb_param_t* record) {
   oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
   oled_screen_display_text("ADV Type  | RSSI", 0, 1, OLED_DISPLAY_NORMAL);
 
-  char* row[45];
+  char row[45];
   for (int i = 0; i < MAX_ITEMS_PER_SCREEN; i++) {
     sprintf(row, "%s %d", evt_adv_type[adv_list[i].scan_rst.ble_evt_type],
             adv_list[i].scan_rst.rssi);
