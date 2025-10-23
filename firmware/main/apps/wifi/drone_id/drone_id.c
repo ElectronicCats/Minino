@@ -56,7 +56,7 @@ void drone_id_set_location(float latitude, float longitude) {
   odrone_id_set_location(latitude, longitude);
 }
 
-void drone_id_set_ble_drone(bool ble_drone) {
+void drone_id_set_ble_drone(uint8_t ble_drone) {
   drone_id_preferences_t* prefs = drone_id_preferences_get();
   prefs->add_ble_drone = ble_drone;
   drone_id_preferences_save();
