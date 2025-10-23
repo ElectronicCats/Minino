@@ -12,6 +12,7 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "task_manager.h"
 
 /**
  * @brief NMEA Parser runtime buffer size
@@ -746,10 +747,13 @@ nmea_parser_handle_t nmea_parser_init(const nmea_parser_config_t* config) {
     goto err_eloop;
   }
   /* Create NMEA Parser task */
-  BaseType_t err = xTaskCreate(
-      nmea_parser_task_entry, "nmea_parser", CONFIG_NMEA_PARSER_TASK_STACK_SIZE,
-      esp_gps, CONFIG_NMEA_PARSER_TASK_PRIORITY, &esp_gps->tsk_hdl);
-  if (err != pdTRUE) {
+  esp_err_t err = task_manager_create(
+      nmea_parser_task_entry, "nmea_parser",
+      TASK_STACK_LARGE,  // 8KB (CONFIG_NMEA_PARSER_TASK_STACK_SIZE)
+      esp_gps,
+      TASK_PRIORITY_HIGH,  // GPS es time-sensitive
+      &esp_gps->tsk_hdl);
+  if (err != ESP_OK) {
     ESP_LOGE(TAG, "create NMEA Parser task failed");
     goto err_task_create;
   }
@@ -777,7 +781,7 @@ err_gps:
  */
 esp_err_t nmea_parser_deinit(nmea_parser_handle_t nmea_hdl) {
   esp_gps_t* esp_gps = (esp_gps_t*) nmea_hdl;
-  vTaskDelete(esp_gps->tsk_hdl);
+  task_manager_delete(esp_gps->tsk_hdl);
   esp_event_loop_delete(esp_gps->event_loop_hdl);
   esp_err_t err = uart_driver_delete(esp_gps->uart_port);
   free(esp_gps->buffer);
