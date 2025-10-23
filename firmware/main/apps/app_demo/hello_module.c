@@ -129,7 +129,7 @@ static void hello_radio_handler(uint8_t option) {
 static void hello_show_radio_selector() {
   general_radio_selection_menu_t settings = {0};
   settings.banner = "Hello Type";    // Menu title
-  settings.options = radio_options;  // Options to choose from
+  settings.options = (const char**) radio_options;  // Options to choose from
   settings.options_count = sizeof(radio_options) / sizeof(char*);
   settings.select_cb =
       hello_radio_handler;  // Function to call when user selects

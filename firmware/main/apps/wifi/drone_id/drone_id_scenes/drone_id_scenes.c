@@ -127,7 +127,7 @@ void drone_id_scenes_settings() {
   current_menu = DRONE_SCENES_SETTINGS;
 }
 
-static void drone_num_handler(uint8_t num_drones) {
+static void drone_num_handler(int16_t num_drones) {
   drone_id_preferences_set_num_drones(num_drones);
   drone_id_set_num_spoofers(num_drones);
 }
@@ -147,7 +147,7 @@ void drone_id_scenes_settings_num_drones() {
   current_menu = DRONE_SCENES_SETTINGS_NUM_DRONES;
 }
 
-static void drone_channel_handler(uint8_t channel) {
+static void drone_channel_handler(int16_t channel) {
   drone_id_preferences_set_channel(channel);
   drone_id_set_wifi_ap(channel);
 }
@@ -187,7 +187,7 @@ static char* ble_drone_options[] = {"Disabled", "Enabled"};
 void drone_id_scenes_settings_ble_drone() {
   general_radio_selection_menu_t ble_drone = {0};
   ble_drone.banner = "BLE Drone";
-  ble_drone.options = ble_drone_options;
+  ble_drone.options = (const char**) ble_drone_options;
   ble_drone.options_count = sizeof(ble_drone_options) / sizeof(char*);
   ble_drone.current_option = drone_id_preferences_get()->add_ble_drone;
   ble_drone.style = RADIO_SELECTION_OLD_STYLE;

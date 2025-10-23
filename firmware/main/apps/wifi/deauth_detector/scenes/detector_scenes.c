@@ -105,7 +105,7 @@ static void settings_exit() {
 void detector_scenes_settings() {
   general_radio_selection_menu_t settings;
   settings.banner = "Scan Mode";
-  settings.options = settings_options;
+  settings.options = (const char**) settings_options;
   settings.options_count = sizeof(settings_options) / sizeof(char*);
   settings.select_cb = settings_handler;
   settings.style = RADIO_SELECTION_OLD_STYLE;
