@@ -1,17 +1,181 @@
-# 🔧 Troubleshooting Guide - Migración ESP-IDF v5.4
+# 🔧 Troubleshooting Guide - Migración ESP-IDF v5.5.1
 
 ## 📋 Tabla de Contenidos
 
-1. [Errores de Compilación](#errores-de-compilación)
-2. [Errores de Ejecución](#errores-de-ejecución)
-3. [Problemas de Protocolos](#problemas-de-protocolos)
-4. [Problemas de Memoria](#problemas-de-memoria)
-5. [Comandos Útiles](#comandos-útiles)
-6. [Debugging Avanzado](#debugging-avanzado)
+1. [Core Components (NUEVO)](#core-components-nuevo)
+2. [Errores de Compilación](#errores-de-compilación)
+3. [Errores de Ejecución](#errores-de-ejecución)
+4. [Problemas de Protocolos](#problemas-de-protocolos)
+5. [Problemas de Memoria](#problemas-de-memoria)
+6. [Comandos Útiles](#comandos-útiles)
+7. [Debugging Avanzado](#debugging-avanzado)
 
 ---
 
-## 1. Errores de Compilación
+## 1. Core Components (NUEVO)
+
+### 🚀 Uso de los Nuevos Core Components
+
+El firmware ahora incluye 3 componentes core que mejoran robustez y monitoreo:
+
+#### Memory Monitor
+
+**¿Qué hace?**  
+Monitorea automáticamente el heap y alerta cuando la memoria es baja.
+
+**Comandos de diagnóstico:**
+```c
+// Ver estadísticas de memoria
+heap_monitor_print_stats();
+
+// Obtener estado actual
+heap_alert_level_t level = heap_monitor_get_alert_level();
+```
+
+**Alertas automáticas en logs:**
+```
+W (12345) heap_monitor: ⚠️  Memoria baja: 45 KB libre (fragmentación: 12.5%)
+E (12350) heap_monitor: 🔴 Memoria crítica: 25 KB libre! Considera liberar recursos
+```
+
+#### Task Manager
+
+**¿Qué hace?**  
+Gestiona todas las tareas con prioridades y stack sizes estandarizados.
+
+**Comandos de diagnóstico:**
+```c
+// Listar todas las tareas
+task_manager_list_all();
+
+// Ver uso de stack
+task_manager_print_stack_usage();
+
+// Verificar riesgo de overflow
+if (task_manager_check_stack_overflow_risk()) {
+    ESP_LOGW(TAG, "Hay tareas con stack muy lleno!");
+}
+```
+
+**Prioridades estandarizadas:**
+- `TASK_PRIORITY_CRITICAL` (24) - Protocolos time-sensitive
+- `TASK_PRIORITY_HIGH` (20) - GPS, WiFi, BLE crítico
+- `TASK_PRIORITY_NORMAL` (15) - Apps, scanners
+- `TASK_PRIORITY_LOW` (10) - UI, LEDs
+- `TASK_PRIORITY_IDLE` (5) - Background tasks
+
+#### Error Handler
+
+**¿Qué hace?**  
+Sistema centralizado de reporteo y recuperación de errores.
+
+**Comandos de diagnóstico:**
+```c
+// Ver estadísticas de errores
+error_handler_print_stats();
+```
+
+**Macros para reportar errores:**
+```c
+// Error genérico
+ERROR_REPORT(ERROR_SEVERITY_WARNING, ERROR_COMPONENT_WIFI, 
+             err, "WiFi failed", false, NULL);
+
+// Shortcuts
+ERROR_WIFI(err, "Connection failed");
+ERROR_CRITICAL(ERROR_COMPONENT_SD_CARD, err, "SD mount failed");
+```
+
+### 🔍 Troubleshooting con Core Components
+
+#### Problema: Stack Overflow
+
+**Síntoma:**
+```
+***ERROR*** A stack overflow in task my_task has been detected.
+```
+
+**Diagnóstico:**
+```c
+task_manager_print_stack_usage();
+```
+
+**Solución:**
+Migrar la tarea al Task Manager con stack size mayor:
+```c
+// ANTES: xTaskCreate(task, "name", 2048, NULL, 5, &handle);
+
+// DESPUÉS: Usar stack MEDIUM (4KB) o LARGE (8KB)
+task_manager_create(task, "name", TASK_STACK_LARGE, NULL, 
+                   TASK_PRIORITY_NORMAL, &handle);
+```
+
+#### Problema: Out of Memory (OOM)
+
+**Síntoma:**
+```
+E (12345) heap: Failed to allocate 8192 bytes
+```
+
+**Diagnóstico:**
+```c
+heap_monitor_print_stats();
+```
+
+**Análisis:**
+1. ¿Cuánta memoria está libre actualmente?
+2. ¿Cuál es el bloque contiguo más grande?
+3. ¿Hay fragmentación alta (>30%)?
+
+**Soluciones:**
+- Si hay fragmentación: reiniciar componentes para liberar memoria
+- Si falta memoria: reducir cache sizes, buffers, o cerrar features
+- Si es temporal: implementar pooling de memoria
+
+#### Problema: Prioridades Incorrectas
+
+**Síntoma:**
+Tareas de UI tienen más prioridad que tareas críticas, causando latencia.
+
+**Diagnóstico:**
+```c
+task_manager_list_all();
+```
+
+**Solución:**
+Migrar tareas al Task Manager con prioridades correctas:
+- GPS/WiFi/BLE → `TASK_PRIORITY_HIGH`
+- UI/Display → `TASK_PRIORITY_LOW`
+- Protocolos (Zigbee) → `TASK_PRIORITY_CRITICAL`
+
+#### Problema: Memory Leak
+
+**Síntoma:**
+Memoria libre disminuye progresivamente.
+
+**Diagnóstico:**
+```c
+// Monitorear por 5 minutos
+heap_stats_t stats = heap_monitor_get_stats();
+ESP_LOGI(TAG, "Mínimo histórico: %zu KB", stats.min_free_ever / 1024);
+
+// Si min_free_ever sigue bajando → hay leak
+```
+
+**Solución:**
+1. Identificar el módulo responsable (suspender uno por uno)
+2. Revisar `malloc()` sin `free()` correspondiente
+3. Verificar que tareas deletadas liberaron recursos
+
+---
+
+**Para más detalles, ver:**
+- `ARCHITECTURAL_IMPROVEMENTS.md` - Documentación completa
+- `CODE_EXAMPLES.md` - Ejemplos de uso
+
+---
+
+## 2. Errores de Compilación
 
 ### Error: "esp_wifi_set_config" undefined reference
 
