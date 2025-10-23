@@ -29,9 +29,6 @@ static void packet_handler(void* buf, wifi_promiscuous_pkt_type_t type) {
   wifi_promiscuous_pkt_t* p = (wifi_promiscuous_pkt_t*) buf;
   wifi_pkt_rx_ctrl_t rx_ctrl = p->rx_ctrl;
   uint8_t* mac = p->payload;
-
-  uint8_t* buf_alternative = (uint8_t*) buf; 
-
   uint8_t buf_alternative = buf[12];
   if (pkt_type == 0xA0 || pkt_type == 0xC0) {
     ESP_LOGI(TAG,
