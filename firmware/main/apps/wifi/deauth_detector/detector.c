@@ -28,9 +28,15 @@ static void packet_handler(void* buf, wifi_promiscuous_pkt_type_t type) {
   TickType_t current_time = xTaskGetTickCount();
   wifi_promiscuous_pkt_t* p = (wifi_promiscuous_pkt_t*) buf;
   wifi_pkt_rx_ctrl_t rx_ctrl = p->rx_ctrl;
-  uint8_t* mac = p->payload;
 
-  if (pkt_type == 0xA0 || pkt_type == 0xC0) {
+  uint8_t* payload = p->payload;
+
+  uint8_t frame_type = payload[0]; 
+
+  if (frame_type == 0xA0 || frame_type == 0xC0) {
+
+    uint8_t* mac = payload + 10;
+
     ESP_LOGI(TAG,
              "Packet received channel: %d from MAC address: "
              "%02x:%02x:%02x:%02x:%02x:%02x",
