@@ -252,7 +252,7 @@ static char* help_txt[] = {"This app allows", "you to spoof",
 void drone_id_scenes_help() {
   general_scrolling_text_ctx help = {0};
   help.banner = "Drone ID Help";
-  help.text_arr = help_txt;
+  help.text_arr = (const char**) help_txt;
   help.text_len = sizeof(help_txt) / sizeof(char*);
   help.scroll_type = GENERAL_SCROLLING_TEXT_CLAMPED;
   help.window_type = GENERAL_SCROLLING_TEXT_WINDOW;

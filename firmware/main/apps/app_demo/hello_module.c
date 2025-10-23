@@ -33,7 +33,7 @@ static const char* help_text_custom[] = {
     "Keep pressing", "the DOWN",      "button for",
     "a while",       "to trigger",    "LONG PRESS",
     "HOLD"};
-static const char* radio_options[] = {"Single", "Timed"};
+static char* radio_options[] = {"Single", "Timed"};
 // Use this variable to save the index of the last selection (this is optional)
 static uint16_t last_main_selection = 0;
 

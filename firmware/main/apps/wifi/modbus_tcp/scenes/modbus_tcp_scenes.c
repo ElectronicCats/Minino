@@ -106,7 +106,7 @@ static void modbus_tcp_scenes_show_target() {
     modbus_show_no_target_notify();
     return;
   }
-  char* body_text[100];
+  char body_text[100];
   sprintf(body_text, "IP: %s Port: %d", mbus_ctx->ip, mbus_ctx->port);
   general_notification_ctx_t notification = {0};
   notification.head = "Target";
@@ -314,7 +314,7 @@ void modbus_tcp_scenes_ap_connect() {
   }
   wifi_ap_manager_get_aps(list_ap);
   general_submenu_menu_t submenu = {0};
-  submenu.options = list_ap;
+  submenu.options = (const char**) list_ap;
   submenu.options_count = count;
   submenu.select_cb = handle_tcp_ap_connection;
   submenu.selected_option = last_settings_selection;
@@ -343,7 +343,7 @@ static char* attacks_type[] = {"Single", "Loop"};
 
 static void modbus_tcp_scenes_show_attacks_list() {
   general_submenu_menu_t submenu = {0};
-  submenu.options = attacks_type;
+  submenu.options = (const char**) attacks_type;
   submenu.options_count = sizeof(attacks_type) / sizeof(char*);
   submenu.select_cb = handle_attack_writer_selector;
   submenu.selected_option = 0;

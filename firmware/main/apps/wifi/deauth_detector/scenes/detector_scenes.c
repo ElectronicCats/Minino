@@ -84,7 +84,7 @@ void detector_scenes_main_menu() {
 
 //////////////////////////   Settings Menu   //////////////////////////
 static enum { CHANNEL_HOP_OPTION, CHANNEL_OPTION } settings_options_e;
-static const char* settings_options[] = {"Channel hop", "Channel"};
+static char* settings_options[] = {"Channel hop", "Channel"};
 static void settings_handler(uint8_t scan_mode) {
   switch (scan_mode) {
     case CHANNEL_HOP_OPTION:
@@ -117,7 +117,7 @@ void detector_scenes_settings() {
 }
 
 //////////////////////////   Channel Hop Menu   //////////////////////////
-static const char* channel_options[] = {
+static char* channel_options[] = {
     "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
 };
 static void channel_handler(uint8_t channel) {
