@@ -30,7 +30,7 @@ static void adv_scanner_menu_handler_selector(uint8_t option) {
 
 static void adv_scanner_display_main() {
   general_submenu_menu_t adv_menu_main = {0};
-  adv_menu_main.options = scan_menu_items;
+  adv_menu_main.options = (const char**) scan_menu_items;
   adv_menu_main.options_count = SCAN_MENU_COUNT;
   adv_menu_main.select_cb = adv_scanner_menu_handler_selector;
   adv_menu_main.exit_cb = menus_module_reset;
@@ -50,7 +50,7 @@ static void adv_type_selection(uint8_t selection) {
 
 static void adv_scanner_display_filter() {
   general_submenu_menu_t adv_menu_filter = {0};
-  adv_menu_filter.options = scan_filter_items;
+  adv_menu_filter.options = (const char**) scan_filter_items;
   adv_menu_filter.options_count = 4;
   adv_menu_filter.select_cb = adv_filter_selection;
   adv_menu_filter.exit_cb = adv_scanner_display_main;
@@ -59,7 +59,7 @@ static void adv_scanner_display_filter() {
 
 static void adv_scanner_display_type() {
   general_submenu_menu_t adv_menu_type = {0};
-  adv_menu_type.options = scan_type_items;
+  adv_menu_type.options = (const char**) scan_type_items;
   adv_menu_type.options_count = 2;
   adv_menu_type.select_cb = adv_type_selection;
   adv_menu_type.exit_cb = adv_scanner_display_main;
