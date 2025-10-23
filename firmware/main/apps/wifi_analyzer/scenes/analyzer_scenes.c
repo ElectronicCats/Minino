@@ -138,8 +138,8 @@ void analyzer_scenes_destination() {
   destination.style = RADIO_SELECTION_OLD_STYLE;
   general_radio_selection(destination);
 }
-//////////////////////////   HELP MENU   ///////////////////////////////
-static const char* wifi_analizer_help[] = {
+
+static char* wifi_analizer_help[] = {
     "This tool",      "allows you to",   "analyze the",
     "WiFi networks",  "around you.",     "",
     "You can select", "the channel and", "the destination",
