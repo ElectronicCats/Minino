@@ -92,10 +92,7 @@ struct psa_hash_operation_s
     psa_driver_hash_context_t ctx;
 };
 
-#define PSA_HASH_OPERATION_INIT \
-    {                           \
-        0, { 0 }                \
-    }
+#define PSA_HASH_OPERATION_INIT {0, {0}}
 static inline struct psa_hash_operation_s psa_hash_operation_init(void)
 {
     const struct psa_hash_operation_s v = PSA_HASH_OPERATION_INIT;
@@ -120,10 +117,7 @@ struct psa_cipher_operation_s
     psa_driver_cipher_context_t ctx;
 };
 
-#define PSA_CIPHER_OPERATION_INIT \
-    {                             \
-        0, 0, 0, 0, { 0 }         \
-    }
+#define PSA_CIPHER_OPERATION_INIT {0, 0, 0, 0, {0}}
 static inline struct psa_cipher_operation_s psa_cipher_operation_init(void)
 {
     const struct psa_cipher_operation_s v = PSA_CIPHER_OPERATION_INIT;
@@ -148,10 +142,7 @@ struct psa_mac_operation_s
     psa_driver_mac_context_t ctx;
 };
 
-#define PSA_MAC_OPERATION_INIT \
-    {                          \
-        0, 0, 0, { 0 }         \
-    }
+#define PSA_MAC_OPERATION_INIT {0, 0, 0, {0}}
 static inline struct psa_mac_operation_s psa_mac_operation_init(void)
 {
     const struct psa_mac_operation_s v = PSA_MAC_OPERATION_INIT;
@@ -172,10 +163,7 @@ struct psa_aead_operation_s
     } ctx;
 };
 
-#define PSA_AEAD_OPERATION_INIT \
-    {                           \
-        0, 0, 0, 0, 0, { 0 }    \
-    }
+#define PSA_AEAD_OPERATION_INIT {0, 0, 0, 0, 0, {0}}
 static inline struct psa_aead_operation_s psa_aead_operation_init(void)
 {
     const struct psa_aead_operation_s v = PSA_AEAD_OPERATION_INIT;
@@ -259,10 +247,7 @@ struct psa_key_derivation_s
 };
 
 /* This only zeroes out the first byte in the union, the rest is unspecified. */
-#define PSA_KEY_DERIVATION_OPERATION_INIT \
-    {                                     \
-        0, 0, 0, { 0 }                    \
-    }
+#define PSA_KEY_DERIVATION_OPERATION_INIT {0, 0, 0, {0}}
 static inline struct psa_key_derivation_s psa_key_derivation_operation_init(void)
 {
     const struct psa_key_derivation_s v = PSA_KEY_DERIVATION_OPERATION_INIT;
@@ -277,10 +262,7 @@ struct psa_key_policy_s
 };
 typedef struct psa_key_policy_s psa_key_policy_t;
 
-#define PSA_KEY_POLICY_INIT \
-    {                       \
-        0, 0, 0             \
-    }
+#define PSA_KEY_POLICY_INIT {0, 0, 0}
 static inline struct psa_key_policy_s psa_key_policy_init(void)
 {
     const struct psa_key_policy_s v = PSA_KEY_POLICY_INIT;
@@ -329,10 +311,8 @@ typedef struct
     psa_key_attributes_flag_t flags;
 } psa_core_key_attributes_t;
 
-#define PSA_CORE_KEY_ATTRIBUTES_INIT                                                                     \
-    {                                                                                                    \
-        PSA_KEY_TYPE_NONE, 0, PSA_KEY_LIFETIME_VOLATILE, MBEDTLS_SVC_KEY_ID_INIT, PSA_KEY_POLICY_INIT, 0 \
-    }
+#define PSA_CORE_KEY_ATTRIBUTES_INIT \
+    {PSA_KEY_TYPE_NONE, 0, PSA_KEY_LIFETIME_VOLATILE, MBEDTLS_SVC_KEY_ID_INIT, PSA_KEY_POLICY_INIT, 0}
 
 struct psa_key_attributes_s
 {
@@ -345,15 +325,9 @@ struct psa_key_attributes_s
 };
 
 #if defined(MBEDTLS_PSA_CRYPTO_SE_C)
-#define PSA_KEY_ATTRIBUTES_INIT                  \
-    {                                            \
-        PSA_CORE_KEY_ATTRIBUTES_INIT, 0, NULL, 0 \
-    }
+#define PSA_KEY_ATTRIBUTES_INIT {PSA_CORE_KEY_ATTRIBUTES_INIT, 0, NULL, 0}
 #else
-#define PSA_KEY_ATTRIBUTES_INIT               \
-    {                                         \
-        PSA_CORE_KEY_ATTRIBUTES_INIT, NULL, 0 \
-    }
+#define PSA_KEY_ATTRIBUTES_INIT {PSA_CORE_KEY_ATTRIBUTES_INIT, NULL, 0}
 #endif
 
 static inline struct psa_key_attributes_s psa_key_attributes_init(void)

@@ -35,7 +35,7 @@ typedef enum {
   HELP_OPTION,
 } main_menu_options_t;
 
-char* main_menu_options[] = {
+const char* main_menu_options[] = {
     "Run",
     "Settings",
     "Help",
@@ -236,18 +236,18 @@ void drone_id_scenes_settings_help() {
 ////////////////////////// HELP //////////////////////////
 
 static char* help_txt[] = {"This app allows", "you to spoof",
-                                 "drone IDs",       "using ESP32",
-                                 "wifi features",   "",
-                                 "You can set",     "the number",
-                                 "of drones,",      "the wifi",
-                                 "channel and",     "the location",
-                                 "source.",         "",
-                                 "Please note",     "that this app",
-                                 "if for",          "educational",
-                                 "purposes only.",  "",
-                                 "Familiarizing",   "with (FAA) laws",
-                                 "is crucial to",   "avoid legal",
-                                 "consequences."};
+                           "drone IDs",       "using ESP32",
+                           "wifi features",   "",
+                           "You can set",     "the number",
+                           "of drones,",      "the wifi",
+                           "channel and",     "the location",
+                           "source.",         "",
+                           "Please note",     "that this app",
+                           "if for",          "educational",
+                           "purposes only.",  "",
+                           "Familiarizing",   "with (FAA) laws",
+                           "is crucial to",   "avoid legal",
+                           "consequences."};
 
 void drone_id_scenes_help() {
   general_scrolling_text_ctx help = {0};

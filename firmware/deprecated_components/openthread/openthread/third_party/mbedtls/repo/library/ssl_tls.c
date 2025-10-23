@@ -1347,11 +1347,11 @@ static int ssl_populate_transform(mbedtls_ssl_transform *transform,
         }
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-        /* Only use PSA-based ciphers for TLS-1.2.
-         * That's relevant at least for TLS-1.0, where
-         * we assume that mbedtls_cipher_crypt() updates
-         * the structure field for the IV, which the PSA-based
-         * implementation currently doesn't. */
+    /* Only use PSA-based ciphers for TLS-1.2.
+     * That's relevant at least for TLS-1.0, where
+     * we assume that mbedtls_cipher_crypt() updates
+     * the structure field for the IV, which the PSA-based
+     * implementation currently doesn't. */
 #if defined(MBEDTLS_SSL_PROTO_TLS1_2)
     if (ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_3)
     {
@@ -2534,9 +2534,9 @@ static int ssl_parse_certificate_verify(mbedtls_ssl_context *ssl, int authmode, 
         return (MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS);
 #endif
 
-        /*
-         * Secondary checks: always done, but change 'ret' only if it was 0
-         */
+    /*
+     * Secondary checks: always done, but change 'ret' only if it was 0
+     */
 
 #if defined(MBEDTLS_ECP_C)
     {
@@ -5551,8 +5551,8 @@ int mbedtls_ssl_start_renegotiation(mbedtls_ssl_context *ssl)
     if ((ret = ssl_handshake_init(ssl)) != 0)
         return (ret);
 
-        /* RFC 6347 4.2.2: "[...] the HelloRequest will have message_seq = 0 and
-         * the ServerHello will have message_seq = 1" */
+    /* RFC 6347 4.2.2: "[...] the HelloRequest will have message_seq = 0 and
+     * the ServerHello will have message_seq = 1" */
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM &&
         ssl->renego_status == MBEDTLS_SSL_RENEGOTIATION_PENDING)

@@ -681,10 +681,7 @@ exit:
 
 otError Br::Process(Arg aArgs[])
 {
-#define CmdEntry(aCommandString)                          \
-    {                                                     \
-        aCommandString, &Br::Process<Cmd(aCommandString)> \
-    }
+#define CmdEntry(aCommandString) {aCommandString, &Br::Process<Cmd(aCommandString)>}
 
     static constexpr Command kCommands[] = {
 #if OPENTHREAD_CONFIG_IP6_BR_COUNTERS_ENABLE

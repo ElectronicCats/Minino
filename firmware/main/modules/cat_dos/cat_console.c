@@ -36,7 +36,7 @@
 #include "captive_cmd.h"
 #include "gattcmd_cmd.h"
 #include "hello_cmd.h"
-#include "zb_cli.h"
+// #include "zb_cli.h"  // Temporarily disabled - zb_cli is deprecated
 
 static const char* TAG = "cat_console";
 #define PROMPT_STR "minino"
@@ -187,7 +187,10 @@ void cat_console_begin() {
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
   if (preferences_get_int("ZBCLI", 0) == 1) {
-    zb_cli_begin();
+    // zb_cli_begin();  // Temporarily disabled - zb_cli is deprecated
+    initialize_nvs();
+    initialize_console();
+    register_commands();
   } else {
     initialize_nvs();
     initialize_console();

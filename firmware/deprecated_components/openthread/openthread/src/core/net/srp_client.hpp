@@ -938,7 +938,8 @@ private:
     class AutoStart : public Clearable<AutoStart>
     {
     public:
-        enum State : uint8_t{
+        enum State : uint8_t
+        {
             kDisabled,                 // AutoStart is disabled.
             kSelectedNone,             // AutoStart is enabled but not yet selected any servers.
             kSelectedUnicastPreferred, // AutoStart selected a preferred unicast entry (address in service data).

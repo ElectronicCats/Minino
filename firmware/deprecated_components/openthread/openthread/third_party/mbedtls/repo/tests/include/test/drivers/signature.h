@@ -41,10 +41,7 @@ typedef struct
     unsigned long hits;
 } mbedtls_test_driver_signature_hooks_t;
 
-#define MBEDTLS_TEST_DRIVER_SIGNATURE_INIT \
-    {                                      \
-        NULL, 0, PSA_SUCCESS, 0            \
-    }
+#define MBEDTLS_TEST_DRIVER_SIGNATURE_INIT {NULL, 0, PSA_SUCCESS, 0}
 static inline mbedtls_test_driver_signature_hooks_t mbedtls_test_driver_signature_hooks_init(void)
 {
     const mbedtls_test_driver_signature_hooks_t v = MBEDTLS_TEST_DRIVER_SIGNATURE_INIT;

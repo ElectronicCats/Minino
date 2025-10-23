@@ -670,9 +670,8 @@ static void captive_module_show_preference_selector() {
 }
 
 static void captive_module_show_running() {
-  
-  // Here I increse the size of the body, I dont know if it is the necessary size but
-  // it is necessary to incrase if it receive 
+  // Here I increse the size of the body, I dont know if it is the necessary
+  // size but it is necessary to incrase if it receive
   char body[128];
   sprintf(body, "Using:%s | Waiting for user creds", captive_context.portal);
 

@@ -49,10 +49,7 @@ typedef struct
     } ctx;
 } aead_operation_t;
 
-#define AEAD_OPERATION_INIT \
-    {                       \
-        0, 0, { 0 }         \
-    }
+#define AEAD_OPERATION_INIT {0, 0, {0}}
 
 static void psa_aead_abort_internal(aead_operation_t *operation)
 {

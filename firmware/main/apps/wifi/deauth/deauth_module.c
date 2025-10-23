@@ -63,8 +63,8 @@ static void scanning_task() {
     }
   }
 
-  // This assigment is the same, the struct returned from 
-  // wifi_scanner_get_ap_records is the same size of 
+  // This assigment is the same, the struct returned from
+  // wifi_scanner_get_ap_records is the same size of
   // scanned_ap_records_t
   ap_records = (scanned_ap_records_t*) wifi_scanner_get_ap_records();
 

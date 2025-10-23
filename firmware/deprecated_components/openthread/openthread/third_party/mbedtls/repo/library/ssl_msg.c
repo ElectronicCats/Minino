@@ -3400,18 +3400,18 @@ static int ssl_parse_record_header(mbedtls_ssl_context const *ssl, unsigned char
     if (rec->data_len == 0)
         return (MBEDTLS_ERR_SSL_INVALID_RECORD);
 
-        /*
-         * DTLS-related tests.
-         * Check epoch before checking length constraint because
-         * the latter varies with the epoch. E.g., if a ChangeCipherSpec
-         * message gets duplicated before the corresponding Finished message,
-         * the second ChangeCipherSpec should be discarded because it belongs
-         * to an old epoch, but not because its length is shorter than
-         * the minimum record length for packets using the new record transform.
-         * Note that these two kinds of failures are handled differently,
-         * as an unexpected record is silently skipped but an invalid
-         * record leads to the entire datagram being dropped.
-         */
+    /*
+     * DTLS-related tests.
+     * Check epoch before checking length constraint because
+     * the latter varies with the epoch. E.g., if a ChangeCipherSpec
+     * message gets duplicated before the corresponding Finished message,
+     * the second ChangeCipherSpec should be discarded because it belongs
+     * to an old epoch, but not because its length is shorter than
+     * the minimum record length for packets using the new record transform.
+     * Note that these two kinds of failures are handled differently,
+     * as an unexpected record is silently skipped but an invalid
+     * record leads to the entire datagram being dropped.
+     */
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
     if (ssl->conf->transport == MBEDTLS_SSL_TRANSPORT_DATAGRAM)
     {
@@ -5260,9 +5260,9 @@ int mbedtls_ssl_read(mbedtls_ssl_context *ssl, unsigned char *buf, size_t len)
             mbedtls_ssl_set_timer(ssl, 0);
 
 #if defined(MBEDTLS_SSL_PROTO_DTLS)
-            /* If we requested renego but received AppData, resend HelloRequest.
-             * Do it now, after setting in_offt, to avoid taking this branch
-             * again if ssl_write_hello_request() returns WANT_WRITE */
+        /* If we requested renego but received AppData, resend HelloRequest.
+         * Do it now, after setting in_offt, to avoid taking this branch
+         * again if ssl_write_hello_request() returns WANT_WRITE */
 #if defined(MBEDTLS_SSL_SRV_C) && defined(MBEDTLS_SSL_RENEGOTIATION)
         if (ssl->conf->endpoint == MBEDTLS_SSL_IS_SERVER && ssl->renego_status == MBEDTLS_SSL_RENEGOTIATION_PENDING)
         {

@@ -102,7 +102,7 @@ int main(void)
 #define DFL_ALLOW_LEGACY -2
 #define DFL_RENEGOTIATE 0
 #define DFL_RENEGO_DELAY -2
-#define DFL_RENEGO_PERIOD ((uint64_t) - 1)
+#define DFL_RENEGO_PERIOD ((uint64_t)-1)
 #define DFL_EXCHANGES 1
 #define DFL_MIN_VERSION -1
 #define DFL_MAX_VERSION -1

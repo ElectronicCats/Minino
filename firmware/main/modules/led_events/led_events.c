@@ -66,12 +66,18 @@ void led_control_stop(void) {
   led_evenet_task = NULL;        ///////////////////
 }
 
+static void effect_wrapper(void* pvParameters) {
+  effect_control func = (effect_control) pvParameters;
+  func();
+}
+
 void led_control_run_effect(effect_control effect_function) {
 #ifndef CONFIG_LEDS_COMPONENT_ENABLED
   return;
 #endif
   // effect_function();
   led_event_running = true;
-  xTaskCreate(effect_function, "effect_function", 4096, NULL, 0,
+  xTaskCreate(effect_wrapper, "effect_function", 4096, (void*) effect_function,
+              0,
               &led_evenet_task);  ////////////
 }

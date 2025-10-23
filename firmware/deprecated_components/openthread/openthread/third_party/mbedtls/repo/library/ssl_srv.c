@@ -1732,7 +1732,7 @@ read_record_header:
         ssl->session_negotiate->compression = MBEDTLS_SSL_COMPRESS_NULL;
 #endif
 
-        /* Do not parse the extensions if the protocol is SSLv3 */
+    /* Do not parse the extensions if the protocol is SSLv3 */
 #if defined(MBEDTLS_SSL_PROTO_SSL3)
     if ((ssl->major_ver != 3) || (ssl->minor_ver != 0))
     {
@@ -2099,7 +2099,7 @@ have_ciphersuite:
         mbedtls_ssl_recv_flight_completed(ssl);
 #endif
 
-        /* Debugging-only output for testsuite */
+    /* Debugging-only output for testsuite */
 #if defined(MBEDTLS_DEBUG_C) && defined(MBEDTLS_SSL_PROTO_TLS1_2) && defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
     if (ssl->minor_ver == MBEDTLS_SSL_MINOR_VERSION_3)
     {

@@ -75,10 +75,7 @@ typedef struct
     mbedtls_transparent_test_driver_cipher_operation_t ctx;
 } mbedtls_opaque_test_driver_cipher_operation_t;
 
-#define MBEDTLS_OPAQUE_TEST_DRIVER_CIPHER_OPERATION_INIT         \
-    {                                                            \
-        0, MBEDTLS_TRANSPARENT_TEST_DRIVER_CIPHER_OPERATION_INIT \
-    }
+#define MBEDTLS_OPAQUE_TEST_DRIVER_CIPHER_OPERATION_INIT {0, MBEDTLS_TRANSPARENT_TEST_DRIVER_CIPHER_OPERATION_INIT}
 
 #endif /* PSA_CRYPTO_DRIVER_TEST */
 

@@ -17,7 +17,7 @@
 #include "sleep_mode.h"
 #include "uart_bridge.h"
 
-#include "zb_cli.h"
+// #include "zb_cli.h"  // Temporarily disabled - zb_cli is deprecated
 
 #define BAUD_RATE        921600
 #define UART_BUFFER_SIZE 1024

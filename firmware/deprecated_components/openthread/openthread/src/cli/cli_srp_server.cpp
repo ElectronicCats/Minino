@@ -533,10 +533,7 @@ exit:
 
 otError SrpServer::Process(Arg aArgs[])
 {
-#define CmdEntry(aCommandString)                                 \
-    {                                                            \
-        aCommandString, &SrpServer::Process<Cmd(aCommandString)> \
-    }
+#define CmdEntry(aCommandString) {aCommandString, &SrpServer::Process<Cmd(aCommandString)>}
 
     static constexpr Command kCommands[] = {
         CmdEntry("addrmode"),

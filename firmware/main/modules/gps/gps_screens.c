@@ -78,7 +78,7 @@ static void gps_screens_test(gps_t* gps) {
   char* str = (char*) malloc(20);
   char* str2 = (char*) malloc(20);
   oled_screen_clear_buffer();
-  uint8_t sats = gps_module_get_signal_strength(gps);
+  // uint8_t sats = gps_module_get_signal_strength(gps);  // Unused variable
   if (gps->sats_in_use == 0) {
     sprintf(str, "GPS OK");
     sprintf(str2, "Sats: %d", 0);
@@ -335,7 +335,7 @@ void gps_screens_show_waiting_signal() {
   oled_screen_display_show();
 }
 
-static void agnss_radio_handler(uint16_t option) {
+static void agnss_radio_handler(uint8_t option) {
   preferences_put_int(AGNSS_OPTIONS_PREF_KEY, option);
 }
 
@@ -351,7 +351,7 @@ static void gps_screens_show_agnss(void) {
   general_radio_selection(settings);
 }
 
-static void power_radio_handler(uint16_t option) {
+static void power_radio_handler(uint8_t option) {
   preferences_put_int(POWER_OPTIONS_PREF_KEY, option);
 }
 
@@ -367,7 +367,7 @@ static void gps_screens_show_power(void) {
   general_radio_selection(settings);
 }
 
-static void advanced_radio_handler(uint16_t option) {
+static void advanced_radio_handler(uint8_t option) {
   preferences_put_int(ADVANCED_OPTIONS_PREF_KEY, option);
 }
 
@@ -383,7 +383,7 @@ static void gps_screens_show_advanced(void) {
   general_radio_selection(settings);
 }
 
-static void update_rate_radio_handler(uint16_t option) {
+static void update_rate_radio_handler(uint8_t option) {
   preferences_put_int(URATE_OPTIONS_PREF_KEY, option);
 }
 

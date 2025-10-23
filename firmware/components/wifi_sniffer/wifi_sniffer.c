@@ -63,7 +63,7 @@ esp_err_t wifi_sniffer_start() {
   uint8_t channel = wifi_sniffer_get_channel();
   snprintf(channel_str, 4, "%d", channel);
   char* sniffer_argv[] = {"sniffer",   "-i", "wlan",      "-c",
-                                 channel_str, "-n", "2147483647"};
+                          channel_str, "-n", "2147483647"};
   uint8_t sniffer_argc = 7;
   do_sniffer_cmd(sniffer_argc, sniffer_argv);
   return ESP_OK;

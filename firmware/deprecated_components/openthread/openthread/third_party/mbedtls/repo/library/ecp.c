@@ -2195,10 +2195,10 @@ static unsigned char ecp_pick_window_size(const mbedtls_ecp_group *grp, unsigned
     if (p_eq_g)
         w++;
 
-        /*
-         * Make sure w is within bounds.
-         * (The last test is useful only for very small curves in the test suite.)
-         */
+    /*
+     * Make sure w is within bounds.
+     * (The last test is useful only for very small curves in the test suite.)
+     */
 #if (MBEDTLS_ECP_WINDOW_SIZE < 6)
     if (w > MBEDTLS_ECP_WINDOW_SIZE)
         w = MBEDTLS_ECP_WINDOW_SIZE;
@@ -2255,7 +2255,7 @@ static int ecp_mul_comb(mbedtls_ecp_group       *grp,
 #endif
             p_rng = &drbg_ctx;
 
-            /* Initialize internal DRBG if necessary */
+        /* Initialize internal DRBG if necessary */
 #if defined(MBEDTLS_ECP_RESTARTABLE)
         if (rs_ctx == NULL || rs_ctx->rsm == NULL || rs_ctx->rsm->drbg_seeded == 0)
 #endif
@@ -2345,7 +2345,7 @@ cleanup:
     if (T == grp->T)
         T = NULL;
 
-        /* does T belong to the restart context? */
+    /* does T belong to the restart context? */
 #if defined(MBEDTLS_ECP_RESTARTABLE)
     if (rs_ctx != NULL && rs_ctx->rsm != NULL && ret == MBEDTLS_ERR_ECP_IN_PROGRESS && T != NULL)
     {
@@ -2927,10 +2927,7 @@ int mbedtls_ecp_muladd(mbedtls_ecp_group       *grp,
 
 #if defined(MBEDTLS_ECP_MONTGOMERY_ENABLED)
 #if defined(MBEDTLS_ECP_DP_CURVE25519_ENABLED)
-#define ECP_MPI_INIT(s, n, p)           \
-    {                                   \
-        s, (n), (mbedtls_mpi_uint *)(p) \
-    }
+#define ECP_MPI_INIT(s, n, p) {s, (n), (mbedtls_mpi_uint *)(p)}
 #define ECP_MPI_INIT_ARRAY(x) ECP_MPI_INIT(1, sizeof(x) / sizeof(mbedtls_mpi_uint), x)
 /*
  * Constants for the two points other than 0, 1, -1 (mod p) in

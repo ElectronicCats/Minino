@@ -158,7 +158,8 @@ typedef struct {
   bool input_lock;
 } menus_manager_t;
 
-menu_t menus[] = {  //////////////////////////////////
+menu_t menus[] = {
+    //////////////////////////////////
     {.display_name = "Must Not See This",
      .menu_idx = MENU_MAIN,
      .parent_idx = -1,

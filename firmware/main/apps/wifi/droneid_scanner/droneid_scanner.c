@@ -102,7 +102,7 @@ static void callback(void* buf, wifi_promiscuous_pkt_type_t type) {
   // Get the packet header
   uint8_t* payload = p->payload;
   int packet_len = p->rx_ctrl.sig_len;
-  uint8_t pkt_type = buf[12];
+  uint8_t pkt_type = ((uint8_t*) buf)[12];
   uav_data* currentUAV = (uav_data*) malloc(sizeof(uav_data));
 
   if (!currentUAV)

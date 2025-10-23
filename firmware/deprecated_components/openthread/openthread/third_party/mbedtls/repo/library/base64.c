@@ -36,7 +36,7 @@
 #endif /* MBEDTLS_PLATFORM_C */
 #endif /* MBEDTLS_SELF_TEST */
 
-#define BASE64_SIZE_T_MAX ((size_t) - 1) /* SIZE_T_MAX is not standard */
+#define BASE64_SIZE_T_MAX ((size_t)-1) /* SIZE_T_MAX is not standard */
 
 /*
  * Encode a buffer into base64 format

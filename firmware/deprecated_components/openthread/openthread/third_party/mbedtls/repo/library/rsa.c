@@ -198,9 +198,9 @@ static int rsa_check_context(mbedtls_rsa_context const *ctx, int is_priv, int bl
     }
 #endif /* MBEDTLS_RSA_NO_CRT */
 
-        /* Blinding shouldn't make exponents negative either,
-         * so check that P, Q >= 1 if that hasn't yet been
-         * done as part of 1. */
+    /* Blinding shouldn't make exponents negative either,
+     * so check that P, Q >= 1 if that hasn't yet been
+     * done as part of 1. */
 #if defined(MBEDTLS_RSA_NO_CRT)
     if (is_priv && blinding_needed && (mbedtls_mpi_cmp_int(&ctx->P, 0) <= 0 || mbedtls_mpi_cmp_int(&ctx->Q, 0) <= 0))
     {

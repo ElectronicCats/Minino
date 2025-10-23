@@ -1269,13 +1269,13 @@ int mbedtls_pk_parse_key(mbedtls_pk_context  *pk,
     ((void)pwdlen);
 #endif /* MBEDTLS_PEM_PARSE_C */
 
-        /*
-         * At this point we only know it's not a PEM formatted key. Could be any
-         * of the known DER encoded private key formats
-         *
-         * We try the different DER format parsers to see if one passes without
-         * error
-         */
+    /*
+     * At this point we only know it's not a PEM formatted key. Could be any
+     * of the known DER encoded private key formats
+     *
+     * We try the different DER format parsers to see if one passes without
+     * error
+     */
 #if defined(MBEDTLS_PKCS12_C) || defined(MBEDTLS_PKCS5_C)
     {
         unsigned char *key_copy;

@@ -551,10 +551,7 @@ exit:
 
 otError Coap::Process(Arg aArgs[])
 {
-#define CmdEntry(aCommandString)                            \
-    {                                                       \
-        aCommandString, &Coap::Process<Cmd(aCommandString)> \
-    }
+#define CmdEntry(aCommandString) {aCommandString, &Coap::Process<Cmd(aCommandString)>}
 
     static constexpr Command kCommands[] = {
 #if OPENTHREAD_CONFIG_COAP_OBSERVE_API_ENABLE

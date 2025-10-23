@@ -241,7 +241,7 @@ int mbedtls_hmac_drbg_seed(mbedtls_hmac_drbg_context *ctx,
     if ((ret = mbedtls_md_setup(&ctx->md_ctx, md_info, 1)) != 0)
         return (ret);
 
-        /* The mutex is initialized iff the md context is set up. */
+    /* The mutex is initialized iff the md context is set up. */
 #if defined(MBEDTLS_THREADING_C)
     mbedtls_mutex_init(&ctx->mutex);
 #endif

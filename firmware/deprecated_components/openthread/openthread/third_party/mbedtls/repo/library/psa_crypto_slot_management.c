@@ -343,7 +343,7 @@ psa_status_t psa_get_and_lock_key_slot(mbedtls_svc_key_id_t key, psa_key_slot_t 
     if (status != PSA_ERROR_DOES_NOT_EXIST)
         return (status);
 
-        /* Loading keys from storage requires support for such a mechanism */
+    /* Loading keys from storage requires support for such a mechanism */
 #if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C) || defined(MBEDTLS_PSA_CRYPTO_BUILTIN_KEYS)
     psa_key_id_t volatile_key_id;
 

@@ -11,7 +11,7 @@
 #include "modals_module.h"
 #include "preferences.h"
 
-char* stealth_mode_options[] = {"Disabled", "Enabled"};
+const char* stealth_mode_options[] = {"Disabled", "Enabled"};
 
 static void stealth_selection_handler(uint8_t stealth_mode) {
   preferences_put_bool("stealth_mode", stealth_mode);

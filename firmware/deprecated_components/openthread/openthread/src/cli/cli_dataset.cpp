@@ -1193,10 +1193,7 @@ void Dataset::HandleDatasetUpdater(otError aError)
 
 otError Dataset::Process(Arg aArgs[])
 {
-#define CmdEntry(aCommandString)                               \
-    {                                                          \
-        aCommandString, &Dataset::Process<Cmd(aCommandString)> \
-    }
+#define CmdEntry(aCommandString) {aCommandString, &Dataset::Process<Cmd(aCommandString)>}
 
     static constexpr Command kCommands[] = {
         CmdEntry("active"),         CmdEntry("clear"),          CmdEntry("commit"),  CmdEntry("init"),

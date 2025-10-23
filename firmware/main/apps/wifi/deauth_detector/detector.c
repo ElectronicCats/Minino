@@ -31,10 +31,9 @@ static void packet_handler(void* buf, wifi_promiscuous_pkt_type_t type) {
 
   uint8_t* payload = p->payload;
 
-  uint8_t frame_type = payload[0]; 
+  uint8_t frame_type = payload[0];
 
   if (frame_type == 0xA0 || frame_type == 0xC0) {
-
     uint8_t* mac = payload + 10;
 
     ESP_LOGI(TAG,

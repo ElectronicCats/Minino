@@ -210,7 +210,7 @@ static void http_get_task(void* pvParameters) {
   vTaskDelete(NULL);
 }
 
-void catdos_module_send_attack() {
+static void catdos_module_send_attack_task(void* pvParameters) {
   ESP_LOGI(CATDOS_TAG, "Sending attack");
   xTaskCreate(&http_get_task, "http_get_task", 4096, NULL, 5, &task_atack);
 
@@ -258,6 +258,12 @@ void catdos_module_send_attack() {
   assert(res == 0);
 
   vTaskDelete(NULL);
+}
+
+int catdos_module_send_attack(int argc, char** argv) {
+  xTaskCreate(&catdos_module_send_attack_task, "http_send_task", 4096, NULL, 5,
+              NULL);
+  return 0;
 }
 
 static bool catdos_module_display_if_nconnect() {
@@ -452,8 +458,8 @@ static void catdos_module_set_menu_selector(uint8_t option) {
       }
       if (catdos_module_get_target() == 0) {
         animations_task_run(&catdos_module_display_attack_animation, 100, NULL);
-        xTaskCreate(&catdos_module_send_attack, "http_send_task", 4096, NULL, 5,
-                    NULL);
+        xTaskCreate(&catdos_module_send_attack_task, "http_send_task", 4096,
+                    NULL, 5, NULL);
       } else {
         catdos_module_show_no_target();
       }

@@ -696,10 +696,7 @@ exit:
 
 otError Dns::Process(Arg aArgs[])
 {
-#define CmdEntry(aCommandString)                           \
-    {                                                      \
-        aCommandString, &Dns::Process<Cmd(aCommandString)> \
-    }
+#define CmdEntry(aCommandString) {aCommandString, &Dns::Process<Cmd(aCommandString)>}
 
     static constexpr Command kCommands[] = {
 

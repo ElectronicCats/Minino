@@ -40,10 +40,7 @@ typedef struct
     psa_status_t driver_status;
 } mbedtls_test_driver_aead_hooks_t;
 
-#define MBEDTLS_TEST_DRIVER_AEAD_INIT \
-    {                                 \
-        0, 0, 0                       \
-    }
+#define MBEDTLS_TEST_DRIVER_AEAD_INIT {0, 0, 0}
 static inline mbedtls_test_driver_aead_hooks_t mbedtls_test_driver_aead_hooks_init(void)
 {
     const mbedtls_test_driver_aead_hooks_t v = MBEDTLS_TEST_DRIVER_AEAD_INIT;

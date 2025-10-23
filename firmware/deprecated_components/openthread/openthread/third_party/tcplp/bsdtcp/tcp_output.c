@@ -603,32 +603,32 @@ after_sack_rexmit:
         if (oldwin >> tp->rcv_scale == (adv + oldwin) >> tp->rcv_scale)
             goto dontupdate;
 
-            /*
-             * samkumar: Here, FreeBSD has some heuristics to decide whether or
-             * not to send a window update. The code for the original heuristics
-             * is commented out, using #if 0. These heuristics compare "adv,"
-             * the size of the window update, with the size of the local receive
-             * buffer. The FreeBSD heuristics aren't applicable because they are
-             * orders of magnitude off from what we see in TCPlp. For example,
-             * FreeBSD only sends a window update if it is at least two segments
-             * big. Note that, in the experiments I did, the second case did not
-             * filter window updates further because, in the experiments, the
-             * receive buffer was smaller than 8 segments.
-             *
-             * I replaced these heuristics with a simpler version, which you can
-             * see below. For the experiments I did, the first condition
-             * (checking if adv >= (long)(2 * tp->t_maxseg)) wasn't included; this
-             * did not matter because the receive buffer was smaller than 8
-             * segments, so any condition that would have triggered the first
-             * condition would have triggered the second one anyway. I've included
-             * the first condition in this version in an effort to be more robust,
-             * in case someone does try to run TCPlp with a large receive buffer.
-             *
-             * It may be worth studying this more and revisiting the heuristic to
-             * use here. In case we try to resurrect the old FreeBSD heuristics,
-             * note that so->so_rcv.sb_hiwat in FreeBSD corresponds roughly to
-             * cbuf_size(&tp->recvbuf) in TCPlp.
-             */
+        /*
+         * samkumar: Here, FreeBSD has some heuristics to decide whether or
+         * not to send a window update. The code for the original heuristics
+         * is commented out, using #if 0. These heuristics compare "adv,"
+         * the size of the window update, with the size of the local receive
+         * buffer. The FreeBSD heuristics aren't applicable because they are
+         * orders of magnitude off from what we see in TCPlp. For example,
+         * FreeBSD only sends a window update if it is at least two segments
+         * big. Note that, in the experiments I did, the second case did not
+         * filter window updates further because, in the experiments, the
+         * receive buffer was smaller than 8 segments.
+         *
+         * I replaced these heuristics with a simpler version, which you can
+         * see below. For the experiments I did, the first condition
+         * (checking if adv >= (long)(2 * tp->t_maxseg)) wasn't included; this
+         * did not matter because the receive buffer was smaller than 8
+         * segments, so any condition that would have triggered the first
+         * condition would have triggered the second one anyway. I've included
+         * the first condition in this version in an effort to be more robust,
+         * in case someone does try to run TCPlp with a large receive buffer.
+         *
+         * It may be worth studying this more and revisiting the heuristic to
+         * use here. In case we try to resurrect the old FreeBSD heuristics,
+         * note that so->so_rcv.sb_hiwat in FreeBSD corresponds roughly to
+         * cbuf_size(&tp->recvbuf) in TCPlp.
+         */
 #if 0
 		if (adv >= (long)(2 * tp->t_maxseg) &&
 		    (adv >= (long)(so->so_rcv.sb_hiwat / 4) ||
@@ -1433,10 +1433,10 @@ out:
     if (tcp_timer_active(tp, TT_DELACK))
         tcp_timer_activate(tp, TT_DELACK, 0);
 
-        /*
-         * samkumar: This was already commented out (using #if 0) in the original
-         * FreeBSD code.
-         */
+    /*
+     * samkumar: This was already commented out (using #if 0) in the original
+     * FreeBSD code.
+     */
 #if 0
 	/*
 	 * This completely breaks TCP if newreno is turned on.  What happens

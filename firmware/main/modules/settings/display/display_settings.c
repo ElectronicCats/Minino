@@ -30,7 +30,7 @@ typedef enum { DISPLAY_MENU, DISPLAY_LIST, DISPLAY_COUNT } display_menu_t;
 
 static char* display_settings_menu_items[] = {"Screen Logo", "Screen Time",
                                               NULL};
-static char** screen_saver_options = NULL;
+static const char** screen_saver_options = NULL;
 static int selected_item = 0;
 static int screen_selected = 0;
 static int time_default_time = 30;
@@ -290,9 +290,9 @@ static void screen_saver_selection_handler(uint8_t screen_saver) {
   preferences_put_int("dp_select", screen_saver);
 }
 
-char** get_screen_saver_names() {
+const char** get_screen_saver_names() {
   uint8_t screen_savers_count = sizeof(screen_savers) / sizeof(epd_bitmap_t*);
-  char** names = malloc(sizeof(char*) * screen_savers_count);
+  const char** names = malloc(sizeof(const char*) * screen_savers_count);
   for (uint8_t i = 0; i < screen_savers_count; i++) {
     names[i] = screen_savers[i]->name;
   }

@@ -268,8 +268,8 @@ psa_status_t psa_register_se_driver(psa_key_location_t location, const psa_drv_s
 
     if (methods->hal_version != PSA_DRV_SE_HAL_VERSION)
         return (PSA_ERROR_NOT_SUPPORTED);
-        /* Driver table entries are 0-initialized. 0 is not a valid driver
-         * location because it means a transparent key. */
+    /* Driver table entries are 0-initialized. 0 is not a valid driver
+     * location because it means a transparent key. */
 #if defined(static_assert)
     static_assert(PSA_KEY_LOCATION_LOCAL_STORAGE == 0, "Secure element support requires 0 to mean a local key");
 #endif

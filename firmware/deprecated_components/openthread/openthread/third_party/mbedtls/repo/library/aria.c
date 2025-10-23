@@ -848,9 +848,9 @@ int mbedtls_aria_self_test(int verbose)
     if (verbose)
         mbedtls_printf("\n");
 
-        /*
-         * Test set 2
-         */
+    /*
+     * Test set 2
+     */
 #if defined(MBEDTLS_CIPHER_MODE_CBC)
     for (i = 0; i < 3; i++)
     {

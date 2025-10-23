@@ -53,10 +53,7 @@ typedef struct
     uint8_t opad[PSA_HMAC_MAX_HASH_BLOCK_SIZE];
 } mbedtls_psa_hmac_operation_t;
 
-#define MBEDTLS_PSA_HMAC_OPERATION_INIT   \
-    {                                     \
-        0, PSA_HASH_OPERATION_INIT, { 0 } \
-    }
+#define MBEDTLS_PSA_HMAC_OPERATION_INIT {0, PSA_HASH_OPERATION_INIT, {0}}
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_HMAC */
 
 #include "mbedtls/cmac.h"
@@ -76,9 +73,6 @@ typedef struct
     } ctx;
 } mbedtls_psa_mac_operation_t;
 
-#define MBEDTLS_PSA_MAC_OPERATION_INIT \
-    {                                  \
-        0, { 0 }                       \
-    }
+#define MBEDTLS_PSA_MAC_OPERATION_INIT {0, {0}}
 
 #endif /* PSA_CRYPTO_BUILTIN_COMPOSITES_H */

@@ -220,7 +220,7 @@ static inline void cc_conn_init(struct tcpcb *tp)
     if (CC_ALGO(tp)->conn_init != NULL)
         CC_ALGO(tp)->conn_init(tp->ccv);
 
-        /* samkumar: print statement for debugging. Resurrect with DEBUG macro? */
+    /* samkumar: print statement for debugging. Resurrect with DEBUG macro? */
 #ifdef INSTRUMENT_TCP
     tcplp_sys_log("TCP CC_INIT %u %d %d", (unsigned int)tcplp_sys_get_millis(), (int)tp->snd_cwnd,
                   (int)tp->snd_ssthresh);
@@ -2727,10 +2727,10 @@ step6:
         // Only place tlen is used after the call to tcp_reass is below
         if (tlen > 0 && (tp->t_flags & TF_SACK_PERMIT))
             tcp_update_sack_list(tp, save_start, save_start + tlen);
-            /*
-             * samkumar: This is not me commenting things out; this was already
-             * commented out in the FreeBSD code.
-             */
+        /*
+         * samkumar: This is not me commenting things out; this was already
+         * commented out in the FreeBSD code.
+         */
 #if 0
 		/*
 		 * Note the amount of data that peer has sent into

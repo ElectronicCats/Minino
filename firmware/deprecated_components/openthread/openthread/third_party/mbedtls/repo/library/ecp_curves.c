@@ -40,10 +40,7 @@
 #define inline __inline
 #endif
 
-#define ECP_MPI_INIT(s, n, p)           \
-    {                                   \
-        s, (n), (mbedtls_mpi_uint *)(p) \
-    }
+#define ECP_MPI_INIT(s, n, p) {s, (n), (mbedtls_mpi_uint *)(p)}
 
 #define ECP_MPI_INIT_ARRAY(x) ECP_MPI_INIT(1, sizeof(x) / sizeof(mbedtls_mpi_uint), x)
 

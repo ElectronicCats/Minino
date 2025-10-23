@@ -896,7 +896,7 @@ static int ssl_validate_ciphersuite(const mbedtls_ssl_ciphersuite_t *suite_info,
         return (1);
 #endif
 
-        /* Don't suggest PSK-based ciphersuite if no PSK is available. */
+    /* Don't suggest PSK-based ciphersuite if no PSK is available. */
 #if defined(MBEDTLS_KEY_EXCHANGE_SOME_PSK_ENABLED)
     if (mbedtls_ssl_ciphersuite_uses_psk(suite_info) && ssl_conf_has_static_psk(ssl->conf) == 0)
     {

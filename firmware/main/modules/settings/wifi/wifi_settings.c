@@ -19,13 +19,13 @@
 
 #define TAG_CONFIG_MODULE "CONFIG_MODULE"
 
-static char* wifi_list[20];
+static const char* wifi_list[20];
 static int selected_ap = 0;
 static int aps_count = 0;
 
-static char* options_list[] = {"Connect", "Forget"};
+static const char* options_list[] = {"Connect", "Forget"};
 
-static char* option_yn[] = {"No", "Yes"};
+static const char* option_yn[] = {"No", "Yes"};
 
 typedef enum {
   WIFI_OPT_CONNECT,

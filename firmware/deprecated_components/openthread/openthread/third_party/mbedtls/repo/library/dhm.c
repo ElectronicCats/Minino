@@ -218,10 +218,10 @@ int mbedtls_dhm_make_params(mbedtls_dhm_context *ctx,
     if (ret != 0)
         goto cleanup;
 
-        /*
-         * Export P, G, GX. RFC 5246 §4.4 states that "leading zero octets are
-         * not required". We omit leading zeros for compactness.
-         */
+    /*
+     * Export P, G, GX. RFC 5246 §4.4 states that "leading zero octets are
+     * not required". We omit leading zeros for compactness.
+     */
 #define DHM_MPI_EXPORT(X, n)                                        \
     do                                                              \
     {                                                               \

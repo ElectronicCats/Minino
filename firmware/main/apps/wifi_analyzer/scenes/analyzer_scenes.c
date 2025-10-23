@@ -64,7 +64,7 @@ static enum {
   ANALYZER_SETTINGS_DESTINATION_OPTION,
 } analyzer_settings_options_e;
 
-const char*  analizer_settings_options[] = {"Channel", "Destination"};
+const char* analizer_settings_options[] = {"Channel", "Destination"};
 
 static void settings_selection_handler(uint8_t selection) {
   switch (selection) {

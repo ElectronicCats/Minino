@@ -1022,7 +1022,7 @@ psa_status_t psa_driver_wrapper_hash_compute(psa_algorithm_t alg,
         return (status);
 #endif
 
-        /* If software fallback is compiled in, try fallback */
+    /* If software fallback is compiled in, try fallback */
 #if defined(MBEDTLS_PSA_BUILTIN_HASH)
     status = mbedtls_psa_hash_compute(alg, input, input_length, hash, hash_size, hash_length);
     if (status != PSA_ERROR_NOT_SUPPORTED)
@@ -1053,7 +1053,7 @@ psa_status_t psa_driver_wrapper_hash_setup(psa_hash_operation_t *operation, psa_
         return (status);
 #endif
 
-        /* If software fallback is compiled in, try fallback */
+    /* If software fallback is compiled in, try fallback */
 #if defined(MBEDTLS_PSA_BUILTIN_HASH)
     status = mbedtls_psa_hash_setup(&operation->ctx.mbedtls_ctx, alg);
     if (status == PSA_SUCCESS)

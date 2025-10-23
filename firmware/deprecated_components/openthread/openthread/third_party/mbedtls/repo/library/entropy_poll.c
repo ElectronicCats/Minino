@@ -170,7 +170,7 @@ int mbedtls_platform_entropy_poll(void *data, unsigned char *output, size_t len,
     }
     else if (errno != ENOSYS)
         return (MBEDTLS_ERR_ENTROPY_SOURCE_FAILED);
-        /* Fall through if the system call isn't known. */
+    /* Fall through if the system call isn't known. */
 #else
     ((void)ret);
 #endif /* HAVE_GETRANDOM */

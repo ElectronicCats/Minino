@@ -332,10 +332,10 @@ int tcp_twcheck(struct tcpcb *tp, struct tcphdr *th, int tlen)
     if (thflags & TH_RST)
         goto drop;
 
-        /*
-         * samkumar: This was commented out (using #if 0) in the original FreeBSD
-         * code.
-         */
+    /*
+     * samkumar: This was commented out (using #if 0) in the original FreeBSD
+     * code.
+     */
 #if 0
 /* PAWS not needed at the moment */
 	/*

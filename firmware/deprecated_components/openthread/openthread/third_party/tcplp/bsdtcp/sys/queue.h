@@ -179,10 +179,7 @@ struct qm_trace
         class type *slh_first; /* first element */ \
     }
 
-#define SLIST_HEAD_INITIALIZER(head) \
-    {                                \
-        NULL                         \
-    }
+#define SLIST_HEAD_INITIALIZER(head) {NULL}
 
 #define SLIST_ENTRY(type)                         \
     struct                                        \
@@ -293,10 +290,7 @@ struct qm_trace
         class type **stqh_last;  /* addr of last next element */ \
     }
 
-#define STAILQ_HEAD_INITIALIZER(head) \
-    {                                 \
-        NULL, &(head).stqh_first      \
-    }
+#define STAILQ_HEAD_INITIALIZER(head) {NULL, &(head).stqh_first}
 
 #define STAILQ_ENTRY(type)                         \
     struct                                         \
@@ -437,10 +431,7 @@ struct qm_trace
         class type *lh_first; /* first element */ \
     }
 
-#define LIST_HEAD_INITIALIZER(head) \
-    {                               \
-        NULL                        \
-    }
+#define LIST_HEAD_INITIALIZER(head) {NULL}
 
 #define LIST_ENTRY(type)                                              \
     struct                                                            \
@@ -590,10 +581,7 @@ struct qm_trace
         TRACEBUF                                                \
     }
 
-#define TAILQ_HEAD_INITIALIZER(head)                  \
-    {                                                 \
-        NULL, &(head).tqh_first, TRACEBUF_INITIALIZER \
-    }
+#define TAILQ_HEAD_INITIALIZER(head) {NULL, &(head).tqh_first, TRACEBUF_INITIALIZER}
 
 #define TAILQ_ENTRY(type)                                              \
     struct                                                             \

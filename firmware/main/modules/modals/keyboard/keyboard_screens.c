@@ -19,7 +19,7 @@ void keyboard_screens_update_text(keyboard_modal_ctx_t* ctx) {
   for (uint8_t i = 0; i < (MIN(ctx->text_length, MAX_CHARS - 1)); i++) {
     char a_char[2];
     snprintf(a_char, sizeof(a_char), "%c", ctx->new_text[i + chars_offset]);
-    oled_screen_display_text(&a_char, i * 8, TEXT_PAGE,
+    oled_screen_display_text(a_char, i * 8, TEXT_PAGE,
                              ctx->current_char == i + chars_offset);
   }
 }

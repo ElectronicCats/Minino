@@ -6,21 +6,26 @@
 
 static char* category = "Minino";
 
-uint8_t print_free_heap() {
+static int restart_wrapper(int argc, char** argv) {
+  esp_restart();
+  return 0;  // This line will never be reached
+}
+
+int print_free_heap(int argc, char** argv) {
   printf("Free heap size: %d bytes or %d KB\n",
          heap_caps_get_free_size(MALLOC_CAP_8BIT),
          heap_caps_get_free_size(MALLOC_CAP_8BIT) / 1024);
   return 0;
 }
 
-uint8_t print_min_free_heap() {
+int print_min_free_heap(int argc, char** argv) {
   printf("Minimum free heap size: %d bytes or %d KB\n",
          heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT),
          heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT) / 1024);
   return 0;
 }
 
-uint8_t print_chip_info() {
+int print_chip_info(int argc, char** argv) {
   esp_chip_info_t chip_info;
   uint32_t flash_size;
   esp_chip_info(&chip_info);
@@ -56,7 +61,7 @@ uint8_t print_chip_info() {
   return 0;
 }
 
-uint8_t print_reset_reason() {
+int print_reset_reason(int argc, char** argv) {
   const char* reset_reason = NULL;
   switch (esp_reset_reason()) {
     case ESP_RST_UNKNOWN:
@@ -117,7 +122,7 @@ void cmd_control_register_system_commands() {
                                .help = "Restart the device",
                                .hint = NULL,
                                .category = category,
-                               .func = &esp_restart,
+                               .func = &restart_wrapper,
                                .argtable = NULL};
 
   esp_console_cmd_t get_free_heap = {.command = "get_free_heap",

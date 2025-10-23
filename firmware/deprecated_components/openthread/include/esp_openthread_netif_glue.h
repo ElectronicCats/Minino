@@ -28,10 +28,11 @@ extern "C" {
    .if_desc = "openthread",                                       \
    .route_prio = 15};
 
-#define ESP_NETIF_DEFAULT_OPENTHREAD()                               \
-  {                                                                  \
-    .base = &g_esp_netif_inherent_openthread_config, .driver = NULL, \
-    .stack = &g_esp_netif_netstack_default_openthread,               \
+#define ESP_NETIF_DEFAULT_OPENTHREAD()                   \
+  {                                                      \
+      .base = &g_esp_netif_inherent_openthread_config,   \
+      .driver = NULL,                                    \
+      .stack = &g_esp_netif_netstack_default_openthread, \
   }
 
 extern const esp_netif_netstack_config_t

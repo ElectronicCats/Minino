@@ -176,7 +176,7 @@ const mbedtls_md_info_t *mbedtls_md_info_from_string(const char *md_name)
     if (NULL == md_name)
         return (NULL);
 
-        /* Get the appropriate digest information */
+    /* Get the appropriate digest information */
 #if defined(MBEDTLS_MD2_C)
     if (!strcmp("MD2", md_name))
         return mbedtls_md_info_from_type(MBEDTLS_MD_MD2);

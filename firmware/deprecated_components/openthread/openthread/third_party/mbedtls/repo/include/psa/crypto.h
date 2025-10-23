@@ -116,10 +116,7 @@ psa_status_t psa_crypto_init(void);
 /* This is an example definition for documentation purposes.
  * Implementations should define a suitable value in `crypto_struct.h`.
  */
-#define PSA_KEY_ATTRIBUTES_INIT \
-    {                           \
-        0                       \
-    }
+#define PSA_KEY_ATTRIBUTES_INIT {0}
 #endif
 
 /** Return an initial value for a key attributes structure.
@@ -929,10 +926,7 @@ typedef struct psa_hash_operation_s psa_hash_operation_t;
 /* This is an example definition for documentation purposes.
  * Implementations should define a suitable value in `crypto_struct.h`.
  */
-#define PSA_HASH_OPERATION_INIT \
-    {                           \
-        0                       \
-    }
+#define PSA_HASH_OPERATION_INIT {0}
 #endif
 
 /** Return an initial value for a hash operation object.
@@ -1293,10 +1287,7 @@ typedef struct psa_mac_operation_s psa_mac_operation_t;
 /* This is an example definition for documentation purposes.
  * Implementations should define a suitable value in `crypto_struct.h`.
  */
-#define PSA_MAC_OPERATION_INIT \
-    {                          \
-        0                      \
-    }
+#define PSA_MAC_OPERATION_INIT {0}
 #endif
 
 /** Return an initial value for a MAC operation object.
@@ -1709,10 +1700,7 @@ typedef struct psa_cipher_operation_s psa_cipher_operation_t;
 /* This is an example definition for documentation purposes.
  * Implementations should define a suitable value in `crypto_struct.h`.
  */
-#define PSA_CIPHER_OPERATION_INIT \
-    {                             \
-        0                         \
-    }
+#define PSA_CIPHER_OPERATION_INIT {0}
 #endif
 
 /** Return an initial value for a cipher operation object.
@@ -2232,10 +2220,7 @@ typedef struct psa_aead_operation_s psa_aead_operation_t;
 /* This is an example definition for documentation purposes.
  * Implementations should define a suitable value in `crypto_struct.h`.
  */
-#define PSA_AEAD_OPERATION_INIT \
-    {                           \
-        0                       \
-    }
+#define PSA_AEAD_OPERATION_INIT {0}
 #endif
 
 /** Return an initial value for an AEAD operation object.
@@ -3229,10 +3214,7 @@ typedef struct psa_key_derivation_s psa_key_derivation_operation_t;
 /* This is an example definition for documentation purposes.
  * Implementations should define a suitable value in `crypto_struct.h`.
  */
-#define PSA_KEY_DERIVATION_OPERATION_INIT \
-    {                                     \
-        0                                 \
-    }
+#define PSA_KEY_DERIVATION_OPERATION_INIT {0}
 #endif
 
 /** Return an initial value for a key derivation operation object.

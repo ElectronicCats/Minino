@@ -85,10 +85,7 @@ typedef struct
     } ctx;
 } mbedtls_psa_hash_operation_t;
 
-#define MBEDTLS_PSA_HASH_OPERATION_INIT \
-    {                                   \
-        0, { 0 }                        \
-    }
+#define MBEDTLS_PSA_HASH_OPERATION_INIT {0, {0}}
 
 /*
  * Cipher multi-part operation definitions.
@@ -116,9 +113,6 @@ typedef struct
     } ctx;
 } mbedtls_psa_cipher_operation_t;
 
-#define MBEDTLS_PSA_CIPHER_OPERATION_INIT \
-    {                                     \
-        0, 0, 0, { 0 }                    \
-    }
+#define MBEDTLS_PSA_CIPHER_OPERATION_INIT {0, 0, 0, {0}}
 
 #endif /* PSA_CRYPTO_BUILTIN_PRIMITIVES_H */
