@@ -21,7 +21,6 @@
 static int AFK_TIMEOUT_S = AFK_TIMEOUT_DEFAULT_S;
 static bool sleep_mode_enabled = false;
 static bool sleep_mode = SLEEP_LIGHT_MODE;
-static const char* TAG = "sleep_mode";
 static esp_timer_handle_t afk_timer;
 
 void sleep_mode_reset_timer();
@@ -92,7 +91,7 @@ void sleep_mode_set_enabled(bool enabled) {
 void sleep_mode_begin() {
   esp_timer_create_args_t timer_args = {
       .callback = timer_callback, .arg = NULL, .name = "afk_timer"};
-  esp_err_t err = esp_timer_create(&timer_args, &afk_timer);
+  esp_timer_create(&timer_args, &afk_timer);
   AFK_TIMEOUT_S = preferences_get_short(AFK_TIME_MEM, AFK_TIMEOUT_DEFAULT_S);
   sleep_mode_enabled = preferences_get_bool(SLEEP_MODE_ENABLE_MEM, true);
   sleep_mode_reset_timer();

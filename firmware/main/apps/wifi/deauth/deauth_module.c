@@ -106,14 +106,6 @@ static void deauth_handle_attacks() {
   }
 }
 
-static void deauth_increment_item() {
-  current_item++;
-}
-
-static void deauth_decrement_item() {
-  current_item--;
-}
-
 void deauth_module_begin() {
   deauth_clear_screen();
   deauth_display_scanning_text();

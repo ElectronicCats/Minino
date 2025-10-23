@@ -9,8 +9,6 @@
 static TaskHandle_t task_brod_attack = NULL;
 static TaskHandle_t task_rogue_attack = NULL;
 
-static wifi_config_t default_ap;
-
 static bool running_broadcast_attack = false;
 static bool running_rogueap_attack = false;
 
@@ -76,7 +74,6 @@ static void wifi_attack_brod_send_deauth_frame(void* args) {
   }
   vTaskSuspend(task_brod_attack);
   vTaskDelete(NULL);
-  free(deauth_frame);
 }
 
 static void wifi_attack_rogueap(void* args) {

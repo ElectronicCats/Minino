@@ -16,8 +16,6 @@
 #include "stealth_mode.h"
 #include "web_file_browser_module.h"
 
-static const char* TAG = "settings_module";
-
 char* sd_card_info_2[6];
 general_menu_t SD_inf = {.menu_count = 6,
                          .menu_items = sd_card_info_2,

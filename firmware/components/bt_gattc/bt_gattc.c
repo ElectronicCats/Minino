@@ -115,7 +115,7 @@ void ble_client_gattc_event_handler(esp_gattc_cb_event_t event,
           p_data->connect.conn_id;
 
       ESP_LOGI(TAG_BT_GATTC, "REMOTE BDA:");
-      esp_log_buffer_hex(
+      ESP_LOG_BUFFER_HEX(
           TAG_BT_GATTC, ble_client_gattc_profile_tab[DEVICE_PROFILE].remote_bda,
           sizeof(esp_bd_addr_t));
       esp_err_t mtu_ret =
@@ -307,9 +307,9 @@ void ble_client_gattc_event_handler(esp_gattc_cb_event_t event,
       } else {
         ESP_LOGI(TAG_BT_GATTC, "ESP_GATTC_NOTIFY_EVT, receive indicate value:");
       }
-      esp_log_buffer_hex(TAG_BT_GATTC, p_data->notify.value,
+      ESP_LOG_BUFFER_HEX(TAG_BT_GATTC, p_data->notify.value,
                          p_data->notify.value_len);
-      esp_log_buffer_char(TAG_BT_GATTC, p_data->notify.value,
+      ESP_LOG_BUFFER_CHAR(TAG_BT_GATTC, p_data->notify.value,
                           p_data->notify.value_len);
 
       break;
@@ -325,7 +325,7 @@ void ble_client_gattc_event_handler(esp_gattc_cb_event_t event,
       esp_bd_addr_t bda;
       memcpy(bda, p_data->srvc_chg.remote_bda, sizeof(esp_bd_addr_t));
       ESP_LOGI(TAG_BT_GATTC, "ESP_GATTC_SRVC_CHG_EVT, bd_addr:");
-      esp_log_buffer_hex(TAG_BT_GATTC, bda, sizeof(esp_bd_addr_t));
+      ESP_LOG_BUFFER_HEX(TAG_BT_GATTC, bda, sizeof(esp_bd_addr_t));
       break;
     }
     case ESP_GATTC_WRITE_CHAR_EVT:
@@ -378,7 +378,7 @@ void ble_client_esp_gap_cb(esp_gap_ble_cb_event_t event,
       }
       switch (scan_result->scan_rst.search_evt) {
         case ESP_GAP_SEARCH_INQ_RES_EVT:
-          esp_log_buffer_hex(TAG_BT_GATTC, scan_result->scan_rst.bda, 6);
+          ESP_LOG_BUFFER_HEX(TAG_BT_GATTC, scan_result->scan_rst.bda, 6);
           ESP_LOGI(TAG_BT_GATTC,
                    "searched Adv Data Len %d, Scan Response Len %d",
                    scan_result->scan_rst.adv_data_len,
@@ -387,7 +387,7 @@ void ble_client_esp_gap_cb(esp_gap_ble_cb_event_t event,
                                               ESP_BLE_AD_TYPE_NAME_CMPL,
                                               &adv_name_len);
           ESP_LOGI(TAG_BT_GATTC, "searched Device Name Len %d", adv_name_len);
-          esp_log_buffer_char(TAG_BT_GATTC, adv_name, adv_name_len);
+          ESP_LOG_BUFFER_CHAR(TAG_BT_GATTC, adv_name, adv_name_len);
           if (adv_name != NULL) {
             if (strlen(remote_device_name) == adv_name_len &&
                 strncmp((char*) adv_name, remote_device_name, adv_name_len) ==

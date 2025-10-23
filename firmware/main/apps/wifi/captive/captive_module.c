@@ -593,7 +593,6 @@ static uint16_t captive_module_get_sd_redirect() {
 }
 
 static uint16_t captive_module_get_sd_portals() {
-  esp_err_t err;
   if (sd_card_is_not_mounted()) {
     return 0;
   }

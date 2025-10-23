@@ -25,8 +25,6 @@
 #define SEQNUM_OFFSET      22
 #define MAX_STRINGS        20
 
-static const char* TAG = "ssid_spam";
-
 esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx,
                             const void* buffer,
                             int len,
@@ -68,10 +66,6 @@ void spam_main_menu() {
   led_control_run_effect(led_control_pulse_leds);
   general_screen_display_menu(current_item);
   menus_module_set_app_state(true, ssid_spam_main_cb);
-}
-
-static void spam_reset_menu() {
-  current_item = 0;
 }
 
 void split_text_into_array(const char* input,

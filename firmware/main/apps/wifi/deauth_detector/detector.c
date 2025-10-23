@@ -56,7 +56,6 @@ static void packet_handler(void* buf, wifi_promiscuous_pkt_type_t type) {
 }
 
 static void channel_hopper(void* pvParameters) {
-  esp_err_t err;
   while (running) {
     esp_wifi_set_channel(current_channel, WIFI_SECOND_CHAN_NONE);
     vTaskDelay(WIFI_CHANNEL_SWITCH_INTERVAL / portTICK_PERIOD_MS);
