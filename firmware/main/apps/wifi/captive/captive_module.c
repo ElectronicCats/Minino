@@ -643,7 +643,7 @@ static void captive_module_mode_selector_handle(uint8_t option) {
 static void captive_module_show_mode_selector() {
   general_radio_selection_menu_t modes = {0};
   modes.banner = "Modes";
-  modes.options = (char**) modes_menu;
+  modes.options = modes_menu;
   modes.options_count = sizeof(modes_menu) / sizeof(char*);
   modes.select_cb = captive_module_mode_selector_handle;
   modes.style = RADIO_SELECTION_OLD_STYLE;
@@ -659,7 +659,7 @@ static void captive_module_preference_selector_handle(uint8_t option) {
 static void captive_module_show_preference_selector() {
   general_radio_selection_menu_t preferences = {0};
   preferences.banner = "Preferences";
-  preferences.options = (char**) config_dump_menu;
+  preferences.options = config_dump_menu;
   preferences.options_count = sizeof(config_dump_menu) / sizeof(char*);
   preferences.select_cb = captive_module_preference_selector_handle;
   preferences.style = RADIO_SELECTION_OLD_STYLE;
@@ -739,7 +739,7 @@ static void captive_module_sd_show_redirect() {
   general_submenu(portals);
 }
 
-static char* channel_options[] = {
+static const char* channel_options[] = {
     "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
 };
 static void captive_module_set_channel(uint8_t selected_item) {

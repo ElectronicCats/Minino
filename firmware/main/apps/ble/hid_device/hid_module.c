@@ -72,7 +72,7 @@ static void hid_device_selection(uint8_t selection) {
   }
 
   general_submenu_menu_t hid_menu_filter = {0};
-  hid_menu_filter.options = hid_device_items;
+  hid_menu_filter.options = (const char**) hid_device_items;
   hid_menu_filter.options_count = HID_DEVICE_COUNT;
   hid_menu_filter.select_cb = hid_device_selection;
   hid_menu_filter.exit_cb = hid_module_reset_menu;

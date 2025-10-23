@@ -338,7 +338,7 @@ static void catdos_module_show_target() {
   target_details[4] = "URL";
 
   general_submenu_menu_t submenu_target = {0};
-  submenu_target.options = target_details;
+  submenu_target.options = (const char**) target_details;
   submenu_target.options_count = sizeof(main_menu_options) / sizeof(char*);
   submenu_target.select_cb = NULL;
   submenu_target.selected_option = 0;
@@ -426,7 +426,7 @@ static void catdos_module_show_aps() {
     wifi_list[i] = strdup(wifi_ssid);
   }
   general_submenu_menu_t menu_aps = {0};
-  menu_aps.options = wifi_list;
+  menu_aps.options = (const char**) wifi_list;
   menu_aps.options_count = aps_count;
   menu_aps.select_cb = catdos_module_connect_selected;
   menu_aps.selected_option = 0;

@@ -117,7 +117,7 @@ void detector_scenes_settings() {
 }
 
 //////////////////////////   Channel Hop Menu   //////////////////////////
-static char* channel_options[] = {
+static const char* channel_options[] = {
     "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
 };
 static void channel_handler(uint8_t channel) {

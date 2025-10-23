@@ -25,7 +25,7 @@ static enum {
   ANALYZER_HELP_OPTION
 } analyzer_main_options_e;
 
-char* analizer_main_options[] = {"Start", "Settings", "Help"};
+const char* analizer_main_options[] = {"Start", "Settings", "Help"};
 
 static void main_menu_selection_handler(uint8_t selection) {
   switch (selection) {
@@ -64,7 +64,7 @@ static enum {
   ANALYZER_SETTINGS_DESTINATION_OPTION,
 } analyzer_settings_options_e;
 
-char* analizer_settings_options[] = {"Channel", "Destination"};
+const char*  analizer_settings_options[] = {"Channel", "Destination"};
 
 static void settings_selection_handler(uint8_t selection) {
   switch (selection) {

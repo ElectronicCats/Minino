@@ -212,7 +212,7 @@ void general_scrolling_text(general_scrolling_text_ctx ctx) {
   scroll_text_ctx->exit_cb = ctx.exit_cb;
   scroll_text_ctx->finish_cb = ctx.finish_cb;
   scroll_text_ctx->text_arr =
-      split_text(scroll_text_ctx->text, &scroll_text_ctx->text_len);
+    (const char**)  split_text(scroll_text_ctx->text, &scroll_text_ctx->text_len);
 
   menus_module_set_app_state(true, scrolling_text_input_cb);
   scroll_text_draw();

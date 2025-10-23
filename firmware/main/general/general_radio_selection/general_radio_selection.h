@@ -15,7 +15,7 @@ typedef enum {
 typedef struct {
   uint8_t selected_option;
   uint8_t options_count;
-  char** options;
+  const char** options;
   char* banner;
   uint8_t current_option;
   radio_selection_handler_t select_cb;
@@ -23,7 +23,7 @@ typedef struct {
 } general_radio_selection_t;
 
 typedef struct {
-  char** options;
+  const char** options;
   char* banner;
   uint8_t current_option;
   uint8_t options_count;

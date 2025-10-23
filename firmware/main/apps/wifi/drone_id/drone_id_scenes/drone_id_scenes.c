@@ -182,7 +182,7 @@ void drone_id_scenes_settings_location() {
   current_menu = DRONE_SCENES_SETTINGS_LOCATION_SRC;
 }
 
-static const char* ble_drone_options[] = {"Disabled", "Enabled"};
+static char* ble_drone_options[] = {"Disabled", "Enabled"};
 
 void drone_id_scenes_settings_ble_drone() {
   general_radio_selection_menu_t ble_drone = {0};
