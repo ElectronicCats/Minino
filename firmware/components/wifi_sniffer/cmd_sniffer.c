@@ -17,6 +17,7 @@
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "sdkconfig.h"
+#include "task_manager.h"
 
 #define SNIFFER_DEFAULT_CHANNEL           (1)
 #define SNIFFER_PAYLOAD_FCS_LEN           (4)
@@ -299,10 +300,14 @@ static esp_err_t sniffer_start(sniffer_runtime_t* sniffer) {
   sniffer->sem_task_over = xSemaphoreCreateBinary();
   ESP_GOTO_ON_FALSE(sniffer->sem_task_over, ESP_FAIL, err_sem, TAG,
                     "create work queue failed");
-  ESP_GOTO_ON_FALSE(
-      xTaskCreate(sniffer_task, "snifferT", CONFIG_SNIFFER_TASK_STACK_SIZE,
-                  sniffer, CONFIG_SNIFFER_TASK_PRIORITY, &sniffer->task),
-      ESP_FAIL, err_task, TAG, "create task failed");
+  esp_err_t task_err = task_manager_create(
+      sniffer_task, "wifi_sniffer",
+      TASK_STACK_MEDIUM,  // 4KB (CONFIG_SNIFFER_TASK_STACK_SIZE)
+      sniffer,
+      TASK_PRIORITY_NORMAL,  // Sniffer es prioridad normal
+      &sniffer->task);
+  ESP_GOTO_ON_FALSE(task_err == ESP_OK, ESP_FAIL, err_task, TAG,
+                    "create task failed");
 
   switch (sniffer->interf) {
     case SNIFFER_INTF_WLAN:
@@ -322,7 +327,7 @@ static esp_err_t sniffer_start(sniffer_runtime_t* sniffer) {
   }
   return ret;
 err_start:
-  vTaskDelete(sniffer->task);
+  task_manager_delete(sniffer->task);
   sniffer->task = NULL;
 err_task:
   vSemaphoreDelete(sniffer->sem_task_over);
