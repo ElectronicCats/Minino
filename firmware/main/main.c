@@ -17,6 +17,11 @@
 #include "sleep_mode.h"
 #include "uart_bridge.h"
 
+// Core components
+#include "error_handler.h"
+#include "memory_monitor.h"
+#include "task_manager.h"
+
 // #include "zb_cli.h"  // Temporarily disabled - zb_cli is deprecated
 
 #define BAUD_RATE        921600
@@ -25,6 +30,22 @@
 
 static const char* TAG = "main";
 void app_main() {
+  // ═══════════════════════════════════════════════════════════
+  // FASE 1: Inicialización de Core Components
+  // ═══════════════════════════════════════════════════════════
+  ESP_LOGI(TAG, "🚀 Iniciando Minino Firmware v5.5.1");
+
+  // Inicializar sistemas core PRIMERO
+  error_handler_init();
+  task_manager_init();
+  heap_monitor_init();
+  heap_monitor_start(5000);  // Monitorear cada 5 segundos
+
+  ESP_LOGI(TAG, "✅ Core components inicializados");
+
+  // ═══════════════════════════════════════════════════════════
+  // FASE 2: Inicialización de Sistema
+  // ═══════════════════════════════════════════════════════════
   preferences_begin();
   gps_hw_init();
   sleep_mode_set_mode(resistor_detector(CONFIG_GPIO_RIGHT_BUTTON));
