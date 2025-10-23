@@ -10,7 +10,7 @@ typedef void (*submenu_exit_handler_t)(void);
 
 typedef struct {
   uint8_t options_count;
-  char** options;
+  const char** options;
   uint8_t selected_option;
   submenu_selection_handler_t select_cb;
   submenu_exit_handler_t exit_cb;
