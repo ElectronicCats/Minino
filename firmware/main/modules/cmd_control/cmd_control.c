@@ -31,7 +31,7 @@ void cmd_control_register_launch_cmd() {
                               "deauth_scan\n"
                               "dos\n"
                               "ssid_spam\n"
-                              "trakers_scan\n"
+                              "trackers_scan\n"
                               "spam\n"
                               "hid\n"
                               "adv\n"
