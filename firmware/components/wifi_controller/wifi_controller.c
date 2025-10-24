@@ -3,8 +3,8 @@
 #include "esp_wifi.h"
 #include "string.h"
 
-static bool wifi_driver_initialized = false;
-static bool netif_default_created = false;
+static volatile bool wifi_driver_initialized = false;
+static volatile bool netif_default_created = false;
 static bool run_once = false;
 static uint8_t default_ap_mac[6];
 static esp_err_t err;

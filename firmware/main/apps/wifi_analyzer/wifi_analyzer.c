@@ -23,8 +23,8 @@
 #include "wifi_screens_module.h"
 
 static const char* TAG = "wifi_module";
-static bool analizer_initialized = false;
-static bool no_mem = false;
+static volatile bool analizer_initialized = false;
+static volatile bool no_mem = false;
 
 static general_menu_t analyzer_summary_menu;
 static char* wifi_analizer_summary_2[120] = {

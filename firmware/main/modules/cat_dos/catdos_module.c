@@ -37,7 +37,7 @@
 
 static uint8_t last_main_selection = 0;
 static TaskHandle_t task_atack = NULL;
-static bool running_attack = false;
+static volatile bool running_attack = false;
 static const char* CATDOS_TAG = "catdos_module";
 static int aps_count = 0;
 static char* wifi_list[20];

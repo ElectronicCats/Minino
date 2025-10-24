@@ -4,7 +4,7 @@
 #include "leds.h"
 #include "task_manager.h"
 
-static TaskHandle_t led_evenet_task = NULL;  ////////////
+static TaskHandle_t led_evenet_task = NULL;
 static volatile bool led_event_running = false;
 
 void led_control_ble_tracking(void) {

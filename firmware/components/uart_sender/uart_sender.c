@@ -11,7 +11,7 @@
 #define BLE_PAYLOAD_OFFSET  27
 #define ESP_BLE_ADV_MAX_LEN 31
 
-static bool is_uart_sender_initialized = false;
+static volatile bool is_uart_sender_initialized = false;
 
 /**
  * @brief Initialize the UART sender

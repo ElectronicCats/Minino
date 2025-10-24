@@ -28,7 +28,7 @@ static app_state2_t app_state = {.in_app = false,
                                  .input_callback = NULL,
                                  .input_last_callback = NULL};
 static TaskHandle_t screen_saver_task = NULL;
-static bool screen_saver_running = false;
+static volatile bool screen_saver_running = false;
 
 static uint8_t get_menu_idx(menu_idx_t menu_idx) {
   for (uint8_t i = 0; i < menus_ctx->menus_count; i++) {

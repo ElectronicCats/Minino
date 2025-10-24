@@ -6,7 +6,7 @@
 
 void (*animations_task_cb)(void*) = NULL;
 
-static bool running = false;
+static volatile bool running = false;
 static uint32_t delay_ms = 100;
 
 static void animations_task(void* pvParameters) {

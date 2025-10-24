@@ -9,8 +9,8 @@
 static TaskHandle_t task_brod_attack = NULL;
 static TaskHandle_t task_rogue_attack = NULL;
 
-static bool running_broadcast_attack = false;
-static bool running_rogueap_attack = false;
+static volatile bool running_broadcast_attack = false;
+static volatile bool running_rogueap_attack = false;
 
 static const uint8_t deauth_frame_default[] = {
     0xc0, 0x00, 0x3a, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff,

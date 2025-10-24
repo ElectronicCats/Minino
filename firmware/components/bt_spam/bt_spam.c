@@ -10,7 +10,7 @@ static const char* TAG = "bt_spam";
 
 static bt_spam_cb_display display_records_cb = NULL;
 static TimerHandle_t adv_timer;
-static bool running_task = false;
+static volatile bool running_task = false;
 static int adv_index = 0;
 
 static esp_ble_adv_params_t ble_adv_params = {
