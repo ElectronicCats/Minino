@@ -477,3 +477,4 @@ TOTAL: 3 horas
 
 **Análisis comparativo completado**: 23 Oct 2025
 
+
