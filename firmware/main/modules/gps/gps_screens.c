@@ -430,25 +430,43 @@ void gps_screens_show_config(void) {
 }
 
 void gps_screens_update_handler(gps_t* gps) {
+  // Check if we're still in a GPS screen before updating
+  // This prevents race conditions when exiting GPS menus
+  if (!menus_module_get_app_state()) {
+    return;  // Not in GPS app anymore, don't update
+  }
+  
   menu_idx_t current = menus_module_get_current_menu();
+  
+  // Double-check menu state for thread safety
   switch (current) {
     case MENU_GPS_DATE_TIME:
-      gps_screens_update_date_and_time(gps);
+      if (menus_module_get_app_state()) {
+        gps_screens_update_date_and_time(gps);
+      }
       break;
     case MENU_GPS_LOCATION:
-      gps_screens_update_location(gps);
+      if (menus_module_get_app_state()) {
+        gps_screens_update_location(gps);
+      }
       break;
     case MENU_GPS_SPEED:
-      gps_screens_update_speed(gps);
+      if (menus_module_get_app_state()) {
+        gps_screens_update_speed(gps);
+      }
       break;
     case MENU_GPS_ROUTE:
-      gps_screens_save_location(gps);
+      if (menus_module_get_app_state()) {
+        gps_screens_save_location(gps);
+      }
       break;
     case MENU_GPS_TEST:
-      gps_screens_test(gps);
+      if (menus_module_get_app_state()) {
+        gps_screens_test(gps);
+      }
       break;
     default:
+      // Not in a GPS screen, ignore
       return;
-      break;
   }
 }
