@@ -6,6 +6,8 @@
 #include "general_screens.h"
 #include "general_scrolling_text.h"
 #include "general_submenu.h"
+#include "gps_hw.h"
+#include "gps_module.h"
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
@@ -337,6 +339,7 @@ void gps_screens_show_waiting_signal() {
 
 static void agnss_radio_handler(uint8_t option) {
   preferences_put_int(AGNSS_OPTIONS_PREF_KEY, option);
+  gps_module_reconfigure_options(GPS_INIT_AGNSS_ONLY);
 }
 
 static void gps_screens_show_agnss(void) {
@@ -353,6 +356,7 @@ static void gps_screens_show_agnss(void) {
 
 static void power_radio_handler(uint8_t option) {
   preferences_put_int(POWER_OPTIONS_PREF_KEY, option);
+  gps_module_reconfigure_options(GPS_INIT_POWER_ONLY);
 }
 
 static void gps_screens_show_power(void) {
@@ -369,6 +373,9 @@ static void gps_screens_show_power(void) {
 
 static void advanced_radio_handler(uint8_t option) {
   preferences_put_int(ADVANCED_OPTIONS_PREF_KEY, option);
+  // Reset advanced config flag so it can be reapplied
+  gps_hw_reset_advanced_config();
+  gps_module_reconfigure_options(GPS_INIT_ADVANCED_ONLY);
 }
 
 static void gps_screens_show_advanced(void) {
@@ -385,6 +392,7 @@ static void gps_screens_show_advanced(void) {
 
 static void update_rate_radio_handler(uint8_t option) {
   preferences_put_int(URATE_OPTIONS_PREF_KEY, option);
+  gps_module_reconfigure_options(GPS_INIT_UPDATERATE_ONLY);
 }
 
 static void gps_screens_show_urate(void) {

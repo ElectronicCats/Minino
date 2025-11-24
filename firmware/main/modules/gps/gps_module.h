@@ -111,13 +111,8 @@ char* get_str_date_time(gps_t* gps);
 
 void gps_module_check_state();
 void gps_module_reset_state();
+void gps_module_reconfigure_options(uint8_t init_type);
 
 void gps_module_reset_test(void);
 void gps_module_on_test_enter(void);
 void gps_module_on_config_enter(void);
-
-// Advanced GPS functions for ATGM336H-6N-74
-void gps_module_set_update_rate(uint8_t rate);
-void gps_module_enable_agnss();
-void gps_module_disable_agnss();
-void gps_module_set_power_mode(gps_power_mode_t mode);
