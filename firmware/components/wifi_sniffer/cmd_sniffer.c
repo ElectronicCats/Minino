@@ -15,15 +15,29 @@
 #include "esp_app_trace.h"
 #include "esp_check.h"
 #include "esp_log.h"
+#include "esp_spiffs.h"
 #include "esp_wifi.h"
 #include "sdkconfig.h"
 #include "task_manager.h"
+#include "wifi_sniffer.h"
 
 #define SNIFFER_DEFAULT_CHANNEL           (1)
 #define SNIFFER_PAYLOAD_FCS_LEN           (4)
 #define SNIFFER_PROCESS_PACKET_TIMEOUT_MS (100)
 #define SNIFFER_RX_FCS_ERR                (0X41)
 #define SNIFFER_DECIMAL_NUM               (10)
+#define PCAP_FLASH_MAX_PACKETS \
+  (900)  // Fallback maximum packets when saving to flash
+#define PCAP_FLASH_MIN_FREE_BYTES \
+  (51200)  // Minimum free space in flash (50KB) - increased to prevent system
+           // freeze
+#define PCAP_FILE_HEADER_SIZE   (24)  // PCAP file header size in bytes
+#define PCAP_PACKET_HEADER_SIZE (16)  // PCAP packet header size in bytes
+#define PCAP_AVG_PACKET_SIZE \
+  (300)  // Average packet size in bytes (header + payload, conservative
+         // estimate)
+#define PCAP_SAFETY_MARGIN_PERCENT \
+  (20)  // Safety margin percentage to leave free space
 
 static const char* TAG = "cmd_sniffer";
 
@@ -47,10 +61,14 @@ static sniffer_cb_t sniffer_cb = NULL;
 static sniffer_animation_cb_t sniffer_animation_start_cb = NULL;
 static sniffer_animation_cb_t sniffer_animation_stop_cb = NULL;
 static void (*out_of_mem_cb)();
+static void (*limit_packets_cb)();
 
-void wifi_sniffer_register_cb(sniffer_cb_t callback, void* _out_of_mem_cb) {
+void wifi_sniffer_register_cb(sniffer_cb_t callback,
+                              void* _out_of_mem_cb,
+                              void* _limit_packets_cb) {
   sniffer_cb = callback;
   out_of_mem_cb = _out_of_mem_cb;
+  limit_packets_cb = _limit_packets_cb;
 }
 
 void wifi_sniffer_register_animation_cbs(sniffer_animation_cb_t start_cb,
@@ -60,6 +78,111 @@ void wifi_sniffer_register_animation_cbs(sniffer_animation_cb_t start_cb,
 }
 
 static esp_err_t sniffer_stop(sniffer_runtime_t* sniffer);
+
+/**
+ * @brief Calculate maximum packets that can fit in available flash space
+ *
+ * @param free_size Available flash space in bytes
+ * @return Maximum number of packets that can be stored
+ */
+static uint32_t calculate_max_packets_from_flash(size_t free_size) {
+  // Reserve minimum free space for SPIFFS operations
+  size_t usable_size = 0;
+  if (free_size > PCAP_FLASH_MIN_FREE_BYTES) {
+    usable_size = free_size - PCAP_FLASH_MIN_FREE_BYTES;
+  } else {
+    return 0;  // Not enough space
+  }
+
+  // Apply safety margin to prevent fragmentation issues
+  usable_size = (usable_size * (100 - PCAP_SAFETY_MARGIN_PERCENT)) / 100;
+
+  // Calculate: (usable_size - file_header) / (packet_header + avg_packet_size)
+  if (usable_size <= PCAP_FILE_HEADER_SIZE) {
+    return 0;
+  }
+
+  size_t bytes_per_packet = PCAP_PACKET_HEADER_SIZE + PCAP_AVG_PACKET_SIZE;
+  size_t available_for_packets = usable_size - PCAP_FILE_HEADER_SIZE;
+  uint32_t max_packets = available_for_packets / bytes_per_packet;
+
+  // Use the lower of calculated limit or hard limit
+  if (max_packets > PCAP_FLASH_MAX_PACKETS) {
+    max_packets = PCAP_FLASH_MAX_PACKETS;
+  }
+
+  return max_packets;
+}
+
+/**
+ * @brief Check if flash sniffing should stop due to packet limit or low flash
+ * space
+ *
+ * @param sniffed_packets Current number of sniffed packets
+ * @return true if sniffing should stop, false otherwise
+ */
+static bool should_stop_flash_sniffing(int32_t sniffed_packets) {
+  // Only check limits when saving to flash
+  if (!wifi_sniffer_is_destination_internal()) {
+    return false;
+  }
+
+  // Get flash space information
+  size_t total_size = 0;
+  size_t used_size = 0;
+  esp_err_t ret = esp_spiffs_info("internal", &total_size, &used_size);
+  if (ret != ESP_OK) {
+    ESP_LOGW(TAG, "Failed to get flash info, using fallback limit");
+    // Use fallback limit if we can't get flash info
+    if (sniffed_packets >= PCAP_FLASH_MAX_PACKETS) {
+      ESP_LOGW(TAG, "Flash packet limit reached (%d packets)",
+               PCAP_FLASH_MAX_PACKETS);
+      return true;
+    }
+    return false;
+  }
+
+  size_t free_size = total_size - used_size;
+
+  // Check if we have minimum free space
+  if (free_size < PCAP_FLASH_MIN_FREE_BYTES) {
+    ESP_LOGW(TAG,
+             "Flash space critically low: %zu bytes free (minimum: %d bytes)",
+             free_size, PCAP_FLASH_MIN_FREE_BYTES);
+    return true;
+  }
+
+  // Calculate dynamic packet limit based on available space
+  uint32_t max_packets = calculate_max_packets_from_flash(free_size);
+
+  if (max_packets == 0) {
+    ESP_LOGW(TAG, "No space available for more packets");
+    return true;
+  }
+
+  // Check if we've reached the calculated limit
+  if (sniffed_packets >= (int32_t) max_packets) {
+    ESP_LOGW(TAG,
+             "Flash packet limit reached: %d packets (calculated from %zu "
+             "bytes free)",
+             max_packets, free_size);
+    return true;
+  }
+
+  // Additional check: if we're getting close to the limit, check more
+  // frequently This helps prevent system freeze by stopping earlier
+  if (sniffed_packets >= (int32_t) (max_packets * 0.9)) {
+    // Re-check available space more aggressively near the limit
+    size_t current_free = total_size - used_size;
+    if (current_free < (PCAP_FLASH_MIN_FREE_BYTES * 1.2)) {
+      ESP_LOGW(TAG, "Approaching flash limit: %d/%d packets, %zu bytes free",
+               sniffed_packets, max_packets, current_free);
+      return true;
+    }
+  }
+
+  return false;
+}
 
 static uint32_t hash_func(const char* str, uint32_t max_num) {
   uint32_t ret = 0;
@@ -181,6 +304,23 @@ static void sniffer_task(void* parameters) {
         force_exit = true;
         out_of_mem_cb();
       }
+    } else {
+      // Packet captured successfully, increment counter
+      sniffer->sniffed_packets++;
+
+      // Check flash limits (packet count and available space) only when saving
+      // to flash
+      if (should_stop_flash_sniffing(sniffer->sniffed_packets)) {
+        ESP_LOGI(TAG, "Stopping sniffer due to flash limits");
+        if (limit_packets_cb) {
+          xSemaphoreGive(sniffer->sem_task_over);
+          force_exit = true;
+          limit_packets_cb();
+        } else {
+          sniffer_stop(sniffer);
+        }
+        break;
+      }
     }
     free(packet_info.payload);
     if (sniffer->packets_to_sniff > 0) {
@@ -188,7 +328,6 @@ static void sniffer_task(void* parameters) {
         sniffer_cb(sniffer);
       }
       sniffer->packets_to_sniff--;
-      sniffer->sniffed_packets++;
       // TODO: Add a flag to make an animation when the sniffer is running
       ESP_LOGW(TAG, "%" PRIi32 " packages left to capture",
                sniffer->packets_to_sniff);

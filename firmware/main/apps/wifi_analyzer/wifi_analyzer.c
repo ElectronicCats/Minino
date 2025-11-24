@@ -57,7 +57,24 @@ static void out_of_mem_handler() {
     wifi_module_summary_exit_cb();
   }
   wifi_screens_show_no_mem();
-  no_mem = false;
+  // no_mem = false;
+}
+
+static void limit_packets_handler() {
+  ESP_LOGW(TAG, "Limit packets reached");
+
+  // Stop the sniffer and the led control
+  wifi_sniffer_stop();
+  led_control_stop();
+
+  // Show the limit packets screen
+  wifi_screens_show_limit_packets();
+
+  // Add a delay to show the limit packets screen
+  vTaskDelay(pdMS_TO_TICKS(1500));
+
+  // Exit the analyzer
+  wifi_module_analyzer_run_exit();
 }
 
 esp_err_t wifi_module_init_sniffer() {
@@ -73,11 +90,9 @@ esp_err_t wifi_module_init_sniffer() {
         ESP_LOGI(TAG, "SD card not supported");
         wifi_screeens_show_sd_not_supported();
         wifi_sniffer_set_destination_internal();
-        // TODO: add an option to format the SD card
         break;
       default:
         ESP_LOGE(TAG, "SD card mount failed: reason: %s", esp_err_to_name(err));
-        /* fall through */
       case ESP_ERR_NOT_FOUND:
         ESP_LOGW(TAG, "SD card not found");
         wifi_screeens_show_sd_not_found();
@@ -143,12 +158,13 @@ void wifi_analyzer_run() {
 
 void wifi_analyzer_begin() {
   if (no_mem) {
-    no_mem = false;
+    out_of_mem_handler();
     return;
   }
+
   ESP_LOGI(TAG, "Initializing WiFi analizer module");
   wifi_sniffer_register_cb(wifi_screens_module_display_sniffer_cb,
-                           out_of_mem_handler);
+                           out_of_mem_handler, limit_packets_handler);
   wifi_sniffer_register_animation_cbs(wifi_screens_sniffer_animation_start,
                                       wifi_screens_sniffer_animation_stop);
   wifi_sniffer_register_summary_cb(wifi_module_analizer_summary_cb);

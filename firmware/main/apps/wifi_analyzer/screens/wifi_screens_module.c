@@ -85,3 +85,7 @@ void wifi_screeens_show_sd_not_found() {
 void wifi_screens_show_no_mem() {
   genera_screen_display_card_information("Out of memory", "free up space");
 }
+
+void wifi_screens_show_limit_packets() {
+  genera_screen_display_card_information("Limit memory", "free up space");
+}

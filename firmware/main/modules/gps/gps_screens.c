@@ -435,9 +435,9 @@ void gps_screens_update_handler(gps_t* gps) {
   if (!menus_module_get_app_state()) {
     return;  // Not in GPS app anymore, don't update
   }
-  
+
   menu_idx_t current = menus_module_get_current_menu();
-  
+
   // Double-check menu state for thread safety
   switch (current) {
     case MENU_GPS_DATE_TIME:

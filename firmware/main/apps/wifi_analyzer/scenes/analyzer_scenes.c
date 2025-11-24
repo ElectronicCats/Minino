@@ -92,15 +92,16 @@ void analyzer_scenes_settings() {
   settings_menu.select_cb = settings_selection_handler;
   settings_menu.exit_cb = settings_exit_handler;
   general_submenu(settings_menu);
-  //   wifi_analyzer_begin();
 }
 //////////////////////////   CHANNEL MENU   ///////////////////////////////
 static const char* channel_options[] = {
     "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
 };
+
 static void set_channel(uint8_t selected_item) {
   wifi_sniffer_set_channel(selected_item + 1);
 }
+
 void analyzer_scenes_channel() {
   general_radio_selection_menu_t channel = {0};
   channel.banner = "Choose Channel",

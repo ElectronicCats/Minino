@@ -160,15 +160,15 @@ void gps_module_start_scan() {
 void gps_module_stop_read() {
   is_uart_installed = false;
   ESP_LOGI(TAG, "Stop reading GPS");
-  
+
   /* Unregister event handler first */
   nmea_parser_remove_handler(nmea_hdl, gps_event_handler);
-  
+
   /* Small delay to ensure any pending callback finishes
-   * The GPS task runs every 5ms, so 20ms ensures we miss at least 
+   * The GPS task runs every 5ms, so 20ms ensures we miss at least
    * one full cycle after unregistering */
   vTaskDelay(pdMS_TO_TICKS(20));
-  
+
   /* Now safe to deinit NMEA parser library */
   nmea_parser_deinit(nmea_hdl);
 }

@@ -51,8 +51,8 @@ typedef struct {
   uint8_t* buffer;                               /*!< Runtime buffer */
   TaskHandle_t tsk_hdl;                          /*!< NMEA Parser task handle */
   QueueHandle_t event_queue;                     /*!< UART event queue handle */
-  esp_event_handler_t event_handler;             /*!< User event handler callback */
-  void* event_handler_arg;                       /*!< User event handler argument */
+  esp_event_handler_t event_handler; /*!< User event handler callback */
+  void* event_handler_arg;           /*!< User event handler argument */
 } esp_gps_t;
 
 /**
@@ -569,7 +569,8 @@ static esp_err_t gps_decode(esp_gps_t* esp_gps, size_t len) {
         if (((esp_gps->parsed_statement) & esp_gps->all_statements) ==
             esp_gps->all_statements) {
           esp_gps->parsed_statement = 0;
-          /* Call user callback to notify that GPS information has been updated */
+          /* Call user callback to notify that GPS information has been updated
+           */
           if (esp_gps->event_handler) {
             esp_gps->event_handler(esp_gps->event_handler_arg, ESP_NMEA_EVENT,
                                    GPS_UPDATE, &(esp_gps->parent));
@@ -579,7 +580,8 @@ static esp_err_t gps_decode(esp_gps_t* esp_gps, size_t len) {
         ESP_LOGD(TAG, "CRC Error for statement:%s", esp_gps->buffer);
       }
       if (esp_gps->cur_statement == STATEMENT_UNKNOWN) {
-        /* Call user callback to notify that one unknown statement has been met */
+        /* Call user callback to notify that one unknown statement has been met
+         */
         if (esp_gps->event_handler) {
           esp_gps->event_handler(esp_gps->event_handler_arg, ESP_NMEA_EVENT,
                                  GPS_UNKNOWN, esp_gps->buffer);
@@ -632,29 +634,29 @@ static void esp_handle_uart_pattern(esp_gps_t* esp_gps) {
  */
 static void nmea_parser_task_entry(void* arg) {
   esp_gps_t* esp_gps = (esp_gps_t*) arg;
-  
+
   ESP_LOGI(TAG, "NMEA Parser task started");
 
   while (1) {
     // Read data from UART using DMA
-    int len = uart_read_bytes(esp_gps->uart_port, esp_gps->buffer, 
-                             NMEA_PARSER_RUNTIME_BUFFER_SIZE - 1, 
-                             pdMS_TO_TICKS(100));
-    
+    int len = uart_read_bytes(esp_gps->uart_port, esp_gps->buffer,
+                              NMEA_PARSER_RUNTIME_BUFFER_SIZE - 1,
+                              pdMS_TO_TICKS(100));
+
     if (len > 0) {
       // Null-terminate the buffer
       esp_gps->buffer[len] = '\0';
-      
+
       // Parse the NMEA data
       if (gps_decode(esp_gps, len) != ESP_OK) {
         ESP_LOGW(TAG, "GPS decode failed");
       }
     }
-    
+
     // Small delay to prevent task starvation
     vTaskDelay(pdMS_TO_TICKS(10));
   }
-  
+
   vTaskDelete(NULL);
 }
 
@@ -702,11 +704,11 @@ nmea_parser_handle_t nmea_parser_init(const nmea_parser_config_t* config) {
   /* Set attributes */
   esp_gps->uart_port = config->uart.uart_port;
   esp_gps->all_statements &= 0xFE;
-  
+
   /* Initialize event handler callbacks to NULL */
   esp_gps->event_handler = NULL;
   esp_gps->event_handler_arg = NULL;
-  
+
   /* Install UART friver */
   uart_config_t uart_config = {
       .baud_rate = config->uart.baud_rate,
@@ -716,7 +718,7 @@ nmea_parser_handle_t nmea_parser_init(const nmea_parser_config_t* config) {
       .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
       .source_clk = UART_SCLK_DEFAULT,
   };
-  
+
   if (uart_param_config(esp_gps->uart_port, &uart_config) != ESP_OK) {
     ESP_LOGE(TAG, "config uart parameter failed");
     goto err_uart_config;
@@ -729,11 +731,11 @@ nmea_parser_handle_t nmea_parser_init(const nmea_parser_config_t* config) {
   }
 
   if (uart_driver_install(
-    esp_gps->uart_port, CONFIG_NMEA_PARSER_RING_BUFFER_SIZE, CONFIG_NMEA_PARSER_RING_BUFFER_SIZE,
-    0, NULL, 0) != ESP_OK) {
+          esp_gps->uart_port, CONFIG_NMEA_PARSER_RING_BUFFER_SIZE,
+          CONFIG_NMEA_PARSER_RING_BUFFER_SIZE, 0, NULL, 0) != ESP_OK) {
     ESP_LOGE(TAG, "install uart driver failed");
     goto err_uart_install;
-    }
+  }
 
   /* Create NMEA Parser task - will use UART DMA mode */
   esp_err_t err = task_manager_create(
@@ -770,17 +772,17 @@ err_gps:
  */
 esp_err_t nmea_parser_deinit(nmea_parser_handle_t nmea_hdl) {
   esp_gps_t* esp_gps = (esp_gps_t*) nmea_hdl;
-  
+
   // Delete the parser task
   task_manager_delete(esp_gps->tsk_hdl);
-  
+
   // Delete UART driver
   esp_err_t err = uart_driver_delete(esp_gps->uart_port);
-  
+
   // Free allocated memory
   free(esp_gps->buffer);
   free(esp_gps);
-  
+
   return err;
 }
 
@@ -798,15 +800,15 @@ esp_err_t nmea_parser_add_handler(nmea_parser_handle_t nmea_hdl,
                                   esp_event_handler_t event_handler,
                                   void* handler_args) {
   esp_gps_t* esp_gps = (esp_gps_t*) nmea_hdl;
-  
+
   if (!esp_gps || !event_handler) {
     return ESP_ERR_INVALID_ARG;
   }
-  
+
   // Store the callback and its argument
   esp_gps->event_handler = event_handler;
   esp_gps->event_handler_arg = handler_args;
-  
+
   ESP_LOGI(TAG, "Event handler registered");
   return ESP_OK;
 }
@@ -815,7 +817,8 @@ esp_err_t nmea_parser_add_handler(nmea_parser_handle_t nmea_hdl,
  * @brief Remove user defined handler for NMEA parser
  *
  * @param nmea_hdl handle of NMEA parser
- * @param event_handler user defined event handler (unused, kept for API compatibility)
+ * @param event_handler user defined event handler (unused, kept for API
+ * compatibility)
  * @return esp_err_t
  *  - ESP_OK: Success
  *  - ESP_ERR_INVALID_ARG: Invalid arguments
@@ -823,15 +826,15 @@ esp_err_t nmea_parser_add_handler(nmea_parser_handle_t nmea_hdl,
 esp_err_t nmea_parser_remove_handler(nmea_parser_handle_t nmea_hdl,
                                      esp_event_handler_t event_handler) {
   esp_gps_t* esp_gps = (esp_gps_t*) nmea_hdl;
-  
+
   if (!esp_gps) {
     return ESP_ERR_INVALID_ARG;
   }
-  
+
   // Clear the callback
   esp_gps->event_handler = NULL;
   esp_gps->event_handler_arg = NULL;
-  
+
   ESP_LOGI(TAG, "Event handler unregistered");
   return ESP_OK;
 }

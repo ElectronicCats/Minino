@@ -36,7 +36,8 @@ static const char* TAG = "cmd_pcap";
 #define SNIFFER_PROCESS_APPTRACE_TIMEOUT_US (100)
 #define SNIFFER_APPTRACE_RETRY              (10)
 #define TRACE_TIMER_FLUSH_INT_MS            (1000)
-#define PCAP_FLUSH_INTERVAL_PACKETS          (100)  // Flush file every N packets to prevent buffer overflow
+#define PCAP_FLUSH_INTERVAL_PACKETS \
+  (100)  // Flush file every N packets to prevent buffer overflow
 
 #define ANALIZER_SD_CARD    "/sdcard"
 #define ANALIZER_FLASH_FS   "/internal"
@@ -195,8 +196,8 @@ esp_err_t packet_capture(void* payload,
                                       seconds, microseconds);
   if (err == ESP_OK) {
     pcap_cmd_rt.packet_count++;
-    // Periodic flush to prevent buffer overflow (especially important for ESP32C6)
-    // Flush every N packets to ensure data is written to storage
+    // Periodic flush to prevent buffer overflow (especially important for
+    // ESP32C6) Flush every N packets to ensure data is written to storage
     if (pcap_cmd_rt.packet_count % PCAP_FLUSH_INTERVAL_PACKETS == 0) {
       if (pcap_cmd_rt.pcap_handle && pcap_cmd_rt.pcap_handle->file) {
         fflush(pcap_cmd_rt.pcap_handle->file);
