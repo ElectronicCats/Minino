@@ -77,6 +77,16 @@ static void gps_event_handler(void* event_handler_arg,
   }
 }
 
+/**
+ * @brief GPS Satellites Event Handler
+ *
+ * @param event_handler_arg handler specific arguments
+ * @param event_base event base, here is fixed to ESP_NMEA_EVENT
+ * @param event_id event id
+ * @param event_data event specific arguments
+ *
+ * @return void
+ */
 static void gps_sats_event_handler(void* event_handler_arg,
                                    esp_event_base_t event_base,
                                    int32_t event_id,
@@ -95,9 +105,12 @@ static void gps_sats_event_handler(void* event_handler_arg,
   }
 }
 
-static void configure_gps_options(void) {
-  // Configure GPS for ATGM336H-6N-74 with multi-constellation support (only
-  // once)
+/**
+ * @brief Configure GPS options
+ *
+ * @return void
+ */
+void configure_gps_options(void) {
   if (!gps_advanced_configured) {
     if (preferences_get_int(ADVANCED_OPTIONS_PREF_KEY, 1) == 1) {
       gps_module_configure_advanced();
@@ -116,6 +129,11 @@ static void configure_gps_options(void) {
   gps_module_set_power_mode(preferences_get_int(POWER_OPTIONS_PREF_KEY, 0));
 }
 
+/**
+ * @brief Reset GPS test
+ *
+ * @return void
+ */
 void gps_module_reset_test(void) {
   animations_task_run(&general_animation_loading, 300, NULL);
   for (int i = 0; i < 5; i++) {
@@ -134,10 +152,12 @@ void gps_module_reset_test(void) {
   gps_module_start_scan();
 }
 
+/**
+ * @brief Start reading the GPS module
+ *
+ * @return void
+ */
 void gps_module_start_scan() {
-  // #if !defined(CONFIG_GPS_MODULE_DEBUG)
-  //   esp_log_level_set(TAG, ESP_LOG_NONE);
-  // #endif
   if (is_uart_installed) {
     return;
   }
@@ -157,6 +177,11 @@ void gps_module_start_scan() {
   gps_screens_show_waiting_signal();
 }
 
+/**
+ * @brief Stop reading the GPS module
+ *
+ * @return void
+ */
 void gps_module_stop_read() {
   is_uart_installed = false;
   ESP_LOGI(TAG, "Stop reading GPS");
@@ -173,6 +198,13 @@ void gps_module_stop_read() {
   nmea_parser_deinit(nmea_hdl);
 }
 
+/**
+ * @brief Get the signal strength
+ *
+ * @param gps The GPS module instance
+ *
+ * @return char*
+ */
 char* gps_module_get_signal_strength(gps_t* gps) {
   if (gps->sats_in_use == 0) {
     return (char*) GPS_SIGNAL_STRENGTH[0];
@@ -185,6 +217,13 @@ char* gps_module_get_signal_strength(gps_t* gps) {
   }
 }
 
+/**
+ * @brief Get the GPS module instance
+ *
+ * @param event_data The event data
+ *
+ * @return gps_t*
+ */
 gps_t* gps_module_get_instance(void* event_data) {
   gps_t* gps = (gps_t*) event_data;
 
@@ -240,11 +279,23 @@ gps_t* gps_module_get_instance(void* event_data) {
   return gps;
 }
 
+/**
+ * @brief Get the GPS module time zone
+ *
+ * @return uint8_t
+ */
 uint8_t gps_module_get_time_zone() {
   uint8_t default_time_zone = 14;  // UTC+0
   return preferences_get_uint("time_zone", default_time_zone);
 }
 
+/**
+ * @brief Get the full date time
+ *
+ * @param gps The GPS module instance
+ *
+ * @return char*
+ */
 char* get_full_date_time(gps_t* gps) {
   char* date_time = malloc(30);
   snprintf(date_time, 30, "%d-%d-%d %d:%d:%d", gps->date.year, gps->date.month,
@@ -252,6 +303,13 @@ char* get_full_date_time(gps_t* gps) {
   return date_time;
 }
 
+/**
+ * @brief Get the string date time
+ *
+ * @param gps The GPS module instance
+ *
+ * @return char*
+ */
 char* get_str_date_time(gps_t* gps) {
   char* date_time = malloc(30);
   snprintf(date_time, 30, "%d%d%d%d%d%d", gps->date.year, gps->date.month,
@@ -259,33 +317,75 @@ char* get_str_date_time(gps_t* gps) {
   return date_time;
 }
 
+/**
+ * @brief Set the GPS module time zone
+ *
+ * @param time_zone The time zone
+ *
+ * @return void
+ */
 void gps_module_set_time_zone(uint8_t time_zone) {
   preferences_put_uint("time_zone", time_zone);
 }
 
+/**
+ * @brief Register the GPS module event callback
+ *
+ * @param callback The callback
+ *
+ * @return void
+ */
 void gps_module_register_cb(gps_event_callback_t callback) {
   gps_module_unregister_cb();
   gps_event_callback = callback;
 }
 
+/**
+ * @brief Unregister the GPS module event callback
+ *
+ * @return void
+ */
 void gps_module_unregister_cb() {
   gps_event_callback = NULL;
 }
 
+/**
+ * @brief On config enter
+ *
+ * @return void
+ */
 void gps_module_on_config_enter() {
   gps_screens_show_config();
 }
 
+/**
+ * @brief On test enter
+ *
+ * @return void
+ */
 void gps_module_on_test_enter(void) {
   menus_module_set_app_state(true, gps_module_general_data_input_cb);
   gps_module_reset_test();
 }
 
+/**
+ * @brief General data run
+ *
+ * @return void
+ */
 void gps_module_general_data_run() {
   menus_module_set_app_state(true, gps_module_general_data_input_cb);
   gps_module_start_scan();
 }
 
+/**
+ * @brief General data input callback
+ *
+ * @param button_name The button name
+ * @param button_event The button event
+ *
+ * @return void
+ */
 static void gps_module_general_data_input_cb(uint8_t button_name,
                                              uint8_t button_event) {
   if (button_event != BUTTON_PRESS_DOWN || button_name != BUTTON_LEFT) {
@@ -295,11 +395,23 @@ static void gps_module_general_data_input_cb(uint8_t button_name,
   menus_module_exit_app();
 }
 
+/**
+ * @brief GPS states
+ *
+ * @return const char*
+ */
 static const char* gps_states[] = {
     "Disabled",
     "Enabled",
 };
 
+/**
+ * @brief State handler
+ *
+ * @param state The state
+ *
+ * @return void
+ */
 static void state_handler(uint8_t state) {
   if (state) {
     gps_hw_on();
@@ -309,6 +421,11 @@ static void state_handler(uint8_t state) {
   gsp_hw_save_state();
 }
 
+/**
+ * @brief GPS settings exit callback
+ *
+ * @return void
+ */
 static void gps_settings_exit_cb() {
   if (gps_hw_get_state()) {
     menus_module_set_default_input();
@@ -318,6 +435,11 @@ static void gps_settings_exit_cb() {
   }
 }
 
+/**
+ * @brief GPS settings state menu, function to show the GPS state menu
+ *
+ * @return void
+ */
 static void gps_settings_state_menu() {
   general_radio_selection_menu_t state = {0};
   state.banner = "GPS State";
@@ -331,6 +453,11 @@ static void gps_settings_state_menu() {
   general_radio_selection(state);
 }
 
+/**
+ * @brief Check the GPS state
+ *
+ * @return void
+ */
 void gps_module_check_state() {
   if (gps_hw_get_state()) {
     return;
@@ -345,12 +472,24 @@ void gps_module_check_state() {
   gps_settings_state_menu();
 }
 
+/**
+ * @brief Reset the GPS state
+ *
+ * @return void
+ */
 void gps_module_reset_state() {
   if (gps_hw_get_state() && !preferences_get_bool(GPS_ENABLED_MEM, false)) {
     gps_hw_off();
   }
 }
 
+/**
+ * @brief Set the GPS update rate
+ *
+ * @param rate The update rate
+ *
+ * @return void
+ */
 void gps_module_set_update_rate(uint8_t rate) {
   if (rate < 1 || rate > 10) {
     ESP_LOGW(TAG, "Invalid update rate: %d (must be 1-10 Hz)", rate);
@@ -443,6 +582,11 @@ void gps_module_set_power_mode(gps_power_mode_t mode) {
   }
 }
 
+/**
+ * @brief Configure the GPS update rate
+ *
+ * @return void
+ */
 static void gps_module_configure_updaterate(void) {
   // Set update rate to 5Hz for better responsiveness
   char update_rate_cmd[128];
