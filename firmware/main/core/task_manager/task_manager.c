@@ -86,7 +86,7 @@ esp_err_t task_manager_delete(TaskHandle_t handle) {
     if (task_registry[i].handle == handle) {
       task_registry[i].is_running = false;
       vTaskDelete(handle);
-      ESP_LOGI(TAG, "❌ Tarea eliminada: '%s'", task_registry[i].name);
+      ESP_LOGI(TAG, "Tarea eliminada: '%s'", task_registry[i].name);
       return ESP_OK;
     }
   }
@@ -96,22 +96,18 @@ esp_err_t task_manager_delete(TaskHandle_t handle) {
 }
 
 void task_manager_list_all(void) {
-  ESP_LOGI(TAG, "════════════════════════════════════════");
-  ESP_LOGI(TAG, "  TASK MANAGER - Tareas Registradas");
-  ESP_LOGI(TAG, "════════════════════════════════════════");
   ESP_LOGI(TAG, "Total de tareas: %lu / %d", task_count, MAX_TASKS);
   ESP_LOGI(TAG, "");
 
   for (uint32_t i = 0; i < task_count; i++) {
     task_info_t* info = &task_registry[i];
-    const char* status = info->is_running ? "🟢 RUN" : "🔴 STOP";
+    const char* status = info->is_running ? "RUN" : "STOP";
     uint32_t uptime_sec =
         (xTaskGetTickCount() * portTICK_PERIOD_MS - info->created_at_ms) / 1000;
 
     ESP_LOGI(TAG, "[%2lu] %s %-20s | Pri:%2d | Stack:%5d | Uptime:%lus", i + 1,
              status, info->name, info->priority, info->stack_size, uptime_sec);
   }
-  ESP_LOGI(TAG, "════════════════════════════════════════");
 }
 
 uint32_t task_manager_get_count(void) {
@@ -138,11 +134,6 @@ void task_manager_update_watermarks(void) {
 
 void task_manager_print_stack_usage(void) {
   task_manager_update_watermarks();
-
-  ESP_LOGI(TAG, "════════════════════════════════════════");
-  ESP_LOGI(TAG, "  STACK USAGE - Análisis de Uso");
-  ESP_LOGI(TAG, "════════════════════════════════════════");
-
   for (uint32_t i = 0; i < task_count; i++) {
     if (!task_registry[i].is_running)
       continue;
@@ -154,17 +145,16 @@ void task_manager_print_stack_usage(void) {
 
     const char* status;
     if (watermark < 128) {
-      status = "🚨 DANGER";  // Menos de 512 bytes libres
+      status = "DANGER";  // Menos de 512 bytes libres
     } else if (watermark < 256) {
-      status = "⚠️  WARNING";  // Menos de 1KB libre
+      status = "WARNING";  // Menos de 1KB libre
     } else {
-      status = "✅ OK";
+      status = "OK";
     }
 
     ESP_LOGI(TAG, "[%2lu] %-20s | %5zu/%5d bytes (%.1f%%) | %s", i + 1,
              info->name, used, info->stack_size, usage_percent, status);
   }
-  ESP_LOGI(TAG, "════════════════════════════════════════");
 }
 
 bool task_manager_check_stack_overflow_risk(void) {
@@ -173,7 +163,7 @@ bool task_manager_check_stack_overflow_risk(void) {
   for (uint32_t i = 0; i < task_count; i++) {
     if (task_registry[i].is_running) {
       if (task_registry[i].stack_watermark < 128) {  // < 512 bytes
-        ESP_LOGE(TAG, "🚨 Stack overflow risk: '%s' (solo %lu bytes libres)",
+        ESP_LOGE(TAG, "Stack overflow risk: '%s' (solo %lu bytes libres)",
                  task_registry[i].name,
                  task_registry[i].stack_watermark * sizeof(StackType_t));
         return true;
