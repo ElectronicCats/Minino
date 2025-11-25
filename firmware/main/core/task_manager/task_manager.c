@@ -12,6 +12,10 @@ static uint32_t task_count = 0;
 static bool manager_initialized = false;
 
 esp_err_t task_manager_init(void) {
+#if !defined(CONFIG_TASK_MANAGER_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   if (manager_initialized) {
     ESP_LOGW(TAG, "Task Manager ya inicializado");
     return ESP_OK;
@@ -70,7 +74,7 @@ esp_err_t task_manager_create(TaskFunction_t task_func,
     *handle = task_handle;
   }
 
-  ESP_LOGI(TAG, "✅ Tarea creada: '%s' (stack=%d, priority=%d, #%lu)", name,
+  ESP_LOGI(TAG, "Tarea creada: '%s' (stack=%d, priority=%d, #%lu)", name,
            stack_size, priority, task_count);
 
   return ESP_OK;

@@ -374,8 +374,10 @@ static void parse_zda(esp_gps_t* esp_gps) {
           convert_two_digit2number(esp_gps->item_str + 2);
       esp_gps->parent.date.year =
           convert_two_digit2number(esp_gps->item_str + 4);
-      ESP_LOGE("GAT", "%d/%02d/%02d", esp_gps->parent.date.year,
+#if defined(CONFIG_NMEA_PARSER_DEBUG)
+      ESP_LOGD(TAG, "ZDA date parsed: %d/%02d/%02d", esp_gps->parent.date.year,
                esp_gps->parent.date.month, esp_gps->parent.date.day);
+#endif
       break;
     default:
       break;

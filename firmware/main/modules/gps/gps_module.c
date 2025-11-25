@@ -135,6 +135,10 @@ void gps_module_start_scan() {
   }
   is_uart_installed = true;
 
+#if !defined(CONFIG_GPS_MODULE_DEBUG)
+  esp_log_level_set(TAG, ESP_LOG_NONE);
+#endif
+
   ESP_LOGI(TAG, "Start reading GPS");
 
   /* NMEA parser configuration */

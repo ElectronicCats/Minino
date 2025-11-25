@@ -151,6 +151,12 @@ menu "General project"
 				help
 					Enable Settings module debug.
 
+			config TASK_MANAGER_DEBUG
+				bool "Task Manager debug"
+				default false
+				help
+					Enable Task Manager debug.
+
 			config WARDRIVING_MODULE_DEBUG
 				bool "Wardriving module debug"
 				default false
