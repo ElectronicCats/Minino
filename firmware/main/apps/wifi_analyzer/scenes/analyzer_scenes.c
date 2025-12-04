@@ -53,7 +53,7 @@ void analyzer_scenes_main_menu() {
   main_menu.options = analizer_main_options;
   main_menu.options_count = sizeof(analizer_main_options) / sizeof(char*);
   main_menu.select_cb = main_menu_selection_handler;
-  main_menu.exit_cb = main_menu_exit_handler;
+  main_menu.exit_cb = menus_module_restart;
   general_submenu(main_menu);
   wifi_analyzer_begin();
 }
