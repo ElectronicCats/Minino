@@ -233,7 +233,7 @@ void menus_module_restart() {
   esp_restart();
 }
 
-void menus_module_return(){
+void menus_module_return() {
   menus_module_set_default_input();
   menus_ctx->current_menu = menus_ctx->parent_menu_idx;
   refresh_menus();
