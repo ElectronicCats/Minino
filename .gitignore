@@ -28,6 +28,7 @@ hardware/minino-backups/
 
 # Visual Studio config files
 .vscode/
+.cache/
 
 # macOS folder attributes
 /**/.DS_Store
