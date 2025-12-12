@@ -118,7 +118,7 @@ void register_pcap_cmd(void);
  * @brief Do pcap command
  *
  */
-int do_pcap_cmd(int argc, char** argv);
+int do_pcap_cmd(int argc, char* argv[]);
 
 #ifdef __cplusplus
 }

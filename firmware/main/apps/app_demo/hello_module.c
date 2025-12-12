@@ -33,7 +33,7 @@ static const char* help_text_custom[] = {
     "Keep pressing", "the DOWN",      "button for",
     "a while",       "to trigger",    "LONG PRESS",
     "HOLD"};
-static const char* radio_options[] = {"Single", "Timed"};
+static char* radio_options[] = {"Single", "Timed"};
 // Use this variable to save the index of the last selection (this is optional)
 static uint16_t last_main_selection = 0;
 
@@ -117,7 +117,7 @@ static void hello_show_notify_timed() {
  * This function is called when the user selects an option in the radio menu.
  * It saves the selected option into flash memory.
  */
-static void hello_radio_handler(uint16_t option) {
+static void hello_radio_handler(uint8_t option) {
   /* Save the value of the selected option into the flash,
   we use a key to create a relation between the key and user selection*/
   preferences_put_int(RADIO_SELECTOR_KEY, option);
@@ -128,8 +128,8 @@ static void hello_radio_handler(uint16_t option) {
  */
 static void hello_show_radio_selector() {
   general_radio_selection_menu_t settings = {0};
-  settings.banner = "Hello Type";    // Menu title
-  settings.options = radio_options;  // Options to choose from
+  settings.banner = "Hello Type";                   // Menu title
+  settings.options = (const char**) radio_options;  // Options to choose from
   settings.options_count = sizeof(radio_options) / sizeof(char*);
   settings.select_cb =
       hello_radio_handler;  // Function to call when user selects

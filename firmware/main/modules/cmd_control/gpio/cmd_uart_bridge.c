@@ -78,29 +78,31 @@ void ctrl_c_callback() {
   run_uart_bridge_task = false;
 }
 
-static void uart_bridge_print(int argc, char** argv) {
+static int uart_bridge_print(int argc, char** argv) {
   int nerrors = arg_parse(argc, argv, (void**) &print_args);
   if (nerrors != 0) {
     arg_print_errors(stderr, print_args.end, argv[0]);
-    return;
+    return 1;
   }
   assert(print_args.message->count == 1);
   const char* message = print_args.message->sval[0];
 
   uart_bridge_write(message, strlen(message));
+  return 0;
 }
 
-static void uart_bridge_println(int argc, char** argv) {
+static int uart_bridge_println(int argc, char** argv) {
   int nerrors = arg_parse(argc, argv, (void**) &print_args);
   if (nerrors != 0) {
     arg_print_errors(stderr, print_args.end, argv[0]);
-    return;
+    return 1;
   }
   assert(print_args.message->count == 1);
   const char* message = print_args.message->sval[0];
 
   uart_bridge_write(message, strlen(message));
   uart_bridge_write("\n", 1);
+  return 0;
 }
 
 static void uart_bridge_task(void* args) {
@@ -136,7 +138,7 @@ static void uart_bridge_task(void* args) {
   vTaskDelete(NULL);
 }
 
-static void uart_bridge(int argc, char** argv) {
+static int uart_bridge(int argc, char** argv) {
   // TODO: Add a command to change these values
   const int buffer_size = 1024;
   const int timeout_ms = 100;
@@ -150,9 +152,10 @@ static void uart_bridge(int argc, char** argv) {
   xTaskCreate(uart_bridge_task, "uart_bridge_task", 4096, (void*) params, 15,
               NULL);
   ESP_LOGI(TAG, "uart_bridge_task started");
+  return 0;
 }
 
-uint8_t print_uart_bridge_config() {
+int print_uart_bridge_config(int argc, char** argv) {
   uart_bridge_config_t config = uart_bridge_get_config();
   printf("UART bridge configuration:\n");
   printf("\tBuffer size: %d\n", config.buffer_size);
@@ -226,7 +229,7 @@ uint8_t print_uart_bridge_config() {
   return 0;
 }
 
-uint8_t uart_bridge_set_config(int argc, char** argv) {
+int uart_bridge_set_config(int argc, char** argv) {
   int nerrors = arg_parse(argc, argv, (void**) &uart_bridge_config_args);
   if (nerrors != 0) {
     arg_print_errors(stderr, uart_bridge_config_args.end, argv[0]);
@@ -270,7 +273,7 @@ uint8_t uart_bridge_set_config(int argc, char** argv) {
   return 0;
 }
 
-static uint8_t uart_bridge_set_buffer_size(int argc, char** argv) {
+static int uart_bridge_set_buffer_size(int argc, char** argv) {
   int nerrors =
       arg_parse(argc, argv, (void**) &uart_bridge_config_buffer_size_args);
   if (nerrors != 0) {
@@ -296,7 +299,7 @@ static uint8_t uart_bridge_set_buffer_size(int argc, char** argv) {
   return 0;
 }
 
-static uint8_t uart_bridge_set_baud_rate(int argc, char** argv) {
+static int uart_bridge_set_baud_rate(int argc, char** argv) {
   int nerrors =
       arg_parse(argc, argv, (void**) &uart_bridge_config_baud_rate_args);
   if (nerrors != 0) {
@@ -320,7 +323,7 @@ static uint8_t uart_bridge_set_baud_rate(int argc, char** argv) {
   return 0;
 }
 
-static uint8_t uart_bridge_set_data_bits(int argc, char** argv) {
+static int uart_bridge_set_data_bits(int argc, char** argv) {
   int nerrors =
       arg_parse(argc, argv, (void**) &uart_bridge_config_data_bits_args);
   if (nerrors != 0) {
@@ -344,7 +347,7 @@ static uint8_t uart_bridge_set_data_bits(int argc, char** argv) {
   return 0;
 }
 
-static uint8_t uart_bridge_set_parity(int argc, char** argv) {
+static int uart_bridge_set_parity(int argc, char** argv) {
   int nerrors = arg_parse(argc, argv, (void**) &uart_bridge_config_parity_args);
   if (nerrors != 0) {
     arg_print_errors(stderr, uart_bridge_config_parity_args.end, argv[0]);
@@ -367,7 +370,7 @@ static uint8_t uart_bridge_set_parity(int argc, char** argv) {
   return 0;
 }
 
-static uint8_t uart_bridge_set_stop_bits(int argc, char** argv) {
+static int uart_bridge_set_stop_bits(int argc, char** argv) {
   int nerrors =
       arg_parse(argc, argv, (void**) &uart_bridge_config_stop_bits_args);
   if (nerrors != 0) {
@@ -391,7 +394,7 @@ static uint8_t uart_bridge_set_stop_bits(int argc, char** argv) {
   return 0;
 }
 
-static uint8_t uart_bridge_set_flow_ctrl(int argc, char** argv) {
+static int uart_bridge_set_flow_ctrl(int argc, char** argv) {
   int nerrors =
       arg_parse(argc, argv, (void**) &uart_bridge_config_flow_ctrl_args);
   if (nerrors != 0) {

@@ -255,7 +255,7 @@ void oled_screen_display_loading_bar(uint8_t value, uint8_t page) {
       bar_bitmap[y][x / 8] |= (1 << (7 - (x % 8)));
     }
   }
-  oled_screen_display_bitmap(bar_bitmap, 0, page * 8, 128, 8,
+  oled_screen_display_bitmap((const uint8_t*) bar_bitmap, 0, page * 8, 128, 8,
                              OLED_DISPLAY_NORMAL);
 }
 

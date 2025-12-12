@@ -5,7 +5,7 @@
 #include "preferences.h"
 #include "uart_bridge.h"
 
-static char* logs_output_options[] = {
+static const char* logs_output_options[] = {
     "USB",
     "UART TXD/RXD",
 };
@@ -14,7 +14,7 @@ uint8_t logs_output_get_option() {
   return preferences_get_uchar("logs_output", USB);
 }
 
-void logs_output_set_output(logs_output_option_t selected_option) {
+void logs_output_set_output(uint8_t selected_option) {
   switch (selected_option) {
     case USB:
       uart_bridge_set_logs_to_usb();

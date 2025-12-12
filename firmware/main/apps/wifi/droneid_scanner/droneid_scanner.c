@@ -12,7 +12,7 @@ static const char* TAG = "DroneidScanner";
 static ODID_UAS_Data UAS_data;
 static int current_channel = 1;
 
-static void task_change_channel(void) {
+static void task_change_channel(void* args) {
   while (true) {
     current_channel = (current_channel + 1) % 14;
     if (current_channel == 0)
@@ -95,14 +95,13 @@ static bool parse_odid(uav_data* UAV, ODID_UAS_Data* UAS_data2) {
   return true;
 }
 
-static void callback(uint8_t* buf, wifi_promiscuous_pkt_type_t type) {
+static void callback(void* buf, wifi_promiscuous_pkt_type_t type) {
   if (type != WIFI_PKT_MGMT)
     return;
   wifi_promiscuous_pkt_t* p = (wifi_promiscuous_pkt_t*) buf;
   // Get the packet header
   uint8_t* payload = p->payload;
   int packet_len = p->rx_ctrl.sig_len;
-  uint8_t pkt_type = buf[12];
   uav_data* currentUAV = (uav_data*) malloc(sizeof(uav_data));
 
   if (!currentUAV)

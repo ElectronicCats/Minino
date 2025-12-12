@@ -94,7 +94,7 @@ static void input_cb(uint8_t button_name, uint8_t button_event) {
       }
       break;
     case BUTTON_RIGHT:
-      void (*select_cb)() = submenu_ctx->select_cb;
+      submenu_selection_handler_t select_cb = submenu_ctx->select_cb;
       if (select_cb) {
         select_cb(submenu_ctx->selected_option);
       }
@@ -137,7 +137,7 @@ void general_submenu(general_submenu_menu_t submenu) {
     submenu_ctx->modal_title = submenu.modal_title;
   }
   menus_module_set_app_state(true, input_cb);
-  if (submenu.modal != NULL) {
+  if (submenu.modal) {
     submenu_ctx->modal = true;
     list_submenu_options_modal();
   } else {

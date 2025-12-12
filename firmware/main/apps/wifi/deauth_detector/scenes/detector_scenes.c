@@ -84,7 +84,7 @@ void detector_scenes_main_menu() {
 
 //////////////////////////   Settings Menu   //////////////////////////
 static enum { CHANNEL_HOP_OPTION, CHANNEL_OPTION } settings_options_e;
-static const char* settings_options[] = {"Channel hop", "Channel"};
+static char* settings_options[] = {"Channel hop", "Channel"};
 static void settings_handler(uint8_t scan_mode) {
   switch (scan_mode) {
     case CHANNEL_HOP_OPTION:
@@ -105,7 +105,7 @@ static void settings_exit() {
 void detector_scenes_settings() {
   general_radio_selection_menu_t settings;
   settings.banner = "Scan Mode";
-  settings.options = settings_options;
+  settings.options = (const char**) settings_options;
   settings.options_count = sizeof(settings_options) / sizeof(char*);
   settings.select_cb = settings_handler;
   settings.style = RADIO_SELECTION_OLD_STYLE;

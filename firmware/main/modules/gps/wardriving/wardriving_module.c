@@ -7,10 +7,13 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#include "error_handler.h"
 #include "gps_module.h"
+#include "memory_monitor.h"
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "sd_card.h"
+#include "task_manager.h"
 #include "wardriving_common.h"
 #include "wardriving_module.h"
 #include "wardriving_screens_module.h"
@@ -380,15 +383,30 @@ void wardriving_module_end() {
 void wardriving_module_start_scan() {
   menus_module_set_app_state(true, wardriving_module_keyboard_cb);
   if (wardriving_module_verify_sd_card() != ESP_OK) {
+    ESP_LOGE(TAG, "SD card verification failed");
     return;
   }
   ESP_LOGI(TAG, "Start scan");
   wardriving_module_state = WARDRIVING_MODULE_STATE_SCANNING;
-  xTaskCreate(wardriving_module_scan_task, "wardriving_module_scan_task", 4096,
-              NULL, 5, &wardriving_module_scan_task_handle);
-  xTaskCreate(wardriving_screens_wifi_animation_task,
-              "scanning_wifi_animation_task", 4096, NULL, 5,
-              &scanning_wifi_animation_task_handle);
+
+  // Usar Task Manager para tareas críticas
+  esp_err_t err = task_manager_create(
+      wardriving_module_scan_task, "wardriving_scan", TASK_STACK_MEDIUM, NULL,
+      TASK_PRIORITY_HIGH,  // GPS es alta prioridad
+      &wardriving_module_scan_task_handle);
+
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to create wardriving scan task");
+    return;
+  }
+
+  task_manager_create(
+      wardriving_screens_wifi_animation_task, "wardriving_anim",
+      TASK_STACK_SMALL,  // Animaciones solo necesitan stack pequeño
+      NULL,
+      TASK_PRIORITY_LOW,  // UI baja prioridad
+      &scanning_wifi_animation_task_handle);
+
   vTaskSuspend(scanning_wifi_animation_task_handle);
   running_wifi_scanner_animation = false;
 
@@ -410,16 +428,15 @@ void wardriving_module_stop_scan() {
   // Desinicializar el controlador WiFi
   wifi_driver_deinit();
 
+  // Usar Task Manager para eliminar tareas
   if (wardriving_module_scan_task_handle != NULL) {
-    vTaskDelete(wardriving_module_scan_task_handle);
+    task_manager_delete(wardriving_module_scan_task_handle);
     wardriving_module_scan_task_handle = NULL;
-    ESP_LOGI(TAG, "Task wardriving_module_scan_task deleted");
   }
 
   if (scanning_wifi_animation_task_handle != NULL) {
-    vTaskDelete(scanning_wifi_animation_task_handle);
+    task_manager_delete(scanning_wifi_animation_task_handle);
     scanning_wifi_animation_task_handle = NULL;
-    ESP_LOGI(TAG, "Task scanning_wifi_animation_task deleted");
   }
 
   if (csv_file_buffer != NULL && csv_file_initialized &&

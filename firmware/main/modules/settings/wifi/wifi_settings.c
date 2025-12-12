@@ -19,13 +19,13 @@
 
 #define TAG_CONFIG_MODULE "CONFIG_MODULE"
 
-static char* wifi_list[20];
+static const char* wifi_list[20];
 static int selected_ap = 0;
 static int aps_count = 0;
 
-static char* options_list[] = {"Connect", "Forget"};
+static const char* options_list[] = {"Connect", "Forget"};
 
-static char* option_yn[] = {"No", "Yes"};
+static const char* option_yn[] = {"No", "Yes"};
 
 typedef enum {
   WIFI_OPT_CONNECT,
@@ -148,16 +148,6 @@ static void wifi_settings_show_no_ap_main() {
   notification.body = "No APs saved";
   general_notification(notification);
   wifi_settings_scenes_main();
-}
-
-static void wifi_settings_show_no_ap() {
-  general_notification_ctx_t notification = {0};
-
-  notification.duration_ms = 2000;
-  notification.head = "Not found";
-  notification.body = "No APs saved";
-  general_notification(notification);
-  wifi_settings_show_list();
 }
 
 static void wifi_settings_show_list() {

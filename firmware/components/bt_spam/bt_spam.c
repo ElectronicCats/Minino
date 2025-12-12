@@ -10,7 +10,7 @@ static const char* TAG = "bt_spam";
 
 static bt_spam_cb_display display_records_cb = NULL;
 static TimerHandle_t adv_timer;
-static bool running_task = false;
+static volatile bool running_task = false;
 static int adv_index = 0;
 
 static esp_ble_adv_params_t ble_adv_params = {
@@ -141,7 +141,7 @@ static void start_adv_timer_callback() {
 
   display_records_cb(long_names_devices[adv_index]);
   esp_err_t err = esp_ble_gap_config_adv_data_raw(
-      &long_devices_raw[adv_index], sizeof(long_devices_raw[adv_index]));
+      long_devices_raw[adv_index], sizeof(long_devices_raw[adv_index]));
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Error setting adv data: %s", esp_err_to_name(err));
     return;
@@ -180,7 +180,7 @@ void bt_spam_app_main() {
   ESP_ERROR_CHECK(esp_ble_gap_register_callback(esp_gap_cb));
   ESP_ERROR_CHECK(esp_ble_gap_set_device_name("NotSuspiciousDevice"));
   // configure the adv data
-  ESP_ERROR_CHECK(esp_ble_gap_config_adv_data_raw(&adv_raw_data, 17));
+  ESP_ERROR_CHECK(esp_ble_gap_config_adv_data_raw(adv_raw_data, 17));
   vTaskDelay(500 / portTICK_PERIOD_MS);
 
   running_task = true;

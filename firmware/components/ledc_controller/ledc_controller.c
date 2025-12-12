@@ -113,7 +113,7 @@ static esp_err_t setup_ledc(int led_gpio, ledc_channel_t led_channel) {
                                             .duty = 0,  // Set duty to 0%
                                             .hpoint = 0};
 
-  ledc_fade_func_install(NULL);
+  ledc_fade_func_install(0);
 
   // Set the configuration
   return ledc_channel_config(&ledc_channel_cfg);

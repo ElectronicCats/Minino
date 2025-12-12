@@ -23,7 +23,7 @@ void flash_fs_screens_handler(flash_fs_events_t event, void* ctx) {
       show_mounting_banner();
       break;
     case FLASH_FS_RESULT_EV:
-      show_result_banner(ctx);
+      show_result_banner((esp_err_t) (intptr_t) ctx);
       break;
     default:
       break;

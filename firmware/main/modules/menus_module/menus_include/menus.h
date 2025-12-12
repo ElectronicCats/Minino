@@ -5,7 +5,7 @@
 #include "hid_module.h"
 #include "spam_module.h"
 #include "trackers_module.h"
-#include "z_switch_module.h"
+// #include "z_switch_module.h"
 
 #include "adv_scan_module.h"
 #include "analyzer_scenes.h"
@@ -24,22 +24,23 @@
 #include "logs_output.h"
 #include "modbus_dos.h"
 #include "modbus_tcp_scenes.h"
-#include "open_thread_module.h"
+#include "uart_bridge_app.h"
+// #include "open_thread_module.h" // Deprecated since v1.1.14.0
 #include "ota_module.h"
 #include "sd_card_settings_module.h"
 #include "settings_module.h"
 #include "sleep_mode_scenes.h"
 #include "ssid_spam.h"
 #include "stealth_mode.h"
-#include "warbee_module.h"
+// #include "warbee_module.h" // Deprecated since v1.1.14.0
 #include "wardriving_module.h"
 #include "wardriving_screens_module.h"
-#include "warthread_module.h"
+// #include "warthread_module.h" // Deprecated since v1.1.14.0
 #include "web_file_browser_module.h"
 #include "wifi_analyzer.h"
 #include "wifi_settings_scenes.h"
-#include "zbcli_settings.h"
-#include "zigbee_module.h"
+// #include "zbcli_settings.h" // Deprecated since v1.1.14.0
+// #include "zigbee_module.h" // Deprecated since v1.1.14.0
 
 // Include our header app
 #include "hello_module.h"
@@ -52,7 +53,7 @@ typedef enum {
   /* Applications */
   MENU_WIFI_APPS,
   MENU_BLUETOOTH_APPS,
-  MENU_ZIGBEE_APPS,
+  // MENU_ZIGBEE_APPS, // Deprecated since v1.1.14.0
   MENU_THREAD_APPS,
   MENU_GPS,
   MENU_GPIO_APPS,
@@ -85,15 +86,17 @@ typedef enum {
   MENU_BLUETOOTH_HID,
   MENU_BLUETOOTH_ADV,
   /* Zigbee applications */
-  MENU_ZIGBEE_SPOOFING,
-  MENU_ZIGBEE_SWITCH,
-  MENU_ZIGBEE_LIGHT,
-  MENU_ZIGBEE_SNIFFER,
+  // MENU_ZIGBEE_SPOOFING, // Deprecated since v1.1.14.0
+  // MENU_ZIGBEE_SWITCH, // Deprecated since v1.1.14.0
+  // MENU_ZIGBEE_LIGHT, // Deprecated since v1.1.14.0
+  // MENU_ZIGBEE_SNIFFER, // Deprecated since v1.1.14.0
   /* Thread applications */
-  MENU_THREAD_BROADCAST,
-  MENU_THREAD_SNIFFER,
+  // MENU_THREAD_BROADCAST, // Deprecated since v1.1.14.0
+  // MENU_THREAD_SNIFFER, // Deprecated since v1.1.14.0 -> This is the same as
+  // MENU_WIFI_DEAUTH_SCAN
   /* Thread Sniffer App */
-  MENU_THREAD_SNIFFER_RUN,
+  // MENU_THREAD_SNIFFER_RUN, // Deprecated since v1.1.14.0 -> This is the same
+  // as MENU_WIFI_DEAUTH_SCAN
   /* GPS applications */
   MENU_GPS_WARDRIVING,
   MENU_GPS_DATE_TIME,
@@ -106,10 +109,15 @@ typedef enum {
   /* GPIO applications */
   MENU_GPIO_I2C_SCANNER,
   MENU_GPIO_UART_BRIDGE,
+  MENU_GPIO_UART_BRIDGE_START,
+  MENU_GPIO_UART_BRIDGE_BAUDRATE,
+  MENU_GPIO_UART_BRIDGE_DATA_BITS,
+  MENU_GPIO_UART_BRIDGE_PARITY,
+  MENU_GPIO_UART_BRIDGE_STOP_BITS,
   /* Wardriving submenus */
   MENU_GPS_WARDRIVING_START,
-  MENU_GPS_WARDRIVING_BEE_START,
-  MENU_GPS_WARDRIVING_THREAD_START,
+  // MENU_GPS_WARDRIVING_BEE_START, // Deprecated since v1.1.14.0
+  // MENU_GPS_WARDRIVING_THREAD_START, // Deprecated since v1.1.14.0
   MENU_GPS_WARDRIVING_HELP,
   /* About submenus */
   MENU_ABOUT_VERSION,
@@ -132,7 +140,7 @@ typedef enum {
   MENU_SETTINGS_SD_CARD_FORMAT,
   MENU_STEALTH_MODE,
   MENU_SLEEP_MODE,
-  MENU_ZB_CLI,
+  // MENU_ZB_CLI, // Deprecated since v1.1.14.0
   /* Menu count */
   MENU_COUNT,  // Keep this at the end
 } menu_idx_t;
@@ -158,7 +166,8 @@ typedef struct {
   bool input_lock;
 } menus_manager_t;
 
-menu_t menus[] = {  //////////////////////////////////
+menu_t menus[] = {
+    //////////////////////////////////
     {.display_name = "Must Not See This",
      .menu_idx = MENU_MAIN,
      .parent_idx = -1,
@@ -345,78 +354,78 @@ menu_t menus[] = {  //////////////////////////////////
      .on_exit_cb = NULL,
      .is_visible = true},
 #endif
-#ifdef CONFIG_ZIGBEE_APPS_ENABLE
-    {.display_name = "Zigbee",
-     .menu_idx = MENU_ZIGBEE_APPS,
-     .parent_idx = MENU_APPLICATIONS,
-     .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
-     .is_visible = true},
-    {.display_name = "Spoofing",
-     .menu_idx = MENU_ZIGBEE_SPOOFING,
-     .parent_idx = MENU_ZIGBEE_APPS,
-     .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
-     .is_visible = true},
-    {.display_name = "Switch",
-     .menu_idx = MENU_ZIGBEE_SWITCH,
-     .parent_idx = MENU_ZIGBEE_SPOOFING,
-     .entry_cmd = "switch",
-     .last_selected_submenu = 0,
-     .on_enter_cb = zigbee_module_switch_enter,
-     .on_exit_cb = NULL,
-     .is_visible = true},
-    {.display_name = "Light",
-     .menu_idx = MENU_ZIGBEE_LIGHT,
-     .parent_idx = MENU_ZIGBEE_SPOOFING,
-     .entry_cmd = "light",
-     .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
-     .is_visible = false},
-    {.display_name = "Sniffer",
-     .menu_idx = MENU_ZIGBEE_SNIFFER,
-     .parent_idx = MENU_ZIGBEE_APPS,
-     .entry_cmd = "zigbee_sniffer",
-     .last_selected_submenu = 0,
-     .on_enter_cb = zigbee_module_sniffer_enter,
-     .on_exit_cb = NULL,
-     .is_visible = true},
-#endif
-#ifdef CONFIG_THREAD_APPS_ENABLE
-    {.display_name = "Thread",
-     .menu_idx = MENU_THREAD_APPS,
-     .parent_idx = MENU_APPLICATIONS,
-     .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
-     .on_exit_cb = NULL,
-     .is_visible = true},
-    {.display_name = "Broadcast",
-     .menu_idx = MENU_THREAD_BROADCAST,
-     .parent_idx = MENU_THREAD_APPS,
-     .entry_cmd = "broadcast",
-     .last_selected_submenu = 0,
-     .on_enter_cb = open_thread_module_broadcast_enter,
-     .on_exit_cb = open_thread_module_exit,
-     .is_visible = true},
-    {.display_name = "Sniffer",
-     .menu_idx = MENU_THREAD_SNIFFER,
-     .parent_idx = MENU_THREAD_APPS,
-     .entry_cmd = "thread_sniffer",
-     .last_selected_submenu = 0,
-     .on_enter_cb = open_thread_module_sniffer_enter,
-     .on_exit_cb = open_thread_module_exit,
-     .is_visible = true},
-    {.display_name = "Run",
-     .menu_idx = MENU_THREAD_SNIFFER_RUN,
-     .parent_idx = MENU_THREAD_SNIFFER,
-     .last_selected_submenu = 0,
-     .on_enter_cb = open_thread_module_sniffer_run,
-     .on_exit_cb = NULL,
-     .is_visible = true},
-#endif
+// #ifdef CONFIG_ZIGBEE_APPS_ENABLE
+//     {.display_name = "Zigbee",
+//      .menu_idx = MENU_ZIGBEE_APPS,
+//      .parent_idx = MENU_APPLICATIONS,
+//      .last_selected_submenu = 0,
+//      .on_enter_cb = NULL,
+//      .on_exit_cb = NULL,
+//      .is_visible = true},
+//     {.display_name = "Spoofing",
+//      .menu_idx = MENU_ZIGBEE_SPOOFING,
+//      .parent_idx = MENU_ZIGBEE_APPS,
+//      .last_selected_submenu = 0,
+//      .on_enter_cb = NULL,
+//      .on_exit_cb = NULL,
+//      .is_visible = true},
+//     {.display_name = "Switch",
+//      .menu_idx = MENU_ZIGBEE_SWITCH,
+//      .parent_idx = MENU_ZIGBEE_SPOOFING,
+//      .entry_cmd = "switch",
+//      .last_selected_submenu = 0,
+//      .on_enter_cb = zigbee_module_switch_enter,
+//      .on_exit_cb = NULL,
+//      .is_visible = true},
+//     {.display_name = "Light",
+//      .menu_idx = MENU_ZIGBEE_LIGHT,
+//      .parent_idx = MENU_ZIGBEE_SPOOFING,
+//      .entry_cmd = "light",
+//      .last_selected_submenu = 0,
+//      .on_enter_cb = NULL,
+//      .on_exit_cb = NULL,
+//      .is_visible = false},
+//     {.display_name = "Sniffer",
+//      .menu_idx = MENU_ZIGBEE_SNIFFER,
+//      .parent_idx = MENU_ZIGBEE_APPS,
+//      .entry_cmd = "zigbee_sniffer",
+//      .last_selected_submenu = 0,
+//      .on_enter_cb = zigbee_module_sniffer_enter,
+//      .on_exit_cb = NULL,
+//      .is_visible = true},
+// #endif
+// #ifdef CONFIG_THREAD_APPS_ENABLE
+//     {.display_name = "Thread",
+//      .menu_idx = MENU_THREAD_APPS,
+//      .parent_idx = MENU_APPLICATIONS,
+//      .last_selected_submenu = 0,
+//      .on_enter_cb = NULL,
+//      .on_exit_cb = NULL,
+//      .is_visible = true},
+//     {.display_name = "Broadcast",
+//      .menu_idx = MENU_THREAD_BROADCAST,
+//      .parent_idx = MENU_THREAD_APPS,
+//      .entry_cmd = "broadcast",
+//      .last_selected_submenu = 0,
+//      .on_enter_cb = open_thread_module_broadcast_enter,
+//      .on_exit_cb = open_thread_module_exit,
+//      .is_visible = true},
+//     {.display_name = "Sniffer",
+//      .menu_idx = MENU_THREAD_SNIFFER,
+//      .parent_idx = MENU_THREAD_APPS,
+//      .entry_cmd = "thread_sniffer",
+//      .last_selected_submenu = 0,
+//      .on_enter_cb = open_thread_module_sniffer_enter,
+//      .on_exit_cb = open_thread_module_exit,
+//      .is_visible = true},
+//     {.display_name = "Run",
+//      .menu_idx = MENU_THREAD_SNIFFER_RUN,
+//      .parent_idx = MENU_THREAD_SNIFFER,
+//      .last_selected_submenu = 0,
+//      .on_enter_cb = open_thread_module_sniffer_run,
+//      .on_exit_cb = NULL,
+//      .is_visible = true},
+// #endif
 #if CONFIG_GPS_APPS_ENABLE && CONFIG_GPS_ENABLED && CONFIG_SD_ENABLED
     {.display_name = "GPS",
      .menu_idx = MENU_GPS,
@@ -444,24 +453,24 @@ menu_t menus[] = {  //////////////////////////////////
      .on_exit_cb = wardriving_module_stop_scan,
      .is_visible = true},
     #endif
-    #ifdef CONFIG_ZIGBEE_APPS_ENABLE
-    {.display_name = "Zigbee Start",
-     .menu_idx = MENU_GPS_WARDRIVING_BEE_START,
-     .parent_idx = MENU_GPS_WARDRIVING,
-     .last_selected_submenu = 0,
-     .on_enter_cb = warbee_module_begin,
-     .on_exit_cb = warbee_module_exit,
-     .is_visible = true},
-    #endif
-    #ifdef CONFIG_THREAD_APPS_ENABLE
-    {.display_name = "Thread Start",
-     .menu_idx = MENU_GPS_WARDRIVING_THREAD_START,
-     .parent_idx = MENU_GPS_WARDRIVING,
-     .last_selected_submenu = 0,
-     .on_enter_cb = warthread_module_begin,
-     .on_exit_cb = warthread_module_exit,
-     .is_visible = true},
-    #endif
+    // #ifdef CONFIG_ZIGBEE_APPS_ENABLE
+    // {.display_name = "Zigbee Start",
+    //  .menu_idx = MENU_GPS_WARDRIVING_BEE_START,
+    //  .parent_idx = MENU_GPS_WARDRIVING,
+    //  .last_selected_submenu = 0,
+    //  .on_enter_cb = warbee_module_begin,
+    //  .on_exit_cb = warbee_module_exit,
+    //  .is_visible = true},
+    // #endif
+    // #ifdef CONFIG_THREAD_APPS_ENABLE
+    // {.display_name = "Thread Start",
+    //  .menu_idx = MENU_GPS_WARDRIVING_THREAD_START,
+    //  .parent_idx = MENU_GPS_WARDRIVING,
+    //  .last_selected_submenu = 0,
+    //  .on_enter_cb = warthread_module_begin,
+    //  .on_exit_cb = warthread_module_exit,
+    //  .is_visible = true},
+    // #endif
     {.display_name = "Help",
      .menu_idx = MENU_GPS_WARDRIVING_HELP,
      .parent_idx = MENU_GPS_WARDRIVING,
@@ -541,7 +550,7 @@ menu_t menus[] = {  //////////////////////////////////
      .parent_idx = MENU_GPIO_APPS,
      .entry_cmd = "uart_bridge",
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = uart_bridge_app_enter,
      .on_exit_cb = NULL,
      .is_visible = true},
 #endif
@@ -664,10 +673,11 @@ menu_t menus[] = {  //////////////////////////////////
      .on_enter_cb = sleep_mode_scenes_main,
      .on_exit_cb = NULL,
      .is_visible = true},
-    {.display_name = "ZB CLI",
-     .menu_idx = MENU_ZB_CLI,
-     .parent_idx = MENU_SETTINGS,
-     .last_selected_submenu = 0,
-     .on_enter_cb = zbcli_settings_main,
-     .on_exit_cb = NULL,
-     .is_visible = true}};
+    // {.display_name = "ZB CLI",
+    //  .menu_idx = MENU_ZB_CLI,
+    //  .parent_idx = MENU_SETTINGS,
+    //  .last_selected_submenu = 0,
+    //  .on_enter_cb = zbcli_settings_main,
+    //  .on_exit_cb = NULL,
+    //  .is_visible = true}
+};

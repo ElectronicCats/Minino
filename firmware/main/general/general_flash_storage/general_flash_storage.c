@@ -26,12 +26,52 @@ static char* tree_subitem_val;
 
 void flash_storage_begin() {
   idx_main_item = malloc(MAX_NVS_CHARS);
+  if (!idx_main_item)
+    goto error;
+
   main_item = malloc(MAX_NVS_CHARS);
+  if (!main_item)
+    goto error;
+
   idx_subitem = malloc(MAX_NVS_CHARS);
+  if (!idx_subitem)
+    goto error;
+
   idx_subitem_count = malloc(MAX_NVS_CHARS);
+  if (!idx_subitem_count)
+    goto error;
+
   tree_subitem_str = malloc(MAX_NVS_CHARS);
+  if (!tree_subitem_str)
+    goto error;
+
   tree_subitem = malloc(MAX_NVS_CHARS);
+  if (!tree_subitem)
+    goto error;
+
   tree_subitem_val = malloc(MAX_LEN_STRING);
+  if (!tree_subitem_val)
+    goto error;
+
+  return;
+
+error:
+  ESP_LOGE(TAG, "Out of memory in flash_storage_begin");
+  // Liberar lo que se pudo allocar
+  if (idx_main_item)
+    free(idx_main_item);
+  if (main_item)
+    free(main_item);
+  if (idx_subitem)
+    free(idx_subitem);
+  if (idx_subitem_count)
+    free(idx_subitem_count);
+  if (tree_subitem_str)
+    free(tree_subitem_str);
+  if (tree_subitem)
+    free(tree_subitem);
+  if (tree_subitem_val)
+    free(tree_subitem_val);
 }
 
 static bool flash_storage_exist_subitem(char* main_tree, char* subitem) {

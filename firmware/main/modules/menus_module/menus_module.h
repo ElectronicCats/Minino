@@ -36,3 +36,4 @@ void menus_module_hide_menu(menu_idx_t menu_idx);
 void menus_module_reveal_menu(menu_idx_t menu_idx);
 void menus_module_refresh();
 void menus_module_reset();
+void menus_module_return();

@@ -48,7 +48,7 @@ static void show_result_status(bool* flash_successful) {
     oled_screen_display_text("   Try again    ", 0, 6, OLED_DISPLAY_NORMAL);
   }
 }
-void ota_module_screens_show_event(ota_show_events_t event, void* context) {
+void ota_module_screens_show_event(uint8_t event, void* context) {
   switch (event) {
     case OTA_SHOW_START_EVENT:
       show_start_status();

@@ -25,7 +25,7 @@ static enum {
   ANALYZER_HELP_OPTION
 } analyzer_main_options_e;
 
-char* analizer_main_options[] = {"Start", "Settings", "Help"};
+const char* analizer_main_options[] = {"Start", "Settings", "Help"};
 
 static void main_menu_selection_handler(uint8_t selection) {
   switch (selection) {
@@ -53,7 +53,7 @@ void analyzer_scenes_main_menu() {
   main_menu.options = analizer_main_options;
   main_menu.options_count = sizeof(analizer_main_options) / sizeof(char*);
   main_menu.select_cb = main_menu_selection_handler;
-  main_menu.exit_cb = main_menu_exit_handler;
+  main_menu.exit_cb = menus_module_restart;
   general_submenu(main_menu);
   wifi_analyzer_begin();
 }
@@ -64,7 +64,7 @@ static enum {
   ANALYZER_SETTINGS_DESTINATION_OPTION,
 } analyzer_settings_options_e;
 
-char* analizer_settings_options[] = {"Channel", "Destination"};
+const char* analizer_settings_options[] = {"Channel", "Destination"};
 
 static void settings_selection_handler(uint8_t selection) {
   switch (selection) {
@@ -92,15 +92,16 @@ void analyzer_scenes_settings() {
   settings_menu.select_cb = settings_selection_handler;
   settings_menu.exit_cb = settings_exit_handler;
   general_submenu(settings_menu);
-  //   wifi_analyzer_begin();
 }
 //////////////////////////   CHANNEL MENU   ///////////////////////////////
 static const char* channel_options[] = {
     "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14",
 };
+
 static void set_channel(uint8_t selected_item) {
   wifi_sniffer_set_channel(selected_item + 1);
 }
+
 void analyzer_scenes_channel() {
   general_radio_selection_menu_t channel = {0};
   channel.banner = "Choose Channel",
@@ -138,8 +139,8 @@ void analyzer_scenes_destination() {
   destination.style = RADIO_SELECTION_OLD_STYLE;
   general_radio_selection(destination);
 }
-//////////////////////////   HELP MENU   ///////////////////////////////
-static const char* wifi_analizer_help[] = {
+
+static char* wifi_analizer_help[] = {
     "This tool",      "allows you to",   "analyze the",
     "WiFi networks",  "around you.",     "",
     "You can select", "the channel and", "the destination",

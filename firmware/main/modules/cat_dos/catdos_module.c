@@ -31,12 +31,13 @@
 #include "oled_screen.h"
 #include "preferences.h"
 #include "sdkconfig.h"
+#include "task_manager.h"
 #include "wifi_ap_manager.h"
 #include "wifi_bitmaps.h"
 
 static uint8_t last_main_selection = 0;
 static TaskHandle_t task_atack = NULL;
-static bool running_attack = false;
+static volatile bool running_attack = false;
 static const char* CATDOS_TAG = "catdos_module";
 static int aps_count = 0;
 static char* wifi_list[20];
@@ -210,9 +211,10 @@ static void http_get_task(void* pvParameters) {
   vTaskDelete(NULL);
 }
 
-void catdos_module_send_attack() {
+static void catdos_module_send_attack_task(void* pvParameters) {
   ESP_LOGI(CATDOS_TAG, "Sending attack");
-  xTaskCreate(&http_get_task, "http_get_task", 4096, NULL, 5, &task_atack);
+  task_manager_create(&http_get_task, "http_get_task", TASK_STACK_MEDIUM, NULL,
+                      TASK_PRIORITY_NORMAL, &task_atack);
 
   pthread_attr_t attr;
   pthread_t thread1, thread2, thread3, thread4, thread5, thread6, thread7,
@@ -258,6 +260,12 @@ void catdos_module_send_attack() {
   assert(res == 0);
 
   vTaskDelete(NULL);
+}
+
+int catdos_module_send_attack(int argc, char** argv) {
+  task_manager_create(&catdos_module_send_attack_task, "catdos_send",
+                      TASK_STACK_MEDIUM, NULL, TASK_PRIORITY_NORMAL, NULL);
+  return 0;
 }
 
 static bool catdos_module_display_if_nconnect() {
@@ -338,7 +346,7 @@ static void catdos_module_show_target() {
   target_details[4] = "URL";
 
   general_submenu_menu_t submenu_target = {0};
-  submenu_target.options = target_details;
+  submenu_target.options = (const char**) target_details;
   submenu_target.options_count = sizeof(main_menu_options) / sizeof(char*);
   submenu_target.select_cb = NULL;
   submenu_target.selected_option = 0;
@@ -426,7 +434,7 @@ static void catdos_module_show_aps() {
     wifi_list[i] = strdup(wifi_ssid);
   }
   general_submenu_menu_t menu_aps = {0};
-  menu_aps.options = wifi_list;
+  menu_aps.options = (const char**) wifi_list;
   menu_aps.options_count = aps_count;
   menu_aps.select_cb = catdos_module_connect_selected;
   menu_aps.selected_option = 0;
@@ -452,8 +460,9 @@ static void catdos_module_set_menu_selector(uint8_t option) {
       }
       if (catdos_module_get_target() == 0) {
         animations_task_run(&catdos_module_display_attack_animation, 100, NULL);
-        xTaskCreate(&catdos_module_send_attack, "http_send_task", 4096, NULL, 5,
-                    NULL);
+        task_manager_create(&catdos_module_send_attack_task, "catdos_send",
+                            TASK_STACK_MEDIUM, NULL, TASK_PRIORITY_NORMAL,
+                            NULL);
       } else {
         catdos_module_show_no_target();
       }

@@ -36,6 +36,8 @@ static const char* TAG = "cmd_pcap";
 #define SNIFFER_PROCESS_APPTRACE_TIMEOUT_US (100)
 #define SNIFFER_APPTRACE_RETRY              (10)
 #define TRACE_TIMER_FLUSH_INT_MS            (1000)
+#define PCAP_FLUSH_INTERVAL_PACKETS \
+  (100)  // Flush file every N packets to prevent buffer overflow
 
 #define ANALIZER_SD_CARD    "/sdcard"
 #define ANALIZER_FLASH_FS   "/internal"
@@ -62,6 +64,7 @@ typedef struct {
   pcap_file_handle_t pcap_handle;
   pcap_link_type_t link_type;
   pcap_memory_buffer_t pcap_buffer;  // To internal memory
+  uint32_t packet_count;             // Counter for periodic flush
 #ifdef CONFIG_SNIFFER_PCAP_DESTINATION_JTAG
   TimerHandle_t trace_flush_timer; /*!< Timer handle for Trace buffer flush */
 #endif                             // CONFIG_SNIFFER_PCAP_DESTINATION_JTAG
@@ -105,10 +108,18 @@ static esp_err_t pcap_close(pcap_cmd_runtime_t* pcap) {
   esp_err_t ret = ESP_OK;
   ESP_GOTO_ON_FALSE(pcap->is_opened, ESP_ERR_INVALID_STATE, err, TAG,
                     ".pcap file is already closed");
+  // Final flush before closing
+  if (pcap->pcap_handle && pcap->pcap_handle->file) {
+    fflush(pcap->pcap_handle->file);
+#ifdef _POSIX_SYNCHRONIZED_IO
+    fsync(fileno(pcap->pcap_handle->file));
+#endif
+  }
   ESP_GOTO_ON_ERROR(pcap_del_session(pcap->pcap_handle) != ESP_OK, err, TAG,
                     "stop pcap session failed");
   pcap->is_opened = false;
   pcap->link_type_set = false;
+  pcap->packet_count = 0;
   pcap->pcap_handle = NULL;
 #if CONFIG_SNIFFER_PCAP_DESTINATION_MEMORY
   free(pcap->pcap_buffer.buffer);
@@ -167,6 +178,7 @@ static esp_err_t pcap_open(pcap_cmd_runtime_t* pcap) {
   ESP_GOTO_ON_ERROR(pcap_new_session(&pcap_config, &pcap_cmd_rt.pcap_handle),
                     err, TAG, "pcap init failed");
   pcap->is_opened = true;
+  pcap->packet_count = 0;  // Initialize packet counter
   ESP_LOGI(TAG, "open file successfully");
   return ret;
 err:
@@ -182,6 +194,19 @@ esp_err_t packet_capture(void* payload,
                          uint32_t microseconds) {
   esp_err_t err = pcap_capture_packet(pcap_cmd_rt.pcap_handle, payload, length,
                                       seconds, microseconds);
+  if (err == ESP_OK) {
+    pcap_cmd_rt.packet_count++;
+    // Periodic flush to prevent buffer overflow (especially important for
+    // ESP32C6) Flush every N packets to ensure data is written to storage
+    if (pcap_cmd_rt.packet_count % PCAP_FLUSH_INTERVAL_PACKETS == 0) {
+      if (pcap_cmd_rt.pcap_handle && pcap_cmd_rt.pcap_handle->file) {
+        fflush(pcap_cmd_rt.pcap_handle->file);
+#ifdef _POSIX_SYNCHRONIZED_IO
+        fsync(fileno(pcap_cmd_rt.pcap_handle->file));
+#endif
+      }
+    }
+  }
   return err;
 }
 
@@ -394,7 +419,7 @@ err:
   return ret;
 }
 
-int do_pcap_cmd(int argc, char** argv) {
+int do_pcap_cmd(int argc, char* argv[]) {
   int ret = 0;
   int nerrors = arg_parse(argc, argv, (void**) &pcap_args);
   if (nerrors != 0) {

@@ -62,7 +62,12 @@ static void scanning_task() {
       break;
     }
   }
-  ap_records = wifi_scanner_get_ap_records();
+
+  // This assigment is the same, the struct returned from
+  // wifi_scanner_get_ap_records is the same size of
+  // scanned_ap_records_t
+  ap_records = (scanned_ap_records_t*) wifi_scanner_get_ap_records();
+
   menu_stadistics.count = ap_records->count;
   animations_task_stop();
   led_control_stop();
@@ -74,7 +79,7 @@ static void scanning_task() {
 }
 
 static void deauth_run_scan_task() {
-  ap_records = wifi_scanner_get_ap_records();
+  ap_records = (scanned_ap_records_t*) wifi_scanner_get_ap_records();
   menu_stadistics.count = ap_records->count;
   while (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 2)) {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -101,14 +106,6 @@ static void deauth_handle_attacks() {
   }
 }
 
-static void deauth_increment_item() {
-  current_item++;
-}
-
-static void deauth_decrement_item() {
-  current_item--;
-}
-
 void deauth_module_begin() {
   deauth_clear_screen();
   deauth_display_scanning_text();
@@ -119,7 +116,7 @@ void deauth_module_begin() {
   memset(&current_wifi_state.wifi_config, 0, sizeof(wifi_config_t));
   current_wifi_state.wifi_config = wifi_driver_access_point_begin();
 
-  ap_records = wifi_scanner_get_ap_records();
+  ap_records = (scanned_ap_records_t*) wifi_scanner_get_ap_records();
   if (ap_records == NULL) {
     ESP_LOGE("deauth", "Failed to get ap records");
     return;

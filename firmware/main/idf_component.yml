@@ -1,15 +1,15 @@
 ## IDF Component Manager Manifest File
 dependencies:
-  espressif/esp-zboss-lib: ^1.2.3
-  espressif/esp-zigbee-lib: ^1.2.3
+  # espressif/esp-zboss-lib: ^1.2.3
+  # espressif/esp-zigbee-lib: ^1.2.3
   espressif/button: ^3.2.0
   ## Required IDF version
   idf:
     version: '>=4.1.0'
-  ieee802154:
-    path: ../components/ieee802154
-  openthread:
-    path: ../components/openthread
+  # ieee802154:
+  #   path: ../components/ieee802154
+  # openthread:
+  #   path: ../components/openthread
   OTA:
     path: ../components/OTA
   ble_hid:
@@ -18,9 +18,9 @@ dependencies:
     version: ~0.1.1
   espressif/console:
     path: ../components/console
-  espressif/esp-zigbee-console:
-    version: "1.*"
-    override_path: "../components/esp-zigbee-console"
+  # espressif/esp-zigbee-console:
+  #   version: "1.*"
+  #   override_path: "../components/esp-zigbee-console"
   # # Put list of dependencies here
   # # For components maintained by Espressif:
   # component: "~1.0.0"

@@ -97,7 +97,7 @@ static void droneid_scanner_show_details() {
 
   general_scrolling_text_ctx menu_details = {0};
   menu_details.banner = "Details";
-  menu_details.text_arr = details_text;
+  menu_details.text_arr = (const char**) details_text;
   menu_details.text_len = DRONEID_SCANNER_COUNT_FIELD;
   menu_details.scroll_type = GENERAL_SCROLLING_TEXT_CLAMPED;
   menu_details.window_type = GENERAL_SCROLLING_TEXT_WINDOW;

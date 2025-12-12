@@ -36,12 +36,12 @@
 #include "captive_cmd.h"
 #include "gattcmd_cmd.h"
 #include "hello_cmd.h"
-#include "zb_cli.h"
 
 static const char* TAG = "cat_console";
 #define PROMPT_STR "minino"
 
 static ctrl_c_callback_t ctrl_c_callback = NULL;
+static bool console_paused = false;
 
 void cat_console_register_ctrl_c_handler(ctrl_c_callback_t callback) {
   ctrl_c_callback = callback;
@@ -121,6 +121,12 @@ static void cat_console_default() {
 restart:
   /* Main loop */
   while (true) {
+    /* Check if console is paused */
+    if (console_paused) {
+      vTaskDelay(pdMS_TO_TICKS(100));
+      continue;
+    }
+
     /* Get a line using linenoise.
      * The line is returned when ENTER is pressed.
      */
@@ -187,11 +193,36 @@ void cat_console_begin() {
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
   if (preferences_get_int("ZBCLI", 0) == 1) {
-    zb_cli_begin();
+    // zb_cli_begin();  // Temporarily disabled - zb_cli is deprecated
+    initialize_nvs();
+    initialize_console();
+    register_commands();
   } else {
     initialize_nvs();
     initialize_console();
     register_commands();
     cat_console_default();
   }
+}
+
+void cat_console_pause(void) {
+  if (!console_paused) {
+    console_paused = true;
+    ESP_LOGI(TAG, "Console paused");
+    printf("\n[Console paused - UART Bridge mode active]\n");
+    fflush(stdout);
+  }
+}
+
+void cat_console_resume(void) {
+  if (console_paused) {
+    console_paused = false;
+    ESP_LOGI(TAG, "Console resumed");
+    printf("\n[Console resumed]\n");
+    fflush(stdout);
+  }
+}
+
+bool cat_console_is_paused(void) {
+  return console_paused;
 }

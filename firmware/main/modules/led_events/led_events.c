@@ -2,8 +2,9 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "leds.h"
+#include "task_manager.h"
 
-static TaskHandle_t led_evenet_task = NULL;  ////////////
+static TaskHandle_t led_evenet_task = NULL;
 static volatile bool led_event_running = false;
 
 void led_control_ble_tracking(void) {
@@ -62,8 +63,13 @@ void led_control_stop(void) {
     return;
   led_event_running = false;
   leds_off();
-  vTaskDelete(led_evenet_task);  /////////////
-  led_evenet_task = NULL;        ///////////////////
+  task_manager_delete(led_evenet_task);
+  led_evenet_task = NULL;
+}
+
+static void effect_wrapper(void* pvParameters) {
+  effect_control func = (effect_control) pvParameters;
+  func();
 }
 
 void led_control_run_effect(effect_control effect_function) {
@@ -72,6 +78,9 @@ void led_control_run_effect(effect_control effect_function) {
 #endif
   // effect_function();
   led_event_running = true;
-  xTaskCreate(effect_function, "effect_function", 4096, NULL, 0,
-              &led_evenet_task);  ////////////
+  task_manager_create(effect_wrapper, "led_effect",
+                      TASK_STACK_SMALL,  // 2KB (LEDs es simple)
+                      (void*) effect_function,
+                      TASK_PRIORITY_LOW,  // UI/LEDs baja prioridad
+                      &led_evenet_task);
 }

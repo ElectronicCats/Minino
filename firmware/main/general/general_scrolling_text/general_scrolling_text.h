@@ -15,7 +15,7 @@ typedef enum {
 typedef struct {
   char* banner;
   char* text;
-  char** text_arr;
+  const char** text_arr;
   uint16_t text_len;
   uint16_t current_idx;
   uint8_t window_type;

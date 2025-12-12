@@ -2,8 +2,11 @@
 
 #include "bitmaps_general.h"
 #include "buzzer.h"
+#include "esp_log.h"
 #include "menus_module.h"
 #include "oled_screen.h"
+
+static const char* TAG = "radio_selection";
 
 #ifdef CONFIG_RESOLUTION_128X64
   #define MAX_OPTIONS_NUM 8
@@ -32,6 +35,10 @@ static void list_radio_options_old_style() {
   items_offset = MIN(ctx->selected_option, items_offset);
   oled_screen_clear_buffer();
   char* str = malloc(20);
+  if (!str) {
+    ESP_LOGE(TAG, "Out of memory");
+    return;
+  }
   oled_screen_display_text(ctx->banner, 0, 0, OLED_DISPLAY_NORMAL);
   for (uint8_t i = 0; i < (MIN(ctx->options_count, MAX_OPTIONS_NUM - 1)); i++) {
     bool is_selected = i + items_offset == ctx->selected_option;
@@ -52,6 +59,10 @@ static void list_radio_options_new_style() {
   items_offset = MIN(ctx->selected_option, items_offset);
   oled_screen_clear_buffer();
   char* str = malloc(20);
+  if (!str) {
+    ESP_LOGE(TAG, "Out of memory");
+    return;
+  }
   oled_screen_display_text(ctx->banner, 0, 0, OLED_DISPLAY_NORMAL);
   for (uint8_t i = 0; i < (MIN(ctx->options_count, MAX_OPTIONS_NUM - 1)); i++) {
     bool is_selected = i + items_offset == ctx->selected_option;
@@ -82,7 +93,8 @@ static void input_cb(uint8_t button_name, uint8_t button_event) {
     case BUTTON_RIGHT:
       general_radio_selection_ctx->current_option =
           general_radio_selection_ctx->selected_option;
-      void (*select_cb)() = general_radio_selection_ctx->select_cb;
+      radio_selection_handler_t select_cb =
+          general_radio_selection_ctx->select_cb;
       if (select_cb) {
         select_cb(general_radio_selection_ctx->current_option);
       }

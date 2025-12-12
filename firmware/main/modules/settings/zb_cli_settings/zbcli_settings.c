@@ -15,7 +15,7 @@ static void zbcli_handle_selector(uint8_t option) {
 void zbcli_settings_main() {
   general_radio_selection_menu_t setting = {0};
   setting.banner = "Zigbee CLI";
-  setting.options = (char**) settings_main;
+  setting.options = settings_main;
   setting.options_count = sizeof(settings_main) / sizeof(char*);
   setting.select_cb = zbcli_handle_selector;
   setting.style = RADIO_SELECTION_OLD_STYLE;

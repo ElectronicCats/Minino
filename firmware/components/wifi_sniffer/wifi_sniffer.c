@@ -52,9 +52,9 @@ esp_err_t wifi_sniffer_start() {
     sd_card_mount();
   }
 
-  const char** pcap_argv[] = {"pcap", "--open", "-f", "sniffer"};
+  char* pcap_argv[] = {"pcap", "--open", "-f", "sniffer"};
   uint8_t pcap_argc = 4;
-  esp_err_t ret = do_pcap_cmd(pcap_argc, (char**) pcap_argv);
+  esp_err_t ret = do_pcap_cmd(pcap_argc, pcap_argv);
   if (ret != ESP_OK) {
     return ret;
   }
@@ -62,34 +62,33 @@ esp_err_t wifi_sniffer_start() {
   char* channel_str = (char*) malloc(4);
   uint8_t channel = wifi_sniffer_get_channel();
   snprintf(channel_str, 4, "%d", channel);
-  const char** sniffer_argv[] = {"sniffer",   "-i", "wlan",      "-c",
-                                 channel_str, "-n", "2147483647"};
+  char* sniffer_argv[] = {"sniffer",   "-i", "wlan",      "-c",
+                          channel_str, "-n", "2147483647"};
   uint8_t sniffer_argc = 7;
-  do_sniffer_cmd(sniffer_argc, (char**) sniffer_argv);
+  do_sniffer_cmd(sniffer_argc, sniffer_argv);
   return ESP_OK;
 }
 
 void wifi_sniffer_stop() {
-  const char** stop_argv[] = {"sniffer", "--stop"};
+  char* stop_argv[] = {"sniffer", "--stop"};
   uint8_t stop_argc = 2;
-  do_sniffer_cmd(stop_argc, (char**) stop_argv);
+  do_sniffer_cmd(stop_argc, stop_argv);
 }
 
 void wifi_sniffer_close_file() {
   // wifi_sniffer_stop();
-
-  const char** close_argv[] = {"pcap", "--close", "-f", "sniffer"};
+  char* close_argv[] = {"pcap", "--close", "-f", "sniffer"};
   uint8_t close_argc = 4;
-  do_pcap_cmd(close_argc, (char**) close_argv);
+  do_pcap_cmd(close_argc, close_argv);
   if (wifi_sniffer_is_destination_sd()) {
     sd_card_unmount();
   }
 }
 
 void wifi_sniffer_load_summary() {
-  const char** summary_argv[] = {"pcap", "--summary", "-f", "sniffer"};
+  char* summary_argv[] = {"pcap", "--summary", "-f", "sniffer"};
   uint8_t summary_argc = 4;
-  do_pcap_cmd(summary_argc, (char**) summary_argv);
+  do_pcap_cmd(summary_argc, summary_argv);
 }
 
 uint8_t wifi_sniffer_get_channel() {

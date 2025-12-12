@@ -35,7 +35,7 @@ typedef enum {
   HELP_OPTION,
 } main_menu_options_t;
 
-static const char* main_menu_options[] = {
+const char* main_menu_options[] = {
     "Run",
     "Settings",
     "Help",
@@ -127,7 +127,7 @@ void drone_id_scenes_settings() {
   current_menu = DRONE_SCENES_SETTINGS;
 }
 
-static void drone_num_handler(uint8_t num_drones) {
+static void drone_num_handler(int16_t num_drones) {
   drone_id_preferences_set_num_drones(num_drones);
   drone_id_set_num_spoofers(num_drones);
 }
@@ -147,7 +147,7 @@ void drone_id_scenes_settings_num_drones() {
   current_menu = DRONE_SCENES_SETTINGS_NUM_DRONES;
 }
 
-static void drone_channel_handler(uint8_t channel) {
+static void drone_channel_handler(int16_t channel) {
   drone_id_preferences_set_channel(channel);
   drone_id_set_wifi_ap(channel);
 }
@@ -182,12 +182,12 @@ void drone_id_scenes_settings_location() {
   current_menu = DRONE_SCENES_SETTINGS_LOCATION_SRC;
 }
 
-static const char* ble_drone_options[] = {"Disabled", "Enabled"};
+static char* ble_drone_options[] = {"Disabled", "Enabled"};
 
 void drone_id_scenes_settings_ble_drone() {
   general_radio_selection_menu_t ble_drone = {0};
   ble_drone.banner = "BLE Drone";
-  ble_drone.options = ble_drone_options;
+  ble_drone.options = (const char**) ble_drone_options;
   ble_drone.options_count = sizeof(ble_drone_options) / sizeof(char*);
   ble_drone.current_option = drone_id_preferences_get()->add_ble_drone;
   ble_drone.style = RADIO_SELECTION_OLD_STYLE;
@@ -235,24 +235,24 @@ void drone_id_scenes_settings_help() {
 
 ////////////////////////// HELP //////////////////////////
 
-static const char* help_txt[] = {"This app allows", "you to spoof",
-                                 "drone IDs",       "using ESP32",
-                                 "wifi features",   "",
-                                 "You can set",     "the number",
-                                 "of drones,",      "the wifi",
-                                 "channel and",     "the location",
-                                 "source.",         "",
-                                 "Please note",     "that this app",
-                                 "if for",          "educational",
-                                 "purposes only.",  "",
-                                 "Familiarizing",   "with (FAA) laws",
-                                 "is crucial to",   "avoid legal",
-                                 "consequences."};
+static char* help_txt[] = {"This app allows", "you to spoof",
+                           "drone IDs",       "using ESP32",
+                           "wifi features",   "",
+                           "You can set",     "the number",
+                           "of drones,",      "the wifi",
+                           "channel and",     "the location",
+                           "source.",         "",
+                           "Please note",     "that this app",
+                           "if for",          "educational",
+                           "purposes only.",  "",
+                           "Familiarizing",   "with (FAA) laws",
+                           "is crucial to",   "avoid legal",
+                           "consequences."};
 
 void drone_id_scenes_help() {
   general_scrolling_text_ctx help = {0};
   help.banner = "Drone ID Help";
-  help.text_arr = help_txt;
+  help.text_arr = (const char**) help_txt;
   help.text_len = sizeof(help_txt) / sizeof(char*);
   help.scroll_type = GENERAL_SCROLLING_TEXT_CLAMPED;
   help.window_type = GENERAL_SCROLLING_TEXT_WINDOW;

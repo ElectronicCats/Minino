@@ -19,7 +19,7 @@
 #define GATTC_TAG "GATTC_DEMO"
 
 static esp_bd_addr_t target;
-static bool initialized = false;
+static volatile bool initialized = false;
 
 void gattcmd_begin(void) {
   ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));

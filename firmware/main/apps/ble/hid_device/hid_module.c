@@ -72,7 +72,7 @@ static void hid_device_selection(uint8_t selection) {
   }
 
   general_submenu_menu_t hid_menu_filter = {0};
-  hid_menu_filter.options = hid_device_items;
+  hid_menu_filter.options = (const char**) hid_device_items;
   hid_menu_filter.options_count = HID_DEVICE_COUNT;
   hid_menu_filter.select_cb = hid_device_selection;
   hid_menu_filter.exit_cb = hid_module_reset_menu;
@@ -82,7 +82,7 @@ static void hid_device_selection(uint8_t selection) {
 
 static void hid_module_display_action_menu() {
   general_submenu_menu_t hid_menu_filter = {0};
-  hid_menu_filter.options = hid_device_items;
+  hid_menu_filter.options = (const char**) hid_device_items;
   hid_menu_filter.options_count = HID_DEVICE_COUNT;
   hid_menu_filter.select_cb = hid_device_selection;
   hid_menu_filter.exit_cb = hid_module_reset_menu;
@@ -116,7 +116,7 @@ static void hid_module_cb_event(uint8_t button_name, uint8_t button_event) {
       if (current_item == HID_CONFIG_NAME) {
         current_item = 0;
         char hid_name[20];
-        ble_hid_get_device_name(&hid_name);
+        ble_hid_get_device_name(hid_name);
         general_screen_display_card_information_handler("Device Name", hid_name,
                                                         hid_module_reset_menu,
                                                         hid_module_cb_event);

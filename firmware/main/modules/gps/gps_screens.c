@@ -6,6 +6,8 @@
 #include "general_screens.h"
 #include "general_scrolling_text.h"
 #include "general_submenu.h"
+#include "gps_hw.h"
+#include "gps_module.h"
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
@@ -78,7 +80,7 @@ static void gps_screens_test(gps_t* gps) {
   char* str = (char*) malloc(20);
   char* str2 = (char*) malloc(20);
   oled_screen_clear_buffer();
-  uint8_t sats = gps_module_get_signal_strength(gps);
+  // uint8_t sats = gps_module_get_signal_strength(gps);  // Unused variable
   if (gps->sats_in_use == 0) {
     sprintf(str, "GPS OK");
     sprintf(str2, "Sats: %d", 0);
@@ -335,8 +337,9 @@ void gps_screens_show_waiting_signal() {
   oled_screen_display_show();
 }
 
-static void agnss_radio_handler(uint16_t option) {
+static void agnss_radio_handler(uint8_t option) {
   preferences_put_int(AGNSS_OPTIONS_PREF_KEY, option);
+  gps_module_reconfigure_options(GPS_INIT_AGNSS_ONLY);
 }
 
 static void gps_screens_show_agnss(void) {
@@ -351,8 +354,9 @@ static void gps_screens_show_agnss(void) {
   general_radio_selection(settings);
 }
 
-static void power_radio_handler(uint16_t option) {
+static void power_radio_handler(uint8_t option) {
   preferences_put_int(POWER_OPTIONS_PREF_KEY, option);
+  gps_module_reconfigure_options(GPS_INIT_POWER_ONLY);
 }
 
 static void gps_screens_show_power(void) {
@@ -367,8 +371,11 @@ static void gps_screens_show_power(void) {
   general_radio_selection(settings);
 }
 
-static void advanced_radio_handler(uint16_t option) {
+static void advanced_radio_handler(uint8_t option) {
   preferences_put_int(ADVANCED_OPTIONS_PREF_KEY, option);
+  // Reset advanced config flag so it can be reapplied
+  gps_hw_reset_advanced_config();
+  gps_module_reconfigure_options(GPS_INIT_ADVANCED_ONLY);
 }
 
 static void gps_screens_show_advanced(void) {
@@ -383,8 +390,9 @@ static void gps_screens_show_advanced(void) {
   general_radio_selection(settings);
 }
 
-static void update_rate_radio_handler(uint16_t option) {
+static void update_rate_radio_handler(uint8_t option) {
   preferences_put_int(URATE_OPTIONS_PREF_KEY, option);
+  gps_module_reconfigure_options(GPS_INIT_UPDATERATE_ONLY);
 }
 
 static void gps_screens_show_urate(void) {
@@ -430,25 +438,43 @@ void gps_screens_show_config(void) {
 }
 
 void gps_screens_update_handler(gps_t* gps) {
+  // Check if we're still in a GPS screen before updating
+  // This prevents race conditions when exiting GPS menus
+  if (!menus_module_get_app_state()) {
+    return;  // Not in GPS app anymore, don't update
+  }
+
   menu_idx_t current = menus_module_get_current_menu();
+
+  // Double-check menu state for thread safety
   switch (current) {
     case MENU_GPS_DATE_TIME:
-      gps_screens_update_date_and_time(gps);
+      if (menus_module_get_app_state()) {
+        gps_screens_update_date_and_time(gps);
+      }
       break;
     case MENU_GPS_LOCATION:
-      gps_screens_update_location(gps);
+      if (menus_module_get_app_state()) {
+        gps_screens_update_location(gps);
+      }
       break;
     case MENU_GPS_SPEED:
-      gps_screens_update_speed(gps);
+      if (menus_module_get_app_state()) {
+        gps_screens_update_speed(gps);
+      }
       break;
     case MENU_GPS_ROUTE:
-      gps_screens_save_location(gps);
+      if (menus_module_get_app_state()) {
+        gps_screens_save_location(gps);
+      }
       break;
     case MENU_GPS_TEST:
-      gps_screens_test(gps);
+      if (menus_module_get_app_state()) {
+        gps_screens_test(gps);
+      }
       break;
     default:
+      // Not in a GPS screen, ignore
       return;
-      break;
   }
 }

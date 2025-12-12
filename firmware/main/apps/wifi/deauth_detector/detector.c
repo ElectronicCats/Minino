@@ -23,14 +23,19 @@ static TaskHandle_t channel_hopper_handle = NULL;
 
 void deauth_detector_stop();
 
-static void packet_handler(uint8_t* buf, wifi_promiscuous_pkt_type_t type) {
+static void packet_handler(void* buf, wifi_promiscuous_pkt_type_t type) {
   static TickType_t last_update = 0;
   TickType_t current_time = xTaskGetTickCount();
   wifi_promiscuous_pkt_t* p = (wifi_promiscuous_pkt_t*) buf;
   wifi_pkt_rx_ctrl_t rx_ctrl = p->rx_ctrl;
-  uint8_t* mac = p->payload;
-  uint8_t pkt_type = buf[12];
-  if (pkt_type == 0xA0 || pkt_type == 0xC0) {
+
+  uint8_t* payload = p->payload;
+
+  uint8_t frame_type = payload[0];
+
+  if (frame_type == 0xA0 || frame_type == 0xC0) {
+    uint8_t* mac = payload + 10;
+
     ESP_LOGI(TAG,
              "Packet received channel: %d from MAC address: "
              "%02x:%02x:%02x:%02x:%02x:%02x",
@@ -51,7 +56,6 @@ static void packet_handler(uint8_t* buf, wifi_promiscuous_pkt_type_t type) {
 }
 
 static void channel_hopper(void* pvParameters) {
-  esp_err_t err;
   while (running) {
     esp_wifi_set_channel(current_channel, WIFI_SECOND_CHAN_NONE);
     vTaskDelay(WIFI_CHANNEL_SWITCH_INTERVAL / portTICK_PERIOD_MS);

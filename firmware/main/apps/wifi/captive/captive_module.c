@@ -40,7 +40,7 @@ static const char* config_dump_menu[] = {"Dump to SD", "No dump"};
 static uint16_t last_index_selected = 0;
 static httpd_handle_t server = NULL;
 static uint16_t retries = 0;
-static char* wifi_ap_name[CAPTIVE_PORTAL_MAX_NAME];
+static char wifi_ap_name[CAPTIVE_PORTAL_MAX_NAME];
 
 typedef enum {
   PORTALS,
@@ -56,8 +56,8 @@ typedef enum { STANDALONE, REPLICATE } mode_types_t;
 
 typedef struct {
   mode_types_t mode;
-  char* portal[48];
-  char* redirect[48];
+  char portal[48];
+  char redirect[48];
 } captive_context_t;
 
 typedef struct {
@@ -183,7 +183,7 @@ static void wifi_init_softap(void) {
 
   uint8_t esp_mac[6] = {0};
   esp_read_mac(esp_mac, ESP_MAC_WIFI_STA);
-  char* default_name[20];
+  char default_name[20];
   sprintf(default_name, "%s_%02X:%02X", CONFIG_WIFI_AP_NAME, esp_mac[4],
           esp_mac[5]);
   strncpy((char*) wifi_config.ap.ssid, default_name,
@@ -593,7 +593,6 @@ static uint16_t captive_module_get_sd_redirect() {
 }
 
 static uint16_t captive_module_get_sd_portals() {
-  esp_err_t err;
   if (sd_card_is_not_mounted()) {
     return 0;
   }
@@ -643,7 +642,7 @@ static void captive_module_mode_selector_handle(uint8_t option) {
 static void captive_module_show_mode_selector() {
   general_radio_selection_menu_t modes = {0};
   modes.banner = "Modes";
-  modes.options = (char**) modes_menu;
+  modes.options = modes_menu;
   modes.options_count = sizeof(modes_menu) / sizeof(char*);
   modes.select_cb = captive_module_mode_selector_handle;
   modes.style = RADIO_SELECTION_OLD_STYLE;
@@ -659,7 +658,7 @@ static void captive_module_preference_selector_handle(uint8_t option) {
 static void captive_module_show_preference_selector() {
   general_radio_selection_menu_t preferences = {0};
   preferences.banner = "Preferences";
-  preferences.options = (char**) config_dump_menu;
+  preferences.options = config_dump_menu;
   preferences.options_count = sizeof(config_dump_menu) / sizeof(char*);
   preferences.select_cb = captive_module_preference_selector_handle;
   preferences.style = RADIO_SELECTION_OLD_STYLE;
@@ -670,12 +669,13 @@ static void captive_module_show_preference_selector() {
 }
 
 static void captive_module_show_running() {
-  char* body[64];
-  sprintf(body, "Using:%s | Waiting for user creds",
-          (char*) captive_context.portal);
+  // Here I increse the size of the body, I dont know if it is the necessary
+  // size but it is necessary to incrase if it receive
+  char body[128];
+  sprintf(body, "Using:%s | Waiting for user creds", captive_context.portal);
 
   general_notification_ctx_t notification = {0};
-  notification.head = (char*) wifi_ap_name;
+  notification.head = wifi_ap_name;
   notification.body = body;
   notification.on_exit = captive_module_disable_wifi;
   general_notification_handler(notification);
@@ -707,7 +707,7 @@ static void captive_module_sd_show_portals() {
   }
 
   general_submenu_menu_t portals = {0};
-  portals.options = (char**) portals_list.ent;
+  portals.options = (const char**) portals_list.ent;
   portals.options_count = portals_list.count;
   portals.select_cb = captive_module_portal_selector_handler;
   portals.selected_option = 0;
@@ -729,7 +729,7 @@ static void captive_module_sd_show_redirect() {
   }
 
   general_submenu_menu_t portals = {0};
-  portals.options = (char**) redirect_list.ent;
+  portals.options = (const char**) redirect_list.ent;
   portals.options_count = redirect_list.count;
   portals.select_cb = captive_module_redirect_selector_handler;
   portals.selected_option = 0;
@@ -811,12 +811,12 @@ static void captive_module_show_aps_list() {
     return;
   }
 
-  if (ap_records->count == NULL) {
+  if (!ap_records->count) {
     ap_records->count = 0;
   }
 
   general_submenu_menu_t ap_list = {0};
-  ap_list.options = wifi_list;
+  ap_list.options = (const char**) wifi_list;
   ap_list.options_count = ap_records->count;
   ap_list.selected_option = 0;
   ap_list.select_cb = captive_module_ap_list_handler;

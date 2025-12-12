@@ -11,8 +11,8 @@ static struct {
   struct arg_end* end;
 } message_args;
 
-static void launch_app_task(char* entry_cmd) {
-  menus_module_set_menu_over_cmd(entry_cmd);
+static void launch_app_task(void* entry_cmd) {
+  menus_module_set_menu_over_cmd((char*) entry_cmd);
   vTaskDelete(NULL);
 }
 

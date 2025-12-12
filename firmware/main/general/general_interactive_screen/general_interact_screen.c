@@ -39,14 +39,16 @@ static void input_cb(uint8_t button_name, uint8_t button_event) {
   }
   switch (button_name) {
     case BUTTON_LEFT:
-      void (*exit_cb)() = interactive_screen_ctx->select_back_cb;
+      screen_back_selection_handler_t exit_cb =
+          interactive_screen_ctx->select_back_cb;
       free(interactive_screen_ctx);
       if (exit_cb) {
         exit_cb();
       }
       break;
     case BUTTON_RIGHT:
-      void (*select_select_cb)() = interactive_screen_ctx->select_select_cb;
+      screen_select_selection_handler_t select_select_cb =
+          interactive_screen_ctx->select_select_cb;
       if (select_select_cb) {
         select_select_cb(counter);
       }
@@ -55,7 +57,8 @@ static void input_cb(uint8_t button_name, uint8_t button_event) {
       counter = counter == interactive_screen_ctx->range_high
                     ? interactive_screen_ctx->range_low
                     : counter + 1;
-      void (*select_up_cb)() = interactive_screen_ctx->select_up_cb;
+      screen_up_selection_handler_t select_up_cb =
+          interactive_screen_ctx->select_up_cb;
       if (select_up_cb) {
         select_up_cb(counter);
       }
@@ -65,7 +68,8 @@ static void input_cb(uint8_t button_name, uint8_t button_event) {
       counter = counter == interactive_screen_ctx->range_low
                     ? interactive_screen_ctx->range_high
                     : counter - 1;
-      void (*select_down_cb)() = interactive_screen_ctx->select_down_cb;
+      screen_down_selection_handler_t select_down_cb =
+          interactive_screen_ctx->select_down_cb;
       if (select_down_cb) {
         select_down_cb(counter);
       }

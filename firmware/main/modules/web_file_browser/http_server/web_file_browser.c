@@ -386,7 +386,7 @@ static esp_err_t download_get_handler(httpd_req_t* req) {
   free(filepath);
   free(buf);
   web_file_browser_show_event(WEB_FILE_BROWSER_TRANSFERING_FILE_RESULT_EV,
-                              true);
+                              (void*) (intptr_t) true);
   return ESP_OK;
 }
 

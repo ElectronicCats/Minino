@@ -61,3 +61,5 @@ void wifi_screeens_show_sd_not_supported();
 void wifi_screeens_show_sd_not_found();
 
 void wifi_screens_show_no_mem();
+
+void wifi_screens_show_limit_packets();

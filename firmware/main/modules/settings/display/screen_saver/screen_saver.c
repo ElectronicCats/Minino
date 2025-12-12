@@ -10,7 +10,6 @@
 #include "preferences.h"
 
 static int IDLE_TIMEOUT_S = 30;
-static const char* TAG = "screen_saver";
 
 static volatile bool screen_saver_running;
 static esp_timer_handle_t screen_saver_idle_timer;
@@ -96,5 +95,5 @@ bool screen_saver_get_idle_state() {
 void screen_saver_begin() {
   esp_timer_create_args_t timer_args = {
       .callback = timer_callback, .arg = NULL, .name = "idle_timer"};
-  esp_err_t err = esp_timer_create(&timer_args, &screen_saver_idle_timer);
+  esp_timer_create(&timer_args, &screen_saver_idle_timer);
 }

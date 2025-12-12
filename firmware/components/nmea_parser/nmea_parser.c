@@ -12,6 +12,7 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "task_manager.h"
 
 /**
  * @brief NMEA Parser runtime buffer size
@@ -48,9 +49,10 @@ typedef struct {
   gps_t parent;                                  /*!< Parent class */
   uart_port_t uart_port;                         /*!< Uart port number */
   uint8_t* buffer;                               /*!< Runtime buffer */
-  esp_event_loop_handle_t event_loop_hdl;        /*!< Event loop handle */
   TaskHandle_t tsk_hdl;                          /*!< NMEA Parser task handle */
   QueueHandle_t event_queue;                     /*!< UART event queue handle */
+  esp_event_handler_t event_handler; /*!< User event handler callback */
+  void* event_handler_arg;           /*!< User event handler argument */
 } esp_gps_t;
 
 /**
@@ -372,8 +374,10 @@ static void parse_zda(esp_gps_t* esp_gps) {
           convert_two_digit2number(esp_gps->item_str + 2);
       esp_gps->parent.date.year =
           convert_two_digit2number(esp_gps->item_str + 4);
-      ESP_LOGE("GAT", "%d/%02d/%02d", esp_gps->parent.date.year,
+#if defined(CONFIG_NMEA_PARSER_DEBUG)
+      ESP_LOGD(TAG, "ZDA date parsed: %d/%02d/%02d", esp_gps->parent.date.year,
                esp_gps->parent.date.month, esp_gps->parent.date.day);
+#endif
       break;
     default:
       break;
@@ -567,18 +571,23 @@ static esp_err_t gps_decode(esp_gps_t* esp_gps, size_t len) {
         if (((esp_gps->parsed_statement) & esp_gps->all_statements) ==
             esp_gps->all_statements) {
           esp_gps->parsed_statement = 0;
-          /* Send signal to notify that GPS information has been updated */
-          esp_event_post_to(esp_gps->event_loop_hdl, ESP_NMEA_EVENT, GPS_UPDATE,
-                            &(esp_gps->parent), sizeof(gps_t),
-                            100 / portTICK_PERIOD_MS);
+          /* Call user callback to notify that GPS information has been updated
+           */
+          if (esp_gps->event_handler) {
+            esp_gps->event_handler(esp_gps->event_handler_arg, ESP_NMEA_EVENT,
+                                   GPS_UPDATE, &(esp_gps->parent));
+          }
         }
       } else {
         ESP_LOGD(TAG, "CRC Error for statement:%s", esp_gps->buffer);
       }
       if (esp_gps->cur_statement == STATEMENT_UNKNOWN) {
-        /* Send signal to notify that one unknown statement has been met */
-        esp_event_post_to(esp_gps->event_loop_hdl, ESP_NMEA_EVENT, GPS_UNKNOWN,
-                          esp_gps->buffer, len, 100 / portTICK_PERIOD_MS);
+        /* Call user callback to notify that one unknown statement has been met
+         */
+        if (esp_gps->event_handler) {
+          esp_gps->event_handler(esp_gps->event_handler_arg, ESP_NMEA_EVENT,
+                                 GPS_UNKNOWN, esp_gps->buffer);
+        }
       }
     }
     /* Other non-space character */
@@ -627,42 +636,29 @@ static void esp_handle_uart_pattern(esp_gps_t* esp_gps) {
  */
 static void nmea_parser_task_entry(void* arg) {
   esp_gps_t* esp_gps = (esp_gps_t*) arg;
-  uart_event_t event;
+
+  ESP_LOGI(TAG, "NMEA Parser task started");
+
   while (1) {
-    if (xQueueReceive(esp_gps->event_queue, &event, pdMS_TO_TICKS(200))) {
-      switch (event.type) {
-        case UART_DATA:
-          break;
-        case UART_FIFO_OVF:
-          ESP_LOGW(TAG, "HW FIFO Overflow");
-          uart_flush(esp_gps->uart_port);
-          xQueueReset(esp_gps->event_queue);
-          break;
-        case UART_BUFFER_FULL:
-          ESP_LOGW(TAG, "Ring Buffer Full");
-          uart_flush(esp_gps->uart_port);
-          xQueueReset(esp_gps->event_queue);
-          break;
-        case UART_BREAK:
-          ESP_LOGW(TAG, "Rx Break");
-          break;
-        case UART_PARITY_ERR:
-          ESP_LOGE(TAG, "Parity Error");
-          break;
-        case UART_FRAME_ERR:
-          ESP_LOGE(TAG, "Frame Error");
-          break;
-        case UART_PATTERN_DET:
-          esp_handle_uart_pattern(esp_gps);
-          break;
-        default:
-          ESP_LOGW(TAG, "unknown uart event type: %d", event.type);
-          break;
+    // Read data from UART using DMA
+    int len = uart_read_bytes(esp_gps->uart_port, esp_gps->buffer,
+                              NMEA_PARSER_RUNTIME_BUFFER_SIZE - 1,
+                              pdMS_TO_TICKS(100));
+
+    if (len > 0) {
+      // Null-terminate the buffer
+      esp_gps->buffer[len] = '\0';
+
+      // Parse the NMEA data
+      if (gps_decode(esp_gps, len) != ESP_OK) {
+        ESP_LOGW(TAG, "GPS decode failed");
       }
     }
-    /* Drive the event loop */
-    esp_event_loop_run(esp_gps->event_loop_hdl, pdMS_TO_TICKS(50));
+
+    // Small delay to prevent task starvation
+    vTaskDelay(pdMS_TO_TICKS(10));
   }
+
   vTaskDelete(NULL);
 }
 
@@ -687,6 +683,7 @@ nmea_parser_handle_t nmea_parser_init(const nmea_parser_config_t* config) {
     ESP_LOGE(TAG, "calloc memory for runtime buffer failed");
     goto err_buffer;
   }
+
 #if CONFIG_NMEA_STATEMENT_GSA
   esp_gps->all_statements |= (1 << STATEMENT_GSA);
 #endif
@@ -705,9 +702,15 @@ nmea_parser_handle_t nmea_parser_init(const nmea_parser_config_t* config) {
 #if CONFIG_NMEA_STATEMENT_VTG
   esp_gps->all_statements |= (1 << STATEMENT_VTG);
 #endif
+
   /* Set attributes */
   esp_gps->uart_port = config->uart.uart_port;
   esp_gps->all_statements &= 0xFE;
+
+  /* Initialize event handler callbacks to NULL */
+  esp_gps->event_handler = NULL;
+  esp_gps->event_handler_arg = NULL;
+
   /* Install UART friver */
   uart_config_t uart_config = {
       .baud_rate = config->uart.baud_rate,
@@ -717,12 +720,7 @@ nmea_parser_handle_t nmea_parser_init(const nmea_parser_config_t* config) {
       .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
       .source_clk = UART_SCLK_DEFAULT,
   };
-  if (uart_driver_install(
-          esp_gps->uart_port, CONFIG_NMEA_PARSER_RING_BUFFER_SIZE, 0,
-          config->uart.event_queue_size, &esp_gps->event_queue, 0) != ESP_OK) {
-    ESP_LOGE(TAG, "install uart driver failed");
-    goto err_uart_install;
-  }
+
   if (uart_param_config(esp_gps->uart_port, &uart_config) != ESP_OK) {
     ESP_LOGE(TAG, "config uart parameter failed");
     goto err_uart_config;
@@ -733,39 +731,38 @@ nmea_parser_handle_t nmea_parser_init(const nmea_parser_config_t* config) {
     ESP_LOGE(TAG, "config uart gpio failed");
     goto err_uart_config;
   }
-  /* Set pattern interrupt, used to detect the end of a line */
-  uart_enable_pattern_det_baud_intr(esp_gps->uart_port, '\n', 1, 9, 0, 0);
-  /* Set pattern queue size */
-  uart_pattern_queue_reset(esp_gps->uart_port, config->uart.event_queue_size);
-  uart_flush(esp_gps->uart_port);
-  /* Create Event loop */
-  esp_event_loop_args_t loop_args = {.queue_size = NMEA_EVENT_LOOP_QUEUE_SIZE,
-                                     .task_name = NULL};
-  if (esp_event_loop_create(&loop_args, &esp_gps->event_loop_hdl) != ESP_OK) {
-    ESP_LOGE(TAG, "create event loop faild");
-    goto err_eloop;
+
+  if (uart_driver_install(
+          esp_gps->uart_port, CONFIG_NMEA_PARSER_RING_BUFFER_SIZE,
+          CONFIG_NMEA_PARSER_RING_BUFFER_SIZE, 0, NULL, 0) != ESP_OK) {
+    ESP_LOGE(TAG, "install uart driver failed");
+    goto err_uart_install;
   }
-  /* Create NMEA Parser task */
-  BaseType_t err = xTaskCreate(
-      nmea_parser_task_entry, "nmea_parser", CONFIG_NMEA_PARSER_TASK_STACK_SIZE,
-      esp_gps, CONFIG_NMEA_PARSER_TASK_PRIORITY, &esp_gps->tsk_hdl);
-  if (err != pdTRUE) {
+
+  /* Create NMEA Parser task - will use UART DMA mode */
+  esp_err_t err = task_manager_create(
+      nmea_parser_task_entry, "nmea_parser",
+      TASK_STACK_LARGE,  // 8KB (CONFIG_NMEA_PARSER_TASK_STACK_SIZE)
+      esp_gps,
+      TASK_PRIORITY_HIGH,  // GPS es time-sensitive
+      &esp_gps->tsk_hdl);
+
+  if (err != ESP_OK) {
     ESP_LOGE(TAG, "create NMEA Parser task failed");
     goto err_task_create;
   }
   ESP_LOGI(TAG, "NMEA Parser init OK");
   return esp_gps;
+
   /*Error Handling*/
 err_task_create:
-  esp_event_loop_delete(esp_gps->event_loop_hdl);
-err_eloop:
-err_uart_install:
   uart_driver_delete(esp_gps->uart_port);
+err_uart_install:
 err_uart_config:
-err_buffer:
   free(esp_gps->buffer);
-err_gps:
+err_buffer:
   free(esp_gps);
+err_gps:
   return NULL;
 }
 
@@ -777,11 +774,17 @@ err_gps:
  */
 esp_err_t nmea_parser_deinit(nmea_parser_handle_t nmea_hdl) {
   esp_gps_t* esp_gps = (esp_gps_t*) nmea_hdl;
-  vTaskDelete(esp_gps->tsk_hdl);
-  esp_event_loop_delete(esp_gps->event_loop_hdl);
+
+  // Delete the parser task
+  task_manager_delete(esp_gps->tsk_hdl);
+
+  // Delete UART driver
   esp_err_t err = uart_driver_delete(esp_gps->uart_port);
+
+  // Free allocated memory
   free(esp_gps->buffer);
   free(esp_gps);
+
   return err;
 }
 
@@ -793,32 +796,47 @@ esp_err_t nmea_parser_deinit(nmea_parser_handle_t nmea_hdl) {
  * @param handler_args handler specific arguments
  * @return esp_err_t
  *  - ESP_OK: Success
- *  - ESP_ERR_NO_MEM: Cannot allocate memory for the handler
- *  - ESP_ERR_INVALIG_ARG: Invalid combination of event base and event id
- *  - Others: Fail
+ *  - ESP_ERR_INVALID_ARG: Invalid arguments
  */
 esp_err_t nmea_parser_add_handler(nmea_parser_handle_t nmea_hdl,
                                   esp_event_handler_t event_handler,
                                   void* handler_args) {
   esp_gps_t* esp_gps = (esp_gps_t*) nmea_hdl;
-  return esp_event_handler_register_with(esp_gps->event_loop_hdl,
-                                         ESP_NMEA_EVENT, ESP_EVENT_ANY_ID,
-                                         event_handler, handler_args);
+
+  if (!esp_gps || !event_handler) {
+    return ESP_ERR_INVALID_ARG;
+  }
+
+  // Store the callback and its argument
+  esp_gps->event_handler = event_handler;
+  esp_gps->event_handler_arg = handler_args;
+
+  ESP_LOGI(TAG, "Event handler registered");
+  return ESP_OK;
 }
 
 /**
  * @brief Remove user defined handler for NMEA parser
  *
  * @param nmea_hdl handle of NMEA parser
- * @param event_handler user defined event handler
+ * @param event_handler user defined event handler (unused, kept for API
+ * compatibility)
  * @return esp_err_t
  *  - ESP_OK: Success
- *  - ESP_ERR_INVALIG_ARG: Invalid combination of event base and event id
- *  - Others: Fail
+ *  - ESP_ERR_INVALID_ARG: Invalid arguments
  */
 esp_err_t nmea_parser_remove_handler(nmea_parser_handle_t nmea_hdl,
                                      esp_event_handler_t event_handler) {
   esp_gps_t* esp_gps = (esp_gps_t*) nmea_hdl;
-  return esp_event_handler_unregister_with(
-      esp_gps->event_loop_hdl, ESP_NMEA_EVENT, ESP_EVENT_ANY_ID, event_handler);
+
+  if (!esp_gps) {
+    return ESP_ERR_INVALID_ARG;
+  }
+
+  // Clear the callback
+  esp_gps->event_handler = NULL;
+  esp_gps->event_handler_arg = NULL;
+
+  ESP_LOGI(TAG, "Event handler unregistered");
+  return ESP_OK;
 }

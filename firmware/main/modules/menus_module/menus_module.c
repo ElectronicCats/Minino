@@ -28,7 +28,7 @@ static app_state2_t app_state = {.in_app = false,
                                  .input_callback = NULL,
                                  .input_last_callback = NULL};
 static TaskHandle_t screen_saver_task = NULL;
-static bool screen_saver_running = false;
+static volatile bool screen_saver_running = false;
 
 static uint8_t get_menu_idx(menu_idx_t menu_idx) {
   for (uint8_t i = 0; i < menus_ctx->menus_count; i++) {
@@ -231,6 +231,12 @@ void menus_module_set_default_input() {
 void menus_module_restart() {
   menus_module_set_reset_screen(menus_ctx->parent_menu_idx);
   esp_restart();
+}
+
+void menus_module_return() {
+  menus_module_set_default_input();
+  menus_ctx->current_menu = menus_ctx->parent_menu_idx;
+  refresh_menus();
 }
 
 void menus_module_reset() {
