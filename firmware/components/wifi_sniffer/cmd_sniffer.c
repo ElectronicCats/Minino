@@ -142,7 +142,15 @@ static bool should_stop_flash_sniffing(int32_t sniffed_packets) {
     return false;
   }
 
-  size_t free_size = total_size - used_size;
+  size_t free_size = 0;
+
+  if(used_size >= total_size) {
+    ESP_LOGW(TAG, "Flash space critically low: %zu bytes free (minimum: %d bytes)",
+             free_size, PCAP_FLASH_MIN_FREE_BYTES);
+    return true;
+  }
+
+  free_size= total_size - used_size;
 
   // Check if we have minimum free space
   if (free_size < PCAP_FLASH_MIN_FREE_BYTES) {
