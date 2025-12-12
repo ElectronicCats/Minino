@@ -1,3 +1,7 @@
+# Target to compile
+CONFIG_IDF_TARGET="esp32c6"
+CONFIG_IDF_TARGET_ESP32C6=y
+
 # Enable support for power management
 CONFIG_PM_ENABLE=y
 # Enable tickless idle mode
