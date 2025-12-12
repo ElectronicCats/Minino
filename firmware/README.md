@@ -290,7 +290,7 @@ MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongit
 # Zigbee
 
 > [!WARNING]
-> **Deprecated component**: Zigbee components are deprecated in newer versions of Minino and only work in versions prior to 1.1.13.0. These components are not available in newer versions.
+> **Not available in this beta version**: Zigbee components do not work in this beta version of Minino. These components are only available in versions prior to 1.1.13.0.
 >
 > **To use Zigbee components**: If you need to use Zigbee functionality, you must checkout the version 1.1.13.0 using:
 > ```bash
@@ -310,7 +310,7 @@ SourcePanID,SourceADDR,DestinationADDR,Channel,RSSI,SecurityEnabled,FrameType,Cu
 # Thread
 
 > [!WARNING]
-> **Deprecated component**: Thread/OpenThread components are deprecated in newer versions of Minino and only work in versions prior to 1.1.13.0. These components are not available in newer versions.
+> **Not available in this beta version**: Thread/OpenThread components do not work in this beta version of Minino. These components are only available in versions prior to 1.1.13.0.
 >
 > **To use Thread/OpenThread components**: If you need to use Thread/OpenThread functionality, you must checkout the version 1.1.13.0 using:
 > ```bash
@@ -339,7 +339,7 @@ DestinationPAN,Destination,ExtendedSource,Channel,UDPSource,UDPDestination,Proto
 # Wardriving Thread test
 
 > [!WARNING]
-> **Deprecated component**: Thread/OpenThread components are deprecated in newer versions of Minino and only work in versions prior to 1.1.13.0. These components are not available in newer versions.
+> **Not available in this beta version**: Thread/OpenThread components do not work in this beta version of Minino. These components are only available in versions prior to 1.1.13.0.
 >
 > **To use Thread/OpenThread components**: If you need to use Thread/OpenThread functionality, you must checkout the version 1.1.13.0 using:
 > ```bash
@@ -566,7 +566,7 @@ The value: `idf.py menuconfig > Component config > HTTP Server > (1024)Max HTTP 
 # Zigbee CLI
 
 > [!WARNING]
-> **Deprecated component**: Zigbee components are deprecated in newer versions of Minino and only work in versions prior to 1.1.13.0. These components are not available in newer versions.
+> **Not available in this beta version**: Zigbee components do not work in this beta version of Minino. These components are only available in versions prior to 1.1.13.0.
 >
 > **To use Zigbee components**: If you need to use Zigbee functionality, you must checkout the version 1.1.13.0 using:
 > ```bash

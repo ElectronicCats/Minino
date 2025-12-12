@@ -239,7 +239,7 @@ typedef enum {
   /* Applications */
   MENU_WIFI_APPS,
   MENU_BLUETOOTH_APPS,
-  // MENU_ZIGBEE_APPS and MENU_THREAD_APPS are deprecated since v1.1.13.0
+  // MENU_ZIGBEE_APPS and MENU_THREAD_APPS are not available in this beta version (only in versions prior to 1.1.13.0)
   MENU_ZIGBEE_APPS,
   MENU_THREAD_APPS,
   MENU_GPS,
