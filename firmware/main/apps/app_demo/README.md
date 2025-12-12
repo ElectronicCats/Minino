@@ -45,13 +45,10 @@ Our main folder structure are:
 │   ├── leds
 │   ├── minino_config
 │   ├── nmea_parser
-│   ├── open_thread
-│   ├── openthread
 │   ├── OTA
 │   ├── preferences
 │   ├── radio_selector
 │   ├── sd_card
-│   ├── thread_broadcast
 │   ├── trackers_scanner
 │   ├── uart_bridge
 │   ├── uart_sender
@@ -62,7 +59,6 @@ Our main folder structure are:
 │   ├── wifi_controller
 │   ├── wifi_scanner
 │   ├── wifi_sniffer
-│   └── zigbee_switch
 ├── main -> Main project structure folder
 │   ├── apps
 │   ├── drivers
@@ -74,8 +70,6 @@ Our main folder structure are:
 │   ├── espressif__button
 │   ├── espressif__cmake_utilities
 │   ├── espressif__esp-modbus
-│   ├── espressif__esp-zboss-lib
-│   ├── espressif__esp-zigbee-lib
 │   ├── espressif__iperf
 │   └── espressif__pcap
 ├── profiles -> Custom boards configs
@@ -245,6 +239,7 @@ typedef enum {
   /* Applications */
   MENU_WIFI_APPS,
   MENU_BLUETOOTH_APPS,
+  // MENU_ZIGBEE_APPS and MENU_THREAD_APPS are deprecated since v1.1.13.0
   MENU_ZIGBEE_APPS,
   MENU_THREAD_APPS,
   MENU_GPS,

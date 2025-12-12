@@ -25,22 +25,22 @@
 #include "modbus_dos.h"
 #include "modbus_tcp_scenes.h"
 #include "uart_bridge_app.h"
-// #include "open_thread_module.h"
+// #include "open_thread_module.h" // Deprecated since v1.1.14.0
 #include "ota_module.h"
 #include "sd_card_settings_module.h"
 #include "settings_module.h"
 #include "sleep_mode_scenes.h"
 #include "ssid_spam.h"
 #include "stealth_mode.h"
-// #include "warbee_module.h"
+// #include "warbee_module.h" // Deprecated since v1.1.14.0
 #include "wardriving_module.h"
 #include "wardriving_screens_module.h"
-// #include "warthread_module.h"
+// #include "warthread_module.h" // Deprecated since v1.1.14.0
 #include "web_file_browser_module.h"
 #include "wifi_analyzer.h"
 #include "wifi_settings_scenes.h"
-// #include "zbcli_settings.h"
-// #include "zigbee_module.h"
+// #include "zbcli_settings.h" // Deprecated since v1.1.14.0
+// #include "zigbee_module.h" // Deprecated since v1.1.14.0
 
 // Include our header app
 #include "hello_module.h"
@@ -53,7 +53,7 @@ typedef enum {
   /* Applications */
   MENU_WIFI_APPS,
   MENU_BLUETOOTH_APPS,
-  MENU_ZIGBEE_APPS,
+  // MENU_ZIGBEE_APPS, // Deprecated since v1.1.14.0
   MENU_THREAD_APPS,
   MENU_GPS,
   MENU_GPIO_APPS,
@@ -86,15 +86,17 @@ typedef enum {
   MENU_BLUETOOTH_HID,
   MENU_BLUETOOTH_ADV,
   /* Zigbee applications */
-  MENU_ZIGBEE_SPOOFING,
-  MENU_ZIGBEE_SWITCH,
-  MENU_ZIGBEE_LIGHT,
-  MENU_ZIGBEE_SNIFFER,
+  // MENU_ZIGBEE_SPOOFING, // Deprecated since v1.1.14.0
+  // MENU_ZIGBEE_SWITCH, // Deprecated since v1.1.14.0
+  // MENU_ZIGBEE_LIGHT, // Deprecated since v1.1.14.0
+  // MENU_ZIGBEE_SNIFFER, // Deprecated since v1.1.14.0
   /* Thread applications */
-  MENU_THREAD_BROADCAST,
-  MENU_THREAD_SNIFFER,
+  // MENU_THREAD_BROADCAST, // Deprecated since v1.1.14.0
+  // MENU_THREAD_SNIFFER, // Deprecated since v1.1.14.0 -> This is the same as
+  // MENU_WIFI_DEAUTH_SCAN
   /* Thread Sniffer App */
-  MENU_THREAD_SNIFFER_RUN,
+  // MENU_THREAD_SNIFFER_RUN, // Deprecated since v1.1.14.0 -> This is the same
+  // as MENU_WIFI_DEAUTH_SCAN
   /* GPS applications */
   MENU_GPS_WARDRIVING,
   MENU_GPS_DATE_TIME,
@@ -114,8 +116,8 @@ typedef enum {
   MENU_GPIO_UART_BRIDGE_STOP_BITS,
   /* Wardriving submenus */
   MENU_GPS_WARDRIVING_START,
-  MENU_GPS_WARDRIVING_BEE_START,
-  MENU_GPS_WARDRIVING_THREAD_START,
+  // MENU_GPS_WARDRIVING_BEE_START, // Deprecated since v1.1.14.0
+  // MENU_GPS_WARDRIVING_THREAD_START, // Deprecated since v1.1.14.0
   MENU_GPS_WARDRIVING_HELP,
   /* About submenus */
   MENU_ABOUT_VERSION,
@@ -138,7 +140,7 @@ typedef enum {
   MENU_SETTINGS_SD_CARD_FORMAT,
   MENU_STEALTH_MODE,
   MENU_SLEEP_MODE,
-  MENU_ZB_CLI,
+  // MENU_ZB_CLI, // Deprecated since v1.1.14.0
   /* Menu count */
   MENU_COUNT,  // Keep this at the end
 } menu_idx_t;

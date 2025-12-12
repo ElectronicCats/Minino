@@ -288,6 +288,15 @@ MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongit
 84:d8:1b:9f:6f:cc,Hacknet_EXT,WPA_WPA2_PSK,2025-1-24 20:8:18,5,2432,-28,20.644129,-100.461815,1892.849976,1.500000,,,WIFI
 ```
 # Zigbee
+
+> [!WARNING]
+> **Deprecated component**: Zigbee components are deprecated in newer versions of Minino and only work in versions prior to 1.1.13.0. These components are not available in newer versions.
+>
+> **To use Zigbee components**: If you need to use Zigbee functionality, you must checkout the version 1.1.13.0 using:
+> ```bash
+> git checkout 1.1.13.0
+> ```
+
 - **SourcePanID**: Source panID
 - **SourceADDR**: Source address
 - **DestinationADDR**: Destionation short address
@@ -299,6 +308,15 @@ SourcePanID,SourceADDR,DestinationADDR,Channel,RSSI,SecurityEnabled,FrameType,Cu
 0x7668,5a:d2:cf:46:fc:ae:75:d7,0xffff,16,-25,No,Data,4.130518,4.130518,1907.400024,1.500000,,,Zigbee
 ```
 # Thread
+
+> [!WARNING]
+> **Deprecated component**: Thread/OpenThread components are deprecated in newer versions of Minino and only work in versions prior to 1.1.13.0. These components are not available in newer versions.
+>
+> **To use Thread/OpenThread components**: If you need to use Thread/OpenThread functionality, you must checkout the version 1.1.13.0 using:
+> ```bash
+> git checkout 1.1.13.0
+> ```
+
 - **DestinationPAN**: Destination from the source
 - **Destination**: Destination short address
 - **ExtendedSource**: Extended source address from the source
@@ -319,6 +337,15 @@ DestinationPAN,Destination,ExtendedSource,Channel,UDPSource,UDPDestination,Proto
 ```
 
 # Wardriving Thread test
+
+> [!WARNING]
+> **Deprecated component**: Thread/OpenThread components are deprecated in newer versions of Minino and only work in versions prior to 1.1.13.0. These components are not available in newer versions.
+>
+> **To use Thread/OpenThread components**: If you need to use Thread/OpenThread functionality, you must checkout the version 1.1.13.0 using:
+> ```bash
+> git checkout 1.1.13.0
+> ```
+
 # Openthread - Install example
 ## ESP-IDF
 ### Get the repo
@@ -537,6 +564,14 @@ The form inputs should use the reserved names `user1` through `user4` to ensure 
 The value: `idf.py menuconfig > Component config > HTTP Server > (1024)Max HTTP Request Header Length` will set to 1024 to avoid issues with Android
 
 # Zigbee CLI
+
+> [!WARNING]
+> **Deprecated component**: Zigbee components are deprecated in newer versions of Minino and only work in versions prior to 1.1.13.0. These components are not available in newer versions.
+>
+> **To use Zigbee components**: If you need to use Zigbee functionality, you must checkout the version 1.1.13.0 using:
+> ```bash
+> git checkout 1.1.13.0
+> ```
 
 ## Important
 **To use the CLI you need to enable it in the `Settings -> ZB CLI` to use, if you want to use zigbee apps you need to disable the CLI before use the app like the sniffer.**
