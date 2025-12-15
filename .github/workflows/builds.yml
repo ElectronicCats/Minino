@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*.*.*.*'
+      - 'v*.*.*.*-*'
 
 permissions:
   contents: write
@@ -113,5 +114,5 @@ jobs:
             ### Command
 
             ```bash
-            python -m esptool --chip esp32c6 -b 460800 --before default_reset --after hard_reset write_flash --flash_mode dio --flash_size 4MB --flash_freq 80m 0x0 bugcon_${{ env.TAG_NAME }}.bin
+            python -m esptool --chip esp32c6 -b 460800 --before default_reset --after hard_reset write_flash --flash_mode dio --flash_size 4MB --flash_freq 80m 0x0 minino_${{ env.TAG_NAME }}.bin
             ```
