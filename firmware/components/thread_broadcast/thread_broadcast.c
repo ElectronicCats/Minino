@@ -8,7 +8,7 @@
 otUdpSocket mSocket;
 TaskHandle_t sender_task_handler = NULL;
 
-void (*on_msg_recieve_cb)(char*) = NULL;
+on_msg_recieve_cb_t on_msg_recieve_cb = NULL;
 
 void on_udp_recieve(void* aContext,
                     otMessage* aMessage,
@@ -24,7 +24,7 @@ void on_udp_recieve(void* aContext,
   printf("MSG\n");
   printf("%s\n", str);
   if (on_msg_recieve_cb != NULL) {
-    on_msg_recieve_cb(str);
+    on_msg_recieve_cb(aMessage, aMessageInfo);
   }
   free(str);
   free(data);

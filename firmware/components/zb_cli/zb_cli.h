@@ -39,8 +39,8 @@
   #error "CLI example for RCP is not ready!"
 #endif
 
-void zb_cli_begin(void);
-void zb_cli_stop(void);
+int zb_cli_begin(int argc, char** argv);
+int zb_cli_stop(int argc, char** argv);
 void zb_cli_cmd_register(void);
 
 #endif

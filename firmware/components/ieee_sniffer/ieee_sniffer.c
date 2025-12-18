@@ -146,7 +146,7 @@ static void debug_handler_task(void* pvParameters) {
   uint8_t packet[257];
   while (xQueueReceive(packet_rx_queue, &packet, portMAX_DELAY) != pdFALSE) {
     if (packet_callback) {
-      packet_callback(&packet[1], packet[0]);
+      packet_callback( (int8_t)packet[1], (int8_t)packet[0]);
     }
     // debug_print_packet(&packet[1], packet[0]);
   }

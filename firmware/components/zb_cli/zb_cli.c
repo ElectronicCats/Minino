@@ -172,7 +172,7 @@ static void zb_stack_main_task(void* pvParameters) {
   vTaskDelete(NULL);
 }
 
-void zb_cli_begin(void) {
+int zb_cli_begin(int argc, char** argv) {
   esp_zb_platform_config_t config = {
       .radio_config = ESP_ZB_DEFAULT_RADIO_CONFIG(),
       .host_config = ESP_ZB_DEFAULT_HOST_CONFIG(),
@@ -182,10 +182,12 @@ void zb_cli_begin(void) {
   ESP_ERROR_CHECK(esp_zb_platform_config(&config));
   xTaskCreate(zb_stack_main_task, "Zigbee_main", 4096, NULL, 5, NULL);
   ESP_ERROR_CHECK(esp_zb_console_start());
+  return 0;
 }
 
-void zb_cli_stop() {
+int zb_cli_stop(int argc, char** argv) {
   esp_zb_console_deinit();
+  return 0;
 }
 
 void zb_cli_cmd_register(void) {
@@ -194,7 +196,7 @@ void zb_cli_cmd_register(void) {
       .help = "Initialize the Zigbee console",
       .category = NULL,
       .hint = NULL,
-      .func = &zb_cli_begin,
+      .func = zb_cli_begin,
       .argtable = NULL,
   };
   esp_console_cmd_t cmd_stop = {
@@ -202,7 +204,7 @@ void zb_cli_cmd_register(void) {
       .help = "Deinitialize the Zigbee console",
       .category = NULL,
       .hint = NULL,
-      .func = &zb_cli_stop,
+      .func = zb_cli_stop,
       .argtable = NULL,
   };
   ESP_ERROR_CHECK(esp_console_cmd_register(&cmd_start));
