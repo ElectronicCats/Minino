@@ -50,10 +50,11 @@ typedef struct mac_fcs {
 /**
  * @brief Callback to handle the IEEE sniffer
  *
- * @param packets_count The number of packets found
- * @param channel The channel where the record was found
+ * @param packet The packet received
+ * @param packet_length The length of the packet
+ *
  */
-typedef void (*ieee_sniffer_cb_t)(int packets_count, int channel);
+typedef void (*ieee_sniffer_cb_t)(uint8_t* packet, uint8_t packet_length);
 
 /**
  * @brief Register the callback for the IEEE sniffer
