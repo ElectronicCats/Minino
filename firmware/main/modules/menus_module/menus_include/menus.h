@@ -5,7 +5,7 @@
 #include "hid_module.h"
 #include "spam_module.h"
 #include "trackers_module.h"
-// #include "z_switch_module.h"
+#include "z_switch_module.h"
 
 #include "adv_scan_module.h"
 #include "analyzer_scenes.h"
@@ -25,22 +25,22 @@
 #include "modbus_dos.h"
 #include "modbus_tcp_scenes.h"
 #include "uart_bridge_app.h"
-// #include "open_thread_module.h" // Deprecated since v1.1.14.0
+#include "open_thread_module.h" // Deprecated since v1.1.14.0
 #include "ota_module.h"
 #include "sd_card_settings_module.h"
 #include "settings_module.h"
 #include "sleep_mode_scenes.h"
 #include "ssid_spam.h"
 #include "stealth_mode.h"
-// #include "warbee_module.h" // Deprecated since v1.1.14.0
+#include "warbee_module.h" // Deprecated since v1.1.14.0
 #include "wardriving_module.h"
 #include "wardriving_screens_module.h"
-// #include "warthread_module.h" // Deprecated since v1.1.14.0
+#include "warthread_module.h" // Deprecated since v1.1.14.0
 #include "web_file_browser_module.h"
 #include "wifi_analyzer.h"
 #include "wifi_settings_scenes.h"
-// #include "zbcli_settings.h" // Deprecated since v1.1.14.0
-// #include "zigbee_module.h" // Deprecated since v1.1.14.0
+#include "zbcli_settings.h" // Deprecated since v1.1.14.0
+#include "zigbee_module.h" // Deprecated since v1.1.14.0
 
 // Include our header app
 #include "hello_module.h"

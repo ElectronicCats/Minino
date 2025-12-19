@@ -30,7 +30,6 @@
 
 static const char* TAG = "main";
 void app_main() {
-  ESP_LOGI(TAG, "🚀 Iniciando Minino Firmware v5.5.1");
 
   // Inicializar sistemas core PRIMERO
   error_handler_init();
