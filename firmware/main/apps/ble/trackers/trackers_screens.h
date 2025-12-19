@@ -1,6 +1,6 @@
 #include <stdbool.h>
 #include <stdint.h>
-#include "general/general_screens.h"
+#include "general_screens.h"
 #ifndef TRACKERS_SCREENS_H
   #define TRACKERS_SCREENS_H
 

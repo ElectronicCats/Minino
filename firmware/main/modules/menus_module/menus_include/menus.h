@@ -115,8 +115,8 @@ typedef enum {
   MENU_GPIO_UART_BRIDGE_STOP_BITS,
   /* Wardriving submenus */
   MENU_GPS_WARDRIVING_START,
-  // MENU_GPS_WARDRIVING_BEE_START, // Deprecated since v1.1.14.0
-  // MENU_GPS_WARDRIVING_THREAD_START, // Deprecated since v1.1.14.0
+  MENU_GPS_WARDRIVING_BEE_START, // Deprecated since v1.1.14.0
+  MENU_GPS_WARDRIVING_THREAD_START, // Deprecated since v1.1.14.0
   MENU_GPS_WARDRIVING_HELP,
   /* About submenus */
   MENU_ABOUT_VERSION,
@@ -353,7 +353,7 @@ menu_t menus[] = {
      .on_exit_cb = NULL,
      .is_visible = true},
 #endif
-// #ifdef CONFIG_ZIGBEE_APPS_ENABLE
+#ifdef CONFIG_ZIGBEE_APPS_ENABLE
     {.display_name = "Zigbee",
      .menu_idx = MENU_ZIGBEE_APPS,
      .parent_idx = MENU_APPLICATIONS,
@@ -392,8 +392,8 @@ menu_t menus[] = {
      .on_enter_cb = NULL,// zigbee_module_sniffer_enter,
      .on_exit_cb = NULL,
      .is_visible = true},
-// #endif
-// #ifdef CONFIG_THREAD_APPS_ENABLE
+#endif
+#ifdef CONFIG_THREAD_APPS_ENABLE
     {.display_name = "Thread",
      .menu_idx = MENU_THREAD_APPS,
      .parent_idx = MENU_APPLICATIONS,
@@ -424,7 +424,7 @@ menu_t menus[] = {
      .on_enter_cb = NULL,// open_thread_module_sniffer_run,
      .on_exit_cb = NULL,
      .is_visible = true},
-// #endif
+#endif
 #if CONFIG_GPS_APPS_ENABLE && CONFIG_GPS_ENABLED && CONFIG_SD_ENABLED
     {.display_name = "GPS",
      .menu_idx = MENU_GPS,

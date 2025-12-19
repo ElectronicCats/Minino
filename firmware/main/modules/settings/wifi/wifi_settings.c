@@ -4,7 +4,7 @@
 #include "cmd_wifi.h"
 #include "deauth_screens.h"
 #include "esp_log.h"
-#include "general/general_screens.h"
+#include "general_screens.h"
 #include "general_notification.h"
 #include "general_scrolling_text.h"
 #include "general_submenu.h"

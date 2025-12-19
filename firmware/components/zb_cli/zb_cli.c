@@ -12,7 +12,7 @@
 #include "esp_system.h"
 #include "nvs_flash.h"
 
-#include "zb_cli.h"
+// #include "zb_cli.h"
 
 static const char* TAG = "zb_cli";
 

@@ -1,6 +1,6 @@
-#include "apps/ble/spam/spam_module.h"
+#include "spam_module.h"
 #include "animations_task.h"
-#include "apps/ble/spam/spam_screens.h"
+#include "spam_screens.h"
 #include "bt_spam.h"
 #include "esp_log.h"
 #include "led_events.h"

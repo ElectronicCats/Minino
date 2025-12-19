@@ -1,5 +1,5 @@
-#include "general/general_screens.h"
-#include "general/bitmaps_general.h"
+#include "general_screens.h"
+#include "bitmaps_general.h"
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"

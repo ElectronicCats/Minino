@@ -1,5 +1,5 @@
-#include "apps/ble/hid_device/hid_module.h"
-#include "apps/ble/hid_device/hid_screens.h"
+#include "hid_module.h"
+#include "hid_screens.h"
 #include "ble_hidd_main.h"
 #include "esp_log.h"
 #include "esp_mac.h"

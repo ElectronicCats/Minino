@@ -3,7 +3,7 @@
 #include <string.h>
 #include "animations_task.h"
 #include "freertos/FreeRTOS.h"
-#include "general/bitmaps_general.h"
+#include "bitmaps_general.h"
 #include "led_events.h"
 #include "oled_screen.h"
 

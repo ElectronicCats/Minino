@@ -3,8 +3,8 @@
 #include <string.h>
 #include "animations_task.h"
 #include "esp_wifi.h"
-#include "general/bitmaps_general.h"
-#include "general/general_screens.h"
+#include "bitmaps_general.h"
+#include "general_screens.h"
 #include "oled_screen.h"
 
 #ifdef CONFIG_RESOLUTION_128X64

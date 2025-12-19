@@ -1,5 +1,5 @@
-#include "apps/ble/trackers/trackers_module.h"
-#include "apps/ble/trackers/trackers_screens.h"
+#include "trackers_module.h"
+#include "trackers_screens.h"
 #include "esp_log.h"
 #include "menus_module.h"
 #include "trackers_scanner.h"
