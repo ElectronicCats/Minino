@@ -24,23 +24,23 @@
 #include "logs_output.h"
 #include "modbus_dos.h"
 #include "modbus_tcp_scenes.h"
-#include "uart_bridge_app.h"
-#include "open_thread_module.h" // Deprecated since v1.1.14.0
+#include "open_thread_module.h"  // Deprecated since v1.1.14.0
 #include "ota_module.h"
 #include "sd_card_settings_module.h"
 #include "settings_module.h"
 #include "sleep_mode_scenes.h"
 #include "ssid_spam.h"
 #include "stealth_mode.h"
-#include "warbee_module.h" // Deprecated since v1.1.14.0
+#include "uart_bridge_app.h"
+#include "warbee_module.h"  // Deprecated since v1.1.14.0
 #include "wardriving_module.h"
 #include "wardriving_screens_module.h"
-#include "warthread_module.h" // Deprecated since v1.1.14.0
+#include "warthread_module.h"  // Deprecated since v1.1.14.0
 #include "web_file_browser_module.h"
 #include "wifi_analyzer.h"
 #include "wifi_settings_scenes.h"
-#include "zbcli_settings.h" // Deprecated since v1.1.14.0
-#include "zigbee_module.h" // Deprecated since v1.1.14.0
+#include "zbcli_settings.h"  // Deprecated since v1.1.14.0
+#include "zigbee_module.h"   // Deprecated since v1.1.14.0
 
 // Include our header app
 #include "hello_module.h"
@@ -53,7 +53,7 @@ typedef enum {
   /* Applications */
   MENU_WIFI_APPS,
   MENU_BLUETOOTH_APPS,
-  MENU_ZIGBEE_APPS, // Deprecated since v1.1.14.0
+  MENU_ZIGBEE_APPS,  // Deprecated since v1.1.14.0
   MENU_THREAD_APPS,
   MENU_GPS,
   MENU_GPIO_APPS,
@@ -86,15 +86,15 @@ typedef enum {
   MENU_BLUETOOTH_HID,
   MENU_BLUETOOTH_ADV,
   /* Zigbee applications */
-  MENU_ZIGBEE_SPOOFING, // Deprecated since v1.1.14.0
-  MENU_ZIGBEE_SWITCH, // Deprecated since v1.1.14.0
-  MENU_ZIGBEE_LIGHT, // Deprecated since v1.1.14.0
-  MENU_ZIGBEE_SNIFFER, // Deprecated since v1.1.14.0
+  MENU_ZIGBEE_SPOOFING,  // Deprecated since v1.1.14.0
+  MENU_ZIGBEE_SWITCH,    // Deprecated since v1.1.14.0
+  MENU_ZIGBEE_LIGHT,     // Deprecated since v1.1.14.0
+  MENU_ZIGBEE_SNIFFER,   // Deprecated since v1.1.14.0
   /* Thread applications */
-  MENU_THREAD_BROADCAST, // Deprecated since v1.1.14.0
-  MENU_THREAD_SNIFFER, // Deprecated since v1.1.14.0 -> This is the same as
+  MENU_THREAD_BROADCAST,  // Deprecated since v1.1.14.0
+  MENU_THREAD_SNIFFER,    // Deprecated since v1.1.14.0 -> This is the same as
   /* Thread Sniffer App */
-  MENU_THREAD_SNIFFER_RUN, // Deprecated since v1.1.14.0 -> This is the same
+  MENU_THREAD_SNIFFER_RUN,  // Deprecated since v1.1.14.0 -> This is the same
   // as MENU_WIFI_DEAUTH_SCAN
   /* GPS applications */
   MENU_GPS_WARDRIVING,
@@ -115,8 +115,8 @@ typedef enum {
   MENU_GPIO_UART_BRIDGE_STOP_BITS,
   /* Wardriving submenus */
   MENU_GPS_WARDRIVING_START,
-  MENU_GPS_WARDRIVING_BEE_START, // Deprecated since v1.1.14.0
-  MENU_GPS_WARDRIVING_THREAD_START, // Deprecated since v1.1.14.0
+  MENU_GPS_WARDRIVING_BEE_START,     // Deprecated since v1.1.14.0
+  MENU_GPS_WARDRIVING_THREAD_START,  // Deprecated since v1.1.14.0
   MENU_GPS_WARDRIVING_HELP,
   /* About submenus */
   MENU_ABOUT_VERSION,
@@ -373,7 +373,7 @@ menu_t menus[] = {
      .parent_idx = MENU_ZIGBEE_SPOOFING,
      .entry_cmd = "switch",
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,// zigbee_module_switch_enter,
+     .on_enter_cb = zigbee_module_switch_enter,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Light",
@@ -389,7 +389,7 @@ menu_t menus[] = {
      .parent_idx = MENU_ZIGBEE_APPS,
      .entry_cmd = "zigbee_sniffer",
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,// zigbee_module_sniffer_enter,
+     .on_enter_cb = zigbee_module_sniffer_enter,
      .on_exit_cb = NULL,
      .is_visible = true},
 #endif
@@ -406,22 +406,22 @@ menu_t menus[] = {
      .parent_idx = MENU_THREAD_APPS,
      .entry_cmd = "broadcast",
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,// open_thread_module_broadcast_enter,
-     .on_exit_cb = NULL,// open_thread_module_exit,
+     .on_enter_cb = open_thread_module_broadcast_enter,
+     .on_exit_cb = open_thread_module_exit,
      .is_visible = true},
     {.display_name = "Sniffer",
      .menu_idx = MENU_THREAD_SNIFFER,
      .parent_idx = MENU_THREAD_APPS,
      .entry_cmd = "thread_sniffer",
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,// open_thread_module_sniffer_enter,
-     .on_exit_cb = NULL,// open_thread_module_exit,
+     .on_enter_cb = open_thread_module_sniffer_enter,
+     .on_exit_cb = open_thread_module_exit,
      .is_visible = true},
     {.display_name = "Run",
      .menu_idx = MENU_THREAD_SNIFFER_RUN,
      .parent_idx = MENU_THREAD_SNIFFER,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,// open_thread_module_sniffer_run,
+     .on_enter_cb = open_thread_module_sniffer_run,
      .on_exit_cb = NULL,
      .is_visible = true},
 #endif
@@ -457,8 +457,8 @@ menu_t menus[] = {
      .menu_idx = MENU_GPS_WARDRIVING_BEE_START,
      .parent_idx = MENU_GPS_WARDRIVING,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,// warbee_module_begin,
-     .on_exit_cb = NULL,// warbee_module_exit,
+     .on_enter_cb = warbee_module_begin,
+     .on_exit_cb = warbee_module_exit,
      .is_visible = true},
     #endif
     #ifdef CONFIG_THREAD_APPS_ENABLE
@@ -466,8 +466,8 @@ menu_t menus[] = {
      .menu_idx = MENU_GPS_WARDRIVING_THREAD_START,
      .parent_idx = MENU_GPS_WARDRIVING,
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,// warthread_module_begin,
-     .on_exit_cb = NULL, // warthread_module_exit,
+     .on_enter_cb = warthread_module_begin,
+     .on_exit_cb = warthread_module_exit,
      .is_visible = true},
     #endif
     {.display_name = "Help",

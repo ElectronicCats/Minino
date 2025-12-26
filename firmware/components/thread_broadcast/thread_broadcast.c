@@ -24,7 +24,7 @@ void on_udp_recieve(void* aContext,
   printf("MSG\n");
   printf("%s\n", str);
   if (on_msg_recieve_cb != NULL) {
-    on_msg_recieve_cb(aMessage, aMessageInfo);
+    on_msg_recieve_cb(str);
   }
   free(str);
   free(data);

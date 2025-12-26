@@ -45,7 +45,7 @@ int8_t ieee_sniffer_get_rssi() {
   return esp_ieee802154_get_recent_rssi();
 }
 
-void ieee_sniffer_set_channel(int channel) {
+void ieee_sniffer_set_channel(uint8_t channel) {
   current_channel = channel;
   if (channel < IEEE_SNIFFER_CHANNEL_MIN) {
     current_channel = IEEE_SNIFFER_CHANNEL_MAX;
@@ -105,7 +105,7 @@ static void ieee_sniffer_configure() {
   ESP_ERROR_CHECK(esp_ieee802154_receive());
 }
 
-void ieee_sniffer_begin(void) {
+void ieee_sniffer_begin(void* args) {
   running = true;
   ieee_sniffer_configure();
   while (running) {
@@ -146,7 +146,7 @@ static void debug_handler_task(void* pvParameters) {
   uint8_t packet[257];
   while (xQueueReceive(packet_rx_queue, packet, portMAX_DELAY) == pdTRUE) {
     if (packet_callback) {
-      packet_callback(&packet[1], packet[0]);  
+      packet_callback(&packet[1], packet[0]);
     }
     // debug_print_packet(&packet[1], packet[0]);
   }

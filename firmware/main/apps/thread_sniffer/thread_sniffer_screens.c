@@ -86,14 +86,14 @@ void thread_sniffer_show_event_handler(thread_sniffer_events_t event,
       animations_task_stop();
       break;
     case THREAD_SNIFFER_FATAL_ERROR_EV:
-      thread_sniffer_show_fatal_error( (const char*)context);
+      thread_sniffer_show_fatal_error((const char*) context);
       break;
     case THREAD_SNIFFER_DESTINATION_EV:
       oled_screen_clear();
-      thread_sniffer_show_destination( (bool*)context);
+      thread_sniffer_show_destination((bool*) context);
       break;
     case THREAD_SNIFFER_NEW_PACKET_EV:
-      thread_sniffer_show_new_packet( (uint32_t)context);
+      thread_sniffer_show_new_packet((uint32_t) context);
       break;
     default:
       break;

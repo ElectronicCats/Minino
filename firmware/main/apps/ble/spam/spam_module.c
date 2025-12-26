@@ -1,11 +1,11 @@
 #include "spam_module.h"
 #include "animations_task.h"
-#include "spam_screens.h"
 #include "bt_spam.h"
 #include "esp_log.h"
 #include "led_events.h"
 #include "menus_module.h"
 #include "oled_screen.h"
+#include "spam_screens.h"
 
 static void ble_module_state_machine(uint8_t button_name, uint8_t button_event);
 

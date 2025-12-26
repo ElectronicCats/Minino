@@ -1092,19 +1092,23 @@ static esp_err_t ieee802154_sleep_init(void) {
   esp_err_t err = ESP_OK;
 #if SOC_PM_MODEM_RETENTION_BY_REGDMA && CONFIG_FREERTOS_USE_TICKLESS_IDLE
   sleep_retention_module_init_param_t init_param = {
-    .cbs = {
-        .create = {
-            .handle = ieee802154_sleep_retention_init,
-            .arg = NULL,
-        },
-    },
-    .attribute = 0,   // Si no usas atributos
-    .depends = {
-        .bitmap = {
-            BIT(SLEEP_RETENTION_MODULE_BT_BB) |
-            BIT(SLEEP_RETENTION_MODULE_CLOCK_MODEM),
-        },
-    },
+      .cbs =
+          {
+              .create =
+                  {
+                      .handle = ieee802154_sleep_retention_init,
+                      .arg = NULL,
+                  },
+          },
+      .attribute = 0,  // Si no usas atributos
+      .depends =
+          {
+              .bitmap =
+                  {
+                      BIT(SLEEP_RETENTION_MODULE_BT_BB) |
+                          BIT(SLEEP_RETENTION_MODULE_CLOCK_MODEM),
+                  },
+          },
   };
 
   err = sleep_retention_module_init(SLEEP_RETENTION_MODULE_802154_MAC,

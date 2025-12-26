@@ -25,7 +25,7 @@
 
 #define ZIGBEE_SNIFFER_FS_CHAN_KEY "zschan"
 
-static char* menu_main_items[] = {"Channel", "Run"};
+static const char* menu_main_items[] = {"Channel", "Run"};
 static const char* channel_item[] = {"11", "12", "13", "14", "15", "16",
                                      "17", "18", "19", "20", "21", "22",
                                      "23", "24", "25", "26"};
@@ -94,7 +94,7 @@ static void zigbee_module_show_run_screen() {
   screen.select_down_cb = ieee_sniffer_set_channel;
   screen.range_low = 11;
   screen.range_high = 26;
-  screen.dinamic_value = &packet_count;
+  screen.dinamic_value = (uint16_t*) &packet_count;
   screen.selected_value = preferences_get_int(ZIGBEE_SNIFFER_FS_CHAN_KEY, 11);
   interactive_screen(screen);
 }
@@ -122,7 +122,7 @@ static void zigbee_module_main_handler(uint8_t option) {
 static void zigbee_module_show_channel_selector(void) {
   general_radio_selection_menu_t channel = {0};
   channel.banner = "Channel";
-  channel.options = (char**) channel_item;
+  channel.options = channel_item;
   channel.options_count = sizeof(channel_item) / sizeof(char*);
   channel.select_cb = zigbee_module_channel_selector;
   channel.style = RADIO_SELECTION_OLD_STYLE;

@@ -66,7 +66,7 @@ void ieee_sniffer_register_cb(ieee_sniffer_cb_t callback);
 /**
  * @brief Begin the IEEE sniffer
  */
-void ieee_sniffer_begin(void);
+void ieee_sniffer_begin(void* args);
 
 /**
  * @brief Stop the IEEE sniffer
@@ -78,7 +78,7 @@ void ieee_sniffer_stop(void);
  *
  * @param channel The channel to set
  */
-void ieee_sniffer_set_channel(int channel);
+void ieee_sniffer_set_channel(uint8_t channel);
 
 uint8_t ieee_sniffer_get_channel();
 int8_t ieee_sniffer_get_rssi();

@@ -22,7 +22,7 @@
 #include "memory_monitor.h"
 #include "task_manager.h"
 
-// #include "zb_cli.h"  // Temporarily disabled - zb_cli is deprecated
+#include "zb_cli.h"
 
 #define BAUD_RATE        921600
 #define UART_BUFFER_SIZE 1024
@@ -30,7 +30,6 @@
 
 static const char* TAG = "main";
 void app_main() {
-
   // Inicializar sistemas core PRIMERO
   error_handler_init();
   task_manager_init();

@@ -1,8 +1,8 @@
 #include "trackers_module.h"
-#include "trackers_screens.h"
 #include "esp_log.h"
 #include "menus_module.h"
 #include "trackers_scanner.h"
+#include "trackers_screens.h"
 
 static uint16_t current_item = 0;
 static uint16_t trackers_count = 0;

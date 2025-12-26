@@ -2,8 +2,8 @@
 #include <stdint.h>
 #include <string.h>
 #include "animations_task.h"
-#include "esp_wifi.h"
 #include "bitmaps_general.h"
+#include "esp_wifi.h"
 #include "general_screens.h"
 #include "oled_screen.h"
 

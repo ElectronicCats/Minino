@@ -5,7 +5,7 @@
 
 #define PORT 12345
 
-typedef void (*on_msg_recieve_cb_t)(otMessage*, const otMessageInfo*);
+typedef void (*on_msg_recieve_cb_t)(char* msg);
 
 void thread_broadcast_init();
 void thread_broadcast_deinit();

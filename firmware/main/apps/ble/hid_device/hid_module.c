@@ -1,9 +1,9 @@
 #include "hid_module.h"
-#include "hid_screens.h"
 #include "ble_hidd_main.h"
 #include "esp_log.h"
 #include "esp_mac.h"
 #include "general_submenu.h"
+#include "hid_screens.h"
 #include "menus_module.h"
 
 static uint16_t current_item = 0;
