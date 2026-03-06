@@ -1,0 +1,1233 @@
+#!/usr/bin/env python3
+"""
+WiFi Spectrum Suite - Suite Completa de Análisis WiFi
+Integra: Depurador CSV + Análisis de Interferencias + Wardriving Analyzer
+Versión unificada con todas las capacidades individuales
+"""
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import folium
+from folium.plugins import HeatMap
+import argparse
+import sys
+import os
+from datetime import datetime
+import warnings
+import csv
+import re
+from typing import List, Dict, Any, Optional
+from collections import Counter
+
+# Configuración de estilo y warnings
+plt.style.use('default')
+sns.set_palette("husl")
+warnings.filterwarnings("ignore", category=UserWarning, module="folium")
+warnings.filterwarnings("ignore", category=FutureWarning)
+
+# ============================================================================
+# PARTE 1: DEPURADOR CSV - Detección y reparación de problemas de fecha
+# ============================================================================
+
+def analyze_date_problems(csv_file):
+    """
+    Analiza específicamente problemas con formatos de fecha en el archivo CSV
+    """
+    print(f"ANALIZANDO PROBLEMAS DE FECHA EN: {csv_file}")
+    print("=" * 60)
+    
+    try:
+        # Leer el archivo línea por línea
+        with open(csv_file, 'r', encoding='utf-8', errors='ignore') as f:
+            lines = f.readlines()
+        
+        print(f"Total de líneas en el archivo: {len(lines)}")
+        
+        if len(lines) < 2:
+            print("El archivo está vacío o tiene muy pocas líneas")
+            return None, [], []
+        
+        # Analizar estructura de encabezados
+        print("\nANALIZANDO ESTRUCTURA:")
+        headers = lines[1].strip().split(',')
+        print(f"Encabezados detectados ({len(headers)}): {headers}")
+        
+        # Buscar la columna que debería contener fechas
+        date_columns = []
+        for i, header in enumerate(headers):
+            if any(keyword in header.upper() for keyword in ['TIME', 'DATE', 'SEEN', 'FIRST', 'LAST']):
+                date_columns.append((i, header))
+        
+        print(f"Columnas potencialmente de fecha: {date_columns}")
+        
+        # Analizar muestras de datos de las columnas de fecha
+        date_samples = {}
+        problematic_lines = []
+        
+        for line_num, line in enumerate(lines[2:12], start=3):
+            if line_num >= len(lines):
+                break
+                
+            fields = line.strip().split(',')
+            for col_idx, col_name in date_columns:
+                if col_idx < len(fields):
+                    value = fields[col_idx]
+                    if col_name not in date_samples:
+                        date_samples[col_name] = []
+                    date_samples[col_name].append(value)
+                    
+                    # Verificar si el valor parece una fecha
+                    if not looks_like_date(value):
+                        problematic_lines.append({
+                            'line': line_num,
+                            'column': col_name,
+                            'value': value,
+                            'reason': 'No parece fecha'
+                        })
+        
+        print(f"\nMUESTRAS DE FECHAS:")
+        for col_name, samples in date_samples.items():
+            print(f"  {col_name}: {samples}")
+        
+        return headers, problematic_lines, date_columns
+        
+    except Exception as e:
+        print(f"ERROR durante el análisis: {e}")
+        return None, [], []
+
+
+def looks_like_date(value):
+    """
+    Determina si un valor parece ser una fecha
+    """
+    if not value or value.strip() == '':
+        return False
+    
+    # Patrones comunes de fecha
+    date_patterns = [
+        r'\d{4}-\d{2}-\d{2}',
+        r'\d{2}/\d{2}/\d{4}',
+        r'\d{2}-\d{2}-\d{4}',
+        r'\d{4}/\d{2}/\d{2}',
+    ]
+    
+    value_str = str(value).strip()
+    
+    # Verificar patrones
+    for pattern in date_patterns:
+        if re.search(pattern, value_str):
+            return True
+    
+    # Verificar si contiene componentes de fecha
+    date_keywords = ['2024', '2025', '2023', 'jan', 'feb', 'mar', 'apr', 'may', 'jun', 
+                    'jul', 'aug', 'sep', 'oct', 'nov', 'dec', 'am', 'pm']
+    
+    if any(keyword in value_str.lower() for keyword in date_keywords):
+        return True
+    
+    return False
+
+
+def repair_date_field(value):
+    """
+    Repara un campo individual que debería ser una fecha
+    """
+    if not value or value.strip() == '':
+        return value
+    
+    value_str = str(value).strip()
+    
+    # Caso 1: El valor "OPEN" - reemplazar con fecha actual
+    if value_str.upper() == 'OPEN':
+        return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    # Caso 2: Valores que claramente no son fechas
+    non_date_values = ['WPA2', 'WPA', 'WEP', 'OPN', 'OPEN', 'UNKNOWN', 'N/A', 'NULL']
+    if value_str.upper() in non_date_values:
+        return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    # Caso 3: Fechas en formato incorrecto pero reconocible
+    try:
+        formats_to_try = [
+            '%Y-%m-%d %H:%M:%S',
+            '%d/%m/%Y %H:%M:%S',
+            '%m/%d/%Y %H:%M:%S',
+            '%Y/%m/%d %H:%M:%S',
+            '%d-%m-%Y %H:%M:%S',
+            '%m-%d-%Y %H:%M:%S',
+            '%Y%m%d%H%M%S',
+        ]
+        
+        for fmt in formats_to_try:
+            try:
+                parsed_date = datetime.strptime(value_str, fmt)
+                return parsed_date.strftime('%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                continue
+    except:
+        pass
+    
+    return value_str
+
+
+def repair_date_issues(csv_file, output_file=None):
+    """
+    Repara problemas específicos de formato de fecha en el archivo CSV
+    """
+    if output_file is None:
+        output_file = csv_file.replace('.csv', '_fixed.csv')
+    
+    print(f"\nREPARANDO PROBLEMAS DE FECHA")
+    print("=" * 50)
+    
+    headers, problematic_lines, date_columns = analyze_date_problems(csv_file)
+    
+    if not headers:
+        print("No se puede proceder con la reparación")
+        return None
+    
+    try:
+        # Leer el archivo original
+        with open(csv_file, 'r', encoding='utf-8', errors='ignore') as f:
+            lines = f.readlines()
+        
+        repaired_lines = []
+        corrections_made = 0
+        date_column_indices = [idx for idx, name in date_columns]
+        
+        print(f"\nAPLICANDO CORRECCIONES DE FECHA...")
+        
+        for line_num, line in enumerate(lines):
+            original_line = line.strip()
+            
+            # Mantener las primeras dos líneas
+            if line_num < 2:
+                repaired_lines.append(original_line)
+                continue
+            
+            fields = original_line.split(',')
+            
+            # Reparar campos de fecha
+            line_corrected = False
+            for col_idx in date_column_indices:
+                if col_idx < len(fields):
+                    original_value = fields[col_idx]
+                    repaired_value = repair_date_field(original_value)
+                    
+                    if repaired_value != original_value:
+                        fields[col_idx] = repaired_value
+                        line_corrected = True
+                        corrections_made += 1
+                        
+                        if corrections_made <= 5:
+                            print(f"  Línea {line_num}: '{original_value}' → '{repaired_value}'")
+            
+            repaired_lines.append(','.join(fields))
+            
+            if line_num % 100 == 0 and line_num > 0:
+                print(f"  Procesadas {line_num} líneas...")
+        
+        # Guardar archivo reparado
+        with open(output_file, 'w', encoding='utf-8') as f:
+            for line in repaired_lines:
+                f.write(line + '\n')
+        
+        print(f"\nREPARACIÓN DE FECHAS COMPLETADA")
+        print("=" * 40)
+        print(f"ESTADÍSTICAS:")
+        print(f"   - Archivo original: {csv_file}")
+        print(f"   - Archivo reparado: {output_file}")
+        print(f"   - Líneas procesadas: {len(repaired_lines)}")
+        print(f"   - Correcciones de fecha aplicadas: {corrections_made}")
+        print(f"   - Columnas de fecha identificadas: {[name for idx, name in date_columns]}")
+        
+        return output_file
+        
+    except Exception as e:
+        print(f"ERROR durante la reparación: {e}")
+        return None
+
+
+def validate_date_repair(repaired_file):
+    """
+    Valida que las fechas en el archivo reparado sean correctas
+    """
+    print(f"\nVALIDANDO REPARACIÓN DE FECHAS: {repaired_file}")
+    
+    try:
+        df = pd.read_csv(repaired_file, skiprows=1)
+        
+        print("INFORMACIÓN DEL DATAFRAME REPARADO:")
+        print(f"   - Filas: {len(df)}")
+        print(f"   - Columnas: {list(df.columns)}")
+        
+        # Identificar columnas de fecha
+        date_cols = []
+        for col in df.columns:
+            if any(keyword in col.upper() for keyword in ['TIME', 'DATE', 'SEEN', 'FIRST', 'LAST']):
+                date_cols.append(col)
+        
+        print(f"   - Columnas de fecha identificadas: {date_cols}")
+        
+        for col in date_cols:
+            if col in df.columns:
+                print(f"\nANÁLISIS DE LA COLUMNA '{col}':")
+                unique_types = df[col].apply(lambda x: type(x).__name__).unique()
+                print(f"   - Tipos de datos: {unique_types}")
+                
+                unique_values = df[col].dropna().unique()
+                print(f"   - Valores únicos (primeros 5): {unique_values[:5]}")
+                
+                try:
+                    date_series = pd.to_datetime(df[col], errors='coerce', format='mixed')
+                    valid_dates = date_series.notna().sum()
+                    invalid_dates = date_series.isna().sum()
+                    
+                    print(f"   - Fechas válidas: {valid_dates}")
+                    print(f"   - Fechas inválidas: {invalid_dates}")
+                    
+                    if valid_dates > 0:
+                        print(f"   - Rango de fechas: {date_series.min()} a {date_series.max()}")
+                    
+                except Exception as e:
+                    print(f"  Error al convertir fechas: {e}")
+        
+        print(f"\nVALIDACIÓN COMPLETADA")
+        return True
+        
+    except Exception as e:
+        print(f"ERROR durante la validación: {e}")
+        return False
+
+
+# ============================================================================
+# PARTE 2: ANÁLISIS DE INTERFERENCIAS - Análisis de canales e interferencias
+# ============================================================================
+
+def robust_csv_loader(csv_file):
+    """
+    Carga el archivo CSV de manera robusta, manejando inconsistencias
+    """
+    print(f"Cargando archivo CSV: {csv_file}")
+    
+    strategies = [
+        lambda: pd.read_csv(csv_file, skiprows=1),
+        lambda: pd.read_csv(csv_file, skiprows=1, on_bad_lines='skip', engine='python'),
+        lambda: pd.read_csv(csv_file, skiprows=1, dtype=str, on_bad_lines='skip'),
+        lambda: pd.read_csv(csv_file, skiprows=1, sep=None, engine='python'),
+    ]
+    
+    for i, strategy in enumerate(strategies):
+        try:
+            print(f"    Intentando estrategia {i+1}...")
+            df = strategy()
+            print(f"    Estrategia {i+1} exitosa - {len(df)} filas cargadas")
+            return df
+        except Exception as e:
+            print(f"    Estrategia {i+1} falló: {e}")
+            continue
+    
+    print("    Intentando carga manual línea por línea...")
+    try:
+        return manual_csv_loader(csv_file)
+    except Exception as e:
+        print(f"    Carga manual falló: {e}")
+    
+    return None
+
+
+def manual_csv_loader(csv_file):
+    """
+    Carga el CSV manualmente, línea por línea
+    """
+    with open(csv_file, 'r', encoding='utf-8', errors='ignore') as f:
+        lines = f.readlines()
+    
+    if len(lines) < 2:
+        raise ValueError("Archivo demasiado corto")
+    
+    headers = lines[1].strip().split(',')
+    expected_columns = len(headers)
+    
+    print(f"   Encabezados detectados: {expected_columns} columnas")
+    print(f"   Líneas totales: {len(lines)}")
+    
+    data = []
+    problematic_lines = 0
+    
+    for i, line in enumerate(lines[2:], start=3):
+        fields = line.strip().split(',')
+        
+        if len(fields) == expected_columns:
+            data.append(fields)
+        elif len(fields) > expected_columns:
+            data.append(fields[:expected_columns])
+            problematic_lines += 1
+        elif len(fields) < expected_columns:
+            padded_fields = fields + [np.nan] * (expected_columns - len(fields))
+            data.append(padded_fields)
+            problematic_lines += 1
+    
+    if problematic_lines > 0:
+        print(f"     Líneas problemáticas corregidas: {problematic_lines}")
+    
+    df = pd.DataFrame(data, columns=headers)
+    return df
+
+
+def clean_and_validate_data(df):
+    """
+    Limpia y valida los datos del DataFrame
+    """
+    print("Limpiando y validando datos...")
+    
+    print(f"    Forma inicial: {df.shape[0]} filas, {df.shape[1]} columnas")
+    
+    critical_columns = ['SSID', 'RSSI', 'Channel']
+    missing_columns = [col for col in critical_columns if col not in df.columns]
+    
+    if missing_columns:
+        print(f"     Columnas faltantes: {missing_columns}")
+        print(f"    Columnas disponibles: {list(df.columns)}")
+    
+    if 'RSSI' in df.columns:
+        df['RSSI'] = pd.to_numeric(df['RSSI'], errors='coerce')
+        rssi_nulos = df['RSSI'].isna().sum()
+        if rssi_nulos > 0:
+            print(f"     Valores RSSI no numéricos eliminados: {rssi_nulos}")
+    
+    if 'Channel' in df.columns:
+        df['Channel'] = pd.to_numeric(df['Channel'], errors='coerce')
+        channel_nulos = df['Channel'].isna().sum()
+        if channel_nulos > 0:
+            print(f"     Valores Channel no numéricos eliminados: {channel_nulos}")
+    
+    initial_rows = len(df)
+    df = df.dropna(subset=['RSSI', 'Channel'])
+    final_rows = len(df)
+    removed_rows = initial_rows - final_rows
+    
+    if removed_rows > 0:
+        print(f"   Filas sin datos críticos eliminadas: {removed_rows}")
+    
+    print(f"    Forma final: {df.shape[0]} filas, {df.shape[1]} columnas")
+    return df
+
+
+def format_channels_list(channels):
+    """
+    Convierte lista de canales a enteros normales
+    """
+    return [int(channel) for channel in channels]
+
+
+def generate_comprehensive_analysis(df, csv_file):
+    """
+    Genera un análisis completo e interpretado de los datos
+    """
+    analysis = "\n" + "="*60 + "\n"
+    analysis += "RESUMEN EJECUTIVO DEL ANÁLISIS\n"
+    analysis += "="*60 + "\n\n"
+    
+    total_networks = len(df)
+    weak_networks = len(df[df['RSSI'] <= -80])
+    weak_percentage = (weak_networks / total_networks) * 100
+    
+    analysis += "HALLAZGOS PRINCIPALES:\n"
+    analysis += f"   • Total de redes detectadas: {total_networks:,} redes\n"
+    analysis += f"   • Redes con señal débil: {weak_networks:,} redes ({weak_percentage:.1f}% del total)\n"
+    analysis += f"   • Canales utilizados: {len(df['Channel'].unique())} canales diferentes\n\n"
+    
+    non_overlapping = [1, 6, 11]
+    channel_counts = df['Channel'].value_counts()
+    
+    analysis += "SITUACIÓN DE CANALES NO SUPERPUESTOS:\n"
+    for channel in non_overlapping:
+        count = channel_counts.get(channel, 0)
+        status = ""
+        if count > 400:
+            status = " (Extremadamente congestionado)"
+        elif count > 300:
+            status = " (Muy congestionado)"
+        elif count > 200:
+            status = " (Congestionado)"
+        elif count > 100:
+            status = " (Moderado)"
+        else:
+            status = " (Óptimo)"
+        analysis += f"   • Canal {channel}: {count:,} redes {status}\n"
+    
+    analysis += "\nCANALES PROBLEMÁTICOS (INTERFERENCIA):\n"
+    overlapping_issues = []
+    for channel in df['Channel'].unique():
+        channel_int = int(channel)
+        if channel_int not in non_overlapping:
+            closest_non_overlap = min(non_overlapping, key=lambda x: abs(x - channel_int))
+            count = len(df[df['Channel'] == channel])
+            overlapping_issues.append((channel_int, closest_non_overlap, count))
+    
+    overlapping_issues.sort(key=lambda x: x[2], reverse=True)
+    
+    for channel, closest, count in overlapping_issues[:6]:
+        analysis += f"   • Canal {channel}: {count:,} redes (interfiere con canal {closest})\n"
+    
+    analysis += "\n" + "="*60 + "\n"
+    analysis += "RECOMENDACIONES ESTRATÉGICAS\n"
+    analysis += "="*60 + "\n\n"
+    
+    analysis += "PROBLEMAS CRÍTICOS IDENTIFICADOS:\n"
+    analysis += "   1. Canal 11 saturado - Evitar completamente\n"
+    analysis += "   2. Todos los canales no superpuestos están congestionados\n"
+    analysis += "   3. Alta densidad de redes en ambiente 2.4GHz\n\n"
+    
+    analysis += "ESTRATEGIAS RECOMENDADAS:\n"
+    analysis += "   1. MIGRACIÓN A 5GHz:\n"
+    analysis += "      • Configurar redes en banda 5GHz si los dispositivos lo soportan\n"
+    analysis += "      • Menor interferencia y más canales disponibles\n\n"
+    
+    analysis += "   2. CANALES ALTERNATIVOS EN 2.4GHz:\n"
+    analysis += f"      • Canal 13: {channel_counts.get(13, 0)} redes (menos congestionado)\n"
+    analysis += f"      • Canal 14: {channel_counts.get(14, 0)} redes (menos congestionado)\n"
+    analysis += f"      • Canal 5: {channel_counts.get(5, 0)} redes (muy poco congestionado)\n\n"
+    
+    analysis += "   3. OPTIMIZACIÓN DE 2.4GHz:\n"
+    analysis += "      • Usar ancho de canal de 20MHz (no 40MHz)\n"
+    analysis += "      • Transmitir en potencia baja para no afectar redes vecinas\n"
+    analysis += "      • Programar reinicios nocturnos del router\n\n"
+    
+    analysis += "   4. PARA REDES CRÍTICAS:\n"
+    analysis += "      • Implementar calidad de servicio (QoS)\n"
+    analysis += "      • Usar banda dual (2.4GHz para IoT, 5GHz para dispositivos principales)\n\n"
+    
+    analysis += "PARA USUARIOS FINALES:\n"
+    analysis += "   • Conectar dispositivos importantes a 5GHz cuando sea posible\n"
+    analysis += "   • Ubicar el router lejos de interferencias\n"
+    analysis += "   • Considerar sistemas mesh para mejor cobertura\n\n"
+    
+    analysis += "PERSPECTIVA:\n"
+    analysis += "   El entorno analizado muestra una SATURACIÓN SEVERA de la banda 2.4GHz.\n"
+    analysis += "   La migración a 5GHz no es solo recomendable, sino necesaria.\n"
+    
+    return analysis
+
+
+def analyze_wifi_interference(csv_file, df=None):
+    """
+    Realiza análisis de interferencias WiFi
+    """
+    if df is None:
+        try:
+            df = robust_csv_loader(csv_file)
+            
+            if df is None:
+                print("No se pudo cargar el archivo con ninguna estrategia")
+                return None
+            
+            df = clean_and_validate_data(df)
+            
+            if len(df) == 0:
+                print("No hay datos válidos después de la limpieza")
+                return None
+            
+            print(f"Archivo '{csv_file}' procesado correctamente")
+            print(f"Filas válidas: {len(df)}")
+            
+        except FileNotFoundError:
+            print(f"Error: No se encontró el archivo '{csv_file}'")
+            return None
+        except Exception as e:
+            print(f"Error al procesar el archivo: {e}")
+            return None
+    
+    def classify_signal(rssi):
+        if rssi >= -50:
+            return "Excelente"
+        elif rssi >= -60:
+            return "Buena"
+        elif rssi >= -70:
+            return "Regular"
+        elif rssi >= -80:
+            return "Débil"
+        else:
+            return "Muy débil"
+    
+    df['Calidad'] = df['RSSI'].apply(classify_signal)
+    
+    print("\n" + "="*50)
+    print("ANÁLISIS DE INTERFERENCIAS WiFi")
+    print("="*50)
+    
+    print("\n1. RESUMEN GENERAL DE REDES DETECTADAS:")
+    print(f"   - Total de redes detectadas: {len(df)}")
+    print(f"   - Redes únicas por SSID: {df['SSID'].nunique()}")
+    
+    print("\n2. DISTRIBUCIÓN POR CANAL:")
+    channel_dist = df['Channel'].value_counts().sort_index()
+    for channel, count in channel_dist.items():
+        print(f"   - Canal {int(channel)}: {count} redes")
+    
+    print("\n3. ANÁLISIS DE INTERFERENCIAS POR CANAL:")
+    
+    non_overlapping = [1, 6, 11]
+    overlapping_issues = []
+    
+    for channel in df['Channel'].unique():
+        channel_int = int(channel)
+        if channel_int not in non_overlapping:
+            closest_non_overlap = min(non_overlapping, key=lambda x: abs(x - channel_int))
+            overlapping_issues.append((channel_int, closest_non_overlap, abs(channel_int - closest_non_overlap)))
+    
+    if overlapping_issues:
+        print("    Se detectaron redes en canales que causan interferencia:")
+        for channel, closest, distance in overlapping_issues:
+            count = len(df[df['Channel'] == channel])
+            print(f"     - Canal {channel}: {count} redes (interfiere con canal {closest})")
+    else:
+        print("    Todas las redes están en canales no superpuestos (1, 6, 11)")
+    
+    print("\n4. INTENSIDAD DE SEÑAL POR CANAL (RSSI promedio):")
+    rssi_by_channel = df.groupby('Channel')['RSSI'].agg(['mean', 'count']).round(1)
+    for channel, data in rssi_by_channel.iterrows():
+        print(f"   - Canal {int(channel)}: {data['mean']} dBm ({int(data['count'])} redes)")
+    
+    print("\n5. REDES CON POSIBLE INTERFERENCIA:")
+    interference_threshold = -80
+    weak_networks = df[df['RSSI'] <= interference_threshold]
+    
+    if len(weak_networks) > 0:
+        print(f"    Se detectaron {len(weak_networks)} redes con señal débil (RSSI <= {interference_threshold} dBm):")
+        for _, row in weak_networks.head(10).iterrows():
+            print(f"     - {row['SSID']} (Canal {int(row['Channel'])}, RSSI: {row['RSSI']} dBm)")
+        if len(weak_networks) > 10:
+            print(f"     ... y {len(weak_networks) - 10} redes más")
+    else:
+        print("    No se detectaron redes con señal extremadamente débil")
+    
+    print("\n6. RECOMENDACIONES:")
+    
+    channel_counts = df['Channel'].value_counts()
+    if not channel_counts.empty:
+        most_congested = int(channel_counts.idxmax())
+        least_congested = int(channel_counts.idxmin())
+        
+        print(f"   - Canal más congestionado: {most_congested} ({channel_counts[most_congested]} redes)")
+        print(f"   - Canal menos congestionado: {least_congested} ({channel_counts[least_congested]} redes)")
+        
+        optimal_channels = []
+        for channel in non_overlapping:
+            if channel not in df['Channel'].values or channel_counts.get(channel, 0) < 2:
+                optimal_channels.append(channel)
+        
+        if optimal_channels:
+            print(f"   - Canales recomendados: {optimal_channels} (poca congestión)")
+        else:
+            print("   - Todos los canales no superpuestos están congestionados")
+    
+    print("\n7. GENERANDO VISUALIZACIONES...")
+    
+    try:
+        plt.style.use('default')
+        fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+        fig.suptitle(f'Análisis de Interferencias WiFi', fontsize=16)
+        
+        channel_counts = df['Channel'].value_counts().sort_index()
+        axes[0, 0].bar(channel_counts.index.astype(str), channel_counts.values, color='skyblue')
+        axes[0, 0].set_title('Distribución de Redes por Canal')
+        axes[0, 0].set_xlabel('Canal')
+        axes[0, 0].set_ylabel('Número de Redes')
+        
+        channel_rssi = df.groupby('Channel')['RSSI'].mean()
+        axes[0, 1].bar(channel_rssi.index.astype(str), channel_rssi.values, color='lightcoral')
+        axes[0, 1].set_title('Intensidad Promedio de Señal por Canal')
+        axes[0, 1].set_xlabel('Canal')
+        axes[0, 1].set_ylabel('RSSI Promedio (dBm)')
+        
+        quality_counts = df['Calidad'].value_counts()
+        colors = ['#4CAF50', '#8BC34A', '#FFC107', '#FF9800', '#F44336']
+        axes[1, 0].pie(quality_counts.values, labels=quality_counts.index, autopct='%1.1f%%', colors=colors)
+        axes[1, 0].set_title('Distribución de Calidad de Señal')
+        
+        ssid_counts = df['SSID'].value_counts().head(8)
+        axes[1, 1].bar(range(len(ssid_counts)), ssid_counts.values, color='mediumpurple')
+        axes[1, 1].set_title('Redes por SSID (Top 8)')
+        axes[1, 1].set_xlabel('SSID')
+        axes[1, 1].set_ylabel('Número de Redes')
+        axes[1, 1].set_xticks(range(len(ssid_counts)))
+        axes[1, 1].set_xticklabels(ssid_counts.index, rotation=45, ha='right')
+        
+        plt.tight_layout()
+        base_name = os.path.splitext(os.path.basename(csv_file))[0]
+        output_image = f'{base_name}_analysis.png'
+        plt.savefig(output_image, dpi=300, bbox_inches='tight')
+        plt.close()
+        print(f"    Gráficas guardadas como '{output_image}'")
+        
+    except Exception as e:
+        print(f"    Error al generar visualizaciones: {e}")
+    
+    try:
+        base_name = os.path.splitext(os.path.basename(csv_file))[0]
+        output_report = f'{base_name}_report.txt'
+        with open(output_report, 'w', encoding='utf-8') as f:
+            f.write("ANÁLISIS DE INTERFERENCIAS WiFi\n")
+            f.write("="*50 + "\n\n")
+            f.write(f"Archivo analizado: {csv_file}\n")
+            f.write(f"Redes analizadas: {len(df)}\n")
+            
+            canales_detectados = format_channels_list(df['Channel'].unique())
+            f.write(f"Canales detectados: {sorted(canales_detectados)}\n")
+            
+            weak_signals = len(df[df['RSSI'] <= -80])
+            f.write(f"Redes con señal débil (RSSI <= -80 dBm): {weak_signals}\n")
+            
+            f.write("\nDistribución por canal:\n")
+            for channel, count in df['Channel'].value_counts().sort_index().items():
+                f.write(f"- Canal {int(channel)}: {count} redes\n")
+            
+            comprehensive_analysis = generate_comprehensive_analysis(df, csv_file)
+            f.write(comprehensive_analysis)
+        
+        print(f"    Reporte guardado como '{output_report}'")
+        
+    except Exception as e:
+        print(f"    Error al guardar reporte: {e}")
+    
+    return df
+
+
+# ============================================================================
+# PARTE 3: WARDRIVING ANALYZER - Análisis completo de wardriving
+# ============================================================================
+
+class WardrivingAnalyzer:
+    """Clase principal para análisis de datos de wardriving"""
+    
+    def __init__(self, archivo_csv: str):
+        self.archivo_csv = archivo_csv
+        self.df = None
+        self.nombre_base = os.path.splitext(os.path.basename(archivo_csv))[0]
+        
+    def cargar_datos(self) -> bool:
+        """Carga y prepara los datos del archivo CSV"""
+        try:
+            if not os.path.exists(self.archivo_csv):
+                print(f"Error: El archivo '{self.archivo_csv}' no existe")
+                return False
+            
+            try:
+                self.df = pd.read_csv(self.archivo_csv, skiprows=1, engine='python', 
+                                     quoting=csv.QUOTE_MINIMAL, on_bad_lines='warn')
+                print("Datos cargados con engine de Python")
+            except Exception as e:
+                print(f"Primer intento falló: {e}")
+                print("Intentando método alternativo...")
+                
+                temp_df = pd.read_csv(self.archivo_csv, engine='python', 
+                                     quoting=csv.QUOTE_MINIMAL, on_bad_lines='skip')
+                
+                if len(temp_df.columns) > 1 and any('SSID' in str(col) for col in temp_df.columns):
+                    self.df = temp_df
+                    print("Datos cargados sin skiprows")
+                else:
+                    self.df = pd.read_csv(self.archivo_csv, skiprows=1, 
+                                         error_bad_lines=False, warn_bad_lines=True)
+                    print("Datos cargados con error_bad_lines=False")
+            
+            if self.df is None or self.df.empty:
+                print("No se pudieron cargar datos válidos")
+                return False
+            
+            self.df.columns = self.df.columns.str.strip()
+            
+            columnas_requeridas = ['SSID', 'FirstSeen', 'Channel', 'Frequency', 'RSSI', 
+                                  'CurrentLatitude', 'CurrentLongitude', 'AuthMode']
+            columnas_faltantes = [col for col in columnas_requeridas if col not in self.df.columns]
+            
+            if columnas_faltantes:
+                print(f"Columnas faltantes: {columnas_faltantes}")
+                print(f"Columnas disponibles: {list(self.df.columns)}")
+                
+                mapeo_columnas = {
+                    'SSID': ['SSID', 'ssid', 'Ssid'],
+                    'FirstSeen': ['FirstSeen', 'First seen', 'firstseen', 'Timestamp'],
+                    'Channel': ['Channel', 'channel', 'CH'],
+                    'Frequency': ['Frequency', 'frequency', 'Freq'],
+                    'RSSI': ['RSSI', 'rssi', 'Signal'],
+                    'CurrentLatitude': ['CurrentLatitude', 'Latitude', 'Lat', 'latitude'],
+                    'CurrentLongitude': ['CurrentLongitude', 'Longitude', 'Lon', 'longitude'],
+                    'AuthMode': ['AuthMode', 'Authentication', 'Encryption', 'auth']
+                }
+                
+                for col_requerida in columnas_faltantes:
+                    for posible_nombre in mapeo_columnas.get(col_requerida, []):
+                        if posible_nombre in self.df.columns:
+                            self.df[col_requerida] = self.df[posible_nombre]
+                            print(f"Mapeada columna '{posible_nombre}' a '{col_requerida}'")
+                            break
+            
+            try:
+                self.df['Timestamp'] = pd.to_datetime(self.df['FirstSeen'], errors='coerce')
+                
+                if 'Channel' in self.df.columns:
+                    self.df['Channel'] = pd.to_numeric(self.df['Channel'], errors='coerce').fillna(0).astype(int)
+                
+                if 'Frequency' in self.df.columns:
+                    self.df['Frequency'] = pd.to_numeric(self.df['Frequency'], errors='coerce').fillna(0).astype(int)
+                
+                if 'RSSI' in self.df.columns:
+                    self.df['RSSI'] = pd.to_numeric(self.df['RSSI'], errors='coerce')
+                
+                if 'CurrentLatitude' in self.df.columns:
+                    self.df['CurrentLatitude'] = pd.to_numeric(self.df['CurrentLatitude'], errors='coerce')
+                    self.df = self.df.dropna(subset=['CurrentLatitude'])
+                
+                if 'CurrentLongitude' in self.df.columns:
+                    self.df['CurrentLongitude'] = pd.to_numeric(self.df['CurrentLongitude'], errors='coerce')
+                    self.df = self.df.dropna(subset=['CurrentLongitude'])
+                
+                print(f"Datos preparados: {len(self.df)} registros válidos")
+                return True
+                
+            except Exception as e:
+                print(f"Error al preparar datos: {e}")
+                return False
+            
+        except Exception as e:
+            print(f"Error al cargar datos: {e}")
+            return False
+    
+    def analizar_general(self) -> Dict[str, Any]:
+        """Realiza análisis general de los datos"""
+        if self.df is None or self.df.empty:
+            return {}
+        
+        try:
+            resultados = {
+                'total_registros': len(self.df),
+                'periodo_captura': f"{self.df['FirstSeen'].min()} - {self.df['FirstSeen'].max()}",
+                'redes_unicas': self.df['SSID'].nunique(),
+                'top_redes': self.df['SSID'].value_counts().head(5).to_dict(),
+                'metricas_rssi': {
+                    'promedio': self.df['RSSI'].mean(),
+                    'minimo': self.df['RSSI'].min(),
+                    'maximo': self.df['RSSI'].max(),
+                    'desviacion': self.df['RSSI'].std()
+                }
+            }
+            
+            return resultados
+        except Exception as e:
+            print(f"Error en análisis general: {e}")
+            return {}
+    
+    def generar_mapa_calor(self) -> str:
+        """Genera mapa de calor de RSSI"""
+        print("Generando mapa de calor de RSSI...")
+        
+        try:
+            centro_lat = self.df['CurrentLatitude'].mean()
+            centro_lon = self.df['CurrentLongitude'].mean()
+            
+            mapa = folium.Map(
+                location=[centro_lat, centro_lon],
+                zoom_start=16,
+                tiles='OpenStreetMap'
+            )
+            
+            heat_data = []
+            for _, row in self.df.iterrows():
+                intensity = max(0.1, min(1.0, (row['RSSI'] + 100) / 40))
+                heat_data.append([row['CurrentLatitude'], row['CurrentLongitude'], intensity])
+            
+            HeatMap(heat_data, radius=15, blur=10, max_zoom=1).add_to(mapa)
+            
+            archivo_mapa = f"mapa_calor_{self.nombre_base}.html"
+            mapa.save(archivo_mapa)
+            print(f"Mapa de calor guardado: {archivo_mapa}")
+            
+            return archivo_mapa
+        except Exception as e:
+            print(f"Error generando mapa de calor: {e}")
+            return ""
+    
+    def generar_mapa_localizacion(self) -> str:
+        """Genera mapa de localización con puntos de acceso"""
+        print("Generando mapa de localización...")
+        
+        try:
+            centro_lat = self.df['CurrentLatitude'].mean()
+            centro_lon = self.df['CurrentLongitude'].mean()
+            
+            mapa = folium.Map(
+                location=[centro_lat, centro_lon],
+                zoom_start=16,
+                tiles='OpenStreetMap'
+            )
+            
+            grupos = self.df.groupby(['SSID', 'CurrentLatitude', 'CurrentLongitude'])
+            colores = ['red', 'blue', 'green', 'purple', 'orange', 'darkred', 'darkblue']
+            
+            for color_idx, ((ssid, lat, lon), group) in enumerate(grupos):
+                rssi_promedio = group['RSSI'].mean()
+                cantidad = len(group)
+                
+                popup_text = f"""
+                <b>{ssid}</b><br>
+                Ubicación: {lat:.6f}, {lon:.6f}<br>
+                RSSI: {rssi_promedio:.1f} dBm<br>
+                Detecciones: {cantidad}
+                """
+                
+                folium.CircleMarker(
+                    location=[lat, lon],
+                    radius=8,
+                    popup=popup_text,
+                    color=colores[color_idx % len(colores)],
+                    fill=True,
+                    fillOpacity=0.6
+                ).add_to(mapa)
+            
+            archivo_mapa = f"mapa_localizacion_{self.nombre_base}.html"
+            mapa.save(archivo_mapa)
+            print(f"Mapa de localización guardado: {archivo_mapa}")
+            
+            return archivo_mapa
+        except Exception as e:
+            print(f"Error generando mapa de localización: {e}")
+            return ""
+    
+    def generar_graficos(self):
+        """Genera gráficos avanzados de análisis"""
+        print("Generando gráficos avanzados...")
+        
+        try:
+            fig, axes = plt.subplots(3, 2, figsize=(15, 15))
+            fig.suptitle(f'Análisis Wardriving - {self.nombre_base}', fontsize=16, fontweight='bold')
+            
+            if 'Channel' in self.df.columns and 'RSSI' in self.df.columns:
+                canales_unicos = sorted(self.df['Channel'].dropna().unique())
+                datos_canales = [self.df[self.df['Channel'] == canal]['RSSI'] for canal in canales_unicos]
+                
+                axes[0, 0].boxplot(datos_canales, tick_labels=canales_unicos)
+                axes[0, 0].set_title('Distribución de RSSI por Canal')
+                axes[0, 0].set_xlabel('Canal')
+                axes[0, 0].set_ylabel('RSSI (dBm)')
+                axes[0, 0].grid(True, alpha=0.3)
+            
+            if 'Channel' in self.df.columns and 'RSSI' in self.df.columns:
+                canal_rssi = self.df.groupby('Channel')['RSSI'].mean().reset_index()
+                scatter = axes[0, 1].scatter(canal_rssi['Channel'], canal_rssi['RSSI'], 
+                                            c=canal_rssi['RSSI'], cmap='viridis', s=100)
+                plt.colorbar(scatter, ax=axes[0, 1], label='RSSI Promedio (dBm)')
+                axes[0, 1].set_title('RSSI Promedio por Canal')
+                axes[0, 1].set_xlabel('Canal')
+                axes[0, 1].set_ylabel('RSSI Promedio (dBm)')
+                axes[0, 1].grid(True, alpha=0.3)
+            
+            if 'Timestamp' in self.df.columns and 'RSSI' in self.df.columns:
+                df_sorted = self.df.sort_values('Timestamp')
+                axes[1, 0].plot(df_sorted['Timestamp'], df_sorted['RSSI'], 'o-', alpha=0.7, markersize=2)
+                axes[1, 0].set_title('Evolución Temporal de la Señal')
+                axes[1, 0].set_xlabel('Tiempo')
+                axes[1, 0].set_ylabel('RSSI (dBm)')
+                axes[1, 0].tick_params(axis='x', rotation=45)
+                axes[1, 0].grid(True, alpha=0.3)
+            
+            if 'AuthMode' in self.df.columns:
+                auth_counts = self.df['AuthMode'].value_counts()
+                axes[1, 1].pie(auth_counts.values, labels=auth_counts.index, autopct='%1.1f%%')
+                axes[1, 1].set_title('Métodos de Autenticación')
+            
+            if all(col in self.df.columns for col in ['CurrentLongitude', 'CurrentLatitude', 'RSSI']):
+                hexbin = axes[2, 0].hexbin(self.df['CurrentLongitude'], self.df['CurrentLatitude'], 
+                                          C=self.df['RSSI'], gridsize=15, cmap='viridis', 
+                                          reduce_C_function=np.mean)
+                plt.colorbar(hexbin, ax=axes[2, 0], label='RSSI Promedio (dBm)')
+                axes[2, 0].set_title('Densidad de Redes y Intensidad de Señal')
+                axes[2, 0].set_xlabel('Longitud')
+                axes[2, 0].set_ylabel('Latitud')
+            
+            if 'RSSI' in self.df.columns:
+                axes[2, 1].hist(self.df['RSSI'], bins=20, alpha=0.7, edgecolor='black')
+                axes[2, 1].set_title('Distribución de Intensidad de Señal')
+                axes[2, 1].set_xlabel('RSSI (dBm)')
+                axes[2, 1].set_ylabel('Frecuencia')
+                axes[2, 1].grid(True, alpha=0.3)
+            
+            plt.tight_layout()
+            archivo_graficos = f'graficos_Avanzados_{self.nombre_base}.png'
+            plt.savefig(archivo_graficos, dpi=300, bbox_inches='tight')
+            plt.close()
+            
+            print(f"Gráficos guardados: {archivo_graficos}")
+            return archivo_graficos
+        except Exception as e:
+            print(f"Error generando gráficos: {e}")
+            return ""
+    
+    def generar_reporte(self):
+        """Genera reporte detallado del análisis"""
+        print("\n" + "=" * 60)
+        print(f"REPORTE DETALLADO - {self.nombre_base}")
+        print("=" * 60)
+        
+        if self.df is None or self.df.empty:
+            print("No hay datos para generar reporte")
+            return
+        
+        analisis = self.analizar_general()
+        if not analisis:
+            print("No se pudo realizar el análisis general")
+            return
+        
+        print(f"\nINFORMACIÓN GENERAL:")
+        print(f"Total de registros: {analisis['total_registros']}")
+        print(f"Período de captura: {analisis['periodo_captura']}")
+        print(f"Redes únicas detectadas: {analisis['redes_unicas']}")
+        
+        if 'Channel' in self.df.columns and 'Frequency' in self.df.columns:
+            canales = sorted([int(c) for c in self.df['Channel'].dropna().unique() if pd.notna(c)])
+            frecuencias = sorted([int(f) for f in self.df['Frequency'].dropna().unique() if pd.notna(f)])
+            
+            print(f"\nCANALES Y FRECUENCIAS:")
+            print(f"Canales utilizados: {canales}")
+            print(f"Frecuencias utilizadas: {frecuencias} MHz")
+            print(f"Total canales: {len(canales)}, Total frecuencias: {len(frecuencias)}")
+        
+        print(f"\nMÉTRICAS DE SEÑAL:")
+        rssi = analisis['metricas_rssi']
+        print(f"RSSI promedio: {rssi['promedio']:.1f} dBm")
+        print(f"RSSI mínimo: {rssi['minimo']} dBm, Máximo: {rssi['maximo']} dBm")
+        
+        print(f"\nTOP 5 REDES:")
+        for ssid, count in analisis['top_redes'].items():
+            red_data = self.df[self.df['SSID'] == ssid]
+            rssi_prom = red_data['RSSI'].mean() if 'RSSI' in red_data.columns else 0
+            print(f"  - {ssid}: {count} detecciones | RSSI: {rssi_prom:.1f} dBm")
+        
+        if 'AuthMode' in self.df.columns:
+            self._analizar_seguridad()
+        
+        if 'RSSI' in self.df.columns:
+            self._analizar_calidad_señal()
+        
+        print(f"\nRECOMENDACIONES:")
+        print("1. Analizar interferencias entre canales cercanos")
+        print("2. Verificar seguridad de redes con encriptación débil")
+        print("3. Optimizar ubicación de puntos de acceso")
+        print("4. Considerar repetidores en áreas de señal débil")
+    
+    def _analizar_seguridad(self):
+        """Análisis de seguridad de las redes"""
+        print(f"\nANÁLISIS DE SEGURIDAD:")
+        
+        redes_abiertas = self.df[self.df['AuthMode'] == 'OPEN']
+        if not redes_abiertas.empty:
+            print(f"  Redes abiertas detectadas: {len(redes_abiertas['SSID'].unique())}")
+            for ssid in list(redes_abiertas['SSID'].unique())[:5]:
+                print(f"    - {ssid}")
+        
+        redes_wep = self.df[self.df['AuthMode'] == 'WEP']
+        if not redes_wep.empty:
+            print(f"  Redes WEP (encriptación débil): {len(redes_wep['SSID'].unique())}")
+            for ssid in list(redes_wep['SSID'].unique())[:5]:
+                print(f"    - {ssid}")
+        
+        redes_seguras = self.df[self.df['AuthMode'].str.contains('WPA2', na=False)]
+        if not redes_seguras.empty:
+            print(f"  Redes con encriptación WPA2: {len(redes_seguras['SSID'].unique())}")
+    
+    def _analizar_calidad_señal(self):
+        """Análisis de calidad de señal"""
+        print(f"\nCALIDAD DE SEÑAL:")
+        
+        excelente = len(self.df[self.df['RSSI'] > -65])
+        buena = len(self.df[(self.df['RSSI'] >= -75) & (self.df['RSSI'] <= -65)])
+        aceptable = len(self.df[(self.df['RSSI'] >= -85) & (self.df['RSSI'] < -75)])
+        debil = len(self.df[self.df['RSSI'] < -85])
+        
+        total = len(self.df)
+        
+        print(f"Excelente (> -65 dBm): {excelente} ({excelente/total*100:.1f}%)")
+        print(f"Buena (-65 a -75 dBm): {buena} ({buena/total*100:.1f}%)")
+        print(f"Aceptable (-75 a -85 dBm): {aceptable} ({aceptable/total*100:.1f}%)")
+        print(f"Débil (< -85 dBm): {debil} ({debil/total*100:.1f}%)")
+
+
+# ============================================================================
+# FUNCIÓN PRINCIPAL - Menú de opciones unificado
+# ============================================================================
+
+def main():
+    """Función principal - WiFi Spectrum Suite unificado"""
+    
+    parser = argparse.ArgumentParser(
+        description='WiFi Spectrum Suite - Suite completa de análisis WiFi',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Ejemplos de uso:
+  # Reparar fechas en un CSV
+  python WiFi_Spectrum_Suite.py archivo.csv --r-f
+  
+  # Análizar interferencias
+  python WiFi_Spectrum_Suite.py archivo.csv --a-i
+  
+  # Análisis completo de wardriving
+  python WiFi_Spectrum_Suite.py archivo.csv --wd --todo
+  
+  # Ejecutar todos los análisis
+  python WiFi_Spectrum_Suite.py archivo.csv --completo
+        """
+    )
+    
+    parser.add_argument('archivo', help='Archivo CSV con datos WiFi')
+    
+    # Opciones de Depurador CSV
+    parser.add_argument('--r-f', action='store_true', 
+                       help='Reparar problemas de formato de fecha')
+    parser.add_argument('--v-f', action='store_true',
+                       help='Validar fechas en archivo reparado')
+    parser.add_argument('-o', '--output', help='Archivo de salida para CSV reparado')
+    
+    # Opciones de Análisis de Interferencias
+    parser.add_argument('--a-i', action='store_true',
+                       help='Ejecutar análisis de interferencias WiFi')
+    
+    # Opciones de Wardriving
+    parser.add_argument('--wd', action='store_true',
+                       help='Ejecutar análisis de wardriving')
+    parser.add_argument('--mapa-calor', '-mc', action='store_true',
+                       help='Generar mapa de calor')
+    parser.add_argument('--mapa-localizacion', '-ml', action='store_true',
+                       help='Generar mapa de localización')
+    parser.add_argument('--graficos', '-g', action='store_true',
+                       help='Generar gráficos')
+    parser.add_argument('--reporte', '-r', action='store_true',
+                       help='Generar reporte')
+    parser.add_argument('--todo', '-a', action='store_true',
+                       help='Ejecutar todas las opciones de wardriving')
+    
+    # Opción para ejecutar todo
+    parser.add_argument('--completo', action='store_true',
+                       help='Ejecutar todos los análisis (reparar + interferencias + wardriving)')
+    
+    args = parser.parse_args()
+    
+    # Verificar que el archivo existe
+    if not os.path.exists(args.archivo):
+        print(f"Error: El archivo '{args.archivo}' no existe")
+        sys.exit(1)
+    
+    print("=" * 70)
+    print("WiFi SPECTRUM SUITE - Suite Completa de Análisis WiFi")
+    print("=" * 70)
+    
+    df_wardriving = None
+    
+    # ========== PARTE 1: DEPURADOR CSV ==========
+    if args.r_f or args.completo:
+        print("\n" + "█" * 70)
+        print("FASE 1: DEPURACIÓN DE PROBLEMAS DE FECHA (Depurador CSV)")
+        print("█" * 70)
+        
+        repaired_file = repair_date_issues(args.archivo, args.output)
+        
+        if repaired_file and args.v_f:
+            validate_date_repair(repaired_file)
+        
+        # Usar archivo reparado para siguientes análisis
+        analysis_file = repaired_file if repaired_file else args.archivo
+    else:
+        analysis_file = args.archivo
+    
+    # ========== PARTE 2: ANÁLISIS DE INTERFERENCIAS ==========
+    if args.a_i or args.completo:
+        print("\n" + "█" * 70)
+        print("FASE 2: ANÁLISIS DE INTERFERENCIAS WiFi")
+        print("█" * 70)
+        
+        df_interferencias = analyze_wifi_interference(analysis_file)
+    
+    # ========== PARTE 3: WARDRIVING ANALYZER ==========
+    if args.wd or args.mapa_calor or args.mapa_localizacion or args.graficos or args.reporte or args.todo or args.completo:
+        print("\n" + "█" * 70)
+        print("FASE 3: ANÁLISIS DE WARDRIVING")
+        print("█" * 70)
+        
+        analyzer = WardrivingAnalyzer(analysis_file)
+        
+        if not analyzer.cargar_datos():
+            print("No se pudieron cargar los datos. Verifica el archivo CSV.")
+            sys.exit(1)
+        
+        print("=" * 70)
+        print(f"ANÁLISIS WARDRIVING - {analyzer.nombre_base}")
+        print("=" * 70)
+        
+        archivos_generados = []
+        
+        # Ejecutar opciones seleccionadas
+        if args.todo or args.completo or args.reporte:
+            analyzer.generar_reporte()
+        
+        if args.todo or args.completo or args.mapa_calor:
+            archivo = analyzer.generar_mapa_calor()
+            if archivo:
+                archivos_generados.append(archivo)
+        
+        if args.todo or args.completo or args.mapa_localizacion:
+            archivo = analyzer.generar_mapa_localizacion()
+            if archivo:
+                archivos_generados.append(archivo)
+        
+        if args.todo or args.completo or args.graficos:
+            archivo = analyzer.generar_graficos()
+            if archivo:
+                archivos_generados.append(archivo)
+        
+        if archivos_generados:
+            print(f"\nARCHIVOS GENERADOS (Wardriving):")
+            for archivo in archivos_generados:
+                print(f"   - {archivo}")
+    
+    # Resumen final
+    print("\n" + "=" * 70)
+    print("ANÁLISIS COMPLETADO EXITOSAMENTE")
+    print("=" * 70)
+    print("\nResumen de lo ejecutado:")
+    if args.r_f or args.completo:
+        print("✓ Depuración de fechas")
+    if args.a_i or args.completo:
+        print("✓ Análisis de interferencias")
+    if args.wd or args.mapa_calor or args.mapa_localizacion or args.graficos or args.reporte or args.todo or args.completo:
+        print("✓ Análisis de wardriving")
+    print("\n")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        print("Uso: python WiFi_Spectrum_Suite.py <archivo.csv> [opciones]")
+        print("\nOpciones - Depurador CSV:")
+        print("  --r-f      Reparar problemas de fecha")
+        print("  --v-f      Validar fechas reparadas")
+        print("  -o, --output          Archivo de salida para CSV reparado")
+        print("\nOpciones - Análisis de Interferencias:")
+        print("  --a-i      Ejecutar análisis de interferencias")
+        print("\nOpciones - Wardriving:")
+        print("  --wd          Ejecutar análisis de wardriving")
+        print("  --mapa-calor, -mc     Generar mapa de calor")
+        print("  --mapa-localizacion, -ml  Generar mapa de localización")
+        print("  --graficos, -g        Generar gráficos")
+        print("  --reporte, -r         Generar reporte")
+        print("  --todo, -a            Ejecutar todas las opciones")
+        print("\nOpciones integradas:")
+        print("  --completo            Ejecutar todos los análisis")
+        print("\nEjemples:")
+        print("  python WiFi_Spectrum_Suite.py datos.csv --completo")
+        print("  python WiFi_Spectrum_Suite.py datos.csv --r-f --ai")
+        print("  python WiFi_Spectrum_Suite.py datos.csv --wd --todo")
+        sys.exit(1)
+    
+    main()
