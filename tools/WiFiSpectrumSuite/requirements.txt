@@ -3,3 +3,6 @@ numpy
 matplotlib
 seaborn
 folium
+click>=8.0.0
+rich>=14.0.0
+setuptools>=80.0.0
