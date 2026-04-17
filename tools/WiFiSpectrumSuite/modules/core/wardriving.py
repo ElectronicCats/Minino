@@ -16,6 +16,7 @@ from ..visualization.plots import generate_wardriving_plots
 # Mapeo de nombres alternativos de columnas al nombre canónico esperado
 _COLUMN_ALIASES: Dict[str, list] = {
     "SSID":             ["SSID", "ssid", "Ssid"],
+    "MAC":              ["BSSID", "MAC", "bssid", "mac"],
     "FirstSeen":        ["FirstSeen", "First seen", "firstseen", "Timestamp"],
     "Channel":          ["Channel", "channel", "CH"],
     "Frequency":        ["Frequency", "frequency", "Freq"],
@@ -245,6 +246,9 @@ class WardrivingAnalyzer:
         if "RSSI" in self.df.columns:
             self._analizar_calidad_señal()
 
+        if "MAC" in self.df.columns and "SSID" in self.df.columns and "AuthMode" in self.df.columns:
+            self._analizar_spoofing()
+
         console.print("\n[cyan bold]RECOMENDACIONES[/cyan bold]")
         console.print("  [dim]1.[/dim] Analizar interferencias entre canales cercanos")
         console.print("  [dim]2.[/dim] Verificar seguridad de redes con encriptación débil")
@@ -292,3 +296,67 @@ class WardrivingAnalyzer:
                 f"  [{color}]{label:<10}[/{color}] [dim]{rango:<18}[/dim] "
                 f"{bar} [{color}]{n:5,}[/{color}] [dim]({pct:.1f}%)[/dim]"
             )
+
+    def _analizar_spoofing(self) -> None:
+        console.print("\n[cyan bold]ANÁLISIS DE SPOOFING / EVIL TWIN[/cyan bold]")
+
+        df_valid = self.df.dropna(subset=["MAC", "SSID", "AuthMode"])
+        unique_aps = df_valid.drop_duplicates(subset=["MAC", "SSID", "AuthMode"])
+
+        evil_twins_detectados = 0
+        multi_mac_ssids = 0
+        reporte_rows: list = []
+
+        for ssid, group in unique_aps.groupby("SSID"):
+            macs = group["MAC"].unique()
+            if len(macs) > 1:
+                multi_mac_ssids += 1
+
+                auth_modes = group["AuthMode"].unique()
+                is_open_present    = any("OPEN" in str(a).upper() for a in auth_modes)
+                is_secure_present  = any("WPA"  in str(a).upper() or "WEP" in str(a).upper() for a in auth_modes)
+
+                if is_open_present and is_secure_present:
+                    evil_twins_detectados += 1
+                    console.print(f"  [red bold]⚠ ¡ALERTA EVIL TWIN! SSID: '{ssid}'[/red bold]")
+                    console.print("    [red]Múltiples MACs con discrepancia de seguridad detectada:[/red]")
+                    for _, row in group.iterrows():
+                        color = "red" if "OPEN" in str(row["AuthMode"]).upper() else "green"
+                        console.print(f"    [dim]- MAC:[/dim] [white]{row['MAC']}[/white] [dim]| Seguridad:[/dim] [{color}]{row['AuthMode']}[/{color}]")
+                        reporte_rows.append({
+                            "SSID":     ssid,
+                            "MAC":      row["MAC"],
+                            "AuthMode": row["AuthMode"],
+                            "Alerta":   "Evil Twin",
+                        })
+                else:
+                    for _, row in group.iterrows():
+                        reporte_rows.append({
+                            "SSID":     ssid,
+                            "MAC":      row["MAC"],
+                            "AuthMode": row["AuthMode"],
+                            "Alerta":   "Multi-MAC (posible corporativo/Mesh)",
+                        })
+
+        if evil_twins_detectados == 0:
+            console.print("  [green]✓[/green] No se detectaron indicadores críticos de Evil Twin (discrepancias de seguridad).")
+
+        if multi_mac_ssids > 0:
+            console.print(f"  [dim]Nota: {multi_mac_ssids} SSIDs están siendo emitidos por múltiples MACs (posibles redes corporativas/Mesh).[/dim]")
+
+        if reporte_rows:
+            self._guardar_reporte_spoofing(reporte_rows)
+
+    def _guardar_reporte_spoofing(self, rows: list) -> str:
+        """Escribe un CSV con los hallazgos de spoofing y devuelve la ruta del archivo."""
+        output_path = os.path.join(self.output_dir, f"{self.nombre_base}_spoofing.csv")
+        try:
+            with open(output_path, "w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=["SSID", "MAC", "AuthMode", "Alerta"])
+                writer.writeheader()
+                writer.writerows(rows)
+            print_success(f"Reporte de spoofing guardado: [cyan]{output_path}[/cyan]")
+        except Exception as exc:
+            print_error(f"Error al guardar reporte de spoofing: {exc}")
+            return ""
+        return output_path
