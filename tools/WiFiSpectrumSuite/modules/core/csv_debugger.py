@@ -55,6 +55,13 @@ def analyze_date_problems(
     console.rule(f"[cyan bold]ANALIZANDO PROBLEMAS DE FECHA — {csv_file}[/cyan bold]", style="cyan")
 
     try:
+        # Validación de tamaño de archivo (Límite: 500 MB)
+        max_size_mb = 500
+        file_size_mb = os.path.getsize(csv_file) / (1024 * 1024)
+        if file_size_mb > max_size_mb:
+            print_error(f"El archivo es demasiado grande ({file_size_mb:.2f} MB). Límite de seguridad: {max_size_mb} MB.")
+            return None, [], []
+
         with open(csv_file, "r", encoding="utf-8", errors="ignore") as f:
             lines = f.readlines()
 

@@ -54,6 +54,13 @@ class WardrivingAnalyzer:
             print_error(f"El archivo '[cyan]{self.archivo_csv}[/cyan]' no existe")
             return False
 
+        # Validación de tamaño de archivo (Límite: 500 MB)
+        max_size_mb = 500
+        file_size_mb = os.path.getsize(self.archivo_csv) / (1024 * 1024)
+        if file_size_mb > max_size_mb:
+            print_error(f"El archivo es demasiado grande ({file_size_mb:.2f} MB). Límite de seguridad: {max_size_mb} MB.")
+            return False
+
         try:
             self.df = self._leer_csv()
         except Exception as exc:
