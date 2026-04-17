@@ -57,7 +57,7 @@ class WardrivingAnalyzer:
         try:
             self.df = self._leer_csv()
         except Exception as exc:
-            print(f"Error al cargar datos: {exc}")
+            print_error(f"Error al cargar datos: {exc}")
             return False
 
         if self.df is None or self.df.empty:
@@ -70,7 +70,7 @@ class WardrivingAnalyzer:
         try:
             self._convertir_tipos()
         except Exception as exc:
-            print(f"Error al preparar datos: {exc}")
+            print_error(f"Error al preparar datos: {exc}")
             return False
 
         print_success(f"Datos preparados: [white bold]{len(self.df)}[/white bold] registros válidos")
@@ -161,7 +161,7 @@ class WardrivingAnalyzer:
                 },
             }
         except Exception as exc:
-            print(f"Error en análisis general: {exc}")
+            print_error(f"Error en análisis general: {exc}")
             return {}
 
     # ------------------------------------------------------------------
