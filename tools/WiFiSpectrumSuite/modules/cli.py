@@ -38,6 +38,7 @@ from .utils.output import (
 
 VERSION_NUMBER = "1.1.0.0"
 COMPANY = "Electronic Cats"
+OUTPUT_DIR = "generatedFiles"
 
 _FUNNY_PHRASES = [
     "Your WiFi is an open book.",
@@ -157,7 +158,8 @@ def cmd_debug(archivo: str, output: str, validar: bool) -> None:
     """
     _phase_header("FASE 1: DEPURACIÓN DE PROBLEMAS DE FECHA")
 
-    repaired_file = repair_date_issues(archivo, output)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    repaired_file = repair_date_issues(archivo, output, output_dir=OUTPUT_DIR)
 
     if repaired_file is None:
         print_error("No se pudo reparar el archivo.")
@@ -188,7 +190,8 @@ def cmd_interference(archivo: str) -> None:
     """
     _phase_header("FASE 2: ANÁLISIS DE INTERFERENCIAS WiFi")
 
-    df = analyze_wifi_interference(archivo)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    df = analyze_wifi_interference(archivo, output_dir=OUTPUT_DIR)
 
     if df is None:
         print_error("No se pudo analizar el archivo.")
@@ -241,7 +244,8 @@ def cmd_wardriving(
     """
     _phase_header("FASE 3: ANÁLISIS DE WARDRIVING")
 
-    analyzer = WardrivingAnalyzer(archivo)
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    analyzer = WardrivingAnalyzer(archivo, output_dir=OUTPUT_DIR)
 
     if not analyzer.cargar_datos():
         print_error("No se pudieron cargar los datos. Verifica el archivo CSV.")
@@ -299,9 +303,11 @@ def cmd_full(archivo: str, output: str, validar: bool) -> None:
     Ejemplo:
       wifi-spectrum-suite full datos.csv --validar
     """
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+
     # ── Fase 1 ────────────────────────────────────────────────────────
     _phase_header("FASE 1: DEPURACIÓN DE PROBLEMAS DE FECHA")
-    repaired_file = repair_date_issues(archivo, output)
+    repaired_file = repair_date_issues(archivo, output, output_dir=OUTPUT_DIR)
     analysis_file = repaired_file if repaired_file else archivo
 
     if repaired_file and validar:
@@ -309,11 +315,11 @@ def cmd_full(archivo: str, output: str, validar: bool) -> None:
 
     # ── Fase 2 ────────────────────────────────────────────────────────
     _phase_header("FASE 2: ANÁLISIS DE INTERFERENCIAS WiFi")
-    analyze_wifi_interference(analysis_file)
+    analyze_wifi_interference(analysis_file, output_dir=OUTPUT_DIR)
 
     # ── Fase 3 ────────────────────────────────────────────────────────
     _phase_header("FASE 3: ANÁLISIS DE WARDRIVING")
-    analyzer = WardrivingAnalyzer(analysis_file)
+    analyzer = WardrivingAnalyzer(analysis_file, output_dir=OUTPUT_DIR)
 
     if not analyzer.cargar_datos():
         print_error("No se pudieron cargar los datos de wardriving.")

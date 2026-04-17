@@ -29,10 +29,11 @@ _COLUMN_ALIASES: Dict[str, list] = {
 class WardrivingAnalyzer:
     """Análisis completo de datos de wardriving a partir de un CSV Kismet/Wigle."""
 
-    def __init__(self, archivo_csv: str) -> None:
+    def __init__(self, archivo_csv: str, output_dir: str = ".") -> None:
         self.archivo_csv = archivo_csv
         self.df: Optional[pd.DataFrame] = None
         self.nombre_base = os.path.splitext(os.path.basename(archivo_csv))[0]
+        self.output_dir = output_dir
 
     # ------------------------------------------------------------------
     # Carga de datos
@@ -169,15 +170,15 @@ class WardrivingAnalyzer:
 
     def generar_mapa_calor(self) -> str:
         """Genera mapa de calor HTML de intensidad RSSI."""
-        return generate_heat_map(self.df, self.nombre_base)
+        return generate_heat_map(self.df, self.nombre_base, output_dir=self.output_dir)
 
     def generar_mapa_localizacion(self) -> str:
         """Genera mapa HTML con marcadores por punto de acceso."""
-        return generate_location_map(self.df, self.nombre_base)
+        return generate_location_map(self.df, self.nombre_base, output_dir=self.output_dir)
 
     def generar_graficos(self) -> str:
         """Genera gráficos PNG avanzados de wardriving."""
-        return generate_wardriving_plots(self.df, self.nombre_base)
+        return generate_wardriving_plots(self.df, self.nombre_base, output_dir=self.output_dir)
 
     # ------------------------------------------------------------------
     # Reporte en consola

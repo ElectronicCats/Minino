@@ -11,7 +11,7 @@ import pandas as pd
 from ..utils.output import console, print_error, print_success
 
 
-def generate_interference_plots(df: pd.DataFrame, csv_file: str) -> str:
+def generate_interference_plots(df: pd.DataFrame, csv_file: str, output_dir: str = ".") -> str:
     """
     Genera cuatro gráficos de análisis de interferencias y los guarda como PNG.
     """
@@ -47,7 +47,7 @@ def generate_interference_plots(df: pd.DataFrame, csv_file: str) -> str:
 
         plt.tight_layout()
         base_name = os.path.splitext(os.path.basename(csv_file))[0]
-        output_path = f"{base_name}_analysis.png"
+        output_path = os.path.join(output_dir, f"{base_name}_analysis.png")
         plt.savefig(output_path, dpi=300, bbox_inches="tight")
         plt.close()
 
@@ -59,7 +59,7 @@ def generate_interference_plots(df: pd.DataFrame, csv_file: str) -> str:
         return ""
 
 
-def generate_wardriving_plots(df: pd.DataFrame, nombre_base: str) -> str:
+def generate_wardriving_plots(df: pd.DataFrame, nombre_base: str, output_dir: str = ".") -> str:
     """
     Genera seis gráficos avanzados de wardriving y los guarda como PNG.
     """
@@ -121,7 +121,7 @@ def generate_wardriving_plots(df: pd.DataFrame, nombre_base: str) -> str:
             axes[2, 1].grid(True, alpha=0.3)
 
         plt.tight_layout()
-        output_path = f"graficos_Avanzados_{nombre_base}.png"
+        output_path = os.path.join(output_dir, f"graficos_Avanzados_{nombre_base}.png")
         plt.savefig(output_path, dpi=300, bbox_inches="tight")
         plt.close()
 

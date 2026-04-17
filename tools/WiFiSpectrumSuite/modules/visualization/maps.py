@@ -2,6 +2,8 @@
 maps.py - Generación de mapas interactivos con Folium
 """
 
+import os
+
 import folium
 import pandas as pd
 from folium.plugins import HeatMap
@@ -9,7 +11,7 @@ from folium.plugins import HeatMap
 from ..utils.output import console, print_error, print_success
 
 
-def generate_heat_map(df: pd.DataFrame, nombre_base: str) -> str:
+def generate_heat_map(df: pd.DataFrame, nombre_base: str, output_dir: str = ".") -> str:
     """
     Genera un mapa de calor de RSSI y lo guarda como HTML.
     """
@@ -28,7 +30,7 @@ def generate_heat_map(df: pd.DataFrame, nombre_base: str) -> str:
 
         HeatMap(heat_data, radius=15, blur=10, max_zoom=1).add_to(mapa)
 
-        output_path = f"mapa_calor_{nombre_base}.html"
+        output_path = os.path.join(output_dir, f"mapa_calor_{nombre_base}.html")
         mapa.save(output_path)
         print_success(f"Mapa de calor guardado: [cyan]{output_path}[/cyan]")
         return output_path
@@ -38,7 +40,7 @@ def generate_heat_map(df: pd.DataFrame, nombre_base: str) -> str:
         return ""
 
 
-def generate_location_map(df: pd.DataFrame, nombre_base: str) -> str:
+def generate_location_map(df: pd.DataFrame, nombre_base: str, output_dir: str = ".") -> str:
     """
     Genera un mapa de localización con marcadores por punto de acceso y lo guarda como HTML.
     """
@@ -74,7 +76,7 @@ def generate_location_map(df: pd.DataFrame, nombre_base: str) -> str:
                 fillOpacity=0.6,
             ).add_to(mapa)
 
-        output_path = f"mapa_localizacion_{nombre_base}.html"
+        output_path = os.path.join(output_dir, f"mapa_localizacion_{nombre_base}.html")
         mapa.save(output_path)
         print_success(f"Mapa de localización guardado: [cyan]{output_path}[/cyan]")
         return output_path

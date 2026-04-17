@@ -132,6 +132,7 @@ def _generate_comprehensive_analysis(df: pd.DataFrame) -> str:
 def analyze_wifi_interference(
     csv_file: str,
     df: Optional[pd.DataFrame] = None,
+    output_dir: str = ".",
 ) -> Optional[pd.DataFrame]:
     """
     Analiza interferencias WiFi entre canales a partir de un archivo CSV.
@@ -260,12 +261,12 @@ def analyze_wifi_interference(
 
     # ── Visualizaciones ──────────────────────────────────────────────────────
     console.print("\n[cyan bold]7. GENERANDO VISUALIZACIONES...[/cyan bold]")
-    generate_interference_plots(df, csv_file)
+    generate_interference_plots(df, csv_file, output_dir=output_dir)
 
     # ── Reporte TXT ──────────────────────────────────────────────────────────
     try:
         base_name = os.path.splitext(os.path.basename(csv_file))[0]
-        report_path = f"{base_name}_report.txt"
+        report_path = os.path.join(output_dir, f"{base_name}_report.txt")
 
         with open(report_path, "w", encoding="utf-8") as f:
             f.write("ANÁLISIS DE INTERFERENCIAS WiFi\n")

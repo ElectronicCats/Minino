@@ -2,6 +2,8 @@
 csv_debugger.py - Detección y reparación de problemas de fecha en archivos CSV
 """
 
+import os
+
 import pandas as pd
 from typing import List, Optional, Tuple
 
@@ -93,6 +95,7 @@ def analyze_date_problems(
 def repair_date_issues(
     csv_file: str,
     output_file: Optional[str] = None,
+    output_dir: str = ".",
 ) -> Optional[str]:
     """
     Repara problemas de formato de fecha en el archivo CSV.
@@ -101,7 +104,8 @@ def repair_date_issues(
         Ruta al archivo reparado, o ``None`` si ocurrió un error.
     """
     if output_file is None:
-        output_file = csv_file.replace(".csv", "_fixed.csv")
+        base_name = os.path.splitext(os.path.basename(csv_file))[0]
+        output_file = os.path.join(output_dir, f"{base_name}_fixed.csv")
 
     console.rule("[cyan bold]REPARANDO PROBLEMAS DE FECHA[/cyan bold]", style="cyan")
 
