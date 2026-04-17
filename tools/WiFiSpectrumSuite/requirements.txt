@@ -1,8 +1,8 @@
-pandas
-numpy
-matplotlib
-seaborn
-folium
+pandas>=3.0.1
+numpy>=2.4.3
+matplotlib>=3.10.8
+seaborn>=0.13.2
+folium>=0.20.0
 click>=8.0.0
 rich>=14.0.0
 setuptools>=80.0.0
