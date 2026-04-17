@@ -63,9 +63,8 @@ def analyze_date_problems(
             return None, [], []
 
         with open(csv_file, "r", encoding="utf-8", errors="ignore") as f:
-            lines = f.readlines()
-
-        console.print(f"  [dim]Total de líneas en el archivo:[/dim] [white bold]{len(lines)}[/white bold]")
+            # Leer solo las primeras 12 líneas para el análisis
+            lines = [line for _, line in zip(range(12), f)]
 
         if len(lines) < 2:
             print_error("El archivo está vacío o tiene muy pocas líneas")
@@ -138,56 +137,53 @@ def repair_date_issues(
         return None
 
     try:
-        with open(csv_file, "r", encoding="utf-8", errors="ignore") as f:
-            lines = f.readlines()
-
-        repaired_lines: List[str] = []
         corrections_made = 0
         date_column_indices = [idx for idx, _ in date_columns]
+        lines_processed = 0
 
         console.print("\n[cyan bold]APLICANDO CORRECCIONES DE FECHA...[/cyan bold]")
 
-        for line_num, line in enumerate(lines):
-            original_line = line.strip()
+        with open(csv_file, "r", encoding="utf-8", errors="ignore") as f_in, \
+             open(output_file, "w", encoding="utf-8") as f_out:
+            
+            for line_num, line in enumerate(f_in):
+                lines_processed += 1
+                original_line = line.strip()
 
-            if line_num < 2:
-                repaired_lines.append(original_line)
-                continue
+                if line_num < 2:
+                    f_out.write(original_line + "\n")
+                    continue
 
-            fields = _split_csv_line(original_line)
-            line_corrected = False
+                fields = _split_csv_line(original_line)
+                line_corrected = False
 
-            for col_idx in date_column_indices:
-                if col_idx < len(fields):
-                    original_value = fields[col_idx]
-                    repaired_value = repair_date_field(original_value)
+                for col_idx in date_column_indices:
+                    if col_idx < len(fields):
+                        original_value = fields[col_idx]
+                        repaired_value = repair_date_field(original_value)
 
-                    if repaired_value != original_value:
-                        fields[col_idx] = repaired_value
-                        line_corrected = True
-                        corrections_made += 1
+                        if repaired_value != original_value:
+                            fields[col_idx] = repaired_value
+                            line_corrected = True
+                            corrections_made += 1
 
-                        if corrections_made <= 5:
-                            console.print(
-                                f"  [dim]Línea {line_num}:[/dim] "
-                                f"[yellow]'{original_value}'[/yellow] "
-                                f"[dim]→[/dim] "
-                                f"[green]'{repaired_value}'[/green]"
-                            )
+                            if corrections_made <= 5:
+                                console.print(
+                                    f"  [dim]Línea {line_num}:[/dim] "
+                                    f"[yellow]'{original_value}'[/yellow] "
+                                    f"[dim]→[/dim] "
+                                    f"[green]'{repaired_value}'[/green]"
+                                )
 
-            repaired_lines.append(_join_csv_line(fields))
+                f_out.write(_join_csv_line(fields) + "\n")
 
-            if line_num % 100 == 0 and line_num > 0:
-                console.print(f"  [dim]Procesadas [white bold]{line_num}[/white bold] líneas...[/dim]")
-
-        with open(output_file, "w", encoding="utf-8") as f:
-            for repaired_line in repaired_lines:
-                f.write(repaired_line + "\n")
+                if line_num % 1000 == 0 and line_num > 0:
+                    console.print(f"  [dim]Procesadas [white bold]{line_num}[/white bold] líneas...[/dim]")
 
         console.print("\n[cyan bold]ESTADÍSTICAS DE REPARACIÓN[/cyan bold]")
         console.print(f"  [dim]Archivo original:[/dim]  [white]{csv_file}[/white]")
         console.print(f"  [dim]Archivo reparado:[/dim]  [cyan]{output_file}[/cyan]")
-        console.print(f"  [dim]Líneas procesadas:[/dim] [white bold]{len(repaired_lines)}[/white bold]")
+        console.print(f"  [dim]Líneas procesadas:[/dim] [white bold]{lines_processed}[/white bold]")
         console.print(
             f"  [dim]Correcciones de fecha:[/dim] "
             f"[{'green bold' if corrections_made else 'dim'}]{corrections_made}[/{'green bold' if corrections_made else 'dim'}]"
