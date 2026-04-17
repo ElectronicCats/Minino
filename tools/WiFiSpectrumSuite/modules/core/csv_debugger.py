@@ -6,6 +6,7 @@ import pandas as pd
 from typing import List, Optional, Tuple
 
 from ..utils.validators import looks_like_date, repair_date_field
+from ..utils.output import console, print_error, print_success, print_warning
 
 
 # ---------------------------------------------------------------------------
@@ -13,15 +14,6 @@ from ..utils.validators import looks_like_date, repair_date_field
 # ---------------------------------------------------------------------------
 
 def _find_date_columns(headers: List[str]) -> List[Tuple[int, str]]:
-    """
-    Identifica columnas que probablemente contienen fechas por su nombre.
-
-    Args:
-        headers: Lista de encabezados del CSV.
-
-    Returns:
-        Lista de tuplas (índice, nombre) para columnas candidatas.
-    """
     keywords = {"TIME", "DATE", "SEEN", "FIRST", "LAST"}
     return [
         (i, header)
@@ -40,37 +32,27 @@ def analyze_date_problems(
     """
     Analiza problemas con formatos de fecha en el archivo CSV.
 
-    Lee las primeras 10 líneas de datos y muestra muestras de las columnas
-    de fecha detectadas.
-
-    Args:
-        csv_file: Ruta al archivo CSV.
-
     Returns:
-        Tupla ``(headers, problematic_lines, date_columns)`` donde:
-        - *headers* es la lista de encabezados, o ``None`` si falló.
-        - *problematic_lines* lista de dicts con info de líneas con problemas.
-        - *date_columns* lista de ``(índice, nombre)`` de columnas de fecha.
+        Tupla ``(headers, problematic_lines, date_columns)``.
     """
-    print(f"ANALIZANDO PROBLEMAS DE FECHA EN: {csv_file}")
-    print("=" * 60)
+    console.rule(f"[cyan bold]ANALIZANDO PROBLEMAS DE FECHA — {csv_file}[/cyan bold]", style="cyan")
 
     try:
         with open(csv_file, "r", encoding="utf-8", errors="ignore") as f:
             lines = f.readlines()
 
-        print(f"Total de líneas en el archivo: {len(lines)}")
+        console.print(f"  [dim]Total de líneas en el archivo:[/dim] [white bold]{len(lines)}[/white bold]")
 
         if len(lines) < 2:
-            print("El archivo está vacío o tiene muy pocas líneas")
+            print_error("El archivo está vacío o tiene muy pocas líneas")
             return None, [], []
 
-        print("\nANALIZANDO ESTRUCTURA:")
+        console.print("\n[cyan bold]ESTRUCTURA DEL ARCHIVO[/cyan bold]")
         headers = lines[1].strip().split(",")
-        print(f"Encabezados detectados ({len(headers)}): {headers}")
+        console.print(f"  [dim]Encabezados detectados:[/dim] [white bold]{len(headers)}[/white bold]  [dim]{headers}[/dim]")
 
         date_columns = _find_date_columns(headers)
-        print(f"Columnas potencialmente de fecha: {date_columns}")
+        console.print(f"  [dim]Columnas potencialmente de fecha:[/dim] [cyan]{date_columns}[/cyan]")
 
         date_samples: dict = {}
         problematic_lines: List[dict] = []
@@ -92,14 +74,19 @@ def analyze_date_problems(
                             }
                         )
 
-        print("\nMUESTRAS DE FECHAS:")
+        console.print("\n[cyan bold]MUESTRAS DE FECHAS[/cyan bold]")
         for col_name, samples in date_samples.items():
-            print(f"  {col_name}: {samples}")
+            console.print(f"  [cyan]{col_name}:[/cyan] [dim]{samples}[/dim]")
+
+        if problematic_lines:
+            print_warning(f"[white bold]{len(problematic_lines)}[/white bold] valores problemáticos detectados")
+        else:
+            print_success("No se detectaron valores problemáticos en las primeras 10 líneas")
 
         return headers, problematic_lines, date_columns
 
     except Exception as exc:
-        print(f"ERROR durante el análisis: {exc}")
+        print_error(f"Error durante el análisis: {exc}")
         return None, [], []
 
 
@@ -110,26 +97,18 @@ def repair_date_issues(
     """
     Repara problemas de formato de fecha en el archivo CSV.
 
-    Escribe un nuevo archivo con las correcciones aplicadas.
-
-    Args:
-        csv_file: Ruta al archivo CSV original.
-        output_file: Ruta para el archivo reparado. Si es ``None`` se usa
-                     ``<nombre_original>_fixed.csv``.
-
     Returns:
         Ruta al archivo reparado, o ``None`` si ocurrió un error.
     """
     if output_file is None:
         output_file = csv_file.replace(".csv", "_fixed.csv")
 
-    print("\nREPARANDO PROBLEMAS DE FECHA")
-    print("=" * 50)
+    console.rule("[cyan bold]REPARANDO PROBLEMAS DE FECHA[/cyan bold]", style="cyan")
 
     headers, _, date_columns = analyze_date_problems(csv_file)
 
     if not headers:
-        print("No se puede proceder con la reparación")
+        print_error("No se puede proceder con la reparación")
         return None
 
     try:
@@ -140,12 +119,11 @@ def repair_date_issues(
         corrections_made = 0
         date_column_indices = [idx for idx, _ in date_columns]
 
-        print("\nAPLICANDO CORRECCIONES DE FECHA...")
+        console.print("\n[cyan bold]APLICANDO CORRECCIONES DE FECHA...[/cyan bold]")
 
         for line_num, line in enumerate(lines):
             original_line = line.strip()
 
-            # Las dos primeras líneas (metadata + headers) se conservan tal cual
             if line_num < 2:
                 repaired_lines.append(original_line)
                 continue
@@ -164,34 +142,37 @@ def repair_date_issues(
                         corrections_made += 1
 
                         if corrections_made <= 5:
-                            print(
-                                f"  Línea {line_num}: '{original_value}' → '{repaired_value}'"
+                            console.print(
+                                f"  [dim]Línea {line_num}:[/dim] "
+                                f"[yellow]'{original_value}'[/yellow] "
+                                f"[dim]→[/dim] "
+                                f"[green]'{repaired_value}'[/green]"
                             )
 
             repaired_lines.append(",".join(fields))
 
             if line_num % 100 == 0 and line_num > 0:
-                print(f"  Procesadas {line_num} líneas...")
+                console.print(f"  [dim]Procesadas [white bold]{line_num}[/white bold] líneas...[/dim]")
 
         with open(output_file, "w", encoding="utf-8") as f:
             for repaired_line in repaired_lines:
                 f.write(repaired_line + "\n")
 
-        print("\nREPARACIÓN DE FECHAS COMPLETADA")
-        print("=" * 40)
-        print(f"ESTADÍSTICAS:")
-        print(f"   - Archivo original: {csv_file}")
-        print(f"   - Archivo reparado: {output_file}")
-        print(f"   - Líneas procesadas: {len(repaired_lines)}")
-        print(f"   - Correcciones de fecha aplicadas: {corrections_made}")
-        print(
-            f"   - Columnas de fecha identificadas: {[name for _, name in date_columns]}"
+        console.print("\n[cyan bold]ESTADÍSTICAS DE REPARACIÓN[/cyan bold]")
+        console.print(f"  [dim]Archivo original:[/dim]  [white]{csv_file}[/white]")
+        console.print(f"  [dim]Archivo reparado:[/dim]  [cyan]{output_file}[/cyan]")
+        console.print(f"  [dim]Líneas procesadas:[/dim] [white bold]{len(repaired_lines)}[/white bold]")
+        console.print(
+            f"  [dim]Correcciones de fecha:[/dim] "
+            f"[{'green bold' if corrections_made else 'dim'}]{corrections_made}[/{'green bold' if corrections_made else 'dim'}]"
         )
+        console.print(f"  [dim]Columnas de fecha:[/dim] [cyan]{[name for _, name in date_columns]}[/cyan]")
+        print_success(f"Reparación completada: [cyan]{output_file}[/cyan]")
 
         return output_file
 
     except Exception as exc:
-        print(f"ERROR durante la reparación: {exc}")
+        print_error(f"Error durante la reparación: {exc}")
         return None
 
 
@@ -199,60 +180,55 @@ def validate_date_repair(repaired_file: str) -> bool:
     """
     Valida que las fechas en el archivo reparado sean correctas.
 
-    Muestra estadísticas de fechas válidas/inválidas por columna.
-
-    Args:
-        repaired_file: Ruta al archivo CSV reparado.
-
     Returns:
         ``True`` si la validación se completó sin errores, ``False`` en caso
         contrario.
     """
-    print(f"\nVALIDANDO REPARACIÓN DE FECHAS: {repaired_file}")
+    console.rule(f"[cyan bold]VALIDANDO REPARACIÓN — {repaired_file}[/cyan bold]", style="cyan")
 
     try:
         df = pd.read_csv(repaired_file, skiprows=1)
 
-        print("INFORMACIÓN DEL DATAFRAME REPARADO:")
-        print(f"   - Filas: {len(df)}")
-        print(f"   - Columnas: {list(df.columns)}")
+        console.print("\n[cyan bold]DATAFRAME REPARADO[/cyan bold]")
+        console.print(f"  [dim]Filas:[/dim]    [white bold]{len(df)}[/white bold]")
+        console.print(f"  [dim]Columnas:[/dim] [dim]{list(df.columns)}[/dim]")
 
         date_cols = [
             col
             for col in df.columns
-            if any(
-                kw in col.upper() for kw in ["TIME", "DATE", "SEEN", "FIRST", "LAST"]
-            )
+            if any(kw in col.upper() for kw in ["TIME", "DATE", "SEEN", "FIRST", "LAST"])
         ]
-        print(f"   - Columnas de fecha identificadas: {date_cols}")
+        console.print(f"  [dim]Columnas de fecha:[/dim] [cyan]{date_cols}[/cyan]")
 
         for col in date_cols:
             if col not in df.columns:
                 continue
 
-            print(f"\nANÁLISIS DE LA COLUMNA '{col}':")
+            console.print(f"\n[cyan bold]COLUMNA '{col}'[/cyan bold]")
             unique_types = df[col].apply(lambda x: type(x).__name__).unique()
-            print(f"   - Tipos de datos: {unique_types}")
-            print(f"   - Valores únicos (primeros 5): {df[col].dropna().unique()[:5]}")
+            console.print(f"  [dim]Tipos de datos:[/dim]           [dim]{unique_types}[/dim]")
+            console.print(f"  [dim]Valores únicos (primeros 5):[/dim] [dim]{df[col].dropna().unique()[:5]}[/dim]")
 
             try:
                 date_series = pd.to_datetime(df[col], errors="coerce", format="mixed")
                 valid_dates = date_series.notna().sum()
                 invalid_dates = date_series.isna().sum()
 
-                print(f"   - Fechas válidas: {valid_dates}")
-                print(f"   - Fechas inválidas: {invalid_dates}")
+                console.print(f"  [dim]Fechas válidas:[/dim]   [green bold]{valid_dates}[/green bold]")
+                if invalid_dates:
+                    console.print(f"  [dim]Fechas inválidas:[/dim] [red bold]{invalid_dates}[/red bold]")
 
                 if valid_dates > 0:
-                    print(
-                        f"   - Rango de fechas: {date_series.min()} a {date_series.max()}"
+                    console.print(
+                        f"  [dim]Rango de fechas:[/dim]  "
+                        f"[white]{date_series.min()}[/white] [dim]→[/dim] [white]{date_series.max()}[/white]"
                     )
             except Exception as exc:
-                print(f"  Error al convertir fechas: {exc}")
+                print_warning(f"Error al convertir fechas en '{col}': {exc}")
 
-        print("\nVALIDACIÓN COMPLETADA")
+        print_success("Validación completada")
         return True
 
     except Exception as exc:
-        print(f"ERROR durante la validación: {exc}")
+        print_error(f"Error durante la validación: {exc}")
         return False

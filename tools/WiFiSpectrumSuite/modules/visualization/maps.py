@@ -6,19 +6,14 @@ import folium
 import pandas as pd
 from folium.plugins import HeatMap
 
+from ..utils.output import console, print_error, print_success
+
 
 def generate_heat_map(df: pd.DataFrame, nombre_base: str) -> str:
     """
     Genera un mapa de calor de RSSI y lo guarda como HTML.
-
-    Args:
-        df: DataFrame con columnas CurrentLatitude, CurrentLongitude, RSSI.
-        nombre_base: Nombre base para el archivo de salida.
-
-    Returns:
-        Ruta al archivo HTML, o cadena vacía si ocurrió un error.
     """
-    print("Generando mapa de calor de RSSI...")
+    console.print("\n[cyan]Generando mapa de calor de RSSI...[/cyan]")
 
     try:
         centro_lat = df["CurrentLatitude"].mean()
@@ -35,26 +30,19 @@ def generate_heat_map(df: pd.DataFrame, nombre_base: str) -> str:
 
         output_path = f"mapa_calor_{nombre_base}.html"
         mapa.save(output_path)
-        print(f"Mapa de calor guardado: {output_path}")
+        print_success(f"Mapa de calor guardado: [cyan]{output_path}[/cyan]")
         return output_path
 
     except Exception as exc:
-        print(f"Error generando mapa de calor: {exc}")
+        print_error(f"Error generando mapa de calor: {exc}")
         return ""
 
 
 def generate_location_map(df: pd.DataFrame, nombre_base: str) -> str:
     """
     Genera un mapa de localización con marcadores por punto de acceso y lo guarda como HTML.
-
-    Args:
-        df: DataFrame con columnas SSID, CurrentLatitude, CurrentLongitude, RSSI.
-        nombre_base: Nombre base para el archivo de salida.
-
-    Returns:
-        Ruta al archivo HTML, o cadena vacía si ocurrió un error.
     """
-    print("Generando mapa de localización...")
+    console.print("\n[cyan]Generando mapa de localización...[/cyan]")
 
     try:
         centro_lat = df["CurrentLatitude"].mean()
@@ -88,9 +76,9 @@ def generate_location_map(df: pd.DataFrame, nombre_base: str) -> str:
 
         output_path = f"mapa_localizacion_{nombre_base}.html"
         mapa.save(output_path)
-        print(f"Mapa de localización guardado: {output_path}")
+        print_success(f"Mapa de localización guardado: [cyan]{output_path}[/cyan]")
         return output_path
 
     except Exception as exc:
-        print(f"Error generando mapa de localización: {exc}")
+        print_error(f"Error generando mapa de localización: {exc}")
         return ""

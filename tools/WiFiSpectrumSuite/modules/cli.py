@@ -20,12 +20,17 @@ from .core.wardriving import WardrivingAnalyzer
 
 # External
 import click
-from rich.console import Console
 from rich.logging import RichHandler
 from rich.panel import Panel
-from rich.style import Style
-from rich.table import Table
-from rich import box
+
+from .utils.output import (
+    STYLES,
+    console,
+    print_error,
+    print_info,
+    print_success,
+    print_warning,
+)
 
 # ---------------------------------------------------------------------------
 # App metadata
@@ -58,21 +63,6 @@ _FUNNY_PHRASES = [
 ]
 
 FUNNY_PHRASE = _random.choice(_FUNNY_PHRASES)
-
-# ---------------------------------------------------------------------------
-# Rich console & styles
-# ---------------------------------------------------------------------------
-
-STYLES = {
-    "header":  Style(color="cyan",    bold=True),
-    "success": Style(color="green",   bold=True),
-    "warning": Style(color="yellow",  bold=True),
-    "error":   Style(color="red",     bold=True),
-    "info":    Style(color="blue",    bold=True),
-    "prompt":  Style(color="magenta", bold=True),
-}
-
-console = Console()
 
 logger = logging.getLogger("rich")
 logging.basicConfig(
@@ -110,21 +100,6 @@ def print_header(module: Optional[str] = None) -> None:
     )
     console.print(panel)
 
-
-def print_success(message: str) -> None:
-    console.print(f"[green]✓[/green] {message}", style=STYLES["success"])
-
-
-def print_warning(message: str) -> None:
-    console.print(f"[yellow]⚠[/yellow] {message}", style=STYLES["warning"])
-
-
-def print_error(message: str) -> None:
-    console.print(f"[red]✗[/red] {message}", style=STYLES["error"])
-
-
-def print_info(message: str) -> None:
-    console.print(f"[blue]ℹ[/blue] {message}", style=STYLES["info"])
 
 
 def _phase_header(title: str) -> None:
