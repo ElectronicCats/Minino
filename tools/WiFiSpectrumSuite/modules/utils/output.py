@@ -1,5 +1,5 @@
 """
-output.py - Consola Rich compartida y helpers de salida para todos los módulos
+output.py - Shared Rich console and output helpers for all modules
 """
 
 from rich.console import Console
@@ -34,7 +34,7 @@ def print_info(message: str) -> None:
 
 
 def rssi_color(rssi: float) -> str:
-    """Devuelve el color Rich correspondiente a la calidad de la señal RSSI."""
+    """Returns the corresponding Rich color for the given RSSI signal quality."""
     if rssi >= -50:
         return "green bold"
     if rssi >= -60:

@@ -1,5 +1,5 @@
 """
-file_utils.py - Carga robusta de archivos CSV con datos WiFi
+file_utils.py - Robust loading of CSV files with WiFi data
 """
 
 import numpy as np
@@ -11,12 +11,12 @@ from .output import console, print_error, print_success, print_warning
 
 def robust_csv_loader(csv_file: str) -> Optional[pd.DataFrame]:
     """
-    Carga un CSV probando múltiples estrategias ante archivos inconsistentes.
+    Loads a CSV trying multiple strategies for inconsistent files.
 
     Returns:
-        DataFrame cargado, o ``None`` si todas las estrategias fallaron.
+        Loaded DataFrame, or ``None`` if all strategies failed.
     """
-    console.print(f"\n[cyan]Cargando archivo CSV:[/cyan] [white bold]{csv_file}[/white bold]")
+    console.print(f"\n[cyan]Loading CSV file:[/cyan] [white bold]{csv_file}[/white bold]")
 
     strategies = [
         lambda: pd.read_csv(csv_file, skiprows=1),
@@ -27,35 +27,35 @@ def robust_csv_loader(csv_file: str) -> Optional[pd.DataFrame]:
 
     for i, strategy in enumerate(strategies, start=1):
         try:
-            console.print(f"  [dim]Intentando estrategia {i}...[/dim]")
+            console.print(f"  [dim]Trying strategy {i}...[/dim]")
             df = strategy()
-            print_success(f"Estrategia {i} exitosa — [white bold]{len(df)}[/white bold] filas cargadas")
+            print_success(f"Strategy {i} successful — [white bold]{len(df)}[/white bold] rows loaded")
             return df
         except Exception as exc:
-            console.print(f"  [dim red]Estrategia {i} falló:[/dim red] [dim]{exc}[/dim]")
+            console.print(f"  [dim red]Strategy {i} failed:[/dim red] [dim]{exc}[/dim]")
 
-    console.print("  [yellow]Intentando carga manual línea por línea...[/yellow]")
+    console.print("  [yellow]Attempting manual line-by-line loading...[/yellow]")
     try:
         return _manual_csv_loader(csv_file)
     except Exception as exc:
-        print_error(f"Carga manual falló: {exc}")
+        print_error(f"Manual loading failed: {exc}")
 
     return None
 
 
 def _manual_csv_loader(csv_file: str) -> pd.DataFrame:
-    """Carga el CSV línea a línea para máxima tolerancia a errores."""
+    """Loads the CSV line by line for maximum fault tolerance."""
     with open(csv_file, "r", encoding="utf-8", errors="ignore") as f:
         lines = f.readlines()
 
     if len(lines) < 2:
-        raise ValueError("Archivo demasiado corto")
+        raise ValueError("File is too short")
 
     headers = lines[1].strip().split(",")
     expected_columns = len(headers)
 
-    console.print(f"  [dim]Encabezados detectados:[/dim] [cyan]{expected_columns}[/cyan] columnas")
-    console.print(f"  [dim]Líneas totales:[/dim] [white bold]{len(lines)}[/white bold]")
+    console.print(f"  [dim]Headers detected:[/dim] [cyan]{expected_columns}[/cyan] columns")
+    console.print(f"  [dim]Total lines:[/dim] [white bold]{len(lines)}[/white bold]")
 
     data = []
     problematic_lines = 0
@@ -73,46 +73,46 @@ def _manual_csv_loader(csv_file: str) -> pd.DataFrame:
             problematic_lines += 1
 
     if problematic_lines:
-        print_warning(f"Líneas problemáticas corregidas: [white bold]{problematic_lines}[/white bold]")
+        print_warning(f"Problematic lines corrected: [white bold]{problematic_lines}[/white bold]")
 
     return pd.DataFrame(data, columns=headers)
 
 
 def clean_and_validate_data(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Limpia y valida los datos del DataFrame.
+    Cleans and validates the DataFrame data.
 
-    Convierte RSSI y Channel a numérico y elimina filas sin datos críticos.
+    Converts RSSI and Channel to numeric and removes rows without critical data.
     """
-    console.print("\n[cyan]Limpiando y validando datos...[/cyan]")
+    console.print("\n[cyan]Cleaning and validating data...[/cyan]")
     console.print(
-        f"  [dim]Forma inicial:[/dim] "
-        f"[white bold]{df.shape[0]}[/white bold] filas, "
-        f"[white bold]{df.shape[1]}[/white bold] columnas"
+        f"  [dim]Initial shape:[/dim] "
+        f"[white bold]{df.shape[0]}[/white bold] rows, "
+        f"[white bold]{df.shape[1]}[/white bold] columns"
     )
 
     critical_columns = ["SSID", "RSSI", "Channel"]
     missing = [c for c in critical_columns if c not in df.columns]
     if missing:
-        print_warning(f"Columnas faltantes: [white]{missing}[/white]")
-        console.print(f"  [dim]Columnas disponibles:[/dim] [dim]{list(df.columns)}[/dim]")
+        print_warning(f"Missing columns: [white]{missing}[/white]")
+        console.print(f"  [dim]Available columns:[/dim] [dim]{list(df.columns)}[/dim]")
 
     for col in ("RSSI", "Channel"):
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
             nulls = df[col].isna().sum()
             if nulls:
-                print_warning(f"Valores [cyan]{col}[/cyan] no numéricos eliminados: [white bold]{nulls}[/white bold]")
+                print_warning(f"Non-numeric [cyan]{col}[/cyan] values removed: [white bold]{nulls}[/white bold]")
 
     initial = len(df)
     df = df.dropna(subset=["RSSI", "Channel"])
     removed = initial - len(df)
     if removed:
-        print_warning(f"Filas sin datos críticos eliminadas: [white bold]{removed}[/white bold]")
+        print_warning(f"Rows without critical data removed: [white bold]{removed}[/white bold]")
 
     console.print(
-        f"  [dim]Forma final:[/dim] "
-        f"[green bold]{df.shape[0]}[/green bold] filas, "
-        f"[white bold]{df.shape[1]}[/white bold] columnas"
+        f"  [dim]Final shape:[/dim] "
+        f"[green bold]{df.shape[0]}[/green bold] rows, "
+        f"[white bold]{df.shape[1]}[/white bold] columns"
     )
     return df

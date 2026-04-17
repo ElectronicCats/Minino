@@ -1,5 +1,5 @@
 """
-validators.py - Validación y reparación de valores individuales de fecha
+validators.py - Validation and repair of individual date values
 """
 
 import re
@@ -7,7 +7,7 @@ from datetime import datetime
 
 
 def looks_like_date(value) -> bool:
-    """Determina si un valor parece ser una fecha."""
+    """Determines if a value looks like a date."""
     if not value or str(value).strip() == "":
         return False
 
@@ -33,7 +33,7 @@ def looks_like_date(value) -> bool:
 
 
 def repair_date_field(value) -> str:
-    """Repara un campo individual que debería ser una fecha."""
+    """Repairs a single field that should be a date."""
     if not value or str(value).strip() == "":
         return value
 

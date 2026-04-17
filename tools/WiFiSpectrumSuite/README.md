@@ -60,7 +60,7 @@ Minino (Scanning) → GPS CSV → Suite (Analysis) → Maps & Reports
 
 ## 🔧 Suite Functionality
 
-### **1. CSV Debugger** (depurador_csv)
+### **1. CSV Debugger** (debug)
 Automatically detects and repairs common CSV file issues:
 - Inconsistent date formats
 - Empty or invalid field values
@@ -73,7 +73,7 @@ Automatically detects and repairs common CSV file issues:
 - EU: `15/01/2024 10:30:00`
 - Compact: `20240115103000`
 
-### **2. Interference Analyzer** (Analisis_Interferencias)
+### **2. Interference Analyzer** (interference)
 Analyzes WiFi channel patterns and interference:
 - Network distribution by channel
 - Channel overlap detection (20/40/80 MHz)
@@ -84,7 +84,7 @@ Analyzes WiFi channel patterns and interference:
 
 **Non-overlapping channels:** 1, 6, 11 (in 2.4GHz band)
 
-### **3. Wardriving Analyzer** (WiFi_Wardriving)
+### **3. Wardriving Analyzer** (wardriving)
 Transforms scan data into geospatial visualizations:
 - **RSSI Heatmaps**: Visualizes signal intensity by location
 - **Location Maps**: Markers for each network with detailed info
@@ -97,25 +97,25 @@ Transforms scan data into geospatial visualizations:
 ## 📦 Script Structure
 
 ```
-WiFi_Spectrum_Suite.py
+wifi_spectrum.py
 
-├─ PART 1: CSV DEBUGGER (lines 30-300)
+├─ PART 1: CSV DEBUGGER
 │  ├─ analyze_date_problems()          → Detects date issues
 │  ├─ repair_date_issues()              → Repairs CSVs
 │  └─ validate_date_repair()            → Validates repair
 │
-├─ PART 2: INTERFERENCE ANALYZER (lines 301-800)
+├─ PART 2: INTERFERENCE ANALYZER
 │  ├─ robust_csv_loader()              → Robust CSV loading
 │  ├─ clean_and_validate_data()        → Data cleaning
 │  ├─ analyze_wifi_interference()      → Interference analysis
 │  └─ generate_comprehensive_analysis()  → Detailed analysis
 │
-└─ PART 3: WARDRIVING ANALYZER (lines 801-1200)
-   ├─ WardrivingAnalyzer.cargar_datos()    → Loads wardriving data
-   ├─ generar_mapa_calor()            → RSSI heatmap
-   ├─ generar_mapa_localizacion()     → Location map
-   ├─ generar_graficos()              → Advanced graphics
-   └─ generar_reporte()               → Detailed report
+└─ PART 3: WARDRIVING ANALYZER
+   ├─ WardrivingAnalyzer.load_data()       → Loads wardriving data
+   ├─ generate_heat_map()                  → RSSI heatmap
+   ├─ generate_location_map()              → Location map
+   ├─ generate_plots()                     → Advanced graphics
+   └─ generate_report()                    → Detailed report
 ```
 
 ---
@@ -129,7 +129,7 @@ WiFi_Spectrum_Suite.py
 ### Install Dependencies
 
 ```bash
-pip install pandas matplotlib seaborn numpy folium
+pip install pandas matplotlib seaborn numpy folium click rich
 ```
 
 Or using requirements.txt if available:
@@ -146,49 +146,49 @@ pip install -r requirements.txt
 
 #### 1. Repair Format Issues
 ```bash
-python WiFi_Spectrum_Suite.py Warfi_file.csv --r-f --v-f -o Warfi_file_fixed.csv
+wifi-spectrum-suite debug Warfi_file.csv --validate -o Warfi_file_fixed.csv
 ```
 - Detects date format issues
-- Generates `wardriving_data_fixed.csv`
+- Generates `Warfi_file_fixed.csv`
 - Repairs dates and validates result
 
 #### 2. Analyze Interference Only
 ```bash
-python WiFi_Spectrum_Suite.py wardriving_data_fixed.csv --a-i
+wifi-spectrum-suite interference wardriving_data_fixed.csv
 ```
 - Generates:
-  - `wardriving_data_analysis.png` (graphs)
-  - `wardriving_data_report.txt` (report)
+  - `wardriving_data_fixed_analysis.png` (graphs)
+  - `wardriving_data_fixed_report.txt` (report)
 
 #### 3. Generate Heatmap Only
 ```bash
-python WiFi_Spectrum_Suite.py wardriving_data_fixed.csv --wd --mapa-calor
+wifi-spectrum-suite wardriving wardriving_data_fixed.csv --heat-map
 ```
-- Generates: `mapa_calor_wardriving_data.html` (interactive map) opcionalmente usar -mc después de --wd
+- Generates: `heat_map_wardriving_data_fixed.html` (interactive map)
 
 #### 4. Generate Location Map
 ```bash
-python WiFi_Spectrum_Suite.py wardriving_data_fixed.csv --wd --mapa-localizacion
+wifi-spectrum-suite wardriving wardriving_data_fixed.csv --location-map
 ```
-- Generates: `mapa_localizacion_wardriving_data.html` (network markers) opcionalmente usar -ml después de --wd
+- Generates: `location_map_wardriving_data_fixed.html` (network markers)
 
 #### 5. Generate Graphics
 ```bash
-python WiFi_Spectrum_Suite.py wardriving_data_fixed.csv --wd --graficos
+wifi-spectrum-suite wardriving wardriving_data_fixed.csv --plots
 ```
-- Generates: `graficos_Avanzados_wardriving_data.png` (6 analysis graphs) opcionalmente usar -g después de --wd
+- Generates: `advanced_plots_wardriving_data_fixed.png` (advanced analysis graphs)
 
 #### 6. Generate Wardriving Report
 ```bash
-python WiFi_Spectrum_Suite.py wardriving_data_fixed.csv --wd --reporte
+wifi-spectrum-suite wardriving wardriving_data_fixed.csv --report
 ```
-- Prints complete analysis to termina, opcionalmente usar -r después de --wd
+- Prints complete analysis to terminal.
 
 ### **Complete Analysis**
 
 #### Option A: Total Integrated Analysis (Recommended)
 ```bash
-python WiFi_Spectrum_Suite.py wardriving_data.csv --completo
+wifi-spectrum-suite full wardriving_data.csv --validate
 ```
 
 **Automatically executes:**
@@ -198,15 +198,15 @@ python WiFi_Spectrum_Suite.py wardriving_data.csv --completo
 
 **Generated files:**
 - `wardriving_data_fixed.csv` - Repaired CSV
-- `wardriving_data_report.txt` - Interference report
-- `wardriving_data_analysis.png` - Interference graphs
-- `mapa_calor_wardriving_data.html` - RSSI intensity map
-- `mapa_localizacion_wardriving_data.html` - Network location map
-- `graficos_Avanzados_wardriving_data.png` - Temporal and distribution analysis
+- `wardriving_data_fixed_report.txt` - Interference report
+- `wardriving_data_fixed_analysis.png` - Interference graphs
+- `heat_map_wardriving_data_fixed.html` - RSSI intensity map
+- `location_map_wardriving_data_fixed.html` - Network location map
+- `advanced_plots_wardriving_data_fixed.png` - Temporal and distribution analysis
 
 #### Option B: All Wardriving Options
 ```bash
-python WiFi_Spectrum_Suite.py wardriving_data_fixed.csv --wd --todo
+wifi-spectrum-suite wardriving wardriving_data_fixed.csv --all
 ```
 
 **Executes:**
@@ -218,13 +218,13 @@ python WiFi_Spectrum_Suite.py wardriving_data_fixed.csv --wd --todo
 #### Option C: Recommended Minino Workflow (Step by Step)
 ```bash
 # Step 1: Repair and validate
-python WiFi_Spectrum_Suite.py minino_wardriving.csv --r-f --v-f
+wifi-spectrum-suite debug minino_wardriving.csv --validate
 
 # Step 2: Analyze interference
-python WiFi_Spectrum_Suite.py minino_wardriving_fixed.csv --a-i
+wifi-spectrum-suite interference minino_wardriving_fixed.csv
 
 # Step 3: Generate complete wardriving visualization
-python WiFi_Spectrum_Suite.py minino_wardriving_fixed.csv --wd --todo
+wifi-spectrum-suite wardriving minino_wardriving_fixed.csv --all
 ```
 
 ---
@@ -258,10 +258,10 @@ Index,SSID,WiFi Address,BSSID,Channel,Frequency,RSSI,Security,FirstSeen,LastSeen
 |------|------------|
 | `*_fixed.csv` | Repaired CSV with corrected dates |
 | `*_report.txt` | Interference analysis report |
-| `*_analysis.png` | Statistical graphs (4 graphs) |
-| `mapa_calor_*.html` | Interactive RSSI intensity map |
-| `mapa_localizacion_*.html` | Interactive network location map |
-| `graficos_Avanzados_*.png` | Advanced graphs (6 analyses) |
+| `*_analysis.png` | Statistical graphs |
+| `heat_map_*.html` | Interactive RSSI intensity map |
+| `location_map_*.html` | Interactive network location map |
+| `advanced_plots_*.png` | Advanced graphs (6 analyses) |
 
 ---
 
@@ -303,25 +303,25 @@ The script prints detailed progress at each phase:
 
 ### Case 1: WiFi Security Audit
 ```bash
-python WiFi_Spectrum_Suite.py scan.csv --a-i
+wifi-spectrum-suite interference scan.csv
 # Identifies insecure networks and saturated channels
 ```
 
 ### Case 2: Coverage Optimization
 ```bash
-python WiFi_Spectrum_Suite.py scan.csv --wd --mapa-calor --graficos
+wifi-spectrum-suite wardriving scan.csv --heat-map --plots
 # Visualizes coverage gaps
 ```
 
 ### Case 3: Community Mapping (like Wigle)
 ```bash
-python WiFi_Spectrum_Suite.py Warfi_file_fixed.csv --wd --todo
+wifi-spectrum-suite wardriving Warfi_file_fixed.csv --all
 # Generates interactive maps for community analysis
 ```
 
 ### Case 4: Automatic Minino Pipeline
 ```bash
-python WiFi_Spectrum_Suite.py Warfi_file.csv --completo
+wifi-spectrum-suite full Warfi_file.csv
 # Processes end-to-end
 ```
 
@@ -347,7 +347,7 @@ python WiFi_Spectrum_Suite.py Warfi_file.csv --completo
 # Verify the path is correct
 ls Warfi.csv
 # Or use absolute path
-python WiFi_Spectrum_Suite.py /full/path/file.csv --completo
+wifi-spectrum-suite full /full/path/file.csv
 ```
 
 ### "Missing columns / Error processing CSV"
@@ -359,9 +359,9 @@ python WiFi_Spectrum_Suite.py /full/path/file.csv --completo
 ### "HTML maps won't open"
 ```bash
 # Open in browser manually
-# Windows: start mapa_calor_file.html
-# Linux: xdg-open mapa_calor_file.html
-# Mac: open mapa_calor_file.html
+# Windows: start heat_map_file.html
+# Linux: xdg-open heat_map_file.html
+# Mac: open heat_map_file.html
 ```
 
 ---
@@ -393,237 +393,3 @@ Project provided for educational and research purposes.
 ---
 
 **Status**: Active | **Last Updated**: March 2026 | **Python**: 3.7+
-
-## Features
-
-### 1. CSV Debugger 🔧
-- Automatically detect date format issues in WiFi survey exports
-- Repair corrupted or malformed CSV files
-- Validate data integrity before analysis
-- Smart field reconstruction for missing or invalid values
-- Supports multiple date formats (ISO 8601, US, EU formats)
-
-### 2. Interference Analysis 📊
-- Detect overlapping WiFi channels
-- Identify potential interference sources
-- Channel frequency analysis
-- SSID and signal strength correlation
-- Visualize interference hotspots on maps
-
-### 3. Wardriving Analyzer 🗺️
-- Geospatial mapping of WiFi networks
-- Heat maps showing network density
-- Interactive Folium-based maps
-- GPS coordinate parsing and validation
-- Network distribution analysis by location
-
-### 4. Data Visualization 📈
-- Signal strength distribution charts
-- Channel frequency heatmaps
-- Network density maps
-- Time-based analysis plots
-- Custom Seaborn/Matplotlib visualizations
-
-## Installation
-
-### Requirements
-- Python 3.7+
-- pandas
-- matplotlib
-- seaborn
-- numpy
-- folium
-- 
-
-### Package Installation
-
-```bash
-pip install pandas matplotlib seaborn numpy folium
-```
-
-Or install all dependencies at once:
-
-```bash
-pip install -r requirements.txt
-```
-
-## Usage
-
-### Basic Usage
-
-```bash
-python WiFi_Spectrum_Suite.py -i input.csv -o output_directory
-```
-
-### Command Line Arguments
-
-| Argument | Description | Required |
-|----------|-------------|----------|
-| `-i, --input` | Input CSV file path | Yes |
-| `-o, --output` | Output directory for results | Yes |
-| `-a, --analyze` | Run interference analysis | No |
-| `-w, --wardriving` | Generate wardriving maps | No |
-| `-r, --repair` | Repair date issues automatically | No |
-| `-v, --validate` | Validate repaired data | No |
-| `-d, --debug` | Enable debug output | No |
-
-### Examples
-
-#### Repair CSV with Date Issues
-```bash
-python WiFi_Spectrum_Suite.py -i survey.csv -o output/ -r
-```
-
-#### Full Analysis Pipeline
-```bash
-python WiFi_Spectrum_Suite.py -i survey.csv -o output/ -r -a -w -v
-```
-
-#### Wardriving Map Generation
-```bash
-python WiFi_Spectrum_Suite.py -i survey.csv -o maps/ -w
-```
-
-#### Interference Analysis Only
-```bash
-python WiFi_Spectrum_Suite.py -i survey.csv -o analysis/ -a
-```
-
-## Input File Format
-
-Expected CSV format for WiFi survey data:
-
-```csv
-Index,SSID,WiFi Address,BSSID,Channel,RSSI,Frequency,Security,First Seen,Last Seen,Latitude,Longitude
-1,MyNetwork,00:11:22:33:44:55,00:11:22:33:44:55,1,-45,2412,WPA2,2024-01-15 10:30:00,2024-01-15 14:45:00,40.7128,-74.0060
-```
-
-### Supported Data Columns
-
-| Column | Purpose | Required |
-|--------|---------|----------|
-| SSID | Network name | Yes |
-| BSSID/WiFi Address | MAC address | Yes |
-| Channel | WiFi channel (1-13 or 1-14) | Yes |
-| RSSI | Signal strength (dBm) | Yes |
-| Latitude/Long | GPS coordinates | For wardriving |
-| First Seen | First detection time | For interference analysis |
-| Security | Encryption type (WPA2, WPA, WEP) | No |
-
-## Output Files
-
-### Generated Reports
-
-- `wifi_analysis_report.txt` - Summary statistics and analysis
-- `channel_overlap_analysis.csv` - Interference matrix
-- `network_density_map.html` - Interactive Folium map
-- `signal_distribution.png` - Signal strength visualization
-- `channel_heatmap.png` - Channel frequency analysis
-- `wardriving_analysis.html` - Geospatial mapping
-- `*_fixed.csv` - Repaired CSV data
-
-## Advanced Features
-
-### Date Repair Engine
-Automatically fixes common date format issues:
-- Detects mixed date formats
-- Converts between ISO 8601, US, and EU formats
-- Replaces invalid values with current timestamp
-- Validates repaired data integrity
-
-### Smart Channel Analysis
-- Identifies overlapping channels (20/40/80 MHz)
-- Calculates interference risk scores
-- Suggests optimal channel placement
-- Visualizes frequency spectrum usage
-
-### Geospatial Heatmaps
-- Creates multi-layer maps showing:
-  - Network density
-  - Signal strength distribution
-  - Security type distribution
-  - Channel allocation patterns
-
-## Troubleshooting
-
-### Common Issues
-
-**Issue: "Date parsing failed"**
-```bash
-Solution: Use the -r (repair) flag to automatically fix date fields
-python WiFi_Spectrum_Suite.py -i survey.csv -o output/ -r
-```
-
-**Issue: "Missing latitude/longitude data"**
-```bash
-Solution: Wardriving features require GPS coordinates. Ensure input file has these columns.
-```
-
-**Issue: "Encoding errors with non-ASCII characters"**
-```bash
-Solution: The tool automatically handles UTF-8 encoding. If issues persist, convert CSV to UTF-8:
-iconv -f ISO-8859-1 -t UTF-8 input.csv > input_utf8.csv
-```
-
-## Performance Tips
-
-- For large datasets (>100k networks), run analysis on subsets
-- Use `-d` flag to monitor memory usage
-- Maps load faster with filtered geographic regions
-- Cache intermediate results in the output directory
-
-## Data Privacy
-
-⚠️ **Important**: WiFi survey data often contains location information. 
-
-- Never share raw survey files publicly
-- Anonymize SSIDs before archiving
-- Filter sensitive geographic regions
-- Comply with local regulations on wireless scanning
-
-## Technical Details
-
-### Dependencies
-- **pandas**: Data manipulation and CSV processing
-- **matplotlib/seaborn**: Statistical visualization
-- **numpy**: Numerical analysis
-- **folium**: Geospatial mapping
-- **Python regex**: Date format detection and repair
-
-### Architecture
-The suite is organized into three main modules:
-1. **CSV Debugger** - Lines 30-400: Data validation and repair
-2. **Interference Analyzer** - Lines 400-800: Channel analysis
-3. **Wardriving Analyzer** - Lines 800-1234: Geospatial visualization
-
-## Contributing
-
-Contributions are welcome! Areas for improvement:
-- Support for additional WiFi data formats
-- Real-time network scanning (requires libpcap)
-- Machine learning-based interference prediction
-- Support for 6GHz and WiFi 7 analysis
-
-## License
-
-This project is provided as-is for educational and research purposes.
-
-## FAQ
-
-**Q: Can I use this for WiFi hacking?**  
-A: This tool is for legitimate network analysis, testing, and optimization only. Always obtain permission before analyzing networks you don't own.
-
-**Q: What's the maximum dataset size?**  
-A: Tested with up to 500,000 network entries. Performance depends on your system RAM.
-
-**Q: Can I integrate this with other tools?**  
-A: Yes! The CSV output can be imported into mapping tools, databases, or analysis platforms.
-
-**Q: Does it work on Windows/Mac/Linux?**  
-A: Yes, it's cross-platform. Python 3.7+ required on all systems.
-
----
-
-**Status**: Active Development  
-**Last Updated**: March 2026  
-**Python**: 3.7+

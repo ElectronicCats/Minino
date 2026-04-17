@@ -1,5 +1,5 @@
 """
-wardriving.py - Análisis completo de datos de wardriving
+wardriving.py - Complete analysis of wardriving data
 """
 
 import csv
@@ -13,7 +13,7 @@ from ..visualization.maps import generate_heat_map, generate_location_map
 from ..visualization.plots import generate_wardriving_plots
 
 
-# Mapeo de nombres alternativos de columnas al nombre canónico esperado
+# Mapping of alternative column names to the expected canonical name
 _COLUMN_ALIASES: Dict[str, list] = {
     "SSID":             ["SSID", "ssid", "Ssid"],
     "MAC":              ["BSSID", "MAC", "bssid", "mac"],
@@ -28,103 +28,102 @@ _COLUMN_ALIASES: Dict[str, list] = {
 
 
 class WardrivingAnalyzer:
-    """Análisis completo de datos de wardriving a partir de un CSV Kismet/Wigle."""
+    """Complete analysis of wardriving data from a Kismet/Wigle CSV."""
 
-    def __init__(self, archivo_csv: str, output_dir: str = ".") -> None:
-        self.archivo_csv = archivo_csv
+    def __init__(self, csv_file: str, output_dir: str = ".") -> None:
+        self.csv_file = csv_file
         self.df: Optional[pd.DataFrame] = None
-        self.nombre_base = os.path.splitext(os.path.basename(archivo_csv))[0]
+        self.base_name = os.path.splitext(os.path.basename(csv_file))[0]
         self.output_dir = output_dir
 
     # ------------------------------------------------------------------
-    # Carga de datos
+    # Data Loading
     # ------------------------------------------------------------------
 
-    def cargar_datos(self) -> bool:
+    def load_data(self) -> bool:
         """
-        Carga y prepara los datos del archivo CSV.
+        Loads and prepares data from the CSV file.
 
-        Intenta varias estrategias de lectura, normaliza nombres de columnas
-        y convierte los tipos numéricos necesarios.
+        Attempts multiple reading strategies, normalizes column names,
+        and converts necessary numeric types.
 
         Returns:
-            ``True`` si los datos se cargaron correctamente, ``False`` en caso
-            contrario.
+            ``True`` if the data was loaded successfully, ``False`` otherwise.
         """
-        if not os.path.exists(self.archivo_csv):
-            print_error(f"El archivo '[cyan]{self.archivo_csv}[/cyan]' no existe")
+        if not os.path.exists(self.csv_file):
+            print_error(f"The file '[cyan]{self.csv_file}[/cyan]' does not exist")
             return False
 
-        # Validación de tamaño de archivo (Límite: 500 MB)
+        # File size validation (Limit: 500 MB)
         max_size_mb = 500
-        file_size_mb = os.path.getsize(self.archivo_csv) / (1024 * 1024)
+        file_size_mb = os.path.getsize(self.csv_file) / (1024 * 1024)
         if file_size_mb > max_size_mb:
-            print_error(f"El archivo es demasiado grande ({file_size_mb:.2f} MB). Límite de seguridad: {max_size_mb} MB.")
+            print_error(f"The file is too large ({file_size_mb:.2f} MB). Safety limit: {max_size_mb} MB.")
             return False
 
         try:
-            self.df = self._leer_csv()
+            self.df = self._read_csv()
         except Exception as exc:
-            print_error(f"Error al cargar datos: {exc}")
+            print_error(f"Error loading data: {exc}")
             return False
 
         if self.df is None or self.df.empty:
-            print_error("No se pudieron cargar datos válidos")
+            print_error("Could not load valid data")
             return False
 
         self.df.columns = self.df.columns.str.strip()
-        self._mapear_columnas()
+        self._map_columns()
 
         try:
-            self._convertir_tipos()
+            self._convert_types()
         except Exception as exc:
-            print_error(f"Error al preparar datos: {exc}")
+            print_error(f"Error preparing data: {exc}")
             return False
 
-        print_success(f"Datos preparados: [white bold]{len(self.df)}[/white bold] registros válidos")
+        print_success(f"Data prepared: [white bold]{len(self.df)}[/white bold] valid records")
         return True
 
-    def _leer_csv(self) -> pd.DataFrame:
-        """Intenta cargar el CSV con múltiples estrategias."""
+    def _read_csv(self) -> pd.DataFrame:
+        """Attempts to load the CSV using multiple strategies."""
         try:
             df = pd.read_csv(
-                self.archivo_csv, skiprows=1,
+                self.csv_file, skiprows=1,
                 engine="python", quoting=csv.QUOTE_MINIMAL, on_bad_lines="warn",
             )
-            print_success("Datos cargados con engine de Python")
+            print_success("Data loaded with Python engine")
             return df
         except Exception as exc:
-            print_warning(f"Primer intento falló: [dim]{exc}[/dim]")
-            console.print("  [dim]Intentando método alternativo...[/dim]")
+            print_warning(f"First attempt failed: [dim]{exc}[/dim]")
+            console.print("  [dim]Trying alternative method...[/dim]")
 
-        # Segunda estrategia: sin skiprows, detectar si tiene encabezado SSID
+        # Second strategy: no skiprows, detect if it has SSID header
         temp_df = pd.read_csv(
-            self.archivo_csv, engine="python",
+            self.csv_file, engine="python",
             quoting=csv.QUOTE_MINIMAL, on_bad_lines="skip",
         )
         if len(temp_df.columns) > 1 and any("SSID" in str(c) for c in temp_df.columns):
-            print_success("Datos cargados sin skiprows")
+            print_success("Data loaded without skiprows")
             return temp_df
 
-        df = pd.read_csv(self.archivo_csv, skiprows=1, on_bad_lines="skip")
-        print_success("Datos cargados ignorando líneas problemáticas")
+        df = pd.read_csv(self.csv_file, skiprows=1, on_bad_lines="skip")
+        print_success("Data loaded ignoring problematic lines")
         return df
 
-    def _mapear_columnas(self) -> None:
-        """Renombra columnas alternativas al nombre canónico si faltan."""
-        faltantes = [c for c in _COLUMN_ALIASES if c not in self.df.columns]
-        if faltantes:
-            print_warning(f"Columnas faltantes: [white]{faltantes}[/white]")
-            console.print(f"  [dim]Disponibles: {list(self.df.columns)}[/dim]")
-            for col in faltantes:
+    def _map_columns(self) -> None:
+        """Renames alternative columns to the canonical name if missing."""
+        missing = [c for c in _COLUMN_ALIASES if c not in self.df.columns]
+        if missing:
+            print_warning(f"Missing columns: [white]{missing}[/white]")
+            console.print(f"  [dim]Available: {list(self.df.columns)}[/dim]")
+            for col in missing:
                 for alias in _COLUMN_ALIASES[col]:
                     if alias in self.df.columns:
                         self.df[col] = self.df[alias]
-                        console.print(f"  [dim]Mapeada [/dim][cyan]{alias}[/cyan][dim] → [/dim][cyan]{col}[/cyan]")
+                        console.print(f"  [dim]Mapped [/dim][cyan]{alias}[/cyan][dim] → [/dim][cyan]{col}[/cyan]")
                         break
 
-    def _convertir_tipos(self) -> None:
-        """Convierte columnas a los tipos numéricos y temporales correctos."""
+    def _convert_types(self) -> None:
+        """Converts columns to the correct numeric and datetime types."""
         self.df["Timestamp"] = pd.to_datetime(self.df["FirstSeen"], errors="coerce")
 
         for col in ("Channel", "Frequency"):
@@ -140,142 +139,141 @@ class WardrivingAnalyzer:
                 self.df = self.df.dropna(subset=[col])
 
     # ------------------------------------------------------------------
-    # Análisis
+    # Analysis
     # ------------------------------------------------------------------
 
-    def analizar_general(self) -> Dict[str, Any]:
+    def analyze_general(self) -> Dict[str, Any]:
         """
-        Calcula métricas generales del dataset.
+        Calculates general metrics of the dataset.
 
         Returns:
-            Diccionario con total de registros, período de captura, redes
-            únicas, top 5 SSIDs y métricas de RSSI. Devuelve ``{}`` si no
-            hay datos.
+            Dictionary with total records, capture period, unique networks,
+            top 5 SSIDs, and RSSI metrics. Returns ``{}`` if there is no data.
         """
         if self.df is None or self.df.empty:
             return {}
 
         try:
             return {
-                "total_registros": len(self.df),
-                "periodo_captura": f"{self.df['FirstSeen'].min()} - {self.df['FirstSeen'].max()}",
-                "redes_unicas": self.df["SSID"].nunique(),
-                "top_redes": self.df["SSID"].value_counts().head(5).to_dict(),
-                "metricas_rssi": {
-                    "promedio":   self.df["RSSI"].mean(),
-                    "minimo":     self.df["RSSI"].min(),
-                    "maximo":     self.df["RSSI"].max(),
-                    "desviacion": self.df["RSSI"].std(),
+                "total_records": len(self.df),
+                "capture_period": f"{self.df['FirstSeen'].min()} - {self.df['FirstSeen'].max()}",
+                "unique_networks": self.df["SSID"].nunique(),
+                "top_networks": self.df["SSID"].value_counts().head(5).to_dict(),
+                "rssi_metrics": {
+                    "average":   self.df["RSSI"].mean(),
+                    "minimum":     self.df["RSSI"].min(),
+                    "maximum":     self.df["RSSI"].max(),
+                    "deviation": self.df["RSSI"].std(),
                 },
             }
         except Exception as exc:
-            print_error(f"Error en análisis general: {exc}")
+            print_error(f"Error in general analysis: {exc}")
             return {}
 
     # ------------------------------------------------------------------
-    # Visualizaciones (delegadas a módulos de visualización)
+    # Visualizations (delegated to visualization modules)
     # ------------------------------------------------------------------
 
-    def generar_mapa_calor(self) -> str:
-        """Genera mapa de calor HTML de intensidad RSSI."""
-        return generate_heat_map(self.df, self.nombre_base, output_dir=self.output_dir)
+    def generate_heat_map(self) -> str:
+        """Generates an HTML heatmap of RSSI intensity."""
+        return generate_heat_map(self.df, self.base_name, output_dir=self.output_dir)
 
-    def generar_mapa_localizacion(self) -> str:
-        """Genera mapa HTML con marcadores por punto de acceso."""
-        return generate_location_map(self.df, self.nombre_base, output_dir=self.output_dir)
+    def generate_location_map(self) -> str:
+        """Generates an HTML map with markers per access point."""
+        return generate_location_map(self.df, self.base_name, output_dir=self.output_dir)
 
-    def generar_graficos(self) -> str:
-        """Genera gráficos PNG avanzados de wardriving."""
-        return generate_wardriving_plots(self.df, self.nombre_base, output_dir=self.output_dir)
+    def generate_plots(self) -> str:
+        """Generates advanced PNG plots for wardriving."""
+        return generate_wardriving_plots(self.df, self.base_name, output_dir=self.output_dir)
 
     # ------------------------------------------------------------------
-    # Reporte en consola
+    # Console Report
     # ------------------------------------------------------------------
 
-    def generar_reporte(self) -> None:
-        """Imprime un reporte detallado del análisis en consola."""
-        console.rule(f"[cyan bold]REPORTE DETALLADO — {self.nombre_base}[/cyan bold]", style="cyan")
+    def generate_report(self) -> None:
+        """Prints a detailed analysis report to the console."""
+        console.rule(f"[cyan bold]DETAILED REPORT — {self.base_name}[/cyan bold]", style="cyan")
 
         if self.df is None or self.df.empty:
-            print_error("No hay datos para generar reporte")
+            print_error("No data to generate report")
             return
 
-        analisis = self.analizar_general()
-        if not analisis:
-            print_error("No se pudo realizar el análisis general")
+        analysis = self.analyze_general()
+        if not analysis:
+            print_error("Could not perform general analysis")
             return
 
-        console.print("\n[cyan bold]INFORMACIÓN GENERAL[/cyan bold]")
-        console.print(f"  [dim]Total de registros:[/dim]      [white bold]{analisis['total_registros']:,}[/white bold]")
-        console.print(f"  [dim]Período de captura:[/dim]      [white]{analisis['periodo_captura']}[/white]")
-        console.print(f"  [dim]Redes únicas detectadas:[/dim] [white bold]{analisis['redes_unicas']:,}[/white bold]")
+        console.print("\n[cyan bold]GENERAL INFORMATION[/cyan bold]")
+        console.print(f"  [dim]Total records:[/dim]      [white bold]{analysis['total_records']:,}[/white bold]")
+        console.print(f"  [dim]Capture period:[/dim]      [white]{analysis['capture_period']}[/white]")
+        console.print(f"  [dim]Unique networks detected:[/dim] [white bold]{analysis['unique_networks']:,}[/white bold]")
 
         if "Channel" in self.df.columns and "Frequency" in self.df.columns:
             canales = sorted(int(c) for c in self.df["Channel"].dropna().unique())
             frecuencias = sorted(int(f) for f in self.df["Frequency"].dropna().unique())
-            console.print("\n[cyan bold]CANALES Y FRECUENCIAS[/cyan bold]")
-            console.print(f"  [dim]Canales utilizados:[/dim]      [cyan]{canales}[/cyan]")
-            console.print(f"  [dim]Frecuencias utilizadas:[/dim]  [cyan]{frecuencias}[/cyan] MHz")
+            console.print("\n[cyan bold]CHANNELS AND FREQUENCIES[/cyan bold]")
+            console.print(f"  [dim]Channels used:[/dim]      [cyan]{canales}[/cyan]")
+            console.print(f"  [dim]Frequencies used:[/dim]  [cyan]{frecuencias}[/cyan] MHz")
             console.print(
-                f"  [dim]Total canales:[/dim] [white bold]{len(canales)}[/white bold]  "
-                f"[dim]Total frecuencias:[/dim] [white bold]{len(frecuencias)}[/white bold]"
+                f"  [dim]Total channels:[/dim] [white bold]{len(canales)}[/white bold]  "
+                f"[dim]Total frequencies:[/dim] [white bold]{len(frecuencias)}[/white bold]"
             )
 
-        rssi_m = analisis["metricas_rssi"]
-        avg_color = rssi_color(rssi_m["promedio"])
-        console.print("\n[cyan bold]MÉTRICAS DE SEÑAL[/cyan bold]")
-        console.print(f"  [dim]RSSI promedio:[/dim] [{avg_color}]{rssi_m['promedio']:.1f} dBm[/{avg_color}]")
+        rssi_m = analysis["rssi_metrics"]
+        avg_color = rssi_color(rssi_m["average"])
+        console.print("\n[cyan bold]SIGNAL METRICS[/cyan bold]")
+        console.print(f"  [dim]Average RSSI:[/dim] [{avg_color}]{rssi_m['average']:.1f} dBm[/{avg_color}]")
         console.print(
-            f"  [dim]RSSI mínimo:[/dim]  [red]{rssi_m['minimo']} dBm[/red]  "
-            f"[dim]Máximo:[/dim]  [green]{rssi_m['maximo']} dBm[/green]"
+            f"  [dim]Minimum RSSI:[/dim]  [red]{rssi_m['minimum']} dBm[/red]  "
+            f"[dim]Maximum:[/dim]  [green]{rssi_m['maximum']} dBm[/green]"
         )
 
-        console.print("\n[cyan bold]TOP 5 REDES[/cyan bold]")
-        for ssid, count in analisis["top_redes"].items():
+        console.print("\n[cyan bold]TOP 5 NETWORKS[/cyan bold]")
+        for ssid, count in analysis["top_networks"].items():
             rssi_prom = self.df.loc[self.df["SSID"] == ssid, "RSSI"].mean() if "RSSI" in self.df.columns else 0.0
             color = rssi_color(rssi_prom)
             console.print(
                 f"  [white bold]{ssid}[/white bold]  "
-                f"[dim]{count} detecciones[/dim]  "
+                f"[dim]{count} detections[/dim]  "
                 f"[{color}]{rssi_prom:.1f} dBm[/{color}]"
             )
 
         if "AuthMode" in self.df.columns:
-            self._analizar_seguridad()
+            self._analyze_security()
 
         if "RSSI" in self.df.columns:
-            self._analizar_calidad_señal()
+            self._analyze_signal_quality()
 
         if "MAC" in self.df.columns and "SSID" in self.df.columns and "AuthMode" in self.df.columns:
-            self._analizar_spoofing()
+            self._analyze_spoofing()
 
-        console.print("\n[cyan bold]RECOMENDACIONES[/cyan bold]")
-        console.print("  [dim]1.[/dim] Analizar interferencias entre canales cercanos")
-        console.print("  [dim]2.[/dim] Verificar seguridad de redes con encriptación débil")
-        console.print("  [dim]3.[/dim] Optimizar ubicación de puntos de acceso")
-        console.print("  [dim]4.[/dim] Considerar repetidores en áreas de señal débil")
+        console.print("\n[cyan bold]RECOMMENDATIONS[/cyan bold]")
+        console.print("  [dim]1.[/dim] Analyze interference between nearby channels")
+        console.print("  [dim]2.[/dim] Verify security of networks with weak encryption")
+        console.print("  [dim]3.[/dim] Optimize placement of access points")
+        console.print("  [dim]4.[/dim] Consider repeaters in areas with weak signals")
 
-    def _analizar_seguridad(self) -> None:
-        console.print("\n[cyan bold]ANÁLISIS DE SEGURIDAD[/cyan bold]")
+    def _analyze_security(self) -> None:
+        console.print("\n[cyan bold]SECURITY ANALYSIS[/cyan bold]")
 
         abiertas = self.df[self.df["AuthMode"] == "OPEN"]
         if not abiertas.empty:
-            console.print(f"  [red]⚠[/red] Redes abiertas: [red bold]{abiertas['SSID'].nunique()}[/red bold]")
+            console.print(f"  [red]⚠[/red] Open networks: [red bold]{abiertas['SSID'].nunique()}[/red bold]")
             for ssid in abiertas["SSID"].unique()[:5]:
                 console.print(f"    [red]•[/red] [white]{ssid}[/white]")
 
         wep = self.df[self.df["AuthMode"] == "WEP"]
         if not wep.empty:
-            console.print(f"  [orange3]⚠[/orange3] Redes WEP (encriptación débil): [orange3 bold]{wep['SSID'].nunique()}[/orange3 bold]")
+            console.print(f"  [orange3]⚠[/orange3] WEP networks (weak encryption): [orange3 bold]{wep['SSID'].nunique()}[/orange3 bold]")
             for ssid in wep["SSID"].unique()[:5]:
                 console.print(f"    [orange3]•[/orange3] [white]{ssid}[/white]")
 
         wpa2 = self.df[self.df["AuthMode"].str.contains("WPA2", na=False)]
         if not wpa2.empty:
-            console.print(f"  [green]✓[/green] Redes WPA2: [green bold]{wpa2['SSID'].nunique()}[/green bold]")
+            console.print(f"  [green]✓[/green] WPA2 networks: [green bold]{wpa2['SSID'].nunique()}[/green bold]")
 
-    def _analizar_calidad_señal(self) -> None:
-        console.print("\n[cyan bold]CALIDAD DE SEÑAL[/cyan bold]")
+    def _analyze_signal_quality(self) -> None:
+        console.print("\n[cyan bold]SIGNAL QUALITY[/cyan bold]")
         total = len(self.df)
         excelente = len(self.df[self.df["RSSI"] > -65])
         buena     = len(self.df[(self.df["RSSI"] >= -75) & (self.df["RSSI"] <= -65)])
@@ -283,10 +281,10 @@ class WardrivingAnalyzer:
         debil     = len(self.df[self.df["RSSI"] < -85])
 
         rows = [
-            ("Excelente", "> −65 dBm",      excelente, "green bold"),
-            ("Buena",     "−65 a −75 dBm",  buena,     "green"),
-            ("Aceptable", "−75 a −85 dBm",  aceptable, "yellow"),
-            ("Débil",     "< −85 dBm",       debil,     "red"),
+            ("Excellent", "> −65 dBm",      excelente, "green bold"),
+            ("Good",      "−65 to −75 dBm", buena,     "green"),
+            ("Fair",      "−75 to −85 dBm", aceptable, "yellow"),
+            ("Weak",      "< −85 dBm",      debil,     "red"),
         ]
         for label, rango, n, color in rows:
             pct = n / total * 100
@@ -297,8 +295,8 @@ class WardrivingAnalyzer:
                 f"{bar} [{color}]{n:5,}[/{color}] [dim]({pct:.1f}%)[/dim]"
             )
 
-    def _analizar_spoofing(self) -> None:
-        console.print("\n[cyan bold]ANÁLISIS DE SPOOFING / EVIL TWIN[/cyan bold]")
+    def _analyze_spoofing(self) -> None:
+        console.print("\n[cyan bold]SPOOFING / EVIL TWIN ANALYSIS[/cyan bold]")
 
         df_valid = self.df.dropna(subset=["MAC", "SSID", "AuthMode"])
         unique_aps = df_valid.drop_duplicates(subset=["MAC", "SSID", "AuthMode"])
@@ -318,16 +316,16 @@ class WardrivingAnalyzer:
 
                 if is_open_present and is_secure_present:
                     evil_twins_detectados += 1
-                    console.print(f"  [red bold]⚠ ¡ALERTA EVIL TWIN! SSID: '{ssid}'[/red bold]")
-                    console.print("    [red]Múltiples MACs con discrepancia de seguridad detectada:[/red]")
+                    console.print(f"  [red bold]⚠ EVIL TWIN ALERT! SSID: '{ssid}'[/red bold]")
+                    console.print("    [red]Multiple MACs with security mismatch detected:[/red]")
                     for _, row in group.iterrows():
                         color = "red" if "OPEN" in str(row["AuthMode"]).upper() else "green"
-                        console.print(f"    [dim]- MAC:[/dim] [white]{row['MAC']}[/white] [dim]| Seguridad:[/dim] [{color}]{row['AuthMode']}[/{color}]")
+                        console.print(f"    [dim]- MAC:[/dim] [white]{row['MAC']}[/white] [dim]| Security:[/dim] [{color}]{row['AuthMode']}[/{color}]")
                         reporte_rows.append({
                             "SSID":     ssid,
                             "MAC":      row["MAC"],
                             "AuthMode": row["AuthMode"],
-                            "Alerta":   "Evil Twin",
+                            "Alert":    "Evil Twin",
                         })
                 else:
                     for _, row in group.iterrows():
@@ -335,28 +333,28 @@ class WardrivingAnalyzer:
                             "SSID":     ssid,
                             "MAC":      row["MAC"],
                             "AuthMode": row["AuthMode"],
-                            "Alerta":   "Multi-MAC (posible corporativo/Mesh)",
+                            "Alert":    "Multi-MAC (possible Corporate/Mesh)",
                         })
 
         if evil_twins_detectados == 0:
-            console.print("  [green]✓[/green] No se detectaron indicadores críticos de Evil Twin (discrepancias de seguridad).")
+            console.print("  [green]✓[/green] No critical Evil Twin indicators detected (security mismatches).")
 
         if multi_mac_ssids > 0:
-            console.print(f"  [dim]Nota: {multi_mac_ssids} SSIDs están siendo emitidos por múltiples MACs (posibles redes corporativas/Mesh).[/dim]")
+            console.print(f"  [dim]Note: {multi_mac_ssids} SSIDs are being broadcast by multiple MACs (possible Corporate/Mesh networks).[/dim]")
 
         if reporte_rows:
-            self._guardar_reporte_spoofing(reporte_rows)
+            self._save_spoofing_report(reporte_rows)
 
-    def _guardar_reporte_spoofing(self, rows: list) -> str:
-        """Escribe un CSV con los hallazgos de spoofing y devuelve la ruta del archivo."""
-        output_path = os.path.join(self.output_dir, f"{self.nombre_base}_spoofing.csv")
+    def _save_spoofing_report(self, rows: list) -> str:
+        """Writes a CSV with the spoofing findings and returns the file path."""
+        output_path = os.path.join(self.output_dir, f"{self.base_name}_spoofing.csv")
         try:
             with open(output_path, "w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(f, fieldnames=["SSID", "MAC", "AuthMode", "Alerta"])
+                writer = csv.DictWriter(f, fieldnames=["SSID", "MAC", "AuthMode", "Alert"])
                 writer.writeheader()
                 writer.writerows(rows)
-            print_success(f"Reporte de spoofing guardado: [cyan]{output_path}[/cyan]")
+            print_success(f"Spoofing report saved: [cyan]{output_path}[/cyan]")
         except Exception as exc:
-            print_error(f"Error al guardar reporte de spoofing: {exc}")
+            print_error(f"Error saving spoofing report: {exc}")
             return ""
         return output_path

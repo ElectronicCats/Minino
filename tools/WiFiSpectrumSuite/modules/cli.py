@@ -102,13 +102,12 @@ def print_header(module: Optional[str] = None) -> None:
     console.print(panel)
 
 
-
 def _phase_header(title: str) -> None:
     console.rule(f"[cyan bold]{title}[/cyan bold]", style="cyan")
 
 
 # ---------------------------------------------------------------------------
-# Grupo raíz
+# Root group
 # ---------------------------------------------------------------------------
 
 @click.group(
@@ -119,238 +118,237 @@ def _phase_header(title: str) -> None:
 @click.pass_context
 def cli(ctx: click.Context) -> None:
     """
-    WiFi Spectrum Suite — Suite completa de análisis WiFi.
+    WiFi Spectrum Suite — Complete WiFi analysis suite.
 
     \b
-    Submódulos disponibles:
-      debug        Depuración y reparación de fechas en CSV
-      interference Análisis de interferencias por canal
-      wardriving   Análisis de wardriving (mapas y gráficos)
-      full         Ejecutar todos los análisis en secuencia
+    Available submodules:
+      debug        Debug and repair dates in CSV
+      interference Channel interference analysis
+      wardriving   Wardriving analysis (maps and plots)
+      full         Execute all analyses sequentially
 
-    Usa ``wifi-spectrum-suite <subcomando> --help`` para más información.
+    Use ``wifi-spectrum-suite <subcommand> --help`` for more information.
     """
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
 
 
 # ---------------------------------------------------------------------------
-# Subcomando: debug
+# Subcommand: debug
 # ---------------------------------------------------------------------------
 
 @cli.command("debug")
-@click.argument("archivo", type=click.Path(exists=True, readable=True))
+@click.argument("csv_file", type=click.Path(exists=True, readable=True))
 @click.option(
     "-o", "--output", default=None,
-    help="Ruta del archivo CSV de salida. Por defecto: <archivo>_fixed.csv",
+    help="Output CSV file path. Default: <csv_file>_fixed.csv",
 )
 @click.option(
-    "--validar", "-v", is_flag=True, default=False,
-    help="Validar el archivo reparado tras la corrección.",
+    "--validate", "-v", is_flag=True, default=False,
+    help="Validate the repaired file after correction.",
 )
-def cmd_debug(archivo: str, output: str, validar: bool) -> None:
+def cmd_debug(csv_file: str, output: str, validate: bool) -> None:
     """
-    Detecta y repara problemas de formato de fecha en ARCHIVO CSV.
+    Detects and repairs date format issues in a CSV FILE.
 
     \b
-    Ejemplo:
-      wifi-spectrum-suite debug datos.csv -o datos_reparados.csv --validar
+    Example:
+      wifi-spectrum-suite debug data.csv -o data_fixed.csv --validate
     """
-    _phase_header("FASE 1: DEPURACIÓN DE PROBLEMAS DE FECHA")
+    _phase_header("PHASE 1: DATE ISSUES DEBUGGING")
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    repaired_file = repair_date_issues(archivo, output, output_dir=OUTPUT_DIR)
+    repaired_file = repair_date_issues(csv_file, output, output_dir=OUTPUT_DIR)
 
     if repaired_file is None:
-        print_error("No se pudo reparar el archivo.")
+        print_error("Could not repair the file.")
         sys.exit(1)
 
-    if validar:
+    if validate:
         validate_date_repair(repaired_file)
 
-    print_success(f"Archivo reparado: {repaired_file}")
+    print_success(f"File repaired: {repaired_file}")
 
 
 # ---------------------------------------------------------------------------
-# Subcomando: interference
+# Subcommand: interference
 # ---------------------------------------------------------------------------
 
 @cli.command("interference")
-@click.argument("archivo", type=click.Path(exists=True, readable=True))
-def cmd_interference(archivo: str) -> None:
+@click.argument("csv_file", type=click.Path(exists=True, readable=True))
+def cmd_interference(csv_file: str) -> None:
     """
-    Analiza interferencias WiFi entre canales en ARCHIVO CSV.
+    Analyzes WiFi channel interference in a CSV FILE.
 
-    Genera un reporte TXT y una imagen PNG con gráficos en el directorio
-    de trabajo actual.
+    Generates a TXT report and a PNG image with plots in the current working directory.
 
     \b
-    Ejemplo:
-      wifi-spectrum-suite interference datos.csv
+    Example:
+      wifi-spectrum-suite interference data.csv
     """
-    _phase_header("FASE 2: ANÁLISIS DE INTERFERENCIAS WiFi")
+    _phase_header("PHASE 2: WIFI INTERFERENCE ANALYSIS")
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    df = analyze_wifi_interference(archivo, output_dir=OUTPUT_DIR)
+    df = analyze_wifi_interference(csv_file, output_dir=OUTPUT_DIR)
 
     if df is None:
-        print_error("No se pudo analizar el archivo.")
+        print_error("Could not analyze the file.")
         sys.exit(1)
 
-    print_success("Análisis de interferencias completado.")
+    print_success("Interference analysis completed.")
 
 
 # ---------------------------------------------------------------------------
-# Subcomando: wardriving
+# Subcommand: wardriving
 # ---------------------------------------------------------------------------
 
 @cli.command("wardriving")
-@click.argument("archivo", type=click.Path(exists=True, readable=True))
+@click.argument("csv_file", type=click.Path(exists=True, readable=True))
 @click.option(
-    "--mapa-calor/--sin-mapa-calor", default=False,
-    help="Generar mapa de calor HTML.",
+    "--heat-map/--no-heat-map", default=False,
+    help="Generate HTML heatmap.",
 )
 @click.option(
-    "--mapa-loc/--sin-mapa-loc", default=False,
-    help="Generar mapa de localización HTML.",
+    "--location-map/--no-location-map", default=False,
+    help="Generate HTML location map.",
 )
 @click.option(
-    "--graficos/--sin-graficos", default=False,
-    help="Generar gráficos PNG avanzados.",
+    "--plots/--no-plots", default=False,
+    help="Generate advanced PNG plots.",
 )
 @click.option(
-    "--reporte/--sin-reporte", default=False,
-    help="Imprimir reporte detallado en consola.",
+    "--report/--no-report", default=False,
+    help="Print detailed report to console.",
 )
 @click.option(
-    "--todo", "-a", is_flag=True, default=False,
-    help="Ejecutar todas las opciones de wardriving.",
+    "--all", "-a", "run_all", is_flag=True, default=False,
+    help="Execute all wardriving options.",
 )
 def cmd_wardriving(
-    archivo: str,
-    mapa_calor: bool,
-    mapa_loc: bool,
-    graficos: bool,
-    reporte: bool,
-    todo: bool,
+    csv_file: str,
+    heat_map: bool,
+    location_map: bool,
+    plots: bool,
+    report: bool,
+    run_all: bool,
 ) -> None:
     """
-    Ejecuta análisis de wardriving sobre ARCHIVO CSV.
+    Executes wardriving analysis on a CSV FILE.
 
     \b
-    Ejemplos:
-      wifi-spectrum-suite wardriving datos.csv --todo
-      wifi-spectrum-suite wardriving datos.csv --mapa-calor --graficos
+    Examples:
+      wifi-spectrum-suite wardriving data.csv --all
+      wifi-spectrum-suite wardriving data.csv --heat-map --plots
     """
-    _phase_header("FASE 3: ANÁLISIS DE WARDRIVING")
+    _phase_header("PHASE 3: WARDRIVING ANALYSIS")
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    analyzer = WardrivingAnalyzer(archivo, output_dir=OUTPUT_DIR)
+    analyzer = WardrivingAnalyzer(csv_file, output_dir=OUTPUT_DIR)
 
-    if not analyzer.cargar_datos():
-        print_error("No se pudieron cargar los datos. Verifica el archivo CSV.")
+    if not analyzer.load_data():
+        print_error("Could not load data. Check the CSV file.")
         sys.exit(1)
 
     console.rule(
-        f"[cyan]ANÁLISIS WARDRIVING — {analyzer.nombre_base}[/cyan]",
+        f"[cyan]WARDRIVING ANALYSIS — {analyzer.base_name}[/cyan]",
         style="cyan dim",
     )
 
-    archivos_generados = []
+    generated_files = []
 
-    if todo or reporte:
-        analyzer.generar_reporte()
-    if todo or mapa_calor:
-        out = analyzer.generar_mapa_calor()
+    if run_all or report:
+        analyzer.generate_report()
+    if run_all or heat_map:
+        out = analyzer.generate_heat_map()
         if out:
-            archivos_generados.append(out)
-    if todo or mapa_loc:
-        out = analyzer.generar_mapa_localizacion()
+            generated_files.append(out)
+    if run_all or location_map:
+        out = analyzer.generate_location_map()
         if out:
-            archivos_generados.append(out)
-    if todo or graficos:
-        out = analyzer.generar_graficos()
+            generated_files.append(out)
+    if run_all or plots:
+        out = analyzer.generate_plots()
         if out:
-            archivos_generados.append(out)
+            generated_files.append(out)
 
-    if archivos_generados:
-        console.print("\n[cyan bold]ARCHIVOS GENERADOS:[/cyan bold]")
-        for out in archivos_generados:
+    if generated_files:
+        console.print("\n[cyan bold]GENERATED FILES:[/cyan bold]")
+        for out in generated_files:
             print_success(out)
     else:
-        print_warning("Ningún artefacto generado. Usa --todo o indica al menos una opción.")
+        print_warning("No artifacts generated. Use --all or indicate at least one option.")
 
 
 # ---------------------------------------------------------------------------
-# Subcomando: full (pipeline completo)
+# Subcommand: full (complete pipeline)
 # ---------------------------------------------------------------------------
 
 @cli.command("full")
-@click.argument("archivo", type=click.Path(exists=True, readable=True))
+@click.argument("csv_file", type=click.Path(exists=True, readable=True))
 @click.option(
     "-o", "--output", default=None,
-    help="Ruta del CSV reparado. Por defecto: <archivo>_fixed.csv",
+    help="Repaired CSV path. Default: <csv_file>_fixed.csv",
 )
 @click.option(
-    "--validar", "-v", is_flag=True, default=False,
-    help="Validar fechas después de la reparación.",
+    "--validate", "-v", is_flag=True, default=False,
+    help="Validate dates after repair.",
 )
-def cmd_full(archivo: str, output: str, validar: bool) -> None:
+def cmd_full(csv_file: str, output: str, validate: bool) -> None:
     """
-    Ejecuta el pipeline completo: debug → interference → wardriving.
+    Executes the complete pipeline: debug → interference → wardriving.
 
     \b
-    Ejemplo:
-      wifi-spectrum-suite full datos.csv --validar
+    Example:
+      wifi-spectrum-suite full data.csv --validate
     """
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # ── Fase 1 ────────────────────────────────────────────────────────
-    _phase_header("FASE 1: DEPURACIÓN DE PROBLEMAS DE FECHA")
-    repaired_file = repair_date_issues(archivo, output, output_dir=OUTPUT_DIR)
-    analysis_file = repaired_file if repaired_file else archivo
+    # ── Phase 1 ────────────────────────────────────────────────────────
+    _phase_header("PHASE 1: DATE ISSUES DEBUGGING")
+    repaired_file = repair_date_issues(csv_file, output, output_dir=OUTPUT_DIR)
+    analysis_file = repaired_file if repaired_file else csv_file
 
-    if repaired_file and validar:
+    if repaired_file and validate:
         validate_date_repair(repaired_file)
 
-    # ── Fase 2 ────────────────────────────────────────────────────────
-    _phase_header("FASE 2: ANÁLISIS DE INTERFERENCIAS WiFi")
+    # ── Phase 2 ────────────────────────────────────────────────────────
+    _phase_header("PHASE 2: WIFI INTERFERENCE ANALYSIS")
     analyze_wifi_interference(analysis_file, output_dir=OUTPUT_DIR)
 
-    # ── Fase 3 ────────────────────────────────────────────────────────
-    _phase_header("FASE 3: ANÁLISIS DE WARDRIVING")
+    # ── Phase 3 ────────────────────────────────────────────────────────
+    _phase_header("PHASE 3: WARDRIVING ANALYSIS")
     analyzer = WardrivingAnalyzer(analysis_file, output_dir=OUTPUT_DIR)
 
-    if not analyzer.cargar_datos():
-        print_error("No se pudieron cargar los datos de wardriving.")
+    if not analyzer.load_data():
+        print_error("Could not load wardriving data.")
         sys.exit(1)
 
     console.rule(
-        f"[cyan]ANÁLISIS WARDRIVING — {analyzer.nombre_base}[/cyan]",
+        f"[cyan]WARDRIVING ANALYSIS — {analyzer.base_name}[/cyan]",
         style="cyan dim",
     )
 
-    archivos_generados = []
-    analyzer.generar_reporte()
+    generated_files = []
+    analyzer.generate_report()
 
     for gen_fn in (
-        analyzer.generar_mapa_calor,
-        analyzer.generar_mapa_localizacion,
-        analyzer.generar_graficos,
+        analyzer.generate_heat_map,
+        analyzer.generate_location_map,
+        analyzer.generate_plots,
     ):
         out = gen_fn()
         if out:
-            archivos_generados.append(out)
+            generated_files.append(out)
 
-    # ── Resumen final ─────────────────────────────────────────────────
-    console.rule("[cyan bold]ANÁLISIS COMPLETADO EXITOSAMENTE[/cyan bold]", style="cyan")
-    print_success("Depuración de fechas")
-    print_success("Análisis de interferencias")
-    print_success("Análisis de wardriving")
+    # ── Final summary ─────────────────────────────────────────────────
+    console.rule("[cyan bold]ANALYSIS SUCCESSFULLY COMPLETED[/cyan bold]", style="cyan")
+    print_success("Date debugging")
+    print_success("Interference analysis")
+    print_success("Wardriving analysis")
 
-    if archivos_generados:
-        console.print("\n[cyan bold]ARCHIVOS GENERADOS:[/cyan bold]")
-        for out in archivos_generados:
+    if generated_files:
+        console.print("\n[cyan bold]GENERATED FILES:[/cyan bold]")
+        for out in generated_files:
             print_success(out)
 
     console.print()

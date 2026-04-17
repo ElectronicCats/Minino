@@ -1,5 +1,5 @@
 """
-interference.py - Análisis de interferencias WiFi por canal
+interference.py - WiFi channel interference analysis
 """
 
 import os
@@ -13,7 +13,7 @@ from ..visualization.plots import generate_interference_plots
 
 
 # ---------------------------------------------------------------------------
-# Helpers internos
+# Internal Helpers
 # ---------------------------------------------------------------------------
 
 _NON_OVERLAPPING = [1, 6, 11]
@@ -21,14 +21,14 @@ _NON_OVERLAPPING = [1, 6, 11]
 
 def _classify_signal(rssi: float) -> str:
     if rssi >= -50:
-        return "Excelente"
+        return "Excellent"
     elif rssi >= -60:
-        return "Buena"
+        return "Good"
     elif rssi >= -70:
-        return "Regular"
+        return "Fair"
     elif rssi >= -80:
-        return "Débil"
-    return "Muy débil"
+        return "Weak"
+    return "Very weak"
 
 
 def _format_channels_list(channels) -> list:
@@ -36,7 +36,7 @@ def _format_channels_list(channels) -> list:
 
 
 def _generate_comprehensive_analysis(df: pd.DataFrame) -> str:
-    """Construye el bloque de texto con el resumen ejecutivo y recomendaciones."""
+    """Builds the text block with the executive summary and recommendations."""
     total = len(df)
     weak = len(df[df["RSSI"] <= -80])
     weak_pct = (weak / total) * 100
@@ -45,29 +45,29 @@ def _generate_comprehensive_analysis(df: pd.DataFrame) -> str:
     lines = [
         "",
         "=" * 60,
-        "RESUMEN EJECUTIVO DEL ANÁLISIS",
+        "EXECUTIVE ANALYSIS SUMMARY",
         "=" * 60,
         "",
-        "HALLAZGOS PRINCIPALES:",
-        f"   • Total de redes detectadas: {total:,} redes",
-        f"   • Redes con señal débil: {weak:,} redes ({weak_pct:.1f}% del total)",
-        f"   • Canales utilizados: {df['Channel'].nunique()} canales diferentes",
+        "MAIN FINDINGS:",
+        f"   • Total detected networks: {total:,} networks",
+        f"   • Networks with weak signal: {weak:,} networks ({weak_pct:.1f}% of total)",
+        f"   • Channels used: {df['Channel'].nunique()} different channels",
         "",
-        "SITUACIÓN DE CANALES NO SUPERPUESTOS:",
+        "NON-OVERLAPPING CHANNELS SITUATION:",
     ]
 
     for ch in _NON_OVERLAPPING:
         count = channel_counts.get(ch, 0)
-        status = " (Óptimo)"
+        status = " (Optimal)"
         if count > 400:
-            status = " (Extremadamente congestionado)"
+            status = " (Extremely congested)"
         elif count > 300:
-            status = " (Muy congestionado)"
+            status = " (Very congested)"
         elif count > 200:
-            status = " (Congestionado)"
+            status = " (Congested)"
         elif count > 100:
-            status = " (Moderado)"
-        lines.append(f"   • Canal {ch}: {count:,} redes{status}")
+            status = " (Moderate)"
+        lines.append(f"   • Channel {ch}: {count:,} networks{status}")
 
     overlapping = sorted(
         [
@@ -81,52 +81,52 @@ def _generate_comprehensive_analysis(df: pd.DataFrame) -> str:
 
     lines += [
         "",
-        "CANALES PROBLEMÁTICOS (INTERFERENCIA):",
-        *[f"   • Canal {ch}: {cnt:,} redes (interfiere con canal {closest})" for ch, closest, cnt in overlapping[:6]],
+        "PROBLEMATIC CHANNELS (INTERFERENCE):",
+        *[f"   • Channel {ch}: {cnt:,} networks (interferes with channel {closest})" for ch, closest, cnt in overlapping[:6]],
         "",
         "=" * 60,
-        "RECOMENDACIONES ESTRATÉGICAS",
+        "STRATEGIC RECOMMENDATIONS",
         "=" * 60,
         "",
-        "PROBLEMAS CRÍTICOS IDENTIFICADOS:",
-        "   1. Canal 11 saturado — Evitar completamente",
-        "   2. Todos los canales no superpuestos están congestionados",
-        "   3. Alta densidad de redes en ambiente 2.4GHz",
+        "CRITICAL ISSUES IDENTIFIED:",
+        "   1. Saturated channel 11 — Avoid completely",
+        "   2. All non-overlapping channels are congested",
+        "   3. High density of networks in 2.4GHz environment",
         "",
-        "ESTRATEGIAS RECOMENDADAS:",
-        "   1. MIGRACIÓN A 5GHz:",
-        "      • Configurar redes en banda 5GHz si los dispositivos lo soportan",
-        "      • Menor interferencia y más canales disponibles",
+        "RECOMMENDED STRATEGIES:",
+        "   1. MIGRATION TO 5GHz:",
+        "      • Configure networks in the 5GHz band if devices support it",
+        "      • Less interference and more available channels",
         "",
-        "   2. CANALES ALTERNATIVOS EN 2.4GHz:",
-        f"      • Canal 13: {channel_counts.get(13, 0)} redes (menos congestionado)",
-        f"      • Canal 14: {channel_counts.get(14, 0)} redes (menos congestionado)",
-        f"      • Canal  5: {channel_counts.get(5, 0)} redes (muy poco congestionado)",
+        "   2. ALTERNATIVE CHANNELS IN 2.4GHz:",
+        f"      • Channel 13: {channel_counts.get(13, 0)} networks (less congested)",
+        f"      • Channel 14: {channel_counts.get(14, 0)} networks (less congested)",
+        f"      • Channel  5: {channel_counts.get(5, 0)} networks (very low congestion)",
         "",
-        "   3. OPTIMIZACIÓN DE 2.4GHz:",
-        "      • Usar ancho de canal de 20MHz (no 40MHz)",
-        "      • Transmitir en potencia baja para no afectar redes vecinas",
-        "      • Programar reinicios nocturnos del router",
+        "   3. OPTIMIZATION IN 2.4GHz:",
+        "      • Use a channel width of 20MHz (not 40MHz)",
+        "      • Transmit at low power to avoid affecting neighboring networks",
+        "      • Schedule nightly router reboots",
         "",
-        "   4. PARA REDES CRÍTICAS:",
-        "      • Implementar calidad de servicio (QoS)",
-        "      • Usar banda dual (2.4GHz para IoT, 5GHz para dispositivos principales)",
+        "   4. FOR CRITICAL NETWORKS:",
+        "      • Implement Quality of Service (QoS)",
+        "      • Use dual band (2.4GHz for IoT, 5GHz for primary devices)",
         "",
-        "PARA USUARIOS FINALES:",
-        "   • Conectar dispositivos importantes a 5GHz cuando sea posible",
-        "   • Ubicar el router lejos de interferencias",
-        "   • Considerar sistemas mesh para mejor cobertura",
+        "FOR END USERS:",
+        "   • Connect important devices to 5GHz whenever possible",
+        "   • Place the router away from interference",
+        "   • Consider mesh systems for better coverage",
         "",
-        "PERSPECTIVA:",
-        "   El entorno analizado muestra una SATURACIÓN SEVERA de la banda 2.4GHz.",
-        "   La migración a 5GHz no es solo recomendable, sino necesaria.",
+        "PERSPECTIVE:",
+        "   The analyzed environment shows SEVERE SATURATION in the 2.4GHz band.",
+        "   Migration to 5GHz is not just recommended, but necessary.",
     ]
 
     return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
-# API pública
+# Public API
 # ---------------------------------------------------------------------------
 
 def analyze_wifi_interference(
@@ -135,57 +135,57 @@ def analyze_wifi_interference(
     output_dir: str = ".",
 ) -> Optional[pd.DataFrame]:
     """
-    Analiza interferencias WiFi entre canales a partir de un archivo CSV.
+    Analyzes WiFi interference between channels from a CSV file.
 
-    Carga y valida los datos si no se pasa un DataFrame, imprime el análisis
-    en consola, guarda un PNG con gráficos y un TXT con el reporte completo.
+    Loads and validates the data if a DataFrame is not passed, prints the analysis
+    to the console, saves a PNG with graphs, and a TXT with the full report.
 
     Args:
-        csv_file: Ruta al archivo CSV con datos WiFi.
-        df: DataFrame ya cargado. Si es ``None`` se carga desde ``csv_file``.
+        csv_file: Path to the CSV file with WiFi data.
+        df: Already loaded DataFrame. If ``None``, it is loaded from ``csv_file``.
 
     Returns:
-        DataFrame procesado con la columna ``Calidad`` añadida, o ``None`` si
-        ocurrió un error.
+        Processed DataFrame with the ``Quality`` column added, or ``None`` if
+        an error occurred.
     """
     if df is None:
         try:
             df = robust_csv_loader(csv_file)
 
             if df is None:
-                print_error("No se pudo cargar el archivo con ninguna estrategia")
+                print_error("Could not load the file with any strategy")
                 return None
 
             df = clean_and_validate_data(df)
 
             if df.empty:
-                print_error("No hay datos válidos después de la limpieza")
+                print_error("No valid data after cleaning")
                 return None
 
             print_success(
-                f"Archivo [cyan]{csv_file}[/cyan] procesado — "
-                f"[white bold]{len(df)}[/white bold] filas válidas"
+                f"File [cyan]{csv_file}[/cyan] processed — "
+                f"[white bold]{len(df)}[/white bold] valid rows"
             )
 
         except FileNotFoundError:
-            print_error(f"No se encontró el archivo '[cyan]{csv_file}[/cyan]'")
+            print_error(f"File not found: '[cyan]{csv_file}[/cyan]'")
             return None
         except Exception as exc:
-            print_error(f"Error al procesar el archivo: {exc}")
+            print_error(f"Error processing the file: {exc}")
             return None
 
-    df["Calidad"] = df["RSSI"].apply(_classify_signal)
+    df["Quality"] = df["RSSI"].apply(_classify_signal)
 
-    # ── Consola ──────────────────────────────────────────────────────────────
-    console.rule("[cyan bold]ANÁLISIS DE INTERFERENCIAS WiFi[/cyan bold]", style="cyan")
+    # ── Console ──────────────────────────────────────────────────────────────
+    console.rule("[cyan bold]WIFI INTERFERENCE ANALYSIS[/cyan bold]", style="cyan")
 
-    # 1. Resumen general
-    console.print("\n[cyan bold]1. RESUMEN GENERAL[/cyan bold]")
-    console.print(f"   [dim]Total de redes detectadas:[/dim]  [white bold]{len(df):,}[/white bold]")
-    console.print(f"   [dim]Redes únicas por SSID:[/dim]      [white bold]{df['SSID'].nunique():,}[/white bold]")
+    # 1. General Summary
+    console.print("\n[cyan bold]1. GENERAL SUMMARY[/cyan bold]")
+    console.print(f"   [dim]Total detected networks:[/dim]  [white bold]{len(df):,}[/white bold]")
+    console.print(f"   [dim]Unique networks by SSID:[/dim]      [white bold]{df['SSID'].nunique():,}[/white bold]")
 
-    # 2. Distribución por canal con barra visual
-    console.print("\n[cyan bold]2. DISTRIBUCIÓN POR CANAL[/cyan bold]")
+    # 2. Channel Distribution with visual bar
+    console.print("\n[cyan bold]2. CHANNEL DISTRIBUTION[/cyan bold]")
     channel_dist = df["Channel"].value_counts().sort_index()
     max_count = int(channel_dist.max()) if not channel_dist.empty else 1
     bar_width = 30
@@ -194,11 +194,11 @@ def analyze_wifi_interference(
         bar_len = int(count / max_count * bar_width)
         bar_color = "cyan" if ch_int in _NON_OVERLAPPING else "yellow"
         bar = f"[{bar_color}]{'█' * bar_len}[/{bar_color}]"
-        tag = "[dim](no superpuesto)[/dim]" if ch_int in _NON_OVERLAPPING else "[yellow](interfiere)[/yellow]"
-        console.print(f"   Canal [cyan]{ch_int:2d}[/cyan]  {bar} [white bold]{count:5,}[/white bold] redes  {tag}")
+        tag = "[dim](non-overlapping)[/dim]" if ch_int in _NON_OVERLAPPING else "[yellow](interferes)[/yellow]"
+        console.print(f"   Channel [cyan]{ch_int:2d}[/cyan]  {bar} [white bold]{count:5,}[/white bold] networks  {tag}")
 
-    # 3. Interferencias
-    console.print("\n[cyan bold]3. ANÁLISIS DE INTERFERENCIAS POR CANAL[/cyan bold]")
+    # 3. Interferences
+    console.print("\n[cyan bold]3. INTERFERENCE ANALYSIS BY CHANNEL[/cyan bold]")
     overlapping_issues = [
         (int(ch), min(_NON_OVERLAPPING, key=lambda x: abs(x - int(ch))),
          abs(int(ch) - min(_NON_OVERLAPPING, key=lambda x: abs(x - int(ch)))))
@@ -207,82 +207,82 @@ def analyze_wifi_interference(
     ]
 
     if overlapping_issues:
-        print_warning("Se detectaron redes en canales que causan interferencia:")
+        print_warning("Networks were detected on channels causing interference:")
         for channel, closest, _ in overlapping_issues:
             count = len(df[df["Channel"] == channel])
             console.print(
-                f"   [yellow]Canal {channel:2d}[/yellow]: [white bold]{count:,}[/white bold] redes "
-                f"[dim](interfiere con canal[/dim] [cyan]{closest}[/cyan][dim])[/dim]"
+                f"   [yellow]Channel {channel:2d}[/yellow]: [white bold]{count:,}[/white bold] networks "
+                f"[dim](interferes with channel[/dim] [cyan]{closest}[/cyan][dim])[/dim]"
             )
     else:
-        print_success("Todas las redes están en canales no superpuestos (1, 6, 11)")
+        print_success("All networks are on non-overlapping channels (1, 6, 11)")
 
-    # 4. RSSI promedio por canal
-    console.print("\n[cyan bold]4. INTENSIDAD DE SEÑAL POR CANAL (RSSI promedio)[/cyan bold]")
+    # 4. Average RSSI by channel
+    console.print("\n[cyan bold]4. SIGNAL STRENGTH BY CHANNEL (Average RSSI)[/cyan bold]")
     for channel, data in df.groupby("Channel")["RSSI"].agg(["mean", "count"]).round(1).iterrows():
         mean_val = float(data["mean"])
         color = rssi_color(mean_val)
         console.print(
-            f"   Canal [cyan]{int(str(channel)):2d}[/cyan]: "
+            f"   Channel [cyan]{int(str(channel)):2d}[/cyan]: "
             f"[{color}]{mean_val:6.1f} dBm[/{color}]  "
-            f"[dim]({int(data['count'])} redes)[/dim]"
+            f"[dim]({int(data['count'])} networks)[/dim]"
         )
 
-    # 5. Redes con señal débil
-    console.print("\n[cyan bold]5. REDES CON POSIBLE INTERFERENCIA[/cyan bold]")
+    # 5. Weak signal networks
+    console.print("\n[cyan bold]5. NETWORKS WITH POSSIBLE INTERFERENCE[/cyan bold]")
     weak = df[df["RSSI"] <= -80]
     if not weak.empty:
-        print_warning(f"[white bold]{len(weak)}[/white bold] redes con señal débil (RSSI ≤ −80 dBm):")
+        print_warning(f"[white bold]{len(weak)}[/white bold] networks with weak signal (RSSI ≤ −80 dBm):")
         for _, row in weak.head(10).iterrows():
             console.print(
                 f"   [red]•[/red] [white]{row['SSID']}[/white]  "
-                f"[dim]Canal[/dim] [cyan]{int(row['Channel'])}[/cyan]  "
+                f"[dim]Channel[/dim] [cyan]{int(row['Channel'])}[/cyan]  "
                 f"[red]{row['RSSI']} dBm[/red]"
             )
         if len(weak) > 10:
-            console.print(f"   [dim]... y {len(weak) - 10} redes más[/dim]")
+            console.print(f"   [dim]... and {len(weak) - 10} more networks[/dim]")
     else:
-        print_success("No se detectaron redes con señal extremadamente débil")
+        print_success("No networks with extremely weak signal detected")
 
-    # 6. Recomendaciones
-    console.print("\n[cyan bold]6. RECOMENDACIONES[/cyan bold]")
+    # 6. Recommendations
+    console.print("\n[cyan bold]6. RECOMMENDATIONS[/cyan bold]")
     channel_counts = df["Channel"].value_counts()
     if not channel_counts.empty:
         most = int(str(channel_counts.idxmax()))
         least = int(str(channel_counts.idxmin()))
-        console.print(f"   [dim]Canal más congestionado:[/dim]   [red bold]{most}[/red bold]  ({channel_counts[most]:,} redes)")
-        console.print(f"   [dim]Canal menos congestionado:[/dim] [green bold]{least}[/green bold] ({channel_counts[least]:,} redes)")
+        console.print(f"   [dim]Most congested channel:[/dim]   [red bold]{most}[/red bold]  ({channel_counts[most]:,} networks)")
+        console.print(f"   [dim]Least congested channel:[/dim] [green bold]{least}[/green bold] ({channel_counts[least]:,} networks)")
 
         optimal = [ch for ch in _NON_OVERLAPPING if channel_counts.get(ch, 0) < 2]
         if optimal:
-            console.print(f"   [green]Canales recomendados:[/green] [cyan]{optimal}[/cyan] [dim](poca congestión)[/dim]")
+            console.print(f"   [green]Recommended channels:[/green] [cyan]{optimal}[/cyan] [dim](low congestion)[/dim]")
         else:
-            print_warning("Todos los canales no superpuestos están congestionados")
+            print_warning("All non-overlapping channels are congested")
 
-    # ── Visualizaciones ──────────────────────────────────────────────────────
-    console.print("\n[cyan bold]7. GENERANDO VISUALIZACIONES...[/cyan bold]")
+    # ── Visualizations ──────────────────────────────────────────────────────
+    console.print("\n[cyan bold]7. GENERATING VISUALIZATIONS...[/cyan bold]")
     generate_interference_plots(df, csv_file, output_dir=output_dir)
 
-    # ── Reporte TXT ──────────────────────────────────────────────────────────
+    # ── TXT Report ──────────────────────────────────────────────────────────
     try:
         base_name = os.path.splitext(os.path.basename(csv_file))[0]
         report_path = os.path.join(output_dir, f"{base_name}_report.txt")
 
         with open(report_path, "w", encoding="utf-8") as f:
-            f.write("ANÁLISIS DE INTERFERENCIAS WiFi\n")
+            f.write("WIFI INTERFERENCE ANALYSIS\n")
             f.write("=" * 50 + "\n\n")
-            f.write(f"Archivo analizado: {csv_file}\n")
-            f.write(f"Redes analizadas: {len(df)}\n")
-            f.write(f"Canales detectados: {sorted(_format_channels_list(df['Channel'].unique()))}\n")
-            f.write(f"Redes con señal débil (RSSI <= -80 dBm): {len(df[df['RSSI'] <= -80])}\n")
-            f.write("\nDistribución por canal:\n")
+            f.write(f"Analyzed file: {csv_file}\n")
+            f.write(f"Analyzed networks: {len(df)}\n")
+            f.write(f"Detected channels: {sorted(_format_channels_list(df['Channel'].unique()))}\n")
+            f.write(f"Networks with weak signal (RSSI <= -80 dBm): {len(df[df['RSSI'] <= -80])}\n")
+            f.write("\nChannel distribution:\n")
             for channel, count in df["Channel"].value_counts().sort_index().items():
-                f.write(f"- Canal {int(str(channel))}: {count} redes\n")
+                f.write(f"- Channel {int(str(channel))}: {count} networks\n")
             f.write(_generate_comprehensive_analysis(df))
 
-        print_success(f"Reporte guardado: [cyan]{report_path}[/cyan]")
+        print_success(f"Report saved: [cyan]{report_path}[/cyan]")
 
     except Exception as exc:
-        print_error(f"Error al guardar reporte: {exc}")
+        print_error(f"Error saving report: {exc}")
 
     return df

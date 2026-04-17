@@ -1,5 +1,5 @@
 """
-conftest.py - Fixtures compartidos para todos los tests
+conftest.py - Shared fixtures for all tests
 """
 
 import textwrap
@@ -10,12 +10,12 @@ import pytest
 
 
 # ---------------------------------------------------------------------------
-# Fixture: silenciar Rich console en todos los tests
+# Fixture: silence Rich console in all tests
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(autouse=True)
-def silenciar_consola():
-    """Suprime toda la salida de Rich para mantener el output de pytest limpio."""
+def silence_console():
+    """Suppresses all Rich output to keep pytest output clean."""
     with (
         patch("modules.utils.output.console") as mock_console,
         patch("modules.utils.output.print_error"),
@@ -28,14 +28,14 @@ def silenciar_consola():
 
 
 # ---------------------------------------------------------------------------
-# Fixtures: DataFrames de prueba
+# Fixtures: Test DataFrames
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def df_wifi_valido():
-    """DataFrame con datos WiFi completos y válidos."""
+def valid_wifi_df():
+    """DataFrame with complete and valid WiFi data."""
     return pd.DataFrame({
-        "SSID":             ["RedCasa", "Oficina_WiFi", "RedVecino", "CafeNet", "MiRed"],
+        "SSID":             ["HomeNet", "Office_WiFi", "NeighborNet", "CafeNet", "MyNet"],
         "RSSI":             [-45.0, -62.0, -75.0, -82.0, -91.0],
         "Channel":          [1, 6, 11, 6, 1],
         "Frequency":        [2412, 2437, 2462, 2437, 2412],
@@ -53,65 +53,65 @@ def df_wifi_valido():
 
 
 @pytest.fixture
-def df_con_nulos():
-    """DataFrame con algunos valores nulos en columnas críticas."""
+def df_with_nulls():
+    """DataFrame with some null values in critical columns."""
     return pd.DataFrame({
-        "SSID":    ["Red1", "Red2", "Red3", "Red4"],
+        "SSID":    ["Net1", "Net2", "Net3", "Net4"],
         "RSSI":    [-50.0, None, -70.0, -80.0],
         "Channel": [1, 6, None, 11],
     })
 
 
 @pytest.fixture
-def df_canales_interferencia():
-    """DataFrame con redes en canales superpuestos para pruebas de interferencia."""
+def interference_channels_df():
+    """DataFrame with networks on overlapping channels for interference testing."""
     return pd.DataFrame({
-        "SSID":    [f"Red{i}" for i in range(20)],
+        "SSID":    [f"Net{i}" for i in range(20)],
         "RSSI":    [-50.0] * 5 + [-65.0] * 5 + [-75.0] * 5 + [-85.0] * 5,
-        "Channel": [1] * 5 + [6] * 5 + [11] * 5 + [3] * 5,  # Canal 3 interfiere
+        "Channel": [1] * 5 + [6] * 5 + [11] * 5 + [3] * 5,  # Channel 3 interferes
     })
 
 
 # ---------------------------------------------------------------------------
-# Fixtures: archivos CSV temporales
+# Fixtures: Temporary CSV files
 # ---------------------------------------------------------------------------
 
-CABECERA_WIGLE = "WigleWifi-1.4,appRelease=2.73\n"
+WIGLE_HEADER = "WigleWifi-1.4,appRelease=2.73\n"
 
-CSV_VALIDO = textwrap.dedent("""\
+VALID_CSV = textwrap.dedent("""\
     WigleWifi-1.4,appRelease=2.73
     MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongitude
-    AA:BB:CC:DD:EE:01,RedCasa,WPA2,2024-01-15 10:00:00,1,2412,-45,19.4326,-99.1332
-    AA:BB:CC:DD:EE:02,Oficina_WiFi,WPA2,2024-01-15 10:01:00,6,2437,-62,19.4327,-99.1333
-    AA:BB:CC:DD:EE:03,RedVecino,WEP,2024-01-15 10:02:00,11,2462,-75,19.4328,-99.1334
+    AA:BB:CC:DD:EE:01,HomeNet,WPA2,2024-01-15 10:00:00,1,2412,-45,19.4326,-99.1332
+    AA:BB:CC:DD:EE:02,Office_WiFi,WPA2,2024-01-15 10:01:00,6,2437,-62,19.4327,-99.1333
+    AA:BB:CC:DD:EE:03,NeighborNet,WEP,2024-01-15 10:02:00,11,2462,-75,19.4328,-99.1334
 """)
 
-CSV_CON_FECHAS_ROTAS = textwrap.dedent("""\
+CSV_WITH_BROKEN_DATES = textwrap.dedent("""\
     WigleWifi-1.4,appRelease=2.73
     MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongitude
-    AA:BB:CC:DD:EE:01,RedCasa,WPA2,WPA2,1,2412,-45,19.4326,-99.1332
-    AA:BB:CC:DD:EE:02,Oficina_WiFi,WPA2,2024-01-15 10:01:00,6,2437,-62,19.4327,-99.1333
+    AA:BB:CC:DD:EE:01,HomeNet,WPA2,WPA2,1,2412,-45,19.4326,-99.1332
+    AA:BB:CC:DD:EE:02,Office_WiFi,WPA2,2024-01-15 10:01:00,6,2437,-62,19.4327,-99.1333
 """)
 
-CSV_CORTO = "WigleWifi-1.4,appRelease=2.73\n"
+SHORT_CSV = "WigleWifi-1.4,appRelease=2.73\n"
 
 
 @pytest.fixture
-def csv_valido(tmp_path):
-    archivo = tmp_path / "wifi_test.csv"
-    archivo.write_text(CSV_VALIDO, encoding="utf-8")
-    return str(archivo)
+def valid_csv(tmp_path):
+    file_path = tmp_path / "wifi_test.csv"
+    file_path.write_text(VALID_CSV, encoding="utf-8")
+    return str(file_path)
 
 
 @pytest.fixture
-def csv_con_fechas_rotas(tmp_path):
-    archivo = tmp_path / "wifi_fechas_rotas.csv"
-    archivo.write_text(CSV_CON_FECHAS_ROTAS, encoding="utf-8")
-    return str(archivo)
+def broken_dates_csv(tmp_path):
+    file_path = tmp_path / "wifi_broken_dates.csv"
+    file_path.write_text(CSV_WITH_BROKEN_DATES, encoding="utf-8")
+    return str(file_path)
 
 
 @pytest.fixture
-def csv_corto(tmp_path):
-    archivo = tmp_path / "wifi_corto.csv"
-    archivo.write_text(CSV_CORTO, encoding="utf-8")
-    return str(archivo)
+def short_csv(tmp_path):
+    file_path = tmp_path / "wifi_short.csv"
+    file_path.write_text(SHORT_CSV, encoding="utf-8")
+    return str(file_path)

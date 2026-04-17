@@ -7,7 +7,7 @@ setup(
     name="WifiSpectrum",
     version="1.1.0.0",
     packages=find_packages(include=["modules", "modules.*"]),
-    description="WiFi Spectrum Suite — Suite completa de análisis WiFi.",
+    description="WiFi Spectrum Suite — Complete WiFi analysis suite.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     install_requires=[

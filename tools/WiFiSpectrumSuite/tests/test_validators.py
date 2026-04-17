@@ -1,5 +1,5 @@
 """
-test_validators.py - Tests unitarios para modules/utils/validators.py
+test_validators.py - Unit tests for modules/utils/validators.py
 """
 
 import pytest
@@ -8,9 +8,9 @@ from modules.utils.validators import looks_like_date, repair_date_field
 
 class TestLooksLikeDate:
 
-    # --- Casos que SÍ deben reconocerse como fecha ---
+    # --- Cases that SHOULD be recognized as a date ---
 
-    @pytest.mark.parametrize("valor", [
+    @pytest.mark.parametrize("value", [
         "2024-01-15 10:30:00",
         "2024-01-15",
         "01/15/2024 10:30:00",
@@ -23,92 +23,92 @@ class TestLooksLikeDate:
         "3:00 PM",
         "12:00 am",
     ])
-    def test_reconoce_fechas_validas(self, valor):
-        assert looks_like_date(valor) is True
+    def test_recognizes_valid_dates(self, value):
+        assert looks_like_date(value) is True
 
-    # --- Casos que NO son fechas ---
+    # --- Cases that are NOT dates ---
 
-    @pytest.mark.parametrize("valor", [
+    @pytest.mark.parametrize("value", [
         "WPA2",
         "WEP",
         "OPEN",
-        "RedCasa",
+        "HomeNet",
         "192.168.1.1",
         "-65",
         "6",
     ])
-    def test_rechaza_no_fechas(self, valor):
-        assert looks_like_date(valor) is False
+    def test_rejects_non_dates(self, value):
+        assert looks_like_date(value) is False
 
-    # --- Casos borde ---
+    # --- Edge cases ---
 
-    def test_cadena_vacia(self):
+    def test_empty_string(self):
         assert looks_like_date("") is False
 
-    def test_solo_espacios(self):
+    def test_only_spaces(self):
         assert looks_like_date("   ") is False
 
     def test_none(self):
         assert looks_like_date(None) is False
 
-    def test_numero_entero(self):
-        # Un número sin año reconocible no es fecha
+    def test_integer_number(self):
+        # A number without a recognizable year is not a date
         assert looks_like_date(42) is False
 
-    def test_año_reconocible(self):
-        # Contiene "2024" como substring → True por keywords
-        assert looks_like_date("Evento 2024") is True
+    def test_recognizable_year(self):
+        # Contains "2024" as a substring → True by keywords
+        assert looks_like_date("Event 2024") is True
 
 
 class TestRepairDateField:
 
-    # --- Valores que ya son fechas válidas → normaliza al formato canónico ---
+    # --- Values that are already valid dates → normalizes to canonical format ---
 
-    def test_formato_iso_sin_cambio(self):
-        resultado = repair_date_field("2024-01-15 10:30:00")
-        assert resultado == "2024-01-15 10:30:00"
+    def test_iso_format_without_change(self):
+        result = repair_date_field("2024-01-15 10:30:00")
+        assert result == "2024-01-15 10:30:00"
 
-    def test_formato_dia_mes_año(self):
-        resultado = repair_date_field("15/01/2024 10:30:00")
-        assert resultado == "2024-01-15 10:30:00"
+    def test_day_month_year_format(self):
+        result = repair_date_field("15/01/2024 10:30:00")
+        assert result == "2024-01-15 10:30:00"
 
-    def test_formato_mes_dia_año(self):
-        resultado = repair_date_field("01/15/2024 10:30:00")
-        assert resultado == "2024-01-15 10:30:00"
+    def test_month_day_year_format(self):
+        result = repair_date_field("01/15/2024 10:30:00")
+        assert result == "2024-01-15 10:30:00"
 
-    def test_formato_año_barra(self):
-        resultado = repair_date_field("2024/01/15 10:30:00")
-        assert resultado == "2024-01-15 10:30:00"
+    def test_year_slash_format(self):
+        result = repair_date_field("2024/01/15 10:30:00")
+        assert result == "2024-01-15 10:30:00"
 
-    def test_formato_dia_guion_mes_año(self):
-        resultado = repair_date_field("15-01-2024 10:30:00")
-        assert resultado == "2024-01-15 10:30:00"
+    def test_day_dash_month_year_format(self):
+        result = repair_date_field("15-01-2024 10:30:00")
+        assert result == "2024-01-15 10:30:00"
 
-    # --- Valores que son protocolos WiFi → reemplaza con fecha actual ---
+    # --- Values that are WiFi protocols → replace with current date ---
 
-    @pytest.mark.parametrize("protocolo", ["WPA2", "WPA", "WEP", "OPN", "OPEN", "UNKNOWN", "N/A", "NULL"])
-    def test_protocolo_wifi_devuelve_fecha(self, protocolo):
-        resultado = repair_date_field(protocolo)
-        # Debe ser parseable como fecha ISO
+    @pytest.mark.parametrize("protocol", ["WPA2", "WPA", "WEP", "OPN", "OPEN", "UNKNOWN", "N/A", "NULL"])
+    def test_wifi_protocol_returns_date(self, protocol):
+        result = repair_date_field(protocol)
+        # Should be parseable as an ISO date
         from datetime import datetime
-        parsed = datetime.strptime(resultado, "%Y-%m-%d %H:%M:%S")
+        parsed = datetime.strptime(result, "%Y-%m-%d %H:%M:%S")
         assert parsed is not None
 
-    # --- Casos borde ---
+    # --- Edge cases ---
 
-    def test_cadena_vacia_devuelve_mismo_valor(self):
+    def test_empty_string_returns_same_value(self):
         assert repair_date_field("") == ""
 
-    def test_none_devuelve_none(self):
+    def test_none_returns_none(self):
         assert repair_date_field(None) is None
 
-    def test_valor_irreconocible_devuelve_original(self):
-        valor = "texto_sin_formato"
-        assert repair_date_field(valor) == valor
+    def test_unrecognizable_value_returns_original(self):
+        value = "unformatted_text"
+        assert repair_date_field(value) == value
 
-    def test_protocolo_en_minusculas_se_detecta(self):
-        # El check usa value_str.upper(), así que "wpa2" → "WPA2" que SÍ está en non_date_values
+    def test_lowercase_protocol_is_detected(self):
+        # The check uses value_str.upper(), so "wpa2" → "WPA2" which IS in non_date_values
         from datetime import datetime
-        resultado = repair_date_field("wpa2")
-        parsed = datetime.strptime(resultado, "%Y-%m-%d %H:%M:%S")
+        result = repair_date_field("wpa2")
+        parsed = datetime.strptime(result, "%Y-%m-%d %H:%M:%S")
         assert parsed is not None

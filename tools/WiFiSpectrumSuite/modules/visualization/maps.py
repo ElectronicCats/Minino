@@ -1,5 +1,5 @@
 """
-maps.py - Generación de mapas interactivos con Folium
+maps.py - Generation of interactive maps with Folium
 """
 
 import os
@@ -11,76 +11,76 @@ from folium.plugins import HeatMap
 from ..utils.output import console, print_error, print_success
 
 
-def generate_heat_map(df: pd.DataFrame, nombre_base: str, output_dir: str = ".") -> str:
+def generate_heat_map(df: pd.DataFrame, base_name: str, output_dir: str = ".") -> str:
     """
-    Genera un mapa de calor de RSSI y lo guarda como HTML.
+    Generates an RSSI heatmap and saves it as HTML.
     """
-    console.print("\n[cyan]Generando mapa de calor de RSSI...[/cyan]")
+    console.print("\n[cyan]Generating RSSI heatmap...[/cyan]")
 
     try:
-        centro_lat = df["CurrentLatitude"].mean()
-        centro_lon = df["CurrentLongitude"].mean()
+        center_lat = df["CurrentLatitude"].mean()
+        center_lon = df["CurrentLongitude"].mean()
 
-        mapa = folium.Map(location=[centro_lat, centro_lon], zoom_start=16, tiles="OpenStreetMap")
+        map_obj = folium.Map(location=[center_lat, center_lon], zoom_start=16, tiles="OpenStreetMap")
 
         heat_data = [
             [row["CurrentLatitude"], row["CurrentLongitude"], max(0.1, min(1.0, (row["RSSI"] + 100) / 40))]
             for _, row in df.iterrows()
         ]
 
-        HeatMap(heat_data, radius=15, blur=10, max_zoom=1).add_to(mapa)
+        HeatMap(heat_data, radius=15, blur=10, max_zoom=1).add_to(map_obj)
 
-        output_path = os.path.join(output_dir, f"mapa_calor_{nombre_base}.html")
-        mapa.save(output_path)
-        print_success(f"Mapa de calor guardado: [cyan]{output_path}[/cyan]")
+        output_path = os.path.join(output_dir, f"heat_map_{base_name}.html")
+        map_obj.save(output_path)
+        print_success(f"Heatmap saved: [cyan]{output_path}[/cyan]")
         return output_path
 
     except Exception as exc:
-        print_error(f"Error generando mapa de calor: {exc}")
+        print_error(f"Error generating heatmap: {exc}")
         return ""
 
 
-def generate_location_map(df: pd.DataFrame, nombre_base: str, output_dir: str = ".") -> str:
+def generate_location_map(df: pd.DataFrame, base_name: str, output_dir: str = ".") -> str:
     """
-    Genera un mapa de localización con marcadores por punto de acceso y lo guarda como HTML.
+    Generates a location map with markers per access point and saves it as HTML.
     """
-    console.print("\n[cyan]Generando mapa de localización...[/cyan]")
+    console.print("\n[cyan]Generating location map...[/cyan]")
 
     try:
-        centro_lat = df["CurrentLatitude"].mean()
-        centro_lon = df["CurrentLongitude"].mean()
+        center_lat = df["CurrentLatitude"].mean()
+        center_lon = df["CurrentLongitude"].mean()
 
-        mapa = folium.Map(location=[centro_lat, centro_lon], zoom_start=16, tiles="OpenStreetMap")
+        map_obj = folium.Map(location=[center_lat, center_lon], zoom_start=16, tiles="OpenStreetMap")
 
-        colores = ["red", "blue", "green", "purple", "orange", "darkred", "darkblue"]
-        grupos = df.groupby(["SSID", "CurrentLatitude", "CurrentLongitude"])
+        colors = ["red", "blue", "green", "purple", "orange", "darkred", "darkblue"]
+        groups = df.groupby(["SSID", "CurrentLatitude", "CurrentLongitude"])
 
-        for color_idx, ((ssid, lat, lon), group) in enumerate(grupos):
+        for color_idx, ((ssid, lat, lon), group) in enumerate(groups):
             lat, lon = float(str(lat)), float(str(lon))
-            rssi_promedio = group["RSSI"].mean()
-            cantidad = len(group)
+            avg_rssi = group["RSSI"].mean()
+            count = len(group)
 
             popup_text = (
                 f"<b>{ssid}</b><br>"
-                f"Ubicación: {lat:.6f}, {lon:.6f}<br>"
-                f"RSSI: {rssi_promedio:.1f} dBm<br>"
-                f"Detecciones: {cantidad}"
+                f"Location: {lat:.6f}, {lon:.6f}<br>"
+                f"RSSI: {avg_rssi:.1f} dBm<br>"
+                f"Detections: {count}"
             )
 
             folium.CircleMarker(
                 location=[lat, lon],
                 radius=8,
                 popup=popup_text,
-                color=colores[color_idx % len(colores)],
+                color=colors[color_idx % len(colors)],
                 fill=True,
                 fillOpacity=0.6,
-            ).add_to(mapa)
+            ).add_to(map_obj)
 
-        output_path = os.path.join(output_dir, f"mapa_localizacion_{nombre_base}.html")
-        mapa.save(output_path)
-        print_success(f"Mapa de localización guardado: [cyan]{output_path}[/cyan]")
+        output_path = os.path.join(output_dir, f"location_map_{base_name}.html")
+        map_obj.save(output_path)
+        print_success(f"Location map saved: [cyan]{output_path}[/cyan]")
         return output_path
 
     except Exception as exc:
-        print_error(f"Error generando mapa de localización: {exc}")
+        print_error(f"Error generating location map: {exc}")
         return ""

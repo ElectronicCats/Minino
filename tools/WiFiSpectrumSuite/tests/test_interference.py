@@ -1,5 +1,5 @@
 """
-test_interference.py - Tests unitarios para modules/core/interference.py
+test_interference.py - Unit tests for modules/core/interference.py
 """
 
 import pandas as pd
@@ -16,98 +16,98 @@ from modules.core.interference import (
 
 class TestClassifySignal:
 
-    @pytest.mark.parametrize("rssi,esperado", [
-        (-49,  "Excelente"),
-        (-50,  "Excelente"),
-        (-51,  "Buena"),
-        (-59,  "Buena"),
-        (-60,  "Buena"),
-        (-61,  "Regular"),
-        (-69,  "Regular"),
-        (-70,  "Regular"),
-        (-71,  "Débil"),
-        (-79,  "Débil"),
-        (-80,  "Débil"),
-        (-81,  "Muy débil"),
-        (-100, "Muy débil"),
+    @pytest.mark.parametrize("rssi,expected", [
+        (-49,  "Excellent"),
+        (-50,  "Excellent"),
+        (-51,  "Good"),
+        (-59,  "Good"),
+        (-60,  "Good"),
+        (-61,  "Fair"),
+        (-69,  "Fair"),
+        (-70,  "Fair"),
+        (-71,  "Weak"),
+        (-79,  "Weak"),
+        (-80,  "Weak"),
+        (-81,  "Very weak"),
+        (-100, "Very weak"),
     ])
-    def test_clasificacion_por_umbral(self, rssi, esperado):
-        assert _classify_signal(rssi) == esperado
+    def test_classification_by_threshold(self, rssi, expected):
+        assert _classify_signal(rssi) == expected
 
-    def test_señal_perfecta(self):
-        assert _classify_signal(0) == "Excelente"
+    def test_perfect_signal(self):
+        assert _classify_signal(0) == "Excellent"
 
-    def test_señal_muy_lejana(self):
-        assert _classify_signal(-120) == "Muy débil"
+    def test_very_far_signal(self):
+        assert _classify_signal(-120) == "Very weak"
 
 
 class TestFormatChannelsList:
 
-    def test_convierte_strings_a_int(self):
-        resultado = _format_channels_list(["1", "6", "11"])
-        assert resultado == [1, 6, 11]
+    def test_converts_strings_to_int(self):
+        result = _format_channels_list(["1", "6", "11"])
+        assert result == [1, 6, 11]
 
-    def test_convierte_floats_a_int(self):
-        resultado = _format_channels_list([1.0, 6.0, 11.0])
-        assert resultado == [1, 6, 11]
+    def test_converts_floats_to_int(self):
+        result = _format_channels_list([1.0, 6.0, 11.0])
+        assert result == [1, 6, 11]
 
-    def test_lista_vacia(self):
+    def test_empty_list(self):
         assert _format_channels_list([]) == []
 
-    def test_tipo_de_retorno_es_lista(self):
+    def test_return_type_is_list(self):
         assert isinstance(_format_channels_list([1, 6]), list)
 
-    def test_todos_elementos_son_int(self):
-        # int() no acepta "7.0" como string → pasar valores ya convertibles
-        resultado = _format_channels_list(["3", 7, 11])
-        assert all(isinstance(c, int) for c in resultado)
+    def test_all_elements_are_int(self):
+        # int() does not accept "7.0" as string → pass already convertible values
+        result = _format_channels_list(["3", 7, 11])
+        assert all(isinstance(c, int) for c in result)
 
 
 class TestNonOverlapping:
 
-    def test_canales_no_superpuestos_son_correctos(self):
+    def test_non_overlapping_channels_are_correct(self):
         assert _NON_OVERLAPPING == [1, 6, 11]
 
-    def test_es_lista(self):
+    def test_is_list(self):
         assert isinstance(_NON_OVERLAPPING, list)
 
 
 class TestGenerateComprehensiveAnalysis:
 
-    def test_retorna_string(self, df_canales_interferencia):
-        df = df_canales_interferencia.copy()
-        resultado = _generate_comprehensive_analysis(df)
-        assert isinstance(resultado, str)
+    def test_returns_string(self, interference_channels_df):
+        df = interference_channels_df.copy()
+        result = _generate_comprehensive_analysis(df)
+        assert isinstance(result, str)
 
-    def test_contiene_resumen_ejecutivo(self, df_canales_interferencia):
-        resultado = _generate_comprehensive_analysis(df_canales_interferencia)
-        assert "RESUMEN EJECUTIVO" in resultado
+    def test_contains_executive_summary(self, interference_channels_df):
+        result = _generate_comprehensive_analysis(interference_channels_df)
+        assert "EXECUTIVE ANALYSIS SUMMARY" in result
 
-    def test_contiene_total_redes(self, df_canales_interferencia):
-        resultado = _generate_comprehensive_analysis(df_canales_interferencia)
-        assert "20" in resultado  # 20 redes en el fixture
+    def test_contains_total_networks(self, interference_channels_df):
+        result = _generate_comprehensive_analysis(interference_channels_df)
+        assert "20" in result  # 20 networks in the fixture
 
-    def test_contiene_canales_no_superpuestos(self, df_canales_interferencia):
-        resultado = _generate_comprehensive_analysis(df_canales_interferencia)
-        assert "Canal 1" in resultado
-        assert "Canal 6" in resultado
-        assert "Canal 11" in resultado
+    def test_contains_non_overlapping_channels(self, interference_channels_df):
+        result = _generate_comprehensive_analysis(interference_channels_df)
+        assert "Channel 1" in result
+        assert "Channel 6" in result
+        assert "Channel 11" in result
 
-    def test_contiene_recomendaciones(self, df_canales_interferencia):
-        resultado = _generate_comprehensive_analysis(df_canales_interferencia)
-        assert "RECOMENDACIONES" in resultado
+    def test_contains_recommendations(self, interference_channels_df):
+        result = _generate_comprehensive_analysis(interference_channels_df)
+        assert "RECOMMENDATIONS" in result
 
-    def test_calcula_porcentaje_señal_debil(self, df_canales_interferencia):
-        df = df_canales_interferencia.copy()
-        resultado = _generate_comprehensive_analysis(df)
-        # 5 redes con RSSI -85 son <= -80 → 25%
-        assert "25.0%" in resultado
+    def test_calculates_weak_signal_percentage(self, interference_channels_df):
+        df = interference_channels_df.copy()
+        result = _generate_comprehensive_analysis(df)
+        # 5 networks with RSSI -85 are <= -80 → 25%
+        assert "25.0%" in result
 
-    def test_con_todas_señales_fuertes(self):
+    def test_with_all_strong_signals(self):
         df = pd.DataFrame({
-            "SSID":    [f"Red{i}" for i in range(5)],
+            "SSID":    [f"Net{i}" for i in range(5)],
             "RSSI":    [-45.0] * 5,
             "Channel": [1, 1, 6, 6, 11],
         })
-        resultado = _generate_comprehensive_analysis(df)
-        assert "0 redes (0.0% del total)" in resultado
+        result = _generate_comprehensive_analysis(df)
+        assert "0 networks (0.0% of total)" in result

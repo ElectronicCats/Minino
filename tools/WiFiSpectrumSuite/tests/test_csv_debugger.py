@@ -1,5 +1,5 @@
 """
-test_csv_debugger.py - Tests unitarios para modules/core/csv_debugger.py
+test_csv_debugger.py - Unit tests for modules/core/csv_debugger.py
 """
 
 import pytest
@@ -14,113 +14,113 @@ from modules.core.csv_debugger import (
 
 class TestFindDateColumns:
 
-    def test_detecta_columna_time(self):
+    def test_detects_time_column(self):
         headers = ["MAC", "SSID", "FirstTime", "Channel"]
-        resultado = _find_date_columns(headers)
-        nombres = [nombre for _, nombre in resultado]
-        assert "FirstTime" in nombres
+        result = _find_date_columns(headers)
+        names = [name for _, name in result]
+        assert "FirstTime" in names
 
-    def test_detecta_columna_date(self):
+    def test_detects_date_column(self):
         headers = ["MAC", "SSID", "ScanDate", "RSSI"]
-        resultado = _find_date_columns(headers)
-        nombres = [nombre for _, nombre in resultado]
-        assert "ScanDate" in nombres
+        result = _find_date_columns(headers)
+        names = [name for _, name in result]
+        assert "ScanDate" in names
 
-    def test_detecta_firstseen_y_lastseen(self):
+    def test_detects_firstseen_and_lastseen(self):
         headers = ["MAC", "SSID", "FirstSeen", "LastSeen", "Channel"]
-        resultado = _find_date_columns(headers)
-        nombres = [nombre for _, nombre in resultado]
-        assert "FirstSeen" in nombres
-        assert "LastSeen" in nombres
+        result = _find_date_columns(headers)
+        names = [name for _, name in result]
+        assert "FirstSeen" in names
+        assert "LastSeen" in names
 
-    def test_no_detecta_columnas_normales(self):
+    def test_does_not_detect_normal_columns(self):
         headers = ["MAC", "SSID", "Channel", "RSSI", "AuthMode"]
-        resultado = _find_date_columns(headers)
-        assert resultado == []
+        result = _find_date_columns(headers)
+        assert result == []
 
-    def test_detecta_por_keyword_first(self):
+    def test_detects_by_first_keyword(self):
         headers = ["FirstSeen", "LastSeen", "RSSI"]
-        resultado = _find_date_columns(headers)
-        assert len(resultado) == 2
+        result = _find_date_columns(headers)
+        assert len(result) == 2
 
-    def test_devuelve_indices_correctos(self):
+    def test_returns_correct_indices(self):
         headers = ["MAC", "FirstSeen", "SSID", "LastSeen"]
-        resultado = _find_date_columns(headers)
-        indices = {nombre: idx for idx, nombre in resultado}
+        result = _find_date_columns(headers)
+        indices = {name: idx for idx, name in result}
         assert indices["FirstSeen"] == 1
         assert indices["LastSeen"] == 3
 
     def test_case_insensitive(self):
-        # "FIRSTSEEN" contiene "FIRST" → debe detectarse
+        # "FIRSTSEEN" contains "FIRST" → should be detected
         headers = ["MAC", "FIRSTSEEN", "SSID"]
-        resultado = _find_date_columns(headers)
-        assert len(resultado) == 1
+        result = _find_date_columns(headers)
+        assert len(result) == 1
 
-    def test_lista_vacia(self):
+    def test_empty_list(self):
         assert _find_date_columns([]) == []
 
 
 class TestAnalyzeDateProblems:
 
-    def test_retorna_headers_en_csv_valido(self, csv_valido):
-        headers, _, _ = analyze_date_problems(csv_valido)
+    def test_returns_headers_on_valid_csv(self, valid_csv):
+        headers, _, _ = analyze_date_problems(valid_csv)
         assert headers is not None
         assert "SSID" in headers
         assert "FirstSeen" in headers
 
-    def test_detecta_columnas_de_fecha(self, csv_valido):
-        _, _, date_columns = analyze_date_problems(csv_valido)
-        nombres = [nombre for _, nombre in date_columns]
-        assert "FirstSeen" in nombres
+    def test_detects_date_columns(self, valid_csv):
+        _, _, date_columns = analyze_date_problems(valid_csv)
+        names = [name for _, name in date_columns]
+        assert "FirstSeen" in names
 
-    def test_csv_sin_problemas_de_fecha(self, csv_valido):
-        _, problematic, _ = analyze_date_problems(csv_valido)
+    def test_csv_without_date_problems(self, valid_csv):
+        _, problematic, _ = analyze_date_problems(valid_csv)
         assert len(problematic) == 0
 
-    def test_detecta_valores_rotos(self, csv_con_fechas_rotas):
-        _, problematic, _ = analyze_date_problems(csv_con_fechas_rotas)
-        # "WPA2" en FirstSeen no parece fecha
+    def test_detects_broken_values(self, broken_dates_csv):
+        _, problematic, _ = analyze_date_problems(broken_dates_csv)
+        # "WPA2" in FirstSeen does not look like a date
         assert len(problematic) > 0
 
-    def test_retorna_none_en_archivo_inexistente(self):
-        headers, problematic, date_cols = analyze_date_problems("/no/existe.csv")
+    def test_returns_none_on_nonexistent_file(self):
+        headers, problematic, date_cols = analyze_date_problems("/does/not/exist.csv")
         assert headers is None
         assert problematic == []
         assert date_cols == []
 
-    def test_retorna_none_en_archivo_muy_corto(self, csv_corto):
-        headers, _, _ = analyze_date_problems(csv_corto)
+    def test_returns_none_on_very_short_file(self, short_csv):
+        headers, _, _ = analyze_date_problems(short_csv)
         assert headers is None
 
 
 class TestRepairDateIssues:
 
-    def test_genera_archivo_reparado(self, csv_con_fechas_rotas, tmp_path):
-        output = str(tmp_path / "reparado.csv")
-        resultado = repair_date_issues(csv_con_fechas_rotas, output_file=output)
-        assert resultado == output
+    def test_generates_repaired_file(self, broken_dates_csv, tmp_path):
+        output = str(tmp_path / "repaired.csv")
+        result = repair_date_issues(broken_dates_csv, output_file=output)
+        assert result == output
 
-    def test_archivo_reparado_existe(self, csv_con_fechas_rotas, tmp_path):
+    def test_repaired_file_exists(self, broken_dates_csv, tmp_path):
         import os
-        output = str(tmp_path / "reparado.csv")
-        repair_date_issues(csv_con_fechas_rotas, output_file=output)
+        output = str(tmp_path / "repaired.csv")
+        repair_date_issues(broken_dates_csv, output_file=output)
         assert os.path.exists(output)
 
-    def test_nombre_output_por_defecto(self, csv_con_fechas_rotas, tmp_path):
+    def test_default_output_name(self, broken_dates_csv, tmp_path):
         import os
-        resultado = repair_date_issues(csv_con_fechas_rotas, output_dir=str(tmp_path))
-        assert resultado is not None
-        assert resultado.endswith("_fixed.csv")
-        assert os.path.exists(resultado)
+        result = repair_date_issues(broken_dates_csv, output_dir=str(tmp_path))
+        assert result is not None
+        assert result.endswith("_fixed.csv")
+        assert os.path.exists(result)
 
-    def test_retorna_none_en_archivo_inexistente(self):
-        resultado = repair_date_issues("/no/existe.csv")
-        assert resultado is None
+    def test_returns_none_on_nonexistent_file(self):
+        result = repair_date_issues("/does/not/exist.csv")
+        assert result is None
 
-    def test_lineas_preservadas(self, csv_valido, tmp_path):
-        output = str(tmp_path / "reparado.csv")
-        repair_date_issues(csv_valido, output_file=output)
+    def test_preserves_lines(self, valid_csv, tmp_path):
+        output = str(tmp_path / "repaired.csv")
+        repair_date_issues(valid_csv, output_file=output)
         with open(output, encoding="utf-8") as f:
-            lineas = f.readlines()
-        # El CSV tiene 2 líneas de cabecera + 3 de datos = 5 líneas
-        assert len(lineas) == 5
+            lines = f.readlines()
+        # The CSV has 2 header lines + 3 data lines = 5 lines
+        assert len(lines) == 5
