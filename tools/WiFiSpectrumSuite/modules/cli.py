@@ -37,7 +37,7 @@ from .utils.output import (
 # ---------------------------------------------------------------------------
 
 VERSION_NUMBER = "1.1.0.0"
-COMPANY = "Electronic Cats"
+COMPANY = "Electronic Cats & Dr. h. c. César A. Peregrino Rodríguez"
 OUTPUT_DIR = "generatedFiles"
 
 _FUNNY_PHRASES = [
@@ -79,18 +79,18 @@ logging.basicConfig(
 
 def print_header(module: Optional[str] = None) -> None:
     """Print the ASCII art header inside a Rich Panel."""
-    label = f"wifi-spectrum-suite {module}" if module else "wifi-spectrum-suite"
+    label = f"wifi-spectrum-suite {module}" if module else "WiFi Spectrum Suite"
 
-    ascii_art = f"""      :-:              :--       |
-      ++++=.        .=++++       |
-      =+++++===++===++++++       |
-      -++++++++++++++++++-       |
- .:   =++---++++++++---++=   :.  |  {label}
- ::---+++.   -++++-   .+++---::  |  v{VERSION_NUMBER}
-::1..:-++++:   ++++   :++++-::.::|  {FUNNY_PHRASE}
-.:...:=++++++++++++++++++=:...:. |
- :---.  -++++++++++++++-  .---:  |
- ..        .:------:.        ..  |"""
+    ascii_art = f"""      :=--             --=-       |   
+      -====-         -=====       |
+      :===================-       |      
+       ===================:       |      
+  -   :==--===========--==-   -   |  {label} 
+ -===:===-   :=====-   -==-.-=--  |  v{VERSION_NUMBER}
+--    ====-   :===-   -====    -- |  {FUNNY_PHRASE}
+-=:   :===================-   .=- |
+ ---=-- -===============-  -=---  |
+ ---       --=======--        --  |"""
 
     panel = Panel(
         f"[cyan bold]{ascii_art}[/cyan bold]",
