@@ -3,6 +3,8 @@ csv_debugger.py - Detección y reparación de problemas de fecha en archivos CSV
 """
 
 import os
+import csv
+import io
 
 import pandas as pd
 from typing import List, Optional, Tuple
@@ -14,6 +16,19 @@ from ..utils.output import console, print_error, print_success, print_warning
 # ---------------------------------------------------------------------------
 # Helpers internos
 # ---------------------------------------------------------------------------
+
+def _split_csv_line(line: str) -> List[str]:
+    """Divide una línea CSV respetando los campos entre comillas."""
+    if not line.strip():
+        return []
+    return next(csv.reader([line]))
+
+def _join_csv_line(fields: List[str]) -> str:
+    """Une campos en una línea CSV escapando comillas si es necesario."""
+    output = io.StringIO()
+    writer = csv.writer(output, lineterminator="")
+    writer.writerow(fields)
+    return output.getvalue()
 
 def _find_date_columns(headers: List[str]) -> List[Tuple[int, str]]:
     keywords = {"TIME", "DATE", "SEEN", "FIRST", "LAST"}
@@ -50,7 +65,7 @@ def analyze_date_problems(
             return None, [], []
 
         console.print("\n[cyan bold]ESTRUCTURA DEL ARCHIVO[/cyan bold]")
-        headers = lines[1].strip().split(",")
+        headers = _split_csv_line(lines[1].strip())
         console.print(f"  [dim]Encabezados detectados:[/dim] [white bold]{len(headers)}[/white bold]  [dim]{headers}[/dim]")
 
         date_columns = _find_date_columns(headers)
@@ -60,7 +75,7 @@ def analyze_date_problems(
         problematic_lines: List[dict] = []
 
         for line_num, line in enumerate(lines[2:12], start=3):
-            fields = line.strip().split(",")
+            fields = _split_csv_line(line.strip())
             for col_idx, col_name in date_columns:
                 if col_idx < len(fields):
                     value = fields[col_idx]
@@ -132,7 +147,7 @@ def repair_date_issues(
                 repaired_lines.append(original_line)
                 continue
 
-            fields = original_line.split(",")
+            fields = _split_csv_line(original_line)
             line_corrected = False
 
             for col_idx in date_column_indices:
@@ -153,7 +168,7 @@ def repair_date_issues(
                                 f"[green]'{repaired_value}'[/green]"
                             )
 
-            repaired_lines.append(",".join(fields))
+            repaired_lines.append(_join_csv_line(fields))
 
             if line_num % 100 == 0 and line_num > 0:
                 console.print(f"  [dim]Procesadas [white bold]{line_num}[/white bold] líneas...[/dim]")
