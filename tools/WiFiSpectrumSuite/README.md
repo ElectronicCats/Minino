@@ -39,6 +39,10 @@
     - [Requirements](#requirements)
     - [Install Dependencies](#install-dependencies)
   - [Usage - Terminal Commands](#usage---terminal-commands)
+    - [**Shell Tab Completion**](#shell-tab-completion)
+      - [Installation](#installation-2)
+      - [Shell-specific notes](#shell-specific-notes)
+      - [Usage](#usage)
     - [**Partial Analysis**](#partial-analysis)
       - [1. Repair Format Issues](#1-repair-format-issues)
       - [2. Analyze Interference Only](#2-analyze-interference-only)
@@ -68,6 +72,7 @@
   - [Troubleshooting](#troubleshooting)
     - ["Error: File does not exist"](#error-file-does-not-exist)
     - ["Missing columns / Error processing CSV"](#missing-columns--error-processing-csv)
+    - ["Empty completion script generated"](#empty-completion-script-generated)
     - ["HTML maps won't open"](#html-maps-wont-open)
   - [Additional Information](#additional-information)
   - [Summary](#summary)
@@ -127,6 +132,7 @@ WiFiSpectrumSuite/
 ├── setup.py
 ├── tests/
 │   ├── conftest.py
+│   ├── test_completion.py
 │   ├── test_csv_debugger.py
 │   ├── test_file_utils.py
 │   ├── test_interference.py
@@ -180,6 +186,7 @@ Generates all visual output:
 | **Rich Console UX** | Color-coded output, progress feedback, and ASCII banner with random WiFi-themed phrases |
 | **Full Pipeline Command** | Single command to run debug → interference → wardriving in sequence |
 | **File Size Guard** | Rejects files over 500 MB to prevent memory exhaustion |
+| **Shell Tab Completion** | Native tab completion for bash, zsh, and fish — auto-detects shell and installs with one command |
 
 ---
 
@@ -362,6 +369,58 @@ pip install -e .
 ---
 
 ## Usage - Terminal Commands
+
+### **Shell Tab Completion**
+
+WiFi Spectrum Suite supports native tab completion for **bash**, **zsh**, and **fish** on Unix-based systems (Linux and macOS).
+
+#### Installation
+
+Run once from the project directory with the virtual environment active:
+
+```bash
+# Auto-detect shell (recommended)
+python wifi_spectrum.py completion install
+
+# Or specify the shell explicitly
+python wifi_spectrum.py completion install --shell zsh
+python wifi_spectrum.py completion install --shell bash
+python wifi_spectrum.py completion install --shell fish
+```
+
+After installation, open a new terminal (or source your rc file) to activate it.
+
+#### Shell-specific notes
+
+| Shell | Completion file | Activation |
+|-------|----------------|------------|
+| **zsh** | `~/.zfunc/_wifi-spectrum` | `source ~/.zshrc && compinit -u` |
+| **bash** | `~/.local/share/bash-completion/completions/wifi-spectrum` | `source <file>` or new terminal |
+| **fish** | `~/.config/fish/completions/wifi-spectrum.fish` | Active in new fish sessions automatically |
+
+> [!NOTE] 
+> The installer requires the virtual environment to be active so it uses the correct Python interpreter. The generated completion script hardcodes the venv's Python path, so tab completion will work in any terminal session regardless of whether the virtual environment is active.
+
+> [!WARNING]
+> **Platform:** Shell completion is only available on Unix-based systems (Linux, macOS). It is not supported on Windows.
+
+#### Usage
+
+```bash
+# Complete subcommands
+python wifi_spectrum.py <TAB>
+# → debug  interference  wardriving  full  completion
+
+# Complete options for a subcommand
+python wifi_spectrum.py wardriving <TAB>
+# → --heat-map  --location-map  --plots  --report  --all  --help
+
+# Complete .csv filenames
+python wifi_spectrum.py debug <TAB>
+# → Warfi_2024-01-15.csv  ...
+```
+
+---
 
 ### **Partial Analysis**
 
@@ -586,6 +645,15 @@ wifi-spectrum-suite full /full/path/file.csv
 ```bash
 # The loader attempts automatic column mapping across 5 strategies.
 # If it fails, ensure the CSV contains at least: SSID, Channel, RSSI, BSSID, FirstSeen, CurrentLatitude, CurrentLongitude
+```
+
+### "Empty completion script generated"
+```bash
+# The installer must be run with the virtual environment active.
+# The venv's Python is used to generate the script — if the system
+# Python is used instead, required packages (e.g. pandas) will be missing.
+source ~/Minino/bin/activate   # or your venv path
+python wifi_spectrum.py completion install
 ```
 
 ### "HTML maps won't open"
