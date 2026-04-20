@@ -11,6 +11,7 @@ import logging
 import os
 import sys
 import random as _random
+from pathlib import Path
 from typing import Optional
 
 # Internal
@@ -38,7 +39,7 @@ import platform
 # App metadata
 # ---------------------------------------------------------------------------
 
-VERSION_NUMBER = "1.1.0.0"
+VERSION_NUMBER = (Path(__file__).parent.parent / "VERSION").read_text(encoding="utf-8").strip()
 COMPANY = "Electronic Cats & Dr. h. c. César A. Peregrino Rodríguez"
 OUTPUT_DIR = "generatedFiles"
 
@@ -121,13 +122,6 @@ def _phase_header(title: str) -> None:
 def cli(ctx: click.Context) -> None:
     """
     WiFi Spectrum Suite — Complete WiFi analysis suite.
-
-    \b
-    Available submodules:
-      debug        Debug and repair dates in CSV
-      interference Channel interference analysis
-      wardriving   Wardriving analysis (maps and plots)
-      full         Execute all analyses sequentially
 
     Use ``wifi-spectrum <subcommand> --help`` for more information.
     """

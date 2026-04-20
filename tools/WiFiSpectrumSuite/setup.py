@@ -2,10 +2,11 @@ from pathlib import Path
 from setuptools import setup, find_packages
 
 long_description = Path("README.md").read_text(encoding="utf-8")
+version = Path("VERSION").read_text(encoding="utf-8").strip()
 
 setup(
     name="WifiSpectrum",
-    version="1.1.0.0",
+    version=version,
     packages=find_packages(include=["modules", "modules.*"]),
     description="WiFi Spectrum Suite — Complete WiFi analysis suite.",
     long_description=long_description,
