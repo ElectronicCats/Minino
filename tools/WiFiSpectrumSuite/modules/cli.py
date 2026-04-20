@@ -491,7 +491,7 @@ def completion_install(shell):
             "    (( CURRENT-- ))\n"
             "    _wifi_spectrum_completion\n"
             "  else\n"
-            "    _normal\n"
+            "    _files\n"
             "  fi\n"
             "}\n"
             "compdef _wifi_spectrum_completion_python_wrapper python python3\n"
