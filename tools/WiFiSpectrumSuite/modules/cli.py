@@ -490,6 +490,8 @@ def completion_install(shell):
             '    words=(wifi-spectrum "${words[@]:2}")\n'
             "    (( CURRENT-- ))\n"
             "    _wifi_spectrum_completion\n"
+            "  else\n"
+            "    _normal\n"
             "  fi\n"
             "}\n"
             "compdef _wifi_spectrum_completion_python_wrapper python python3\n"
@@ -518,6 +520,8 @@ def completion_install(shell):
             '        COMP_WORDS=("${new_words[@]}")\n'
             "        COMP_CWORD=$(( COMP_CWORD - 1 ))\n"
             "        _wifi_spectrum_completion\n"
+            "    else\n"
+            '        COMPREPLY=( $(compgen -f -- "$cur") )\n'
             "    fi\n"
             "}\n"
             "complete -F _wifi_spectrum_completion_python_wrapper python python3\n"
