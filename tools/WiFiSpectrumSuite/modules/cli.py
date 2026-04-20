@@ -82,7 +82,7 @@ logging.basicConfig(
 
 def print_header(module: Optional[str] = None) -> None:
     """Print the ASCII art header inside a Rich Panel."""
-    label = f"wifi-spectrum-suite {module}" if module else "WiFi Spectrum Suite"
+    label = f"WiFi Spectrum Suite"
 
     ascii_art = f"""      :=--             --=-       |   
       -====-         -=====       |
