@@ -502,26 +502,25 @@ def completion_install(shell):
         )
         # Register for both 'wifi-spectrum' and 'wifi-spectrum.py'
         script = script.replace(
-            "complete -F _wifi-spectrum_completion wifi-spectrum",
-            "complete -F _wifi-spectrum_completion wifi-spectrum wifi-spectrum.py",
+            "complete -F _wifi_spectrum_completion wifi-spectrum",
+            "complete -F _wifi_spectrum_completion wifi-spectrum wifi-spectrum.py",
         )
-        # Append a wrapper that intercepts 'python wifi-spectrum.py <TAB>'
+        # Append a wrapper that intercepts 'python wifi_spectrum.py <TAB>'
         extra = (
             "\n"
-            "# Enable completion when invoked as 'python wifi-spectrum.py'\n"
-            "_wifi-spectrum_completion_python_wrapper() {\n"
+            "# Enable completion when invoked as 'python wifi_spectrum.py'\n"
+            "_wifi_spectrum_completion_python_wrapper() {\n"
             "    local cur script_arg\n"
             '    cur="${COMP_WORDS[COMP_CWORD]}"\n'
             '    script_arg="${COMP_WORDS[1]}"\n'
             '    if [[ "$(basename "$script_arg")" == "wifi_spectrum.py" ]]; then\n'
-            "        # Rebuild COMP_WORDS without the leading 'python' / path\n"
             '        local new_words=(wifi-spectrum "${COMP_WORDS[@]:2}")\n'
             '        COMP_WORDS=("${new_words[@]}")\n'
             "        COMP_CWORD=$(( COMP_CWORD - 1 ))\n"
-            "        _wifi-spectrum_completion\n"
+            "        _wifi_spectrum_completion\n"
             "    fi\n"
             "}\n"
-            "complete -F _wifi-spectrum_completion_python_wrapper python python3\n"
+            "complete -F _wifi_spectrum_completion_python_wrapper python python3\n"
         )
         script += extra
 
