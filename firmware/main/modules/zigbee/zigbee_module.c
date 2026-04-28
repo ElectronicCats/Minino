@@ -43,13 +43,9 @@ typedef enum {
 
 static int packet_count = 0;
 int current_channel = IEEE_SNIFFER_CHANNEL_DEFAULT;
-static TaskHandle_t zigbee_task_display_records = NULL;
-static TaskHandle_t zigbee_task_display_animation = NULL;
 static TaskHandle_t zigbee_task_sniffer = NULL;
 
-static void zigbee_module_app_selector();
 static void switch_input_cb(uint8_t button_name, uint8_t button_event);
-static void sniffer_input_cb(uint8_t button_name, uint8_t button_event);
 
 static void zigbee_module_display_records_cb(uint8_t* packet,
                                              uint8_t packet_length) {
@@ -204,45 +200,6 @@ static void switch_input_cb(uint8_t button_name, uint8_t button_event) {
           break;
       }
       break;
-    default:
-      break;
-  }
-}
-
-static void sniffer_input_cb(uint8_t button_name, uint8_t button_event) {
-  ESP_LOGI(TAG_ZIGBEE_MODULE, "Zigbee Sniffer Entered");
-  switch (button_name) {
-    case BUTTON_LEFT:
-      if (button_event == BUTTON_SINGLE_CLICK) {
-        led_control_stop();
-        menus_module_set_reset_screen(MENU_ZIGBEE_APPS);
-        esp_restart();
-      }
-      break;
-    case BUTTON_RIGHT:
-      ESP_LOGI(TAG_ZIGBEE_MODULE, "Button right pressed - Option selected");
-      break;
-    case BUTTON_UP:
-      ESP_LOGI(TAG_ZIGBEE_MODULE, "Button up pressed");
-      if (button_event == BUTTON_SINGLE_CLICK) {
-        current_channel = (current_channel == IEEE_SNIFFER_CHANNEL_MAX)
-                              ? IEEE_SNIFFER_CHANNEL_MIN
-                              : (current_channel + 1);
-        ieee_sniffer_set_channel(current_channel);
-        // zigbee_screens_display_scanning_text(0, current_channel);
-      }
-      break;
-    case BUTTON_DOWN:
-      ESP_LOGI(TAG_ZIGBEE_MODULE, "Button down pressed");
-      if (button_event == BUTTON_SINGLE_CLICK) {
-        current_channel = (current_channel == IEEE_SNIFFER_CHANNEL_MIN)
-                              ? IEEE_SNIFFER_CHANNEL_MAX
-                              : (current_channel - 1);
-        ieee_sniffer_set_channel(current_channel);
-        // zigbee_screens_display_scanning_text(0, current_channel);
-      }
-      break;
-    case BUTTON_BOOT:
     default:
       break;
   }
