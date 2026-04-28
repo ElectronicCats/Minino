@@ -53,6 +53,9 @@ void ieee_sniffer_set_channel(uint8_t channel) {
     current_channel = IEEE_SNIFFER_CHANNEL_MIN;
   }
 
+  if (running) {
+    esp_ieee802154_sleep();
+  }
   err = esp_ieee802154_set_channel(current_channel);
   if (err != ESP_OK) {
     ESP_LOGE(TAG_IEEE_SNIFFER, "Error setting channel: %s",
@@ -60,6 +63,13 @@ void ieee_sniffer_set_channel(uint8_t channel) {
     return;
   }
   ESP_LOGI(TAG_IEEE_SNIFFER, "Channel set to %d", current_channel);
+  if (running) {
+    err = esp_ieee802154_receive();
+    if (err != ESP_OK) {
+      ESP_LOGE(TAG_IEEE_SNIFFER, "Error restarting receive on channel %d: %s",
+               current_channel, esp_err_to_name(err));
+    }
+  }
 }
 
 static void ieee_sniffer_configure() {
@@ -88,7 +98,7 @@ static void ieee_sniffer_configure() {
              esp_err_to_name(err));
     return;
   }
-  err = esp_ieee802154_set_channel(25);
+  err = esp_ieee802154_set_channel(current_channel);
   if (err != ESP_OK) {
     ESP_LOGE(TAG_IEEE_SNIFFER, "Error setting channel: %s",
              esp_err_to_name(err));

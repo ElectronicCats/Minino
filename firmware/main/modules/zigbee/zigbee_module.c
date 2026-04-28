@@ -87,14 +87,19 @@ static void zigbee_module_stop_and_show_main() {
   zigbee_modue_show_main();
 }
 
+static void zigbee_module_set_channel(uint8_t channel) {
+  packet_count = 0;
+  ieee_sniffer_set_channel(channel);
+}
+
 static void zigbee_module_show_run_screen() {
   general_interactive_screen_t screen = {0};
   screen.static_text = "Channel";
   screen.dinamic_text = "Packets";
   screen.header_title = "ZB Sniffer";
   screen.select_back_cb = zigbee_module_stop_and_show_main;
-  screen.select_up_cb = ieee_sniffer_set_channel;
-  screen.select_down_cb = ieee_sniffer_set_channel;
+  screen.select_up_cb = zigbee_module_set_channel;
+  screen.select_down_cb = zigbee_module_set_channel;
   screen.range_low = 11;
   screen.range_high = 26;
   screen.dinamic_value = (uint16_t*) &packet_count;
@@ -110,6 +115,8 @@ static void zigbee_module_main_handler(uint8_t option) {
       break;
     case ZM_RUN:
       if (!is_running) {
+        ieee_sniffer_set_channel(
+            preferences_get_int(ZIGBEE_SNIFFER_FS_CHAN_KEY, 11));
         led_control_run_effect(led_control_zigbee_scanning);
         xTaskCreate(ieee_sniffer_begin, "ieee_sniffer_task", 4096, NULL, 5,
                     &zigbee_task_sniffer);
