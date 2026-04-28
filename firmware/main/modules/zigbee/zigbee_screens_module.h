@@ -57,6 +57,14 @@ void zigbee_screens_module_display_status(uint8_t status);
 
 /////////////////////////////////////////////////////////////////////////
 
+/* Zigbee Light screens */
+void zigbee_screens_light_joining(void);
+void zigbee_screens_light_joining_failed(void);
+void zigbee_screens_light_on(void);
+void zigbee_screens_light_off(void);
+void zigbee_screens_light_leaving(void);
+void zigbee_screens_light_display_status(uint8_t status);
+
 void zigbee_screens_display_device_ad(void);
 void zigbee_screens_display_scanning_animation(void);
 void zigbee_screens_display_scanning_text(int count);

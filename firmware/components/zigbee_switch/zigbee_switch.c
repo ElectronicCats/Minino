@@ -72,8 +72,13 @@ TaskHandle_t switch_state_machine_task_handle = NULL;
 TaskHandle_t network_open_task_handle = NULL;
 
 display_status_cb_t zigbee_switch_display_status_cb = NULL;
+static zb_signal_handler_t g_custom_signal_handler = NULL;
 
 static const char* TAG = "ESP_ZB_ON_OFF_SWITCH";
+
+void zigbee_set_app_signal_handler(zb_signal_handler_t handler) {
+  g_custom_signal_handler = handler;
+}
 
 bool zigbee_switch_is_light_connected() {
   return switch_state == SWITCH_LIGHT_FOUND;
@@ -132,7 +137,7 @@ static void user_find_cb(esp_zb_zdp_status_t zdo_status,
   }
 }
 
-void esp_zb_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
+void zigbee_switch_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
   uint32_t* p_sg_p = signal_struct->p_app_signal;
   esp_err_t err_status = signal_struct->esp_err_status;
   esp_zb_app_signal_type_t sig_type = *p_sg_p;
@@ -225,6 +230,20 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
                esp_zb_zdo_signal_to_string(sig_type), sig_type,
                esp_err_to_name(err_status));
       break;
+  }
+}
+
+/*
+ * Global Zigbee signal dispatcher. This symbol must live in this component
+ * (libzigbee_switch.a) because the prebuilt Zigbee libraries that reference
+ * it appear earlier in the link order than libmain.a, so the symbol must be
+ * in an archive that is processed AFTER those libraries.
+ */
+void esp_zb_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
+  if (g_custom_signal_handler) {
+    g_custom_signal_handler(signal_struct);
+  } else {
+    zigbee_switch_app_signal_handler(signal_struct);
   }
 }
 

@@ -13,3 +13,6 @@ void radio_selector_set_zigbee_sniffer() {
 void radio_selector_set_thread() {
   radio_selected_option = RADIO_SELECT_THREAD;
 }
+void radio_selector_set_zigbee_light() {
+  radio_selected_option = RADIO_SELECT_ZIGBEE_LIGHT;
+}

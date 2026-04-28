@@ -2,6 +2,7 @@
 #include "general/general_screens.h"
 #include "oled_screen.h"
 #include "zigbee_bitmaps.h"
+#include "zigbee_light.h"
 #include "zigbee_switch.h"
 
 void zigbee_screens_module_toogle_pressed() {
@@ -84,6 +85,61 @@ void zigbee_screens_module_display_status(uint8_t status) {
       break;
     case LIGHT_RELASED:
       zigbee_screens_module_toggle_released();
+    default:
+      break;
+  }
+}
+
+///////////////////////////////////////////////////////////////////////////
+/* Zigbee Light screens */
+
+void zigbee_screens_light_joining(void) {
+  static uint8_t dots = 0;
+  dots = ++dots > 3 ? 0 : dots;
+  genera_screen_display_card_information("ZB Light", "Joining...");
+  for (int i = 0; i < 3; i++) {
+    oled_screen_display_text(i < dots ? "." : "", 56 + (i * 8), 4,
+                             OLED_DISPLAY_NORMAL);
+  }
+}
+
+void zigbee_screens_light_joining_failed(void) {
+  oled_screen_clear();
+  genera_screen_display_card_information("ZB Light", "Join failed");
+}
+
+void zigbee_screens_light_on(void) {
+  oled_screen_clear();
+  genera_screen_display_card_information("ZB Light", "ON");
+}
+
+void zigbee_screens_light_off(void) {
+  oled_screen_clear();
+  genera_screen_display_card_information("ZB Light", "OFF");
+}
+
+void zigbee_screens_light_leaving(void) {
+  oled_screen_clear();
+  genera_screen_display_card_information("ZB Light", "Leaving...");
+}
+
+void zigbee_screens_light_display_status(uint8_t status) {
+  switch (status) {
+    case LIGHT_DISPLAY_JOINING:
+      zigbee_screens_light_joining();
+      break;
+    case LIGHT_DISPLAY_JOINING_FAILED:
+      zigbee_screens_light_joining_failed();
+      break;
+    case LIGHT_DISPLAY_ON:
+      zigbee_screens_light_on();
+      break;
+    case LIGHT_DISPLAY_OFF:
+      zigbee_screens_light_off();
+      break;
+    case LIGHT_DISPLAY_LEAVING:
+      zigbee_screens_light_leaving();
+      break;
     default:
       break;
   }

@@ -8,6 +8,7 @@
 #include "preferences.h"
 #include "radio_selector.h"
 #include "uart_sender.h"
+#include "zigbee_light.h"
 #include "zigbee_screens_module.h"
 #include "zigbee_switch.h"
 
@@ -45,6 +46,7 @@ static int packet_count = 0;
 int current_channel = IEEE_SNIFFER_CHANNEL_DEFAULT;
 static TaskHandle_t zigbee_task_sniffer = NULL;
 
+static void light_input_cb(uint8_t button_name, uint8_t button_event);
 static void switch_input_cb(uint8_t button_name, uint8_t button_event);
 
 static void zigbee_module_display_records_cb(uint8_t* packet,
@@ -70,9 +72,18 @@ void zigbee_module_begin(int app_selected) {
 
 void zigbee_module_switch_enter() {
   radio_selector_set_zigbee_switch();
+  zigbee_set_app_signal_handler(NULL);  // use default switch handler
   menus_module_set_app_state(true, switch_input_cb);
   zigbee_switch_set_display_status_cb(zigbee_screens_module_display_status);
   zigbee_switch_init();
+}
+
+void zigbee_module_light_enter() {
+  radio_selector_set_zigbee_light();
+  zigbee_set_app_signal_handler(zigbee_light_app_signal_handler);
+  menus_module_set_app_state(true, light_input_cb);
+  zigbee_light_set_display_cb(zigbee_screens_light_display_status);
+  zigbee_light_init();
 }
 
 static void zigbee_module_channel_selector(uint8_t option) {
@@ -179,6 +190,21 @@ void zigbee_module_sniffer_enter() {
     return;
   }
   zigbee_modue_show_main();
+}
+
+static void light_input_cb(uint8_t button_name, uint8_t button_event) {
+  switch (button_name) {
+    case BUTTON_LEFT:
+      switch (button_event) {
+        case BUTTON_PRESS_DOWN:
+          menus_module_set_reset_screen(MENU_ZIGBEE_SPOOFING);
+          zigbee_light_deinit();
+          break;
+      }
+      break;
+    default:
+      break;
+  }
 }
 
 static void switch_input_cb(uint8_t button_name, uint8_t button_event) {

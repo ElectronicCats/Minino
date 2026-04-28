@@ -75,6 +75,8 @@ void zigbee_switch_deinit();
  */
 void zigbee_switch_toggle();
 
+typedef void (*zb_signal_handler_t)(esp_zb_app_signal_t*);
+void zigbee_set_app_signal_handler(zb_signal_handler_t handler);
 void zigbee_switch_set_display_status_cb(display_status_cb_t cb);
 void zigbee_switch_remove_display_status_cb(display_status_cb_t cb);
 bool zigbee_switch_is_light_connected();

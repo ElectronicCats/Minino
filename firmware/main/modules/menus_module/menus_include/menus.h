@@ -5,7 +5,6 @@
 #include "hid_module.h"
 #include "spam_module.h"
 #include "trackers_module.h"
-#include "z_switch_module.h"
 
 #include "adv_scan_module.h"
 #include "analyzer_scenes.h"
@@ -381,9 +380,9 @@ menu_t menus[] = {
      .parent_idx = MENU_ZIGBEE_SPOOFING,
      .entry_cmd = "light",
      .last_selected_submenu = 0,
-     .on_enter_cb = NULL,
+     .on_enter_cb = zigbee_module_light_enter,
      .on_exit_cb = NULL,
-     .is_visible = false},
+     .is_visible = true},
     {.display_name = "Sniffer",
      .menu_idx = MENU_ZIGBEE_SNIFFER,
      .parent_idx = MENU_ZIGBEE_APPS,
