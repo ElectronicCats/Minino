@@ -279,7 +279,9 @@ void network_failed_task(void* pvParameters) {
  */
 void wait_for_devices_task(void* pvParameters) {
   while (true) {
-    zigbee_switch_display_status_cb(WAITING_FOR_DEVICES);
+    if (switch_state == SWITCH_WAIT_FOR_DEVICES) {
+      zigbee_switch_display_status_cb(WAITING_FOR_DEVICES);
+    }
     vTaskDelay(pdMS_TO_TICKS(300));
   }
 }
@@ -352,6 +354,22 @@ void zigbee_switch_deinit() {
   switch_state = SWITCH_EXIT;
   vTaskDelay(50 / portTICK_PERIOD_MS);
   zigbee_switch_display_status_cb(CLOSING_NETWORK);
+  if (network_failed_task_handle) {
+    vTaskDelete(network_failed_task_handle);
+    network_failed_task_handle = NULL;
+  }
+  if (wait_for_devices_task_handle) {
+    vTaskDelete(wait_for_devices_task_handle);
+    wait_for_devices_task_handle = NULL;
+  }
+  if (switch_state_machine_task_handle) {
+    vTaskDelete(switch_state_machine_task_handle);
+    switch_state_machine_task_handle = NULL;
+  }
+  if (network_open_task_handle) {
+    vTaskDelete(network_open_task_handle);
+    network_open_task_handle = NULL;
+  }
   esp_zb_factory_reset();
 }
 
