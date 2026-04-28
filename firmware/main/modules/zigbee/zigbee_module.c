@@ -84,12 +84,19 @@ static void zigbee_module_channel_selector(uint8_t option) {
   zigbee_modue_show_main();
 }
 
+static void zigbee_module_stop_and_show_main() {
+  ieee_sniffer_stop();
+  zigbee_task_sniffer = NULL;
+  is_running = false;
+  zigbee_modue_show_main();
+}
+
 static void zigbee_module_show_run_screen() {
   general_interactive_screen_t screen = {0};
   screen.static_text = "Channel";
   screen.dinamic_text = "Packets";
   screen.header_title = "ZB Sniffer";
-  screen.select_back_cb = zigbee_modue_show_main;
+  screen.select_back_cb = zigbee_module_stop_and_show_main;
   screen.select_up_cb = ieee_sniffer_set_channel;
   screen.select_down_cb = ieee_sniffer_set_channel;
   screen.range_low = 11;
@@ -132,13 +139,22 @@ static void zigbee_module_show_channel_selector(void) {
   general_radio_selection(channel);  // Show the radio menu
 }
 
+static void zigbee_module_sniffer_exit() {
+  if (is_running) {
+    ieee_sniffer_stop();
+    zigbee_task_sniffer = NULL;
+    is_running = false;
+  }
+  menus_module_restart();
+}
+
 static void zigbee_modue_show_main() {
   general_submenu_menu_t main = {0};
   main.options = menu_main_items;
   main.options_count = sizeof(menu_main_items) / sizeof(char*);
   main.select_cb = zigbee_module_main_handler;
   main.selected_option = last_index_selected;
-  main.exit_cb = menus_module_restart;
+  main.exit_cb = zigbee_module_sniffer_exit;
   general_submenu(main);
 }
 
