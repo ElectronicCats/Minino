@@ -3,6 +3,7 @@
 #include "openthread/dataset.h"
 #include "openthread/instance.h"
 #include "openthread/ip6.h"
+#include "openthread/link.h"
 #include "openthread/logging.h"
 #include "openthread/message.h"
 #include "openthread/tasklet.h"
@@ -33,7 +34,7 @@ otError openthread_ipmaddr_subscribe(const char* address);
 
 otError openthread_ipmaddr_unsubscribe(const char* address);
 
-otError openthread_enable_promiscous_mode();
+otError openthread_enable_promiscous_mode(otLinkPcapCallback promiscuous_cb);
 otError openthread_disable_promiscous_mode();
 void openthread_set_channel(uint8_t channel);
 void openthread_factory_reset();

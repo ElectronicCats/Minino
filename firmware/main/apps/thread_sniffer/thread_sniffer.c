@@ -59,37 +59,55 @@ static esp_err_t pcap_capture(void* payload,
                               uint32_t seconds,
                               uint32_t microseconds);
 
-void on_pcap_receive(const otRadioFrame* aFrame, bool aIsTx);
+void on_pcap_receive(const otRadioFrame* aFrame, bool aIsTx, void* aContext);
 static void thread_sniffer_show_event(thread_sniffer_events_t event,
                                       void* context);
 static void debug_handler_task();
 
 static void create_pcaps_dir() {
   if (sd_card_mount() == ESP_OK) {
+    ESP_LOGI(TAG, "SD card mounted, creating pcaps dir");
     sd_card_create_dir(APPS_PATH);
     sd_card_create_dir(THREAD_PATH);
     sd_card_create_dir(THREAD_PCAPS_PATH);
+  } else {
+    ESP_LOGW(TAG, "SD card not available for pcaps dir creation");
   }
 }
 
 void thread_sniffer_init() {
+  ESP_LOGI(TAG, "Initializing thread sniffer");
   create_pcaps_dir();
   openthread_init();
   esp_log_level_set("OPENTHREAD", ESP_LOG_NONE);
   packet_rx_queue =
       xQueueCreate(THREAD_SNIFFER_QUEUE_SIZE, sizeof(sniffer_packet_info_t));
+  if (packet_rx_queue == NULL) {
+    ESP_LOGE(TAG, "Failed to create packet queue");
+    return;
+  }
+  ESP_LOGI(TAG, "Packet queue created (size=%d, item=%d bytes)",
+           THREAD_SNIFFER_QUEUE_SIZE, sizeof(sniffer_packet_info_t));
   xTaskCreate(debug_handler_task, "debug_handler_task", 8192, NULL, 20, NULL);
+  ESP_LOGI(TAG, "Handler task created");
 }
 
 void thread_sniffer_run() {
+  ESP_LOGI(TAG, "Starting thread sniffer");
   pcap_start();
   packets_count = 0;
   thread_sniffer_show_event(THREAD_SNIFFER_START_EV, NULL);
   thread_sniffer_show_event_cb(THREAD_SNIFFER_NEW_PACKET_EV, &packets_count);
-  openthread_enable_promiscous_mode(&on_pcap_receive);
+  otError err = openthread_enable_promiscous_mode(&on_pcap_receive);
+  if (err != OT_ERROR_NONE) {
+    ESP_LOGE(TAG, "Failed to enable promiscuous mode: %d", err);
+  } else {
+    ESP_LOGI(TAG, "Promiscuous mode enabled, waiting for packets...");
+  }
 }
 
 void thread_sniffer_stop() {
+  ESP_LOGI(TAG, "Stopping thread sniffer (total packets: %lu)", packets_count);
   pcap_stop();
   thread_sniffer_show_event(THREAD_SNIFFER_STOP_EV, NULL);
   openthread_disable_promiscous_mode();
@@ -97,11 +115,13 @@ void thread_sniffer_stop() {
 
 static void chek_for_fatal_error(esp_err_t err, const char* err_tag) {
   if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Fatal error: %s (0x%x)", err_tag, err);
     thread_sniffer_show_event_cb(THREAD_SNIFFER_FATAL_ERROR_EV, err_tag);
   }
 }
 static void chek_for_fatal_false(bool ok, const char* err_tag) {
   if (!ok) {
+    ESP_LOGE(TAG, "Fatal error: %s", err_tag);
     thread_sniffer_show_event_cb(THREAD_SNIFFER_FATAL_ERROR_EV, err_tag);
   }
 }
@@ -112,9 +132,12 @@ static esp_err_t pcap_start() {
   bool save_in_sd = false;
   if (sd_card_mount() == ESP_OK) {
     save_in_sd = true;
+    ESP_LOGI(TAG, "Saving PCAP to SD card");
   } else if (flash_fs_mount() == ESP_OK) {
     save_in_sd = false;
+    ESP_LOGI(TAG, "Saving PCAP to internal flash");
   } else {
+    ESP_LOGE(TAG, "No storage available for PCAP");
     chek_for_fatal_false(false, "FAILED TO CREATE PCAP FILE");
   }
 
@@ -123,6 +146,7 @@ static esp_err_t pcap_start() {
   sprintf(pcap_dir, "%s/%s", SD_CARD, THREAD_PCAPS_PATH);
   files_ops_incremental_name(save_in_sd ? pcap_dir : FLASH_FS, "thread",
                              ".pcap", pcap_path);
+  ESP_LOGI(TAG, "PCAP file path: %s", pcap_path);
   fp = fopen(pcap_path, "w");
   chek_for_fatal_false(fp, "open file failed");
   pcap_config_t pcap_cfg = {
@@ -139,6 +163,7 @@ static esp_err_t pcap_start() {
       "Write header failed");
   fflush(pcap_cfg.fp);
   thread_pcap.is_writing = true;
+  ESP_LOGI(TAG, "PCAP session started successfully");
 
   thread_sniffer_show_event(THREAD_SNIFFER_DESTINATION_EV, &save_in_sd);
 
@@ -162,13 +187,34 @@ static esp_err_t pcap_stop() {
   thread_pcap.is_writing = false;
   thread_pcap.link_type_set = false;
   thread_pcap.pcap_handle = NULL;
+  ESP_LOGI(TAG, "PCAP session stopped");
   free(err_str);
   return ESP_OK;
 }
 
-void on_pcap_receive(const otRadioFrame* aFrame, bool aIsTx) {
-  BaseType_t task;
-  xQueueSendToBackFromISR(packet_rx_queue, aFrame, &task);
+void on_pcap_receive(const otRadioFrame* aFrame, bool aIsTx, void* aContext) {
+  ESP_LOGD(TAG, "on_pcap_receive: len=%d ch=%d ts=%llu tx=%d", aFrame->mLength,
+           aFrame->mChannel, aFrame->mInfo.mRxInfo.mTimestamp, aIsTx);
+
+  sniffer_packet_info_t packet_info = {0};
+
+  uint8_t* payload_copy = malloc(aFrame->mLength);
+  if (!payload_copy) {
+    ESP_LOGE(TAG, "on_pcap_receive: malloc failed for len=%d", aFrame->mLength);
+    return;
+  }
+  memcpy(payload_copy, aFrame->mPsdu, aFrame->mLength);
+
+  packet_info.payload = payload_copy;
+  packet_info.length = aFrame->mLength;
+  packet_info.seconds = aFrame->mInfo.mRxInfo.mTimestamp / 1000000u;
+  packet_info.microseconds = aFrame->mInfo.mRxInfo.mTimestamp % 1000000u;
+
+  if (xQueueSendToBack(packet_rx_queue, &packet_info, 0) != pdTRUE) {
+    ESP_LOGW(TAG, "on_pcap_receive: queue full, dropping packet (len=%d)",
+             aFrame->mLength);
+    free(payload_copy);
+  }
 }
 
 static esp_err_t pcap_capture(void* payload,
@@ -177,7 +223,7 @@ static esp_err_t pcap_capture(void* payload,
                               uint32_t microseconds) {
   if (pcap_capture_packet(thread_pcap.pcap_handle, payload, length, seconds,
                           microseconds) != ESP_OK) {
-    printf("PCAP CAPTURE FAILED\n");
+    ESP_LOGE(TAG, "pcap_capture_packet failed (len=%lu)", length);
     return ESP_FAIL;
   }
   return ESP_OK;
@@ -199,18 +245,25 @@ static void thread_packet_debug(const otRadioFrame* aFrame) {
 }
 
 static void debug_handler_task() {
-  otRadioFrame packet;
-  while (xQueueReceive(packet_rx_queue, &packet, portMAX_DELAY) != pdFALSE) {
+  ESP_LOGI(TAG, "Handler task started, waiting for packets...");
+  sniffer_packet_info_t packet_info;
+  while (xQueueReceive(packet_rx_queue, &packet_info, portMAX_DELAY) !=
+         pdFALSE) {
     packets_count++;
+    ESP_LOGI(TAG, "Packet #%lu received: len=%lu ts=%lu.%06lu", packets_count,
+             packet_info.length, packet_info.seconds, packet_info.microseconds);
     thread_sniffer_show_event_cb(THREAD_SNIFFER_NEW_PACKET_EV, &packets_count);
-    pcap_capture(packet.mPsdu, packet.mLength,
-                 packet.mInfo.mRxInfo.mTimestamp / 1000000u,
-                 packet.mInfo.mRxInfo.mTimestamp % 1000000u);
-    // thread_packet_debug(&packet);
-    uart_sender_send_packet(UART_SENDER_PACKET_TYPE_THREAD, packet.mPsdu,
-                            packet.mLength);
+    esp_err_t cap_ret =
+        pcap_capture(packet_info.payload, packet_info.length,
+                     packet_info.seconds, packet_info.microseconds);
+    if (cap_ret != ESP_OK) {
+      ESP_LOGW(TAG, "PCAP write failed for packet #%lu", packets_count);
+    }
+    uart_sender_send_packet(UART_SENDER_PACKET_TYPE_THREAD, packet_info.payload,
+                            packet_info.length);
+    free(packet_info.payload);
   }
-  ESP_LOGE("debug_handler_task", "Terminated");
+  ESP_LOGE(TAG, "Handler task terminated unexpectedly");
   vTaskDelete(NULL);
 }
 

@@ -170,7 +170,9 @@ static void thread_gps_event_handler_cb(gps_t* gps) {
   }
 }
 
-static void warthread_packet_handler(const otRadioFrame* aFrame, bool aIsTx) {
+static void warthread_packet_handler(const otRadioFrame* aFrame,
+                                     bool aIsTx,
+                                     void* aContext) {
   if (gps_ctx->sats_in_use == 0) {
     ESP_LOGW(TAG, "No GPS signa dont saved");
     return;
