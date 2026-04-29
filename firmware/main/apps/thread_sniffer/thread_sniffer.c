@@ -99,12 +99,12 @@ void thread_sniffer_run() {
   packets_count = 0;
   thread_sniffer_show_event(THREAD_SNIFFER_START_EV, NULL);
   thread_sniffer_show_event_cb(THREAD_SNIFFER_NEW_PACKET_EV, &packets_count);
-  openthread_set_channel(current_channel);
   otError err = openthread_enable_promiscous_mode(&on_pcap_receive);
+  openthread_set_channel(current_channel);
   if (err != OT_ERROR_NONE) {
     ESP_LOGE(TAG, "Failed to enable promiscuous mode: %d", err);
   } else {
-    ESP_LOGI(TAG, "Promiscuous mode enabled, waiting for packets...");
+    ESP_LOGI(TAG, "Promiscuous mode enabled on channel %d", current_channel);
   }
 }
 
