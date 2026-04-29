@@ -35,6 +35,7 @@ typedef enum {
   LIGHT_DISPLAY_ON,
   LIGHT_DISPLAY_OFF,
   LIGHT_DISPLAY_LEAVING,
+  LIGHT_DISPLAY_DISCONNECTED,
 } light_display_status_t;
 
 typedef void (*light_display_cb_t)(uint8_t);

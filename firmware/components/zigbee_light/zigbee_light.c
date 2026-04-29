@@ -1,11 +1,12 @@
 #include "zigbee_light.h"
 
+#include <string.h>
 #include "esp_log.h"
 #include "esp_system.h"
-#include "leds.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "ha/esp_zigbee_ha_standard.h"
+#include "leds.h"
 #include "radio_selector.h"
 
 #define TAG "zigbee_light"
@@ -15,6 +16,7 @@ typedef enum {
   LIGHT_JOINING,
   LIGHT_JOINED,
   LIGHT_JOIN_FAILED,
+  LIGHT_DISCONNECTED,
   LIGHT_EXIT,
 } light_state_t;
 
@@ -73,7 +75,73 @@ static esp_err_t zb_action_handler(esp_zb_core_action_callback_id_t callback_id,
 }
 
 static void bdb_start_top_level_commissioning_cb(uint8_t mode_mask) {
-  ESP_ERROR_CHECK(esp_zb_bdb_start_top_level_commissioning(mode_mask));
+  light_state = LIGHT_JOINING;
+  esp_err_t err = esp_zb_bdb_start_top_level_commissioning(mode_mask);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to start commissioning (status: %s)",
+             esp_err_to_name(err));
+  }
+}
+
+static void restart_steering_after_disconnect_cb(uint8_t mode_mask) {
+  bdb_start_top_level_commissioning_cb(mode_mask);
+}
+
+static void handle_network_disconnected(void) {
+  if (light_state == LIGHT_DISCONNECTED || light_state == LIGHT_EXIT) {
+    return;
+  }
+  light_state = LIGHT_DISCONNECTED;
+  leds_off();
+  ESP_LOGW(TAG, "Signal lost with Switch - Restarting search");
+  if (zigbee_light_display_cb) {
+    zigbee_light_display_cb(LIGHT_DISPLAY_DISCONNECTED);
+  }
+
+  /* Force leave the network locally to clear state and association */
+  esp_zb_zdo_mgmt_leave_req_param_t leave_req;
+  memset(&leave_req, 0, sizeof(esp_zb_zdo_mgmt_leave_req_param_t));
+  leave_req.dst_nwk_addr = esp_zb_get_short_address();
+  leave_req.rejoin = false;
+  leave_req.remove_children = false;
+  esp_zb_get_long_address(leave_req.device_address);
+
+  esp_zb_zdo_device_leave_req(&leave_req, NULL, NULL);
+
+  /* Schedule a fresh search after a short delay to let the stack settle */
+  esp_zb_scheduler_alarm(
+      (esp_zb_callback_t) bdb_start_top_level_commissioning_cb,
+      ESP_ZB_BDB_MODE_NETWORK_STEERING, 2000);
+}
+
+static void light_schedule_coordinator_ping(uint8_t param);
+
+static void light_coordinator_ping_cb(esp_zb_zdp_status_t zdo_status,
+                                      esp_zb_zdo_ieee_addr_rsp_t* resp,
+                                      void* user_ctx) {
+  if (light_state != LIGHT_JOINED) {
+    return;
+  }
+  if (zdo_status != ESP_ZB_ZDP_STATUS_SUCCESS) {
+    ESP_LOGW(TAG, "Coordinator not responding (0x%02x)", zdo_status);
+    handle_network_disconnected();
+    return;
+  }
+  esp_zb_scheduler_alarm((esp_zb_callback_t) light_schedule_coordinator_ping, 0,
+                         10000);
+}
+
+static void light_schedule_coordinator_ping(uint8_t param) {
+  if (light_state != LIGHT_JOINED) {
+    return;
+  }
+  esp_zb_zdo_ieee_addr_req_param_t req = {
+      .dst_nwk_addr = 0x0000,
+      .addr_of_interest = 0x0000,
+      .request_type = 0,
+      .start_index = 0,
+  };
+  esp_zb_zdo_ieee_addr_req(&req, light_coordinator_ping_cb, NULL);
 }
 
 void zigbee_light_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
@@ -84,8 +152,7 @@ void zigbee_light_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
   switch (sig_type) {
     case ESP_ZB_ZDO_SIGNAL_SKIP_STARTUP:
       ESP_LOGI(TAG, "Zigbee stack initialized");
-      light_state = LIGHT_JOINING;
-      esp_zb_bdb_start_top_level_commissioning(ESP_ZB_BDB_MODE_INITIALIZATION);
+      bdb_start_top_level_commissioning_cb(ESP_ZB_BDB_MODE_INITIALIZATION);
       break;
 
     case ESP_ZB_BDB_SIGNAL_DEVICE_FIRST_START:
@@ -95,8 +162,7 @@ void zigbee_light_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
         /* Visual feedback for scanning */
         led_start_blink(LED_LEFT, 255, 3, 50, 50, 150);
         led_start_blink(LED_RIGHT, 255, 3, 50, 50, 150);
-        esp_zb_bdb_start_top_level_commissioning(
-            ESP_ZB_BDB_MODE_NETWORK_STEERING);
+        bdb_start_top_level_commissioning_cb(ESP_ZB_BDB_MODE_NETWORK_STEERING);
       } else {
         ESP_LOGE(TAG, "Zigbee stack init failed (status: %s)",
                  esp_err_to_name(err_status));
@@ -117,6 +183,8 @@ void zigbee_light_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
         if (zigbee_light_display_cb) {
           zigbee_light_display_cb(LIGHT_DISPLAY_OFF);
         }
+        esp_zb_scheduler_alarm(
+            (esp_zb_callback_t) light_schedule_coordinator_ping, 0, 10000);
       } else {
         ESP_LOGW(TAG, "Network steering failed (status: %s)",
                  esp_err_to_name(err_status));
@@ -128,9 +196,35 @@ void zigbee_light_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
       }
       break;
 
+    case ESP_ZB_NWK_SIGNAL_NO_ACTIVE_LINKS_LEFT:
+      if (light_state == LIGHT_JOINED) {
+        ESP_LOGW(TAG, "Parent/coordinator lost (No active links)");
+        handle_network_disconnected();
+      }
+      break;
+
+    case ESP_ZB_NLME_STATUS_INDICATION:
+      if (light_state == LIGHT_JOINED && err_status != ESP_OK) {
+        ESP_LOGW(TAG, "Network status error (0x%x) - checking connection",
+                 err_status);
+        handle_network_disconnected();
+      }
+      break;
+
+    case ESP_ZB_ZDO_DEVICE_UNAVAILABLE:
+      if (light_state == LIGHT_JOINED) {
+        ESP_LOGW(TAG, "Device unavailable signal received");
+        handle_network_disconnected();
+      }
+      break;
+
     case ESP_ZB_ZDO_SIGNAL_LEAVE:
-      ESP_LOGI(TAG, "Left network");
-      light_state = LIGHT_INIT;
+      if (light_state == LIGHT_EXIT || light_state == LIGHT_DISCONNECTED) {
+        ESP_LOGI(TAG, "Left network (Intentional or local action)");
+        break;
+      }
+      ESP_LOGW(TAG, "Removed from network");
+      handle_network_disconnected();
       break;
 
     default:
@@ -158,6 +252,11 @@ static void light_state_machine_task(void* pvParameters) {
         case LIGHT_JOIN_FAILED:
           if (zigbee_light_display_cb) {
             zigbee_light_display_cb(LIGHT_DISPLAY_JOINING_FAILED);
+          }
+          break;
+        case LIGHT_DISCONNECTED:
+          if (zigbee_light_display_cb) {
+            zigbee_light_display_cb(LIGHT_DISPLAY_DISCONNECTED);
           }
           break;
         default:

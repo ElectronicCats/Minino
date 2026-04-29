@@ -123,6 +123,11 @@ void zigbee_screens_light_leaving(void) {
   genera_screen_display_card_information("ZB Light", "Leaving...");
 }
 
+void zigbee_screens_light_disconnected(void) {
+  oled_screen_clear();
+  genera_screen_display_card_information("ZB Light", "Signal lost");
+}
+
 void zigbee_screens_light_display_status(uint8_t status) {
   switch (status) {
     case LIGHT_DISPLAY_JOINING:
@@ -139,6 +144,9 @@ void zigbee_screens_light_display_status(uint8_t status) {
       break;
     case LIGHT_DISPLAY_LEAVING:
       zigbee_screens_light_leaving();
+      break;
+    case LIGHT_DISPLAY_DISCONNECTED:
+      zigbee_screens_light_disconnected();
       break;
     default:
       break;
