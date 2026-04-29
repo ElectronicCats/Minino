@@ -2,6 +2,7 @@
 
 #include "esp_log.h"
 #include "esp_system.h"
+#include "leds.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "ha/esp_zigbee_ha_standard.h"
@@ -49,6 +50,11 @@ static esp_err_t zb_attribute_handler(
     light_on = message->attribute.data.value
                    ? *(bool*) message->attribute.data.value
                    : false;
+    if (light_on) {
+      leds_on();
+    } else {
+      leds_off();
+    }
     ESP_LOGI(TAG, "Light turned %s", light_on ? "ON" : "OFF");
     if (zigbee_light_display_cb) {
       zigbee_light_display_cb(light_on ? LIGHT_DISPLAY_ON : LIGHT_DISPLAY_OFF);
@@ -86,12 +92,16 @@ void zigbee_light_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
     case ESP_ZB_BDB_SIGNAL_DEVICE_REBOOT:
       if (err_status == ESP_OK) {
         ESP_LOGI(TAG, "Starting network steering to join existing network");
+        /* Visual feedback for scanning */
+        led_start_blink(LED_LEFT, 255, 3, 50, 50, 150);
+        led_start_blink(LED_RIGHT, 255, 3, 50, 50, 150);
         esp_zb_bdb_start_top_level_commissioning(
             ESP_ZB_BDB_MODE_NETWORK_STEERING);
       } else {
         ESP_LOGE(TAG, "Zigbee stack init failed (status: %s)",
                  esp_err_to_name(err_status));
         light_state = LIGHT_JOIN_FAILED;
+        leds_off();
       }
       break;
 
@@ -103,12 +113,14 @@ void zigbee_light_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
                  esp_zb_get_short_address());
         light_state = LIGHT_JOINED;
         light_on = false;
+        leds_off();
         if (zigbee_light_display_cb) {
           zigbee_light_display_cb(LIGHT_DISPLAY_OFF);
         }
       } else {
         ESP_LOGW(TAG, "Network steering failed (status: %s)",
                  esp_err_to_name(err_status));
+        leds_off();
         /* Retry steering after 5 seconds */
         esp_zb_scheduler_alarm(
             (esp_zb_callback_t) bdb_start_top_level_commissioning_cb,
