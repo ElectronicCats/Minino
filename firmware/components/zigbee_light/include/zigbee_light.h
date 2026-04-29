@@ -5,7 +5,8 @@
 #define HA_ONOFF_LIGHT_ENDPOINT         10
 #define ZIGBEE_LIGHT_MAX_CHILDREN       10
 #define INSTALLCODE_POLICY_ENABLE_LIGHT false
-/* All Zigbee primary channels (11-26) — Router scans all to find an existing network */
+/* All Zigbee primary channels (11-26) — Router scans all to find an existing
+ * network */
 #define ESP_ZB_LIGHT_PRIMARY_CHANNEL_MASK (0x07FFF800UL)
 
 #define ESP_ZB_ZR_CONFIG()                                    \

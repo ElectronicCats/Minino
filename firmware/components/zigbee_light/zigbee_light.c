@@ -1,11 +1,11 @@
 #include "zigbee_light.h"
 
 #include "esp_log.h"
+#include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "ha/esp_zigbee_ha_standard.h"
 #include "radio_selector.h"
-
 
 #define TAG "zigbee_light"
 
@@ -210,4 +210,6 @@ void zigbee_light_deinit(void) {
   }
   zigbee_light_display_cb = NULL;
   esp_zb_factory_reset();
+  vTaskDelay(pdMS_TO_TICKS(500));
+  esp_restart();
 }

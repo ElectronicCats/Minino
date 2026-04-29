@@ -13,7 +13,6 @@
 #include "nvs_flash.h"
 #include "radio_selector.h"
 
-
 // #include "zb_cli.h"
 
 static const char* TAG = "zb_cli";

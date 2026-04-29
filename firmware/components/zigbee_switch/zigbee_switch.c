@@ -37,6 +37,7 @@
 
 #include "zigbee_switch.h"
 #include "esp_log.h"
+#include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "ha/esp_zigbee_ha_standard.h"
@@ -393,6 +394,8 @@ void zigbee_switch_deinit() {
     network_open_task_handle = NULL;
   }
   esp_zb_factory_reset();
+  vTaskDelay(pdMS_TO_TICKS(500));
+  esp_restart();
 }
 
 void zigbee_switch_set_display_status_cb(display_status_cb_t cb) {
