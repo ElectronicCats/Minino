@@ -51,6 +51,7 @@ thread_pcap_handler_t thread_pcap = {0};
 thread_sniffer_show_event_cb_t thread_sniffer_show_event_cb = NULL;
 static QueueHandle_t packet_rx_queue = NULL;
 static uint32_t packets_count = 0;
+static uint8_t current_channel = 11;
 
 static esp_err_t pcap_start();
 static esp_err_t pcap_stop();
@@ -98,6 +99,7 @@ void thread_sniffer_run() {
   packets_count = 0;
   thread_sniffer_show_event(THREAD_SNIFFER_START_EV, NULL);
   thread_sniffer_show_event_cb(THREAD_SNIFFER_NEW_PACKET_EV, &packets_count);
+  openthread_set_channel(current_channel);
   otError err = openthread_enable_promiscous_mode(&on_pcap_receive);
   if (err != OT_ERROR_NONE) {
     ESP_LOGE(TAG, "Failed to enable promiscuous mode: %d", err);
@@ -265,6 +267,13 @@ static void debug_handler_task() {
   }
   ESP_LOGE(TAG, "Handler task terminated unexpectedly");
   vTaskDelete(NULL);
+}
+
+void thread_sniffer_set_channel(uint8_t channel) {
+  current_channel = channel;
+  packets_count = 0;
+  openthread_set_channel(channel);
+  ESP_LOGI(TAG, "Channel set to %d", channel);
 }
 
 void thread_sniffer_set_show_event_cb(thread_sniffer_show_event_cb_t cb) {

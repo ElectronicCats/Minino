@@ -14,4 +14,5 @@ typedef void (*thread_sniffer_show_event_cb_t)(thread_sniffer_events_t, void*);
 void thread_sniffer_init();
 void thread_sniffer_run();
 void thread_sniffer_stop();
+void thread_sniffer_set_channel(uint8_t channel);
 void thread_sniffer_set_show_event_cb(thread_sniffer_show_event_cb_t cb);
