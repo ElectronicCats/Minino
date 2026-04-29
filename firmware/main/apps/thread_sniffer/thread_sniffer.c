@@ -50,6 +50,7 @@ typedef struct {
 thread_pcap_handler_t thread_pcap = {0};
 thread_sniffer_show_event_cb_t thread_sniffer_show_event_cb = NULL;
 static QueueHandle_t packet_rx_queue = NULL;
+static TaskHandle_t handler_task_handle = NULL;
 static uint32_t packets_count = 0;
 static uint8_t current_channel = 11;
 
@@ -89,7 +90,8 @@ void thread_sniffer_init() {
   }
   ESP_LOGI(TAG, "Packet queue created (size=%d, item=%d bytes)",
            THREAD_SNIFFER_QUEUE_SIZE, sizeof(sniffer_packet_info_t));
-  xTaskCreate(debug_handler_task, "debug_handler_task", 8192, NULL, 20, NULL);
+  xTaskCreate(debug_handler_task, "debug_handler_task", 8192, NULL, 20,
+              &handler_task_handle);
   ESP_LOGI(TAG, "Handler task created");
 }
 
@@ -98,7 +100,7 @@ void thread_sniffer_run() {
   pcap_start();
   packets_count = 0;
   thread_sniffer_show_event(THREAD_SNIFFER_START_EV, NULL);
-  thread_sniffer_show_event_cb(THREAD_SNIFFER_NEW_PACKET_EV, &packets_count);
+  thread_sniffer_show_event(THREAD_SNIFFER_NEW_PACKET_EV, &packets_count);
   otError err = openthread_enable_promiscous_mode(&on_pcap_receive);
   openthread_set_channel(current_channel);
   if (err != OT_ERROR_NONE) {
@@ -110,21 +112,25 @@ void thread_sniffer_run() {
 
 void thread_sniffer_stop() {
   ESP_LOGI(TAG, "Stopping thread sniffer (total packets: %lu)", packets_count);
+  openthread_disable_promiscous_mode();
+  sniffer_packet_info_t discarded;
+  while (xQueueReceive(packet_rx_queue, &discarded, 0) == pdTRUE) {
+    free(discarded.payload);
+  }
   pcap_stop();
   thread_sniffer_show_event(THREAD_SNIFFER_STOP_EV, NULL);
-  openthread_disable_promiscous_mode();
 }
 
 static void chek_for_fatal_error(esp_err_t err, const char* err_tag) {
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Fatal error: %s (0x%x)", err_tag, err);
-    thread_sniffer_show_event_cb(THREAD_SNIFFER_FATAL_ERROR_EV, err_tag);
+    thread_sniffer_show_event(THREAD_SNIFFER_FATAL_ERROR_EV, err_tag);
   }
 }
 static void chek_for_fatal_false(bool ok, const char* err_tag) {
   if (!ok) {
     ESP_LOGE(TAG, "Fatal error: %s", err_tag);
-    thread_sniffer_show_event_cb(THREAD_SNIFFER_FATAL_ERROR_EV, err_tag);
+    thread_sniffer_show_event(THREAD_SNIFFER_FATAL_ERROR_EV, err_tag);
   }
 }
 
@@ -172,17 +178,9 @@ static esp_err_t pcap_start() {
   free(pcap_dir);
   free(pcap_path);
   return ESP_OK;
-  // err:
-  if (fp) {
-    fclose(fp);
-  }
-  thread_pcap.is_opened = false;
-  return ret;
 }
 
 static esp_err_t pcap_stop() {
-  esp_err_t ret = ESP_OK;
-  char* err_str = malloc(30);
   chek_for_fatal_error(pcap_del_session(thread_pcap.pcap_handle),
                        "stop pcap session failed");
   thread_pcap.is_opened = false;
@@ -190,7 +188,6 @@ static esp_err_t pcap_stop() {
   thread_pcap.link_type_set = false;
   thread_pcap.pcap_handle = NULL;
   ESP_LOGI(TAG, "PCAP session stopped");
-  free(err_str);
   return ESP_OK;
 }
 
@@ -254,12 +251,14 @@ static void debug_handler_task() {
     packets_count++;
     ESP_LOGI(TAG, "Packet #%lu received: len=%lu ts=%lu.%06lu", packets_count,
              packet_info.length, packet_info.seconds, packet_info.microseconds);
-    thread_sniffer_show_event_cb(THREAD_SNIFFER_NEW_PACKET_EV, &packets_count);
-    esp_err_t cap_ret =
-        pcap_capture(packet_info.payload, packet_info.length,
-                     packet_info.seconds, packet_info.microseconds);
-    if (cap_ret != ESP_OK) {
-      ESP_LOGW(TAG, "PCAP write failed for packet #%lu", packets_count);
+    thread_sniffer_show_event(THREAD_SNIFFER_NEW_PACKET_EV, &packets_count);
+    if (thread_pcap.is_writing && thread_pcap.pcap_handle != NULL) {
+      esp_err_t cap_ret =
+          pcap_capture(packet_info.payload, packet_info.length,
+                       packet_info.seconds, packet_info.microseconds);
+      if (cap_ret != ESP_OK) {
+        ESP_LOGW(TAG, "PCAP write failed for packet #%lu", packets_count);
+      }
     }
     uart_sender_send_packet(UART_SENDER_PACKET_TYPE_THREAD, packet_info.payload,
                             packet_info.length);

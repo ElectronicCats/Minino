@@ -87,7 +87,15 @@ static size_t hex_string_to_binary(const char* hex_string,
 void openthread_set_channel(uint8_t channel) {
   esp_openthread_lock_acquire(portMAX_DELAY);
   otInstance* instance = esp_openthread_get_instance();
+  bool promiscuous = otLinkIsPromiscuous(instance);
+  otIp6SetEnabled(instance, false);
+  otThreadSetEnabled(instance, false);
   otLinkSetChannel(instance, channel);
+  otIp6SetEnabled(instance, true);
+  otThreadSetEnabled(instance, true);
+  if (promiscuous) {
+    otLinkSetPromiscuous(instance, true);
+  }
   esp_openthread_lock_release();
 }
 
@@ -95,6 +103,8 @@ esp_err_t openthread_set_dataset(uint8_t channel, uint16_t panid) {
   esp_openthread_lock_acquire(portMAX_DELAY);
   otInstance* instance = esp_openthread_get_instance();
   size_t len = 0;
+  otIp6SetEnabled(instance, false);
+  otThreadSetEnabled(instance, false);
 #if CONFIG_OPENTHREAD_FTD
   otDatasetCreateNewNetwork(instance, &dataset);
 #else
