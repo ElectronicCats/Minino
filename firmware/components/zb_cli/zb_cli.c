@@ -11,6 +11,8 @@
 #include "esp_log.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
+#include "radio_selector.h"
+
 
 // #include "zb_cli.h"
 
@@ -142,7 +144,10 @@ void esp_zb_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
 void zb_stack_init(void) {
   /* Initialize Zigbee stack with default configuraion */
   esp_zb_cfg_t zb_nwk_cfg = ESP_ZB_ZR_CONFIG();
-  esp_zb_init(&zb_nwk_cfg);
+  if (!radio_selector_is_stack_initialized()) {
+    esp_zb_init(&zb_nwk_cfg);
+    radio_selector_set_stack_initialized(true);
+  }
 
   /* Set default allowed network channels */
   esp_zb_set_channel_mask(ESP_ZB_TRANSCEIVER_ALL_CHANNELS_MASK);
@@ -173,14 +178,17 @@ static void zb_stack_main_task(void* pvParameters) {
 }
 
 int zb_cli_begin(int argc, char** argv) {
-  esp_zb_platform_config_t config = {
-      .radio_config = ESP_ZB_DEFAULT_RADIO_CONFIG(),
-      .host_config = ESP_ZB_DEFAULT_HOST_CONFIG(),
-  };
-  ESP_ERROR_CHECK(nvs_flash_init());
-  ESP_ERROR_CHECK(esp_zb_console_init());
-  ESP_ERROR_CHECK(esp_zb_platform_config(&config));
-  xTaskCreate(zb_stack_main_task, "Zigbee_main", 4096, NULL, 5, NULL);
+  if (!radio_selector_is_platform_configured()) {
+    esp_zb_platform_config_t config = {
+        .radio_config = ESP_ZB_DEFAULT_RADIO_CONFIG(),
+        .host_config = ESP_ZB_DEFAULT_HOST_CONFIG(),
+    };
+    ESP_ERROR_CHECK(nvs_flash_init());
+    ESP_ERROR_CHECK(esp_zb_console_init());
+    ESP_ERROR_CHECK(esp_zb_platform_config(&config));
+    radio_selector_set_platform_configured(true);
+  }
+  xTaskCreate(zb_stack_main_task, "Zigbee_main", 10240, NULL, 5, NULL);
   ESP_ERROR_CHECK(esp_zb_console_start());
   return 0;
 }

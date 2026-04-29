@@ -4,6 +4,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "ha/esp_zigbee_ha_standard.h"
+#include "radio_selector.h"
+
 
 #define TAG "zigbee_light"
 
@@ -55,8 +57,8 @@ static esp_err_t zb_attribute_handler(
   return ESP_OK;
 }
 
-static esp_err_t zb_action_handler(
-    esp_zb_core_action_callback_id_t callback_id, const void* message) {
+static esp_err_t zb_action_handler(esp_zb_core_action_callback_id_t callback_id,
+                                   const void* message) {
   if (callback_id == ESP_ZB_CORE_SET_ATTR_VALUE_CB_ID) {
     return zb_attribute_handler(
         (const esp_zb_zcl_set_attr_value_message_t*) message);
@@ -157,30 +159,35 @@ static void light_state_machine_task(void* pvParameters) {
 
 static void esp_zb_light_task(void* pvParameters) {
   esp_zb_cfg_t zb_nwk_cfg = ESP_ZB_ZR_CONFIG();
-  esp_zb_init(&zb_nwk_cfg);
+  if (!radio_selector_is_stack_initialized()) {
+    esp_zb_init(&zb_nwk_cfg);
+    radio_selector_set_stack_initialized(true);
+  }
 
   esp_zb_on_off_light_cfg_t light_cfg = ESP_ZB_DEFAULT_ON_OFF_LIGHT_CONFIG();
   esp_zb_ep_list_t* ep_list =
       esp_zb_on_off_light_ep_create(HA_ONOFF_LIGHT_ENDPOINT, &light_cfg);
   esp_zb_device_register(ep_list);
   esp_zb_core_action_handler_register(zb_action_handler);
-  /* Scan all 2.4 GHz Zigbee channels to find the existing network */
-  esp_zb_set_primary_network_channel_set(ESP_ZB_TRANSCEIVER_ALL_CHANNELS_MASK);
+  esp_zb_set_primary_network_channel_set(ESP_ZB_LIGHT_PRIMARY_CHANNEL_MASK);
   ESP_ERROR_CHECK(esp_zb_start(false));
   esp_zb_stack_main_loop();
 }
 
 void zigbee_light_init(void) {
-  esp_zb_platform_config_t config = {
-      .radio_config = ESP_ZB_LIGHT_RADIO_CONFIG(),
-      .host_config = ESP_ZB_LIGHT_HOST_CONFIG(),
-  };
-  ESP_ERROR_CHECK(esp_zb_platform_config(&config));
+  if (!radio_selector_is_platform_configured()) {
+    esp_zb_platform_config_t config = {
+        .radio_config = ESP_ZB_LIGHT_RADIO_CONFIG(),
+        .host_config = ESP_ZB_LIGHT_HOST_CONFIG(),
+    };
+    ESP_ERROR_CHECK(esp_zb_platform_config(&config));
+    radio_selector_set_platform_configured(true);
+  }
   light_state = LIGHT_JOINING;
   light_state_prev = LIGHT_EXIT;
   light_on = false;
 
-  xTaskCreate(esp_zb_light_task, "zigbee_light_main", 4096, NULL, 5, NULL);
+  xTaskCreate(esp_zb_light_task, "zigbee_light_main", 10240, NULL, 5, NULL);
   xTaskCreate(light_joining_task, "light_joining", 4096, NULL, 5,
               &light_joining_task_handle);
   xTaskCreate(light_state_machine_task, "light_state_machine", 4096, NULL, 5,

@@ -2,22 +2,24 @@
 
 #include "esp_zigbee_core.h"
 
-#define HA_ONOFF_LIGHT_ENDPOINT    10
-#define ZIGBEE_LIGHT_MAX_CHILDREN  10
+#define HA_ONOFF_LIGHT_ENDPOINT         10
+#define ZIGBEE_LIGHT_MAX_CHILDREN       10
 #define INSTALLCODE_POLICY_ENABLE_LIGHT false
+/* All Zigbee primary channels (11-26) — Router scans all to find an existing network */
+#define ESP_ZB_LIGHT_PRIMARY_CHANNEL_MASK (0x07FFF800UL)
 
-#define ESP_ZB_ZR_CONFIG()                              \
-  {                                                     \
-      .esp_zb_role = ESP_ZB_DEVICE_TYPE_ROUTER,         \
+#define ESP_ZB_ZR_CONFIG()                                    \
+  {                                                           \
+      .esp_zb_role = ESP_ZB_DEVICE_TYPE_ROUTER,               \
       .install_code_policy = INSTALLCODE_POLICY_ENABLE_LIGHT, \
-      .nwk_cfg.zczr_cfg =                               \
-          {                                             \
-              .max_children = ZIGBEE_LIGHT_MAX_CHILDREN, \
-          },                                            \
+      .nwk_cfg.zczr_cfg =                                     \
+          {                                                   \
+              .max_children = ZIGBEE_LIGHT_MAX_CHILDREN,      \
+          },                                                  \
   }
 
-#define ESP_ZB_LIGHT_RADIO_CONFIG()   \
-  {                                   \
+#define ESP_ZB_LIGHT_RADIO_CONFIG()       \
+  {                                       \
       .radio_mode = ZB_RADIO_MODE_NATIVE, \
   }
 

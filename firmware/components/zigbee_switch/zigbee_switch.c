@@ -40,6 +40,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "ha/esp_zigbee_ha_standard.h"
+#include "radio_selector.h"
 #include "string.h"
 
 typedef struct light_bulb_device_params_s {
@@ -153,13 +154,9 @@ void zigbee_switch_app_signal_handler(esp_zb_app_signal_t* signal_struct) {
       if (err_status == ESP_OK) {
         ESP_LOGI(TAG, "Device started up in %s factory-reset mode",
                  esp_zb_bdb_is_factory_new() ? "" : "non");
-        if (esp_zb_bdb_is_factory_new()) {
-          ESP_LOGI(TAG, "Start network formation");
-          esp_zb_bdb_start_top_level_commissioning(
-              ESP_ZB_BDB_MODE_NETWORK_FORMATION);
-        } else {
-          ESP_LOGI(TAG, "Device rebooted");
-        }
+        ESP_LOGI(TAG, "Start network formation");
+        esp_zb_bdb_start_top_level_commissioning(
+            ESP_ZB_BDB_MODE_NETWORK_FORMATION);
       } else {
         ESP_LOGE(TAG, "Failed to initialize Zigbee stack (status: %s)",
                  esp_err_to_name(err_status));
@@ -341,23 +338,29 @@ void switch_state_machine_task(void* pvParameters) {
 static void esp_zb_task(void* pvParameters) {
   /* initialize Zigbee stack */
   esp_zb_cfg_t zb_nwk_cfg = ESP_ZB_ZC_CONFIG();
-  esp_zb_init(&zb_nwk_cfg);
+  if (!radio_selector_is_stack_initialized()) {
+    esp_zb_init(&zb_nwk_cfg);
+    radio_selector_set_stack_initialized(true);
+  }
   esp_zb_on_off_switch_cfg_t switch_cfg = ESP_ZB_DEFAULT_ON_OFF_SWITCH_CONFIG();
   esp_zb_ep_list_t* esp_zb_on_off_switch_ep =
       esp_zb_on_off_switch_ep_create(HA_ONOFF_SWITCH_ENDPOINT, &switch_cfg);
   esp_zb_device_register(esp_zb_on_off_switch_ep);
   esp_zb_set_primary_network_channel_set(ESP_ZB_PRIMARY_CHANNEL_MASK);
   ESP_ERROR_CHECK(esp_zb_start(false));
-  esp_zb_main_loop_iteration();
+  esp_zb_stack_main_loop();
 }
 
 void zigbee_switch_init() {
-  esp_zb_platform_config_t config = {
-      .radio_config = ESP_ZB_DEFAULT_RADIO_CONFIG(),
-      .host_config = ESP_ZB_DEFAULT_HOST_CONFIG(),
-  };
-  ESP_ERROR_CHECK(esp_zb_platform_config(&config));
-  xTaskCreate(esp_zb_task, "Zigbee_main", 4096, NULL, 5, NULL);
+  if (!radio_selector_is_platform_configured()) {
+    esp_zb_platform_config_t config = {
+        .radio_config = ESP_ZB_DEFAULT_RADIO_CONFIG(),
+        .host_config = ESP_ZB_DEFAULT_HOST_CONFIG(),
+    };
+    ESP_ERROR_CHECK(esp_zb_platform_config(&config));
+    radio_selector_set_platform_configured(true);
+  }
+  xTaskCreate(esp_zb_task, "Zigbee_main", 10240, NULL, 5, NULL);
   xTaskCreate(network_failed_task, "Network_failed", 4096, NULL, 5,
               &network_failed_task_handle);
   xTaskCreate(wait_for_devices_task, "Wait_for_devices", 4096, NULL, 5,

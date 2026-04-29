@@ -1,5 +1,7 @@
 #pragma once
+#include <stdbool.h>
 #include <stdint.h>
+
 typedef enum {
   RADIO_SELECT_ZIGBEE_SWITCH,
   RADIO_SELECT_ZIGBEE_SNIFFER,
@@ -12,3 +14,7 @@ void radio_selector_set_zigbee_switch();
 void radio_selector_set_zigbee_sniffer();
 void radio_selector_set_thread();
 void radio_selector_set_zigbee_light();
+bool radio_selector_is_platform_configured();
+void radio_selector_set_platform_configured(bool configured);
+bool radio_selector_is_stack_initialized();
+void radio_selector_set_stack_initialized(bool initialized);
