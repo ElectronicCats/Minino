@@ -11,6 +11,7 @@ static const char* TAG = "DroneidScanner";
 
 static ODID_UAS_Data UAS_data;
 static int current_channel = 1;
+static TaskHandle_t channel_task_handle = NULL;
 
 static void task_change_channel(void* args) {
   while (true) {
@@ -215,5 +216,6 @@ void droneid_scanner_begin() {
   }
 
   droneid_scanner_screen_main();
-  xTaskCreate(task_change_channel, "channhop", 4096, NULL, 5, NULL);
+  xTaskCreate(task_change_channel, "channhop", 4096, NULL, 5,
+              &channel_task_handle);
 }

@@ -12,6 +12,7 @@ static bt_spam_cb_display display_records_cb = NULL;
 static TimerHandle_t adv_timer;
 static volatile bool running_task = false;
 static int adv_index = 0;
+static TaskHandle_t adv_task_handle = NULL;
 
 static esp_ble_adv_params_t ble_adv_params = {
     .adv_int_min = 0x20,
@@ -186,9 +187,13 @@ void bt_spam_app_main() {
   running_task = true;
 
   esp_ble_gap_start_advertising(&ble_adv_params);
-  xTaskCreate(&start_adv, "start_adv", 4096, NULL, 5, NULL);
+  xTaskCreate(&start_adv, "start_adv", 4096, NULL, 5, &adv_task_handle);
 }
 
 void bt_spam_app_stop() {
   running_task = false;
+  if (adv_task_handle != NULL) {
+    vTaskDelete(adv_task_handle);
+    adv_task_handle = NULL;
+  }
 }

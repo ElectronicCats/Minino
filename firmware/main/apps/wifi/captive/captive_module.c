@@ -41,6 +41,7 @@ static uint16_t last_index_selected = 0;
 static httpd_handle_t server = NULL;
 static uint16_t retries = 0;
 static char wifi_ap_name[CAPTIVE_PORTAL_MAX_NAME];
+static TaskHandle_t scanning_task_handle = NULL;
 
 typedef enum {
   PORTALS,
@@ -891,7 +892,8 @@ static void captive_module_main_menu_handler(uint8_t option) {
       if (preferences_get_int(CAPTIVE_PORTAL_MODE_FS_KEY, 0) == 1) {
         retries = 0;
         captive_module_scan_clean();
-        xTaskCreate(scanning_task, "wifi_scan", 8096, NULL, 5, NULL);
+        xTaskCreate(scanning_task, "wifi_scan", 8096, NULL, 5,
+                    &scanning_task_handle);
         animations_task_run(&general_animation_loading, 300, NULL);
         captive_module_run_scan_task();
       } else {

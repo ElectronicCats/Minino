@@ -19,6 +19,7 @@ typedef struct {
   uint32_t freq;
   uint32_t duty;
   bool enabled;
+  TaskHandle_t task_handle;
 } buzzer_t;
 
 static buzzer_t buzzer;
@@ -105,9 +106,11 @@ void buzzer_play_for_task(void* duration) {
 #endif
 
   uint32_t dur = *(uint32_t*) duration;
+  free(duration);
   buzzer_play();
-  vTaskDelay(*(uint32_t*) duration / portTICK_PERIOD_MS);
+  vTaskDelay(dur / portTICK_PERIOD_MS);
   buzzer_stop();
+  buzzer.task_handle = NULL;
   vTaskDelete(NULL);
 }
 
@@ -122,7 +125,7 @@ void buzzer_play_for(uint32_t duration) {
   uint32_t* duration_ptr = malloc(sizeof(uint32_t));
   *duration_ptr = duration;
   xTaskCreate(buzzer_play_for_task, "buzzer_play_for_task", 2048, duration_ptr,
-              5, NULL);
+              5, &buzzer.task_handle);
 }
 
 void buzzer_stop() {

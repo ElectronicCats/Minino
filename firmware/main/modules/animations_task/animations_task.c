@@ -8,6 +8,7 @@ void (*animations_task_cb)(void*) = NULL;
 
 static volatile bool running = false;
 static uint32_t delay_ms = 100;
+static TaskHandle_t animations_task_handle = NULL;
 
 static void animations_task(void* pvParameters) {
   running = true;
@@ -28,10 +29,15 @@ void animations_task_run(void* animation_cb,
   }
   animations_task_cb = animation_cb;
   delay_ms = period_ms;
-  xTaskCreate(animations_task, "animations_task", 2048, pvParameters, 5, NULL);
+  xTaskCreate(animations_task, "animations_task", 2048, pvParameters, 5,
+              &animations_task_handle);
 }
 
 void animations_task_stop() {
   animations_task_cb = NULL;
   running = false;
+  if (animations_task_handle != NULL) {
+    vTaskDelete(animations_task_handle);
+    animations_task_handle = NULL;
+  }
 }

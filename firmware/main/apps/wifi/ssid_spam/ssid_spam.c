@@ -47,6 +47,7 @@ static char* ssids_list[99] = {};
 static char* ssids_attack[MAX_STRINGS];
 static uint16_t total_lines = 0;
 static uint8_t current_item = 0;
+static TaskHandle_t spam_task_handle = NULL;
 
 static const general_menu_t spam_menu_main = {
     .menu_items = ssids_main_list,
@@ -189,7 +190,7 @@ static void ssid_spam_init() {
   ESP_ERROR_CHECK(esp_wifi_start());
   ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
 
-  xTaskCreate(&spam_task, "spam_task", 4096, NULL, 5, NULL);
+  xTaskCreate(&spam_task, "spam_task", 4096, NULL, 5, &spam_task_handle);
 }
 
 static void ssid_spam_input_cb(uint8_t button_name, uint8_t button_event) {
