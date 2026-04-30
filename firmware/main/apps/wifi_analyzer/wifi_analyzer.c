@@ -31,6 +31,15 @@ static char* wifi_analizer_summary_2[120] = {
     "Summary",
 };
 
+static void wifi_analizer_free_summary(void) {
+  for (uint8_t i = 1; i < 120; i++) {
+    if (wifi_analizer_summary_2[i] != NULL) {
+      free(wifi_analizer_summary_2[i]);
+      wifi_analizer_summary_2[i] = NULL;
+    }
+  }
+}
+
 static void wifi_module_input_cb(uint8_t button_name, uint8_t button_event);
 static void wifi_module_summary_exit_cb();
 
@@ -113,6 +122,7 @@ static void wifi_module_summary_exit_cb() {
   if (analizer_initialized) {
     wifi_sniffer_close_file();
   }
+  wifi_analizer_free_summary();
   analyzer_scenes_main_menu();
 }
 
@@ -179,6 +189,7 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
   esp_err_t ret = ESP_OK;
   long size = pcap_cmd_get_file_size(pcap_file);
   char* packet_payload = NULL;
+  wifi_analizer_free_summary();
   // packet index (by bytes)
   uint32_t index = 0;
   pcap_file_header_t file_header;
@@ -202,13 +213,13 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
 
   // Load header information
   uint32_t summary_index = 1;  // Skip scroll text flag and Summary title
-  wifi_analizer_summary_2[summary_index++] = "----------------";
-  wifi_analizer_summary_2[summary_index++] = "Magic Number:";
+  wifi_analizer_summary_2[summary_index++] = strdup("----------------");
+  wifi_analizer_summary_2[summary_index++] = strdup("Magic Number:");
   wifi_analizer_summary_2[summary_index++] = magic_number_str;
   wifi_analizer_summary_2[summary_index++] = major_version_str;
   wifi_analizer_summary_2[summary_index++] = snaplen_str;
   wifi_analizer_summary_2[summary_index++] = link_type_str;
-  wifi_analizer_summary_2[summary_index++] = "----------------";
+  wifi_analizer_summary_2[summary_index++] = strdup("----------------");
 
   uint32_t packet_num = 0;
   pcap_packet_header_t packet_header;
@@ -269,7 +280,7 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
         snprintf(bssid_str2, 32, "       %2X:%2X:%2X", packet_payload[19],
                  packet_payload[20], packet_payload[21]);
 
-        wifi_analizer_summary_2[summary_index++] = "SSID:";
+        wifi_analizer_summary_2[summary_index++] = strdup("SSID:");
         wifi_analizer_summary_2[summary_index++] = ssid_str;
         wifi_analizer_summary_2[summary_index++] = channel_str;
         wifi_analizer_summary_2[summary_index++] = bssid_str;
@@ -297,17 +308,17 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
 
       wifi_analizer_summary_2[summary_index++] = frame_type_str;
       wifi_analizer_summary_2[summary_index++] = frame_subtype_str;
-      wifi_analizer_summary_2[summary_index++] = "Destination:";
+      wifi_analizer_summary_2[summary_index++] = strdup("Destination:");
       wifi_analizer_summary_2[summary_index++] = destination_str;
       wifi_analizer_summary_2[summary_index++] = destination_str2;
       wifi_analizer_summary_2[summary_index++] = source_str;
       wifi_analizer_summary_2[summary_index++] = source_str2;
 
-      wifi_analizer_summary_2[summary_index++] = "----------------";
+      wifi_analizer_summary_2[summary_index++] = strdup("----------------");
     } else {
       char* link_type_str = malloc(32);
       snprintf(link_type_str, 32, "Link Type: %" PRIu32, file_header.link_type);
-      wifi_analizer_summary_2[summary_index++] = "Unknown link type";
+      wifi_analizer_summary_2[summary_index++] = strdup("Unknown link type");
       wifi_analizer_summary_2[summary_index++] = link_type_str;
     }
     free(packet_payload);
@@ -317,12 +328,12 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
   }
 
   if (packet_num > 0) {
-    wifi_analizer_summary_2[summary_index++] = "Open the pcap";
-    wifi_analizer_summary_2[summary_index++] = "file in";
-    wifi_analizer_summary_2[summary_index++] = "Wireshark to see";
-    wifi_analizer_summary_2[summary_index++] = "more.";
+    wifi_analizer_summary_2[summary_index++] = strdup("Open the pcap");
+    wifi_analizer_summary_2[summary_index++] = strdup("file in");
+    wifi_analizer_summary_2[summary_index++] = strdup("Wireshark to see");
+    wifi_analizer_summary_2[summary_index++] = strdup("more.");
   } else {
-    wifi_analizer_summary_2[summary_index++] = "No packets found";
+    wifi_analizer_summary_2[summary_index++] = strdup("No packets found");
   }
 
   wifi_analizer_summary_2[summary_index++] = NULL;

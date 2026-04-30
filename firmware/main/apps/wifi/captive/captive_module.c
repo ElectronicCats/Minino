@@ -629,7 +629,8 @@ static uint16_t captive_module_get_sd_portals() {
     if (!ext || strcmp(ext, ".html") != 0) {
       continue;
     }
-    portals_list.ent[portals_list.count] = (char*) malloc(strlen(ent->d_name) + 1);
+    portals_list.ent[portals_list.count] =
+        (char*) malloc(strlen(ent->d_name) + 1);
     if (!portals_list.ent[portals_list.count]) {
       ESP_LOGE("CAPTIVE", "Failed to allocate memory for dirent name");
       continue;
