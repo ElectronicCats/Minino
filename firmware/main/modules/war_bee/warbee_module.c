@@ -127,19 +127,15 @@ static void warbee_gps_event_handler_cb(gps_t* gps) {
     update_file_name(context_session.session_str);
     ESP_LOGI("Warbee", "Creating Session File: %s",
              context_session.session_str);
-    sd_card_write_file(csv_file_name, csv_file_buffer);
-    csv_lines = CSV_HEADER_LINES;
-    free(csv_file_buffer);
-
-    ESP_LOGI("Warbee", "Free heap size before allocation: %" PRIu32 " bytes",
-             esp_get_free_heap_size());
-    ESP_LOGI("Warbee", "Allocating %d bytes for csv_file_buffer",
-             CSV_FILE_SIZE);
-    csv_file_buffer = malloc(CSV_FILE_SIZE);
-    if (csv_file_buffer == NULL) {
+    char* new_csv_buffer = malloc(CSV_FILE_SIZE);
+    if (new_csv_buffer == NULL) {
       ESP_LOGE("Warbee", "Failed to allocate memory for csv_file_buffer");
       return;
     }
+    sd_card_write_file(csv_file_name, csv_file_buffer);
+    csv_lines = CSV_HEADER_LINES;
+    free(csv_file_buffer);
+    csv_file_buffer = new_csv_buffer;
 
     sprintf(csv_file_buffer, "%s\n",
             war_bee_csv_header);  // Append header to csv file
@@ -225,6 +221,9 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
         default: {
           ESP_LOGE(TAG_IEEE_SNIFFER,
                    "With reserved destination address type, ignoring packet\n");
+          free(csv_line_buffer);
+          free(dst_addr_str);
+          free(src_addr_str);
           return;
         }
       }
@@ -259,6 +258,9 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
         default: {
           ESP_LOGE(TAG_IEEE_SNIFFER,
                    "With reserved source address type, ignoring packet");
+          free(csv_line_buffer);
+          free(dst_addr_str);
+          free(src_addr_str);
           return;
         }
       }
@@ -304,21 +306,21 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
 
   if (context_session.session_records_count >= MAX_CSV_LINES) {
     ESP_LOGW(TAG, "Max CSV lines reached, writing to file");
+    char* new_csv_buffer = malloc(CSV_FILE_SIZE);
+    if (new_csv_buffer == NULL) {
+      ESP_LOGE(TAG, "Failed to allocate memory for csv_file_buffer");
+      free(csv_line_buffer);
+      free(dst_addr_str);
+      free(src_addr_str);
+      return;
+    }
     context_session.session_str = get_str_date_time(gps_ctx);
     context_session.session_records_count = 0;
     update_file_name(context_session.session_str);
     sd_card_write_file(csv_file_name, csv_file_buffer);
     csv_lines = CSV_HEADER_LINES;
     free(csv_file_buffer);
-
-    ESP_LOGI(TAG, "Free heap size before allocation: %" PRIu32 " bytes",
-             esp_get_free_heap_size());
-    ESP_LOGI(TAG, "Allocating %d bytes for csv_file_buffer", CSV_FILE_SIZE);
-    csv_file_buffer = malloc(CSV_FILE_SIZE);
-    if (csv_file_buffer == NULL) {
-      ESP_LOGE(TAG, "Failed to allocate memory for csv_file_buffer");
-      return;
-    }
+    csv_file_buffer = new_csv_buffer;
 
     sprintf(csv_file_buffer, "%s\n",
             war_bee_csv_header);  // Append header to csv file
@@ -329,6 +331,7 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
   context_session.session_records_count++;
   free(csv_line_buffer);
   free(dst_addr_str);
+  free(src_addr_str);
 }
 
 void warbee_module_begin() {
