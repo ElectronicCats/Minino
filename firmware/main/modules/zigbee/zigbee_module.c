@@ -88,7 +88,6 @@ void zigbee_module_light_enter() {
 
 static void zigbee_module_channel_selector(uint8_t option) {
   preferences_put_int(ZIGBEE_SNIFFER_FS_CHAN_KEY, option + 11);
-  zigbee_modue_show_main();
 }
 
 static void zigbee_module_stop_and_show_main() {
