@@ -19,6 +19,10 @@ void oled_screen_begin() {
 #endif
 
   oled_mutex = xSemaphoreCreateMutex();
+  if (oled_mutex == NULL) {
+    ESP_LOGE(TAG, "Failed to create oled_mutex");
+    return;
+  }
 #if CONFIG_I2C_INTERFACE
   ESP_LOGI(TAG, "INTERFACE is i2c");
   ESP_LOGI(TAG, "CONFIG_SDA_GPIO=%d", CONFIG_SDA_GPIO);

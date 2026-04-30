@@ -20,6 +20,9 @@ static void anim_mutex_alloc() {
     return;
   }
   anim_mutex = xSemaphoreCreateMutex();
+  if (anim_mutex == NULL) {
+    ESP_LOGE(TAG, "Failed to create anim_mutex");
+  }
 }
 
 ///////////////////////////////////////////////////////////
