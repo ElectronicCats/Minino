@@ -20,6 +20,7 @@
 
 typedef void (*app_callback)(bool state);
 
+void wifi_ap_manager_deinit();
 int wifi_ap_manager_connect_ap(const char* ssid, const char* pass);
 int wifi_ap_manager_connect_index(int index);
 void wifi_ap_manager_unregister_callback();
