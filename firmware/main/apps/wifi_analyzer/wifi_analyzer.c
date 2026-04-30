@@ -5,6 +5,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "keyboard_module.h"
 #include "string.h"
 
@@ -25,6 +26,8 @@
 static const char* TAG = "wifi_module";
 static volatile bool analizer_initialized = false;
 static volatile bool no_mem = false;
+static SemaphoreHandle_t summary_mutex = NULL;
+static volatile bool analyzer_exiting = false;
 
 static general_menu_t analyzer_summary_menu;
 static char* wifi_analizer_summary_2[120] = {
@@ -122,11 +125,17 @@ static void wifi_module_summary_exit_cb() {
   if (analizer_initialized) {
     wifi_sniffer_close_file();
   }
+  xSemaphoreTake(summary_mutex, portMAX_DELAY);
   wifi_analizer_free_summary();
+  xSemaphoreGive(summary_mutex);
   analyzer_scenes_main_menu();
 }
 
 void wifi_module_analyzer_run_exit() {
+  if (analyzer_exiting) {
+    return;
+  }
+  analyzer_exiting = true;
   analyzer_summary_menu.menu_items = wifi_analizer_summary_2;
   analyzer_summary_menu.menu_level = GENERAL_TREE_APP_MENU;
   wifi_sniffer_stop();
@@ -135,6 +144,7 @@ void wifi_module_analyzer_run_exit() {
   analyzer_summary_menu.menu_count = get_summary_rows_count();
   general_register_scrolling_menu(&analyzer_summary_menu);
   general_screen_display_scrolling_text_handler(wifi_module_summary_exit_cb);
+  analyzer_exiting = false;
 }
 
 void wifi_module_analyzer_summary_exit() {
@@ -167,6 +177,9 @@ void wifi_analyzer_run() {
 }
 
 void wifi_analyzer_begin() {
+  if (summary_mutex == NULL) {
+    summary_mutex = xSemaphoreCreateMutex();
+  }
   if (no_mem) {
     out_of_mem_handler();
     return;
@@ -189,6 +202,7 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
   esp_err_t ret = ESP_OK;
   long size = pcap_cmd_get_file_size(pcap_file);
   char* packet_payload = NULL;
+  xSemaphoreTake(summary_mutex, portMAX_DELAY);
   wifi_analizer_free_summary();
   // packet index (by bytes)
   uint32_t index = 0;
@@ -340,12 +354,14 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
   if (packet_payload) {
     free(packet_payload);
   }
+  xSemaphoreGive(summary_mutex);
   return;
 err:
   if (packet_payload) {
     free(packet_payload);
   }
   wifi_analizer_summary_2[summary_index++] = NULL;
+  xSemaphoreGive(summary_mutex);
 }
 
 static void wifi_module_input_cb(uint8_t button_name, uint8_t button_event) {

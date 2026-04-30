@@ -1,5 +1,7 @@
 #include "trackers_module.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "menus_module.h"
 #include "trackers_scanner.h"
 #include "trackers_screens.h"
@@ -8,6 +10,7 @@ static uint16_t current_item = 0;
 static uint16_t trackers_count = 0;
 static bool trackers_scanned = false;
 static tracker_profile_t* scanned_airtags = NULL;
+static SemaphoreHandle_t trackers_mutex = NULL;
 char* tracker_information[4] = {
     NULL,
     NULL,
@@ -48,6 +51,7 @@ static void module_reset_menu() {
 }
 
 static void module_handle_trackers(tracker_profile_t record) {
+  xSemaphoreTake(trackers_mutex, portMAX_DELAY);
   int device_exists = trackers_scanner_find_profile_by_mac(
       scanned_airtags, trackers_count, record.mac_address);
   if (device_exists == -1) {
@@ -63,6 +67,7 @@ static void module_handle_trackers(tracker_profile_t record) {
     module_update_tracker_name(scanned_airtags[device_exists].name,
                                device_exists);
   }
+  xSemaphoreGive(trackers_mutex);
 }
 
 static void module_main_cb_event(uint8_t button_name, uint8_t button_event) {
@@ -122,6 +127,7 @@ static void module_list_cb_event(uint8_t button_name, uint8_t button_event) {
       break;
     case BUTTON_RIGHT:
       tracker_information_free();
+      xSemaphoreTake(trackers_mutex, portMAX_DELAY);
       char tracker_mac[18];
       snprintf(tracker_mac, sizeof(tracker_mac), "%02X:%02X:%02X:%02X:%02X",
                scanned_airtags[current_item].mac_address[1],
@@ -141,6 +147,7 @@ static void module_list_cb_event(uint8_t button_name, uint8_t button_event) {
       strcpy(tracker_information[1], tracker_rssi);
       tracker_information[3] = malloc(strlen(tracker_mac) + 1);
       strcpy(tracker_information[3], tracker_mac);
+      xSemaphoreGive(trackers_mutex);
       general_register_scrolling_menu(&trackers_information);
       general_screen_display_scrolling_text_handler(module_reset_menu);
       break;
@@ -156,6 +163,9 @@ static void module_list_cb_event(uint8_t button_name, uint8_t button_event) {
 }
 
 void trackers_module_begin() {
+  if (trackers_mutex == NULL) {
+    trackers_mutex = xSemaphoreCreateMutex();
+  }
   module_register_menu(GENERAL_TREE_APP_MENU);
   module_display_menu(current_item);
   menus_module_set_app_state(true, module_main_cb_event);
