@@ -206,8 +206,8 @@ static const unsigned char simple_up_arrow_bmp[] = {0x00, 0x18, 0x24, 0x42,
 static const unsigned char simple_down_arrow_bmp[] = {0x00, 0x00, 0x00, 0x81,
                                                       0x42, 0x24, 0x18, 0x00};
 
-unsigned char* epd_startup_logo[] = {epd_bitmap_minino_text_logo,
-                                     epd_bitmap_face_logo};
+const unsigned char* epd_startup_logo[] = {epd_bitmap_minino_text_logo,
+                                           epd_bitmap_face_logo};
 
 // 'loading_3_3232', 32x32px
 const unsigned char epd_bitmap_loading_3_3232[] = {

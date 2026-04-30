@@ -41,14 +41,6 @@ void menus_screens_display_menus_f(menus_manager_t* ctx) {
   bool skip_first = !ctx->selected_submenu;
   bool skip_last = ctx->selected_submenu == ctx->submenus_count - 1;
 
-  if (preferences_get_int("ZBCLI", 0) == 0) {
-    oled_screen_display_bitmap(minino_face_bitmap.bitmap, 0, 0,
-                               minino_face_bitmap.width,
-                               minino_face_bitmap.height, OLED_DISPLAY_NORMAL);
-  } else {
-    oled_screen_display_text("[ZB]", 0, 0, OLED_DISPLAY_NORMAL);
-  }
-
   uint8_t idx = 0;
   for (uint8_t i = 0; i < 3; i++) {
     if ((!i && skip_first) || (i == 2 && skip_last)) {
@@ -60,6 +52,17 @@ void menus_screens_display_menus_f(menus_manager_t* ctx) {
     char* str = (char*) malloc(strlen(display_name) + 3);
     sprintf(str, "%s%s", i == 1 ? prefix : " ", display_name);
     oled_screen_display_text(str, 0, i * page_increment + page,
+                             OLED_DISPLAY_NORMAL);
+    free(str);
+  }
+
+  if (preferences_get_int("ZBCLI", 0) == 0) {
+    uint8_t bitmap_y = (page_increment + page) * minino_face_bitmap.height;
+    oled_screen_display_bitmap(minino_face_bitmap.bitmap, 0, bitmap_y,
+                               minino_face_bitmap.width,
+                               minino_face_bitmap.height, OLED_DISPLAY_NORMAL);
+  } else {
+    oled_screen_display_text("[ZB]", 0, page_increment + page,
                              OLED_DISPLAY_NORMAL);
   }
 

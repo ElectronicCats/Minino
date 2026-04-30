@@ -85,16 +85,14 @@ typedef enum {
   MENU_BLUETOOTH_HID,
   MENU_BLUETOOTH_ADV,
   /* Zigbee applications */
-  MENU_ZIGBEE_SPOOFING,  // Deprecated since v1.1.14.0
-  MENU_ZIGBEE_SWITCH,    // Deprecated since v1.1.14.0
-  MENU_ZIGBEE_LIGHT,     // Deprecated since v1.1.14.0
-  MENU_ZIGBEE_SNIFFER,   // Deprecated since v1.1.14.0
+  MENU_ZIGBEE_SPOOFING,
+  MENU_ZIGBEE_SWITCH,
+  MENU_ZIGBEE_LIGHT,
+  MENU_ZIGBEE_SNIFFER,
   /* Thread applications */
-  MENU_THREAD_BROADCAST,  // Deprecated since v1.1.14.0
-  MENU_THREAD_SNIFFER,    // Deprecated since v1.1.14.0 -> This is the same as
-  /* Thread Sniffer App */
-  MENU_THREAD_SNIFFER_RUN,  // Deprecated since v1.1.14.0 -> This is the same
-  // as MENU_WIFI_DEAUTH_SCAN
+  MENU_THREAD_BROADCAST,  
+  MENU_THREAD_SNIFFER,
+  MENU_THREAD_SNIFFER_RUN,   
   /* GPS applications */
   MENU_GPS_WARDRIVING,
   MENU_GPS_DATE_TIME,
