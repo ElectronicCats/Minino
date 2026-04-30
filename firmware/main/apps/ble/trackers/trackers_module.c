@@ -15,6 +15,21 @@ char* tracker_information[4] = {
     NULL,
 };
 
+static void tracker_information_free(void) {
+  if (tracker_information[0] != NULL) {
+    free(tracker_information[0]);
+    tracker_information[0] = NULL;
+  }
+  if (tracker_information[1] != NULL) {
+    free(tracker_information[1]);
+    tracker_information[1] = NULL;
+  }
+  if (tracker_information[3] != NULL) {
+    free(tracker_information[3]);
+    tracker_information[3] = NULL;
+  }
+}
+
 static const general_menu_t trackers_information = {
     .menu_items = tracker_information,
     .menu_count = 4,
@@ -25,6 +40,7 @@ static void module_main_cb_event(uint8_t button_name, uint8_t button_event);
 static void module_list_cb_event(uint8_t button_name, uint8_t button_event);
 
 static void module_reset_menu() {
+  tracker_information_free();
   current_item = 0;
   module_register_menu(GENERAL_TREE_APP_SUBMENU);
   module_display_menu(current_item);
@@ -105,6 +121,7 @@ static void module_list_cb_event(uint8_t button_name, uint8_t button_event) {
       module_display_menu(current_item);
       break;
     case BUTTON_RIGHT:
+      tracker_information_free();
       char tracker_mac[18];
       snprintf(tracker_mac, sizeof(tracker_mac), "%02X:%02X:%02X:%02X:%02X",
                scanned_airtags[current_item].mac_address[1],
@@ -128,14 +145,7 @@ static void module_list_cb_event(uint8_t button_name, uint8_t button_event) {
       general_screen_display_scrolling_text_handler(module_reset_menu);
       break;
     case BUTTON_LEFT:
-      if (tracker_information[0] != NULL) {
-        free(tracker_information[0]);
-        free(tracker_information[1]);
-        free(tracker_information[3]);
-        tracker_information[0] = NULL;
-        tracker_information[1] = NULL;
-        tracker_information[3] = NULL;
-      }
+      tracker_information_free();
       menus_module_set_app_state(true, module_main_cb_event);
       module_register_menu(GENERAL_TREE_APP_MENU);
       module_display_menu(current_item);
