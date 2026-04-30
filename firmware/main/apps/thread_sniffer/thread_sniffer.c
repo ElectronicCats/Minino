@@ -150,7 +150,16 @@ static esp_err_t pcap_start() {
   }
 
   char* pcap_path = (char*) malloc(100);
+  if (!pcap_path) {
+    ESP_LOGE(TAG, "Failed to allocate memory for pcap_path");
+    return ESP_ERR_NO_MEM;
+  }
   char* pcap_dir = (char*) malloc(30);
+  if (!pcap_dir) {
+    ESP_LOGE(TAG, "Failed to allocate memory for pcap_dir");
+    free(pcap_path);
+    return ESP_ERR_NO_MEM;
+  }
   sprintf(pcap_dir, "%s/%s", SD_CARD, THREAD_PCAPS_PATH);
   files_ops_incremental_name(save_in_sd ? pcap_dir : FLASH_FS, "thread",
                              ".pcap", pcap_path);
