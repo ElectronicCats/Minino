@@ -5,6 +5,7 @@
 #include "droneid_scanner_screens.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
+#include "freertos/queue.h"
 #include "odid_wifi.h"
 
 static const char* TAG = "DroneidScanner";
@@ -12,6 +13,16 @@ static const char* TAG = "DroneidScanner";
 static ODID_UAS_Data UAS_data;
 static int current_channel = 1;
 static TaskHandle_t channel_task_handle = NULL;
+static TaskHandle_t process_task_handle = NULL;
+static QueueHandle_t packet_queue = NULL;
+
+#define MAX_PAYLOAD_LEN   512
+#define PACKET_QUEUE_SIZE 10
+
+typedef struct {
+  uint8_t payload[MAX_PAYLOAD_LEN];
+  uint16_t len;
+} wifi_packet_t;
 
 static void task_change_channel(void* args) {
   while (true) {
@@ -96,79 +107,85 @@ static bool parse_odid(uav_data* UAV, ODID_UAS_Data* UAS_data2) {
   return true;
 }
 
-static void callback(void* buf, wifi_promiscuous_pkt_type_t type) {
-  if (type != WIFI_PKT_MGMT)
-    return;
-  wifi_promiscuous_pkt_t* p = (wifi_promiscuous_pkt_t*) buf;
-  // Get the packet header
-  uint8_t* payload = p->payload;
-  int packet_len = p->rx_ctrl.sig_len;
-  uav_data* currentUAV = (uav_data*) malloc(sizeof(uav_data));
+static void droneid_scanner_process_task(void* pvParameters) {
+  wifi_packet_t packet;
+  while (xQueueReceive(packet_queue, &packet, portMAX_DELAY)) {
+    uint8_t* payload = packet.payload;
+    int packet_len = packet.len;
 
-  if (!currentUAV)
-    return;
+    uav_data* currentUAV = (uav_data*) malloc(sizeof(uav_data));
+    if (!currentUAV)
+      continue;
 
-  memset(currentUAV, 0, sizeof(uav_data));
+    memset(currentUAV, 0, sizeof(uav_data));
+    store_mac(currentUAV, payload);
 
-  store_mac(currentUAV, payload);
+    uint8_t astm_1std[3] = {0x50, 0x6f, 0x9a};
+    uint8_t astm_2std[3] = {0x90, 0x3a, 0xe6};
+    uint8_t astm_3std[3] = {0xfa, 0x0b, 0xbc};
+    uint8_t dji_1[3] = {0x60, 0x60, 0x1F};
+    uint8_t dji_2[3] = {0x48, 0x1C, 0xB9};
+    uint8_t dji_3[3] = {0x34, 0xD2, 0x62};
 
-  /**
-   * Packet subtype
-   * 0x00 = Management
-   * 0x80 = Beacon
-   * 0x13 = Action
-   */
-  uint8_t astm_1std[3] = {0x50, 0x6f, 0x9a};
-  uint8_t astm_2std[3] = {0x90, 0x3a, 0xe6};
-  uint8_t astm_3std[3] = {0xfa, 0x0b, 0xbc};
-  uint8_t dji_1[3] = {0x60, 0x60, 0x1F};
-  uint8_t dji_2[3] = {0x48, 0x1C, 0xB9};
-  uint8_t dji_3[3] = {0x34, 0xD2, 0x62};
-
-  static const uint8_t nan_dest[6] = {0x51, 0x6f, 0x9a, 0x01, 0x00, 0x00};
-  if (memcmp(nan_dest, &payload[4], 6) == 0) {
-    // ESP_LOGI(TAG, "NAN packet detected");
-    if (odid_wifi_receive_message_pack_nan_action_frame(
-            &UAS_data, (char*) currentUAV->op_id, payload, packet_len) == 0) {
-      if (parse_odid(currentUAV, &UAS_data)) {
-        droneid_scanner_update_list(currentUAV->mac, currentUAV);
-      }
-    }
-  } else if (payload[0] == 0x80) {
-    int offset = BEACON_OFFSET;
-    bool parsed = false;
-    while (offset < packet_len) {
-      int payload_type = payload[offset];
-      int payload_len = payload[offset + 1];
-      if (!parsed) {
-        if ((payload_type == 0xdd) &&
-            ((memcmp(&payload[offset + 2], astm_1std, sizeof(astm_1std)) ==
-              0) ||
-             (memcmp(&payload[offset + 2], astm_2std, sizeof(astm_2std)) ==
-              0) ||
-             (memcmp(&payload[offset + 2], astm_3std, sizeof(astm_3std)) ==
-              0) ||
-             (memcmp(&payload[offset + 2], dji_1, sizeof(dji_1)) == 0) ||
-             (memcmp(&payload[offset + 2], dji_2, sizeof(dji_2)) == 0) ||
-             (memcmp(&payload[offset + 2], dji_3, sizeof(dji_3)) == 0))) {
-          // ESP_LOGI(TAG, "ODID packet detected");
-          int idx = offset + BEACON_PACKET_OFFSET;
-          if (idx < packet_len) {
-            memset(&UAS_data, 0, sizeof(UAS_data));
-            odid_message_process_pack(&UAS_data, &payload[idx],
-                                      packet_len - idx);
-            if (parse_odid(currentUAV, &UAS_data)) {
-              droneid_scanner_update_list(currentUAV->mac, currentUAV);
-            }
-            parsed = true;
-          }
+    static const uint8_t nan_dest[6] = {0x51, 0x6f, 0x9a, 0x01, 0x00, 0x00};
+    if (memcmp(nan_dest, &payload[4], 6) == 0) {
+      if (odid_wifi_receive_message_pack_nan_action_frame(
+              &UAS_data, (char*) currentUAV->op_id, payload, packet_len) == 0) {
+        if (parse_odid(currentUAV, &UAS_data)) {
+          droneid_scanner_update_list(currentUAV->mac, currentUAV);
         }
       }
-      offset += payload_len + 2;
+    } else if (payload[0] == 0x80) {
+      int offset = BEACON_OFFSET;
+      bool parsed = false;
+      while (offset < packet_len) {
+        int payload_type = payload[offset];
+        int payload_len = payload[offset + 1];
+        if (!parsed) {
+          if ((payload_type == 0xdd) &&
+              ((memcmp(&payload[offset + 2], astm_1std, sizeof(astm_1std)) ==
+                0) ||
+               (memcmp(&payload[offset + 2], astm_2std, sizeof(astm_2std)) ==
+                0) ||
+               (memcmp(&payload[offset + 2], astm_3std, sizeof(astm_3std)) ==
+                0) ||
+               (memcmp(&payload[offset + 2], dji_1, sizeof(dji_1)) == 0) ||
+               (memcmp(&payload[offset + 2], dji_2, sizeof(dji_2)) == 0) ||
+               (memcmp(&payload[offset + 2], dji_3, sizeof(dji_3)) == 0))) {
+            int idx = offset + BEACON_PACKET_OFFSET;
+            if (idx < packet_len) {
+              memset(&UAS_data, 0, sizeof(UAS_data));
+              odid_message_process_pack(&UAS_data, &payload[idx],
+                                        packet_len - idx);
+              if (parse_odid(currentUAV, &UAS_data)) {
+                droneid_scanner_update_list(currentUAV->mac, currentUAV);
+              }
+              parsed = true;
+            }
+          }
+        }
+        offset += payload_len + 2;
+      }
     }
+    free(currentUAV);
   }
-  free(currentUAV);
-  vTaskDelay(500 / portTICK_PERIOD_MS);
+}
+
+static void callback(void* buf, wifi_promiscuous_pkt_type_t type) {
+  if (type != WIFI_PKT_MGMT || packet_queue == NULL)
+    return;
+
+  wifi_promiscuous_pkt_t* p = (wifi_promiscuous_pkt_t*) buf;
+  wifi_packet_t packet;
+
+  packet.len = p->rx_ctrl.sig_len;
+  if (packet.len > MAX_PAYLOAD_LEN) {
+    packet.len = MAX_PAYLOAD_LEN;
+  }
+
+  memcpy(packet.payload, p->payload, packet.len);
+
+  xQueueSend(packet_queue, &packet, 0);
 }
 
 static int droneid_scanner_init_wifi(void) {
@@ -209,6 +226,9 @@ static int droneid_scanner_init_wifi(void) {
 }
 
 void droneid_scanner_begin() {
+  if (packet_queue == NULL) {
+    packet_queue = xQueueCreate(PACKET_QUEUE_SIZE, sizeof(wifi_packet_t));
+  }
   esp_err_t err = droneid_scanner_init_wifi();
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Error starting droneid scanner");
@@ -218,4 +238,6 @@ void droneid_scanner_begin() {
   droneid_scanner_screen_main();
   xTaskCreate(task_change_channel, "channhop", 4096, NULL, 5,
               &channel_task_handle);
+  xTaskCreate(droneid_scanner_process_task, "id_proc", 4096, NULL, 5,
+              &process_task_handle);
 }
