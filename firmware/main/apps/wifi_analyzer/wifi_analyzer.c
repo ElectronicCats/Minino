@@ -8,6 +8,7 @@
 #include "freertos/semphr.h"
 #include "keyboard_module.h"
 #include "string.h"
+#include "task_manager.h"
 
 #include "analyzer_scenes.h"
 #include "deauth_module.h"
@@ -24,10 +25,19 @@
 #include "wifi_screens_module.h"
 
 static const char* TAG = "wifi_module";
+
+// ---------------------------------------------------------------------------
+// State flags — all accesses must be guarded by state_mutex
+// ---------------------------------------------------------------------------
 static volatile bool analizer_initialized = false;
+static volatile bool analizer_initializing = false;
+static volatile bool analizer_running = false;
 static volatile bool no_mem = false;
-static SemaphoreHandle_t summary_mutex = NULL;
 static volatile bool analyzer_exiting = false;
+
+// Two separate mutexes: one for the summary buffer, one for the state flags.
+static SemaphoreHandle_t summary_mutex = NULL;
+static SemaphoreHandle_t state_mutex = NULL;
 
 static general_menu_t analyzer_summary_menu;
 static char* wifi_analizer_summary_2[120] = {
@@ -69,7 +79,6 @@ static void out_of_mem_handler() {
     wifi_module_summary_exit_cb();
   }
   wifi_screens_show_no_mem();
-  // no_mem = false;
 }
 
 static void limit_packets_handler() {
@@ -105,6 +114,7 @@ esp_err_t wifi_module_init_sniffer() {
         break;
       default:
         ESP_LOGE(TAG, "SD card mount failed: reason: %s", esp_err_to_name(err));
+        /* fall through */
       case ESP_ERR_NOT_FOUND:
         ESP_LOGW(TAG, "SD card not found");
         wifi_screeens_show_sd_not_found();
@@ -114,13 +124,16 @@ esp_err_t wifi_module_init_sniffer() {
   }
   err = wifi_sniffer_start();
   if (err != ESP_OK) {
+    xSemaphoreTake(state_mutex, portMAX_DELAY);
     analizer_initialized = false;
+    xSemaphoreGive(state_mutex);
     out_of_mem_handler();
     return err;
   }
   led_control_run_effect(led_control_zigbee_scanning);
   return ESP_OK;
 }
+
 static void wifi_module_summary_exit_cb() {
   if (analizer_initialized) {
     wifi_sniffer_close_file();
@@ -145,6 +158,13 @@ void wifi_module_analyzer_run_exit() {
   general_register_scrolling_menu(&analyzer_summary_menu);
   general_screen_display_scrolling_text_handler(wifi_module_summary_exit_cb);
   analyzer_exiting = false;
+
+  // Reset ALL state flags so re-entry works correctly.
+  xSemaphoreTake(state_mutex, portMAX_DELAY);
+  analizer_running = false;
+  analizer_initialized = false;
+  analizer_initializing = false;
+  xSemaphoreGive(state_mutex);
 }
 
 void wifi_module_analyzer_summary_exit() {
@@ -168,38 +188,121 @@ void wifi_module_analyzer_destination_exit() {
   }
 }
 
-void wifi_analyzer_run() {
+// ---------------------------------------------------------------------------
+// wifi_analyzer_init_task — runs wifi_module_init_sniffer() in a dedicated
+// 8 KB task, completely off the esp_timer stack.
+// ---------------------------------------------------------------------------
+static void wifi_analyzer_init_task(void* pvParameters) {
   esp_err_t err = wifi_module_init_sniffer();
-  if (err != ESP_OK) {
-    return;
+  if (err == ESP_OK) {
+    menus_module_set_app_state(true, wifi_module_input_cb);
+  } else {
+    xSemaphoreTake(state_mutex, portMAX_DELAY);
+    analizer_running = false;
+    xSemaphoreGive(state_mutex);
   }
-  menus_module_set_app_state(true, wifi_module_input_cb);
+  vTaskDelete(NULL);
 }
 
-void wifi_analyzer_begin() {
+// ---------------------------------------------------------------------------
+// wifi_analyzer_setup_task — runs wifi_sniffer_begin() (which calls
+// wifi_driver_init_null / esp_wifi_init) in a dedicated 8 KB task.
+// ---------------------------------------------------------------------------
+static void wifi_analyzer_setup_task(void* pvParameters) {
+  wifi_sniffer_begin();
+  xSemaphoreTake(state_mutex, portMAX_DELAY);
+  analizer_initialized = true;
+  analizer_initializing = false;
+  xSemaphoreGive(state_mutex);
+  vTaskDelete(NULL);
+}
+
+// ---------------------------------------------------------------------------
+// wifi_analyzer_run — called from the submenu select callback (esp_timer
+// context). Only creates the init task; returns immediately.
+// ---------------------------------------------------------------------------
+void wifi_analyzer_run() {
+  xSemaphoreTake(state_mutex, portMAX_DELAY);
+  bool busy = (!analizer_initialized || analizer_initializing || analizer_running);
+  if (!busy) {
+    analizer_running = true;
+  }
+  xSemaphoreGive(state_mutex);
+
+  if (busy) {
+    ESP_LOGW(TAG, "WiFi analyzer busy or not initialized");
+    return;
+  }
+
+  task_manager_create(wifi_analyzer_init_task, "wifi_analyzer_init",
+                      TASK_STACK_LARGE, NULL, TASK_PRIORITY_HIGH, NULL);
+}
+
+// ---------------------------------------------------------------------------
+// wifi_analyzer_begin_task — all one-time setup work moved here so
+// wifi_analyzer_begin() itself can return immediately from the esp_timer stack.
+// ---------------------------------------------------------------------------
+static void wifi_analyzer_begin_task(void* pvParameters) {
+  // Ensure mutexes exist (safe to create from any task context)
   if (summary_mutex == NULL) {
     summary_mutex = xSemaphoreCreateMutex();
   }
-  if (no_mem) {
-    out_of_mem_handler();
-    return;
+  if (state_mutex == NULL) {
+    state_mutex = xSemaphoreCreateMutex();
   }
 
-  ESP_LOGI(TAG, "Initializing WiFi analizer module");
+  // Register sniffer callbacks
   wifi_sniffer_register_cb(wifi_screens_module_display_sniffer_cb,
                            out_of_mem_handler, limit_packets_handler);
   wifi_sniffer_register_animation_cbs(wifi_screens_sniffer_animation_start,
                                       wifi_screens_sniffer_animation_stop);
   wifi_sniffer_register_summary_cb(wifi_module_analizer_summary_cb);
-  if (analizer_initialized) {
+
+  xSemaphoreTake(state_mutex, portMAX_DELAY);
+  bool already_done = (analizer_initialized || analizer_initializing);
+  if (!already_done) {
+    analizer_initializing = true;
+  }
+  xSemaphoreGive(state_mutex);
+
+  if (already_done) {
+    vTaskDelete(NULL);
     return;
   }
-  wifi_sniffer_begin();
-  analizer_initialized = true;
+
+  // Run the heavy WiFi setup (esp_wifi_init, etc.) inside this task
+  wifi_analyzer_setup_task(NULL);
+  // Note: wifi_analyzer_setup_task calls vTaskDelete(NULL) at the end, which
+  // terminates THIS task too, so no vTaskDelete(NULL) is needed here.
+}
+
+// ---------------------------------------------------------------------------
+// wifi_analyzer_begin — entry point called from analyzer_scenes_main_menu()
+// which runs in the esp_timer callback context.  Must return IMMEDIATELY.
+// All real work is deferred to wifi_analyzer_begin_task.
+// ---------------------------------------------------------------------------
+void wifi_analyzer_begin() {
+  if (no_mem) {
+    // Schedule the OOM handler in a safe context
+    task_manager_create(
+        (TaskFunction_t) out_of_mem_handler, "wifi_oom",
+        TASK_STACK_SMALL, NULL, TASK_PRIORITY_NORMAL, NULL);
+    return;
+  }
+
+  // Bail out fast if already initialized — no task needed
+  if (analizer_initialized || analizer_initializing) {
+    return;
+  }
+
+  ESP_LOGI(TAG, "Initializing WiFi analizer module");
+  // Spawn a task to do the heavy lifting off the esp_timer stack
+  task_manager_create(wifi_analyzer_begin_task, "wifi_analyzer_begin",
+                      TASK_STACK_LARGE, NULL, TASK_PRIORITY_HIGH, NULL);
 }
 
 void wifi_module_analizer_summary_cb(FILE* pcap_file) {
-  esp_err_t ret = ESP_OK;
+  esp_err_t ret __attribute__((unused)) = ESP_OK;
   long size = pcap_cmd_get_file_size(pcap_file);
   char* packet_payload = NULL;
   xSemaphoreTake(summary_mutex, portMAX_DELAY);
@@ -211,6 +314,7 @@ void wifi_module_analizer_summary_cb(FILE* pcap_file) {
       fread(&file_header, sizeof(pcap_file_header_t), 1, pcap_file);
   if (real_read != 1) {
     ESP_LOGE(TAG, "read pcap file header failed");
+    xSemaphoreGive(summary_mutex);
     return;
   }
   index += sizeof(pcap_file_header_t);

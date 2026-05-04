@@ -357,7 +357,7 @@ const unsigned char epd_bitmap_wifi_loading_4[] = {
     0x00, 0x01, 0x80, 0x00, 0x00, 0x01, 0x80, 0x00};
 #endif
 
-static const unsigned char* epd_bitmap_wifi_loading[4] = {
+static const unsigned char* __attribute__((unused)) epd_bitmap_wifi_loading[4] = {
     epd_bitmap_wifi_loading_1,
     epd_bitmap_wifi_loading_2,
     epd_bitmap_wifi_loading_3,

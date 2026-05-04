@@ -21,7 +21,7 @@ static const char* TAG = "MODBUS_ENGINE";
 static modbus_engine_t* modbus_engine;
 static TaskHandle_t keep_alive_task = NULL;
 
-static void modbus_engine_keep_alive(void* pvParameters) {
+static void __attribute__((unused)) modbus_engine_keep_alive(void* pvParameters) {
   uint8_t packet[] = {
       0x00, 0x01,  // Transaction ID
       0x00, 0x00,  // Protocol ID

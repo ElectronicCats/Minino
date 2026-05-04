@@ -50,7 +50,7 @@ void detector_scenes_show_table(uint16_t* deauth_packets_count_list) {
 }
 
 //////////////////////////   Main Menu   //////////////////////////
-static enum { RUN_OPTION, SETTINGS_OPTION, HELP_OPTION } main_menu_options_e;
+typedef enum { RUN_OPTION, SETTINGS_OPTION, HELP_OPTION } main_menu_options_e;
 static const char* main_menu_options[] = {"Run", "Settings", "Help"};
 static void main_menu_handler(uint8_t selection) {
   switch (selection) {
@@ -83,7 +83,7 @@ void detector_scenes_main_menu() {
 }
 
 //////////////////////////   Settings Menu   //////////////////////////
-static enum { CHANNEL_HOP_OPTION, CHANNEL_OPTION } settings_options_e;
+typedef enum { CHANNEL_HOP_OPTION, CHANNEL_OPTION } settings_options_e;
 static char* settings_options[] = {"Channel hop", "Channel"};
 static void settings_handler(uint8_t scan_mode) {
   switch (scan_mode) {
@@ -155,8 +155,8 @@ static void help_exit() {
 void detector_scenes_help() {
   general_scrolling_text_ctx help;
   memset(&help, 0, sizeof(help));
-  help.banner = "< Back";
-  help.text = help_text;
+  help.banner = (char*) "< Back";
+  help.text = (char*) help_text;
   help.scroll_type = GENERAL_SCROLLING_TEXT_CLAMPED;
   help.window_type = GENERAL_SCROLLING_TEXT_WINDOW;
   help.exit_cb = help_exit;

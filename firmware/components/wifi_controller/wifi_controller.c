@@ -8,7 +8,6 @@ static volatile bool netif_default_created = false;
 static bool run_once = false;
 static uint8_t default_ap_mac[6];
 static esp_err_t err;
-static wifi_config_t wifi_manager_config;
 
 wifi_config_t wifi_driver_access_point_begin() {
   // #if !defined(CONFIG_WIFI_CONTROLLER_DEBUG)
@@ -129,6 +128,9 @@ void wifi_driver_init_sta(void) {
 }
 
 void wifi_driver_init_null(void) {
+  if (wifi_driver_initialized) {
+    wifi_driver_deinit();
+  }
   esp_err_t err = esp_event_loop_create_default();
   if (err == ESP_ERR_INVALID_STATE) {
     ESP_LOGI(TAG_WIFI_DRIVER, "Event loop already created");

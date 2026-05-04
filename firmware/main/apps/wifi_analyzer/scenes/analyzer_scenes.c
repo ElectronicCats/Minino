@@ -19,7 +19,7 @@ analyzer_scenes_e analyzer_get_current_scene() {
 }
 
 //////////////////////////   MAIN MENU   ///////////////////////////////
-static enum {
+typedef enum {
   ANALYZER_START_OPTION,
   ANALYZER_SETTINGS_OPTION,
   ANALYZER_HELP_OPTION
@@ -43,7 +43,7 @@ static void main_menu_selection_handler(uint8_t selection) {
   }
 }
 
-static void main_menu_exit_handler() {
+static void __attribute__((unused)) main_menu_exit_handler() {
   menus_module_reset();
 }
 
@@ -59,7 +59,7 @@ void analyzer_scenes_main_menu() {
 }
 
 //////////////////////////   SETTINGS MENU   ///////////////////////////////
-static enum {
+typedef enum {
   ANALYZER_SETTINGS_CHANNEL_OPTION,
   ANALYZER_SETTINGS_DESTINATION_OPTION,
 } analyzer_settings_options_e;

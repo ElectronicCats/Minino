@@ -149,7 +149,7 @@ static int cmd_mb_engine_set_server(int argc, char** argv) {
     return 1;
   }
 
-  modbus_engine_set_server(mb_engine_set_server_args.ip->sval[0],
+  modbus_engine_set_server((char*) mb_engine_set_server_args.ip->sval[0],
                            mb_engine_set_server_args.port->ival[0]);
   return 0;
 }

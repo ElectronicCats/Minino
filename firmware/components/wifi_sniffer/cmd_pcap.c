@@ -7,7 +7,9 @@
 */
 #include <stdlib.h>
 #include <string.h>
+#include <dirent.h>
 #include "argtable3/argtable3.h"
+#include "esp_spiffs.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "freertos/semphr.h"
@@ -38,6 +40,9 @@ static const char* TAG = "cmd_pcap";
 #define TRACE_TIMER_FLUSH_INT_MS            (1000)
 #define PCAP_FLUSH_INTERVAL_PACKETS \
   (100)  // Flush file every N packets to prevent buffer overflow
+// Minimum free bytes required in internal flash before starting a new capture.
+// Shared logic with cmd_sniffer.c — keep in sync if changed there.
+#define PCAP_FLASH_MIN_FREE_BYTES (51200)
 
 #define ANALIZER_SD_CARD    "/sdcard"
 #define ANALIZER_FLASH_FS   "/internal"
@@ -98,6 +103,56 @@ static void create_pcaps_dir() {
     sd_card_create_dir(ANALIZER_PATH);
     sd_card_create_dir(ANALIZER_PCAPS_PATH);
   }
+}
+
+/**
+ * @brief Remove all analizer*.pcap files from the internal SPIFFS partition.
+ *
+ * The analyzer accumulates one .pcap file per session and never deletes old
+ * ones.  On a 512 KB partition this quickly exhausts all available space.
+ * We only ever need the most-recent capture, so we wipe the stale files
+ * before opening a new session.
+ */
+static void cleanup_internal_pcap_files(void) {
+  DIR* dir = opendir(ANALIZER_FLASH_FS);
+  if (!dir) {
+    return;
+  }
+  struct dirent* entry;
+  char filepath[280];
+  while ((entry = readdir(dir)) != NULL) {
+    // Match any file that starts with "analizer" and ends with ".pcap"
+    const char* name = entry->d_name;
+    size_t len = strlen(name);
+    if (len > 5 &&
+        strncmp(name, "analizer", 8) == 0 &&
+        strcmp(name + len - 5, ".pcap") == 0) {
+      snprintf(filepath, sizeof(filepath), "%s/%s", ANALIZER_FLASH_FS, name);
+      ESP_LOGI(TAG, "Removing stale pcap: %s", filepath);
+      remove(filepath);
+    }
+  }
+  closedir(dir);
+}
+
+/**
+ * @brief Return ESP_ERR_NO_MEM if the internal partition has less than the
+ *        minimum free bytes required to start a new capture session.
+ */
+static esp_err_t check_internal_free_space(void) {
+  size_t total = 0, used = 0;
+  esp_err_t ret = esp_spiffs_info("internal", &total, &used);
+  if (ret != ESP_OK) {
+    // Cannot determine free space — optimistically continue
+    return ESP_OK;
+  }
+  size_t free_bytes = (used < total) ? (total - used) : 0;
+  if (free_bytes < PCAP_FLASH_MIN_FREE_BYTES) {
+    ESP_LOGW(TAG, "Not enough internal space: %zu free / %zu total (need %d)",
+             free_bytes, total, PCAP_FLASH_MIN_FREE_BYTES);
+    return ESP_ERR_NO_MEM;
+  }
+  return ESP_OK;
 }
 
 void wifi_sniffer_register_summary_cb(summary_cb_t cb) {
@@ -162,8 +217,16 @@ static esp_err_t pcap_open(pcap_cmd_runtime_t* pcap) {
     fp = fopen(pcap->filename, "wb+");
   } else if (wifi_sniffer_is_destination_internal()) {
     flash_fs_mount();
-    files_ops_incremental_name(ANALIZER_FLASH_FS, "analizer", ".pcap",
-                               pcap->filename);
+    // Remove leftover .pcap files from previous sessions to reclaim space,
+    // then verify there is enough room before attempting to create the file.
+    cleanup_internal_pcap_files();
+    esp_err_t space_ret = check_internal_free_space();
+    if (space_ret != ESP_OK) {
+      return space_ret;  // ESP_ERR_NO_MEM → triggers out_of_mem_cb correctly
+    }
+    // Always overwrite the same filename so we never accumulate old captures.
+    snprintf(pcap->filename, PCAP_FILE_NAME_MAX_LEN, "%s/analizer00.pcap",
+             ANALIZER_FLASH_FS);
     fp = fopen(pcap->filename, "wb+");
   } else {
     ESP_LOGE(TAG, "pcap file destination hasn't specified");
@@ -184,6 +247,12 @@ static esp_err_t pcap_open(pcap_cmd_runtime_t* pcap) {
 err:
   if (fp) {
     fclose(fp);
+  }
+  // If the file could not be opened and we don't already have a specific error
+  // code, promote ESP_FAIL to ESP_ERR_NO_MEM so the caller's out_of_mem_cb
+  // fires correctly (ESP_FAIL would be silently ignored after our earlier fix).
+  if (ret == ESP_FAIL) {
+    ret = ESP_ERR_NO_MEM;
   }
   return ret;
 }

@@ -188,7 +188,7 @@ void reading_task() {
   // while (is_running) {
   skt = modbus_tcp_connect(port, ip);
   if (skt >= 0) {
-    modbus_tcp_request(skt, request, sizeof(request));
+    modbus_tcp_request(skt, (uint8_t*) request, sizeof(request));
     //   vTaskDelay(500);
   }
   close(skt);
