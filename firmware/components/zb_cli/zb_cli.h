@@ -14,15 +14,17 @@
 #define INSTALLCODE_POLICY_ENABLE \
   false /* enable the install code policy for security */
 
-#define ESP_ZB_ZR_CONFIG()                              \
-  {                                                     \
-      .esp_zb_role = ESP_ZB_DEVICE_TYPE_ROUTER,         \
-      .install_code_policy = INSTALLCODE_POLICY_ENABLE, \
-      .nwk_cfg.zczr_cfg =                               \
-          {                                             \
-              .max_children = MAX_CHILDREN,             \
-          },                                            \
-  }
+#ifndef ESP_ZB_ZR_CONFIG
+  #define ESP_ZB_ZR_CONFIG()                              \
+    {                                                     \
+        .esp_zb_role = ESP_ZB_DEVICE_TYPE_ROUTER,         \
+        .install_code_policy = INSTALLCODE_POLICY_ENABLE, \
+        .nwk_cfg.zczr_cfg =                               \
+            {                                             \
+                .max_children = MAX_CHILDREN,             \
+            },                                            \
+    }
+#endif
 
 #define ESP_ZB_DEFAULT_HOST_CONFIG()                        \
   {                                                         \

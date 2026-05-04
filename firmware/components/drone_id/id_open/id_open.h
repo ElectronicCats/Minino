@@ -151,7 +151,8 @@ class ID_OpenDrone {
   uint8_t WiFi_mac_addr[6], wifi_channel = WIFI_CHANNEL, *auth_key = NULL,
                             *auth_iv = NULL;
     #if ID_OD_WIFI
-  uint16_t sequence = 1, beacon_interval = 0x200;
+  uint32_t sequence = 1;
+  uint16_t beacon_interval = 0x200;
       #if ID_OD_WIFI_BEACON
   int beacon_offset = 0, beacon_max_packed = 30;
   uint8_t beacon_frame[BEACON_FRAME_SIZE],

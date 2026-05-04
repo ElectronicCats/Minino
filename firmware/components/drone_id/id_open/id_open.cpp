@@ -321,7 +321,6 @@ void ID_OpenDrone::set_auth(char* auth) {
 
 void ID_OpenDrone::set_auth(uint8_t* auth, short int len, uint8_t type) {
   int i, j;
-  uint8_t check[32];
 
   auth_page_count = 1;
 
@@ -333,10 +332,10 @@ void ID_OpenDrone::set_auth(uint8_t* auth, short int len, uint8_t type) {
   auth_data[0]->AuthType = (ODID_authtype_t) type;
 
   for (i = 0; (i < 17) && (auth[i]); ++i) {
-    check[i] = auth_data[0]->AuthData[i] = auth[i];
+    auth_data[0]->AuthData[i] = auth[i];
   }
 
-  check[i] = auth_data[0]->AuthData[i] = 0;
+  auth_data[0]->AuthData[i] = 0;
 
   // if (Debug_Serial) {
 
@@ -354,14 +353,12 @@ void ID_OpenDrone::set_auth(uint8_t* auth, short int len, uint8_t type) {
       auth_data[auth_page_count]->AuthType = (ODID_authtype_t) type;
 
       for (j = 0; (j < 23) && (i < len); ++i, ++j) {
-        check[j] = auth_data[auth_page_count]->AuthData[j] = auth[i];
+        auth_data[auth_page_count]->AuthData[j] = auth[i];
       }
 
       if (j < 23) {
         auth_data[auth_page_count]->AuthData[j] = 0;
       }
-
-      check[j] = 0;
 
       // if (Debug_Serial) {
 
@@ -756,7 +753,7 @@ int ID_OpenDrone::transmit_wifi(struct UTM_data* utm_data, int prepacked) {
 
 #endif  // WIFI
 
-  return 0;
+  return wifi_status;
 }
 
 /*

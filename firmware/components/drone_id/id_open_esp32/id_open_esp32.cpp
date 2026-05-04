@@ -145,7 +145,7 @@ void set_wifi_ap(char* ssid, uint8_t wifi_channel) {
   if (!wifi_initialized) {
     return;
   }
-  wifi_config_t wifi_manager_config = {0};
+  wifi_config_t wifi_manager_config = {};
   strcpy((char*) wifi_manager_config.ap.ssid, ssid);
   strcpy((char*) wifi_manager_config.ap.password, password);
   wifi_manager_config.ap.ssid_len = strlen(ssid);
@@ -267,7 +267,10 @@ void init_ble() {
   }
   ESP_ERROR_CHECK(ret);
 
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
   esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
+  #pragma GCC diagnostic pop
   ESP_ERROR_CHECK(esp_bt_controller_init(&bt_cfg));
   ESP_ERROR_CHECK(esp_bt_controller_enable(ESP_BT_MODE_BLE));
 
