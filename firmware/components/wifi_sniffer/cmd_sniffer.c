@@ -39,6 +39,8 @@
 #define PCAP_SAFETY_MARGIN_PERCENT \
   (20)  // Safety margin percentage to leave free space
 
+#define SNIFFER_MAX_PACKET_LEN 2346  // IEEE 802.11 max MPDU
+
 static const char* TAG = "cmd_sniffer";
 
 typedef struct {
@@ -246,6 +248,10 @@ static void queue_packet(void* recv_packet,
                          sniffer_packet_info_t* packet_info) {
   /* Copy a packet from Link Layer driver and queue the copy to be processed by
    * sniffer task */
+  if (packet_info->length == 0 ||
+      packet_info->length > SNIFFER_MAX_PACKET_LEN) {
+    return;
+  }
   void* packet_to_queue = malloc(packet_info->length);
   if (packet_to_queue) {
     memcpy(packet_to_queue, recv_packet, packet_info->length);

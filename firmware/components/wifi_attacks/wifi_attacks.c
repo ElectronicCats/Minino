@@ -72,7 +72,7 @@ static void wifi_attack_brod_send_deauth_frame(void* args) {
     attack_brodcast_send_raw_frame(deauth_frame, sizeof(deauth_frame));
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
-  vTaskSuspend(task_brod_attack);
+  task_brod_attack = NULL;
   vTaskDelete(NULL);
 }
 
@@ -97,7 +97,7 @@ static void wifi_attack_rogueap(void* args) {
   while (running_rogueap_attack) {
     vTaskDelay(10000 / portTICK_PERIOD_MS);
   }
-  vTaskSuspend(task_rogue_attack);
+  task_rogue_attack = NULL;
   vTaskDelete(NULL);
 }
 

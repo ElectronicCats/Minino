@@ -2,8 +2,11 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+
+char* TAG;
 
 otUdpSocket mSocket;
 TaskHandle_t sender_task_handler = NULL;
@@ -17,10 +20,21 @@ void on_udp_recieve(void* aContext,
 
   int payload_size =
       (otMessageGetLength(aMessage) - otMessageGetOffset(aMessage));
+  if (payload_size == 0)
+    return;
   void* data = malloc(payload_size);
+  if (!data) {
+    ESP_LOGE(TAG, "OOM in udp receive");
+    return;
+  }
   otMessageRead(aMessage, otMessageGetOffset(aMessage), data, payload_size);
   char* str = (char*) malloc(payload_size + 1);
-  sprintf(str, "%s", (char*) data);
+  if (!str) {
+    free(data);
+    return;
+  }
+  memcpy(str, data, payload_size);
+  str[payload_size] = '\0';
   printf("MSG\n");
   printf("%s\n", str);
   if (on_msg_recieve_cb != NULL) {

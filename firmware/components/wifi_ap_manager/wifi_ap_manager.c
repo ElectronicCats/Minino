@@ -46,6 +46,7 @@ static void event_handler(void* arg,
   } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
     printf("Connected to AP");
     preferences_put_bool("wifi_connected", true);
+    reconnections = 0;
     xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
   }
 }
@@ -124,7 +125,9 @@ static bool wifi_ap_manager_join(const char* ssid,
   }
 
   preferences_put_string("ssid", ssid);
-  preferences_put_string("passwd", pass);
+  if (pass) {
+    preferences_put_string("passwd", pass);
+  }
 
   int bits = xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, pdFALSE,
                                  pdTRUE, timeout_ms / portTICK_PERIOD_MS);
@@ -202,7 +205,6 @@ int wifi_ap_manager_delete_ap_by_index(int index) {
     return 1;
   }
 
-  preferences_get_int("count_ap", 0);
   int count = preferences_get_int("count_ap", 0);
   if (count > 0) {
     count--;
@@ -260,10 +262,7 @@ void wifi_ap_manager_get_aps(char** aps_list) {
     if (err != ESP_OK) {
       continue;
     }
-    aps_list[i] = malloc(sizeof(wifi_ssid) + 1);
-    if (aps_list[i] != NULL) {
-      aps_list[i] = strdup(wifi_ssid);
-    }
+    aps_list[i] = strdup(wifi_ssid);
     printf("[%i][%s] SSID: %s\n", i, wifi_ap, wifi_ssid);
   }
 }
