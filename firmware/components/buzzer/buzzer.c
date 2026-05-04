@@ -12,8 +12,6 @@
 #define BUZZER_DEFAULT_DUTTY        (4096)  // Set duty to 50%. (2 ** 13) * 50% = 4096
 #define BUZZER_DEFAULT_FREQUENCY_HZ (4000)  // Set frequency at 4 kHz
 
-static const char* TAG = "buzzer";
-
 typedef struct {
   uint8_t pin;
   uint32_t freq;

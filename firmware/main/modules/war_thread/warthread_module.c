@@ -28,7 +28,6 @@
 
 static const char* TAG = "warthread";
 
-static TaskHandle_t thread_task_sniffer = NULL;
 static TaskHandle_t scanning_thread_animation_task_handle = NULL;
 static TaskHandle_t scanning_thread_channel_task_handle = NULL;
 static thread_module_t context_session;

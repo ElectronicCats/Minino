@@ -319,7 +319,6 @@ esp_err_t led_stop_breath_effect(led_t* led) {
  */
 static void breath_effect_callback(void* arg) {
   led_breath_t* breath_data = (led_breath_t*) arg;
-  esp_err_t ret = ESP_OK;
 
   // Pre-compute the brightness factor
   float brightness_factor = breath_data->brightness;

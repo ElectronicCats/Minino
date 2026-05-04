@@ -18,7 +18,7 @@ static ieee_sniffer_cb_t packet_callback = NULL;
 static int current_channel = IEEE_SNIFFER_CHANNEL_DEFAULT;
 static bool running = false;
 
-static void debug_print_packet(uint8_t* packet, uint8_t packet_length);
+static void debug_print_packet(uint8_t* packet, uint8_t packet_length) __attribute__((unused));
 static void debug_handler_task(void* pvParameters);
 
 static char addressing_mode[4][15] = {"None", "Reserved", "Short/16-bit",
@@ -291,7 +291,7 @@ static void debug_print_packet(uint8_t* packet, uint8_t packet_length) {
 
       printf("Data length: %u\n", data_length);
       printf("Data: ==================================================\n");
-      esp_log_buffer_hex(TAG_IEEE_SNIFFER, data, data_length);
+      ESP_LOG_BUFFER_HEX(TAG_IEEE_SNIFFER, data, data_length);
 
       uint16_t checksum = *((uint16_t*) &packet[position]);
 
@@ -309,6 +309,6 @@ static void debug_print_packet(uint8_t* packet, uint8_t packet_length) {
       break;
     }
   }
-  esp_log_buffer_hex(TAG_IEEE_SNIFFER, packet, packet_length);
+  ESP_LOG_BUFFER_HEX(TAG_IEEE_SNIFFER, packet, packet_length);
   printf("-----------------------\n");
 }

@@ -70,7 +70,7 @@ static void thread_sniffer_show_fatal_error(const char* error) {
                                      OLED_DISPLAY_NORMAL);
     goto exit;
   }
-  oled_screen_display_text_splited(error, &page, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_splited((char*) error, &page, OLED_DISPLAY_NORMAL);
 exit:
   vTaskDelay(pdMS_TO_TICKS(4000));
   open_thread_module_exit();

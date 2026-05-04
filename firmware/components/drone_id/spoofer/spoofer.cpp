@@ -27,7 +27,7 @@ void Spoofer::updateLocation(float latitude, float longitude) {
   double lat_d = utm_data.latitude_d = utm_data.base_latitude =
       latitude + (float) (rand() % 10 - 5) / 10000.0;
 
-  double long_d = utm_data.longitude_d = utm_data.base_longitude =
+  [[maybe_unused]] double long_d = utm_data.longitude_d = utm_data.base_longitude =
       longitude + (float) (rand() % 10 - 5) / 10000.0;
 
   utm_data.base_valid = 1;
@@ -79,7 +79,7 @@ void Spoofer::update() {
   y += speed_m_y * time_elapsed_secs;
 
   // calculate new height
-  float climbrate =
+  [[maybe_unused]] float climbrate =
       float(rand() % int(2 * max_climbrate) - max_climbrate) / 1000.0;
   z = (z < -max_height) ? -max_height : (z > max_height ? max_height : z);
   utm_data.alt_msl_m = utm_data.base_alt_m + z;

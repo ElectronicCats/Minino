@@ -109,7 +109,7 @@ static void draw_frame() {
     xSemaphoreGive(anim_mutex);
     return;
   }
-  bitmap_t* bitmap = &anim_ctx->animation->bitmaps[actual_frame];
+  const bitmap_t* bitmap = &anim_ctx->animation->bitmaps[actual_frame];
 
   oled_screen_buffer_bitmap(bitmap->bitmap, anim_ctx->x, anim_ctx->y,
                             bitmap->width, bitmap->height, anim_ctx->invert);

@@ -21,8 +21,11 @@
 #include "wifi_scanner.h"
 
 #define FILE_NAME                   WARFI_DIR_NAME "/Warfi"
+#undef CSV_FILE_SIZE
 #define CSV_FILE_SIZE               8192
+#undef CSV_HEADER_LINES
 #define CSV_HEADER_LINES            1
+#undef MAX_CSV_LINES
 #define MAX_CSV_LINES               20
 #define WIFI_SCAN_REFRESH_RATE_MS   3000
 #define DISPLAY_REFRESH_RATE_SEC    2

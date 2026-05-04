@@ -35,7 +35,7 @@ static void show_splash_screen() {
   uint8_t screen_savers_count = sizeof(screen_savers) / sizeof(epd_bitmap_t*);
   int get_logo =
       MIN(screen_savers_count - 1, preferences_get_int("dp_select", 0));
-  epd_bitmap_t* logo;
+  const epd_bitmap_t* logo;
   logo = screen_savers[get_logo];
 
   screen_saver_running = true;

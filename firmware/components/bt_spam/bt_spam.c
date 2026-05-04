@@ -9,7 +9,6 @@
 static const char* TAG = "bt_spam";
 
 static bt_spam_cb_display display_records_cb = NULL;
-static TimerHandle_t adv_timer;
 static volatile bool running_task = false;
 static int adv_index = 0;
 static TaskHandle_t adv_task_handle = NULL;
@@ -142,7 +141,7 @@ static void start_adv_timer_callback() {
 
   display_records_cb(long_names_devices[adv_index]);
   esp_err_t err = esp_ble_gap_config_adv_data_raw(
-      long_devices_raw[adv_index], sizeof(long_devices_raw[adv_index]));
+      (uint8_t*) long_devices_raw[adv_index], sizeof(long_devices_raw[adv_index]));
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Error setting adv data: %s", esp_err_to_name(err));
     return;

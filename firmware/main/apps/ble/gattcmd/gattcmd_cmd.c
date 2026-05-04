@@ -32,7 +32,7 @@ static int gattccmd_enum_client(int argc, char** argv) {
     arg_print_errors(stderr, gattccmd_client_args.end, GATTCMD_CMD_NAME);
     return 1;
   }
-  gattcmd_module_enum_client(gattccmd_client_args.remote_addr->sval[0]);
+  gattcmd_module_enum_client((char*) gattccmd_client_args.remote_addr->sval[0]);
   return 0;
 }
 
@@ -42,9 +42,9 @@ static int gattccmd_write(int argc, char** argv) {
     arg_print_errors(stderr, gattccmd_write_args.end, GATTCMD_CMD_NAME);
     return 1;
   }
-  gattcmd_module_gatt_write(gattccmd_write_args.addr->sval[0],
-                            gattccmd_write_args.gatt->sval[0],
-                            gattccmd_write_args.value->sval[0]);
+  gattcmd_module_gatt_write((char*) gattccmd_write_args.addr->sval[0],
+                            (char*) gattccmd_write_args.gatt->sval[0],
+                            (char*) gattccmd_write_args.value->sval[0]);
   return 0;
 }
 

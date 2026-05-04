@@ -347,8 +347,6 @@ static void gattcmd_recon_gap_cb(esp_gap_ble_cb_event_t event,
   uint8_t adv_name_len = 0;
   switch (event) {
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
-      // the unit of the duration is second
-      uint32_t duration = 30;
       connect = false;
       get_server = false;
       esp_ble_gap_start_scanning(30);

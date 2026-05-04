@@ -13,7 +13,7 @@ static void show_mounting_banner() {
 
 static void show_result_banner(esp_err_t err) {
   if (err != ESP_OK) {
-    modals_module_show_info("ERROR", esp_err_to_name(err), 2000, false);
+    modals_module_show_info("ERROR", (char*) esp_err_to_name(err), 2000, false);
   }
 }
 

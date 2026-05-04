@@ -45,11 +45,6 @@ sdmmc_card_t* card;
 bool _format_if_mount_failed = false;
 sd_card_info_t _sd_card_info;
 
-static struct {
-  struct arg_str* device;
-  struct arg_end* end;
-} mount_args;
-
 esp_err_t sd_card_fill_info(const sdmmc_card_t* card);
 
 void print_files_in_sd() {

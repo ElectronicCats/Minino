@@ -19,7 +19,7 @@ void menus_screens_display_menus(menus_manager_t* ctx) {
        i++) {
     const char* display_name =
         menus[*ctx->submenus_idx[i + items_offset]].display_name;
-    oled_screen_display_text(display_name, 0, i,
+    oled_screen_display_text((char*) display_name, 0, i,
                              ctx->selected_submenu == i + items_offset);
   }
 }
@@ -46,7 +46,7 @@ void menus_screens_display_menus_f(menus_manager_t* ctx) {
     if ((!i && skip_first) || (i == 2 && skip_last)) {
       continue;
     }
-    char* display_name =
+    const char* display_name =
         menus[*ctx->submenus_idx[(idx++) + ctx->selected_submenu - !skip_first]]
             .display_name;
     char* str = (char*) malloc(strlen(display_name) + 3);

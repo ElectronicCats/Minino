@@ -16,8 +16,6 @@ on_msg_recieve_cb_t on_msg_recieve_cb = NULL;
 void on_udp_recieve(void* aContext,
                     otMessage* aMessage,
                     const otMessageInfo* aMessageInfo) {
-  otError error = OT_ERROR_NONE;
-
   int payload_size =
       (otMessageGetLength(aMessage) - otMessageGetOffset(aMessage));
   if (payload_size == 0)

@@ -172,9 +172,9 @@ void ble_server_write_event(esp_gatt_if_t gatts_if,
 void ble_server_exce_write_event(prepare_type_env_t* prepare_write_env,
                                  esp_ble_gatts_cb_param_t* param) {
   if (param->exec_write.exec_write_flag == ESP_GATT_PREP_WRITE_EXEC) {
-    esp_log_buffer_hex(TAG_BT_GATTS, prepare_write_env->prepare_buf,
+    ESP_LOG_BUFFER_HEX(TAG_BT_GATTS, prepare_write_env->prepare_buf,
                        prepare_write_env->prepare_len);
-    esp_log_buffer_char(TAG_BT_GATTS, param->write.value, param->write.len);
+    ESP_LOG_BUFFER_CHAR(TAG_BT_GATTS, param->write.value, param->write.len);
   } else {
     ESP_LOGI(TAG_BT_GATTS, "ESP_GATT_PREP_WRITE_CANCEL");
   }
@@ -290,8 +290,8 @@ void ble_server_gatt_profiles_event_handler(esp_gatts_cb_event_t event,
       if (!param->write.is_prep) {
         ESP_LOGI(TAG_BT_GATTS,
                  "GATT_WRITE_EVT, value len %d, value :", param->write.len);
-        esp_log_buffer_hex(TAG_BT_GATTS, param->write.value, param->write.len);
-        esp_log_buffer_char(TAG_BT_GATTS, param->write.value, param->write.len);
+        ESP_LOG_BUFFER_HEX(TAG_BT_GATTS, param->write.value, param->write.len);
+        ESP_LOG_BUFFER_CHAR(TAG_BT_GATTS, param->write.value, param->write.len);
 
         if (ble_server_gatt_profile_tab[DEVICE_PROFILE].descr_handle ==
                 param->write.handle &&
@@ -319,7 +319,7 @@ void ble_server_gatt_profiles_event_handler(esp_gatts_cb_event_t event,
             ESP_LOGI(TAG_BT_GATTS, "notify/indicate disable ");
           } else {
             ESP_LOGE(TAG_BT_GATTS, "unknown descr value");
-            esp_log_buffer_hex(TAG_BT_GATTS, param->write.value,
+            ESP_LOG_BUFFER_HEX(TAG_BT_GATTS, param->write.value,
                                param->write.len);
           }
         }
@@ -463,8 +463,8 @@ void ble_server_gatt_profiles_event_handler(esp_gatts_cb_event_t event,
                param->conf.status, param->conf.handle);
       if (param->conf.status != ESP_GATT_OK) {
         ESP_LOGW(TAG_BT_GATTS, "Confirm error, status %d", param->conf.status);
-        esp_log_buffer_hex(TAG_BT_GATTS, param->conf.value, param->conf.len);
-        esp_log_buffer_char(TAG_BT_GATTS, param->conf.value, param->conf.len);
+        ESP_LOG_BUFFER_HEX(TAG_BT_GATTS, param->conf.value, param->conf.len);
+        ESP_LOG_BUFFER_CHAR(TAG_BT_GATTS, param->conf.value, param->conf.len);
       }
       break;
     }

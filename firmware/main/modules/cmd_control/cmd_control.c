@@ -17,9 +17,9 @@ static void launch_app_task(void* entry_cmd) {
 }
 
 static int launch_app(int argc, char** argv) {
-  int nerrors = arg_parse(argc, argv, (void**) &message_args);
+  arg_parse(argc, argv, (void**) &message_args);
   xTaskCreate(launch_app_task, "launch_app_task", 4096,
-              message_args.app->sval[0], 15, NULL);
+              (void*) message_args.app->sval[0], 15, NULL);
   return 0;
 }
 

@@ -78,7 +78,7 @@ static int save_ssid_cmd(int argc, char** argv) {
   }
   storage_contex_t new_ssid;
   new_ssid.main_storage_name = GENFLASH_STORAGE_SPAM;
-  new_ssid.item_storage_name = ssdi_save_args.name->sval[0];
+  new_ssid.item_storage_name = (char*) ssdi_save_args.name->sval[0];
   new_ssid.items_storage_value = malloc(GENFLASH_STORAGE_MAX_LEN_STR);
   strcpy(new_ssid.items_storage_value, ssdi_save_args.value->sval[0]);
   flash_storage_save_list_items(&new_ssid);

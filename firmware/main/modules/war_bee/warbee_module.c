@@ -183,8 +183,7 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
   switch (fcs->frameType) {
     case FRAME_TYPE_DATA:
     case FRAME_TYPE_MAC_COMMAND:
-      uint8_t sequence_number = packet[position];
-      position += sizeof(uint8_t);
+      position += sizeof(uint8_t);  // skip sequence number
 
       switch (fcs->destAddrType) {
         case ADDR_MODE_NONE:

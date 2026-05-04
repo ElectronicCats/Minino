@@ -124,18 +124,17 @@ void thread_sniffer_stop() {
 static void chek_for_fatal_error(esp_err_t err, const char* err_tag) {
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Fatal error: %s (0x%x)", err_tag, err);
-    thread_sniffer_show_event(THREAD_SNIFFER_FATAL_ERROR_EV, err_tag);
+    thread_sniffer_show_event(THREAD_SNIFFER_FATAL_ERROR_EV, (void*) err_tag);
   }
 }
 static void chek_for_fatal_false(bool ok, const char* err_tag) {
   if (!ok) {
     ESP_LOGE(TAG, "Fatal error: %s", err_tag);
-    thread_sniffer_show_event(THREAD_SNIFFER_FATAL_ERROR_EV, err_tag);
+    thread_sniffer_show_event(THREAD_SNIFFER_FATAL_ERROR_EV, (void*) err_tag);
   }
 }
 
 static esp_err_t pcap_start() {
-  esp_err_t ret = ESP_OK;
   FILE* fp = NULL;
   bool save_in_sd = false;
   if (sd_card_mount() == ESP_OK) {
@@ -237,7 +236,7 @@ static esp_err_t pcap_capture(void* payload,
   return ESP_OK;
 }
 
-static void thread_packet_debug(const otRadioFrame* aFrame) {
+static void __attribute__((unused)) thread_packet_debug(const otRadioFrame* aFrame) {
   otLogHexDumpInfo info;
 
   info.mDataBytes = aFrame->mPsdu;

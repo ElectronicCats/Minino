@@ -162,9 +162,7 @@ static void http_get_task(void* pvParameters) {
       .ai_socktype = SOCK_STREAM,
   };
   struct addrinfo* res;
-  struct in_addr* addr;
-  int s, r;
-  char recv_buf[64];
+  int s;
 
   char* request = (char*) malloc(128);
   sprintf(request, "GET %s HTTP/1.0\r\nHost: %s:%s\r\n", endpoint, host, port);
@@ -178,8 +176,6 @@ static void http_get_task(void* pvParameters) {
       vTaskDelay(1000 / portTICK_PERIOD_MS);
       continue;
     }
-
-    addr = &((struct sockaddr_in*) res->ai_addr)->sin_addr;
 
     s = socket(res->ai_family, res->ai_socktype, 0);
     if (s < 0) {
@@ -219,7 +215,6 @@ static void catdos_module_send_attack_task(void* pvParameters) {
   pthread_attr_t attr;
   pthread_t thread1, thread2, thread3, thread4, thread5, thread6, thread7,
       thread8;
-  esp_pthread_cfg_t esp_pthread_cfg;
   int res;
 
   res = pthread_create(&thread1, NULL, (void*) http_get_task, NULL);

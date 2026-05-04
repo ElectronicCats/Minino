@@ -611,7 +611,7 @@ static esp_err_t gps_decode(esp_gps_t* esp_gps, size_t len) {
  *
  * @param esp_gps esp_gps_t type object
  */
-static void esp_handle_uart_pattern(esp_gps_t* esp_gps) {
+static void __attribute__((unused)) esp_handle_uart_pattern(esp_gps_t* esp_gps) {
   int pos = uart_pattern_pop_pos(esp_gps->uart_port);
   if (pos != -1) {
     /* read one line(include '\n') */

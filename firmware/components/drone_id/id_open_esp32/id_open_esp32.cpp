@@ -62,7 +62,6 @@
 #if ID_OD_WIFI
 
   #include <esp_event.h>
-  #include <esp_event_loop.h>
   #include <esp_system.h>
   #include <esp_wifi.h>
   #include <esp_wifi_types.h>
@@ -171,10 +170,8 @@ void init_w(char* ssid,
             int ssid_length,
             uint8_t* WiFi_mac_addr,
             uint8_t wifi_channel) {
-  int status;
   char text[128];
 
-  status = 0;
   text[0] = text[63] = 0;
 
 #if ID_OD_WIFI

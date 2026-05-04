@@ -27,7 +27,6 @@ static void menus_input_cb(uint8_t button_name, uint8_t button_event);
 static app_state2_t app_state = {.in_app = false,
                                  .input_callback = NULL,
                                  .input_last_callback = NULL};
-static TaskHandle_t screen_saver_task = NULL;
 static volatile bool screen_saver_running = false;
 
 static uint8_t get_menu_idx(menu_idx_t menu_idx) {

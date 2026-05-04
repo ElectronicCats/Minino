@@ -14,8 +14,6 @@
 #include "uart_bridge.h"
 #include "uart_bridge_screen.h"
 
-static const char* TAG = "uart_bridge_app";
-
 static TaskHandle_t uart_bridge_app_task_handle = NULL;
 
 uint8_t uart_baudrate_option = 1;
@@ -117,7 +115,7 @@ static void keyboard_navigation_cb(uint8_t button_name, uint8_t button_event) {
 void uart_bridge_app_begin() {
   uart_bridge_exit = false;
 
-  esp_err_t err = task_manager_create(
+  task_manager_create(
       uart_bridge_app_task, "uart_bridge_app_task", TASK_STACK_MEDIUM, NULL,
       TASK_PRIORITY_LOW, &uart_bridge_app_task_handle);
 }
