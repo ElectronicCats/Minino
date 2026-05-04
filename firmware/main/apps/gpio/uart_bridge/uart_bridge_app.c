@@ -115,9 +115,9 @@ static void keyboard_navigation_cb(uint8_t button_name, uint8_t button_event) {
 void uart_bridge_app_begin() {
   uart_bridge_exit = false;
 
-  task_manager_create(
-      uart_bridge_app_task, "uart_bridge_app_task", TASK_STACK_MEDIUM, NULL,
-      TASK_PRIORITY_LOW, &uart_bridge_app_task_handle);
+  task_manager_create(uart_bridge_app_task, "uart_bridge_app_task",
+                      TASK_STACK_MEDIUM, NULL, TASK_PRIORITY_LOW,
+                      &uart_bridge_app_task_handle);
 }
 
 void set_uart_baudrate(uint8_t option) {

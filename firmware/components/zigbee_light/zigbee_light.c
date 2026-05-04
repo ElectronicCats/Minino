@@ -83,7 +83,8 @@ static void bdb_start_top_level_commissioning_cb(uint8_t mode_mask) {
   }
 }
 
-static void __attribute__((unused)) restart_steering_after_disconnect_cb(uint8_t mode_mask) {
+static void __attribute__((unused)) restart_steering_after_disconnect_cb(
+    uint8_t mode_mask) {
   bdb_start_top_level_commissioning_cb(mode_mask);
 }
 

@@ -27,8 +27,8 @@ void Spoofer::updateLocation(float latitude, float longitude) {
   double lat_d = utm_data.latitude_d = utm_data.base_latitude =
       latitude + (float) (rand() % 10 - 5) / 10000.0;
 
-  [[maybe_unused]] double long_d = utm_data.longitude_d = utm_data.base_longitude =
-      longitude + (float) (rand() % 10 - 5) / 10000.0;
+  [[maybe_unused]] double long_d = utm_data.longitude_d =
+      utm_data.base_longitude = longitude + (float) (rand() % 10 - 5) / 10000.0;
 
   utm_data.base_valid = 1;
   utm_data.base_alt_m = (float) (rand() % 1000) / 10.0;

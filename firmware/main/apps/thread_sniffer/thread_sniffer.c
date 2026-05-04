@@ -236,7 +236,8 @@ static esp_err_t pcap_capture(void* payload,
   return ESP_OK;
 }
 
-static void __attribute__((unused)) thread_packet_debug(const otRadioFrame* aFrame) {
+static void __attribute__((unused)) thread_packet_debug(
+    const otRadioFrame* aFrame) {
   otLogHexDumpInfo info;
 
   info.mDataBytes = aFrame->mPsdu;

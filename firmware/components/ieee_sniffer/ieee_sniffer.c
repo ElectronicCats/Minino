@@ -18,7 +18,8 @@ static ieee_sniffer_cb_t packet_callback = NULL;
 static int current_channel = IEEE_SNIFFER_CHANNEL_DEFAULT;
 static bool running = false;
 
-static void debug_print_packet(uint8_t* packet, uint8_t packet_length) __attribute__((unused));
+static void debug_print_packet(uint8_t* packet, uint8_t packet_length)
+    __attribute__((unused));
 static void debug_handler_task(void* pvParameters);
 
 static char addressing_mode[4][15] = {"None", "Reserved", "Short/16-bit",

@@ -223,7 +223,8 @@ static void wifi_analyzer_setup_task(void* pvParameters) {
 // ---------------------------------------------------------------------------
 void wifi_analyzer_run() {
   xSemaphoreTake(state_mutex, portMAX_DELAY);
-  bool busy = (!analizer_initialized || analizer_initializing || analizer_running);
+  bool busy =
+      (!analizer_initialized || analizer_initializing || analizer_running);
   if (!busy) {
     analizer_running = true;
   }
@@ -284,9 +285,8 @@ static void wifi_analyzer_begin_task(void* pvParameters) {
 void wifi_analyzer_begin() {
   if (no_mem) {
     // Schedule the OOM handler in a safe context
-    task_manager_create(
-        (TaskFunction_t) out_of_mem_handler, "wifi_oom",
-        TASK_STACK_SMALL, NULL, TASK_PRIORITY_NORMAL, NULL);
+    task_manager_create((TaskFunction_t) out_of_mem_handler, "wifi_oom",
+                        TASK_STACK_SMALL, NULL, TASK_PRIORITY_NORMAL, NULL);
     return;
   }
 

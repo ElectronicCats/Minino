@@ -5,9 +5,9 @@
    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
    CONDITIONS OF ANY KIND, either express or implied.
 */
+#include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dirent.h>
 #include "argtable3/argtable3.h"
 #include "esp_spiffs.h"
 #include "freertos/FreeRTOS.h"
@@ -124,8 +124,7 @@ static void cleanup_internal_pcap_files(void) {
     // Match any file that starts with "analizer" and ends with ".pcap"
     const char* name = entry->d_name;
     size_t len = strlen(name);
-    if (len > 5 &&
-        strncmp(name, "analizer", 8) == 0 &&
+    if (len > 5 && strncmp(name, "analizer", 8) == 0 &&
         strcmp(name + len - 5, ".pcap") == 0) {
       snprintf(filepath, sizeof(filepath), "%s/%s", ANALIZER_FLASH_FS, name);
       ESP_LOGI(TAG, "Removing stale pcap: %s", filepath);
