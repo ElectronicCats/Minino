@@ -125,9 +125,15 @@ void spam_display_list_ssid() {
 }
 
 static void spam_task(void* pvParameter) {
-  uint8_t line = 0;
+  if (total_lines == 0) {
+    ESP_LOGE("SSIDSpam", "No SSIDs loaded, stopping task");
+    vTaskDelete(NULL);
+    return;
+  }
 
-  uint16_t seqnum[total_lines];
+  uint8_t line = 0;
+  uint16_t seqnum[MAX_STRINGS];
+  memset(seqnum, 0, sizeof(seqnum));
 
   for (;;) {
     vTaskDelay(100 / total_lines / portTICK_PERIOD_MS);
@@ -227,6 +233,10 @@ static void ssid_spam_main_cb(uint8_t button_name, uint8_t button_event) {
         spam_display_list_ssid();
         break;
       } else if (current_item == SPAM_START) {
+        if (total_lines == 0) {
+          genera_screen_display_notify_information("No SSID list", "selected");
+          break;
+        }
         spam_start_attack();
       }
       break;
