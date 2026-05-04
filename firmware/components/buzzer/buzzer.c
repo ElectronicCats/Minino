@@ -122,6 +122,11 @@ void buzzer_play_for(uint32_t duration) {
   if (!buzzer.enabled) {
     return;
   }
+  if (buzzer.task_handle != NULL) {
+    vTaskDelete(buzzer.task_handle);
+    buzzer_stop();
+    buzzer.task_handle = NULL;
+  }
   uint32_t* duration_ptr = malloc(sizeof(uint32_t));
   *duration_ptr = duration;
   xTaskCreate(buzzer_play_for_task, "buzzer_play_for_task", 2048, duration_ptr,
