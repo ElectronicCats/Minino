@@ -172,10 +172,9 @@ ID_OpenDrone::ID_OpenDrone() {
 void ID_OpenDrone::init(UTM_parameters* parameters, bool ble_drone) {
   bt_mode = ble_drone;
 
-  int status, i;
+  int i;
   char text[128];
 
-  status = 0;
   text[0] = text[63] = 0;
 
 #if DIAGNOSTICS
@@ -322,8 +321,6 @@ void ID_OpenDrone::set_auth(char* auth) {
 
 void ID_OpenDrone::set_auth(uint8_t* auth, short int len, uint8_t type) {
   int i, j;
-  char text[160];
-  uint8_t check[32];
 
   auth_page_count = 1;
 
@@ -335,10 +332,10 @@ void ID_OpenDrone::set_auth(uint8_t* auth, short int len, uint8_t type) {
   auth_data[0]->AuthType = (ODID_authtype_t) type;
 
   for (i = 0; (i < 17) && (auth[i]); ++i) {
-    check[i] = auth_data[0]->AuthData[i] = auth[i];
+    auth_data[0]->AuthData[i] = auth[i];
   }
 
-  check[i] = auth_data[0]->AuthData[i] = 0;
+  auth_data[0]->AuthData[i] = 0;
 
   // if (Debug_Serial) {
 
@@ -356,14 +353,12 @@ void ID_OpenDrone::set_auth(uint8_t* auth, short int len, uint8_t type) {
       auth_data[auth_page_count]->AuthType = (ODID_authtype_t) type;
 
       for (j = 0; (j < 23) && (i < len); ++i, ++j) {
-        check[j] = auth_data[auth_page_count]->AuthData[j] = auth[i];
+        auth_data[auth_page_count]->AuthData[j] = auth[i];
       }
 
       if (j < 23) {
         auth_data[auth_page_count]->AuthData[j] = 0;
       }
-
-      check[j] = 0;
 
       // if (Debug_Serial) {
 
@@ -403,14 +398,12 @@ void ID_OpenDrone::set_auth(uint8_t* auth, short int len, uint8_t type) {
 
 int ID_OpenDrone::transmit(struct UTM_data* utm_data) {
   int i, status = 0;
-  char text[128];
   time_t secs = 0;
   static int phase = 0;
 
   //
 
   i = 0;
-  text[0] = 0;
   msecs = esp_timer_get_time() / 1000;
 
   // For the ODID 2.0 and auth timestamps.
@@ -640,9 +633,6 @@ int ID_OpenDrone::transmit_wifi(struct UTM_data* utm_data, int prepacked) {
 
   int length = 0, wifi_status = 0;
   uint64_t usecs = 0;
-  char text[128];
-
-  text[0] = 0;
 
   //
 
@@ -763,7 +753,7 @@ int ID_OpenDrone::transmit_wifi(struct UTM_data* utm_data, int prepacked) {
 
 #endif  // WIFI
 
-  return 0;
+  return wifi_status;
 }
 
 /*
@@ -781,10 +771,8 @@ int ID_OpenDrone::transmit_ble(uint8_t* odid_msg, int length) {
   // #if ID_OD_BT
 
   int i, j, k, len, status;
-  uint8_t* a;
 
-  i = j = k = len = 0;
-  a = ble_message;
+  i = j = k = len = status = 0;
 
   memset(ble_message, 0, sizeof(ble_message));
 

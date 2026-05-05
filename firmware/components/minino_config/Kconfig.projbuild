@@ -1,3 +1,13 @@
+config GPIO_RANGE_MAX
+	int
+	default 33 if IDF_TARGET_ESP32
+	default 46 if IDF_TARGET_ESP32S2
+	default 48 if IDF_TARGET_ESP32S3
+	default 18 if IDF_TARGET_ESP32C2
+	default 19 if IDF_TARGET_ESP32C3
+	default 30 if IDF_TARGET_ESP32C6
+	default 27 if IDF_TARGET_ESP32H2
+
 menu "General project"
 
 	choice BOARD_TYPE
@@ -431,15 +441,6 @@ menu "General project"
 
 	menu "OLED Screen Configuration"
 
-		config GPIO_RANGE_MAX
-			int
-			default 33 if IDF_TARGET_ESP32
-			default 46 if IDF_TARGET_ESP32S2
-			default 48 if IDF_TARGET_ESP32S3
-			default 18 if IDF_TARGET_ESP32C2
-			default 19 if IDF_TARGET_ESP32C3
-			default 30 if IDF_TARGET_ESP32C6
-
 		choice INTERFACE
 			prompt "Interface"
 			default I2C_INTERFACE
@@ -628,15 +629,6 @@ menu "General project"
 
 	menu "Keyboard Configuration"
 
-		config GPIO_RANGE_MAX
-			int
-			default 33 if IDF_TARGET_ESP32
-			default 46 if IDF_TARGET_ESP32S2
-			default 48 if IDF_TARGET_ESP32S3
-			default 18 if IDF_TARGET_ESP32C2
-			default 19 if IDF_TARGET_ESP32C3
-			default 30 if IDF_TARGET_ESP32C6
-			default 27 if IDF_TARGET_ESP32H2
 		config BOOT_BUTTON
 			int "GPIO BOOT Button Pin"
 			range 0 GPIO_RANGE_MAX

@@ -114,7 +114,7 @@ static void scroll_text_draw_window() {
   for (uint16_t i = scroll_text_ctx->current_idx; i < end_index; i++) {
     if (scroll_text_ctx->text_arr[i] != NULL) {
       oled_screen_display_text(
-          scroll_text_ctx->text_arr[i], 3,
+          (char*) scroll_text_ctx->text_arr[i], 3,
           (i - scroll_text_ctx->current_idx) + (1 + screen_title),
           OLED_DISPLAY_NORMAL);
     }
@@ -136,7 +136,7 @@ static void scroll_text_ctx_free() {
   if (scroll_text_ctx) {
     if (scroll_text_ctx->text) {
       for (uint16_t i = 0; i < scroll_text_ctx->text_len; ++i) {
-        free(scroll_text_ctx->text_arr[i]);
+        free((void*) scroll_text_ctx->text_arr[i]);
       }
       free(scroll_text_ctx->text_arr);
     }

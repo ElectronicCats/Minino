@@ -19,41 +19,62 @@ static void anim_mutex_alloc() {
   if (anim_mutex) {
     return;
   }
-  anim_mutex = xSemaphoreCreateMutex();
+  anim_mutex = xSemaphoreCreateRecursiveMutex();
+  if (anim_mutex == NULL) {
+    ESP_LOGE(TAG, "Failed to create anim_mutex");
+  }
 }
 
 ///////////////////////////////////////////////////////////
 
 static void anim_ctx_free() {
-  xSemaphoreTake(anim_mutex, portMAX_DELAY);
+  xSemaphoreTakeRecursive(anim_mutex, portMAX_DELAY);
   if (anim_ctx) {
     free(anim_ctx);
     anim_ctx = NULL;
   }
-  xSemaphoreGive(anim_mutex);
+  xSemaphoreGiveRecursive(anim_mutex);
+}
+
+static void _set_running(bool val) {
+  if (anim_ctx) {
+    anim_ctx->_is_runing = val;
+  }
+}
+static bool _get_running() {
+  return anim_ctx ? anim_ctx->_is_runing : false;
+}
+
+static void _set_paused(bool val) {
+  if (anim_ctx) {
+    anim_ctx->_is_paused = val;
+  }
+}
+static bool _get_paused() {
+  return anim_ctx ? anim_ctx->_is_paused : false;
 }
 
 static void set_running(bool val) {
-  xSemaphoreTake(anim_mutex, portMAX_DELAY);
-  anim_ctx->_is_runing = val;
-  xSemaphoreGive(anim_mutex);
+  xSemaphoreTakeRecursive(anim_mutex, portMAX_DELAY);
+  _set_running(val);
+  xSemaphoreGiveRecursive(anim_mutex);
 }
 static bool get_running() {
-  xSemaphoreTake(anim_mutex, portMAX_DELAY);
-  bool _is_running = anim_ctx->_is_runing;
-  xSemaphoreGive(anim_mutex);
+  xSemaphoreTakeRecursive(anim_mutex, portMAX_DELAY);
+  bool _is_running = _get_running();
+  xSemaphoreGiveRecursive(anim_mutex);
   return _is_running;
 }
 
 static void set_paused(bool val) {
-  xSemaphoreTake(anim_mutex, portMAX_DELAY);
-  anim_ctx->_is_paused = val;
-  xSemaphoreGive(anim_mutex);
+  xSemaphoreTakeRecursive(anim_mutex, portMAX_DELAY);
+  _set_paused(val);
+  xSemaphoreGiveRecursive(anim_mutex);
 }
 static bool get_paused() {
-  xSemaphoreTake(anim_mutex, portMAX_DELAY);
-  bool _is_paused = anim_ctx->_is_paused;
-  xSemaphoreGive(anim_mutex);
+  xSemaphoreTakeRecursive(anim_mutex, portMAX_DELAY);
+  bool _is_paused = _get_paused();
+  xSemaphoreGiveRecursive(anim_mutex);
   return _is_paused;
 }
 
@@ -62,14 +83,14 @@ void animations_module_set_pos(uint8_t x, uint8_t y) {
   // {
   //     return;
   // }
-  xSemaphoreTake(anim_mutex, portMAX_DELAY);
+  xSemaphoreTakeRecursive(anim_mutex, portMAX_DELAY);
   if (!anim_ctx) {
-    xSemaphoreGive(anim_mutex);
+    xSemaphoreGiveRecursive(anim_mutex);
     return;
   }
   anim_ctx->x = x;
   anim_ctx->y = y;
-  xSemaphoreGive(anim_mutex);
+  xSemaphoreGiveRecursive(anim_mutex);
 }
 
 static void task_delay() {
@@ -79,7 +100,7 @@ static void task_delay() {
 }
 
 static void increment_frame() {
-  xSemaphoreTake(anim_mutex, portMAX_DELAY);
+  xSemaphoreTakeRecursive(anim_mutex, portMAX_DELAY);
   if (++anim_ctx->current_frame >= anim_ctx->animation->frames_len) {
     if (anim_ctx->loop) {
       anim_ctx->current_frame = 0;
@@ -87,11 +108,11 @@ static void increment_frame() {
       anim_ctx->_is_runing = false;
     }
   }
-  xSemaphoreGive(anim_mutex);
+  xSemaphoreGiveRecursive(anim_mutex);
 }
 
 static void draw_frame() {
-  xSemaphoreTake(anim_mutex, portMAX_DELAY);
+  xSemaphoreTakeRecursive(anim_mutex, portMAX_DELAY);
   if (!anim_ctx->manual_clear) {
     oled_screen_clear_buffer();
   }
@@ -103,10 +124,10 @@ static void draw_frame() {
   uint8_t actual_frame = anim_ctx->animation->order[anim_ctx->current_frame];
   if (actual_frame >= anim_ctx->animation->bitmaps_len) {
     anim_ctx->_is_runing = false;
-    xSemaphoreGive(anim_mutex);
+    xSemaphoreGiveRecursive(anim_mutex);
     return;
   }
-  bitmap_t* bitmap = &anim_ctx->animation->bitmaps[actual_frame];
+  const bitmap_t* bitmap = &anim_ctx->animation->bitmaps[actual_frame];
 
   oled_screen_buffer_bitmap(bitmap->bitmap, anim_ctx->x, anim_ctx->y,
                             bitmap->width, bitmap->height, anim_ctx->invert);
@@ -118,7 +139,7 @@ static void draw_frame() {
   if (!anim_ctx->manual_show) {
     oled_screen_display_show();
   }
-  xSemaphoreGive(anim_mutex);
+  xSemaphoreGiveRecursive(anim_mutex);
 }
 
 static void animation_task() {
@@ -144,29 +165,35 @@ void animations_module_pause() {
     ESP_LOGW(TAG, "Run any animation first");
     return;
   }
-  xSemaphoreTake(anim_mutex, portMAX_DELAY);
+  xSemaphoreTakeRecursive(anim_mutex, portMAX_DELAY);
   if (anim_ctx && anim_ctx->task_handle) {
-    xSemaphoreGive(anim_mutex);
+    // Release mutex while waiting for the task to pause itself
+    // The task sets _is_paused = true during vTaskDelay where it holds no mutex
+    xSemaphoreGiveRecursive(anim_mutex);
     while (!get_paused()) {
       vTaskDelay(1);
     }
-    xSemaphoreTake(anim_mutex, portMAX_DELAY);
-    vTaskSuspend(anim_ctx->task_handle);
+    // Re-acquire mutex to safely check context and suspend
+    xSemaphoreTakeRecursive(anim_mutex, portMAX_DELAY);
+    if (anim_ctx && anim_ctx->task_handle) {
+      vTaskSuspend(anim_ctx->task_handle);
+    }
   } else {
     ESP_LOGW(TAG, "There is not any running Task");
   }
-  xSemaphoreGive(anim_mutex);
+  xSemaphoreGiveRecursive(anim_mutex);
 }
 
 void animations_module_delete() {
   animations_module_pause();
-  xSemaphoreTake(anim_mutex, portMAX_DELAY);
+  xSemaphoreTakeRecursive(anim_mutex, portMAX_DELAY);
   if (anim_ctx && anim_ctx->task_handle) {
     vTaskDelete(anim_ctx->task_handle);
-    xSemaphoreGive(anim_mutex);
+    xSemaphoreGiveRecursive(anim_mutex);
     anim_ctx_free();
+  } else {
+    xSemaphoreGiveRecursive(anim_mutex);
   }
-  xSemaphoreGive(anim_mutex);
 }
 
 void animations_module_resume() {
@@ -174,14 +201,14 @@ void animations_module_resume() {
     ESP_LOGW(TAG, "Run any animation first");
     return;
   }
-  xSemaphoreTake(anim_mutex, portMAX_DELAY);
+  xSemaphoreTakeRecursive(anim_mutex, portMAX_DELAY);
   if (anim_ctx && anim_ctx->task_handle && anim_ctx->_is_paused &&
       anim_ctx->_is_runing) {
     vTaskResume(anim_ctx->task_handle);
   } else {
     ESP_LOGW(TAG, "There is not any paused Task");
   }
-  xSemaphoreGive(anim_mutex);
+  xSemaphoreGiveRecursive(anim_mutex);
 }
 
 void animations_module_stop() {
@@ -189,28 +216,28 @@ void animations_module_stop() {
     ESP_LOGW(TAG, "Run any animation first");
     return;
   }
-  xSemaphoreTake(anim_mutex, portMAX_DELAY);
+  xSemaphoreTakeRecursive(anim_mutex, portMAX_DELAY);
   if (anim_ctx && anim_ctx->task_handle && anim_ctx->_is_runing) {
     anim_ctx->_is_runing = false;
   }
-  xSemaphoreGive(anim_mutex);
+  xSemaphoreGiveRecursive(anim_mutex);
 }
 
 void animations_module_run(animations_module_ctx_t ctx) {
   anim_mutex_alloc();
 
-  xSemaphoreTake(anim_mutex, portMAX_DELAY);
+  xSemaphoreTakeRecursive(anim_mutex, portMAX_DELAY);
   if (anim_ctx) {
-    xSemaphoreGive(anim_mutex);
+    xSemaphoreGiveRecursive(anim_mutex);
     ESP_LOGW(TAG,
              "Another animation is running, stop it first by calling "
              "animations_module_stop()");
     return;
   }
-  xSemaphoreGive(anim_mutex);
+  xSemaphoreGiveRecursive(anim_mutex);
 
   anim_ctx_free();
-  xSemaphoreTake(anim_mutex, portMAX_DELAY);
+  xSemaphoreTakeRecursive(anim_mutex, portMAX_DELAY);
   anim_ctx = calloc(1, sizeof(animations_module_ctx_t));
 
   anim_ctx->animation = ctx.animation;
@@ -228,5 +255,5 @@ void animations_module_run(animations_module_ctx_t ctx) {
   xTaskCreate(animation_task, "animation_task", 4096, NULL, 10,
               &anim_ctx->task_handle);
 
-  xSemaphoreGive(anim_mutex);
+  xSemaphoreGiveRecursive(anim_mutex);
 }

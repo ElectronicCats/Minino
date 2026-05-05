@@ -63,7 +63,6 @@ static esp_err_t http_server_app_js_handler(httpd_req_t* req);
 static esp_err_t http_server_favicon_handler(httpd_req_t* req);
 static esp_err_t http_server_ota_update_handler(httpd_req_t* req);
 static esp_err_t http_server_ota_status_handler(httpd_req_t* req);
-static esp_err_t http_server_sensor_value_handler(httpd_req_t* req);
 static void http_server_fw_update_reset_timer(void);
 
 // Public Function Definition

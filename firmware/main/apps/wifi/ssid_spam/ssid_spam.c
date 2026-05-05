@@ -47,6 +47,7 @@ static char* ssids_list[99] = {};
 static char* ssids_attack[MAX_STRINGS];
 static uint16_t total_lines = 0;
 static uint8_t current_item = 0;
+static TaskHandle_t spam_task_handle = NULL;
 
 static const general_menu_t spam_menu_main = {
     .menu_items = ssids_main_list,
@@ -124,9 +125,15 @@ void spam_display_list_ssid() {
 }
 
 static void spam_task(void* pvParameter) {
-  uint8_t line = 0;
+  if (total_lines == 0) {
+    ESP_LOGE("SSIDSpam", "No SSIDs loaded, stopping task");
+    vTaskDelete(NULL);
+    return;
+  }
 
-  uint16_t seqnum[total_lines];
+  uint8_t line = 0;
+  uint16_t seqnum[MAX_STRINGS];
+  memset(seqnum, 0, sizeof(seqnum));
 
   for (;;) {
     vTaskDelay(100 / total_lines / portTICK_PERIOD_MS);
@@ -189,7 +196,7 @@ static void ssid_spam_init() {
   ESP_ERROR_CHECK(esp_wifi_start());
   ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
 
-  xTaskCreate(&spam_task, "spam_task", 4096, NULL, 5, NULL);
+  xTaskCreate(&spam_task, "spam_task", 4096, NULL, 5, &spam_task_handle);
 }
 
 static void ssid_spam_input_cb(uint8_t button_name, uint8_t button_event) {
@@ -226,6 +233,10 @@ static void ssid_spam_main_cb(uint8_t button_name, uint8_t button_event) {
         spam_display_list_ssid();
         break;
       } else if (current_item == SPAM_START) {
+        if (total_lines == 0) {
+          genera_screen_display_notify_information("No SSID list", "selected");
+          break;
+        }
         spam_start_attack();
       }
       break;

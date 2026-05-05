@@ -88,6 +88,7 @@ void interactive_screen(general_interactive_screen_t screen) {
   interactive_screen_ctx->dinamic_value = screen.dinamic_value;
   interactive_screen_ctx->select_back_cb = screen.select_back_cb;
   interactive_screen_ctx->select_up_cb = screen.select_up_cb;
+  interactive_screen_ctx->select_down_cb = screen.select_down_cb;
   interactive_screen_ctx->select_select_cb = screen.select_select_cb;
   interactive_screen_ctx->selected_value =
       screen.selected_value ? screen.selected_value : 0;

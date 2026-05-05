@@ -32,7 +32,7 @@ void odrone_id_set_num_spoofers(uint8_t num_drones) {
 }
 
 void odrone_id_set_wifi_ap(uint8_t channel) {
-  set_wifi_ap("Mini Drone", channel);
+  set_wifi_ap((char*) "Mini Drone", channel);
 }
 
 void odrone_id_set_location(float latitude, float longitude) {

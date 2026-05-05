@@ -149,8 +149,6 @@ void uart_sender_send_packet_ble(uart_sender_packet_type type,
   }
 
   uint8_t total_payload_len = 6 + valid_len;  // 6 bytes addr + ADV data
-  uint8_t total_packet_len =
-      BLE_ADDRESS_SIZE + 2 + total_payload_len + 3;  // header + crc
 
   uint8_t temp_packet[64];  // Tamaño suficiente
   index = 0;

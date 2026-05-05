@@ -44,6 +44,8 @@ typedef struct {
   uint32_t time_off;         // Duration of the LED OFF state during each pulse
   uint32_t time_out;         // Timeout duration for the blink effect
   uint8_t pulse_count;       // Number of pulses for the blink effect
+  bool state;                // Current state of the LED (ON/OFF)
+  uint8_t counter;           // Current blink counter
 } led_blink_t;
 
 // LED Effects Structure
@@ -317,7 +319,6 @@ esp_err_t led_stop_breath_effect(led_t* led) {
  */
 static void breath_effect_callback(void* arg) {
   led_breath_t* breath_data = (led_breath_t*) arg;
-  esp_err_t ret = ESP_OK;
 
   // Pre-compute the brightness factor
   float brightness_factor = breath_data->brightness;
@@ -356,19 +357,17 @@ static void blink_timer_callback(void* arg) {
   uint32_t time_off_ms = blink_data->time_off;
   uint32_t time_out_ms = blink_data->time_out;
 
-  static bool led_state = false;
-  static uint8_t blink_counter = 0;
-  if (led_state) {
+  if (blink_data->state) {
     // Turn off the LED
     set_duty(blink_data->led, 0);
-    led_state = false;
+    blink_data->state = false;
 
     // Increment the blink counter
-    blink_counter++;
+    blink_data->counter++;
 
     // Check if the specified number of blinks has been completed
-    if (blink_counter >= blink_len) {
-      blink_counter = 0;  // Reset the blink counter
+    if (blink_len != 0 && blink_data->counter >= blink_len) {
+      blink_data->counter = 0;  // Reset the blink counter
 
       if (time_out_ms != 0) {
         // Wait for time_out_ms and then restart the blink sequence
@@ -381,7 +380,7 @@ static void blink_timer_callback(void* arg) {
   } else {
     // Set the LED color
     set_duty(blink_data->led, duty);
-    led_state = true;
+    blink_data->state = true;
     esp_timer_start_once(blink_data->timer, time_on_ms * 1000);
   }
 }
@@ -492,7 +491,10 @@ esp_err_t led_controller_start_blink_effect(led_t* led,
     led_effects[i].blink_effect.time_on = time_on;
     led_effects[i].blink_effect.time_off = time_off;
     led_effects[i].blink_effect.time_out = time_out;
+    led_effects[i].blink_effect.time_out = time_out;
     led_effects[i].blink_effect.timer = timer;
+    led_effects[i].blink_effect.state = false;
+    led_effects[i].blink_effect.counter = 0;
     led_effects[i].effect_state = LED_EFFECT_BLINK;
 
     // Start the blink effect

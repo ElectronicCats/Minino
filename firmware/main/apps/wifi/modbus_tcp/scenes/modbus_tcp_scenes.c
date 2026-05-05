@@ -207,7 +207,7 @@ static void modbus_handle_cb_attack(bool state) {
   }
 }
 
-static void modbus_handle_cb_attack_dos(bool state) {
+static void __attribute__((unused)) modbus_handle_cb_attack_dos(bool state) {
   if (state) {
     modbus_show_attacking_notify();
     modbus_engine_begin();

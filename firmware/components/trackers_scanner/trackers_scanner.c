@@ -92,26 +92,25 @@ static void task_tracker_timer() {
   trackers_scan_duration = 0;
   while (trackers_scanner_active) {
     if (trackers_scan_duration >= TRACKER_SCAN_DURATION) {
-      ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
       trackers_scanner_stop();
     }
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
+  trackers_scan_timer_task = NULL;
+  vTaskDelete(NULL);
 }
 
 void trackers_scanner_stop() {
   trackers_scanner_active = false;
-  ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
-  if (trackers_scan_timer_task != NULL) {
-    ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
-    vTaskSuspend(trackers_scan_timer_task);
-  }
-  ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
   trackers_scan_duration = 0;
-  vTaskDelete(NULL);
+  TaskHandle_t task_to_delete = trackers_scan_timer_task;
+  trackers_scan_timer_task = NULL;
+  ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
+  if (task_to_delete != NULL) {
+    vTaskDelete(task_to_delete);
+  }
   // TODO: When this is called, the BLE stopping bricks the device
   // bt_gattc_task_stop();
-  ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
 }
 
 static void tracker_dissector(esp_ble_gap_cb_param_t* scan_rst,

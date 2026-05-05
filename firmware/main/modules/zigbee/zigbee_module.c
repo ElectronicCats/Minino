@@ -1,0 +1,238 @@
+#include "zigbee_module.h"
+#include "animations_task.h"
+#include "esp_log.h"
+#include "ieee_sniffer.h"
+#include "led_events.h"
+#include "menus_module.h"
+#include "oled_screen.h"
+#include "preferences.h"
+#include "radio_selector.h"
+#include "uart_sender.h"
+#include "zigbee_light.h"
+#include "zigbee_screens_module.h"
+#include "zigbee_switch.h"
+
+#include "bitmaps_general.h"
+#include "general_notification.h"
+#include "general_radio_selection.h"
+#include "general_scrolling_text.h"
+#include "general_submenu.h"
+#include "menus_module.h"
+#include "preferences.h"
+
+#include "zb_cli.h"
+
+#include "general_interact_screen.h"
+
+#define ZIGBEE_SNIFFER_FS_CHAN_KEY "zschan"
+
+static const char* menu_main_items[] = {"Channel", "Run"};
+static const char* channel_item[] = {"11", "12", "13", "14", "15", "16",
+                                     "17", "18", "19", "20", "21", "22",
+                                     "23", "24", "25", "26"};
+
+static uint16_t last_index_selected = 0;
+static bool is_running = false;
+
+static void zigbee_modue_show_main();
+static void zigbee_module_show_channel_selector();
+
+typedef enum {
+  ZM_CHANNEL,
+  ZM_RUN,
+} main_menu_items_t;
+
+static int packet_count = 0;
+int current_channel = IEEE_SNIFFER_CHANNEL_DEFAULT;
+static TaskHandle_t zigbee_task_sniffer = NULL;
+
+static void light_input_cb(uint8_t button_name, uint8_t button_event);
+static void switch_input_cb(uint8_t button_name, uint8_t button_event);
+
+static void zigbee_module_display_records_cb(uint8_t* packet,
+                                             uint8_t packet_length) {
+  if (packet_count == 1000) {
+    packet_count = 0;
+  }
+  packet_count++;
+  update_interactive_screen();
+  for (int i = 0; i < packet_length; i++) {
+    printf("%02x", packet[i]);
+  }
+  printf("\n");
+  uart_sender_send_packet(UART_SENDER_PACKET_TYPE_ZIGBEE, packet,
+                          packet_length);
+}
+
+void zigbee_module_begin(int app_selected) {
+#if !defined(CONFIG_ZIGBEE_MODULE_DEBUG)
+  esp_log_level_set(TAG_ZIGBEE_MODULE, ESP_LOG_NONE);
+#endif
+};
+
+void zigbee_module_switch_enter() {
+  radio_selector_set_zigbee_switch();
+  zigbee_set_app_signal_handler(NULL);  // use default switch handler
+  menus_module_set_app_state(true, switch_input_cb);
+  zigbee_switch_set_display_status_cb(zigbee_screens_module_display_status);
+  zigbee_switch_init();
+}
+
+void zigbee_module_light_enter() {
+  radio_selector_set_zigbee_light();
+  zigbee_set_app_signal_handler(zigbee_light_app_signal_handler);
+  menus_module_set_app_state(true, light_input_cb);
+  zigbee_light_set_display_cb(zigbee_screens_light_display_status);
+  zigbee_light_init();
+}
+
+static void zigbee_module_channel_selector(uint8_t option) {
+  preferences_put_int(ZIGBEE_SNIFFER_FS_CHAN_KEY, option + 11);
+}
+
+static void zigbee_module_stop_and_show_main() {
+  ieee_sniffer_stop();
+  zigbee_task_sniffer = NULL;
+  is_running = false;
+  zigbee_modue_show_main();
+}
+
+static void zigbee_module_set_channel(uint8_t channel) {
+  packet_count = 0;
+  ieee_sniffer_set_channel(channel);
+}
+
+static void zigbee_module_show_run_screen() {
+  general_interactive_screen_t screen = {0};
+  screen.static_text = "Channel";
+  screen.dinamic_text = "Packets";
+  screen.header_title = "ZB Sniffer";
+  screen.select_back_cb = zigbee_module_stop_and_show_main;
+  screen.select_up_cb = zigbee_module_set_channel;
+  screen.select_down_cb = zigbee_module_set_channel;
+  screen.range_low = 11;
+  screen.range_high = 26;
+  screen.dinamic_value = (uint16_t*) &packet_count;
+  screen.selected_value = preferences_get_int(ZIGBEE_SNIFFER_FS_CHAN_KEY, 11);
+  interactive_screen(screen);
+}
+
+static void zigbee_module_main_handler(uint8_t option) {
+  last_index_selected = 0;
+  switch (option) {
+    case ZM_CHANNEL:
+      zigbee_module_show_channel_selector();
+      break;
+    case ZM_RUN:
+      if (!is_running) {
+        ieee_sniffer_set_channel(
+            preferences_get_int(ZIGBEE_SNIFFER_FS_CHAN_KEY, 11));
+        led_control_run_effect(led_control_zigbee_scanning);
+        xTaskCreate(ieee_sniffer_begin, "ieee_sniffer_task", 4096, NULL, 5,
+                    &zigbee_task_sniffer);
+        is_running = true;
+      }
+      zigbee_module_show_run_screen();
+      break;
+    default:
+      break;
+  }
+}
+
+static void zigbee_module_show_channel_selector(void) {
+  general_radio_selection_menu_t channel = {0};
+  channel.banner = "Channel";
+  channel.options = channel_item;
+  channel.options_count = sizeof(channel_item) / sizeof(char*);
+  channel.select_cb = zigbee_module_channel_selector;
+  channel.style = RADIO_SELECTION_OLD_STYLE;
+  channel.exit_cb = zigbee_modue_show_main;
+  channel.current_option =
+      preferences_get_int(ZIGBEE_SNIFFER_FS_CHAN_KEY, 11) - 11;
+  general_radio_selection(channel);  // Show the radio menu
+}
+
+static void zigbee_module_sniffer_exit() {
+  if (is_running) {
+    ieee_sniffer_stop();
+    zigbee_task_sniffer = NULL;
+    is_running = false;
+  }
+  menus_module_restart();
+}
+
+static void zigbee_modue_show_main() {
+  general_submenu_menu_t main = {0};
+  main.options = menu_main_items;
+  main.options_count = sizeof(menu_main_items) / sizeof(char*);
+  main.select_cb = zigbee_module_main_handler;
+  main.selected_option = last_index_selected;
+  main.exit_cb = zigbee_module_sniffer_exit;
+  general_submenu(main);
+}
+
+static void zigbee_module_show_disable_cli(void) {
+  general_notification_ctx_t notification = {0};
+  notification.duration_ms = 4000;
+  notification.head = "Warning";
+  notification.body = "Please disable the Zigbee CLI before running ZB apps";
+  general_notification(notification);
+  menus_module_set_reset_screen(MENU_SETTINGS_SYSTEM);
+}
+
+void zigbee_module_sniffer_enter() {
+  radio_selector_set_zigbee_sniffer();
+  ieee_sniffer_register_cb(zigbee_module_display_records_cb);
+  if (preferences_get_int("ZBCLI", 0) == 1) {
+    zigbee_module_show_disable_cli();
+    menus_module_reset();
+    return;
+  }
+  zigbee_modue_show_main();
+}
+
+static void light_input_cb(uint8_t button_name, uint8_t button_event) {
+  switch (button_name) {
+    case BUTTON_LEFT:
+      switch (button_event) {
+        case BUTTON_PRESS_DOWN:
+          menus_module_set_reset_screen(MENU_ZIGBEE_SPOOFING);
+          zigbee_light_deinit();
+          break;
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+static void switch_input_cb(uint8_t button_name, uint8_t button_event) {
+  ESP_LOGI(TAG_ZIGBEE_MODULE, "Zigbee Switch Entered");
+  switch (button_name) {
+    case BUTTON_RIGHT:
+      switch (button_event) {
+        case BUTTON_PRESS_DOWN:
+          if (zigbee_switch_is_light_connected()) {
+            zigbee_screens_module_toogle_pressed();
+          }
+          break;
+        case BUTTON_PRESS_UP:
+          if (zigbee_switch_is_light_connected()) {
+            zigbee_screens_module_toggle_released();
+            zigbee_switch_toggle();
+          }
+          break;
+      }
+      break;
+    case BUTTON_LEFT:
+      switch (button_event) {
+        case BUTTON_PRESS_DOWN:
+          menus_module_set_reset_screen(MENU_ZIGBEE_SPOOFING);
+          zigbee_switch_deinit();
+          break;
+      }
+      break;
+    default:
+      break;
+  }
+}

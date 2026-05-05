@@ -12,13 +12,12 @@
 #define BUZZER_DEFAULT_DUTTY        (4096)  // Set duty to 50%. (2 ** 13) * 50% = 4096
 #define BUZZER_DEFAULT_FREQUENCY_HZ (4000)  // Set frequency at 4 kHz
 
-static const char* TAG = "buzzer";
-
 typedef struct {
   uint8_t pin;
   uint32_t freq;
   uint32_t duty;
   bool enabled;
+  TaskHandle_t task_handle;
 } buzzer_t;
 
 static buzzer_t buzzer;
@@ -105,9 +104,11 @@ void buzzer_play_for_task(void* duration) {
 #endif
 
   uint32_t dur = *(uint32_t*) duration;
+  free(duration);
   buzzer_play();
-  vTaskDelay(*(uint32_t*) duration / portTICK_PERIOD_MS);
+  vTaskDelay(dur / portTICK_PERIOD_MS);
   buzzer_stop();
+  buzzer.task_handle = NULL;
   vTaskDelete(NULL);
 }
 
@@ -119,10 +120,15 @@ void buzzer_play_for(uint32_t duration) {
   if (!buzzer.enabled) {
     return;
   }
+  if (buzzer.task_handle != NULL) {
+    vTaskDelete(buzzer.task_handle);
+    buzzer_stop();
+    buzzer.task_handle = NULL;
+  }
   uint32_t* duration_ptr = malloc(sizeof(uint32_t));
   *duration_ptr = duration;
   xTaskCreate(buzzer_play_for_task, "buzzer_play_for_task", 2048, duration_ptr,
-              5, NULL);
+              5, &buzzer.task_handle);
 }
 
 void buzzer_stop() {

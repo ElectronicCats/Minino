@@ -8,10 +8,11 @@
 #include "preferences.h"
 
 static const char* TAG = "ap_manager";
-static EventGroupHandle_t wifi_event_group;
+static EventGroupHandle_t wifi_event_group = NULL;
 static app_callback callback_connection;
 const int CONNECTED_BIT = BIT0;
 static int reconnections = 0;
+static bool initialized = false;
 
 static bool wifi_ap_manager_join(const char* ssid,
                                  const char* pass,
@@ -45,18 +46,26 @@ static void event_handler(void* arg,
   } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
     printf("Connected to AP");
     preferences_put_bool("wifi_connected", true);
+    reconnections = 0;
     xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
   }
 }
 
 static void initialise_wifi(void) {
   esp_log_level_set(TAG, ESP_LOG_WARN);
-  static bool initialized = false;
   if (initialized) {
     return;
   }
   ESP_ERROR_CHECK(esp_netif_init());
+  if (wifi_event_group != NULL) {
+    vEventGroupDelete(wifi_event_group);
+    wifi_event_group = NULL;
+  }
   wifi_event_group = xEventGroupCreate();
+  if (wifi_event_group == NULL) {
+    ESP_LOGE(TAG, "Failed to create wifi_event_group");
+    return;
+  }
   esp_err_t err = esp_event_loop_create_default();
   if (err == ESP_ERR_INVALID_STATE) {
     ESP_LOGI(TAG, "Event loop already created");
@@ -116,7 +125,9 @@ static bool wifi_ap_manager_join(const char* ssid,
   }
 
   preferences_put_string("ssid", ssid);
-  preferences_put_string("passwd", pass);
+  if (pass) {
+    preferences_put_string("passwd", pass);
+  }
 
   int bits = xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT, pdFALSE,
                                  pdTRUE, timeout_ms / portTICK_PERIOD_MS);
@@ -194,13 +205,20 @@ int wifi_ap_manager_delete_ap_by_index(int index) {
     return 1;
   }
 
-  preferences_get_int("count_ap", 0);
   int count = preferences_get_int("count_ap", 0);
   if (count > 0) {
     count--;
   }
   preferences_put_int("count_ap", count);
   return 0;
+}
+
+void wifi_ap_manager_deinit() {
+  if (wifi_event_group != NULL) {
+    vEventGroupDelete(wifi_event_group);
+    wifi_event_group = NULL;
+  }
+  initialized = false;
 }
 
 bool wifi_ap_manager_is_connect() {
@@ -244,10 +262,7 @@ void wifi_ap_manager_get_aps(char** aps_list) {
     if (err != ESP_OK) {
       continue;
     }
-    aps_list[i] = malloc(sizeof(wifi_ssid) + 1);
-    if (aps_list[i] != NULL) {
-      aps_list[i] = strdup(wifi_ssid);
-    }
+    aps_list[i] = strdup(wifi_ssid);
     printf("[%i][%s] SSID: %s\n", i, wifi_ap, wifi_ssid);
   }
 }

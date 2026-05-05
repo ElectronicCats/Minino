@@ -23,12 +23,6 @@ static struct {
 } println_args;
 
 static struct {
-  struct arg_str* buffer_size;
-  struct arg_int* timeout_ms;
-  struct arg_end* end;
-} uart_bridge_args;
-
-static struct {
   struct arg_int* buffer_size;
   struct arg_int* baud_rate;
   struct arg_int* data_bits;
@@ -256,11 +250,6 @@ int uart_bridge_set_config(int argc, char** argv) {
       .parity = parity,
       .stop_bits = stop_bits,
       .flow_ctrl = flow_ctrl,
-  };
-
-  uart_bridge_config_t config = {
-      .buffer_size = buffer_size,
-      .uart_config = uart_config,
   };
 
   esp_err_t err = uart_bridge_begin(uart_config, buffer_size);

@@ -88,9 +88,14 @@ esp_err_t task_manager_delete(TaskHandle_t handle) {
   // Buscar tarea en el registry
   for (uint32_t i = 0; i < task_count; i++) {
     if (task_registry[i].handle == handle) {
-      task_registry[i].is_running = false;
-      vTaskDelete(handle);
       ESP_LOGI(TAG, "Tarea eliminada: '%s'", task_registry[i].name);
+      vTaskDelete(handle);
+      // Compactar el registry: desplazar entradas posteriores hacia arriba
+      for (uint32_t j = i; j < task_count - 1; j++) {
+        task_registry[j] = task_registry[j + 1];
+      }
+      memset(&task_registry[task_count - 1], 0, sizeof(task_info_t));
+      task_count--;
       return ESP_OK;
     }
   }

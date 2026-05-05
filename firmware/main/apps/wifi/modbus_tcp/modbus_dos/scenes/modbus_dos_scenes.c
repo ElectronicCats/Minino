@@ -89,8 +89,8 @@ static const char* settings_options[] = {"SSID", "Password", "Server IP",
 
 static void show_cmds_help(const char* head, const char* body) {
   general_notification_ctx_t notification = {0};
-  notification.head = head;
-  notification.body = body;
+  notification.head = (char*) head;
+  notification.body = (char*) body;
   notification.on_exit = modbus_dos_scenes_settings;
 
   general_notification_handler(notification);
@@ -137,7 +137,7 @@ static const char* help_txt[] = {"You must set",   "the server",
 
 void modbus_dos_scenes_help() {
   general_scrolling_text_ctx help = {0};
-  help.banner = "Modbus DOS Help";
+  help.banner = (char*) "Modbus DOS Help";
   help.text_arr = help_txt;
   help.text_len = sizeof(help_txt) / sizeof(char*);
   help.window_type = GENERAL_SCROLLING_TEXT_WINDOW;

@@ -49,7 +49,7 @@ static int hello_cmd_handler(int argc, char** argv) {
                              minino_letters_bitmap.height, OLED_DISPLAY_NORMAL);
   // Show the user input in the center of the screen at position 4
   oled_screen_display_text_center("Of:", 5, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center(hello_cmd_args.name->sval[0], 6,
+  oled_screen_display_text_center((char*) hello_cmd_args.name->sval[0], 6,
                                   OLED_DISPLAY_INVERT);
 
   printf("\nMeow %s! Says Minino\n", hello_cmd_args.name->sval[0]);

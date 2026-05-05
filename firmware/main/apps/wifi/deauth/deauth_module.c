@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <string.h>
 #include "animations_task.h"
-#include "apps/wifi/deauth/deauth_screens.h"
+#include "deauth_screens.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "led_events.h"
@@ -48,8 +48,6 @@ static TaskHandle_t scanning_task_handle = NULL;
 
 static void scanning_task();
 static void deauth_run_scan_task();
-static void deauth_increment_item();
-static void deauth_decrement_item();
 static void deauth_handle_attacks();
 
 static void scanning_task() {

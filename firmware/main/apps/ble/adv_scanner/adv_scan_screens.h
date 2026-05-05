@@ -1,7 +1,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "esp_gap_ble_api.h"
-#include "general/general_screens.h"
+#include "general_screens.h"
 #ifndef ADV_SCAN_SCREENS_H
   #define ADV_SCAN_SCREENS_H
 

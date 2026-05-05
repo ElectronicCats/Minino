@@ -41,7 +41,7 @@ static int set_ssid(int argc, char** argv) {
     return 1;
   }
 
-  modbus_dos_prefs_set_ssid(mb_dos_ssid_args.ssid->sval[0]);
+  modbus_dos_prefs_set_ssid((char*) mb_dos_ssid_args.ssid->sval[0]);
   return 0;
 }
 
@@ -52,7 +52,7 @@ static int set_pass(int argc, char** argv) {
     return 1;
   }
 
-  modbus_dos_prefs_set_pass(mb_dos_pass_args.pass->sval[0]);
+  modbus_dos_prefs_set_pass((char*) mb_dos_pass_args.pass->sval[0]);
   return 0;
 }
 
@@ -63,7 +63,7 @@ static int set_ip(int argc, char** argv) {
     return 1;
   }
 
-  modbus_dos_prefs_set_ip(mb_dos_ip_args.ip->sval[0]);
+  modbus_dos_prefs_set_ip((char*) mb_dos_ip_args.ip->sval[0]);
   return 0;
 }
 

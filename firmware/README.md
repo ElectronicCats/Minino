@@ -60,7 +60,7 @@ You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/p
 > The version you need to install must be [5.5.1](https://github.com/espressif/esp-idf/releases/tag/v5.5.1); we cannot guarantee that a more recent version will compile.
 
 - [Minino](https://electroniccats.com/store/minino/)
-- [ESP-IDF v5.5.1](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/index.html) installed
+- [ESP-IDF v5.5.1](https://docs.espressif.com/projects/esp-idf/en/v5.5.1/esp32/get-started/index.html) installed
 - [Make](https://www.gnu.org/software/make/) installed
 - [pre-commit](https://pre-commit.com/) installed (optional but recommended)
 

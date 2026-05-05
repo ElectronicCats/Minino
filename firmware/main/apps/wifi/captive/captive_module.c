@@ -41,6 +41,7 @@ static uint16_t last_index_selected = 0;
 static httpd_handle_t server = NULL;
 static uint16_t retries = 0;
 static char wifi_ap_name[CAPTIVE_PORTAL_MAX_NAME];
+static TaskHandle_t scanning_task_handle = NULL;
 
 typedef enum {
   PORTALS,
@@ -210,7 +211,7 @@ static void wifi_init_softap(void) {
                                          CAPTIVE_PORTAL_MAX_NAME);
   if (err == ESP_OK) {
     ESP_LOGW("HERE", "New name: %s", ap_name);
-    char* wifi_name = malloc(strlen((char*) ap_name + 1));
+    char* wifi_name = malloc(strlen((char*) ap_name) + 1);
     if (wifi_name == NULL) {
       ESP_LOGE(TAG, "Failed to allocate memory for wifi_ssid");
     } else {
@@ -554,6 +555,10 @@ static uint16_t captive_module_get_sd_redirect() {
   }
 
   char* path = (char*) malloc(CAPTIVE_PORTAL_MAX_DEFAULT_LEN);
+  if (!path) {
+    ESP_LOGE("CAPTIVE", "Failed to allocate memory for path");
+    return 0;
+  }
   snprintf(path, CAPTIVE_PORTAL_MAX_DEFAULT_LEN, "%s/%s", SD_CARD_PATH,
            CAPTIVE_PORTAL_REDIRECT_PATH_NAME);
   DIR* dir;
@@ -578,7 +583,7 @@ static uint16_t captive_module_get_sd_redirect() {
       continue;
     }
     redirect_list.ent[redirect_list.count] =
-        (char*) malloc(strlen(ent->d_name));
+        (char*) malloc(strlen(ent->d_name) + 1);
     if (!redirect_list.ent[redirect_list.count]) {
       ESP_LOGE("CAPTIVE", "Failed to allocate memory for dirent name");
       continue;
@@ -598,6 +603,10 @@ static uint16_t captive_module_get_sd_portals() {
   }
 
   char* path = (char*) malloc(CAPTIVE_PORTAL_MAX_DEFAULT_LEN);
+  if (!path) {
+    ESP_LOGE("CAPTIVE", "Failed to allocate memory for path");
+    return 0;
+  }
   snprintf(path, CAPTIVE_PORTAL_MAX_DEFAULT_LEN, "%s/%s", SD_CARD_PATH,
            CAPTIVE_PORTAL_PATH_NAME);
   DIR* dir;
@@ -621,7 +630,8 @@ static uint16_t captive_module_get_sd_portals() {
     if (!ext || strcmp(ext, ".html") != 0) {
       continue;
     }
-    portals_list.ent[portals_list.count] = (char*) malloc(strlen(ent->d_name));
+    portals_list.ent[portals_list.count] =
+        (char*) malloc(strlen(ent->d_name) + 1);
     if (!portals_list.ent[portals_list.count]) {
       ESP_LOGE("CAPTIVE", "Failed to allocate memory for dirent name");
       continue;
@@ -882,7 +892,8 @@ static void captive_module_main_menu_handler(uint8_t option) {
       if (preferences_get_int(CAPTIVE_PORTAL_MODE_FS_KEY, 0) == 1) {
         retries = 0;
         captive_module_scan_clean();
-        xTaskCreate(scanning_task, "wifi_scan", 8096, NULL, 5, NULL);
+        xTaskCreate(scanning_task, "wifi_scan", 8096, NULL, 5,
+                    &scanning_task_handle);
         animations_task_run(&general_animation_loading, 300, NULL);
         captive_module_run_scan_task();
       } else {

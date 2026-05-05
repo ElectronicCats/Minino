@@ -23,7 +23,7 @@ static int captivecmd_change_name(int argc, char** argv) {
     return 1;
   }
 
-  captive_module_change_ap_name(captivecmd_ap_name_args.name->sval[0]);
+  captive_module_change_ap_name((char*) captivecmd_ap_name_args.name->sval[0]);
 
   return 0;
 }

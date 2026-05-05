@@ -9,9 +9,9 @@
 static const char* TAG = "bt_spam";
 
 static bt_spam_cb_display display_records_cb = NULL;
-static TimerHandle_t adv_timer;
 static volatile bool running_task = false;
 static int adv_index = 0;
+static TaskHandle_t adv_task_handle = NULL;
 
 static esp_ble_adv_params_t ble_adv_params = {
     .adv_int_min = 0x20,
@@ -140,8 +140,9 @@ static void start_adv_timer_callback() {
   }
 
   display_records_cb(long_names_devices[adv_index]);
-  esp_err_t err = esp_ble_gap_config_adv_data_raw(
-      long_devices_raw[adv_index], sizeof(long_devices_raw[adv_index]));
+  esp_err_t err =
+      esp_ble_gap_config_adv_data_raw((uint8_t*) long_devices_raw[adv_index],
+                                      sizeof(long_devices_raw[adv_index]));
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Error setting adv data: %s", esp_err_to_name(err));
     return;
@@ -186,9 +187,13 @@ void bt_spam_app_main() {
   running_task = true;
 
   esp_ble_gap_start_advertising(&ble_adv_params);
-  xTaskCreate(&start_adv, "start_adv", 4096, NULL, 5, NULL);
+  xTaskCreate(&start_adv, "start_adv", 4096, NULL, 5, &adv_task_handle);
 }
 
 void bt_spam_app_stop() {
   running_task = false;
+  if (adv_task_handle != NULL) {
+    vTaskDelete(adv_task_handle);
+    adv_task_handle = NULL;
+  }
 }

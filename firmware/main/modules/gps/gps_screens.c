@@ -305,8 +305,8 @@ void gps_screens_stop_route_recording() {
       }
     }
     // Escribir el pie de página GPX
-    esp_err_t err =
-        sd_card_append_to_file(gps_route_file_name, gps_route_gpx_footer);
+    esp_err_t err = sd_card_append_to_file(gps_route_file_name,
+                                           (char*) gps_route_gpx_footer);
     if (err != ESP_OK) {
       ESP_LOGE(TAG, "Failed to append GPX footer: %s", esp_err_to_name(err));
     }

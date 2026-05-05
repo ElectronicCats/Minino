@@ -209,9 +209,9 @@ static void display_config_module_state_machine_menu_time(
   }
 }
 
-static void display_config_module_state_machine_menu_logo(
-    uint8_t button_name,
-    uint8_t button_event) {
+static void __attribute__((unused))
+display_config_module_state_machine_menu_logo(uint8_t button_name,
+                                              uint8_t button_event) {
   if (button_event != BUTTON_PRESS_DOWN) {
     return;
   }

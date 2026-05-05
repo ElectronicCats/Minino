@@ -9,7 +9,6 @@
 static size_t flash_fs_size, flash_fs_used;
 
 static void (*flash_fs_show_event_cb)(flash_fs_events_t, void*) = NULL;
-static bool already_mounted = false;
 
 void flash_fs_begin(void* screens_cb) {
   flash_fs_show_event_cb = screens_cb;

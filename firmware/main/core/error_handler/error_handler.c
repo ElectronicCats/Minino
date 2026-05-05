@@ -65,7 +65,6 @@ void error_handler_report(const error_info_t* error) {
 
   // Determinar emoji y nivel de log
   const char* severity_emoji[] = {"ℹ️ ", "⚠️ ", "❌", "🚨"};
-  const char* severity_str[] = {"INFO", "WARNING", "ERROR", "CRITICAL"};
 
   // Log estructurado
   const char* component_name = component_names[error->component];

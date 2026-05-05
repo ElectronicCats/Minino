@@ -17,8 +17,8 @@ uint8_t pkts_offset = 2;
 
 void wifi_screens_module_display_sniffer_cb(sniffer_runtime_t* sniffer) {
   if (sniffer->is_running) {
-    const char* packets_str = malloc(16);
-    const char* channel_str = malloc(16);
+    char* packets_str = malloc(16);
+    char* channel_str = malloc(16);
 
     sprintf(packets_str, "%ld", sniffer->sniffed_packets);
     sprintf(channel_str, "%ld", sniffer->channel);

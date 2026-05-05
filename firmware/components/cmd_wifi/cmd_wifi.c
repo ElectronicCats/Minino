@@ -35,10 +35,6 @@ static const char* TAG = "cmd_wifi";
 // static EventGroupHandle_t wifi_event_group;
 // const int CONNECTED_BIT = BIT0;
 // static app_callback callback_connection;
-static bool disconnect_cb = false;
-static int reconnections = 0;
-static int connect(int argc, char** argv);
-static bool wifi_join(const char* ssid, const char* pass, int timeout_ms);
 static void cmd_wifi_handle_credentials(const char* ssid, const char* pass);
 static int cmd_wifi_show_aps(int argc, char** argv);
 
@@ -166,31 +162,6 @@ static int cmd_wifi_show_aps(int argc, char** argv) {
     }
     printf("[%i][%s] SSID: %s\n", i, wifi_ap, wifi_ssid);
   }
-  return 0;
-}
-
-static int connect(int argc, char** argv) {
-  int nerrors = arg_parse(argc, argv, (void**) &join_args);
-  if (nerrors != 0) {
-    arg_print_errors(stderr, join_args.end, argv[0]);
-    return 1;
-  }
-  ESP_LOGI(__func__, "Connecting to '%s'", join_args.ssid->sval[0]);
-
-  /* set default value*/
-  if (join_args.timeout->count == 0) {
-    join_args.timeout->ival[0] = JOIN_TIMEOUT_MS;
-  }
-  printf("timeout: %d\n", join_args.timeout->ival[0]);
-  printf("ssid: %s\n", join_args.ssid->sval[0]);
-  bool connected =
-      wifi_join(join_args.ssid->sval[0], join_args.password->sval[0],
-                join_args.timeout->ival[0]);
-  if (!connected) {
-    ESP_LOGW(__func__, "Connection timed out");
-    return 1;
-  }
-  ESP_LOGI(__func__, "Connected");
   return 0;
 }
 

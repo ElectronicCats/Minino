@@ -151,7 +151,6 @@ void cmd_control_register_system_commands() {
                                         .help = "Get the reset reason",
                                         .category = category,
                                         .hint = NULL,
-                                        .category = category,
                                         .func = &print_reset_reason,
                                         .argtable = NULL};
 
