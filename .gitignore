@@ -57,3 +57,7 @@ minino-all-pos.csv
 
 # Gerber
 /**/MININO_GERBER
+
+# Python Cache
+__pycache__/
+*.pyc
