@@ -254,44 +254,21 @@ void ble_hid_get_device_mac(uint8_t* mac) {
 void ble_hid_begin() {
   esp_err_t ret;
 
-  // Initialize NVS.
-  ret = nvs_flash_init();
-  if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
-      ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-    ESP_ERROR_CHECK(nvs_flash_erase());
-    ret = nvs_flash_init();
-  }
-  ESP_ERROR_CHECK(ret);
-
-  ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
-
-  esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-  ret = esp_bt_controller_init(&bt_cfg);
-  if (ret) {
-    ESP_LOGE(HID_DEMO_TAG, "%s initialize controller failed", __func__);
-    return;
+  if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_IDLE) {
+    esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
+    ret = esp_bt_controller_init(&bt_cfg);
+    if (ret == ESP_OK) {
+      esp_bt_controller_enable(ESP_BT_MODE_BLE);
+    }
   }
 
-  ret = esp_bt_controller_enable(ESP_BT_MODE_BLE);
-  if (ret) {
-    ESP_LOGE(HID_DEMO_TAG, "%s enable controller failed", __func__);
-    return;
-  }
-
-  ret = esp_bluedroid_init();
-  if (ret) {
-    ESP_LOGE(HID_DEMO_TAG, "%s init bluedroid failed", __func__);
-    return;
-  }
-
-  ret = esp_bluedroid_enable();
-  if (ret) {
-    ESP_LOGE(HID_DEMO_TAG, "%s init bluedroid failed", __func__);
-    return;
+  if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_UNINITIALIZED) {
+    esp_bluedroid_init();
+    esp_bluedroid_enable();
   }
 
   if ((ret = esp_hidd_profile_init()) != ESP_OK) {
-    ESP_LOGE(HID_DEMO_TAG, "%s init bluedroid failed", __func__);
+    ESP_LOGE(HID_DEMO_TAG, "%s init hid profile failed", __func__);
   }
 
   /// register the callback function to the gap module
@@ -301,7 +278,7 @@ void ble_hid_begin() {
   /* set the security iocap & auth_req & key size & init key response key
    * parameters to the stack*/
   esp_ble_auth_req_t auth_req =
-      ESP_LE_AUTH_BOND;  // bonding with peer device after authentication
+      ESP_LE_AUTH_REQ_SC_BOND;  // LE Secure Connections bonding
   esp_ble_io_cap_t iocap =
       ESP_IO_CAP_NONE;    // set the IO capability to No output No input
   uint8_t key_size = 16;  // the key size should be 7~16 bytes

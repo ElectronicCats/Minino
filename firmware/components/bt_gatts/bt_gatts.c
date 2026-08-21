@@ -516,36 +516,21 @@ void bt_gatts_task_begin(void) {
 
   esp_err_t ret;
 
-  ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
-
-  esp_bt_controller_config_t bluetooth_config =
-      BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-  ret = esp_bt_controller_init(&bluetooth_config);
-  if (ret) {
-    ESP_LOGE(TAG_BT_GATTS, "%s initialize controller failed: %s", __func__,
-             esp_err_to_name(ret));
-    return;
+  if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_IDLE) {
+    esp_bt_controller_config_t bluetooth_config =
+        BT_CONTROLLER_INIT_CONFIG_DEFAULT();
+    ret = esp_bt_controller_init(&bluetooth_config);
+    if (ret == ESP_OK) {
+      esp_bt_controller_enable(ESP_BT_MODE_BLE);
+    }
   }
 
-  ret = esp_bt_controller_enable(ESP_BT_MODE_BLE);
-  if (ret) {
-    ESP_LOGE(TAG_BT_GATTS, "%s enable controller failed: %s", __func__,
-             esp_err_to_name(ret));
-    return;
-  }
-
-  esp_bluedroid_config_t bluedroid_config = BT_BLUEDROID_INIT_CONFIG_DEFAULT();
-  ret = esp_bluedroid_init_with_cfg(&bluedroid_config);
-  if (ret) {
-    ESP_LOGE(TAG_BT_GATTS, "%s initialize bluedroid failed: %s", __func__,
-             esp_err_to_name(ret));
-    return;
-  }
-  ret = esp_bluedroid_enable();
-  if (ret) {
-    ESP_LOGE(TAG_BT_GATTS, "%s enable bluetooth failed: %s", __func__,
-             esp_err_to_name(ret));
-    return;
+  if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_UNINITIALIZED) {
+    esp_bluedroid_config_t bluedroid_config = BT_BLUEDROID_INIT_CONFIG_DEFAULT();
+    ret = esp_bluedroid_init_with_cfg(&bluedroid_config);
+    if (ret == ESP_OK) {
+      esp_bluedroid_enable();
+    }
   }
 
   ret = esp_ble_gatts_register_callback(gatts_event_handler);
@@ -574,9 +559,14 @@ void bt_gatts_task_begin(void) {
 
 void bt_gatts_task_stop(void) {
   ESP_LOGI(TAG_BT_GATTS, "Stopping BLE task");
-  esp_bluedroid_disable();
-  esp_bluedroid_deinit();
-  esp_bt_controller_disable();
-  esp_bt_controller_deinit();
-  esp_bt_controller_mem_release(ESP_BT_MODE_BLE);
+  esp_ble_gap_stop_advertising();
+  if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_ENABLED) {
+    esp_bluedroid_disable();
+  }
+  if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_INITIALIZED) {
+    esp_bluedroid_deinit();
+  }
+  if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_ENABLED) {
+    esp_bt_controller_disable();
+  }
 }
