@@ -14,16 +14,14 @@ void wifi_scanner_module_scan() {
   esp_log_level_set(TAG_WIFI_SCANNER_MODULE, ESP_LOG_NONE);
 #endif
   esp_err_t err = esp_event_loop_create_default();
-  if (err != ESP_OK) {
+  if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
     ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to create event loop: %s",
              esp_err_to_name(err));
-    esp_event_loop_delete_default();
-    esp_event_loop_create_default();
   }
   ap_records.count = CONFIG_SCAN_MAX_AP;
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   err = esp_wifi_init(&cfg);
-  if (err != ESP_OK) {
+  if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
     ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to init wifi: %s",
              esp_err_to_name(err));
     return;
@@ -35,7 +33,7 @@ void wifi_scanner_module_scan() {
     return;
   }
   err = esp_wifi_start();
-  if (err != ESP_OK) {
+  if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
     ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to start wifi: %s",
              esp_err_to_name(err));
     return;
@@ -69,7 +67,7 @@ wifi_scanner_ap_records_t* wifi_scanner_get_ap_records() {
 }
 
 wifi_ap_record_t* wifi_scanner_get_ap_record(unsigned index) {
-  if (index > ap_records.count) {
+  if (index >= ap_records.count) {
     ESP_LOGE(TAG_WIFI_SCANNER_MODULE,
              "Index out of bounds! %u records available, but %u requested",
              ap_records.count, index);

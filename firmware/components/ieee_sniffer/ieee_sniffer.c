@@ -14,6 +14,7 @@
 
 static esp_err_t err;
 static QueueHandle_t packet_rx_queue = NULL;
+static TaskHandle_t debug_task_hdl = NULL;
 static ieee_sniffer_cb_t packet_callback = NULL;
 static int current_channel = IEEE_SNIFFER_CHANNEL_DEFAULT;
 static bool running = false;
@@ -28,10 +29,16 @@ static char addressing_mode[4][15] = {"None", "Reserved", "Short/16-bit",
 void sniffer_esp_ieee802154_receive_done(
     uint8_t* frame,
     esp_ieee802154_frame_info_t* frame_info) {
-  // ESP_EARLY_LOGI(TAG_IEEE_SNIFFER, "rx OK, received %d bytes", frame[0]);
-  BaseType_t task;
-  xQueueSendToBackFromISR(packet_rx_queue, frame, &task);
+  if (!running || packet_rx_queue == NULL) {
+    esp_ieee802154_receive_handle_done(frame);
+    return;
+  }
+  BaseType_t higher_priority_task_woken = pdFALSE;
+  xQueueSendToBackFromISR(packet_rx_queue, frame, &higher_priority_task_woken);
   esp_ieee802154_receive_handle_done(frame);
+  if (higher_priority_task_woken == pdTRUE) {
+    portYIELD_FROM_ISR();
+  }
 }
 
 void ieee_sniffer_register_cb(ieee_sniffer_cb_t callback) {
@@ -47,19 +54,14 @@ int8_t ieee_sniffer_get_rssi() {
 }
 
 void ieee_sniffer_set_channel(uint8_t channel) {
+  if (channel < IEEE_SNIFFER_CHANNEL_MIN || channel > IEEE_SNIFFER_CHANNEL_MAX) {
+    ESP_LOGE(TAG_IEEE_SNIFFER, "Invalid channel %d", channel);
+    return;
+  }
   current_channel = channel;
-  if (channel < IEEE_SNIFFER_CHANNEL_MIN) {
-    current_channel = IEEE_SNIFFER_CHANNEL_MAX;
-  } else if (channel > IEEE_SNIFFER_CHANNEL_MAX) {
-    current_channel = IEEE_SNIFFER_CHANNEL_MIN;
-  }
-
-  if (running) {
-    esp_ieee802154_sleep();
-  }
   err = esp_ieee802154_set_channel(current_channel);
   if (err != ESP_OK) {
-    ESP_LOGE(TAG_IEEE_SNIFFER, "Error setting channel: %s",
+    ESP_LOGE(TAG_IEEE_SNIFFER, "Error setting channel %d: %s", current_channel,
              esp_err_to_name(err));
     return;
   }
@@ -78,8 +80,9 @@ static void ieee_sniffer_configure() {
   esp_log_level_set(TAG_IEEE_SNIFFER, ESP_LOG_NONE);
 #endif
 
-  packet_rx_queue = xQueueCreate(8, 257);
-  xTaskCreate(debug_handler_task, "debug_handler_task", 8192, NULL, 20, NULL);
+  packet_rx_queue = xQueueCreate(8, 128);
+  xTaskCreate(debug_handler_task, "debug_handler_task", 8192, NULL, 20,
+              &debug_task_hdl);
 
   err = esp_ieee802154_enable();
   if (err != ESP_OK) {
@@ -144,17 +147,25 @@ void ieee_sniffer_stop(void) {
     return;
   }
   running = false;
+  esp_ieee802154_sleep();
   err = esp_ieee802154_disable();
   if (err != ESP_OK) {
     ESP_LOGE(TAG_IEEE_SNIFFER, "Error disabling IEEE 802.15.4 driver: %s",
              esp_err_to_name(err));
-    return;
   }
-  vQueueDelete(packet_rx_queue);
+  if (debug_task_hdl != NULL) {
+    vTaskDelete(debug_task_hdl);
+    debug_task_hdl = NULL;
+  }
+  if (packet_rx_queue != NULL) {
+    QueueHandle_t q = packet_rx_queue;
+    packet_rx_queue = NULL;
+    vQueueDelete(q);
+  }
 }
 
 static void debug_handler_task(void* pvParameters) {
-  uint8_t packet[257];
+  uint8_t packet[128];
   while (xQueueReceive(packet_rx_queue, packet, portMAX_DELAY) == pdTRUE) {
     if (packet_callback) {
       packet_callback(&packet[1], packet[0]);

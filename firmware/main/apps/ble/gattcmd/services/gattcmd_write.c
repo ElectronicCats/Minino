@@ -330,9 +330,18 @@ static void parse_address_colon(const char* str, uint8_t addr[6]) {
 void gattcmd_write_begin(char* saddress,
                          uint16_t target_uuid,
                          char* value_str) {
+  if (saddress == NULL || value_str == NULL) {
+    ESP_LOGE(GATTC_WRITE_TAG, "Invalid NULL parameters");
+    return;
+  }
   parse_address_colon(saddress, target_bda);
-  gatt_target_value_len = hex_string_to_bytes(value_str, gatt_target_value,
-                                              sizeof(gatt_target_value));
+  int converted_len = hex_string_to_bytes(value_str, gatt_target_value,
+                                          sizeof(gatt_target_value));
+  if (converted_len < 0) {
+    ESP_LOGE(GATTC_WRITE_TAG, "Invalid hex string value: %s", value_str);
+    return;
+  }
+  gatt_target_value_len = (uint16_t) converted_len;
   gatt_target_uuid = target_uuid;
   // register the  callback function to the gap module
   esp_err_t ret = esp_ble_gap_register_callback(gattcmd_write_gap_cb);

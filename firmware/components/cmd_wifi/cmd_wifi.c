@@ -82,11 +82,16 @@ static int cmd_wifi_save_credentials(int argc, char** argv) {
     ESP_LOGW(__func__, "Error parsing arguments");
     return -1;
   }
-  cmd_wifi_handle_credentials(join_args.ssid->sval[0],
-                              join_args.password->sval[0]);
-  ESP_LOGI(__func__, "Credentials saved: %s:%s\n", join_args.ssid->sval[0],
-           join_args.password->sval[0]);
-  printf("Credentials saved: %s\n", join_args.ssid->sval[0]);
+  if (join_args.ssid->count == 0) {
+    ESP_LOGW(__func__, "Missing SSID argument");
+    return -1;
+  }
+  const char* ssid = join_args.ssid->sval[0];
+  const char* pass = (join_args.password->count > 0) ? join_args.password->sval[0] : "";
+
+  cmd_wifi_handle_credentials(ssid, pass);
+  ESP_LOGI(__func__, "Credentials saved for SSID: %s", ssid);
+  printf("Credentials saved: %s\n", ssid);
   return 0;
 }
 
@@ -97,39 +102,50 @@ static int cmd_wifi_delete_crendentials(int argc, char** argv) {
     ESP_LOGW(__func__, "Error parsing arguments");
     return 1;
   }
+  if (delete_args.index->count == 0) {
+    return 1;
+  }
   int index = atoi(delete_args.index->sval[0]);
   int count = preferences_get_int("count_ap", 0);
-  if (index >= count) {
+  if (index < 0 || index >= count || count <= 0) {
     ESP_LOGW(__func__, "Index out of range");
     printf("Index out of range\n");
     return 1;
   }
 
-  char* wifi_list[count - 1];
+  char** wifi_list = (char**) malloc(sizeof(char*) * count);
+  if (wifi_list == NULL) {
+    ESP_LOGE(__func__, "Memory allocation failed");
+    return 1;
+  }
   int new_counter = 0;
 
   for (int i = 0; i < count; i++) {
-    char wifi_apk[100];
+    char wifi_apk[32];
     char wifi_ssid[100];
+    memset(wifi_ssid, 0, sizeof(wifi_ssid));
 
-    sprintf(wifi_apk, "wifi%d", i);
+    snprintf(wifi_apk, sizeof(wifi_apk), "wifi%d", i);
     if (i == index) {
-      preferences_get_string(wifi_apk, wifi_ssid, 100);
+      preferences_get_string(wifi_apk, wifi_ssid, sizeof(wifi_ssid));
       preferences_remove(wifi_ssid);
       preferences_remove(wifi_apk);
     } else {
-      preferences_get_string(wifi_apk, wifi_ssid, 100);
-      wifi_list[new_counter] = malloc(sizeof(wifi_ssid));
-      wifi_list[new_counter] = strdup(wifi_ssid);
-      new_counter++;
+      if (preferences_get_string(wifi_apk, wifi_ssid, sizeof(wifi_ssid)) == ESP_OK) {
+        wifi_list[new_counter] = strdup(wifi_ssid);
+        if (wifi_list[new_counter] != NULL) {
+          new_counter++;
+        }
+      }
     }
   }
   for (int i = 0; i < new_counter; i++) {
-    char wifi_apk[100];
-    sprintf(wifi_apk, "wifi%d", i);
+    char wifi_apk[32];
+    snprintf(wifi_apk, sizeof(wifi_apk), "wifi%d", i);
     preferences_put_string(wifi_apk, wifi_list[i]);
     free(wifi_list[i]);
   }
+  free(wifi_list);
 
   preferences_put_int("count_ap", new_counter);
   return 0;

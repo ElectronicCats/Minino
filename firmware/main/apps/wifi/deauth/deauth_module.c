@@ -52,13 +52,10 @@ static void deauth_handle_attacks();
 
 static void scanning_task() {
   uint8_t scan_count = 0;
-  while (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 2)) {
+  while (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 2) && scan_count < 3) {
     wifi_scanner_module_scan();
     vTaskDelay(1000 / portTICK_PERIOD_MS);
     scan_count++;
-    if (xTaskGetCurrentTaskHandle() == NULL) {
-      break;
-    }
   }
 
   // This assigment is the same, the struct returned from
@@ -79,9 +76,6 @@ static void scanning_task() {
 static void deauth_run_scan_task() {
   ap_records = (scanned_ap_records_t*) wifi_scanner_get_ap_records();
   menu_stadistics.count = ap_records->count;
-  while (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 2)) {
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-  }
 }
 
 static void deauth_handle_attacks() {
@@ -159,7 +153,8 @@ static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event) {
             deauth_clear_screen();
             deauth_display_scanning_text();
             animations_task_run(&deauth_display_scanning, 200, NULL);
-            xTaskCreate(scanning_task, "wifi_scan", 4096, NULL, 5, NULL);
+            xTaskCreate(scanning_task, "wifi_scan", 4096, NULL, 5,
+                        &scanning_task_handle);
             deauth_run_scan_task();
             menus_module_set_app_state(true, deauth_module_cb_event);
             current_item = 0;
@@ -206,15 +201,17 @@ static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event) {
         animations_task_stop();
         wifi_scanner_clear_ap_records();
         led_control_stop();
-        menus_module_restart();
         current_item = 0;
         deauth_clear_screen();
-        printf("Exit deauth during scan\n");
+        menus_module_exit_app();
       } else {
+        wifi_attacks_module_stop();
+        animations_task_stop();
+        led_control_stop();
         wifi_scanner_clear_ap_records();
-        printf("Exit deauth: %d\n", current_item);
-        menus_module_restart();
-        // led_control_stop();
+        current_item = 0;
+        deauth_clear_screen();
+        menus_module_exit_app();
       }
       break;
     default:

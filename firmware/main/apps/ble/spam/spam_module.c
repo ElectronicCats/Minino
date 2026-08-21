@@ -17,10 +17,10 @@ static void ble_module_state_machine(uint8_t button_name,
   }
   switch (button_name) {
     case BUTTON_LEFT:
+      bt_spam_register_cb(NULL);
       bt_spam_app_stop();
-      menus_module_set_app_state(false, NULL);
       animations_task_stop();
-      menus_module_restart();
+      menus_module_exit_app();
       break;
     case BUTTON_RIGHT:
     case BUTTON_UP:
@@ -31,13 +31,37 @@ static void ble_module_state_machine(uint8_t button_name,
   }
 }
 
-void ble_module_begin() {
+static void ble_spam_start_mode(bt_spam_mode_t mode, const char* title) {
 #if !defined(CONFIG_BLE_MODULE_DEBUG)
   esp_log_level_set(TAG_BLE_MODULE, ESP_LOG_NONE);
 #endif
   menus_module_set_app_state(true, ble_module_state_machine);
   oled_screen_clear();
-  ble_screens_start_scanning_animation();
+  ble_screens_start_scanning_animation(title);
   bt_spam_register_cb(ble_screens_display_scanning_text);
-  bt_spam_app_main();
-};
+  bt_spam_app_main(mode);
+}
+
+void ble_spam_apple_begin(void) {
+  ble_spam_start_mode(BT_SPAM_MODE_APPLE, "Apple Spam");
+}
+
+void ble_spam_android_begin(void) {
+  ble_spam_start_mode(BT_SPAM_MODE_ANDROID, "Android Spam");
+}
+
+void ble_spam_windows_begin(void) {
+  ble_spam_start_mode(BT_SPAM_MODE_WINDOWS, "Windows Spam");
+}
+
+void ble_spam_samsung_begin(void) {
+  ble_spam_start_mode(BT_SPAM_MODE_SAMSUNG, "Samsung Spam");
+}
+
+void ble_spam_all_begin(void) {
+  ble_spam_start_mode(BT_SPAM_MODE_ALL, "Random Spam");
+}
+
+void ble_module_begin(void) {
+  ble_spam_all_begin();
+}
