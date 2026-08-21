@@ -23,6 +23,13 @@ static void droneid_scanner_show_list();
 static void droneid_scanner_show_details();
 
 static void droneid_scanner_exit() {
+  for (int i = 0; i < num_drones; i++) {
+    if (droneid_list[i] != NULL) {
+      free(droneid_list[i]);
+      droneid_list[i] = NULL;
+    }
+  }
+  num_drones = 0;
   menus_module_restart();
 }
 
@@ -32,20 +39,26 @@ static void droneid_scanner_main(uint8_t button_name, uint8_t button_event) {
   }
   switch (button_name) {
     case BUTTON_UP:
-      current_position = (current_position - 1 + num_drones) % num_drones;
+      if (num_drones > 0) {
+        current_position = (current_position - 1 + num_drones) % num_drones;
+      }
       droneid_scanner_show_list();
       break;
     case BUTTON_DOWN:
-      current_position = (current_position + 1) % num_drones;
+      if (num_drones > 0) {
+        current_position = (current_position + 1) % num_drones;
+      }
       droneid_scanner_show_list();
       break;
     case BUTTON_RIGHT:
-      drone_selected = droneid_list[current_position];
-      if (drone_selected == NULL) {
-        ESP_LOGW("ERRRR", "Drone selected null");
+      if (num_drones > 0 && current_position < num_drones) {
+        drone_selected = droneid_list[current_position];
+        if (drone_selected == NULL) {
+          ESP_LOGW("ERRRR", "Drone selected null");
+        }
+        droneid_scanner_show_details();
+        current_position = 0;
       }
-      droneid_scanner_show_details();
-      current_position = 0;
       break;
     case BUTTON_LEFT:
       droneid_scanner_exit();
@@ -60,10 +73,12 @@ static void droneid_scanner_details_exit_cb() {
 
   menus_module_set_app_state(true, droneid_scanner_main);
 
+  free(details_text[DRONEID_SCANNER_CHANNEL_POS]);
   free(details_text[DRONEID_SCANNER_AUTHTYPE_POS]);
   free(details_text[DRONEID_SCANNER_LOCATION_POS]);
   free(details_text[DRONEID_SCANNER_LOCATION_POS + 1]);
 
+  details_text[DRONEID_SCANNER_CHANNEL_POS] = NULL;
   details_text[DRONEID_SCANNER_AUTHTYPE_POS] = NULL;
   details_text[DRONEID_SCANNER_LOCATION_POS] = NULL;
   details_text[DRONEID_SCANNER_LOCATION_POS + 1] = NULL;
