@@ -107,20 +107,6 @@ static void gps_sats_event_handler(void* event_handler_arg,
  * @return void
  */
 void gps_module_reset_test(void) {
-  animations_task_run(&general_animation_loading, 300, NULL);
-  for (int i = 0; i < 5; i++) {
-    /* NMEA parser configuration */
-    nmea_parser_config_t config = NMEA_PARSER_CONFIG_DEFAULT();
-    /* init NMEA parser library */
-    nmea_hdl = nmea_parser_init(&config);
-    nmea_parser_add_handler(nmea_hdl, gps_sats_event_handler, NULL);
-    vTaskDelay(3000 / portTICK_PERIOD_MS);
-    nmea_parser_remove_handler(nmea_hdl, gps_sats_event_handler);
-    /* deinit NMEA parser library */
-    nmea_parser_deinit(nmea_hdl);
-    vTaskDelay(3000 / portTICK_PERIOD_MS);
-  }
-  animations_task_stop();
   gps_module_start_scan();
 }
 
@@ -157,19 +143,19 @@ void gps_module_start_scan() {
  * @return void
  */
 void gps_module_stop_read() {
+  if (!is_uart_installed || nmea_hdl == NULL) {
+    return;
+  }
   is_uart_installed = false;
   ESP_LOGI(TAG, "Stop reading GPS");
 
-  /* Unregister event handler first */
+  /* Unregister event handlers first */
+  gps_event_callback = NULL;
   nmea_parser_remove_handler(nmea_hdl, gps_event_handler);
-
-  /* Small delay to ensure any pending callback finishes
-   * The GPS task runs every 5ms, so 20ms ensures we miss at least
-   * one full cycle after unregistering */
-  vTaskDelay(pdMS_TO_TICKS(20));
 
   /* Now safe to deinit NMEA parser library */
   nmea_parser_deinit(nmea_hdl);
+  nmea_hdl = NULL;
 }
 
 /**
@@ -210,34 +196,37 @@ gps_t* gps_module_get_instance(void* event_data) {
   int8_t hour_offset = (int8_t) timeZoneValue;
   int8_t minute_offset = (int8_t) ((timeZoneValue - (float) hour_offset) * 60);
 
-  uint8_t hour = gps->tim.hour;
-  if (hour_offset < 0 && hour < abs(hour_offset)) {
-    day--;
-    hour = 24 + hour_offset + hour;
-  } else {
-    hour += hour_offset;
+  int16_t hour = (int16_t) gps->tim.hour + hour_offset;
+  int16_t minute = (int16_t) gps->tim.minute + minute_offset;
+
+  if (minute < 0) {
+    minute += 60;
+    hour--;
+  } else if (minute >= 60) {
+    minute -= 60;
+    hour++;
   }
 
-  uint8_t minute = gps->tim.minute;
-  if (minute_offset < 0 && minute < abs(minute_offset)) {
-    hour--;
-    minute = 60 + minute_offset + minute;
-  } else {
-    minute += minute_offset;
+  if (hour < 0) {
+    hour += 24;
+    day--;
+  } else if (hour >= 24) {
+    hour -= 24;
+    day++;
   }
 
   uint8_t second = gps->tim.second;
   second = second > 60 ? second - 60 : second;
 
-  gps->tim.hour = hour;
-  gps->tim.minute = minute;
+  gps->tim.hour = (uint8_t) hour;
+  gps->tim.minute = (uint8_t) minute;
   gps->tim.second = second;
   gps->date.year = year;
   gps->date.month = month;
   gps->date.day = day;
 
   ESP_LOGI(TAG,
-           "%d/%d/%d %d:%d:%d => "
+           "%d/%d/%d %02d:%02d:%02d => "
            " Sats in use: %d"
            " Sats in view: %d"
            " Valid: %s"
@@ -260,7 +249,11 @@ gps_t* gps_module_get_instance(void* event_data) {
  */
 uint8_t gps_module_get_time_zone() {
   uint8_t default_time_zone = 14;  // UTC+0
-  return preferences_get_uint("time_zone", default_time_zone);
+  uint8_t tz = preferences_get_uint("time_zone", default_time_zone);
+  if (tz >= (sizeof(TIME_ZONES) / sizeof(TIME_ZONES[0]))) {
+    return default_time_zone;
+  }
+  return tz;
 }
 
 /**

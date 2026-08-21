@@ -1,5 +1,7 @@
 #include "gps_screens.h"
+#include <math.h>
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "sd_card.h"
 
 #include "general_radio_selection.h"
@@ -11,7 +13,20 @@
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 
+/* Minimum interval between OLED refreshes (microseconds) = 700ms.
+ * The NMEA parser fires GPS_UPDATE once all sentences in a cycle are
+ * received. At 1 Hz this is once per second, but during satellite
+ * acquisition GSV sentences can increase the firing rate to 5–10 Hz,
+ * causing rapid clear+redraw cycles that look like flicker on the OLED.
+ * Throttling to 700 ms eliminates flicker while keeping updates responsive.
+ */
+#define GPS_SCREEN_REFRESH_INTERVAL_US (700 * 1000)
+static int64_t gps_screen_last_refresh_us = 0;
+
+static SemaphoreHandle_t route_mutex = NULL;
 static char* gps_route_file_name = NULL;
 static char* gps_route_file_buffer = NULL;
 static uint16_t gps_route_lines = 0;
@@ -77,69 +92,151 @@ void gps_screen_running_test(void) {
 }
 
 static void gps_screens_test(gps_t* gps) {
-  char* str = (char*) malloc(20);
-  char* str2 = (char*) malloc(20);
+  static int last_sats = -1;
+  if (gps == NULL) return;
+  if (last_sats == gps->sats_in_use && gps->sats_in_use == 0) return;
+  last_sats = gps->sats_in_use;
+
+  char str[32];
+  char str2[32];
   oled_screen_clear_buffer();
-  // uint8_t sats = gps_module_get_signal_strength(gps);  // Unused variable
   if (gps->sats_in_use == 0) {
-    sprintf(str, "GPS OK");
-    sprintf(str2, "Sats: %d", 0);
+    snprintf(str, sizeof(str), "Signal: None    ");
+    snprintf(str2, sizeof(str2), "Sats: 0         ");
   } else {
-    sprintf(str, "Signal: %s   ", gps_module_get_signal_strength(gps));
-    sprintf(str2, "Sats: %d", gps->sats_in_use);
+    snprintf(str, sizeof(str), "Signal: %-8s", gps_module_get_signal_strength(gps));
+    snprintf(str2, sizeof(str2), "Sats: %-10d", gps->sats_in_use);
   }
 
-  oled_screen_display_text(str, 0, 0, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center("UTC Date-Time", 1, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("UTC Date-Time", 0, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text(str, 0, 1, OLED_DISPLAY_NORMAL);
   oled_screen_display_text(str2, 0, 2, OLED_DISPLAY_NORMAL);
 
-  sprintf(str, "Date: %d/%02d/%02d", gps->date.year, gps->date.month,
-          gps->date.day);
+  snprintf(str, sizeof(str), "Date: %04d/%02d/%02d", gps->date.year, gps->date.month,
+           gps->date.day);
   oled_screen_display_text(str, 0, 3, OLED_DISPLAY_NORMAL);
-  sprintf(str, "Time: %02d:%02d:%02d", gps->tim.hour, gps->tim.minute,
-          gps->tim.second);
+  snprintf(str, sizeof(str), "Time: %02d:%02d:%02d  ", gps->tim.hour, gps->tim.minute,
+           gps->tim.second);
   oled_screen_display_text(str, 0, 4, OLED_DISPLAY_NORMAL);
   oled_screen_display_show();
-
-  free(str);
-  free(str2);
 }
 
 static void gps_screens_update_date_and_time(gps_t* gps) {
-  char* str = (char*) malloc(20);
-  oled_screen_clear_buffer();
-  sprintf(str, "Signal: %s   ", gps_module_get_signal_strength(gps));
+  static int last_sats = -1;
+  static uint8_t last_sec = 255;
+  static uint8_t last_min = 255;
+  static uint8_t last_hour = 255;
+  static uint8_t last_day = 255;
+
+  if (gps == NULL || gps->sats_in_use == 0) {
+    if (last_sats == 0) {
+      /* Already showing searching screen, avoid redraw flicker */
+      return;
+    }
+    last_sats = 0;
+    last_sec = 255;
+    oled_screen_clear_buffer();
+    oled_screen_display_text_center("UTC Date-Time", 0, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text_center("Searching...", 3, OLED_DISPLAY_NORMAL);
+    oled_screen_display_show();
+    return;
+  }
+
+  /* Only redraw if second, time, date or satellites changed */
+  if (last_sats == gps->sats_in_use &&
+      last_sec == gps->tim.second &&
+      last_min == gps->tim.minute &&
+      last_hour == gps->tim.hour &&
+      last_day == gps->date.day) {
+    return;
+  }
+
+  bool first_fix = (last_sats == 0 || last_sats == -1);
+  last_sats = gps->sats_in_use;
+  last_sec = gps->tim.second;
+  last_min = gps->tim.minute;
+  last_hour = gps->tim.hour;
+  last_day = gps->date.day;
+
+  if (first_fix) {
+    oled_screen_clear();
+  }
+
+  char line[32];
   oled_screen_display_text_center("UTC Date-Time", 0, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text(str, 0, 0, OLED_DISPLAY_NORMAL);
-  sprintf(str, "Date: %d/%02d/%02d", gps->date.year, gps->date.month,
-          gps->date.day);
-  oled_screen_display_text(str, 0, 2, OLED_DISPLAY_NORMAL);
-  sprintf(str, "Time: %02d:%02d:%02d", gps->tim.hour, gps->tim.minute,
-          gps->tim.second);
-  oled_screen_display_text(str, 0, 3, OLED_DISPLAY_NORMAL);
-  oled_screen_display_show();
-  free(str);
+
+  snprintf(line, sizeof(line), "Signal: %-8s", gps_module_get_signal_strength(gps));
+  oled_screen_display_text(line, 0, 1, OLED_DISPLAY_NORMAL);
+
+  snprintf(line, sizeof(line), "Date: %04d/%02d/%02d", gps->date.year, gps->date.month,
+           gps->date.day);
+  oled_screen_display_text(line, 0, 3, OLED_DISPLAY_NORMAL);
+
+  snprintf(line, sizeof(line), "Time: %02d:%02d:%02d  ", gps->tim.hour, gps->tim.minute,
+           gps->tim.second);
+  oled_screen_display_text(line, 0, 4, OLED_DISPLAY_NORMAL);
 }
 
 static void gps_screens_update_location(gps_t* gps) {
-  char* str = (char*) malloc(20);
-  oled_screen_clear_buffer();
-  sprintf(str, "Signal: %s   ", gps_module_get_signal_strength(gps));
-  oled_screen_display_text(str, 0, 0, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("Latitude:", 0, 2, OLED_DISPLAY_NORMAL);
-  sprintf(str, "  %.05f N", gps->latitude);
-  oled_screen_display_text(str, 0, 3, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("Longitude:", 0, 4, OLED_DISPLAY_NORMAL);
-  sprintf(str, "  %.05f E", gps->longitude);
-  oled_screen_display_text(str, 0, 5, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text("Altitude:", 0, 6, OLED_DISPLAY_NORMAL);
-  sprintf(str, "  %.04fm", gps->altitude);
-  oled_screen_display_text(str, 0, 7, OLED_DISPLAY_NORMAL);
-  oled_screen_display_show();
-  free(str);
+  static int last_sats = -1;
+  static float last_lat = -999.0f;
+  static float last_lon = -999.0f;
+  static float last_alt = -999.0f;
+
+  if (gps == NULL || gps->sats_in_use == 0) {
+    if (last_sats == 0) {
+      return;
+    }
+    last_sats = 0;
+    oled_screen_clear_buffer();
+    oled_screen_display_text_center("Location", 0, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text_center("Searching...", 3, OLED_DISPLAY_NORMAL);
+    oled_screen_display_show();
+    return;
+  }
+
+  if (last_sats == gps->sats_in_use &&
+      fabsf(last_lat - gps->latitude) < 0.00001f &&
+      fabsf(last_lon - gps->longitude) < 0.00001f &&
+      fabsf(last_alt - gps->altitude) < 0.1f) {
+    return;
+  }
+
+  bool first_fix = (last_sats == 0 || last_sats == -1);
+  last_sats = gps->sats_in_use;
+  last_lat = gps->latitude;
+  last_lon = gps->longitude;
+  last_alt = gps->altitude;
+
+  if (first_fix) {
+    oled_screen_clear();
+  }
+
+  char line[32];
+  snprintf(line, sizeof(line), "Signal: %-8s", gps_module_get_signal_strength(gps));
+  oled_screen_display_text(line, 0, 0, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("Latitude:       ", 0, 2, OLED_DISPLAY_NORMAL);
+  snprintf(line, sizeof(line), "  %.05f N     ", gps->latitude);
+  oled_screen_display_text(line, 0, 3, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("Longitude:      ", 0, 4, OLED_DISPLAY_NORMAL);
+  snprintf(line, sizeof(line), "  %.05f E     ", gps->longitude);
+  oled_screen_display_text(line, 0, 5, OLED_DISPLAY_NORMAL);
+  oled_screen_display_text("Altitude:       ", 0, 6, OLED_DISPLAY_NORMAL);
+  snprintf(line, sizeof(line), "  %.02fm       ", gps->altitude);
+  oled_screen_display_text(line, 0, 7, OLED_DISPLAY_NORMAL);
 }
 
 static void gps_screens_save_location(gps_t* gps) {
+  if (route_mutex == NULL) {
+    route_mutex = xSemaphoreCreateMutex();
+  }
+  if (xSemaphoreTake(route_mutex, pdMS_TO_TICKS(100)) != pdTRUE) {
+    return;
+  }
+  if (!menus_module_get_app_state()) {
+    xSemaphoreGive(route_mutex);
+    return;
+  }
   static uint32_t counter = 0;
   counter++;
 
@@ -147,6 +244,7 @@ static void gps_screens_save_location(gps_t* gps) {
     oled_screen_clear();
     oled_screen_display_text_center("No GPS Signal", 3, OLED_DISPLAY_NORMAL);
     oled_screen_display_show();
+    xSemaphoreGive(route_mutex);
     return;
   }
 
@@ -162,6 +260,7 @@ static void gps_screens_save_location(gps_t* gps) {
       oled_screen_display_text_center("detected!", 3, OLED_DISPLAY_NORMAL);
       oled_screen_display_show();
       gps_route_recording = false;
+      xSemaphoreGive(route_mutex);
       return;
     }
 
@@ -171,14 +270,16 @@ static void gps_screens_save_location(gps_t* gps) {
                esp_err_to_name(err));
       sd_card_unmount();
       gps_route_recording = false;
+      xSemaphoreGive(route_mutex);
       return;
     }
 
-    gps_route_file_name = malloc(strlen(GPS_ROUTE_DIR_NAME) + 30);
+    gps_route_file_name = malloc(strlen(GPS_ROUTE_DIR_NAME) + 48);
     if (gps_route_file_name == NULL) {
       ESP_LOGE(TAG, "Failed to allocate memory for gps_route_file_name");
       sd_card_unmount();
       gps_route_recording = false;
+      xSemaphoreGive(route_mutex);
       return;
     }
 
@@ -186,8 +287,10 @@ static void gps_screens_save_location(gps_t* gps) {
     if (gps_route_file_buffer == NULL) {
       ESP_LOGE(TAG, "Failed to allocate memory for gps_route_file_buffer");
       free(gps_route_file_name);
+      gps_route_file_name = NULL;
       sd_card_unmount();
       gps_route_recording = false;
+      xSemaphoreGive(route_mutex);
       return;
     }
 
@@ -195,15 +298,19 @@ static void gps_screens_save_location(gps_t* gps) {
     if (full_date_time == NULL) {
       ESP_LOGE(TAG, "Failed to get full date time");
       free(gps_route_file_name);
+      gps_route_file_name = NULL;
       free(gps_route_file_buffer);
+      gps_route_file_buffer = NULL;
       sd_card_unmount();
       gps_route_recording = false;
+      xSemaphoreGive(route_mutex);
       return;
     }
 
-    snprintf(gps_route_file_name, strlen(GPS_ROUTE_DIR_NAME) + 30,
+    snprintf(gps_route_file_name, strlen(GPS_ROUTE_DIR_NAME) + 48,
              "%s/Route_%s.gpx", GPS_ROUTE_DIR_NAME, full_date_time);
-    for (int i = 0; i < strlen(gps_route_file_name); i++) {
+    free(full_date_time);
+    for (size_t i = 0; i < strlen(gps_route_file_name); i++) {
       if (gps_route_file_name[i] == ' ')
         gps_route_file_name[i] = '_';
       if (gps_route_file_name[i] == ':')
@@ -223,42 +330,41 @@ static void gps_screens_save_location(gps_t* gps) {
       ESP_LOGE(TAG, "Failed to write GPX header: %s",
                esp_err_to_name(err_header));
       free(gps_route_file_name);
+      gps_route_file_name = NULL;
       free(gps_route_file_buffer);
+      gps_route_file_buffer = NULL;
       sd_card_unmount();
       gps_route_recording = false;
+      xSemaphoreGive(route_mutex);
       return;
     }
     gps_route_file_buffer[0] =
         '\0';  // Limpiar buffer después de escribir el encabezado
-    free(full_date_time);
   }
 
-  char* str = (char*) malloc(20);
-  if (str == NULL) {
-    ESP_LOGE(TAG, "Failed to allocate memory for display string");
-    return;
-  }
+  char str[32];
   oled_screen_clear_buffer();
-  snprintf(str, 20, "Points: %u", gps_route_points_saved);
+  snprintf(str, sizeof(str), "Points: %u", gps_route_points_saved);
   oled_screen_display_text(str, 0, 0, OLED_DISPLAY_NORMAL);
-  snprintf(str, 20, "Lat: %.05f", gps->latitude);
+  snprintf(str, sizeof(str), "Lat: %.05f", gps->latitude);
   oled_screen_display_text(str, 0, 2, OLED_DISPLAY_NORMAL);
-  snprintf(str, 20, "Lon: %.05f", gps->longitude);
+  snprintf(str, sizeof(str), "Lon: %.05f", gps->longitude);
   oled_screen_display_text(str, 0, 3, OLED_DISPLAY_NORMAL);
   oled_screen_display_show();
-  free(str);
 
   if (counter % GPS_ROUTE_SAVE_INTERVAL_SEC == 0) {
     if (gps->sats_in_use == 0) {
       oled_screen_clear();
       oled_screen_display_text_center("No GPS Signal", 3, OLED_DISPLAY_NORMAL);
       oled_screen_display_show();
+      xSemaphoreGive(route_mutex);
       return;
     }
 
     char* gpx_line_buffer = malloc(256);
     if (gpx_line_buffer == NULL) {
       ESP_LOGE(TAG, "Failed to allocate memory for gpx_line_buffer");
+      xSemaphoreGive(route_mutex);
       return;
     }
 
@@ -291,12 +397,20 @@ static void gps_screens_save_location(gps_t* gps) {
     }
     free(gpx_line_buffer);
   }
+  xSemaphoreGive(route_mutex);
 }
 
 void gps_screens_stop_route_recording() {
+  if (route_mutex == NULL) {
+    route_mutex = xSemaphoreCreateMutex();
+  }
+  if (xSemaphoreTake(route_mutex, pdMS_TO_TICKS(1000)) != pdTRUE) {
+    ESP_LOGE(TAG, "Failed to obtain route_mutex on stop");
+    return;
+  }
   if (gps_route_recording) {
     // Escribir cualquier punto pendiente en el buffer
-    if (gps_route_file_buffer[0] != '\0') {
+    if (gps_route_file_buffer != NULL && gps_route_file_buffer[0] != '\0') {
       esp_err_t err =
           sd_card_append_to_file(gps_route_file_name, gps_route_file_buffer);
       if (err != ESP_OK) {
@@ -305,30 +419,62 @@ void gps_screens_stop_route_recording() {
       }
     }
     // Escribir el pie de página GPX
-    esp_err_t err = sd_card_append_to_file(gps_route_file_name,
-                                           (char*) gps_route_gpx_footer);
-    if (err != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to append GPX footer: %s", esp_err_to_name(err));
+    if (gps_route_file_name != NULL) {
+      esp_err_t err = sd_card_append_to_file(gps_route_file_name,
+                                             (char*) gps_route_gpx_footer);
+      if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to append GPX footer: %s", esp_err_to_name(err));
+      }
     }
-    free(gps_route_file_buffer);
-    free(gps_route_file_name);
+    if (gps_route_file_buffer) {
+      free(gps_route_file_buffer);
+      gps_route_file_buffer = NULL;
+    }
+    if (gps_route_file_name) {
+      free(gps_route_file_name);
+      gps_route_file_name = NULL;
+    }
     sd_card_unmount();
     gps_route_recording = false;
     gps_route_points_saved = 0;
     gps_route_lines = 0;
     ESP_LOGI(TAG, "Route recording stopped, SD card unmounted");
   }
+  xSemaphoreGive(route_mutex);
 }
 
 static void gps_screens_update_speed(gps_t* gps) {
-  char* str = (char*) malloc(20);
-  oled_screen_clear_buffer();
-  sprintf(str, "Signal: %s   ", gps_module_get_signal_strength(gps));
-  oled_screen_display_text(str, 0, 0, OLED_DISPLAY_NORMAL);
-  sprintf(str, "Speed: %.02fm/s", gps->speed);
-  oled_screen_display_text(str, 0, 2, OLED_DISPLAY_NORMAL);
-  oled_screen_display_show();
-  free(str);
+  static int last_sats = -1;
+  static float last_spd = -999.0f;
+
+  if (gps == NULL || gps->sats_in_use == 0) {
+    if (last_sats == 0) return;
+    last_sats = 0;
+    oled_screen_clear_buffer();
+    oled_screen_display_text_center("Speed", 0, OLED_DISPLAY_NORMAL);
+    oled_screen_display_text_center("Searching...", 3, OLED_DISPLAY_NORMAL);
+    oled_screen_display_show();
+    return;
+  }
+
+  if (last_sats == gps->sats_in_use && fabsf(last_spd - gps->speed) < 0.05f) {
+    return;
+  }
+
+  bool first_fix = (last_sats == 0 || last_sats == -1);
+  last_sats = gps->sats_in_use;
+  last_spd = gps->speed;
+
+  if (first_fix) {
+    oled_screen_clear();
+  }
+
+  char line[32];
+  oled_screen_display_text_center("Speed", 0, OLED_DISPLAY_NORMAL);
+  snprintf(line, sizeof(line), "Signal: %-8s", gps_module_get_signal_strength(gps));
+  oled_screen_display_text(line, 0, 1, OLED_DISPLAY_NORMAL);
+  snprintf(line, sizeof(line), "Speed: %.02fm/s   ", gps->speed);
+  oled_screen_display_text(line, 0, 3, OLED_DISPLAY_NORMAL);
 }
 
 void gps_screens_show_waiting_signal() {
@@ -433,48 +579,49 @@ void gps_screens_show_config(void) {
   main.options_count = sizeof(config_menu_options) / sizeof(char*);
   main.select_cb = config_main_handler;
   main.selected_option = last_config_selection;
-  main.exit_cb = menus_module_restart;
+  main.exit_cb = menus_module_exit_app;
   general_submenu(main);
 }
 
 void gps_screens_update_handler(gps_t* gps) {
   // Check if we're still in a GPS screen before updating
-  // This prevents race conditions when exiting GPS menus
   if (!menus_module_get_app_state()) {
-    return;  // Not in GPS app anymore, don't update
+    return;
   }
 
   menu_idx_t current = menus_module_get_current_menu();
 
-  // Double-check menu state for thread safety
+  // Rate-limit OLED refreshes to avoid flicker during GPS signal acquisition.
+  // During acquisition, GSV sentences cause the NMEA cycle to fire at up to
+  // 5-10 Hz. Each screen function calls oled_screen_clear_buffer() which wipes
+  // the display before the I2C transfer completes, causing visible flicker.
+  // Exception: MENU_GPS_ROUTE (GPX track logging) is not rate-limited because
+  // it does not clear/redraw the display on every call.
+  if (current != MENU_GPS_ROUTE) {
+    int64_t now_us = esp_timer_get_time();
+    if ((now_us - gps_screen_last_refresh_us) < GPS_SCREEN_REFRESH_INTERVAL_US) {
+      return;
+    }
+    gps_screen_last_refresh_us = now_us;
+  }
+
   switch (current) {
     case MENU_GPS_DATE_TIME:
-      if (menus_module_get_app_state()) {
-        gps_screens_update_date_and_time(gps);
-      }
+      gps_screens_update_date_and_time(gps);
       break;
     case MENU_GPS_LOCATION:
-      if (menus_module_get_app_state()) {
-        gps_screens_update_location(gps);
-      }
+      gps_screens_update_location(gps);
       break;
     case MENU_GPS_SPEED:
-      if (menus_module_get_app_state()) {
-        gps_screens_update_speed(gps);
-      }
+      gps_screens_update_speed(gps);
       break;
     case MENU_GPS_ROUTE:
-      if (menus_module_get_app_state()) {
-        gps_screens_save_location(gps);
-      }
+      gps_screens_save_location(gps);
       break;
     case MENU_GPS_TEST:
-      if (menus_module_get_app_state()) {
-        gps_screens_test(gps);
-      }
+      gps_screens_test(gps);
       break;
     default:
-      // Not in a GPS screen, ignore
       return;
   }
 }

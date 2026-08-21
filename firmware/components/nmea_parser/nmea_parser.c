@@ -53,6 +53,8 @@ typedef struct {
   QueueHandle_t event_queue;                     /*!< UART event queue handle */
   esp_event_handler_t event_handler; /*!< User event handler callback */
   void* event_handler_arg;           /*!< User event handler argument */
+  volatile bool is_running;          /*!< Task running state flag */
+  SemaphoreHandle_t task_done_sem;   /*!< Task completion semaphore */
 } esp_gps_t;
 
 /**
@@ -86,6 +88,9 @@ static inline uint8_t convert_two_digit2number(const char* digit_char) {
  * @param esp_gps esp_gps_t type object
  */
 static void parse_utc_time(esp_gps_t* esp_gps) {
+  if (strlen(esp_gps->item_str) < 6) {
+    return;
+  }
   esp_gps->parent.tim.hour = convert_two_digit2number(esp_gps->item_str + 0);
   esp_gps->parent.tim.minute = convert_two_digit2number(esp_gps->item_str + 2);
   esp_gps->parent.tim.second = convert_two_digit2number(esp_gps->item_str + 4);
@@ -497,8 +502,10 @@ static esp_err_t gps_decode(esp_gps_t* esp_gps, size_t len) {
       esp_gps->sat_count = 0;
       esp_gps->sat_num = 0;
       /* Add character to item */
-      esp_gps->item_str[esp_gps->item_pos++] = *d;
-      esp_gps->item_str[esp_gps->item_pos] = '\0';
+      if (esp_gps->item_pos < NMEA_MAX_STATEMENT_ITEM_LENGTH - 1) {
+        esp_gps->item_str[esp_gps->item_pos++] = *d;
+        esp_gps->item_str[esp_gps->item_pos] = '\0';
+      }
     }
     /* Detect item separator character */
     else if (*d == ',') {
@@ -597,8 +604,10 @@ static esp_err_t gps_decode(esp_gps_t* esp_gps, size_t len) {
         esp_gps->crc ^= (uint8_t) (*d);
       }
       /* Add character to item */
-      esp_gps->item_str[esp_gps->item_pos++] = *d;
-      esp_gps->item_str[esp_gps->item_pos] = '\0';
+      if (esp_gps->item_pos < NMEA_MAX_STATEMENT_ITEM_LENGTH - 1) {
+        esp_gps->item_str[esp_gps->item_pos++] = *d;
+        esp_gps->item_str[esp_gps->item_pos] = '\0';
+      }
     }
     /* Process next character */
     d++;
@@ -639,27 +648,33 @@ static void nmea_parser_task_entry(void* arg) {
   esp_gps_t* esp_gps = (esp_gps_t*) arg;
 
   ESP_LOGI(TAG, "NMEA Parser task started");
+  esp_gps->is_running = true;
 
-  while (1) {
-    // Read data from UART using DMA
+  while (esp_gps->is_running) {
+    // Read data from UART using DMA with 50ms timeout
     int len = uart_read_bytes(esp_gps->uart_port, esp_gps->buffer,
                               NMEA_PARSER_RUNTIME_BUFFER_SIZE - 1,
-                              pdMS_TO_TICKS(100));
+                              pdMS_TO_TICKS(50));
 
-    if (len > 0) {
+    if (esp_gps->is_running && len > 0) {
       // Null-terminate the buffer
       esp_gps->buffer[len] = '\0';
 
       // Parse the NMEA data
-      if (gps_decode(esp_gps, len) != ESP_OK) {
+      if (esp_gps->is_running && gps_decode(esp_gps, len) != ESP_OK) {
         ESP_LOGW(TAG, "GPS decode failed");
       }
     }
 
-    // Small delay to prevent task starvation
-    vTaskDelay(pdMS_TO_TICKS(10));
+    if (esp_gps->is_running) {
+      vTaskDelay(pdMS_TO_TICKS(10));
+    }
   }
 
+  ESP_LOGI(TAG, "NMEA Parser task exiting gracefully");
+  if (esp_gps->task_done_sem) {
+    xSemaphoreGive(esp_gps->task_done_sem);
+  }
   vTaskDelete(NULL);
 }
 
@@ -683,6 +698,12 @@ nmea_parser_handle_t nmea_parser_init(const nmea_parser_config_t* config) {
   if (!esp_gps->buffer) {
     ESP_LOGE(TAG, "calloc memory for runtime buffer failed");
     goto err_buffer;
+  }
+
+  esp_gps->task_done_sem = xSemaphoreCreateBinary();
+  if (!esp_gps->task_done_sem) {
+    ESP_LOGE(TAG, "create task_done_sem failed");
+    goto err_sem;
   }
 
 #if CONFIG_NMEA_STATEMENT_GSA
@@ -712,7 +733,7 @@ nmea_parser_handle_t nmea_parser_init(const nmea_parser_config_t* config) {
   esp_gps->event_handler = NULL;
   esp_gps->event_handler_arg = NULL;
 
-  /* Install UART friver */
+  /* Install UART driver */
   uart_config_t uart_config = {
       .baud_rate = config->uart.baud_rate,
       .data_bits = config->uart.data_bits,
@@ -760,6 +781,8 @@ err_task_create:
   uart_driver_delete(esp_gps->uart_port);
 err_uart_install:
 err_uart_config:
+  vSemaphoreDelete(esp_gps->task_done_sem);
+err_sem:
   free(esp_gps->buffer);
 err_buffer:
   free(esp_gps);
@@ -775,15 +798,39 @@ err_gps:
  */
 esp_err_t nmea_parser_deinit(nmea_parser_handle_t nmea_hdl) {
   esp_gps_t* esp_gps = (esp_gps_t*) nmea_hdl;
+  if (!esp_gps) {
+    return ESP_ERR_INVALID_ARG;
+  }
 
-  // Delete the parser task
-  task_manager_delete(esp_gps->tsk_hdl);
+  // 1. Unregister event handler so no further callbacks fire
+  esp_gps->event_handler = NULL;
+  esp_gps->event_handler_arg = NULL;
 
-  // Delete UART driver
+  // 2. Signal task to stop running
+  esp_gps->is_running = false;
+
+  // 3. Wait up to 250ms for task to exit cleanly and release any mutexes
+  if (esp_gps->task_done_sem) {
+    if (xSemaphoreTake(esp_gps->task_done_sem, pdMS_TO_TICKS(250)) != pdTRUE) {
+      ESP_LOGW(TAG, "NMEA Parser task did not stop in time, forcing delete");
+      if (esp_gps->tsk_hdl) {
+        task_manager_delete(esp_gps->tsk_hdl);
+      }
+    }
+    vSemaphoreDelete(esp_gps->task_done_sem);
+    esp_gps->task_done_sem = NULL;
+  } else if (esp_gps->tsk_hdl) {
+    task_manager_delete(esp_gps->tsk_hdl);
+  }
+
+  // 4. Delete UART driver
   esp_err_t err = uart_driver_delete(esp_gps->uart_port);
 
-  // Free allocated memory
-  free(esp_gps->buffer);
+  // 5. Free allocated memory
+  if (esp_gps->buffer) {
+    free(esp_gps->buffer);
+    esp_gps->buffer = NULL;
+  }
   free(esp_gps);
 
   return err;

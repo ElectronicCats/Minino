@@ -38,15 +38,15 @@ void gps_hw_init() {
   gpio_config(&io_conf);
 
   gps_enabled = preferences_get_bool(GPS_ENABLED_MEM, false);
+  gpio_set_level(GPS_ON_OFF_PIN, gps_enabled ? 1 : 0);
 
   if (gps_enabled) {
+    vTaskDelay(pdMS_TO_TICKS(300));
     if (!gps_hw_init_preferences(GPS_INIT_ALL)) {
       ESP_LOGE(TAG, "Failed to initialize GPS preferences");
       return;
     }
   }
-
-  gpio_set_level(GPS_ON_OFF_PIN, gps_enabled);
 }
 
 void gps_hw_on() {
@@ -55,6 +55,7 @@ void gps_hw_on() {
 #endif
   gpio_set_level(GPS_ON_OFF_PIN, 1);
   gps_enabled = true;
+  vTaskDelay(pdMS_TO_TICKS(300));
 
   // Configure GPS when it's enabled (if GPS is not currently active/scanning)
   // This ensures GPS is properly configured when enabled from settings
@@ -376,12 +377,12 @@ bool gps_hw_init_preferences(uint8_t init_type) {
       .source_clk = UART_SCLK_DEFAULT,
   };
 
-  if (uart_set_pin(GPS_UART_PORT, GPS_UART_TX_PIN, GPS_UART_RX_PIN,
-                   UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE) != ESP_OK) {
+  if (uart_param_config(GPS_UART_PORT, &uart_config) != ESP_OK) {
     return false;
   }
 
-  if (uart_param_config(GPS_UART_PORT, &uart_config) != ESP_OK) {
+  if (uart_set_pin(GPS_UART_PORT, GPS_UART_TX_PIN, GPS_UART_RX_PIN,
+                   UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE) != ESP_OK) {
     return false;
   }
 
