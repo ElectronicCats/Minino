@@ -158,13 +158,13 @@ static httpd_handle_t http_server_configure(void) {
   // Generate the default configuration
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
 
-  // create HTTP Server Monitor Task
-  xTaskCreate(&http_server_monitor, "http_server_monitor", 4 * 1024u, NULL, 3u,
-              &task_http_server_monitor);
-
   // create a message queue
   http_server_monitor_q_handle =
       xQueueCreate(HTTP_SERVER_MONITOR_QUEUE_LEN, sizeof(http_server_q_msg_t));
+
+  // create HTTP Server Monitor Task
+  xTaskCreate(&http_server_monitor, "http_server_monitor", 4 * 1024u, NULL, 3u,
+              &task_http_server_monitor);
 
   // No need to specify the core id as this is esp32s2 with single core
 
@@ -419,14 +419,19 @@ static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
     // the information in the header that we need
     if (!is_req_body_started) {
       is_req_body_started = true;
-      // Now we have to identify from where the binary file content is starting
-      // this can be done by actually checking the escape characters i.e.
-      // \r\n\r\n Get the location of the *.bin file content (remove the web
-      // form data) the strstr will return the pointer to the \r\n\r\n in the
-      // ota_buffer and then by adding 4 we reach to the start of the binary
-      // content/start
-      char* body_start_p = strstr(ota_buffer, "\r\n\r\n") + 4u;
-      int body_part_len = recv_len - (body_start_p - ota_buffer);
+      // Identify from where the binary file content starts.
+      // Search for \r\n\r\n boundary safely within the received bytes
+      char* header_end = NULL;
+      for (int i = 0; i <= recv_len - 4; i++) {
+        if (ota_buffer[i] == '\r' && ota_buffer[i + 1] == '\n' &&
+            ota_buffer[i + 2] == '\r' && ota_buffer[i + 3] == '\n') {
+          header_end = &ota_buffer[i];
+          break;
+        }
+      }
+
+      char* body_start_p = header_end ? (header_end + 4) : ota_buffer;
+      int body_part_len = header_end ? (recv_len - (body_start_p - ota_buffer)) : recv_len;
       ESP_LOGI(TAG, "http_server_ota_update_handler: OTA File Size: %d",
                content_len);
       /*
@@ -508,9 +513,9 @@ static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
  * @return ESP_OK
  */
 static esp_err_t http_server_ota_status_handler(httpd_req_t* req) {
-  char ota_JSON[100];
+  char ota_JSON[128];
   ESP_LOGI(TAG, "OTA Status Requested");
-  sprintf(ota_JSON,
+  snprintf(ota_JSON, sizeof(ota_JSON),
           "{\"ota_update_status\":%d,\"current_fw_version\":"
           "\"%s\"}",
           fw_update_status, CURRENT_FW_VERSION);

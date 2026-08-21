@@ -266,9 +266,29 @@ esp_err_t list_files_handler(httpd_req_t* req) {
   return ESP_OK;
 }
 
+static bool is_valid_safe_path(const char* path) {
+  if (path == NULL || strlen(path) == 0) {
+    return false;
+  }
+  // Prevent directory traversal attacks
+  if (strstr(path, "..") != NULL) {
+    return false;
+  }
+  // Must be strictly within valid mount points
+  if (strncmp(path, WFB_SD_CARD_PATH, strlen(WFB_SD_CARD_PATH)) != 0 &&
+      strncmp(path, WFB_FLASH_FS_PATH, strlen(WFB_FLASH_FS_PATH)) != 0) {
+    return false;
+  }
+  return true;
+}
+
 static esp_err_t delete_get_handler(httpd_req_t* req) {
   size_t buf_len = 300;
   char* buf = (char*) malloc(buf_len);
+  if (buf == NULL) {
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Out of memory");
+    return ESP_FAIL;
+  }
 
   esp_err_t err = httpd_req_get_url_query_str(req, buf, buf_len);
   if (err != ESP_OK) {
@@ -279,20 +299,32 @@ static esp_err_t delete_get_handler(httpd_req_t* req) {
 
   size_t filepath_len = 200;
   char* filepath = (char*) malloc(filepath_len);
+  if (filepath == NULL) {
+    free(buf);
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Out of memory");
+    return ESP_FAIL;
+  }
+
   err = httpd_query_key_value(buf, "path", filepath, filepath_len);
   if (err != ESP_OK) {
-    printf("ERR: %s\n", esp_err_to_name(err));
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid Parameters");
     free(filepath);
     free(buf);
     return ESP_FAIL;
   }
 
-  httpd_query_key_value(buf, "path", filepath, filepath_len);
-  for (int i = 0; i < filepath[i]; i++) {
+  for (size_t i = 0; filepath[i] != '\0'; i++) {
     // Convert to original name with spaces
     if (filepath[i] == '+')
       filepath[i] = ' ';
+  }
+
+  if (!is_valid_safe_path(filepath)) {
+    ESP_LOGW(TAG, "Blocked path traversal/invalid path in delete: %s", filepath);
+    httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Access Denied");
+    free(filepath);
+    free(buf);
+    return ESP_FAIL;
   }
 
   if (remove(filepath) == 0) {
@@ -312,6 +344,10 @@ static esp_err_t delete_get_handler(httpd_req_t* req) {
 static esp_err_t download_get_handler(httpd_req_t* req) {
   size_t buf_len = 300;
   char* buf = (char*) malloc(buf_len);
+  if (buf == NULL) {
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Out of memory");
+    return ESP_FAIL;
+  }
 
   esp_err_t err = httpd_req_get_url_query_str(req, buf, buf_len);
   if (err != ESP_OK) {
@@ -322,10 +358,28 @@ static esp_err_t download_get_handler(httpd_req_t* req) {
 
   size_t filepath_len = 200;
   char* filepath = (char*) malloc(filepath_len);
+  if (filepath == NULL) {
+    free(buf);
+    httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Out of memory");
+    return ESP_FAIL;
+  }
+
   err = httpd_query_key_value(buf, "path", filepath, filepath_len);
   if (err != ESP_OK) {
-    printf("ERR: %s\n", esp_err_to_name(err));
     httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid Parameters");
+    free(filepath);
+    free(buf);
+    return ESP_FAIL;
+  }
+
+  for (size_t i = 0; filepath[i] != '\0'; i++) {
+    if (filepath[i] == '+')
+      filepath[i] = ' ';
+  }
+
+  if (!is_valid_safe_path(filepath)) {
+    ESP_LOGW(TAG, "Blocked path traversal/invalid path in download: %s", filepath);
+    httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Access Denied");
     free(filepath);
     free(buf);
     return ESP_FAIL;
@@ -346,9 +400,9 @@ static esp_err_t download_get_handler(httpd_req_t* req) {
   } else {
     file_name++;
   }
-  char* content_disposition_header = (char*) malloc(50);
-  snprintf(content_disposition_header, 50, "attachment; filename=%s",
-           file_name);
+  char content_disposition_header[256];
+  snprintf(content_disposition_header, sizeof(content_disposition_header),
+           "attachment; filename=\"%s\"", file_name);
 
   httpd_resp_set_type(req, "application/octet-stream");
   httpd_resp_set_hdr(req, "Content-Disposition", content_disposition_header);
@@ -367,14 +421,13 @@ static esp_err_t download_get_handler(httpd_req_t* req) {
       if (httpd_resp_send_chunk(req, buffer, read_bytes) != ESP_OK) {
         web_file_browser_show_event(WEB_FILE_BROWSER_TRANSFERING_FILE_RESULT_EV,
                                     false);
-        free(content_disposition_header);
         fclose(file);
         free(filepath);
         free(buf);
         return ESP_FAIL;
       }
       loaded_size += read_bytes;
-      uint8_t state = (loaded_size * 100) / file_size;
+      uint8_t state = file_size > 0 ? ((loaded_size * 100) / file_size) : 100;
       web_file_browser_show_event(WEB_FILE_BROWSER_TRANSFER_STATE_EV, &state);
     }
   } while (read_bytes > 0);
@@ -382,7 +435,6 @@ static esp_err_t download_get_handler(httpd_req_t* req) {
   fclose(file);
   httpd_resp_send_chunk(req, NULL, 0);
 
-  free(content_disposition_header);
   free(filepath);
   free(buf);
   web_file_browser_show_event(WEB_FILE_BROWSER_TRANSFERING_FILE_RESULT_EV,

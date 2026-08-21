@@ -47,11 +47,22 @@ static void show_event(file_manager_events_t event, void* context) {
 }
 
 static void clear_items() {
-  fm_ctx->items_count = 0;
-  for (uint8_t i = 0; i < fm_ctx->items_count; i++) {
-    free(fm_ctx->file_items_arr[i]);
+  if (fm_ctx->file_items_arr != NULL) {
+    for (uint8_t i = 0; i < fm_ctx->items_count; i++) {
+      if (fm_ctx->file_items_arr[i] != NULL) {
+        if (fm_ctx->file_items_arr[i]->name != NULL) {
+          free(fm_ctx->file_items_arr[i]->name);
+        }
+        if (fm_ctx->file_items_arr[i]->path != NULL) {
+          free(fm_ctx->file_items_arr[i]->path);
+        }
+        free(fm_ctx->file_items_arr[i]);
+      }
+    }
+    free(fm_ctx->file_items_arr);
+    fm_ctx->file_items_arr = NULL;
   }
-  free(fm_ctx->file_items_arr);
+  fm_ctx->items_count = 0;
 }
 
 static void get_parent_path(const char* path, char* parent_path) {
@@ -280,7 +291,7 @@ static void open_root_options() {
     modals_module_show_info("ERROR", "No file systems detected", 2000, true);
     file_manager_module_exit();
   }
-  root_paths = (char**) realloc(root_paths, sizeof(root_paths) + 1);
+  root_paths = (char**) realloc(root_paths, sizeof(char*) * (root_idx + 1));
   root_paths[root_idx] = NULL;
   int8_t root_selection =
       modals_module_get_user_selection(root_paths, "< Exit");
