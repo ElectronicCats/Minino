@@ -6,7 +6,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-char* TAG;
+static const char* TAG = "thread_broadcast";
 
 otUdpSocket mSocket;
 TaskHandle_t sender_task_handler = NULL;
@@ -46,11 +46,10 @@ void sender() {
   uint16_t counter = 0;
   while (1) {
     counter++;
-    char* str = (char*) malloc(20);
-    sprintf(str, "Counter: %d", counter);
+    char str[32];
+    snprintf(str, sizeof(str), "Counter: %d", counter);
     vTaskDelay(pdMS_TO_TICKS(500));
     openthread_udp_send(&mSocket, "ff02::1", PORT, str, strlen(str));
-    free(str);
   }
 }
 
@@ -63,6 +62,10 @@ void thread_broadcast_init() {
 }
 
 void thread_broadcast_deinit() {
+  if (sender_task_handler != NULL) {
+    vTaskDelete(sender_task_handler);
+    sender_task_handler = NULL;
+  }
   openthread_udp_close(&mSocket);
   openthread_deinit();
 }

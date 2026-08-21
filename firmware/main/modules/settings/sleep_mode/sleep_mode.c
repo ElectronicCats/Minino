@@ -70,8 +70,10 @@ static void timer_callback() {
 }
 
 void sleep_mode_reset_timer() {
-  esp_timer_stop(afk_timer);
-  esp_timer_start_once(afk_timer, AFK_TIMEOUT_S * 1000 * 1000);
+  if (afk_timer != NULL && sleep_mode_enabled) {
+    esp_timer_stop(afk_timer);
+    esp_timer_start_once(afk_timer, (uint64_t) AFK_TIMEOUT_S * 1000 * 1000);
+  }
 }
 
 void sleep_mode_set_afk_timeout(int16_t timeout_seconds) {
@@ -83,7 +85,7 @@ void sleep_mode_set_afk_timeout(int16_t timeout_seconds) {
 void sleep_mode_set_enabled(bool enabled) {
   sleep_mode_enabled = enabled;
   preferences_put_bool(SLEEP_MODE_ENABLE_MEM, sleep_mode_enabled);
-  if (!sleep_mode_enabled) {
+  if (!sleep_mode_enabled && afk_timer != NULL) {
     esp_timer_stop(afk_timer);
   }
 };

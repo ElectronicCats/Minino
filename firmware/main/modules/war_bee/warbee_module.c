@@ -158,8 +158,8 @@ static void warbee_gps_event_handler_cb(gps_t* gps) {
 }
 
 static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
-  if (gps_ctx->sats_in_use == 0) {
-    ESP_LOGW("Warbee", "No GPS signa dont savel");
+  if (gps_ctx == NULL || gps_ctx->sats_in_use == 0) {
+    ESP_LOGW("Warbee", "No GPS signal, packet not saved");
     return;
   }
 
@@ -374,7 +374,13 @@ void warbee_module_begin() {
 
 void warbee_module_exit() {
   ESP_LOGI("Warbee", "Warbee module end");
+  if (scanning_zigbee_animation_task_handle != NULL) {
+    vTaskDelete(scanning_zigbee_animation_task_handle);
+    scanning_zigbee_animation_task_handle = NULL;
+  }
   ieee_sniffer_stop();
+  gps_module_stop_read();
+  gps_module_unregister_cb();
   sd_card_read_file(csv_file_name);
   sd_card_unmount();
   if (csv_file_buffer) {
@@ -384,5 +390,9 @@ void warbee_module_exit() {
   if (csv_file_name) {
     free(csv_file_name);
     csv_file_name = NULL;
+  }
+  if (context_session.session_str != NULL && strlen(context_session.session_str) > 0) {
+    free(context_session.session_str);
+    context_session.session_str = "";
   }
 }

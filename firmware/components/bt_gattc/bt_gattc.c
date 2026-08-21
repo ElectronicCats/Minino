@@ -8,7 +8,6 @@ static char remote_device_name[MAX_REMOTE_DEVICE_NAME];
 static bool search_by_name = false;
 static bool is_connected = false;
 static bool server_attached = false;
-static bool bt_service_init = false;
 static esp_gattc_char_elem_t* char_elem_result = NULL;
 static esp_gattc_descr_elem_t* descr_elem_result = NULL;
 static esp_bt_uuid_t ble_client_remote_filter_service_uuid;
@@ -486,40 +485,21 @@ void bt_gattc_task_begin(void) {
 
   esp_err_t ret;
 
-  ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
-
-  esp_bt_controller_config_t bluetooth_config =
-      BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-
-  if (!bt_service_init) {
+  if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_IDLE) {
+    esp_bt_controller_config_t bluetooth_config =
+        BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     ret = esp_bt_controller_init(&bluetooth_config);
-    if (ret) {
-      ESP_LOGE(TAG_BT_GATTC, "%s initialize controller failed: %s", __func__,
-               esp_err_to_name(ret));
-      return;
+    if (ret == ESP_OK) {
+      esp_bt_controller_enable(ESP_BT_MODE_BLE);
     }
   }
 
-  ret = esp_bt_controller_enable(ESP_BT_MODE_BLE);
-  if (ret) {
-    ESP_LOGE(TAG_BT_GATTC, "%s enable controller failed: %s", __func__,
-             esp_err_to_name(ret));
-    return;
-  }
-
-  esp_bluedroid_config_t bluedroid_config = BT_BLUEDROID_INIT_CONFIG_DEFAULT();
-  ret = esp_bluedroid_init_with_cfg(&bluedroid_config);
-  if (ret) {
-    ESP_LOGE(TAG_BT_GATTC, "%s initialize bluedroid failed: %s", __func__,
-             esp_err_to_name(ret));
-    return;
-  }
-
-  ret = esp_bluedroid_enable();
-  if (ret) {
-    ESP_LOGE(TAG_BT_GATTC, "%s enable bluetooth failed: %s", __func__,
-             esp_err_to_name(ret));
-    return;
+  if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_UNINITIALIZED) {
+    esp_bluedroid_config_t bluedroid_config = BT_BLUEDROID_INIT_CONFIG_DEFAULT();
+    ret = esp_bluedroid_init_with_cfg(&bluedroid_config);
+    if (ret == ESP_OK) {
+      esp_bluedroid_enable();
+    }
   }
 
   ret = esp_ble_gap_register_callback(ble_client_esp_gap_cb);
@@ -549,9 +529,18 @@ void bt_gattc_task_begin(void) {
 
 void bt_gattc_task_stop(void) {
   ESP_LOGI(TAG_BT_GATTC, "stop_ble_client_task");
-  esp_bluedroid_disable();
-  esp_bluedroid_deinit();
-  esp_bt_controller_disable();
-  // esp_bt_controller_deinit();
-  // esp_bt_controller_mem_release(ESP_BT_MODE_BLE);
+  esp_ble_gap_stop_scanning();
+  if (ble_client_gattc_profile_tab[DEVICE_PROFILE].gattc_if != ESP_GATT_IF_NONE) {
+    esp_ble_gattc_app_unregister(ble_client_gattc_profile_tab[DEVICE_PROFILE].gattc_if);
+    ble_client_gattc_profile_tab[DEVICE_PROFILE].gattc_if = ESP_GATT_IF_NONE;
+  }
+  if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_ENABLED) {
+    esp_bluedroid_disable();
+  }
+  if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_INITIALIZED) {
+    esp_bluedroid_deinit();
+  }
+  if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_ENABLED) {
+    esp_bt_controller_disable();
+  }
 }

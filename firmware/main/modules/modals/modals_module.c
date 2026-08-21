@@ -112,8 +112,9 @@ int8_t modals_module_get_user_selection(char** options, char* banner) {
   modal_get_user_selection_ctx->banner = banner;
   menus_module_set_app_state(true, get_user_selection_input_cb);
   list_options();
-  while (!modal_get_user_selection_ctx->consumed)
-    ;
+  while (!modal_get_user_selection_ctx->consumed) {
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
   int8_t selection = modal_get_user_selection_ctx->selected_option;
   free(modal_get_user_selection_ctx);
   return selection;
@@ -127,8 +128,9 @@ int8_t modals_module_get_user_y_n_selection(char* banner) {
   custom_list_options_cb = modals_screens_list_y_n_options_cb;
   menus_module_set_app_state(true, get_user_selection_input_cb);
   list_options();
-  while (!modal_get_user_selection_ctx->consumed)
-    ;
+  while (!modal_get_user_selection_ctx->consumed) {
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
   custom_list_options_cb = NULL;
   int8_t selection = modal_get_user_selection_ctx->selected_option;
   free(modal_get_user_selection_ctx);
@@ -147,8 +149,9 @@ uint8_t modals_module_get_radio_selection(char** options,
   modal_get_radio_selection_ctx->selected_option = current_option;
   menus_module_set_app_state(true, get_radio_selection_input_cb);
   list_radio_options();
-  while (!modal_get_radio_selection_ctx->consumed)
-    ;
+  while (!modal_get_radio_selection_ctx->consumed) {
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
   uint8_t selection = modal_get_radio_selection_ctx->current_option;
   free(modal_get_radio_selection_ctx);
   return selection;

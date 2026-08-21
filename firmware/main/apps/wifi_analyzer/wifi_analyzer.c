@@ -66,7 +66,7 @@ uint16_t get_summary_rows_count() {
   }
 
   if (num_items == 0) {
-    return -1;
+    return 0;
   }
   return num_items;
 }

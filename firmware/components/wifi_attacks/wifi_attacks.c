@@ -105,10 +105,13 @@ void wifi_attacks_module_stop() {
   running_broadcast_attack = false;
   running_rogueap_attack = false;
   if (task_brod_attack != NULL) {
-    vTaskSuspend(task_brod_attack);
+    vTaskDelete(task_brod_attack);
+    task_brod_attack = NULL;
   }
   if (task_rogue_attack != NULL) {
     wifi_driver_restore_ap_mac();
+    vTaskDelete(task_rogue_attack);
+    task_rogue_attack = NULL;
   }
 }
 

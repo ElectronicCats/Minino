@@ -181,6 +181,7 @@ otIp6Address openthread_get_my_ipv6address() {
 void openthread_factory_reset() {
   esp_openthread_lock_acquire(portMAX_DELAY);
   otInstanceFactoryReset(esp_openthread_get_instance());
+  esp_openthread_lock_release();
 }
 
 otError openthread_ipmaddr_subscribe(const char* address) {
@@ -289,10 +290,12 @@ otError openthread_udp_send(otUdpSocket* mSocket,
   uint8_t* payload = (uint8_t*) malloc(data_size);
   if (!payload) {
     ESP_LOGE(TAG, "Failed to allocate memory for data");
+    esp_openthread_lock_release();
     return error;
   }
   memcpy(payload, data, data_size);
   otMessageAppend(message, payload, data_size);
+  free(payload);
 
   error = otUdpSend(instance, mSocket, message, &messageInfo);
   esp_openthread_lock_release();
@@ -306,8 +309,9 @@ otError openthread_enable_promiscous_mode(otLinkPcapCallback promiscuous_cb) {
   otIp6SetEnabled(instance, false);
   otThreadSetEnabled(instance, false);
   error = otLinkSetPromiscuous(instance, true);
-  if (ERR) {
+  if (error != OT_ERROR_NONE) {
     printf("ERR\n");
+    esp_openthread_lock_release();
     return error;
   }
   otLinkSetPcapCallback(instance, promiscuous_cb, NULL);

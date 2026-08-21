@@ -4,17 +4,17 @@
 #include "esp_bt.h"
 #include "esp_log.h"
 #include "inttypes.h"
+#include <string.h>
+
+#define APPLE_COMPANY_ID          0x004C
+#define SAMSUNG_COMPANY_ID        0x0075
+#define SAMSUNG_SMARTTAG_SVC_UUID 0xFD5A
+#define TILE_SVC_UUID             0xFEED
 
 static TaskHandle_t trackers_scan_timer_task = NULL;
 static bluetooth_traker_scanner_cb_t display_records_cb = NULL;
 static int trackers_scan_duration = 0;
 static bool trackers_scanner_active = false;
-
-// https://adamcatley.com/AirTag
-static tracker_adv_cmp_t trackers[] = {
-    {.name = "ATag", .vendor = "Apple", .adv_cmp = {0x1E, 0xFF, 0x4C, 0x00}},
-    {.name = "UATag", .vendor = "Apple", .adv_cmp = {0x4C, 0x00, 0x12, 0x19}},
-    {.name = "Tile", .vendor = "Tile", .adv_cmp = {0x02, 0x01, 0x06, 0x0D}}};
 
 static void task_tracker_timer();
 static void tracker_dissector(esp_ble_gap_cb_param_t* scan_rst,
@@ -23,10 +23,6 @@ static void handle_bt_gapc_events(esp_gap_ble_cb_event_t event_type,
                                   esp_ble_gap_cb_param_t* param);
 
 void trackers_scanner_start() {
-  // #if !defined(CONFIG_TRACKERS_SCANNER_DEBUG)
-  //   esp_log_level_set(TAG_BLE_CLIENT_MODULE, ESP_LOG_NONE);
-  // #endif
-
   gattc_scan_params_t scan_params = {
       .remote_filter_service_uuid =
           bt_gattc_set_default_ble_filter_service_uuid(),
@@ -91,64 +87,118 @@ static void task_tracker_timer() {
   ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task started");
   trackers_scan_duration = 0;
   while (trackers_scanner_active) {
-    if (trackers_scan_duration >= TRACKER_SCAN_DURATION) {
+    if (++trackers_scan_duration >= TRACKER_SCAN_DURATION) {
       trackers_scanner_stop();
+      break;
     }
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(1000));
   }
   trackers_scan_timer_task = NULL;
   vTaskDelete(NULL);
 }
 
 void trackers_scanner_stop() {
+  if (!trackers_scanner_active) {
+    return;
+  }
   trackers_scanner_active = false;
   trackers_scan_duration = 0;
+  bt_gattc_task_stop();
+  ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
   TaskHandle_t task_to_delete = trackers_scan_timer_task;
   trackers_scan_timer_task = NULL;
-  ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
-  if (task_to_delete != NULL) {
+  if (task_to_delete != NULL && task_to_delete != xTaskGetCurrentTaskHandle()) {
     vTaskDelete(task_to_delete);
   }
-  // TODO: When this is called, the BLE stopping bricks the device
-  // bt_gattc_task_stop();
 }
 
 static void tracker_dissector(esp_ble_gap_cb_param_t* scan_rst,
                               tracker_profile_t* tracker_record) {
-  for (int i = 0; i < 3; i++) {
-    if (scan_rst->scan_rst.ble_adv[0] == trackers[i].adv_cmp[0] &&
-        scan_rst->scan_rst.ble_adv[1] == trackers[i].adv_cmp[1] &&
-        scan_rst->scan_rst.ble_adv[2] == trackers[i].adv_cmp[2] &&
-        scan_rst->scan_rst.ble_adv[3] == trackers[i].adv_cmp[3]) {
-      tracker_record->is_tracker = true;
-      tracker_record->name = trackers[i].name;
-      tracker_record->vendor = trackers[i].vendor;
-      tracker_record->adv_data_length = scan_rst->scan_rst.adv_data_len;
-      tracker_record->rssi = scan_rst->scan_rst.rssi;
-      memcpy(tracker_record->mac_address, scan_rst->scan_rst.bda, 6);
-      memcpy(tracker_record->adv_data, scan_rst->scan_rst.ble_adv,
-             sizeof(tracker_record->adv_data));
+  uint8_t* adv = scan_rst->scan_rst.ble_adv;
+  uint8_t adv_len = scan_rst->scan_rst.adv_data_len;
+  uint8_t offset = 0;
 
-      ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers found");
-      ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Address: %02X:%02X:%02X:%02X:%02X:%02X",
-               scan_rst->scan_rst.bda[5], scan_rst->scan_rst.bda[4],
-               scan_rst->scan_rst.bda[3], scan_rst->scan_rst.bda[2],
-               scan_rst->scan_rst.bda[1], scan_rst->scan_rst.bda[0]);
-      ESP_LOGI(TAG_BLE_CLIENT_MODULE,
-               "ADV data %d:", scan_rst->scan_rst.adv_data_len);
-      ESP_LOG_BUFFER_HEX(TAG_BLE_CLIENT_MODULE, &scan_rst->scan_rst.ble_adv,
-                         scan_rst->scan_rst.adv_data_len);
-      ESP_LOGI(TAG_BLE_CLIENT_MODULE, " ");
+  tracker_record->is_tracker = false;
+
+  // Iterate over standard BLE TLV structures
+  while (offset < adv_len) {
+    uint8_t length = adv[offset];
+    if (length == 0 || (offset + length + 1) > adv_len) {
       break;
     }
+    uint8_t ad_type = adv[offset + 1];
+    uint8_t* ad_data = &adv[offset + 2];
+    uint8_t ad_data_len = length - 1;
+
+    // 1. Manufacturer Specific Data (0xFF)
+    if (ad_type == 0xFF && ad_data_len >= 2) {
+      uint16_t company_id = (uint16_t)(ad_data[0] | (ad_data[1] << 8));
+      
+      // Apple AirTag / FindMy / Nearby (Company 0x004C)
+      if (company_id == APPLE_COMPANY_ID && ad_data_len >= 3) {
+        if (ad_data[2] == 0x12) { // Apple FindMy payload
+          tracker_record->is_tracker = true;
+          tracker_record->name = "AirTag";
+          tracker_record->vendor = "Apple";
+          break;
+        } else if (ad_data[2] == 0x07 || ad_data[2] == 0x10) { // AirPods / Nearby Action
+          tracker_record->is_tracker = true;
+          tracker_record->name = "Apple Dev";
+          tracker_record->vendor = "Apple";
+          break;
+        }
+      }
+      
+      // Samsung SmartTag (Company 0x0075)
+      if (company_id == SAMSUNG_COMPANY_ID) {
+        tracker_record->is_tracker = true;
+        tracker_record->name = "SmartTag";
+        tracker_record->vendor = "Samsung";
+        break;
+      }
+    }
+
+    // 2. Complete/Incomplete 16-bit Service UUIDs (0x02 / 0x03) or Service Data (0x16)
+    if ((ad_type == 0x02 || ad_type == 0x03 || ad_type == 0x16) && ad_data_len >= 2) {
+      uint16_t uuid = (uint16_t)(ad_data[0] | (ad_data[1] << 8));
+      if (uuid == TILE_SVC_UUID) {
+        tracker_record->is_tracker = true;
+        tracker_record->name = "Tile Tag";
+        tracker_record->vendor = "Tile";
+        break;
+      } else if (uuid == SAMSUNG_SMARTTAG_SVC_UUID) {
+        tracker_record->is_tracker = true;
+        tracker_record->name = "SmartTag";
+        tracker_record->vendor = "Samsung";
+        break;
+      }
+    }
+
+    offset += (length + 1);
+  }
+
+  if (tracker_record->is_tracker) {
+    tracker_record->rssi = scan_rst->scan_rst.rssi;
+    tracker_record->adv_data_length = adv_len;
+    memcpy(tracker_record->mac_address, scan_rst->scan_rst.bda, 6);
+    size_t copy_len = (adv_len > sizeof(tracker_record->adv_data)) ? sizeof(tracker_record->adv_data) : adv_len;
+    memcpy(tracker_record->adv_data, adv, copy_len);
   }
 }
 
 void trackers_scanner_add_tracker_profile(tracker_profile_t** profiles,
                                           uint16_t* num_profiles,
                                           tracker_profile_t new_profile) {
-  *profiles =
+  if (profiles == NULL || num_profiles == NULL) {
+    return;
+  }
+  tracker_profile_t* temp =
       realloc(*profiles, (*num_profiles + 1) * sizeof(tracker_profile_t));
+  if (temp == NULL) {
+    ESP_LOGE(TAG_BLE_CLIENT_MODULE, "Failed to reallocate tracker profiles");
+    return;
+  }
+  *profiles = temp;
   (*profiles)[*num_profiles] = new_profile;
   (*num_profiles)++;
 }

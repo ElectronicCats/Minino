@@ -197,6 +197,8 @@ static void get_reset_menu() {
     show_logo();
   } else {
     preferences_put_int("MENUNUMBER", MENU_MAIN);
+    menus_ctx->parent_menu_idx =
+        menus[get_menu_idx(menus_ctx->current_menu)].parent_idx;
     sleep_mode_reset_timer();
     screen_saver_get_idle_state();
     refresh_menus();
@@ -235,6 +237,8 @@ void menus_module_restart() {
 void menus_module_return() {
   menus_module_set_default_input();
   menus_ctx->current_menu = menus_ctx->parent_menu_idx;
+  menus_ctx->parent_menu_idx =
+      menus[get_menu_idx(menus_ctx->current_menu)].parent_idx;
   refresh_menus();
 }
 

@@ -188,21 +188,18 @@ static void register_commands() {
   // hello_cmd_register();
 }
 
+static void cat_console_task(void* pvParameters) {
+  initialize_console();
+  register_commands();
+  cat_console_default();
+  vTaskDelete(NULL);
+}
+
 void cat_console_begin() {
 #if !defined(CONFIG_CAT_CONSOLE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
-  if (preferences_get_int("ZBCLI", 0) == 1) {
-    // zb_cli_begin();  // Temporarily disabled - zb_cli is deprecated
-    initialize_nvs();
-    initialize_console();
-    register_commands();
-  } else {
-    initialize_nvs();
-    initialize_console();
-    register_commands();
-    cat_console_default();
-  }
+  xTaskCreate(cat_console_task, "cat_console", 6144, NULL, 5, NULL);
 }
 
 void cat_console_pause(void) {

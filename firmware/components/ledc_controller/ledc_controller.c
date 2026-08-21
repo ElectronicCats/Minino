@@ -455,15 +455,9 @@ esp_err_t led_controller_start_blink_effect(led_t* led,
 
   switch (led_effects[i].effect_state) {
     case LED_EFFECT_BLINK:
-      // Update the existing blink effect
-      led_effects[i].blink_effect.duty = duty;
-      led_effects[i].blink_effect.pulse_count = pulse_count;
-      led_effects[i].blink_effect.time_on = time_on;
-      led_effects[i].blink_effect.time_off = time_off;
-      led_effects[i].blink_effect.time_out = time_out;
-      return ESP_OK;
+      led_stop_blink_effect(led);
+      break;
     case LED_EFFECT_BREATH:
-      // Stop the breath effect before starting the blink effect
       led_stop_breath_effect(led);
       break;
     default:

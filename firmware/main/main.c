@@ -56,21 +56,23 @@ void app_main() {
   uart_bridge_begin(uart_config, UART_BUFFER_SIZE);
   logs_output_set_output(preferences_get_uchar("logs_output", USB));
 
+  buzzer_begin(BUZZER_PIN);
+
   bool stealth_mode = preferences_get_bool("stealth_mode", false);
   if (!stealth_mode) {
     buzzer_enable();
     leds_begin();
+  } else {
+    buzzer_disable();
   }
-  buzzer_begin(BUZZER_PIN);
+
+  leds_off();
   sd_card_begin();
   flash_fs_begin(flash_fs_screens_handler);
   keyboard_module_begin();
   menus_module_begin();
-  leds_off();
   preferences_put_bool("wifi_connected", false);
   flash_storage_begin();
 
-  cat_console_begin();  // Contains a while(true) loop, it must be at the end
-
-  // zb_cli_begin();
+  cat_console_begin();  // Spawns dedicated FreeRTOS console task
 }

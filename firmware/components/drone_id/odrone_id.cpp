@@ -19,15 +19,18 @@ static void spoofing_task(void* pvParameters) {
     if (add_ble_drone) {
       ble_drone.update();
     }
-    for (int i = 0; i < num_spoofers; i++) {
+    for (int i = 0; i < num_spoofers && i < 16; i++) {
       spoofers[i].update();
-      vTaskDelay(pdMS_TO_TICKS(200 / num_spoofers));
+      vTaskDelay(pdMS_TO_TICKS(num_spoofers > 0 ? (200 / num_spoofers) : 200));
     }
   }
 }
 
 extern "C" {
 void odrone_id_set_num_spoofers(uint8_t num_drones) {
+  if (num_drones > 16) {
+    num_drones = 16;
+  }
   num_spoofers = num_drones;
 }
 
@@ -39,7 +42,7 @@ void odrone_id_set_location(float latitude, float longitude) {
   if (add_ble_drone) {
     ble_drone.updateLocation(latitude, longitude);
   }
-  for (int i = 0; i < num_spoofers; i++) {
+  for (int i = 0; i < num_spoofers && i < 16; i++) {
     spoofers[i].updateLocation(latitude, longitude);
   }
 }

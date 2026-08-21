@@ -1,37 +1,47 @@
-#include "driver/ledc.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "math.h"
-
 #include "buzzer.h"
+
+#include "driver/gpio.h"
+#include "driver/ledc.h"
+#include "esp_timer.h"
+#include "freertos/FreeRTOS.h"
 
 #define LEDC_TIMER                  LEDC_TIMER_1
 #define LEDC_MODE                   LEDC_LOW_SPEED_MODE
 #define LEDC_CHANNEL                LEDC_CHANNEL_2
-#define LEDC_DUTY_RES               LEDC_TIMER_13_BIT  // Set duty resolution to 13 bits
-#define BUZZER_DEFAULT_DUTTY        (4096)  // Set duty to 50%. (2 ** 13) * 50% = 4096
-#define BUZZER_DEFAULT_FREQUENCY_HZ (4000)  // Set frequency at 4 kHz
+#define LEDC_DUTY_RES               LEDC_TIMER_13_BIT  // 13 bits resolution
+#define BUZZER_DEFAULT_DUTTY        (4096)             // 50% duty
+#define BUZZER_DEFAULT_FREQUENCY_HZ (4000)             // 4 kHz
 
 typedef struct {
   uint8_t pin;
   uint32_t freq;
   uint32_t duty;
   bool enabled;
-  TaskHandle_t task_handle;
+  esp_timer_handle_t timer_handle;
 } buzzer_t;
 
-static buzzer_t buzzer;
+static buzzer_t buzzer = {
+    .pin = 2,
+    .freq = BUZZER_DEFAULT_FREQUENCY_HZ,
+    .duty = BUZZER_DEFAULT_DUTTY,
+    .enabled = true,
+    .timer_handle = NULL,
+};
+
+static void buzzer_timer_callback(void* arg) {
+  buzzer_stop();
+}
 
 void buzzer_enable() {
 #ifndef CONFIG_BUZZER_COMPONENT_ENABLED
   return;
 #endif
-
   buzzer.enabled = true;
 }
 
 void buzzer_disable() {
   buzzer.enabled = false;
+  buzzer_stop();
 }
 
 void buzzer_begin(uint8_t pin) {
@@ -42,6 +52,15 @@ void buzzer_begin(uint8_t pin) {
   buzzer.pin = pin;
   buzzer.freq = BUZZER_DEFAULT_FREQUENCY_HZ;
   buzzer.duty = BUZZER_DEFAULT_DUTTY;
+
+  if (buzzer.timer_handle == NULL) {
+    const esp_timer_create_args_t timer_args = {
+        .callback = buzzer_timer_callback,
+        .arg = NULL,
+        .name = "buzzer_timer",
+    };
+    esp_timer_create(&timer_args, &buzzer.timer_handle);
+  }
 }
 
 void buzzer_configure() {
@@ -49,30 +68,31 @@ void buzzer_configure() {
   return;
 #endif
 
-  // Prepare and then apply the LEDC PWM timer configuration
-  ledc_timer_config_t ledc_timer = {.speed_mode = LEDC_MODE,
-                                    .duty_resolution = LEDC_DUTY_RES,
-                                    .timer_num = LEDC_TIMER,
-                                    .freq_hz = buzzer.freq,
-                                    .clk_cfg = LEDC_AUTO_CLK};
-  ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
+  ledc_timer_config_t ledc_timer = {
+      .speed_mode = LEDC_MODE,
+      .duty_resolution = LEDC_DUTY_RES,
+      .timer_num = LEDC_TIMER,
+      .freq_hz = buzzer.freq,
+      .clk_cfg = LEDC_AUTO_CLK,
+  };
+  ledc_timer_config(&ledc_timer);
 
-  // Prepare and then apply the LEDC PWM channel configuration
-  ledc_channel_config_t ledc_channel = {.speed_mode = LEDC_MODE,
-                                        .channel = LEDC_CHANNEL,
-                                        .timer_sel = LEDC_TIMER,
-                                        .intr_type = LEDC_INTR_DISABLE,
-                                        .gpio_num = buzzer.pin,
-                                        .duty = 0,  // Set duty to 0%
-                                        .hpoint = 0};
-  ESP_ERROR_CHECK(ledc_channel_config(&ledc_channel));
+  ledc_channel_config_t ledc_channel = {
+      .speed_mode = LEDC_MODE,
+      .channel = LEDC_CHANNEL,
+      .timer_sel = LEDC_TIMER,
+      .intr_type = LEDC_INTR_DISABLE,
+      .gpio_num = buzzer.pin,
+      .duty = 0,
+      .hpoint = 0,
+  };
+  ledc_channel_config(&ledc_channel);
 }
 
 void buzzer_set_freq(uint32_t freq) {
 #ifndef CONFIG_BUZZER_COMPONENT_ENABLED
   return;
 #endif
-
   buzzer.freq = freq;
 }
 
@@ -80,7 +100,6 @@ void buzzer_set_duty(uint32_t duty) {
 #ifndef CONFIG_BUZZER_COMPONENT_ENABLED
   return;
 #endif
-
   buzzer.duty = duty;
 }
 
@@ -93,23 +112,8 @@ void buzzer_play() {
     return;
   }
   buzzer_configure();
-  // Set the duty cycle
-  ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, buzzer.duty));
-  ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
-}
-
-void buzzer_play_for_task(void* duration) {
-#ifndef CONFIG_BUZZER_COMPONENT_ENABLED
-  return;
-#endif
-
-  uint32_t dur = *(uint32_t*) duration;
-  free(duration);
-  buzzer_play();
-  vTaskDelay(dur / portTICK_PERIOD_MS);
-  buzzer_stop();
-  buzzer.task_handle = NULL;
-  vTaskDelete(NULL);
+  ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, buzzer.duty);
+  ledc_update_duty(LEDC_MODE, LEDC_CHANNEL);
 }
 
 void buzzer_play_for(uint32_t duration) {
@@ -120,15 +124,16 @@ void buzzer_play_for(uint32_t duration) {
   if (!buzzer.enabled) {
     return;
   }
-  if (buzzer.task_handle != NULL) {
-    vTaskDelete(buzzer.task_handle);
-    buzzer_stop();
-    buzzer.task_handle = NULL;
+
+  if (buzzer.timer_handle != NULL) {
+    esp_timer_stop(buzzer.timer_handle);
   }
-  uint32_t* duration_ptr = malloc(sizeof(uint32_t));
-  *duration_ptr = duration;
-  xTaskCreate(buzzer_play_for_task, "buzzer_play_for_task", 2048, duration_ptr,
-              5, &buzzer.task_handle);
+
+  buzzer_play();
+
+  if (buzzer.timer_handle != NULL) {
+    esp_timer_start_once(buzzer.timer_handle, (uint64_t) duration * 1000);
+  }
 }
 
 void buzzer_stop() {
@@ -136,15 +141,10 @@ void buzzer_stop() {
   return;
 #endif
 
-  ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 0));
-  ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEDC_CHANNEL));
+  if (buzzer.timer_handle != NULL) {
+    esp_timer_stop(buzzer.timer_handle);
+  }
 
-  // Configure buzzer_pin as input
-  gpio_config_t io_conf = {.pin_bit_mask = (1ULL << buzzer.pin),
-                           .mode = GPIO_MODE_INPUT,
-                           .pull_up_en = GPIO_PULLUP_DISABLE,
-                           .pull_down_en = GPIO_PULLDOWN_DISABLE,
-                           .intr_type = GPIO_INTR_DISABLE};
-
-  ESP_ERROR_CHECK(gpio_config(&io_conf));
+  ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, 0);
+  ledc_update_duty(LEDC_MODE, LEDC_CHANNEL);
 }

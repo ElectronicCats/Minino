@@ -342,26 +342,8 @@ void wardriving_module_begin() {
 void wardriving_module_end() {
   ESP_LOGI(TAG, "Wardriving module end");
 
-  // Desinicializar el bucle de eventos si existe
-  esp_err_t err = esp_event_loop_delete_default();
-  if (err == ESP_OK) {
-    ESP_LOGI(TAG, "Default event loop deleted successfully");
-  } else if (err != ESP_ERR_INVALID_STATE) {  // Ignorar si no existe
-    ESP_LOGE(TAG, "Failed to delete default event loop: %s",
-             esp_err_to_name(err));
-  }
-
-  // Desinicializar el adaptador TCP/IP
-  err = esp_netif_deinit();
-  if (err == ESP_OK) {
-    ESP_LOGI(TAG, "TCP/IP adapter deinitialized successfully");
-  } else if (err != ESP_ERR_NOT_SUPPORTED) {  // Ignorar si no está soportado
-    ESP_LOGE(TAG, "Failed to deinitialize TCP/IP adapter: %s",
-             esp_err_to_name(err));
-  }
-
   // Desmontar la tarjeta SD
-  err = sd_card_unmount();
+  esp_err_t err = sd_card_unmount();
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Failed to unmount SD card: %s", esp_err_to_name(err));
   } else {

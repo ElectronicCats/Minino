@@ -44,13 +44,13 @@ static void show_splash_screen() {
   h_screen_space = h_screen_space == 0 ? 2 : h_screen_space;
   int start_x_position = w_screen_space / 2;
 #if CONFIG_RESOLUTION_128X64
-  static int start_y_position = 16;
-  static int y_direction = 1;
+  int start_y_position = 16;
+  int y_direction = 1;
 #else
-  static int start_y_position = 0;
-  static int y_direction = 0;
+  int start_y_position = 0;
+  int y_direction = 0;
 #endif
-  static int x_direction = 1;
+  int x_direction = 1;
 
   while (screen_saver_running) {
     oled_screen_display_bitmap(logo->bitmap, start_x_position, start_y_position,
@@ -72,6 +72,9 @@ static void show_splash_screen() {
 }
 
 void screen_saver_run() {
+  if (screen_saver_running) {
+    return;
+  }
   oled_screen_clear();
   xTaskCreate(show_splash_screen, "show_splash_screen", 4096, NULL, 5, NULL);
 }

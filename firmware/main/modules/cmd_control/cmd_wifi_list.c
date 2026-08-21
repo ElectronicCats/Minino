@@ -8,7 +8,7 @@ static wifi_scanner_ap_records_t* ap_records;
 static void cmd_wifi_run_scan_task() {
   uint8_t scan_count = 0;
   ap_records = wifi_scanner_get_ap_records();
-  while (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 2)) {
+  while (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 2) && scan_count < 3) {
     wifi_scanner_module_scan();
     vTaskDelay(1000 / portTICK_PERIOD_MS);
     scan_count++;
