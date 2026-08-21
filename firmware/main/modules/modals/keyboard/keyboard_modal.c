@@ -85,14 +85,18 @@ char* keyboard_modal_write(char* text, char* banner) {
   menus_module_set_app_state(true, keyboard_modal_input_cb);
   keyboard_screens_show(kb_ctx);
   keyboard_screens_update_text(kb_ctx);
-  while (!kb_ctx->consumed)
-    ;
+  while (!kb_ctx->consumed) {
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
+  char* new_text = NULL;
   if (kb_ctx->consumed > 0) {
-    char* new_text = (char*) malloc(kb_ctx->text_length + 1);
-    strcpy(new_text, kb_ctx->new_text);
-    free(kb_ctx);
-    return new_text;
+    new_text = strdup(kb_ctx->new_text);
+  }
+  if (kb_ctx->new_text != NULL) {
+    free(kb_ctx->new_text);
+    kb_ctx->new_text = NULL;
   }
   free(kb_ctx);
-  return NULL;
+  kb_ctx = NULL;
+  return new_text;
 }

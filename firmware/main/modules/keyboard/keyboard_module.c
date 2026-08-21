@@ -8,7 +8,7 @@ static int IDLE_TIMEOUT_S = 30;
 
 static const char* TAG = "keyboard";
 static input_callback_t input_callback = NULL;
-esp_timer_handle_t idle_timer;
+esp_timer_handle_t idle_timer = NULL;
 static bool lock_input = false;
 
 static const char* button_to_name[] = {
@@ -23,9 +23,15 @@ static const char* event_to_name[] = {
 
 static void button_event_cb(void* arg, void* data);
 
+static void keyboard_idle_timer_cb(void* arg) {
+  // Idle callback placeholder
+}
+
 void keyboard_module_reset_idle_timer() {
-  esp_timer_stop(idle_timer);
-  esp_timer_start_once(idle_timer, IDLE_TIMEOUT_S * 1000 * 1000);
+  if (idle_timer != NULL) {
+    esp_timer_stop(idle_timer);
+    esp_timer_start_once(idle_timer, (uint64_t) IDLE_TIMEOUT_S * 1000 * 1000);
+  }
 }
 
 void keyboard_module_set_lock(bool lock) {
@@ -99,6 +105,14 @@ void keyboard_module_begin() {
 #if !defined(CONFIG_KEYBOARD_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
+  if (idle_timer == NULL) {
+    const esp_timer_create_args_t timer_args = {
+        .callback = keyboard_idle_timer_cb,
+        .arg = NULL,
+        .name = "kbd_idle_timer",
+    };
+    esp_timer_create(&timer_args, &idle_timer);
+  }
   button_init(BOOT_BUTTON_PIN, BOOT_BUTTON_MASK);
   button_init(LEFT_BUTTON_PIN, LEFT_BUTTON_MASK);
   button_init(RIGHT_BUTTON_PIN, RIGHT_BUTTON_MASK);

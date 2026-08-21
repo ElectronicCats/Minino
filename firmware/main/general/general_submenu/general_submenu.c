@@ -82,13 +82,14 @@ static void list_submenu_options() {
 }
 
 static void input_cb(uint8_t button_name, uint8_t button_event) {
-  if (button_event != BUTTON_PRESS_DOWN) {
+  if (button_event != BUTTON_PRESS_DOWN || submenu_ctx == NULL) {
     return;
   }
   switch (button_name) {
     case BUTTON_LEFT:
       void (*exit_cb)() = submenu_ctx->exit_cb;
       free(submenu_ctx);
+      submenu_ctx = NULL;
       if (exit_cb) {
         exit_cb();
       }
