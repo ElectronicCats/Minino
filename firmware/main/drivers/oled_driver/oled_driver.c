@@ -191,11 +191,7 @@ void oled_driver_clear_screen(oled_driver_t* dev, bool invert) {
 }
 
 void oled_driver_clear_line(oled_driver_t* dev, int x, int page, bool invert) {
-  // char space[16];
-  // memset(space, 0x00, sizeof(space));
-  // oled_driver_display_text(dev, page, space, sizeof(space), invert);
-  // char* space = "                ";
-  char* space = "        ";
+  char* space = "                ";
   oled_driver_display_text(dev, page, space, x, invert);
 }
 
@@ -465,7 +461,6 @@ void oled_driver_bitmaps(oled_driver_t* dev,
     ESP_LOGE(TAG, "width must be a multiple of 8");
     return;
   }
-  xpos += 2;
   int _width = width / 8;
   uint8_t wk0;
   uint8_t wk1;

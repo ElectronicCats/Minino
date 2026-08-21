@@ -40,10 +40,29 @@ const char* f_result_to_name[] = {"FR_OK",
                                   "FR_TOO_MANY_OPEN_FILES",
                                   "FR_INVALID_PARAMETER"};
 
+#include "freertos/semphr.h"
+
 static const char* TAG = "sd_card";
-sdmmc_card_t* card;
+sdmmc_card_t* card = NULL;
 bool _format_if_mount_failed = false;
 sd_card_info_t _sd_card_info;
+static bool s_sd_card_mounted = false;
+static SemaphoreHandle_t s_sd_mutex = NULL;
+
+static void sd_card_lock() {
+  if (s_sd_mutex == NULL) {
+    s_sd_mutex = xSemaphoreCreateMutex();
+  }
+  if (s_sd_mutex != NULL) {
+    xSemaphoreTake(s_sd_mutex, portMAX_DELAY);
+  }
+}
+
+static void sd_card_unlock() {
+  if (s_sd_mutex != NULL) {
+    xSemaphoreGive(s_sd_mutex);
+  }
+}
 
 esp_err_t sd_card_fill_info(const sdmmc_card_t* card);
 
@@ -125,6 +144,7 @@ int mount() {
   /* print card info if mount successfully */
   // sdmmc_card_print_info(stdout, card);
   sd_card_fill_info(card);
+  s_sd_card_mounted = true;
   return ESP_OK;
 }
 
@@ -139,11 +159,13 @@ esp_err_t unmount() {
   sdmmc_host_t host = SDSPI_HOST_DEFAULT();
 
   /* unmount sd card */
-  // TODO: use esp_vfs_fat_sdcard_unmount instead
   if (esp_vfs_fat_sdcard_unmount(MOUNT_POINT, card) != ESP_OK) {
     ESP_LOGE(TAG, "Card unmount failed");
     return ESP_FAIL;
   }
+  card = NULL;
+  s_sd_card_mounted = false;
+
   ret = spi_bus_free(host.slot);
   if (ret != ESP_OK) {
     ESP_LOGE(TAG, "Failed to deinitialize bus.");
@@ -219,7 +241,7 @@ esp_err_t sd_card_format() {
 }
 
 bool sd_card_is_mounted() {
-  return sd_card_create_dir(".minino") == ESP_OK;
+  return s_sd_card_mounted && (card != NULL);
 }
 
 bool sd_card_is_not_mounted() {
@@ -259,26 +281,33 @@ esp_err_t sd_card_create_file(const char* path) {
     return ESP_FAIL;
   }
 
-  uint16_t path_len = strlen(path);
-  char full_path[path_len + 1 + strlen(MOUNT_POINT)];
-  sprintf(full_path, "%s/%s", MOUNT_POINT, path);
+  if (path == NULL) {
+    ESP_LOGE(TAG, "Path is NULL");
+    return ESP_ERR_INVALID_ARG;
+  }
 
+  char full_path[256];
+  snprintf(full_path, sizeof(full_path), "%s/%s", MOUNT_POINT, path);
+
+  sd_card_lock();
   // Try to read it to check if it exists
   FILE* file = fopen(full_path, "r");
   if (file != NULL) {
     ESP_LOGE(TAG, "File already exists");
     fclose(file);
+    sd_card_unlock();
     return ESP_ERR_FILE_EXISTS;
   }
 
-  fclose(file);
   file = fopen(full_path, "w");
   if (file == NULL) {
     ESP_LOGE(TAG, "Failed to open file for writing");
+    sd_card_unlock();
     return ESP_FAIL;
   }
 
   fclose(file);
+  sd_card_unlock();
   return ESP_OK;
 }
 
@@ -293,14 +322,15 @@ esp_err_t sd_card_read_file(const char* path) {
     return ESP_FAIL;
   }
 
-  uint16_t path_len = strlen(path);
-  char full_path[path_len + 1 + strlen(MOUNT_POINT)];
-  sprintf(full_path, "%s/%s", MOUNT_POINT, path);
+  char full_path[256];
+  snprintf(full_path, sizeof(full_path), "%s/%s", MOUNT_POINT, path);
 
+  sd_card_lock();
   ESP_LOGI(TAG, "Reading file %s", full_path);
   FILE* file = fopen(full_path, "r");
   if (file == NULL) {
     ESP_LOGE(TAG, "Failed to open file for reading");
+    sd_card_unlock();
     return ESP_FAIL;
   }
 
@@ -315,6 +345,7 @@ esp_err_t sd_card_read_file(const char* path) {
     ESP_LOGI(TAG, "'%s'", line);
   }
   fclose(file);
+  sd_card_unlock();
 
   return ESP_OK;
 }
@@ -325,18 +356,25 @@ esp_err_t sd_card_write_file(const char* path, char* data) {
     return ESP_FAIL;
   }
 
-  uint8_t path_len = strlen(path);
-  char full_path[path_len + 1 + strlen(MOUNT_POINT)];
-  sprintf(full_path, "%s/%s", MOUNT_POINT, path);
+  if (path == NULL || data == NULL) {
+    ESP_LOGE(TAG, "Invalid argument: path or data is NULL");
+    return ESP_ERR_INVALID_ARG;
+  }
 
+  char full_path[256];
+  snprintf(full_path, sizeof(full_path), "%s/%s", MOUNT_POINT, path);
+
+  sd_card_lock();
   ESP_LOGI(TAG, "Opening file w %s", full_path);
   FILE* file = fopen(full_path, "w");
   if (file == NULL) {
     ESP_LOGE(TAG, "Failed to open file for writing");
+    sd_card_unlock();
     return ESP_FAIL;
   }
-  fprintf(file, data);
+  fputs(data, file);
   fclose(file);
+  sd_card_unlock();
   ESP_LOGI(TAG, "File written");
 
   return ESP_OK;
@@ -348,29 +386,39 @@ esp_err_t sd_card_append_to_file(const char* path, char* data) {
     return ESP_FAIL;
   }
 
-  char full_path[64];
-  sprintf(full_path, "%s/%s", MOUNT_POINT, path);
+  if (path == NULL || data == NULL) {
+    ESP_LOGE(TAG, "Invalid argument: path or data is NULL");
+    return ESP_ERR_INVALID_ARG;
+  }
 
+  char full_path[256];
+  snprintf(full_path, sizeof(full_path), "%s/%s", MOUNT_POINT, path);
+
+  sd_card_lock();
   ESP_LOGI(TAG, "Opening file a %s", full_path);
   FILE* file = fopen(full_path, "a");
   if (file == NULL) {
     ESP_LOGE(TAG, "Failed to open file for writing");
+    sd_card_unlock();
     return ESP_FAIL;
   }
   size_t data_len = strlen(data);
   size_t written = fwrite(data, 1, data_len, file);
   if (written != data_len) {
     ESP_LOGE(TAG, "Failed to write all data to file: wrote %d of %d bytes",
-             written, data_len);
+             (int) written, (int) data_len);
     fclose(file);
+    sd_card_unlock();
     return ESP_FAIL;
   }
   if (fflush(file) != 0) {
     ESP_LOGE(TAG, "Failed to flush file");
     fclose(file);
+    sd_card_unlock();
     return ESP_FAIL;
   }
   fclose(file);
+  sd_card_unlock();
   ESP_LOGI(TAG, "File written");
 
   return ESP_OK;
