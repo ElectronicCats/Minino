@@ -2744,7 +2744,22 @@ y a la tabla de menús, con `parent_idx = MENU_APPLICATIONS`:
 
 más `#include "surveillance_module.h"` en la zona de includes de `menus.h`.
 
-- [ ] **Step 2: Implementar la pantalla principal**
+- [ ] **Step 2: Definir los umbrales del semáforo una sola vez**
+
+Los umbrales son semántica del motor, no de la pantalla, y los consumen tanto
+esta tarea como la Task 12 (LEDs). Si se escriben como literales en los dos
+sitios, el día que alguien ajuste uno y no el otro la pantalla y los LEDs
+discrepan sobre el nivel de alerta, que es de los fallos más desconcertantes
+posibles en campo. Añadir a `include/surv_engine.h`:
+
+```c
+// Umbrales del semaforo, del modelo de score de eye-spy (Apache-2.0):
+// 0-2 CLEAR, 3-5 CAUTION, 6+ ALERT. Los consumen la pantalla y los LEDs.
+#define SURV_SCORE_CAUTION 3
+#define SURV_SCORE_ALERT   6
+```
+
+- [ ] **Step 3: Implementar la pantalla principal**
 
 `surveillance_screens.c`, con `oled_screen_display_text` sobre las 8 páginas:
 
@@ -2757,7 +2772,9 @@ void surveillance_screens_show_status(uint8_t score, const char* profile,
   snprintf(buf, sizeof(buf), "SURVEIL [%s]", profile);
   oled_screen_display_text(buf, 0, 0, false);
 
-  const char* level = score >= 6 ? "ALERT" : (score >= 3 ? "CAUTION" : "CLEAR");
+  const char* level = score >= SURV_SCORE_ALERT
+                          ? "ALERT"
+                          : (score >= SURV_SCORE_CAUTION ? "CAUTION" : "CLEAR");
   snprintf(buf, sizeof(buf), "score %2d  %s", score, level);
   oled_screen_display_text(buf, 0, 1, false);
 
@@ -2771,7 +2788,7 @@ void surveillance_screens_show_status(uint8_t score, const char* profile,
 }
 ```
 
-- [ ] **Step 3: Implementar la pantalla de ayuda con el aviso regional**
+- [ ] **Step 4: Implementar la pantalla de ayuda con el aviso regional**
 
 El spec §9.4 lo exige: con la tabla base, en México la app puede correr una hora
 sin una sola detección, y ese es el resultado correcto. Sin decirlo, parece
@@ -2805,7 +2822,7 @@ void surveillance_screens_show_help(uint8_t page) {
 
 Se llega con BUTTON_UP desde la pantalla principal; BUTTON_LEFT vuelve.
 
-- [ ] **Step 4: Implementar el ciclo de vida y los botones**
+- [ ] **Step 5: Implementar el ciclo de vida y los botones**
 
 `surveillance_module.c`, siguiendo el patrón de
 `main/apps/wifi/deauth_detector/detector.c`:
@@ -2865,7 +2882,7 @@ void surveillance_module_stop(void) {
 }
 ```
 
-- [ ] **Step 5: Compilar, flashear y verificar en hardware**
+- [ ] **Step 6: Compilar, flashear y verificar en hardware**
 
 ```bash
 cd firmware && idf.py build && idf.py -p /dev/ttyACM0 flash monitor
@@ -2877,7 +2894,7 @@ cd firmware && idf.py build && idf.py -p /dev/ttyACM0 flash monitor
 4. Reentrar y volver a salir tres veces: no debe caer el heap libre de forma
    monotónica (comprobar con `esp_get_free_heap_size()` en el log).
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add firmware/main/apps/surveillance firmware/main/modules/menus_module
@@ -2930,7 +2947,9 @@ static void tier_chirp(uint8_t tier) {
 ```c
 static void update_leds(uint8_t score) {
   static uint8_t last_level = 0xff;
-  uint8_t level = score >= 6 ? 2 : (score >= 3 ? 1 : 0);
+  uint8_t level = score >= SURV_SCORE_ALERT
+                      ? 2
+                      : (score >= SURV_SCORE_CAUTION ? 1 : 0);
   if (level == last_level) {
     return;
   }
