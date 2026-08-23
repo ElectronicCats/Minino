@@ -1940,6 +1940,12 @@ bool surv_engine_note_unknown(const uint8_t mac[6], uint32_t now_ms) {
 `surv_engine_reset()` debe limpiar también `s_track` con
 `memset(s_track, 0, sizeof(s_track));`.
 
+**Orden en el archivo:** las declaraciones de `surv_track_t` y `s_track` van
+**antes** de `surv_engine_reset()`, aunque en este documento aparezcan después
+por claridad expositiva. Si se transcriben en el orden del texto,
+`surv_engine_reset()` referencia un identificador aún no declarado y no
+compila.
+
 - [ ] **Step 4: Ejecutar y verificar que pasan**
 
 Run: `make -C firmware/components/surveillance_detect/test run-tests`.
