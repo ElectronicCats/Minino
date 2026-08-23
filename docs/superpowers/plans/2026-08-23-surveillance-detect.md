@@ -1556,7 +1556,7 @@ bool surv_ie_matches_flock(const uint8_t* ies, int len) {
 - [ ] **Step 4: Ejecutar y verificar que pasan**
 
 Run: `make -C firmware/components/surveillance_detect/test run-tests`.
-Esperado: los diez tests de `[surv][ie]` pasan.
+Esperado: los once tests de `[surv][ie]` pasan.
 
 - [ ] **Step 5: Anotar la deuda de vectores reales**
 
