@@ -1329,6 +1329,8 @@ TEST_CASE("un probe con IE distintos no matchea", "[surv][ie]") {
   TEST_ASSERT_FALSE(surv_ie_matches_flock(ies, sizeof(ies)));
 }
 
+// Comprueba que una cola de bytes tras la firma no la rompe. Lo garantiza la
+// salida temprana del recorrido al completarse la firma, no ningun reintento.
 TEST_CASE("la firma matchea con 4 bytes de FCS al final", "[surv][ie]") {
   uint8_t ies[sizeof(FLOCK_IES) + 4];
   memcpy(ies, FLOCK_IES, sizeof(FLOCK_IES));
@@ -1360,6 +1362,16 @@ TEST_CASE("una firma anadida matchea sin perder la compilada", "[surv][ie]") {
   TEST_ASSERT_TRUE(surv_ie_matches_flock(FLOCK_IES, sizeof(FLOCK_IES)));
 
   surv_ie_reset_signatures();
+}
+
+TEST_CASE("se rechaza una firma con mas tokens de los permitidos",
+          "[surv][ie]") {
+  surv_ie_reset_signatures();
+  surv_ie_tok_t demasiados[SURV_IE_MAX_TOKS + 1];
+  memset(demasiados, 0, sizeof(demasiados));
+  TEST_ASSERT_FALSE(surv_ie_add_signature(demasiados, SURV_IE_MAX_TOKS + 1));
+  TEST_ASSERT_FALSE(surv_ie_add_signature(NULL, 3));
+  TEST_ASSERT_FALSE(surv_ie_add_signature(demasiados, 0));
 }
 
 TEST_CASE("se respeta el tope de 8 firmas del overlay", "[surv][ie]") {
@@ -1526,14 +1538,18 @@ bool surv_ie_matches_flock(const uint8_t* ies, int len) {
   if (ies == NULL || len < 2) {
     return false;
   }
-  if (tokens_match(ies, len)) {
-    return true;
-  }
-  // Reintento sin los 4 bytes de FCS: el driver a veces los entrega.
-  if (len > 4 && tokens_match(ies, len - 4)) {
-    return true;
-  }
-  return false;
+  // NO se reintenta sin los 4 bytes de FCS, al contrario que flock-you. Alli la
+  // firma se construye consumiendo la trama entera, asi que una cola de FCS la
+  // rompe y el reintento es imprescindible. Aqui el recorrido termina en cuanto
+  // la firma se completa (t == sig_len), de modo que cualquier cola posterior
+  // -FCS incluido- se ignora sola.
+  //
+  // Un reintento con len-4 seria codigo muerto demostrable: el unico chequeo
+  // sensible a `len` (i + 2 + elen > len) solo se vuelve MAS estricto al
+  // acortar el buffer, asi que si el intento primario fallo, el reintento
+  // falla tambien. Codigo muerto que aparenta protegernos es peor que su
+  // ausencia: sugiere una garantia que nadie tiene.
+  return tokens_match(ies, len);
 }
 ```
 
