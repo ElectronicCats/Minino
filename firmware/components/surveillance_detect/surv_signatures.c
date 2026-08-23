@@ -131,25 +131,49 @@ const surv_oui_entry_t* surv_signatures_ouis(void) {
 }
 
 static const surv_kw_entry_t KWS[] = {
-    {"flocksafety", SURV_CLASS_FLOCK, 5}, {"flock", SURV_CLASS_FLOCK, 5},
-    {"pigvision", SURV_CLASS_FLOCK, 5},   {"penguin", SURV_CLASS_FLOCK, 5},
-    {"fs ext", SURV_CLASS_FLOCK, 5},      {"raven", SURV_CLASS_RAVEN, 5},
-    {"licenseplat", SURV_CLASS_ALPR, 4},  {"plateread", SURV_CLASS_ALPR, 4},
-    {"vigilant", SURV_CLASS_ALPR, 4},     {"motorola", SURV_CLASS_ALPR, 4},
-    {"automate", SURV_CLASS_ALPR, 4},     {"alpr", SURV_CLASS_ALPR, 4},
-    {"lpr", SURV_CLASS_ALPR, 4},          {"hikvision", SURV_CLASS_CAM, 2},
-    {"doorbell", SURV_CLASS_CAM, 2},      {"amcrest", SURV_CLASS_CAM, 2},
-    {"reolink", SURV_CLASS_CAM, 2},       {"vivotek", SURV_CLASS_CAM, 2},
-    {"mobotix", SURV_CLASS_CAM, 2},       {"genetec", SURV_CLASS_CAM, 2},
-    {"protect", SURV_CLASS_CAM, 2},       {"hanwha", SURV_CLASS_CAM, 2},
-    {"dahua", SURV_CLASS_CAM, 2},         {"lorex", SURV_CLASS_CAM, 2},
-    {"blink", SURV_CLASS_CAM, 2},         {"ipcam", SURV_CLASS_CAM, 2},
-    {"unifi", SURV_CLASS_CAM, 2},         {"arlo", SURV_CLASS_CAM, 2},
-    {"wyze", SURV_CLASS_CAM, 2},          {"ring", SURV_CLASS_CAM, 2},
-    {"nest", SURV_CLASS_CAM, 2},          {"axis", SURV_CLASS_CAM, 2},
-    {"flir", SURV_CLASS_CAM, 2},          {"surv", SURV_CLASS_CAM, 2},
-    {"cctv", SURV_CLASS_CAM, 2},          {"nvr", SURV_CLASS_CAM, 2},
-    {"dvr", SURV_CLASS_CAM, 2},           {"cam", SURV_CLASS_CAM, 2},
+    {"flocksafety", SURV_CLASS_FLOCK, 5},
+    {"flock", SURV_CLASS_FLOCK, 5},
+    {"pigvision", SURV_CLASS_FLOCK, 5},
+    {"penguin", SURV_CLASS_FLOCK, 5},
+    {"fs ext", SURV_CLASS_FLOCK, 5},
+    {"raven", SURV_CLASS_RAVEN, 5},
+    // "motorola" y "lpr" estan DELIBERADAMENTE fuera, pese a venir en el
+    // ALPR_SSID_KW de eye-spy: rompen el criterio de aceptacion de cero falsos
+    // positivos de clase ALPR. "motorola" matchea el SSID por defecto de
+    // cualquier modem de consumo Motorola/Arris, que en Mexico reparten Izzi y
+    // Totalplay por millones; "lpr" matchea dentro de "HelpRouter" y de las
+    // impresoras "HP_LPR_*". Quien las quiera puede reponerlas por overlay de
+    // microSD.
+    {"licenseplat", SURV_CLASS_ALPR, 4},
+    {"plateread", SURV_CLASS_ALPR, 4},
+    {"vigilant", SURV_CLASS_ALPR, 4},
+    {"automate", SURV_CLASS_ALPR, 4},
+    {"alpr", SURV_CLASS_ALPR, 4},
+    {"hikvision", SURV_CLASS_CAM, 2},
+    {"doorbell", SURV_CLASS_CAM, 2},
+    {"amcrest", SURV_CLASS_CAM, 2},
+    {"reolink", SURV_CLASS_CAM, 2},
+    {"vivotek", SURV_CLASS_CAM, 2},
+    {"mobotix", SURV_CLASS_CAM, 2},
+    {"genetec", SURV_CLASS_CAM, 2},
+    {"protect", SURV_CLASS_CAM, 2},
+    {"hanwha", SURV_CLASS_CAM, 2},
+    {"dahua", SURV_CLASS_CAM, 2},
+    {"lorex", SURV_CLASS_CAM, 2},
+    {"blink", SURV_CLASS_CAM, 2},
+    {"ipcam", SURV_CLASS_CAM, 2},
+    {"unifi", SURV_CLASS_CAM, 2},
+    {"arlo", SURV_CLASS_CAM, 2},
+    {"wyze", SURV_CLASS_CAM, 2},
+    {"ring", SURV_CLASS_CAM, 2},
+    {"nest", SURV_CLASS_CAM, 2},
+    {"axis", SURV_CLASS_CAM, 2},
+    {"flir", SURV_CLASS_CAM, 2},
+    {"surv", SURV_CLASS_CAM, 2},
+    {"cctv", SURV_CLASS_CAM, 2},
+    {"nvr", SURV_CLASS_CAM, 2},
+    {"dvr", SURV_CLASS_CAM, 2},
+    {"cam", SURV_CLASS_CAM, 2},
 };
 
 uint16_t surv_signatures_kw_count(void) {

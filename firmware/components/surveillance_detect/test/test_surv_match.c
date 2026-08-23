@@ -74,3 +74,12 @@ TEST_CASE("un SSID de camara matchea con 2 puntos", "[surv][match]") {
 TEST_CASE("un SSID normal no matchea", "[surv][match]") {
   TEST_ASSERT_NULL(surv_match_ssid("INFINITUM1234"));
 }
+
+// Regresion: estos dos rompian el criterio de cero falsos positivos de ALPR.
+TEST_CASE("un modem Motorola de consumo NO es ALPR", "[surv][match]") {
+  TEST_ASSERT_NULL(surv_match_ssid("MOTOROLA-A1B2"));
+}
+
+TEST_CASE("una impresora LPR NO es ALPR", "[surv][match]") {
+  TEST_ASSERT_NULL(surv_match_ssid("HP_LPR_Printer"));
+}
