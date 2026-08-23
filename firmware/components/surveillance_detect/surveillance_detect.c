@@ -10,7 +10,7 @@ esp_err_t surv_begin(surv_profile_t profile, bool active_scan) {
 
 void surv_stop(void) {}
 
-void surv_register_cb(surv_event_cb_t cb) {
+void surv_register_cb(surv_detect_cb_t cb) {
   (void) cb;
 }
 

@@ -5,8 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "esp_err.h"
-
-typedef enum { SURV_PROFILE_BLE = 0, SURV_PROFILE_WIFI } surv_profile_t;
+#include "surveillance_detect.h"
 
 esp_err_t surv_radio_start(surv_profile_t p, bool active_scan);
 void surv_radio_stop(void);

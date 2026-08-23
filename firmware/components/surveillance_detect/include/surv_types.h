@@ -1,5 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+//
 // Tipos compartidos del detector de vigilancia.
+//
+// Procedencia: la taxonomia de surv_class_t deriva de los motores de deteccion
+// de eye-spy (simeononsecurity, Apache-2.0), en concreto de los DECL_DETECTOR
+// de src/es_confidence.h. Los niveles de tier SURV_TIER_* derivan de flock-you
+// (colonelpanichacks, MIT).
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
