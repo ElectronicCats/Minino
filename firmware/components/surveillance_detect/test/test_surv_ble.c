@@ -90,3 +90,33 @@ TEST_CASE("detecta Axon por el OUI de la MAC BLE", "[surv][ble]") {
   TEST_ASSERT_EQUAL_INT(SURV_CLASS_AXON, e->klass);
   TEST_ASSERT_EQUAL_UINT8(5, e->points);
 }
+
+TEST_CASE("dos clases distintas producen dos hits", "[surv][ble]") {
+  // Tile (0xFEED) y Ray-Ban Meta (0xFD5F) en dos estructuras AD.
+  const uint8_t adv[] = {0x03, 0x03, 0xed, 0xfe, 0x03, 0x03, 0x5f, 0xfd};
+  surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
+  uint8_t n = surv_match_ble_adv(adv, sizeof(adv), hits);
+  TEST_ASSERT_EQUAL_UINT8(2, n);
+  TEST_ASSERT_EQUAL_INT(SURV_CLASS_TILE, hits[0].klass);
+  TEST_ASSERT_EQUAL_INT(SURV_CLASS_GLASSES, hits[1].klass);
+}
+
+TEST_CASE("dos UUID de la misma clase producen un solo hit", "[surv][ble]") {
+  // 0xFEED y 0xFEEC son ambos Tile: push_hit debe deduplicar por clase.
+  const uint8_t adv[] = {0x03, 0x03, 0xed, 0xfe, 0x03, 0x03, 0xec, 0xfe};
+  surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
+  uint8_t n = surv_match_ble_adv(adv, sizeof(adv), hits);
+  TEST_ASSERT_EQUAL_UINT8(1, n);
+  TEST_ASSERT_EQUAL_INT(SURV_CLASS_TILE, hits[0].klass);
+}
+
+TEST_CASE("cinco clases se recortan al tope de SURV_BLE_MAX_HITS",
+          "[surv][ble]") {
+  // GLASSES, ODID, SMARTTAG, TILE y SKIMMER: cinco clases distintas.
+  const uint8_t adv[] = {0x03, 0x03, 0x5f, 0xfd, 0x03, 0x03, 0xfa, 0xff,
+                         0x03, 0x03, 0x5a, 0xfd, 0x03, 0x03, 0xed, 0xfe,
+                         0x06, 0x09, 'H',  'C',  '-',  '0',  '5'};
+  surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
+  uint8_t n = surv_match_ble_adv(adv, sizeof(adv), hits);
+  TEST_ASSERT_EQUAL_UINT8(SURV_BLE_MAX_HITS, n);
+}
