@@ -881,8 +881,12 @@ dispositivo puede ser a la vez iBeacon y otra cosa.
 #include "surv_test.h"
 
 TEST_CASE("detecta un AirTag por mfr data 004C subtipo 12", "[surv][ble]") {
-  // len=0x1E, AD type=0xFF, company=0x004C (LE), subtipo=0x12
-  const uint8_t adv[] = {0x1e, 0xff, 0x4c, 0x00, 0x12, 0x19, 0x00};
+  // len=0x06 (AD type + 5 bytes de payload), AD type=0xFF,
+  // company=0x004C (LE), subtipo=0x12.
+  // OJO: el byte de longitud debe cuadrar con el buffer real, no con el
+  // advertisement completo de 31 bytes que emite un AirTag de verdad; si no,
+  // el guard de limites lo rechaza (correctamente) y el test falla.
+  const uint8_t adv[] = {0x06, 0xff, 0x4c, 0x00, 0x12, 0x19, 0x00};
   surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
   uint8_t n = surv_match_ble_adv(adv, sizeof(adv), hits);
   TEST_ASSERT_EQUAL_UINT8(1, n);
@@ -891,7 +895,8 @@ TEST_CASE("detecta un AirTag por mfr data 004C subtipo 12", "[surv][ble]") {
 }
 
 TEST_CASE("detecta un iBeacon por 4C 00 02 15", "[surv][ble]") {
-  const uint8_t adv[] = {0x1a, 0xff, 0x4c, 0x00, 0x02, 0x15,
+  // len=0x09 (AD type + 8 bytes de payload)
+  const uint8_t adv[] = {0x09, 0xff, 0x4c, 0x00, 0x02, 0x15,
                          0x00, 0x00, 0x00, 0x00};
   surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
   uint8_t n = surv_match_ble_adv(adv, sizeof(adv), hits);
