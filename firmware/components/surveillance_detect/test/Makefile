@@ -12,7 +12,8 @@ SRCS := $(SRCDIR)/surv_signatures.c \
 
 TESTS := test_surv_signatures.c \
         test_surv_match.c \
-        test_surv_ble.c
+        test_surv_ble.c \
+        test_surv_ie.c
 
 CFLAGS := -std=gnu99 -Wall -Wextra -Werror -g -I. -I$(SRCDIR)/include -I$(UNITY)
 
