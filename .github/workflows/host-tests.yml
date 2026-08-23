@@ -1,0 +1,21 @@
+name: Host tests
+
+on:
+  push:
+    branches: [main, 'feat/**']
+  pull_request:
+
+jobs:
+  surveillance-detect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch Unity from ESP-IDF
+        run: |
+          git clone --depth 1 -b v5.5.1 --filter=blob:none --sparse \
+              https://github.com/espressif/esp-idf.git "$RUNNER_TEMP/esp-idf"
+          git -C "$RUNNER_TEMP/esp-idf" sparse-checkout set components/unity
+      - name: Run surveillance_detect host tests
+        run: make -C firmware/components/surveillance_detect/test run-tests
+        env:
+          IDF_PATH: ${{ runner.temp }}/esp-idf
