@@ -43,6 +43,8 @@ TEST_CASE("un probe con IE distintos no matchea", "[surv][ie]") {
   TEST_ASSERT_FALSE(surv_ie_matches_flock(ies, sizeof(ies)));
 }
 
+// Comprueba que una cola de bytes tras la firma no la rompe. Lo garantiza la
+// salida temprana del recorrido al completarse la firma, no ningun reintento.
 TEST_CASE("la firma matchea con 4 bytes de FCS al final", "[surv][ie]") {
   uint8_t ies[sizeof(FLOCK_IES) + 4];
   memcpy(ies, FLOCK_IES, sizeof(FLOCK_IES));
@@ -84,6 +86,16 @@ TEST_CASE("se respeta el tope de 8 firmas del overlay", "[surv][ie]") {
   }
   TEST_ASSERT_FALSE(surv_ie_add_signature(t1, 1));
   surv_ie_reset_signatures();
+}
+
+TEST_CASE("se rechaza una firma con mas tokens de los permitidos",
+          "[surv][ie]") {
+  surv_ie_reset_signatures();
+  surv_ie_tok_t demasiados[SURV_IE_MAX_TOKS + 1];
+  memset(demasiados, 0, sizeof(demasiados));
+  TEST_ASSERT_FALSE(surv_ie_add_signature(demasiados, SURV_IE_MAX_TOKS + 1));
+  TEST_ASSERT_FALSE(surv_ie_add_signature(NULL, 3));
+  TEST_ASSERT_FALSE(surv_ie_add_signature(demasiados, 0));
 }
 
 // PENDIENTE DE CAPTURA REAL: los tests de arriba usan un vector sintetico.

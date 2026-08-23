@@ -106,12 +106,16 @@ bool surv_ie_matches_flock(const uint8_t* ies, int len) {
   if (ies == NULL || len < 2) {
     return false;
   }
-  if (tokens_match(ies, len)) {
-    return true;
-  }
-  // Reintento sin los 4 bytes de FCS: el driver a veces los entrega.
-  if (len > 4 && tokens_match(ies, len - 4)) {
-    return true;
-  }
-  return false;
+  // NO se reintenta sin los 4 bytes de FCS, al contrario que flock-you. Alli la
+  // firma se construye consumiendo la trama entera, asi que una cola de FCS la
+  // rompe y el reintento es imprescindible. Aqui el recorrido termina en cuanto
+  // la firma se completa (t == sig_len), de modo que cualquier cola posterior
+  // -FCS incluido- se ignora sola.
+  //
+  // Un reintento con len-4 seria codigo muerto demostrable: el unico chequeo
+  // sensible a `len` (i + 2 + elen > len) solo se vuelve MAS estricto al
+  // acortar el buffer, asi que si el intento primario fallo, el reintento
+  // falla tambien. Codigo muerto que aparenta protegernos es peor que su
+  // ausencia: sugiere una garantia que nadie tiene.
+  return tokens_match(ies, len);
 }
