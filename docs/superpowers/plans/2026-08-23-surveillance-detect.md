@@ -1289,6 +1289,7 @@ exactamente la firma drive-testeada de flock-you
 // Vectores de trama. El vector base es sintetico y reproduce la firma
 // documentada por DeFlockJoplin. Debe complementarse con capturas reales
 // extraidas de los pcap de evidencia (Task 15) en cuanto existan.
+#include <string.h>
 #include "surv_ie.h"
 #include "surv_test.h"
 
@@ -1539,7 +1540,7 @@ bool surv_ie_matches_flock(const uint8_t* ies, int len) {
 - [ ] **Step 4: Ejecutar y verificar que pasan**
 
 Run: `make -C firmware/components/surveillance_detect/test run-tests`.
-Esperado: los ocho tests de `[surv][ie]` pasan.
+Esperado: los diez tests de `[surv][ie]` pasan.
 
 - [ ] **Step 5: Anotar la deuda de vectores reales**
 
