@@ -6,7 +6,7 @@
 
 **Architecture:** Un componente `surveillance_detect` en C puro con los matchers y el motor de score aislados de todo hardware —para que corran como tests en host Linux— más una app de menú que solo hace UI y persistencia. El callback promiscuo de WiFi y el de GAP de BLE solo comparan y encolan en un ring buffer; una task aparte drena, puntúa y notifica.
 
-**Tech Stack:** ESP-IDF v5.5.1, target `esp32c6`, C99. Unity + `test_apps` con target `linux` para los tests de host. Componentes existentes de Minino: `sd_card`, `nmea_parser`, `buzzer`, `leds`, `preferences`, `oled_screen`, `menus_module`, `espressif__pcap`.
+**Tech Stack:** ESP-IDF v5.5.1, target `esp32c6`, C99. Tests de host con `gcc` y la Unity vendorizada en ESP-IDF, sin el build system de IDF. Componentes existentes de Minino: `sd_card`, `nmea_parser`, `buzzer`, `leds`, `preferences`, `oled_screen`, `menus_module`, `espressif__pcap`.
 
 **Spec:** `docs/superpowers/specs/2026-08-23-surveillance-detect-design.md`
 
@@ -16,7 +16,16 @@
 
 Todos los valores son literales del spec. Aplican a todas las tareas.
 
-- **ESP-IDF v5.5.1**, target `esp32c6`. Los tests de host usan target `linux`.
+- **ESP-IDF v5.5.1** en `/home/sabas/esp/esp-idf-v5.5.1`, target `esp32c6`.
+  Activar con `. /home/sabas/esp/esp-idf-v5.5.1/export.sh` antes de cualquier
+  `idf.py`. Baseline verificado: el firmware compila limpio con esta versión.
+- **Tests de host: `gcc` directo contra la Unity vendorizada** en
+  `$IDF_PATH/components/unity/unity/src`. **No** se usa el target `linux` de
+  ESP-IDF: requiere `libbsd-dev`, que no está instalado y cuya instalación
+  necesita sudo. Verificado con un probe end-to-end.
+- **`surv_signatures.c`, `surv_match.c`, `surv_ie.c`, `surv_overlay.c` y
+  `surv_engine.c` no pueden incluir cabeceras de ESP-IDF.** El build de gcc
+  falla si lo hacen, y ésa es la garantía de que los tests corren sin hardware.
 - **Licencia GPL-3.0.** Cada archivo derivado de flock-you o eye-spy lleva cabecera con `SPDX-License-Identifier: GPL-3.0-or-later` y un aviso de procedencia citando el proyecto original y su licencia (MIT / Apache-2.0).
 - **Prefijo `surv_`** en todos los símbolos del componente. Nunca `sd_` (colisiona con `sd_card`).
 - **Sin `printf`, `malloc`, ni I/O de archivo en callbacks de radio.** Solo comparación y encolado.
@@ -50,11 +59,11 @@ Todos los valores son literales del spec. Aplican a todas las tareas.
 | `include/surv_ie.h`, `surv_ie.c` | Fingerprint de Information Elements. Aislado por ser la pieza más delicada |
 | `include/surv_overlay.h`, `surv_overlay.c` | Parser del overlay de microSD. Recibe texto, no toca el sistema de archivos |
 | `include/surv_engine.h`, `surv_engine.c` | Score, decay, cooldown, tabla por MAC, dedupe |
-| `surv_radio.c` | Planificador de fases y salto de canal. **Solo target esp32c6** |
-| `include/surveillance_detect.h`, `surveillance_detect.c` | API pública, callbacks de radio, ring buffer. **Solo target esp32c6** |
-| `test_apps/surv/` | Test app de Unity para host |
+| `surv_radio.c` | Planificador de fases y salto de canal. Depende de ESP-IDF |
+| `include/surveillance_detect.h`, `surveillance_detect.c` | API pública, callbacks de radio, ring buffer. Depende de ESP-IDF |
+| `test/` | Arnés de host: `Makefile`, shim `surv_test.h`, runner y archivos de test |
 
-Los seis primeros no incluyen ninguna cabecera de ESP-IDF fuera de `stdint.h`/`stdbool.h`/`string.h`. Es la condición para que los tests corran en host.
+Los seis primeros no incluyen ninguna cabecera de ESP-IDF fuera de `stdint.h`/`stdbool.h`/`string.h`. Es la condición para que los tests corran en host, y el build de gcc del `test/Makefile` la impone: si alguien incluye `esp_wifi.h` ahí, los tests dejan de compilar.
 
 ### App nueva: `firmware/main/apps/surveillance/`
 
@@ -86,11 +95,10 @@ Los seis primeros no incluyen ninguna cabecera de ESP-IDF fuera de `stdint.h`/`s
 - Create: `firmware/components/surveillance_detect/include/surv_types.h`
 - Create: `firmware/components/surveillance_detect/surv_signatures.c`
 - Create: `firmware/components/surveillance_detect/include/surv_signatures.h`
-- Create: `firmware/components/surveillance_detect/test_apps/surv/CMakeLists.txt`
-- Create: `firmware/components/surveillance_detect/test_apps/surv/sdkconfig.defaults`
-- Create: `firmware/components/surveillance_detect/test_apps/surv/main/CMakeLists.txt`
-- Create: `firmware/components/surveillance_detect/test_apps/surv/main/test_app_main.c`
-- Create: `firmware/components/surveillance_detect/test_apps/surv/main/test_surv_signatures.c`
+- Create: `firmware/components/surveillance_detect/test/Makefile`
+- Create: `firmware/components/surveillance_detect/test/surv_test.h`
+- Create: `firmware/components/surveillance_detect/test/surv_test_main.c`
+- Create: `firmware/components/surveillance_detect/test/test_surv_signatures.c`
 - Create: `.github/workflows/host-tests.yml`
 
 **Interfaces:**
@@ -99,11 +107,11 @@ Los seis primeros no incluyen ninguna cabecera de ESP-IDF fuera de `stdint.h`/`s
 
 - [ ] **Step 1: Escribir el test que falla**
 
-`test_apps/surv/main/test_surv_signatures.c`:
+`test/test_surv_signatures.c`:
 
 ```c
 // SPDX-License-Identifier: GPL-3.0-or-later
-#include "unity.h"
+#include "surv_test.h"
 #include "surv_signatures.h"
 #include "surv_types.h"
 
@@ -112,46 +120,108 @@ TEST_CASE("la tabla base tiene 75 OUIs", "[surv][signatures]") {
 }
 ```
 
-- [ ] **Step 2: Crear el andamiaje de la test app**
+- [ ] **Step 2: Crear el arnés de tests de host**
 
-`test_apps/surv/CMakeLists.txt`:
+Tres archivos. El shim `surv_test.h` reproduce la macro `TEST_CASE` de ESP-IDF
+sobre Unity vanilla con auto-registro por constructor, de modo que los archivos
+de test se escriben igual que en `components/console/test_apps` pero corren con
+gcc, sin ESP-IDF y sin `libbsd-dev`.
 
-```cmake
-cmake_minimum_required(VERSION 3.16)
-include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-set(COMPONENTS main)
-project(test_surv)
+`test/surv_test.h`:
+
+```c
+// SPDX-License-Identifier: GPL-3.0-or-later
+#pragma once
+#include "surv_test.h"
+
+typedef void (*surv_test_fn)(void);
+void surv_test_register(const char* name, const char* tags, surv_test_fn fn);
+
+#define SURV_CAT_(a, b) a##b
+#define SURV_CAT(a, b) SURV_CAT_(a, b)
+
+// Declara el test y un constructor que lo registra antes de main().
+#define TEST_CASE(desc, tags)                                        \
+  static void SURV_CAT(surv_test_, __LINE__)(void);                  \
+  __attribute__((constructor)) static void SURV_CAT(surv_reg_,       \
+                                                    __LINE__)(void) {\
+    surv_test_register(desc, tags, SURV_CAT(surv_test_, __LINE__));  \
+  }                                                                  \
+  static void SURV_CAT(surv_test_, __LINE__)(void)
 ```
 
-`test_apps/surv/sdkconfig.defaults`:
-
-```
-CONFIG_ESP_TASK_WDT_INIT=n
-```
-
-`test_apps/surv/main/CMakeLists.txt`:
-
-```cmake
-idf_component_register(SRCS "test_app_main.c"
-                            "test_surv_signatures.c"
-                       INCLUDE_DIRS "."
-                       PRIV_REQUIRES unity surveillance_detect
-                       WHOLE_ARCHIVE)
-```
-
-`test_apps/surv/main/test_app_main.c`:
+`test/surv_test_main.c`:
 
 ```c
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <stdio.h>
-#include "unity.h"
-#include "unity_test_runner.h"
+#include "surv_test.h"
 
-void app_main(void) {
-  printf("Running surveillance_detect tests\n");
-  unity_run_menu();
+#define SURV_TEST_MAX 256
+
+static struct {
+  const char*  name;
+  const char*  tags;
+  surv_test_fn fn;
+} s_t[SURV_TEST_MAX];
+static int s_n;
+
+void surv_test_register(const char* name, const char* tags, surv_test_fn fn) {
+  if (s_n < SURV_TEST_MAX) {
+    s_t[s_n].name = name;
+    s_t[s_n].tags = tags;
+    s_t[s_n].fn = fn;
+    s_n++;
+  }
+}
+
+void setUp(void) {}
+void tearDown(void) {}
+
+int main(void) {
+  UNITY_BEGIN();
+  for (int i = 0; i < s_n; i++) {
+    UnityDefaultTestRun(s_t[i].fn, s_t[i].name, 0);
+  }
+  return UNITY_END();
 }
 ```
+
+`test/Makefile` — `TESTS` es la lista a la que cada tarea posterior añade su
+archivo:
+
+```make
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Tests de host: gcc contra la Unity vendorizada en ESP-IDF.
+# Requiere IDF_PATH (. $IDF_PATH/export.sh) pero NO usa el build system de IDF.
+UNITY  := $(IDF_PATH)/components/unity/unity/src
+SRCDIR := ..
+
+SRCS := $(SRCDIR)/surv_signatures.c \
+        $(SRCDIR)/surv_match.c \
+        $(SRCDIR)/surv_ie.c \
+        $(SRCDIR)/surv_overlay.c \
+        $(SRCDIR)/surv_engine.c
+
+TESTS := test_surv_signatures.c
+
+CFLAGS := -std=gnu99 -Wall -Wextra -Werror -g -I. -I$(SRCDIR)/include -I$(UNITY)
+
+run-tests: build/run-tests
+	./build/run-tests
+
+build/run-tests: $(SRCS) $(TESTS) surv_test_main.c surv_test.h
+	@mkdir -p build
+	$(CC) $(CFLAGS) $(SRCS) $(TESTS) surv_test_main.c $(UNITY)/unity.c -o $@
+
+clean:
+	rm -rf build
+
+.PHONY: run-tests clean
+```
+
+Las tabulaciones de las recetas del Makefile son obligatorias: si el editor las
+convierte en espacios, `make` falla con `missing separator`.
 
 - [ ] **Step 3: Escribir los tipos**
 
@@ -319,42 +389,57 @@ const surv_oui_entry_t* surv_signatures_ouis(void) {
 }
 ```
 
-`CMakeLists.txt` del componente — el `if` de target es lo que permite el test en
-host, copiando el patrón de `firmware/components/console/CMakeLists.txt`:
+`CMakeLists.txt` del componente:
 
 ```cmake
-idf_build_get_property(target IDF_TARGET)
-
-set(srcs "surv_signatures.c"
-         "surv_match.c"
-         "surv_ie.c"
-         "surv_overlay.c"
-         "surv_engine.c")
-
-set(reqs "")
-
-if(NOT ${target} STREQUAL "linux")
-    list(APPEND srcs "surv_radio.c" "surveillance_detect.c")
-    list(APPEND reqs esp_wifi bt esp_timer)
-endif()
-
-idf_component_register(SRCS ${srcs}
+idf_component_register(SRCS "surv_signatures.c"
+                            "surv_match.c"
+                            "surv_ie.c"
+                            "surv_overlay.c"
+                            "surv_engine.c"
+                            "surv_radio.c"
+                            "surveillance_detect.c"
                        INCLUDE_DIRS "include"
-                       REQUIRES ${reqs})
+                       REQUIRES esp_wifi bt esp_timer radio_selector)
 ```
 
-Los archivos `surv_match.c`, `surv_ie.c`, `surv_overlay.c` y `surv_engine.c` se
-crean en esta tarea **vacíos salvo un `#include` de su cabecera**, para que el
-componente compile; su contenido llega en las tareas 2, 6, 8 y 7.
+El componente solo se compila para `esp32c6`; los tests de host no pasan por
+CMake. La disciplina de "sin cabeceras de ESP-IDF" en los cinco archivos puros
+la impone el build de gcc del `test/Makefile`, que falla si alguien la rompe.
+
+**Todos** los archivos `.c` listados se crean en esta tarea. Los cinco puros
+(`surv_match.c`, `surv_ie.c`, `surv_overlay.c`, `surv_engine.c`) van vacíos
+salvo el `#include` de su cabecera; su contenido llega en las Tasks 2, 6, 8 y 7.
+
+`surv_radio.c` y `surveillance_detect.c` van con **stubs no-op** que devuelven
+`ESP_OK` o cero, para que `idf.py build` pase en el Step 6 de esta tarea; las
+Tasks 9 y 10 los reemplazan:
+
+```c
+// surv_radio.c — stub; la implementacion real llega en la Task 10.
+#include "surv_radio.h"
+esp_err_t surv_radio_start(surv_profile_t p, bool active_scan) {
+  (void) p; (void) active_scan; return ESP_OK;
+}
+void    surv_radio_stop(void) {}
+uint8_t surv_radio_current_channel(void) { return 0; }
+```
+
+`surveillance_detect.c` lleva el mismo tratamiento para `surv_begin`,
+`surv_stop`, `surv_register_cb` y `surv_queue_overflows`, y las cabeceras
+`include/surv_radio.h` e `include/surveillance_detect.h` se crean aquí con las
+firmas que declaran las Tasks 9 y 10.
 
 - [ ] **Step 5: Ejecutar el test en host y verificar que pasa**
 
 ```bash
-cd firmware/components/surveillance_detect/test_apps/surv
-idf.py --preview set-target linux
-idf.py build
-./build/test_surv.elf -v
+. /home/sabas/esp/esp-idf-v5.5.1/export.sh
+cd firmware/components/surveillance_detect/test
+make run-tests
 ```
+
+Salida esperada: `1 Tests 0 Failures 0 Ignored` y `OK`. `make` devuelve un
+código distinto de cero si algún test falla, que es lo que hace útil el CI.
 
 Esperado: el test `la tabla base tiene 75 OUIs` pasa. Si falla con un conteo
 distinto, faltan entradas por transcribir de `es_detect.h`.
@@ -362,12 +447,14 @@ distinto, faltan entradas por transcribir de `es_detect.h`.
 - [ ] **Step 6: Verificar que el firmware sigue compilando para el target real**
 
 ```bash
+. /home/sabas/esp/esp-idf-v5.5.1/export.sh
 cd firmware
-idf.py set-target esp32c6
 idf.py build
 ```
 
-Esperado: build OK. El componente nuevo aún no lo usa nadie.
+Esperado: build OK. El componente nuevo aún no lo usa nadie, pero debe compilar.
+El baseline ya se verificó verde antes de empezar el plan, así que cualquier
+fallo aquí lo introdujo esta tarea.
 
 - [ ] **Step 7: Crear el workflow de tests de host**
 
@@ -387,16 +474,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: 'recursive'
+      - name: Fetch Unity from ESP-IDF
+        run: |
+          git clone --depth 1 -b v5.5.1 --filter=blob:none --sparse \
+              https://github.com/espressif/esp-idf.git "$RUNNER_TEMP/esp-idf"
+          git -C "$RUNNER_TEMP/esp-idf" sparse-checkout set components/unity
       - name: Run surveillance_detect host tests
-        uses: espressif/esp-idf-ci-action@v1
-        with:
-          esp_idf_version: v5.5.1
-          target: linux
-          path: './firmware/components/surveillance_detect/test_apps/surv'
-          command: "idf.py --preview set-target linux build && ./build/test_surv.elf -v"
+        run: make -C firmware/components/surveillance_detect/test run-tests
+        env:
+          IDF_PATH: ${{ runner.temp }}/esp-idf
 ```
+
+El CI no instala el toolchain de ESP-IDF: solo necesita `gcc` y los dos archivos
+de Unity, así que baja el repo de IDF con sparse-checkout. Corre en segundos.
 
 - [ ] **Step 8: Commit**
 
@@ -412,8 +502,8 @@ git commit -m "feat(surveillance): add component skeleton, signature tables and 
 **Files:**
 - Modify: `firmware/components/surveillance_detect/surv_match.c`
 - Create: `firmware/components/surveillance_detect/include/surv_match.h`
-- Modify: `firmware/components/surveillance_detect/test_apps/surv/main/CMakeLists.txt`
-- Test: `firmware/components/surveillance_detect/test_apps/surv/main/test_surv_match.c`
+- Modify: `firmware/components/surveillance_detect/test/CMakeLists.txt`
+- Test: `firmware/components/surveillance_detect/test/test_surv_match.c`
 
 **Interfaces:**
 - Consumes: `surv_signatures_ouis()`, `surv_signatures_oui_count()`, `surv_oui_entry_t`.
@@ -421,14 +511,14 @@ git commit -m "feat(surveillance): add component skeleton, signature tables and 
 
 - [ ] **Step 1: Escribir los tests que fallan**
 
-`test_apps/surv/main/test_surv_match.c`:
+`test/test_surv_match.c`:
 
 ```c
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <string.h>
 #include "surv_match.h"
 #include "surv_signatures.h"
-#include "unity.h"
+#include "surv_test.h"
 
 TEST_CASE("un OUI de Flock matchea con clase FLOCK", "[surv][match]") {
   surv_match_init();
@@ -474,12 +564,13 @@ TEST_CASE("ningun OUI aparece en dos clases distintas", "[surv][match]") {
 }
 ```
 
-Añadir `"test_surv_match.c"` a los `SRCS` de `test_apps/surv/main/CMakeLists.txt`.
+Añadir `test_surv_match.c` a la variable `TESTS` de
+`firmware/components/surveillance_detect/test/Makefile`.
 
 - [ ] **Step 2: Ejecutar y verificar que falla**
 
 ```bash
-cd firmware/components/surveillance_detect/test_apps/surv && idf.py build
+make -C firmware/components/surveillance_detect/test run-tests
 ```
 
 Esperado: error de compilación, `surv_match.h` no existe.
@@ -549,7 +640,7 @@ const surv_oui_entry_t* surv_match_oui(const uint8_t mac[6]) {
 - [ ] **Step 4: Ejecutar y verificar que pasan**
 
 ```bash
-cd firmware/components/surveillance_detect/test_apps/surv && idf.py build && ./build/test_surv.elf -v
+make -C firmware/components/surveillance_detect/test run-tests
 ```
 
 Esperado: los cinco tests pasan. Si el de OUI duplicado falla, hay una entrada
@@ -569,7 +660,7 @@ git commit -m "feat(surveillance): add OUI matcher with first-octet bitmap prefi
 **Files:**
 - Modify: `firmware/components/surveillance_detect/surv_match.c`, `include/surv_match.h`
 - Modify: `firmware/components/surveillance_detect/surv_signatures.c`, `include/surv_signatures.h`
-- Test: `firmware/components/surveillance_detect/test_apps/surv/main/test_surv_match.c`
+- Test: `firmware/components/surveillance_detect/test/test_surv_match.c`
 
 **Interfaces:**
 - Consumes: `surv_signatures_kws()`, `surv_signatures_kw_count()`.
@@ -609,7 +700,7 @@ TEST_CASE("un SSID normal no matchea", "[surv][match]") {
 
 - [ ] **Step 2: Ejecutar y verificar que falla**
 
-Run: `idf.py build` en `test_apps/surv`. Esperado: `surv_match_ssid` no declarada.
+Run: `make -C firmware/components/surveillance_detect/test run-tests`. Esperado: `surv_match_ssid` no declarada.
 
 - [ ] **Step 3: Añadir la tabla de keywords**
 
@@ -695,7 +786,7 @@ Declarar ambas en `surv_match.h`.
 
 - [ ] **Step 5: Ejecutar y verificar que pasan**
 
-Run: `idf.py build && ./build/test_surv.elf -v` en `test_apps/surv`.
+Run: `make -C firmware/components/surveillance_detect/test run-tests`.
 Esperado: los nueve tests pasan.
 
 - [ ] **Step 6: Commit**
@@ -712,7 +803,7 @@ git commit -m "feat(surveillance): add case-insensitive SSID keyword matcher"
 **Files:**
 - Modify: `firmware/components/surveillance_detect/surv_match.c`, `include/surv_match.h`
 - Modify: `firmware/components/surveillance_detect/surv_signatures.c`, `include/surv_signatures.h`
-- Test: `firmware/components/surveillance_detect/test_apps/surv/main/test_surv_ble.c`
+- Test: `firmware/components/surveillance_detect/test/test_surv_ble.c`
 
 **Interfaces:**
 - Consumes: `surv_match_contains_ci()`, `surv_signatures_uuids()`, `surv_signatures_uuid_count()`, `surv_signatures_ble_names()`, `surv_signatures_ble_name_count()`, `surv_signatures_skimmers()`, `surv_signatures_skimmer_count()` (todos declarados en Task 1).
@@ -734,12 +825,12 @@ dispositivo puede ser a la vez iBeacon y otra cosa.
 
 - [ ] **Step 1: Escribir los tests que fallan**
 
-`test_apps/surv/main/test_surv_ble.c`:
+`test/test_surv_ble.c`:
 
 ```c
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "surv_match.h"
-#include "unity.h"
+#include "surv_test.h"
 
 TEST_CASE("detecta un AirTag por mfr data 004C subtipo 12", "[surv][ble]") {
   // len=0x1E, AD type=0xFF, company=0x004C (LE), subtipo=0x12
@@ -829,11 +920,11 @@ TEST_CASE("detecta Axon por el OUI de la MAC BLE", "[surv][ble]") {
 }
 ```
 
-Añadir `"test_surv_ble.c"` a los `SRCS` del `main/CMakeLists.txt` de la test app.
+Añadir `test_surv_ble.c` a la variable `TESTS` del `test/Makefile`.
 
 - [ ] **Step 2: Ejecutar y verificar que falla**
 
-Run: `idf.py build` en `test_apps/surv`. Esperado: `surv_match_ble_adv` no declarada.
+Run: `make -C firmware/components/surveillance_detect/test run-tests`. Esperado: `surv_match_ble_adv` no declarada.
 
 - [ ] **Step 3: Añadir las firmas BLE a `surv_signatures.c`**
 
@@ -960,7 +1051,7 @@ uint8_t surv_match_ble_adv(const uint8_t* adv, uint8_t adv_len,
 
 - [ ] **Step 5: Ejecutar y verificar que pasan**
 
-Run: `idf.py build && ./build/test_surv.elf -v` en `test_apps/surv`.
+Run: `make -C firmware/components/surveillance_detect/test run-tests`.
 Esperado: los nueve tests de `[surv][ble]` pasan.
 
 - [ ] **Step 6: Commit**
@@ -1114,7 +1205,7 @@ La pieza más delicada del plan. Va en su propio archivo y su propio test.
 **Files:**
 - Create: `firmware/components/surveillance_detect/include/surv_ie.h`
 - Modify: `firmware/components/surveillance_detect/surv_ie.c`
-- Test: `firmware/components/surveillance_detect/test_apps/surv/main/test_surv_ie.c`
+- Test: `firmware/components/surveillance_detect/test/test_surv_ie.c`
 
 **Interfaces:**
 - Consumes: nada.
@@ -1136,7 +1227,7 @@ La pieza más delicada del plan. Va en su propio archivo y su propio test.
 
 - [ ] **Step 1: Escribir los tests que fallan**
 
-`test_apps/surv/main/test_surv_ie.c`. El vector se construye para reproducir
+`test/test_surv_ie.c`. El vector se construye para reproducir
 exactamente la firma drive-testeada de flock-you
 `2,12,127,221:506f9a16030103,45,191,221:0050f208000000`:
 
@@ -1146,7 +1237,7 @@ exactamente la firma drive-testeada de flock-you
 // documentada por DeFlockJoplin. Debe complementarse con capturas reales
 // extraidas de los pcap de evidencia (Task 15) en cuanto existan.
 #include "surv_ie.h"
-#include "unity.h"
+#include "surv_test.h"
 
 // SSID wildcard + los siete IE de la firma primaria de Flock
 static const uint8_t FLOCK_IES[] = {
@@ -1228,11 +1319,11 @@ TEST_CASE("se respeta el tope de 8 firmas del overlay", "[surv][ie]") {
 }
 ```
 
-Añadir `"test_surv_ie.c"` a los `SRCS` de la test app.
+Añadir `test_surv_ie.c` a la variable `TESTS` del `test/Makefile`.
 
 - [ ] **Step 2: Ejecutar y verificar que falla**
 
-Run: `idf.py build` en `test_apps/surv`. Esperado: `surv_ie.h` no existe.
+Run: `make -C firmware/components/surveillance_detect/test run-tests`. Esperado: `surv_ie.h` no existe.
 
 - [ ] **Step 3: Implementar el patrón y la comparación binaria**
 
@@ -1394,7 +1485,7 @@ bool surv_ie_matches_flock(const uint8_t* ies, int len) {
 
 - [ ] **Step 4: Ejecutar y verificar que pasan**
 
-Run: `idf.py build && ./build/test_surv.elf -v` en `test_apps/surv`.
+Run: `make -C firmware/components/surveillance_detect/test run-tests`.
 Esperado: los ocho tests de `[surv][ie]` pasan.
 
 - [ ] **Step 5: Anotar la deuda de vectores reales**
@@ -1426,7 +1517,7 @@ git commit -m "feat(surveillance): add binary IE fingerprint matcher for Flock p
 **Files:**
 - Create: `firmware/components/surveillance_detect/include/surv_engine.h`
 - Modify: `firmware/components/surveillance_detect/surv_engine.c`
-- Test: `firmware/components/surveillance_detect/test_apps/surv/main/test_surv_engine.c`
+- Test: `firmware/components/surveillance_detect/test/test_surv_engine.c`
 
 **Interfaces:**
 - Consumes: `surv_event_t`, `surv_class_t`.
@@ -1450,13 +1541,13 @@ que permite probar decay y cooldown en host sin esperar minutos reales.
 
 - [ ] **Step 1: Escribir los tests que fallan**
 
-`test_apps/surv/main/test_surv_engine.c`:
+`test/test_surv_engine.c`:
 
 ```c
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <string.h>
 #include "surv_engine.h"
-#include "unity.h"
+#include "surv_test.h"
 
 static int      s_emits;
 static uint8_t  s_last_score;
@@ -1579,7 +1670,7 @@ TEST_CASE("la tabla se satura a 200 MAC sin desbordar", "[surv][engine]") {
 
 - [ ] **Step 2: Ejecutar y verificar que falla**
 
-Run: `idf.py build` en `test_apps/surv`. Esperado: `surv_engine.h` no existe.
+Run: `make -C firmware/components/surveillance_detect/test run-tests`. Esperado: `surv_engine.h` no existe.
 
 - [ ] **Step 3: Implementar el motor**
 
@@ -1781,7 +1872,7 @@ bool surv_engine_note_unknown(const uint8_t mac[6], uint32_t now_ms) {
 
 - [ ] **Step 4: Ejecutar y verificar que pasan**
 
-Run: `idf.py build && ./build/test_surv.elf -v` en `test_apps/surv`.
+Run: `make -C firmware/components/surveillance_detect/test run-tests`.
 Esperado: los ocho tests de `[surv][engine]` pasan.
 
 - [ ] **Step 5: Commit**
@@ -1798,7 +1889,7 @@ git commit -m "feat(surveillance): add scoring engine with decay, cooldown and t
 **Files:**
 - Create: `firmware/components/surveillance_detect/include/surv_overlay.h`
 - Modify: `firmware/components/surveillance_detect/surv_overlay.c`
-- Test: `firmware/components/surveillance_detect/test_apps/surv/main/test_surv_overlay.c`
+- Test: `firmware/components/surveillance_detect/test/test_surv_overlay.c`
 
 **Interfaces:**
 - Consumes: `surv_oui_entry_t`, `surv_class_t`, `surv_kw_entry_t`, `surv_uuid_entry_t`, `surv_ie_tok_t`, `surv_ie_add_signature()`, `surv_ie_reset_signatures()`, `surv_signatures_build_effective*()`.
@@ -1814,13 +1905,13 @@ responsabilidad de la app (Task 17). Así el parser es 100% testeable en host.
 
 - [ ] **Step 1: Escribir los tests que fallan**
 
-`test_apps/surv/main/test_surv_overlay.c`:
+`test/test_surv_overlay.c`:
 
 ```c
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "surv_match.h"
 #include "surv_overlay.h"
-#include "unity.h"
+#include "surv_test.h"
 
 TEST_CASE("un OUI anadido pasa a matchear", "[surv][overlay]") {
   surv_overlay_reset();
@@ -1925,7 +2016,7 @@ TEST_CASE("se respeta el tope de 256 OUIs", "[surv][overlay]") {
 
 - [ ] **Step 2: Ejecutar y verificar que falla**
 
-Run: `idf.py build` en `test_apps/surv`. Esperado: `surv_overlay.h` no existe.
+Run: `make -C firmware/components/surveillance_detect/test run-tests`. Esperado: `surv_overlay.h` no existe.
 
 - [ ] **Step 3: Reestructurar las tablas para admitir overlay**
 
@@ -2213,7 +2304,7 @@ siguen pasando.
 
 - [ ] **Step 5: Ejecutar y verificar que pasan**
 
-Run: `idf.py build && ./build/test_surv.elf -v` en `test_apps/surv`.
+Run: `make -C firmware/components/surveillance_detect/test run-tests`.
 Esperado: los seis tests de `[surv][overlay]` pasan y los de Task 2 siguen
 pasando (la tabla efectiva sin overlay es idéntica a la base).
 
