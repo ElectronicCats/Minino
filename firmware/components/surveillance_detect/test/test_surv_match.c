@@ -48,3 +48,29 @@ TEST_CASE("ningun OUI aparece en dos clases distintas", "[surv][match]") {
     }
   }
 }
+
+TEST_CASE("la busqueda de substring ignora mayusculas", "[surv][match]") {
+  TEST_ASSERT_TRUE(surv_match_contains_ci("FLOCK_CAM_0032", "flock"));
+  TEST_ASSERT_TRUE(surv_match_contains_ci("mi-FlOcK-red", "flock"));
+  TEST_ASSERT_FALSE(surv_match_contains_ci("floc", "flock"));
+  TEST_ASSERT_FALSE(surv_match_contains_ci(NULL, "flock"));
+  TEST_ASSERT_FALSE(surv_match_contains_ci("flock", NULL));
+}
+
+TEST_CASE("un SSID de Flock matchea con 5 puntos y tier 0", "[surv][match]") {
+  const surv_kw_entry_t* e = surv_match_ssid("Flock_CAM_0032");
+  TEST_ASSERT_NOT_NULL(e);
+  TEST_ASSERT_EQUAL_INT(SURV_CLASS_FLOCK, e->klass);
+  TEST_ASSERT_EQUAL_UINT8(5, e->points);
+}
+
+TEST_CASE("un SSID de camara matchea con 2 puntos", "[surv][match]") {
+  const surv_kw_entry_t* e = surv_match_ssid("casa-ipcam-01");
+  TEST_ASSERT_NOT_NULL(e);
+  TEST_ASSERT_EQUAL_INT(SURV_CLASS_CAM, e->klass);
+  TEST_ASSERT_EQUAL_UINT8(2, e->points);
+}
+
+TEST_CASE("un SSID normal no matchea", "[surv][match]") {
+  TEST_ASSERT_NULL(surv_match_ssid("INFINITUM1234"));
+}

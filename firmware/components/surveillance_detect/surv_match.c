@@ -36,3 +36,38 @@ const surv_oui_entry_t* surv_match_oui(const uint8_t mac[6]) {
   }
   return NULL;
 }
+
+static char lower_ascii(char c) {
+  return (c >= 'A' && c <= 'Z') ? (char) (c + 32) : c;
+}
+
+bool surv_match_contains_ci(const char* hay, const char* needle) {
+  if (hay == NULL || needle == NULL || needle[0] == '\0') {
+    return false;
+  }
+  for (size_t i = 0; hay[i] != '\0'; i++) {
+    size_t j = 0;
+    while (needle[j] != '\0' && hay[i + j] != '\0' &&
+           lower_ascii(hay[i + j]) == lower_ascii(needle[j])) {
+      j++;
+    }
+    if (needle[j] == '\0') {
+      return true;
+    }
+  }
+  return false;
+}
+
+const surv_kw_entry_t* surv_match_ssid(const char* ssid) {
+  if (ssid == NULL || ssid[0] == '\0') {
+    return NULL;
+  }
+  const surv_kw_entry_t* t = surv_signatures_kws();
+  uint16_t n = surv_signatures_kw_count();
+  for (uint16_t i = 0; i < n; i++) {
+    if (surv_match_contains_ci(ssid, t[i].kw)) {
+      return &t[i];
+    }
+  }
+  return NULL;
+}
