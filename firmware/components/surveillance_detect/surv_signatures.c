@@ -7,6 +7,7 @@
 // flock-you (MIT); se transcriben aqui con la misma clase y peso que
 // tienen en la tabla de origen.
 #include "surv_signatures.h"
+#include <string.h>
 
 static const surv_oui_entry_t OUIS[] = {
     // --- Flock Safety (@NitekryDPaul, dataset en modo promiscuo, 25 entradas)
@@ -122,12 +123,52 @@ static const surv_oui_entry_t OUIS[] = {
     {{0x00, 0x25, 0xdf}, SURV_CLASS_AXON, 5, SURV_TIER_ADDR2},
 };
 
+// Tabla efectiva = base + anadidos del overlay - quitados del overlay. Vive
+// en RAM porque el overlay se recarga en runtime (Task 8). Sin overlay
+// cargado (s_effective_built == false) los accessors devuelven OUIS tal
+// cual, asi que las Tasks 1 y 2 no se rompen.
+//
+// El tamano se deriva de sizeof(OUIS) en vez de un literal para no quedar
+// desincronizado si la tabla base crece: un literal stale aqui desbordaria
+// s_effective por un elemento en cuanto el overlay llegue a su tope.
+#define SURV_OVERLAY_MAX_OUIS 256
+
+static surv_oui_entry_t
+    s_effective[(sizeof(OUIS) / sizeof(OUIS[0])) + SURV_OVERLAY_MAX_OUIS];
+static uint16_t s_effective_count;
+static bool s_effective_built;
+
+void surv_signatures_build_effective(const surv_oui_entry_t* extra,
+                                     uint16_t extra_count,
+                                     const uint8_t (*removed)[3],
+                                     uint16_t removed_count) {
+  s_effective_count = 0;
+  uint16_t base_n = (uint16_t) (sizeof(OUIS) / sizeof(OUIS[0]));
+  for (uint16_t i = 0; i < base_n; i++) {
+    bool drop = false;
+    for (uint16_t j = 0; j < removed_count; j++) {
+      if (memcmp(OUIS[i].oui, removed[j], 3) == 0) {
+        drop = true;
+        break;
+      }
+    }
+    if (!drop) {
+      s_effective[s_effective_count++] = OUIS[i];
+    }
+  }
+  for (uint16_t i = 0; i < extra_count; i++) {
+    s_effective[s_effective_count++] = extra[i];
+  }
+  s_effective_built = true;
+}
+
 uint16_t surv_signatures_oui_count(void) {
-  return (uint16_t) (sizeof(OUIS) / sizeof(OUIS[0]));
+  return s_effective_built ? s_effective_count
+                           : (uint16_t) (sizeof(OUIS) / sizeof(OUIS[0]));
 }
 
 const surv_oui_entry_t* surv_signatures_ouis(void) {
-  return OUIS;
+  return s_effective_built ? s_effective : OUIS;
 }
 
 static const surv_kw_entry_t KWS[] = {
@@ -176,12 +217,34 @@ static const surv_kw_entry_t KWS[] = {
     {"cam", SURV_CLASS_CAM, 2},
 };
 
+// Gemela de s_effective/build_effective, para keywords de SSID/BLE-name.
+#define SURV_OVERLAY_MAX_KWS 64
+
+static surv_kw_entry_t
+    s_effective_kws[(sizeof(KWS) / sizeof(KWS[0])) + SURV_OVERLAY_MAX_KWS];
+static uint16_t s_effective_kw_count;
+static bool s_effective_kws_built;
+
+void surv_signatures_build_effective_kws(const surv_kw_entry_t* extra,
+                                         uint16_t extra_count) {
+  s_effective_kw_count = 0;
+  uint16_t base_n = (uint16_t) (sizeof(KWS) / sizeof(KWS[0]));
+  for (uint16_t i = 0; i < base_n; i++) {
+    s_effective_kws[s_effective_kw_count++] = KWS[i];
+  }
+  for (uint16_t i = 0; i < extra_count; i++) {
+    s_effective_kws[s_effective_kw_count++] = extra[i];
+  }
+  s_effective_kws_built = true;
+}
+
 uint16_t surv_signatures_kw_count(void) {
-  return (uint16_t) (sizeof(KWS) / sizeof(KWS[0]));
+  return s_effective_kws_built ? s_effective_kw_count
+                               : (uint16_t) (sizeof(KWS) / sizeof(KWS[0]));
 }
 
 const surv_kw_entry_t* surv_signatures_kws(void) {
-  return KWS;
+  return s_effective_kws_built ? s_effective_kws : KWS;
 }
 
 // UUIDs de 16 bits, de eye-spy (Apache-2.0)
@@ -193,12 +256,35 @@ static const surv_uuid_entry_t UUIDS[] = {
     {0xFEEC, SURV_CLASS_TILE, 3, "Tile"},
 };
 
+// Gemela de s_effective/build_effective, para UUIDs de servicio BLE.
+#define SURV_OVERLAY_MAX_UUIDS 16
+
+static surv_uuid_entry_t s_effective_uuids[(sizeof(UUIDS) / sizeof(UUIDS[0])) +
+                                           SURV_OVERLAY_MAX_UUIDS];
+static uint16_t s_effective_uuid_count;
+static bool s_effective_uuids_built;
+
+void surv_signatures_build_effective_uuids(const surv_uuid_entry_t* extra,
+                                           uint16_t extra_count) {
+  s_effective_uuid_count = 0;
+  uint16_t base_n = (uint16_t) (sizeof(UUIDS) / sizeof(UUIDS[0]));
+  for (uint16_t i = 0; i < base_n; i++) {
+    s_effective_uuids[s_effective_uuid_count++] = UUIDS[i];
+  }
+  for (uint16_t i = 0; i < extra_count; i++) {
+    s_effective_uuids[s_effective_uuid_count++] = extra[i];
+  }
+  s_effective_uuids_built = true;
+}
+
 uint16_t surv_signatures_uuid_count(void) {
-  return (uint16_t) (sizeof(UUIDS) / sizeof(UUIDS[0]));
+  return s_effective_uuids_built
+             ? s_effective_uuid_count
+             : (uint16_t) (sizeof(UUIDS) / sizeof(UUIDS[0]));
 }
 
 const surv_uuid_entry_t* surv_signatures_uuids(void) {
-  return UUIDS;
+  return s_effective_uuids_built ? s_effective_uuids : UUIDS;
 }
 
 // Substrings de nombre BLE, case-insensitive
