@@ -229,7 +229,13 @@ convierte en espacios, `make` falla con `missing separator`.
 
 ```c
 // SPDX-License-Identifier: GPL-3.0-or-later
+//
 // Tipos compartidos del detector de vigilancia.
+//
+// Procedencia: la taxonomia de surv_class_t deriva de los motores de deteccion
+// de eye-spy (simeononsecurity, Apache-2.0), en concreto de los DECL_DETECTOR
+// de src/es_confidence.h. Los niveles de tier SURV_TIER_* derivan de flock-you
+// (colonelpanichacks, MIT).
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
@@ -426,9 +432,36 @@ uint8_t surv_radio_current_channel(void) { return 0; }
 ```
 
 `surveillance_detect.c` lleva el mismo tratamiento para `surv_begin`,
-`surv_stop`, `surv_register_cb` y `surv_queue_overflows`, y las cabeceras
-`include/surv_radio.h` e `include/surveillance_detect.h` se crean aquí con las
-firmas que declaran las Tasks 9 y 10.
+`surv_stop`, `surv_register_cb` y `surv_queue_overflows`.
+
+Las cabeceras `include/surv_radio.h` e `include/surveillance_detect.h` se crean
+aquí **con exactamente estas firmas**, que son las que declaran las Tasks 9 y 10.
+No inventar otras: si divergen, la Task 9 reescribe cabeceras en vez de rellenar
+implementaciones.
+
+```c
+// include/surveillance_detect.h
+typedef enum {
+  SURV_PROFILE_FLOCK = 0,   // 100% WiFi promiscuo
+  SURV_PROFILE_SURVEIL,     // ciclo BLE + WiFi
+  SURV_PROFILE_TRACKERS,    // 100% BLE pasivo
+} surv_profile_t;
+
+typedef void (*surv_detect_cb_t)(const surv_event_t* ev, uint8_t score);
+
+esp_err_t surv_begin(surv_profile_t profile, bool active_scan);
+void      surv_stop(void);
+void      surv_register_cb(surv_detect_cb_t cb);
+uint32_t  surv_queue_overflows(void);
+
+// include/surv_radio.h
+esp_err_t surv_radio_start(surv_profile_t p, bool active_scan);
+void      surv_radio_stop(void);
+uint8_t   surv_radio_current_channel(void);
+```
+
+El perfil describe **qué se está cazando**, no qué radio se enciende: un
+`SURV_PROFILE_BLE`/`SURV_PROFILE_WIFI` seria un concepto distinto y equivocado.
 
 - [ ] **Step 5: Ejecutar el test en host y verificar que pasa**
 
