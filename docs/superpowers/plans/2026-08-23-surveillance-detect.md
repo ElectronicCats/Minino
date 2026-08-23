@@ -1985,6 +1985,7 @@ responsabilidad de la app (Task 17). Así el parser es 100% testeable en host.
 
 ```c
 // SPDX-License-Identifier: GPL-3.0-or-later
+#include "surv_ie.h"
 #include "surv_match.h"
 #include "surv_overlay.h"
 #include "surv_test.h"
@@ -2102,7 +2103,11 @@ efectiva en RAM = base + añadidos − quitados. En `surv_signatures.c` añadir:
 ```c
 #define SURV_OVERLAY_MAX_OUIS 256
 
-static surv_oui_entry_t s_effective[74 + SURV_OVERLAY_MAX_OUIS];
+// OJO: dimensionar desde sizeof(OUIS), NUNCA con un literal. La tabla base
+// crecio de 74 a 75 al anadir el OUI de Axon, y un literal desfasado desborda
+// este array por el final justo cuando el overlay va lleno.
+static surv_oui_entry_t
+    s_effective[sizeof(OUIS) / sizeof(OUIS[0]) + SURV_OVERLAY_MAX_OUIS];
 static uint16_t         s_effective_count;
 
 void surv_signatures_build_effective(const surv_oui_entry_t* extra,
@@ -2198,13 +2203,18 @@ static bool parse_ie_token(const char* s, surv_ie_tok_t* out) {
   }
   out->tag = (uint8_t) tag;
   if (colon == NULL) {
-    return true;
+    // Un token vendor sin payload se rechaza. El matcher decide comparar bytes
+    // vendor por `tag == 221`, nunca por vlen, asi que aceptar un "221" pelado
+    // produce una firma que se carga sin quejarse y luego no matchea NUNCA, sin
+    // forma de depurarlo. Mejor una linea contada como saltada, que el usuario ve.
+    return out->tag != SURV_IE_VENDOR_TAG;
   }
   const char* hex = colon + 1;
   size_t      hl = strlen(hex);
   if (hl != 14) {  // exactamente 7 bytes de vendor
     return false;
   }
+  // (ver abajo: un token 221 sin payload se rechaza antes de llegar aqui)
   for (int i = 0; i < 7; i++) {
     unsigned b;
     if (sscanf(hex + i * 2, "%2x", &b) != 1) {
