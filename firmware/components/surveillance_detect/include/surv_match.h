@@ -16,3 +16,18 @@ bool surv_match_contains_ci(const char* hay, const char* needle);
 
 // Busca SSID en la tabla de keywords. Devuelve la primera coincidencia o NULL.
 const surv_kw_entry_t* surv_match_ssid(const char* ssid);
+
+#define SURV_BLE_MAX_HITS 4
+typedef struct {
+  surv_class_t klass;
+  uint8_t points;
+  const char* label;  // "AirTag", "Axon", ... string estático
+} surv_ble_hit_t;
+
+// Recorre los TLV de un advertisement BLE y acumula hasta SURV_BLE_MAX_HITS
+// clases distintas (un mismo advertisement puede ser iBeacon y otra cosa a la
+// vez). adv puede venir directo del aire: adv_len es la longitud real del
+// buffer, no confiable por sí sola. Devuelve el número de hits en out.
+uint8_t surv_match_ble_adv(const uint8_t* adv,
+                           uint8_t adv_len,
+                           surv_ble_hit_t out[SURV_BLE_MAX_HITS]);

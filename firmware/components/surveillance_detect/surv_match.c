@@ -71,3 +71,92 @@ const surv_kw_entry_t* surv_match_ssid(const char* ssid) {
   }
   return NULL;
 }
+
+static void push_hit(surv_ble_hit_t* out,
+                     uint8_t* n,
+                     surv_class_t k,
+                     uint8_t pts,
+                     const char* label) {
+  if (*n >= SURV_BLE_MAX_HITS) {
+    return;
+  }
+  for (uint8_t i = 0; i < *n; i++) {
+    if (out[i].klass == k) {
+      return;  // ya registrada
+    }
+  }
+  out[*n].klass = k;
+  out[*n].points = pts;
+  out[*n].label = label;
+  (*n)++;
+}
+
+uint8_t surv_match_ble_adv(const uint8_t* adv,
+                           uint8_t adv_len,
+                           surv_ble_hit_t out[SURV_BLE_MAX_HITS]) {
+  uint8_t n = 0;
+  if (adv == NULL || out == NULL) {
+    return 0;
+  }
+  uint8_t off = 0;
+  while (off + 1 < adv_len) {
+    uint8_t len = adv[off];
+    if (len == 0 || (uint16_t) (off + len + 1) > adv_len) {
+      break;  // longitud imposible: advertisement truncado
+    }
+    uint8_t ad_type = adv[off + 1];
+    const uint8_t* d = &adv[off + 2];
+    uint8_t dlen = (uint8_t) (len - 1);
+
+    if (ad_type == 0xFF && dlen >= 2) {  // manufacturer specific
+      uint16_t company = (uint16_t) (d[0] | (d[1] << 8));
+      if (company == 0x004C && dlen >= 3) {  // Apple
+        if (d[2] == 0x12 || d[2] == 0x1E) {
+          push_hit(out, &n, SURV_CLASS_AIRTAG, 4, "AirTag");
+        } else if (d[2] == 0x02 && dlen >= 4 && d[3] == 0x15) {
+          push_hit(out, &n, SURV_CLASS_IBEACON, 2, "iBeacon");
+        } else if (d[2] == 0x07 || d[2] == 0x10) {
+          push_hit(out, &n, SURV_CLASS_APPLE_NEARBY, 2, "Apple Dev");
+        }
+      } else if (company == 0x0075) {  // Samsung
+        push_hit(out, &n, SURV_CLASS_SMARTTAG, 3, "SmartTag");
+      } else if (company == 0x09C8) {  // XUNTONG, confirmado Flock (eye-spy)
+        push_hit(out, &n, SURV_CLASS_FLOCK, 5, "Flock BLE");
+      }
+    }
+
+    if ((ad_type == 0x02 || ad_type == 0x03 || ad_type == 0x16) && dlen >= 2) {
+      uint16_t uuid = (uint16_t) (d[0] | (d[1] << 8));
+      for (uint16_t i = 0; i < surv_signatures_uuid_count(); i++) {
+        if (surv_signatures_uuids()[i].uuid == uuid) {
+          push_hit(out, &n, surv_signatures_uuids()[i].klass,
+                   surv_signatures_uuids()[i].points,
+                   surv_signatures_uuids()[i].label);
+        }
+      }
+    }
+
+    if (ad_type == 0x08 || ad_type == 0x09) {  // nombre corto / completo
+      char name[32];
+      uint8_t cp =
+          dlen < sizeof(name) - 1 ? dlen : (uint8_t) (sizeof(name) - 1);
+      memcpy(name, d, cp);
+      name[cp] = '\0';
+      for (uint16_t i = 0; i < surv_signatures_skimmer_count(); i++) {
+        if (strcmp(name, surv_signatures_skimmers()[i]) == 0) {
+          push_hit(out, &n, SURV_CLASS_SKIMMER, 5, "Skimmer");
+        }
+      }
+      for (uint16_t i = 0; i < surv_signatures_ble_name_count(); i++) {
+        if (surv_match_contains_ci(name, surv_signatures_ble_names()[i].name)) {
+          push_hit(out, &n, surv_signatures_ble_names()[i].klass,
+                   surv_signatures_ble_names()[i].points,
+                   surv_signatures_ble_names()[i].label);
+        }
+      }
+    }
+
+    off = (uint8_t) (off + len + 1);
+  }
+  return n;
+}

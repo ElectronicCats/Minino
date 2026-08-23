@@ -183,3 +183,49 @@ uint16_t surv_signatures_kw_count(void) {
 const surv_kw_entry_t* surv_signatures_kws(void) {
   return KWS;
 }
+
+// UUIDs de 16 bits, de eye-spy (Apache-2.0)
+static const surv_uuid_entry_t UUIDS[] = {
+    {0xFD5F, SURV_CLASS_GLASSES, 5, "RayBan Meta"},
+    {0xFFFA, SURV_CLASS_ODID, 4, "Drone ODID"},
+    {0xFD5A, SURV_CLASS_SMARTTAG, 3, "SmartTag"},
+    {0xFEED, SURV_CLASS_TILE, 3, "Tile"},
+    {0xFEEC, SURV_CLASS_TILE, 3, "Tile"},
+};
+
+uint16_t surv_signatures_uuid_count(void) {
+  return (uint16_t) (sizeof(UUIDS) / sizeof(UUIDS[0]));
+}
+
+const surv_uuid_entry_t* surv_signatures_uuids(void) {
+  return UUIDS;
+}
+
+// Substrings de nombre BLE, case-insensitive
+static const surv_name_entry_t BLE_NAMES[] = {
+    {"fs ext battery", SURV_CLASS_FLOCK, 5, "Flock Battery"},
+    {"pigvision", SURV_CLASS_FLOCK, 5, "Flock"},
+    {"penguin", SURV_CLASS_FLOCK, 5, "Flock"},
+    {"flock", SURV_CLASS_FLOCK, 5, "Flock"},
+    {"raven", SURV_CLASS_RAVEN, 5, "Raven"},
+    {"meshcore-", SURV_CLASS_MESHCORE, 2, "MeshCore"},
+};
+
+uint16_t surv_signatures_ble_name_count(void) {
+  return (uint16_t) (sizeof(BLE_NAMES) / sizeof(BLE_NAMES[0]));
+}
+
+const surv_name_entry_t* surv_signatures_ble_names(void) {
+  return BLE_NAMES;
+}
+
+// Nombres exactos de modulos de skimmer
+static const char* const SKIMMER_NAMES[] = {"HC-03", "HC-05", "HC-06"};
+
+uint16_t surv_signatures_skimmer_count(void) {
+  return (uint16_t) (sizeof(SKIMMER_NAMES) / sizeof(SKIMMER_NAMES[0]));
+}
+
+const char* const* surv_signatures_skimmers(void) {
+  return SKIMMER_NAMES;
+}
