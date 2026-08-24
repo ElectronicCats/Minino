@@ -1,15 +1,11 @@
 
 #include "trackers_scanner.h"
+#include <string.h>
 #include "bt_gattc.h"
 #include "esp_bt.h"
 #include "esp_log.h"
 #include "inttypes.h"
-#include <string.h>
-
-#define APPLE_COMPANY_ID          0x004C
-#define SAMSUNG_COMPANY_ID        0x0075
-#define SAMSUNG_SMARTTAG_SVC_UUID 0xFD5A
-#define TILE_SVC_UUID             0xFEED
+#include "surv_match.h"
 
 static TaskHandle_t trackers_scan_timer_task = NULL;
 static bluetooth_traker_scanner_cb_t display_records_cb = NULL;
@@ -23,6 +19,7 @@ static void handle_bt_gapc_events(esp_gap_ble_cb_event_t event_type,
                                   esp_ble_gap_cb_param_t* param);
 
 void trackers_scanner_start() {
+  bt_gattc_set_passive_scan(true);
   gattc_scan_params_t scan_params = {
       .remote_filter_service_uuid =
           bt_gattc_set_default_ble_filter_service_uuid(),
@@ -116,72 +113,40 @@ static void tracker_dissector(esp_ble_gap_cb_param_t* scan_rst,
                               tracker_profile_t* tracker_record) {
   uint8_t* adv = scan_rst->scan_rst.ble_adv;
   uint8_t adv_len = scan_rst->scan_rst.adv_data_len;
-  uint8_t offset = 0;
 
   tracker_record->is_tracker = false;
 
-  // Iterate over standard BLE TLV structures
-  while (offset < adv_len) {
-    uint8_t length = adv[offset];
-    if (length == 0 || (offset + length + 1) > adv_len) {
+  surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
+  uint8_t n = surv_match_ble_adv(adv, adv_len, hits);
+
+  // Esta app solo muestra rastreadores personales. El resto de clases que el
+  // disector compartido reconoce (Flock, Axon, drones) las consume la app de
+  // vigilancia, no esta.
+  for (uint8_t i = 0; i < n; i++) {
+    switch (hits[i].klass) {
+      case SURV_CLASS_AIRTAG:
+      case SURV_CLASS_SMARTTAG:
+      case SURV_CLASS_TILE:
+      case SURV_CLASS_APPLE_NEARBY:
+        tracker_record->is_tracker = true;
+        tracker_record->name = (char*) hits[i].label;
+        tracker_record->vendor = (char*) hits[i].label;
+        break;
+      default:
+        break;
+    }
+    if (tracker_record->is_tracker) {
       break;
     }
-    uint8_t ad_type = adv[offset + 1];
-    uint8_t* ad_data = &adv[offset + 2];
-    uint8_t ad_data_len = length - 1;
-
-    // 1. Manufacturer Specific Data (0xFF)
-    if (ad_type == 0xFF && ad_data_len >= 2) {
-      uint16_t company_id = (uint16_t)(ad_data[0] | (ad_data[1] << 8));
-      
-      // Apple AirTag / FindMy / Nearby (Company 0x004C)
-      if (company_id == APPLE_COMPANY_ID && ad_data_len >= 3) {
-        if (ad_data[2] == 0x12) { // Apple FindMy payload
-          tracker_record->is_tracker = true;
-          tracker_record->name = "AirTag";
-          tracker_record->vendor = "Apple";
-          break;
-        } else if (ad_data[2] == 0x07 || ad_data[2] == 0x10) { // AirPods / Nearby Action
-          tracker_record->is_tracker = true;
-          tracker_record->name = "Apple Dev";
-          tracker_record->vendor = "Apple";
-          break;
-        }
-      }
-      
-      // Samsung SmartTag (Company 0x0075)
-      if (company_id == SAMSUNG_COMPANY_ID) {
-        tracker_record->is_tracker = true;
-        tracker_record->name = "SmartTag";
-        tracker_record->vendor = "Samsung";
-        break;
-      }
-    }
-
-    // 2. Complete/Incomplete 16-bit Service UUIDs (0x02 / 0x03) or Service Data (0x16)
-    if ((ad_type == 0x02 || ad_type == 0x03 || ad_type == 0x16) && ad_data_len >= 2) {
-      uint16_t uuid = (uint16_t)(ad_data[0] | (ad_data[1] << 8));
-      if (uuid == TILE_SVC_UUID) {
-        tracker_record->is_tracker = true;
-        tracker_record->name = "Tile Tag";
-        tracker_record->vendor = "Tile";
-        break;
-      } else if (uuid == SAMSUNG_SMARTTAG_SVC_UUID) {
-        tracker_record->is_tracker = true;
-        tracker_record->name = "SmartTag";
-        tracker_record->vendor = "Samsung";
-        break;
-      }
-    }
-
-    offset += (length + 1);
   }
 
   if (tracker_record->is_tracker) {
     tracker_record->rssi = scan_rst->scan_rst.rssi;
     tracker_record->adv_data_length = adv_len;
     memcpy(tracker_record->mac_address, scan_rst->scan_rst.bda, 6);
-    size_t copy_len = (adv_len > sizeof(tracker_record->adv_data)) ? sizeof(tracker_record->adv_data) : adv_len;
+    size_t copy_len = (adv_len > sizeof(tracker_record->adv_data))
+                          ? sizeof(tracker_record->adv_data)
+                          : adv_len;
     memcpy(tracker_record->adv_data, adv, copy_len);
   }
 }
