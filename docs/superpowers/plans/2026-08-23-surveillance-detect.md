@@ -2522,9 +2522,30 @@ uint32_t surv_queue_overflows(void) {
   return s_overflows;
 }
 
+// Puntos del motor ODID por WiFi. Mismo peso que la entrada ODID de la tabla
+// BLE (surv_signatures.c); nombrado para que la duplicacion se vea.
+#define SURV_PTS_ODID_WIFI 4
+
+// El `tier` de la entrada de OUI es un TECHO, nunca el tier del evento. Se
+// escribe una sola vez: las tres rutas de deteccion aplican el mismo recorte y
+// una de ellas con el ternario al reves promocionaria un OUI de fabricante
+// contratista a tier confirmatorio.
+static inline uint8_t clamp_tier(uint8_t computed, uint8_t ceiling) {
+  return computed > ceiling ? ceiling : computed;
+}
+
 static void IRAM_ATTR wifi_sniffer_cb(void* buf,
                                       wifi_promiscuous_pkt_type_t type) {
   const wifi_promiscuous_pkt_t* p = (const wifi_promiscuous_pkt_t*) buf;
+  // Descartar tramas que el hardware marco con error de recepcion, como hace
+  // el sniffer de ejemplo de ESP-IDF. Una trama corrupta puede traer un addr2
+  // alterado que coincida por azar con un OUI conocido, y alimentaria las
+  // rutas tier-1/tier-2 -las de solo OUI, ya de por si las mas ruidosas- con
+  // basura. El criterio de aceptacion del proyecto es CERO falsos positivos de
+  // clase FLOCK/ALPR, asi que esto no es higiene opcional.
+  if (p->rx_ctrl.rx_state != 0) {
+    return;
+  }
   if (p->rx_ctrl.rssi < SURV_RSSI_MIN) {
     return;
   }
@@ -2553,11 +2574,10 @@ static void IRAM_ATTR wifi_sniffer_cb(void* buf,
       if (surv_ie_is_wildcard_probe(ies, ielen) == 1) {
         memcpy(ev.mac, addr2, 6);
         ev.klass = e->klass;
-        ev.tier = surv_ie_matches_flock(ies, ielen) ? SURV_TIER_IE_SIG
-                                                    : SURV_TIER_PROBE;
-        if (ev.tier > e->tier) {
-          ev.tier = e->tier;  // el techo de la firma manda
-        }
+        ev.tier = clamp_tier(surv_ie_matches_flock(ies, ielen)
+                                 ? SURV_TIER_IE_SIG
+                                 : SURV_TIER_PROBE,
+                             e->tier);
         queue_push(&ev, e->points);
         return;
       }
@@ -2571,7 +2591,7 @@ static void IRAM_ATTR wifi_sniffer_cb(void* buf,
     memcpy(ev.mac, addr2, 6);
     ev.klass = SURV_CLASS_ODID;
     ev.tier = SURV_TIER_ADDR2;
-    queue_push(&ev, 4);
+    queue_push(&ev, SURV_PTS_ODID_WIFI);
     return;
   }
 
@@ -2580,7 +2600,7 @@ static void IRAM_ATTR wifi_sniffer_cb(void* buf,
   if (e2 != NULL) {
     memcpy(ev.mac, addr2, 6);
     ev.klass = e2->klass;
-    ev.tier = SURV_TIER_ADDR2 > e2->tier ? e2->tier : SURV_TIER_ADDR2;
+    ev.tier = clamp_tier(SURV_TIER_ADDR2, e2->tier);
     queue_push(&ev, e2->points);
     return;
   }
@@ -2594,7 +2614,7 @@ static void IRAM_ATTR wifi_sniffer_cb(void* buf,
   if (e1 != NULL) {
     memcpy(ev.mac, addr1, 6);
     ev.klass = e1->klass;
-    ev.tier = SURV_TIER_ADDR13 > e1->tier ? e1->tier : SURV_TIER_ADDR13;
+    ev.tier = clamp_tier(SURV_TIER_ADDR13, e1->tier);
     queue_push(&ev, e1->points);
   }
 }
