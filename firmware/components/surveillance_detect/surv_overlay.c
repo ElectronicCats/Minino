@@ -22,10 +22,14 @@
 #include "surv_ie.h"
 #include "surv_signatures.h"
 
-#define MAX_ADD      256
+// MAX_ADD/_KW/_UUID se derivan de las constantes de surv_signatures.h: son
+// las mismas que dimensionan los arreglos efectivos alli. Definirlas por
+// separado en cada archivo dejaria la sincronizacion librada a la
+// convencion en vez de al compilador.
+#define MAX_ADD      SURV_OVERLAY_MAX_OUIS
 #define MAX_REMOVE   64
-#define MAX_ADD_KW   64
-#define MAX_ADD_UUID 16
+#define MAX_ADD_KW   SURV_OVERLAY_MAX_KWS
+#define MAX_ADD_UUID SURV_OVERLAY_MAX_UUIDS
 #define MAX_LINE     128
 #define KW_MAX_LEN   24
 
@@ -67,11 +71,21 @@ static bool parse_oui(const char* s, uint8_t out[3]) {
 // "45" -> {45,0}; "221:506f9a16030103" -> {221,7,{0x50,0x6f,...}}
 static bool parse_ie_token(const char* s, surv_ie_tok_t* out) {
   memset(out, 0, sizeof(*out));
-  const char* colon = strchr(s, ':');
-  int tag = atoi(s);
-  if (tag < 0 || tag > 255) {
+  if (s == NULL || *s == '\0') {
     return false;
   }
+  char* end = NULL;
+  long tag = strtol(s, &end, 10);
+  // strtol y no atoi, y se rechaza el tag 0. atoi("xyz") devuelve 0 en
+  // silencio, y un token con tag 0 es indistinguible del elemento SSID:
+  // tokens_match_sig lo salta ANTES de compararlo contra la firma, asi que la
+  // firma nunca se completa y queda muerta -ocupando ademas uno de los 8
+  // huecos de overlay-. Mismo modo de fallo que el token 221 sin payload, y
+  // ninguno de los dos avisa de nada.
+  if (end == s || (*end != '\0' && *end != ':') || tag < 1 || tag > 255) {
+    return false;
+  }
+  const char* colon = strchr(s, ':');
   out->tag = (uint8_t) tag;
   if (colon == NULL) {
     if (out->tag == SURV_IE_VENDOR_TAG) {
@@ -174,7 +188,13 @@ static bool handle_line(char* line, surv_overlay_stats_t* st) {
     surv_ie_tok_t toks[SURV_IE_MAX_TOKS];
     uint8_t n = 0;
     const char* tok = value;
-    while (tok != NULL && n < SURV_IE_MAX_TOKS) {
+    while (tok != NULL) {
+      if (n >= SURV_IE_MAX_TOKS) {
+        // Mas tokens de los que caben: se salta la linea entera. Aplicarla
+        // truncada dejaria cargada una firma que el usuario no escribio.
+        st->skipped++;
+        return true;
+      }
       if (!parse_ie_token(tok, &toks[n])) {
         st->skipped++;
         return true;

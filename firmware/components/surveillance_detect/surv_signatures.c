@@ -131,8 +131,8 @@ static const surv_oui_entry_t OUIS[] = {
 // El tamano se deriva de sizeof(OUIS) en vez de un literal para no quedar
 // desincronizado si la tabla base crece: un literal stale aqui desbordaria
 // s_effective por un elemento en cuanto el overlay llegue a su tope.
-#define SURV_OVERLAY_MAX_OUIS 256
-
+// SURV_OVERLAY_MAX_OUIS vive en surv_signatures.h: es la misma constante que
+// limita cuantos OUIs acepta el overlay en surv_overlay.c.
 static surv_oui_entry_t
     s_effective[(sizeof(OUIS) / sizeof(OUIS[0])) + SURV_OVERLAY_MAX_OUIS];
 static uint16_t s_effective_count;
@@ -218,8 +218,7 @@ static const surv_kw_entry_t KWS[] = {
 };
 
 // Gemela de s_effective/build_effective, para keywords de SSID/BLE-name.
-#define SURV_OVERLAY_MAX_KWS 64
-
+// SURV_OVERLAY_MAX_KWS vive en surv_signatures.h.
 static surv_kw_entry_t
     s_effective_kws[(sizeof(KWS) / sizeof(KWS[0])) + SURV_OVERLAY_MAX_KWS];
 static uint16_t s_effective_kw_count;
@@ -257,8 +256,7 @@ static const surv_uuid_entry_t UUIDS[] = {
 };
 
 // Gemela de s_effective/build_effective, para UUIDs de servicio BLE.
-#define SURV_OVERLAY_MAX_UUIDS 16
-
+// SURV_OVERLAY_MAX_UUIDS vive en surv_signatures.h.
 static surv_uuid_entry_t s_effective_uuids[(sizeof(UUIDS) / sizeof(UUIDS[0])) +
                                            SURV_OVERLAY_MAX_UUIDS];
 static uint16_t s_effective_uuid_count;

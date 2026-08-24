@@ -35,6 +35,16 @@ typedef struct {
   const char* label;
 } surv_name_entry_t;
 
+// Topes del overlay. Fuente unica de verdad: aqui dimensionan los arreglos
+// efectivos (surv_signatures.c) y en surv_overlay.c limitan cuantas entradas
+// se aceptan. Definirlos por separado en cada archivo, como se hizo al
+// principio, deja la sincronizacion librada a la convencion: si alguien sube
+// uno sin subir el otro, surv_signatures_build_effective() escribe pasado el
+// final de un arreglo estatico sin ningun diagnostico del compilador.
+#define SURV_OVERLAY_MAX_OUIS  256
+#define SURV_OVERLAY_MAX_KWS   64
+#define SURV_OVERLAY_MAX_UUIDS 16
+
 uint16_t surv_signatures_oui_count(void);
 const surv_oui_entry_t* surv_signatures_ouis(void);
 uint16_t surv_signatures_kw_count(void);

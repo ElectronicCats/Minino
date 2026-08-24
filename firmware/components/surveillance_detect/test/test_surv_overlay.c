@@ -100,6 +100,38 @@ TEST_CASE("un token 221 sin payload de vendor se salta", "[surv][overlay]") {
   TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
 }
 
+// atoi("xyz") devuelve 0 en silencio, y un token con tag 0 es indistinguible
+// del elemento SSID: tokens_match_sig lo salta ANTES de compararlo contra la
+// firma, asi que la firma nunca se completa y queda muerta -ocupando ademas
+// uno de los 8 huecos de overlay-. Mismo modo de fallo que el 221 sin
+// payload.
+TEST_CASE("un token de tag 0 se salta", "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+iesig,0,45\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
+TEST_CASE("un token no numerico se salta en vez de leerse como tag 0",
+          "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+iesig,xyz,45\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
+// Una firma con mas tokens de los que caben en SURV_IE_MAX_TOKS se salta
+// entera: aplicarla truncada dejaria cargada una firma que el usuario no
+// escribio, y ese error tambien seria silencioso.
+TEST_CASE("una firma iesig con mas tokens de los permitidos se salta entera",
+          "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st =
+      surv_overlay_parse("+iesig,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
 TEST_CASE("se respeta el tope de 256 OUIs", "[surv][overlay]") {
   surv_overlay_reset();
   char buf[64];
