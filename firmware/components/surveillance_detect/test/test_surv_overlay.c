@@ -192,6 +192,20 @@ TEST_CASE("un +uuid con puntos no numericos se salta en vez de cargar 0",
   TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
 }
 
+// La longitud total (8) por si sola no basta: si el ultimo octeto trae
+// basura pegada a un solo digito hex valido, "aa:bb:c!" tambien mide 8
+// caracteres. Solo el %n de sscanf (cuantos caracteres consumio realmente el
+// ultimo campo) detecta que el tercer octeto no se completo. Sin ese chequeo
+// esta forma se colaria con el mismo bug que la MAC completa o el
+// "aa:bb:ccdd", solo que mas angosto.
+TEST_CASE("un OUI de 8 caracteres con basura en el ultimo octeto se rechaza",
+          "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+oui,aa:bb:c!,flock,5,2\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
 TEST_CASE("se respeta el tope de 256 OUIs", "[surv][overlay]") {
   surv_overlay_reset();
   char buf[64];

@@ -140,7 +140,14 @@ void surv_engine_submit(const surv_event_t* ev,
 
 void surv_engine_tick(uint32_t now_ms) {
   if (s_score == 0) {
+    // El ancla se fija aqui tambien: el engine task llama a tick() en cada
+    // vuelta de loop (~100 ms) mucho antes de que exista ninguna deteccion.
+    // Si solo submit() fijara la bandera, la primera deteccion pisaria el
+    // ancla que ya habia establecido tick(), corriendo el proximo decay unos
+    // ~100 ms respecto al comportamiento original basado en el sentinela
+    // ms==0 (donde s_last_decay_ms ya era != 0 antes del primer submit).
     s_last_decay_ms = now_ms;
+    s_decay_anchor_set = true;
     return;
   }
   while (s_score > 0 && (now_ms - s_last_decay_ms) >= SURV_DECAY_MS) {
