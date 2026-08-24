@@ -17,6 +17,7 @@ typedef struct {
   uint8_t mac[6];
   uint8_t best_tier;
   uint32_t last_emit_ms;
+  bool last_emit_set;  // false = todavia no emitio nada, distinto de ms==0
   bool used;
 } surv_dev_t;
 
@@ -26,6 +27,7 @@ static uint32_t s_class_scored_ms[SURV_CLASS_MAX];
 static bool s_class_seen[SURV_CLASS_MAX];
 static uint8_t s_score;
 static uint32_t s_last_decay_ms;
+static bool s_decay_anchor_set;  // false = ancla de decay sin fijar aun
 static surv_engine_emit_cb_t s_emit_cb;
 
 // Rastreador de persistencia (de eye-spy, Apache-2.0): declarado aqui arriba
@@ -53,6 +55,7 @@ void surv_engine_reset(void) {
   s_dev_count = 0;
   s_score = 0;
   s_last_decay_ms = 0;
+  s_decay_anchor_set = false;
   s_emit_cb = NULL;
   memset(s_track, 0, sizeof(s_track));
 }
@@ -74,6 +77,7 @@ static surv_dev_t* find_or_add(const uint8_t mac[6]) {
   memcpy(d->mac, mac, 6);
   d->best_tier = 0;
   d->last_emit_ms = 0;
+  d->last_emit_set = false;
   d->used = true;
   return d;
 }
@@ -111,20 +115,22 @@ void surv_engine_submit(const surv_event_t* ev,
     s_score = (uint8_t) (sum > 255 ? 255 : sum);
     s_class_scored_ms[ev->klass] = now_ms;
     s_class_seen[ev->klass] = true;
-    if (s_last_decay_ms == 0) {
+    if (!s_decay_anchor_set) {
       s_last_decay_ms = now_ms;
+      s_decay_anchor_set = true;
     }
   }
 
   // Emision: dedupe de 5 s por MAC, preemptado por un tier superior.
   bool emit = true;
   if (d != NULL) {
-    if (!tier_up && d->last_emit_ms != 0 &&
+    if (!tier_up && d->last_emit_set &&
         (now_ms - d->last_emit_ms) < SURV_DEDUPE_MS) {
       emit = false;
     }
     if (emit) {
       d->last_emit_ms = now_ms;
+      d->last_emit_set = true;
     }
   }
   if (emit && s_emit_cb != NULL) {

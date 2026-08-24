@@ -54,12 +54,23 @@ void surv_overlay_reset(void) {
   surv_ie_reset_signatures();
 }
 
+// Exige exactamente "xx:xx:xx" (8 caracteres) y nada mas. sscanf con "%2x"
+// por si solo acepta gustoso "aa:bb:ccdd" o una MAC completa
+// "aa:bb:cc:dd:ee:ff" como si fueran el OUI "aa:bb:cc": el resto de la
+// cadena se ignora en silencio. Esto se edita a mano en el overlay, asi que
+// aceptar una MAC completa donde se penso escribir un OUI hace creer al
+// usuario que apunto a un solo equipo cuando en realidad apunto a todo un
+// prefijo de fabricante. %n mide cuantos caracteres consumio el ultimo
+// campo que matcheo: si el tercer octeto trae basura pegada (p.ej. "c!"),
+// %2x solo consume el digito hex valido y %n lo delata aunque la cadena
+// completa mida 8 caracteres.
 static bool parse_oui(const char* s, uint8_t out[3]) {
-  unsigned a, b, c;
-  if (sscanf(s, "%2x:%2x:%2x", &a, &b, &c) != 3) {
+  if (strlen(s) != 8) {
     return false;
   }
-  if (strlen(s) < 8) {
+  unsigned a, b, c;
+  int consumed = 0;
+  if (sscanf(s, "%2x:%2x:%2x%n", &a, &b, &c, &consumed) != 3 || consumed != 8) {
     return false;
   }
   out[0] = (uint8_t) a;
@@ -113,6 +124,24 @@ static bool parse_ie_token(const char* s, surv_ie_tok_t* out) {
   return true;
 }
 
+// strtol y no atoi, mismo motivo que en parse_ie_token: atoi("xyz") devuelve
+// 0 en silencio, y un campo de puntos/tier que se lee como 0 no se distingue
+// de uno legitimamente escrito como "0". La linea entera deberia contar como
+// saltada (st->skipped, visible en pantalla) en vez de cargar una entrada
+// inerte que el usuario cree activa.
+static bool parse_u8_field(const char* s, uint8_t* out) {
+  if (s == NULL || *s == '\0') {
+    return false;
+  }
+  char* end = NULL;
+  long v = strtol(s, &end, 10);
+  if (end == s || *end != '\0' || v < 0 || v > 255) {
+    return false;
+  }
+  *out = (uint8_t) v;
+  return true;
+}
+
 static surv_class_t parse_class(const char* s) {
   if (strcmp(s, "flock") == 0)
     return SURV_CLASS_FLOCK;
@@ -145,8 +174,10 @@ static bool handle_line(char* line, surv_overlay_stats_t* st) {
     char* klass_s = strtok_r(NULL, ",", &save);
     char* points_s = strtok_r(NULL, ",\n\r", &save);
     surv_class_t k = (klass_s != NULL) ? parse_class(klass_s) : SURV_CLASS_NONE;
+    uint8_t points = 0;
     if (k == SURV_CLASS_NONE || points_s == NULL || sign != '+' ||
-        s_add_kw_count >= MAX_ADD_KW || strlen(value) >= sizeof(s_kw_pool[0])) {
+        s_add_kw_count >= MAX_ADD_KW || strlen(value) >= sizeof(s_kw_pool[0]) ||
+        !parse_u8_field(points_s, &points)) {
       st->skipped++;
       return true;
     }
@@ -155,7 +186,7 @@ static bool handle_line(char* line, surv_overlay_stats_t* st) {
     strcpy(s_kw_pool[s_add_kw_count], value);
     s_add_kw[s_add_kw_count].kw = s_kw_pool[s_add_kw_count];
     s_add_kw[s_add_kw_count].klass = k;
-    s_add_kw[s_add_kw_count].points = (uint8_t) atoi(points_s);
+    s_add_kw[s_add_kw_count].points = points;
     s_add_kw_count++;
     st->added++;
     return true;
@@ -164,8 +195,10 @@ static bool handle_line(char* line, surv_overlay_stats_t* st) {
     char* klass_s = strtok_r(NULL, ",", &save);
     char* points_s = strtok_r(NULL, ",\n\r", &save);
     unsigned u = 0;
+    uint8_t points = 0;
     if (sign != '+' || klass_s == NULL || points_s == NULL ||
-        sscanf(value, "%4x", &u) != 1 || s_add_uuid_count >= MAX_ADD_UUID) {
+        sscanf(value, "%4x", &u) != 1 || s_add_uuid_count >= MAX_ADD_UUID ||
+        !parse_u8_field(points_s, &points)) {
       st->skipped++;
       return true;
     }
@@ -176,7 +209,7 @@ static bool handle_line(char* line, surv_overlay_stats_t* st) {
     }
     s_add_uuid[s_add_uuid_count].uuid = (uint16_t) u;
     s_add_uuid[s_add_uuid_count].klass = k;
-    s_add_uuid[s_add_uuid_count].points = (uint8_t) atoi(points_s);
+    s_add_uuid[s_add_uuid_count].points = points;
     s_add_uuid[s_add_uuid_count].label = "overlay";
     s_add_uuid_count++;
     st->added++;
@@ -234,7 +267,10 @@ static bool handle_line(char* line, surv_overlay_stats_t* st) {
   char* klass_s = strtok_r(NULL, ",", &save);
   char* points_s = strtok_r(NULL, ",", &save);
   char* tier_s = strtok_r(NULL, ",\n\r", &save);
-  if (klass_s == NULL || points_s == NULL || tier_s == NULL) {
+  uint8_t points = 0;
+  uint8_t tier = 0;
+  if (klass_s == NULL || points_s == NULL || tier_s == NULL ||
+      !parse_u8_field(points_s, &points) || !parse_u8_field(tier_s, &tier)) {
     st->skipped++;
     return true;
   }
@@ -245,8 +281,8 @@ static bool handle_line(char* line, surv_overlay_stats_t* st) {
   }
   memcpy(s_add[s_add_count].oui, oui, 3);
   s_add[s_add_count].klass = k;
-  s_add[s_add_count].points = (uint8_t) atoi(points_s);
-  s_add[s_add_count].tier = (uint8_t) atoi(tier_s);
+  s_add[s_add_count].points = points;
+  s_add[s_add_count].tier = tier;
   s_add_count++;
   st->added++;
   return true;

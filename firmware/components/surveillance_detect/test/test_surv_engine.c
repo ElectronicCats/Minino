@@ -113,6 +113,38 @@ TEST_CASE("una MAC desconocida vista 3 veces en 1 min no puntua",
   TEST_ASSERT_EQUAL_UINT8(0, surv_engine_score());
 }
 
+TEST_CASE(
+    "una MAC rastreada se purga tras 30 min de ausencia y el slot se reusa",
+    "[surv][engine]") {
+  surv_engine_reset();
+  const uint8_t mac_a[6] = {0xde, 0xad, 0x00, 0x00, 0x00, 0x03};
+  const uint8_t mac_b[6] = {0xde, 0xad, 0x00, 0x00, 0x00, 0x04};
+  surv_engine_note_unknown(mac_a, 1000);
+  // mac_a no vuelve a verse; pasan mas de 30 min y otra MAC entra: el scan
+  // de purga debe liberar el slot de mac_a y reusarlo para mac_b.
+  surv_engine_note_unknown(mac_b, 1000 + 1800001);
+  // Si el slot de mac_a no se hubiese purgado, su conteo de "seen" seguiria
+  // en pie y dispararia persistencia en la SEGUNDA vista de aqui en mas
+  // (porque el span de 5 min desde el first_ms original de hace 30 min ya se
+  // cumple). En cambio, al haberse reusado el slot, mac_a arranca de cero:
+  // hacen falta 3 vistas nuevas antes de puntuar.
+  TEST_ASSERT_FALSE(surv_engine_note_unknown(mac_a, 1000 + 1800002));
+  TEST_ASSERT_FALSE(surv_engine_note_unknown(mac_a, 1000 + 1800002 + 1));
+  TEST_ASSERT_TRUE(surv_engine_note_unknown(mac_a, 1000 + 1800002 + 300001));
+}
+
+TEST_CASE("un tier inferior tras uno superior no fuerza re-emision",
+          "[surv][engine]") {
+  surv_engine_reset();
+  surv_engine_register_emit_cb(on_emit);
+  s_emits = 0;
+  surv_event_t hi = mk(0x01, SURV_CLASS_FLOCK, SURV_TIER_IE_SIG);
+  surv_event_t lo = mk(0x01, SURV_CLASS_FLOCK, SURV_TIER_ADDR13);
+  surv_engine_submit(&hi, 5, 1000);
+  surv_engine_submit(&lo, 5, 1500);  // tier menor, dentro de los 5 s de dedupe
+  TEST_ASSERT_EQUAL_INT(1, s_emits);
+}
+
 TEST_CASE("la tabla se satura a 200 MAC sin desbordar", "[surv][engine]") {
   surv_engine_reset();
   for (int i = 0; i < 300; i++) {

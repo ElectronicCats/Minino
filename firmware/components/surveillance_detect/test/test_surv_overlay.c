@@ -132,6 +132,66 @@ TEST_CASE("una firma iesig con mas tokens de los permitidos se salta entera",
   TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
 }
 
+// parse_oui debe exigir exactamente "xx:xx:xx": aceptar una MAC completa
+// donde se esperaba un OUI hace que el usuario crea que apunto a un solo
+// equipo cuando en realidad apunto a todo un prefijo de fabricante.
+TEST_CASE("un OUI con una MAC completa se rechaza en vez de truncarse",
+          "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st =
+      surv_overlay_parse("+oui,aa:bb:cc:dd:ee:ff,flock,5,2\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+  surv_match_init();
+  const uint8_t mac[6] = {0xaa, 0xbb, 0xcc, 0x00, 0x00, 0x01};
+  TEST_ASSERT_NULL(surv_match_oui(mac));
+}
+
+TEST_CASE("un OUI con basura al final del tercer octeto se rechaza",
+          "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+oui,aa:bb:ccdd,flock,5,2\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
+// atoi("xyz") devuelve 0 en silencio: un campo de puntos no numerico cargaria
+// una entrada de 0 puntos, invisible e inerte, en vez de contar como saltada
+// (que el usuario si ve en pantalla). parse_ie_token ya resuelve esto con
+// strtol mas chequeo de puntero final; estas tres pruebas cubren los otros
+// tres lugares donde el mismo bug existia: +oui, +ssid y +uuid.
+TEST_CASE("un +oui con puntos no numericos se salta en vez de cargar 0",
+          "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+oui,aa:bb:cc,flock,xyz,2\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
+TEST_CASE("un +oui con tier no numerico se salta en vez de cargar 0",
+          "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+oui,aa:bb:cc,flock,5,xyz\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
+TEST_CASE("un +ssid con puntos no numericos se salta en vez de cargar 0",
+          "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+ssid,mikamara,cam,xyz\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
+TEST_CASE("un +uuid con puntos no numericos se salta en vez de cargar 0",
+          "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+uuid,fd6f,cam,xyz\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
 TEST_CASE("se respeta el tope de 256 OUIs", "[surv][overlay]") {
   surv_overlay_reset();
   char buf[64];
