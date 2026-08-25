@@ -36,19 +36,33 @@ static volatile uint8_t s_q_head, s_q_tail;
 static volatile uint32_t s_overflows;
 static portMUX_TYPE s_q_mux = portMUX_INITIALIZER_UNLOCKED;
 
-static bool queue_push(const surv_event_t* ev, uint8_t points) {
+bool surv_queue_push(const surv_event_t* ev, uint8_t points) {
   bool ok = false;
-  portENTER_CRITICAL_ISR(&s_q_mux);
-  uint8_t next = (uint8_t) ((s_q_head + 1) % SURV_QUEUE_LEN);
-  if (next != s_q_tail) {
-    s_queue[s_q_head].ev = *ev;
-    s_queue[s_q_head].points = points;
-    s_q_head = next;
-    ok = true;
+  if (xPortInIsrContext()) {
+    portENTER_CRITICAL_ISR(&s_q_mux);
+    uint8_t next = (uint8_t) ((s_q_head + 1) % SURV_QUEUE_LEN);
+    if (next != s_q_tail) {
+      s_queue[s_q_head].ev = *ev;
+      s_queue[s_q_head].points = points;
+      s_q_head = next;
+      ok = true;
+    } else {
+      s_overflows++;
+    }
+    portEXIT_CRITICAL_ISR(&s_q_mux);
   } else {
-    s_overflows++;
+    portENTER_CRITICAL(&s_q_mux);
+    uint8_t next = (uint8_t) ((s_q_head + 1) % SURV_QUEUE_LEN);
+    if (next != s_q_tail) {
+      s_queue[s_q_head].ev = *ev;
+      s_queue[s_q_head].points = points;
+      s_q_head = next;
+      ok = true;
+    } else {
+      s_overflows++;
+    }
+    portEXIT_CRITICAL(&s_q_mux);
   }
-  portEXIT_CRITICAL_ISR(&s_q_mux);
   return ok;
 }
 
@@ -60,12 +74,10 @@ uint32_t surv_queue_overflows(void) {
 // escribe una sola vez: las tres rutas de deteccion aplican el mismo recorte
 // y una de ellas con el ternario al reves promocionaria un OUI de fabricante
 // contratista a tier confirmatorio.
-static inline uint8_t clamp_tier(uint8_t computed, uint8_t ceiling) {
-  return computed > ceiling ? ceiling : computed;
-}
+// surv_clamp_tier se define en surv_types.h como surv_surv_clamp_tier().
 
-static void IRAM_ATTR wifi_sniffer_cb(void* buf,
-                                      wifi_promiscuous_pkt_type_t type) {
+void IRAM_ATTR wifi_sniffer_cb(void* buf,
+                               wifi_promiscuous_pkt_type_t type) {
   (void) type;
   const wifi_promiscuous_pkt_t* p = (const wifi_promiscuous_pkt_t*) buf;
   if (p->rx_ctrl.rssi < SURV_RSSI_MIN) {
@@ -106,10 +118,10 @@ static void IRAM_ATTR wifi_sniffer_cb(void* buf,
         memcpy(ev.mac, addr2, 6);
         ev.klass = e->klass;
         ev.tier =
-            clamp_tier(surv_ie_matches_flock(ies, ielen) ? SURV_TIER_IE_SIG
+            surv_clamp_tier(surv_ie_matches_flock(ies, ielen) ? SURV_TIER_IE_SIG
                                                          : SURV_TIER_PROBE,
                        e->tier);
-        queue_push(&ev, e->points);
+        surv_queue_push(&ev, e->points);
         return;
       }
     }
@@ -122,7 +134,7 @@ static void IRAM_ATTR wifi_sniffer_cb(void* buf,
     memcpy(ev.mac, addr2, 6);
     ev.klass = SURV_CLASS_ODID;
     ev.tier = SURV_TIER_ADDR2;
-    queue_push(&ev, SURV_PTS_ODID_WIFI);
+    surv_queue_push(&ev, SURV_PTS_ODID_WIFI);
     return;
   }
 
@@ -131,8 +143,8 @@ static void IRAM_ATTR wifi_sniffer_cb(void* buf,
   if (e2 != NULL) {
     memcpy(ev.mac, addr2, 6);
     ev.klass = e2->klass;
-    ev.tier = clamp_tier(SURV_TIER_ADDR2, e2->tier);
-    queue_push(&ev, e2->points);
+    ev.tier = surv_clamp_tier(SURV_TIER_ADDR2, e2->tier);
+    surv_queue_push(&ev, e2->points);
     return;
   }
 
@@ -145,8 +157,8 @@ static void IRAM_ATTR wifi_sniffer_cb(void* buf,
   if (e1 != NULL) {
     memcpy(ev.mac, addr1, 6);
     ev.klass = e1->klass;
-    ev.tier = clamp_tier(SURV_TIER_ADDR13, e1->tier);
-    queue_push(&ev, e1->points);
+    ev.tier = surv_clamp_tier(SURV_TIER_ADDR13, e1->tier);
+    surv_queue_push(&ev, e1->points);
   }
 }
 
@@ -209,6 +221,10 @@ esp_err_t surv_begin(surv_profile_t profile, bool active_scan) {
 void surv_stop(void) {
   s_running = false;
   surv_radio_stop();
+  // Esperar a que la tarea engine_task termine y se auto-elimine.
+  while (s_engine_task != NULL) {
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
 }
 
 void surv_register_cb(surv_detect_cb_t cb) {

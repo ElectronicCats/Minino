@@ -18,6 +18,16 @@ void surv_match_init(void) {
   s_inited = true;
 }
 
+void surv_match_rebuild_bitmap(void) {
+  memset(s_first_octet_bitmap, 0, sizeof(s_first_octet_bitmap));
+  const surv_oui_entry_t* t = surv_signatures_ouis();
+  uint16_t n = surv_signatures_oui_count();
+  for (uint16_t i = 0; i < n; i++) {
+    uint8_t b = t[i].oui[0];
+    s_first_octet_bitmap[b >> 3] |= (uint8_t) (1u << (b & 7));
+  }
+}
+
 const surv_oui_entry_t* surv_match_oui(const uint8_t mac[6]) {
   if (!s_inited || mac == NULL) {
     return NULL;
@@ -115,17 +125,30 @@ uint8_t surv_match_ble_adv(const uint8_t* adv,
           push_hit(out, &n, SURV_CLASS_AIRTAG, 4, "AirTag");
         } else if (d[2] == 0x02 && dlen >= 4 && d[3] == 0x15) {
           push_hit(out, &n, SURV_CLASS_IBEACON, 2, "iBeacon");
-        } else if (d[2] == 0x07 || d[2] == 0x10) {
+        } else if (d[2] == 0x07 || d[2] == 0x10 || d[2] == 0x0B || d[2] == 0x09) {
           push_hit(out, &n, SURV_CLASS_APPLE_NEARBY, 2, "Apple Dev");
         }
       } else if (company == 0x0075) {  // Samsung
         push_hit(out, &n, SURV_CLASS_SMARTTAG, 3, "SmartTag");
+      } else if (company == 0x00C7) {  // Tile Inc.
+        push_hit(out, &n, SURV_CLASS_TILE, 3, "Tile");
       } else if (company == 0x09C8) {  // XUNTONG, confirmado Flock (eye-spy)
         push_hit(out, &n, SURV_CLASS_FLOCK, 5, "Flock BLE");
       }
     }
 
-    if ((ad_type == 0x02 || ad_type == 0x03 || ad_type == 0x16) && dlen >= 2) {
+    if (ad_type == 0x02 || ad_type == 0x03) {  // 16-bit Service UUIDs (Complete/Incomplete)
+      for (uint8_t u = 0; u + 1 < dlen; u += 2) {
+        uint16_t uuid = (uint16_t) (d[u] | (d[u + 1] << 8));
+        for (uint16_t i = 0; i < surv_signatures_uuid_count(); i++) {
+          if (surv_signatures_uuids()[i].uuid == uuid) {
+            push_hit(out, &n, surv_signatures_uuids()[i].klass,
+                     surv_signatures_uuids()[i].points,
+                     surv_signatures_uuids()[i].label);
+          }
+        }
+      }
+    } else if (ad_type == 0x16 && dlen >= 2) {  // Service Data (16-bit UUID)
       uint16_t uuid = (uint16_t) (d[0] | (d[1] << 8));
       for (uint16_t i = 0; i < surv_signatures_uuid_count(); i++) {
         if (surv_signatures_uuids()[i].uuid == uuid) {

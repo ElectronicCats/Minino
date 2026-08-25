@@ -16,3 +16,8 @@ uint8_t surv_engine_best_tier(const uint8_t mac[6]);
 // desconocida vista >=3 veces a lo largo de >=5 min es un posible seguidor.
 // Devuelve true la vez que dispara la puntuacion.
 bool surv_engine_note_unknown(const uint8_t mac[6], uint32_t now_ms);
+
+// Umbrales del semaforo, del modelo de score de eye-spy (Apache-2.0):
+// 0-2 CLEAR, 3-5 CAUTION, 6+ ALERT. Los consumen la pantalla y los LEDs.
+#define SURV_SCORE_CAUTION 3
+#define SURV_SCORE_ALERT   6

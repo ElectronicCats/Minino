@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "surv_ie.h"
+#include "surv_match.h"
 #include "surv_signatures.h"
 
 // MAX_ADD/_KW/_UUID se derivan de las constantes de surv_signatures.h: son
@@ -116,14 +117,38 @@ static bool parse_ie_token(const char* s, surv_ie_tok_t* out) {
 static surv_class_t parse_class(const char* s) {
   if (strcmp(s, "flock") == 0)
     return SURV_CLASS_FLOCK;
+  if (strcmp(s, "flock_mfr") == 0)
+    return SURV_CLASS_FLOCK_MFR;
   if (strcmp(s, "alpr") == 0)
     return SURV_CLASS_ALPR;
-  if (strcmp(s, "cam") == 0)
-    return SURV_CLASS_CAM;
+  if (strcmp(s, "soundthinking") == 0)
+    return SURV_CLASS_SOUNDTHINKING;
   if (strcmp(s, "axon") == 0)
     return SURV_CLASS_AXON;
   if (strcmp(s, "glasses") == 0)
     return SURV_CLASS_GLASSES;
+  if (strcmp(s, "cam") == 0)
+    return SURV_CLASS_CAM;
+  if (strcmp(s, "airtag") == 0)
+    return SURV_CLASS_AIRTAG;
+  if (strcmp(s, "smarttag") == 0)
+    return SURV_CLASS_SMARTTAG;
+  if (strcmp(s, "tile") == 0)
+    return SURV_CLASS_TILE;
+  if (strcmp(s, "apple_nearby") == 0)
+    return SURV_CLASS_APPLE_NEARBY;
+  if (strcmp(s, "ibeacon") == 0)
+    return SURV_CLASS_IBEACON;
+  if (strcmp(s, "odid") == 0)
+    return SURV_CLASS_ODID;
+  if (strcmp(s, "skimmer") == 0)
+    return SURV_CLASS_SKIMMER;
+  if (strcmp(s, "meshcore") == 0)
+    return SURV_CLASS_MESHCORE;
+  if (strcmp(s, "raven") == 0)
+    return SURV_CLASS_RAVEN;
+  if (strcmp(s, "persist") == 0)
+    return SURV_CLASS_PERSIST;
   return SURV_CLASS_NONE;
 }
 
@@ -277,5 +302,8 @@ surv_overlay_stats_t surv_overlay_parse(const char* text) {
   surv_signatures_build_effective(s_add, s_add_count, s_remove, s_remove_count);
   surv_signatures_build_effective_kws(s_add_kw, s_add_kw_count);
   surv_signatures_build_effective_uuids(s_add_uuid, s_add_uuid_count);
+  // Reconstruir el bitmap del prefiltro OUI para que las entradas anadidas
+  // por overlay sean visibles en surv_match_oui() (hot path del sniffer).
+  surv_match_rebuild_bitmap();
   return st;
 }

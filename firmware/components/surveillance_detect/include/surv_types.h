@@ -50,3 +50,10 @@ typedef struct {
   uint8_t channel;  // 0 si es BLE
   surv_proto_t proto;
 } surv_event_t;
+
+// Techo de confianza: el tier del evento nunca puede superar el tier de la
+// firma. Usado tanto en la ruta WiFi (surveillance_detect.c) como en BLE
+// (surv_radio.c).
+static inline uint8_t surv_clamp_tier(uint8_t computed, uint8_t ceiling) {
+  return computed > ceiling ? ceiling : computed;
+}

@@ -246,13 +246,18 @@ const surv_kw_entry_t* surv_signatures_kws(void) {
   return s_effective_kws_built ? s_effective_kws : KWS;
 }
 
-// UUIDs de 16 bits, de eye-spy (Apache-2.0)
+// UUIDs de 16 bits, de eye-spy (Apache-2.0) y especificaciones oficiales
 static const surv_uuid_entry_t UUIDS[] = {
     {0xFD5F, SURV_CLASS_GLASSES, 5, "RayBan Meta"},
+    {0xFE07, SURV_CLASS_GLASSES, 4, "Snap Spectacles"},
     {0xFFFA, SURV_CLASS_ODID, 4, "Drone ODID"},
     {0xFD5A, SURV_CLASS_SMARTTAG, 3, "SmartTag"},
     {0xFEED, SURV_CLASS_TILE, 3, "Tile"},
     {0xFEEC, SURV_CLASS_TILE, 3, "Tile"},
+    {0xFE2C, SURV_CLASS_AIRTAG, 4, "Google Tracker"},
+    {0xFEEB, SURV_CLASS_MESHCORE, 2, "Meshtastic"},
+    {0xFFE0, SURV_CLASS_SKIMMER, 4, "BLE Serial SPP"},
+    {0x1802, SURV_CLASS_AIRTAG, 3, "FindMe Beacon"},
 };
 
 // Gemela de s_effective/build_effective, para UUIDs de servicio BLE.
@@ -285,7 +290,7 @@ const surv_uuid_entry_t* surv_signatures_uuids(void) {
   return s_effective_uuids_built ? s_effective_uuids : UUIDS;
 }
 
-// Substrings de nombre BLE, case-insensitive
+// Substrings de nombre BLE, case-insensitive para detección real
 static const surv_name_entry_t BLE_NAMES[] = {
     {"fs ext battery", SURV_CLASS_FLOCK, 5, "Flock Battery"},
     {"pigvision", SURV_CLASS_FLOCK, 5, "Flock"},
@@ -293,6 +298,23 @@ static const surv_name_entry_t BLE_NAMES[] = {
     {"flock", SURV_CLASS_FLOCK, 5, "Flock"},
     {"raven", SURV_CLASS_RAVEN, 5, "Raven"},
     {"meshcore-", SURV_CLASS_MESHCORE, 2, "MeshCore"},
+    {"meshtastic", SURV_CLASS_MESHCORE, 2, "Meshtastic"},
+    {"axon", SURV_CLASS_AXON, 5, "Axon BodyCam"},
+    {"body 3", SURV_CLASS_AXON, 5, "Axon Body 3"},
+    {"body 2", SURV_CLASS_AXON, 5, "Axon Body 2"},
+    {"taser", SURV_CLASS_AXON, 5, "Axon Taser"},
+    {"v300", SURV_CLASS_AXON, 5, "Motorola V300"},
+    {"watchguard", SURV_CLASS_AXON, 5, "WatchGuard Cam"},
+    {"smarttag", SURV_CLASS_SMARTTAG, 3, "SmartTag"},
+    {"airtag", SURV_CLASS_AIRTAG, 4, "AirTag"},
+    {"tile", SURV_CLASS_TILE, 3, "Tile"},
+    {"chipolo", SURV_CLASS_AIRTAG, 4, "Chipolo Tracker"},
+    {"pebblebee", SURV_CLASS_AIRTAG, 4, "Pebblebee"},
+    {"eufy", SURV_CLASS_AIRTAG, 3, "Eufy SmartTrack"},
+    {"ray-ban", SURV_CLASS_GLASSES, 5, "RayBan Meta"},
+    {"stories", SURV_CLASS_GLASSES, 4, "RayBan Stories"},
+    {"spectacles", SURV_CLASS_GLASSES, 4, "Snap Spectacles"},
+    {"skimmer", SURV_CLASS_SKIMMER, 5, "Card Skimmer"},
 };
 
 uint16_t surv_signatures_ble_name_count(void) {
@@ -303,8 +325,13 @@ const surv_name_entry_t* surv_signatures_ble_names(void) {
   return BLE_NAMES;
 }
 
-// Nombres exactos de modulos de skimmer
-static const char* const SKIMMER_NAMES[] = {"HC-03", "HC-05", "HC-06"};
+// Nombres exactos de modulos comunes de skimmers y sniffers BLE/SPP
+static const char* const SKIMMER_NAMES[] = {
+    "HC-03", "HC-05", "HC-06", "HC-08", "HC-11", "HC-12",
+    "JDY-08", "JDY-10", "JDY-16", "JDY-18", "JDY-23", "JDY-30", "JDY-31", "JDY-33",
+    "AT-09", "BT05", "MLT-BT05", "CC2540", "CC2541", "HM-10", "HM-11",
+    "DX-BT04", "SPP-CA", "BT-401"
+};
 
 uint16_t surv_signatures_skimmer_count(void) {
   return (uint16_t) (sizeof(SKIMMER_NAMES) / sizeof(SKIMMER_NAMES[0]));
