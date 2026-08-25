@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 PROJECT_NAME="minino"
 CONFIG_FILE="sdkconfig.version"
 
