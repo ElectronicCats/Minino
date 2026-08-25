@@ -117,8 +117,8 @@ static void gattcmd_scan_gap_cb(esp_gap_ble_cb_event_t event,
           printf("|\t" ESP_BD_ADDR_STR " |\t %d \t\t|",
                  ESP_BD_ADDR_HEX(scan_result->scan_rst.bda),
                  scan_result->scan_rst.rssi);
-          if (adv_name != NULL) {
-            printf("<- %s\n", adv_name);
+          if (adv_name != NULL && adv_name_len > 0) {
+            printf("<- %.*s\n", (int) adv_name_len, (char*) adv_name);
           } else {
             printf("\n");
           }

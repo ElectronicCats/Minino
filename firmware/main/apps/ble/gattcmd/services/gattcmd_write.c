@@ -179,7 +179,7 @@ static void gattcmd_write_gattc_profile_event_handler(
           for (int i = 0; i < count; i++) {
             if (char_elem_result[i].uuid.uuid.uuid16 == gatt_target_uuid) {
               esp_err_t res = esp_ble_gattc_write_char(
-                  gattc_if, p_data->connect.conn_id,
+                  gattc_if, p_data->search_cmpl.conn_id,
                   char_elem_result[i].char_handle, gatt_target_value_len,
                   gatt_target_value, ESP_GATT_WRITE_TYPE_RSP,
                   ESP_GATT_AUTH_REQ_NONE);

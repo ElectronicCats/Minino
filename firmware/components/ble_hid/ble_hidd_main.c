@@ -8,15 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "esp_bt.h"
-#include "esp_event.h"
 #include "esp_log.h"
 #include "esp_mac.h"
-#include "esp_system.h"
-#include "esp_wifi.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/event_groups.h"
-#include "freertos/task.h"
-#include "nvs_flash.h"
 
 #include "driver/gpio.h"
 #include "esp_bt_defs.h"
@@ -244,7 +237,7 @@ void ble_hid_register_callback(hid_event_callback_f callback) {
 }
 
 void ble_hid_get_device_name(char* device_name) {
-  strcpy(device_name, HIDD_DEVICE_NAME);
+  strlcpy(device_name, HIDD_DEVICE_NAME, 32);
 }
 
 void ble_hid_get_device_mac(uint8_t* mac) {
@@ -257,14 +250,28 @@ void ble_hid_begin() {
   if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_IDLE) {
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     ret = esp_bt_controller_init(&bt_cfg);
-    if (ret == ESP_OK) {
-      esp_bt_controller_enable(ESP_BT_MODE_BLE);
+    if (ret != ESP_OK) {
+      ESP_LOGE(HID_DEMO_TAG, "esp_bt_controller_init failed: %d", ret);
+      return;
+    }
+    ret = esp_bt_controller_enable(ESP_BT_MODE_BLE);
+    if (ret != ESP_OK) {
+      ESP_LOGE(HID_DEMO_TAG, "esp_bt_controller_enable failed: %d", ret);
+      return;
     }
   }
 
   if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_UNINITIALIZED) {
-    esp_bluedroid_init();
-    esp_bluedroid_enable();
+    ret = esp_bluedroid_init();
+    if (ret != ESP_OK) {
+      ESP_LOGE(HID_DEMO_TAG, "esp_bluedroid_init failed: %d", ret);
+      return;
+    }
+    ret = esp_bluedroid_enable();
+    if (ret != ESP_OK) {
+      ESP_LOGE(HID_DEMO_TAG, "esp_bluedroid_enable failed: %d", ret);
+      return;
+    }
   }
 
   if ((ret = esp_hidd_profile_init()) != ESP_OK) {
@@ -272,7 +279,10 @@ void ble_hid_begin() {
   }
 
   /// register the callback function to the gap module
-  esp_ble_gap_register_callback(gap_event_handler);
+  ret = esp_ble_gap_register_callback(gap_event_handler);
+  if (ret != ESP_OK) {
+    ESP_LOGE(HID_DEMO_TAG, "esp_ble_gap_register_callback failed: %d", ret);
+  }
   esp_hidd_register_callbacks(hidd_event_callback);
 
   /* set the security iocap & auth_req & key size & init key response key

@@ -299,15 +299,22 @@ static void gattcmd_recon_gattc_profile_event_handler(
       if (p_data->read.status != ESP_GATT_OK) {
         break;
       }
-      printf("|\t %04x\t |\t\t\t\t\t |\t\t| %s |\n", p_data->read.handle,
-             p_data->read.value);
+      printf("|\t %04x\t |\t\t\t\t\t |\t\t| ", p_data->read.handle);
+      for (int v = 0; v < p_data->read.value_len; v++) {
+        printf("%02x ", p_data->read.value[v]);
+      }
+      printf("|\n");
       break;
     case ESP_GATTC_READ_DESCR_EVT:
       if (p_data->read.status != ESP_GATT_OK) {
         break;
       }
-      printf("| %04x| %04x \t\t| %s |\n", p_data->read.handle,
-             p_data->read.handle, p_data->read.value);
+      printf("| %04x| %04x \t\t| ", p_data->read.handle,
+             p_data->read.handle);
+      for (int v = 0; v < p_data->read.value_len; v++) {
+        printf("%02x ", p_data->read.value[v]);
+      }
+      printf("|\n");
       desc_count_readed++;
       if (desc_count == desc_count_readed) {
         ESP_LOGW("HERE", "Restart connection");
@@ -460,7 +467,7 @@ static void gattcmd_recon_gap_cb(esp_gap_ble_cb_event_t event,
         ESP_LOGE(TAG, "Authentication failed, reason: 0x%x",
                  param->ble_security.auth_cmpl.fail_reason);
       }
-      esp_ble_gap_disconnect(param->scan_rst.bda);
+      esp_ble_gap_disconnect(param->ble_security.auth_cmpl.bd_addr);
       connect = false;
       get_server = false;
       break;

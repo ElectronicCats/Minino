@@ -76,11 +76,11 @@ static void module_main_cb_event(uint8_t button_name, uint8_t button_event) {
   }
   switch (button_name) {
     case BUTTON_UP:
-      current_item = current_item-- == 0 ? TRACKERS_COUNT - 1 : current_item;
+      current_item = (current_item == 0) ? (TRACKERS_COUNT - 1) : (current_item - 1);
       module_display_menu(current_item);
       break;
     case BUTTON_DOWN:
-      current_item = ++current_item > TRACKERS_COUNT - 1 ? 0 : current_item;
+      current_item = (current_item + 1 >= TRACKERS_COUNT) ? 0 : (current_item + 1);
       module_display_menu(current_item);
       break;
     case BUTTON_RIGHT:
@@ -103,6 +103,18 @@ static void module_main_cb_event(uint8_t button_name, uint8_t button_event) {
         module_display_menu(current_item);
         menus_module_set_app_state(true, module_main_cb_event);
       } else {
+        tracker_information_free();
+        trackers_scanner_stop();
+        if (trackers_mutex) {
+          xSemaphoreTake(trackers_mutex, portMAX_DELAY);
+          if (scanned_airtags != NULL) {
+            free(scanned_airtags);
+            scanned_airtags = NULL;
+          }
+          trackers_count = 0;
+          trackers_scanned = false;
+          xSemaphoreGive(trackers_mutex);
+        }
         menus_module_restart();
       }
       break;
@@ -118,11 +130,11 @@ static void module_list_cb_event(uint8_t button_name, uint8_t button_event) {
 
   switch (button_name) {
     case BUTTON_UP:
-      current_item = current_item-- == 0 ? TRACKERS_COUNT - 1 : current_item;
+      current_item = (current_item == 0) ? (trackers_count > 0 ? trackers_count - 1 : 0) : (current_item - 1);
       module_display_menu(current_item);
       break;
     case BUTTON_DOWN:
-      current_item = ++current_item > TRACKERS_COUNT - 1 ? 0 : current_item;
+      current_item = (trackers_count > 0 && current_item + 1 >= trackers_count) ? 0 : (current_item + 1);
       module_display_menu(current_item);
       break;
     case BUTTON_RIGHT:
@@ -156,6 +168,16 @@ static void module_list_cb_event(uint8_t button_name, uint8_t button_event) {
     case BUTTON_LEFT:
       tracker_information_free();
       trackers_scanner_stop();
+      if (trackers_mutex) {
+        xSemaphoreTake(trackers_mutex, portMAX_DELAY);
+        if (scanned_airtags != NULL) {
+          free(scanned_airtags);
+          scanned_airtags = NULL;
+        }
+        trackers_count = 0;
+        trackers_scanned = false;
+        xSemaphoreGive(trackers_mutex);
+      }
       menus_module_set_app_state(true, module_main_cb_event);
       module_register_menu(GENERAL_TREE_APP_MENU);
       module_display_menu(current_item);
