@@ -8,6 +8,7 @@
 #include "esp_log.h"
 #include "esp_ota_ops.h"
 #include "esp_timer.h"
+#include <string.h>
 #include "sys/param.h"
 
 #include "http_server.h"
@@ -20,6 +21,7 @@
 #define HTTP_SERVER_RECEIVE_WAIT_TIMEOUT (10u)  // in seconds
 #define HTTP_SERVER_SEND_WAIT_TIMEOUT    (10u)  // in seconds
 #define HTTP_SERVER_MONITOR_QUEUE_LEN    (3u)
+#define OTA_AUTH_TOKEN                   CONFIG_OTA_AUTH_TOKEN
 
 // Private Variables
 static const char TAG[] = "http_server";
@@ -89,6 +91,11 @@ void http_server_stop(void) {
     vTaskDelete(task_http_server_monitor);
     ESP_LOGI(TAG, "http_server_stop: stopping HTTP server monitor");
     task_http_server_monitor = NULL;
+  }
+
+  if (http_server_monitor_q_handle) {
+    vQueueDelete(http_server_monitor_q_handle);
+    http_server_monitor_q_handle = NULL;
   }
 }
 
@@ -346,6 +353,34 @@ static esp_err_t http_server_favicon_handler(httpd_req_t* req) {
 }
 
 /**
+ * @brief Check OTA authorization token from HTTP header
+ * @param req HTTP request to check
+ * @return true if authorized, false otherwise
+ */
+static bool http_server_check_ota_auth(httpd_req_t* req) {
+  char buf[512];
+  int ret = httpd_req_get_hdr_value_str(req, "Authorization", buf, sizeof(buf));
+  bool authorized = false;
+  if (ret == ESP_OK) {
+    const char* token = strstr(buf, "Bearer ");
+    if (token) {
+      token += 7;
+    } else {
+      token = buf;
+    }
+    if (strcmp(token, OTA_AUTH_TOKEN) == 0) {
+      authorized = true;
+    }
+  }
+  if (!authorized) {
+    ESP_LOGW(TAG, "OTA request rejected: invalid or missing auth token");
+    httpd_resp_set_status(req, "401 Unauthorized");
+    httpd_resp_send(req, "Unauthorized", -1);
+  }
+  return authorized;
+}
+
+/**
  * @brief Receives the *.bin file via the web page and handles the firmware
  * update
  * @param req HTTP request for which the uri needs to be handled
@@ -353,6 +388,10 @@ static esp_err_t http_server_favicon_handler(httpd_req_t* req) {
  * started
  */
 static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
+  if (!http_server_check_ota_auth(req)) {
+    return ESP_FAIL;
+  }
+
   esp_err_t error;
   esp_ota_handle_t ota_handle;
   char ota_buffer[1024];
@@ -405,6 +444,10 @@ static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
       // If there is some other error apart from Timeout, then exit with fail
       ESP_LOGI(TAG, "http_server_ota_update_handler: OTA Other Error, %d",
                recv_len);
+      if (is_req_body_started) {
+        esp_ota_abort(ota_handle);
+      }
+      is_ota_running = false;
       OTA_call_show_event_cb(OTA_SHOW_RESULT_EVENT, &flash_successful);
       return ESP_FAIL;
     }
@@ -501,6 +544,7 @@ static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
   } else {
     http_server_monitor_send_msg(HTTP_MSG_WIFI_OTA_UPDATE_FAILED);
   }
+  is_ota_running = false;
   OTA_call_show_event_cb(OTA_SHOW_RESULT_EVENT, &flash_successful);
   return ESP_OK;
 }
@@ -513,6 +557,10 @@ static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
  * @return ESP_OK
  */
 static esp_err_t http_server_ota_status_handler(httpd_req_t* req) {
+  if (!http_server_check_ota_auth(req)) {
+    return ESP_FAIL;
+  }
+
   char ota_JSON[128];
   ESP_LOGI(TAG, "OTA Status Requested");
   snprintf(ota_JSON, sizeof(ota_JSON),
