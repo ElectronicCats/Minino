@@ -1,7 +1,11 @@
 #include "sd_card.h"
 
 #include <dirent.h>
+#include <errno.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include "driver/sdmmc_host.h"
 #include "driver/sdspi_host.h"
 #include "driver/spi_common.h"
@@ -248,17 +252,51 @@ bool sd_card_is_not_mounted() {
   return !sd_card_is_mounted();
 }
 
+static void sd_card_build_full_path(const char* path,
+                                    char* full_path,
+                                    size_t max_len) {
+  if (path == NULL || full_path == NULL || max_len == 0) {
+    return;
+  }
+  if (strncmp(path, MOUNT_POINT, strlen(MOUNT_POINT)) == 0) {
+    snprintf(full_path, max_len, "%s", path);
+  } else if (path[0] == '/') {
+    snprintf(full_path, max_len, "%s%s", MOUNT_POINT, path);
+  } else {
+    snprintf(full_path, max_len, "%s/%s", MOUNT_POINT, path);
+  }
+}
+
 esp_err_t sd_card_create_dir(const char* dir_name) {
-  FRESULT res = f_mkdir(dir_name);
-  if (res == FR_OK) {
-    ESP_LOGI(TAG, "Directory created");
-    return ESP_OK;
-  } else if (res == FR_EXIST) {
-    ESP_LOGW(TAG, "Directory already exists");
+  if (sd_card_is_not_mounted()) {
+    ESP_LOGE(TAG, "SD card not mounted");
+    return ESP_FAIL;
+  }
+
+  if (dir_name == NULL) {
+    return ESP_ERR_INVALID_ARG;
+  }
+
+  char full_path[256];
+  sd_card_build_full_path(dir_name, full_path, sizeof(full_path));
+
+  struct stat st;
+  if (stat(full_path, &st) == 0) {
+    if (S_ISDIR(st.st_mode)) {
+      return ESP_OK;
+    }
+  }
+
+  sd_card_lock();
+  int res = mkdir(full_path, 0777);
+  sd_card_unlock();
+
+  if (res == 0 || errno == EEXIST) {
+    ESP_LOGI(TAG, "Directory ready: %s", full_path);
     return ESP_OK;
   } else {
-    ESP_LOGE(TAG, "Failed to create directory, reason: %s",
-             f_result_to_name[res]);
+    ESP_LOGE(TAG, "Failed to create directory %s: %s", full_path,
+             strerror(errno));
     return ESP_FAIL;
   }
 }
@@ -287,7 +325,7 @@ esp_err_t sd_card_create_file(const char* path) {
   }
 
   char full_path[256];
-  snprintf(full_path, sizeof(full_path), "%s/%s", MOUNT_POINT, path);
+  sd_card_build_full_path(path, full_path, sizeof(full_path));
 
   sd_card_lock();
   // Try to read it to check if it exists
@@ -323,7 +361,7 @@ esp_err_t sd_card_read_file(const char* path) {
   }
 
   char full_path[256];
-  snprintf(full_path, sizeof(full_path), "%s/%s", MOUNT_POINT, path);
+  sd_card_build_full_path(path, full_path, sizeof(full_path));
 
   sd_card_lock();
   ESP_LOGI(TAG, "Reading file %s", full_path);
@@ -362,7 +400,7 @@ esp_err_t sd_card_write_file(const char* path, char* data) {
   }
 
   char full_path[256];
-  snprintf(full_path, sizeof(full_path), "%s/%s", MOUNT_POINT, path);
+  sd_card_build_full_path(path, full_path, sizeof(full_path));
 
   sd_card_lock();
   ESP_LOGI(TAG, "Opening file w %s", full_path);
@@ -392,7 +430,7 @@ esp_err_t sd_card_append_to_file(const char* path, char* data) {
   }
 
   char full_path[256];
-  snprintf(full_path, sizeof(full_path), "%s/%s", MOUNT_POINT, path);
+  sd_card_build_full_path(path, full_path, sizeof(full_path));
 
   sd_card_lock();
   ESP_LOGI(TAG, "Opening file a %s", full_path);
@@ -431,7 +469,7 @@ size_t sd_card_get_file_size(FILE* file) {
   long current_ptr = ftell(file);
   fseek(file, 0, SEEK_END);
   size_t file_size = ftell(file);
-  fseek(file, 0, current_ptr);
+  fseek(file, current_ptr, SEEK_SET);
   return file_size;
 }
 

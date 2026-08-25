@@ -34,7 +34,7 @@ esp_err_t flash_fs_mount() {
       flash_fs_show_event(FLASH_FS_RESULT_EV, ESP_OK);
       return ESP_OK;
     }
-    flash_fs_show_event(FLASH_FS_RESULT_EV, &ret);
+    flash_fs_show_event(FLASH_FS_RESULT_EV, (void*) (intptr_t) ret);
     return ret;
   }
   return ESP_OK;

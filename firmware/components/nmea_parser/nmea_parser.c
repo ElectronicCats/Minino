@@ -79,7 +79,10 @@ static float parse_lat_long(esp_gps_t* esp_gps) {
  * @return uint8_t result of converting
  */
 static inline uint8_t convert_two_digit2number(const char* digit_char) {
-  return 10 * (digit_char[0] - '0') + (digit_char[1] - '0');
+  if (!isdigit((unsigned char) digit_char[0]) || !isdigit((unsigned char) digit_char[1])) {
+    return 0;
+  }
+  return (uint8_t)(10 * (digit_char[0] - '0') + (digit_char[1] - '0'));
 }
 
 /**
@@ -88,18 +91,24 @@ static inline uint8_t convert_two_digit2number(const char* digit_char) {
  * @param esp_gps esp_gps_t type object
  */
 static void parse_utc_time(esp_gps_t* esp_gps) {
-  if (strlen(esp_gps->item_str) < 6) {
+  size_t len = strlen(esp_gps->item_str);
+  if (len < 6) {
     return;
   }
   esp_gps->parent.tim.hour = convert_two_digit2number(esp_gps->item_str + 0);
   esp_gps->parent.tim.minute = convert_two_digit2number(esp_gps->item_str + 2);
   esp_gps->parent.tim.second = convert_two_digit2number(esp_gps->item_str + 4);
-  if (esp_gps->item_str[6] == '.') {
+  if (len > 6 && esp_gps->item_str[6] == '.') {
     uint16_t tmp = 0;
     uint8_t i = 7;
-    while (esp_gps->item_str[i]) {
-      tmp = 10 * tmp + esp_gps->item_str[i] - '0';
+    uint8_t digits = 0;
+    while (esp_gps->item_str[i] && isdigit((unsigned char) esp_gps->item_str[i]) && digits < 3) {
+      tmp = 10 * tmp + (esp_gps->item_str[i] - '0');
       i++;
+      digits++;
+    }
+    while (digits++ < 3) {
+      tmp *= 10;
     }
     esp_gps->parent.tim.thousand = tmp;
   }

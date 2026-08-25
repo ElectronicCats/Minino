@@ -186,10 +186,17 @@ static void tracker_dissector(esp_ble_gap_cb_param_t* scan_rst,
   }
 }
 
+#define TRACKERS_MAX_PROFILES 50
+
 void trackers_scanner_add_tracker_profile(tracker_profile_t** profiles,
                                           uint16_t* num_profiles,
                                           tracker_profile_t new_profile) {
   if (profiles == NULL || num_profiles == NULL) {
+    return;
+  }
+  if (*num_profiles >= TRACKERS_MAX_PROFILES) {
+    ESP_LOGW(TAG_BLE_CLIENT_MODULE, "Maximum tracker profiles reached (%d)",
+             TRACKERS_MAX_PROFILES);
     return;
   }
   tracker_profile_t* temp =

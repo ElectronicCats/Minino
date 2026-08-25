@@ -214,8 +214,14 @@ void print_data() {
   otOperationalDatasetTlvs dataset;
 
   const otNetifAddress* unicastAddrs = otIp6GetUnicastAddresses(instance);
-  mAddr = unicastAddrs->mNext->mAddress;
-  print_otIp6Address(&mAddr);
+  if (unicastAddrs != NULL) {
+    if (unicastAddrs->mNext != NULL) {
+      mAddr = unicastAddrs->mNext->mAddress;
+    } else {
+      mAddr = unicastAddrs->mAddress;
+    }
+    print_otIp6Address(&mAddr);
+  }
 
   error = otDatasetGetActiveTlvs(instance, &dataset);
   if (!ERR) {

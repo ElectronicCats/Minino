@@ -33,7 +33,7 @@ size_t files_ops_get_file_size(FILE* file) {
   long current_ptr = ftell(file);
   fseek(file, 0, SEEK_END);
   size_t file_size = ftell(file);
-  fseek(file, 0, current_ptr);
+  fseek(file, current_ptr, SEEK_SET);
   return file_size;
 }
 

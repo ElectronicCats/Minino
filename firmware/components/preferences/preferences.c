@@ -11,11 +11,12 @@ static esp_err_t _return_err = ESP_OK;
 static nvs_handle_t _nvs_handler = 0;
 static bool _started = false;
 static bool _read_only = false;
+static StaticSemaphore_t _pref_mutex_buffer;
 static SemaphoreHandle_t _pref_mutex = NULL;
 
 static bool _ensure_mutex(void) {
   if (_pref_mutex == NULL) {
-    _pref_mutex = xSemaphoreCreateMutex();
+    _pref_mutex = xSemaphoreCreateMutexStatic(&_pref_mutex_buffer);
   }
   return (_pref_mutex != NULL);
 }

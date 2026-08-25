@@ -297,17 +297,21 @@ static void debug_print_packet(uint8_t* packet, uint8_t packet_length) {
         }
       }
 
-      uint8_t* data = &packet[position];
-      uint8_t data_length = packet_length - position - sizeof(uint16_t);
-      position += data_length;
+      if (packet_length >= (position + sizeof(uint16_t))) {
+        uint8_t data_length = packet_length - position - sizeof(uint16_t);
+        uint8_t* data = &packet[position];
+        position += data_length;
 
-      printf("Data length: %u\n", data_length);
-      printf("Data: ==================================================\n");
-      ESP_LOG_BUFFER_HEX(TAG_IEEE_SNIFFER, data, data_length);
+        printf("Data length: %u\n", data_length);
+        printf("Data: ==================================================\n");
+        ESP_LOG_BUFFER_HEX(TAG_IEEE_SNIFFER, data, data_length);
 
-      uint16_t checksum = *((uint16_t*) &packet[position]);
-
-      printf("Checksum: %04x\n", checksum);
+        uint16_t checksum = *((uint16_t*) &packet[position]);
+        printf("Checksum: %04x\n", checksum);
+      } else {
+        ESP_LOGW(TAG_IEEE_SNIFFER, "Truncated 802.15.4 frame received (len: %u)",
+                 packet_length);
+      }
       break;
     }
     case FRAME_TYPE_ACK: {

@@ -79,6 +79,15 @@ menu "General project"
 
 	endmenu
 
+	menu "OTA Config"
+		config OTA_AUTH_TOKEN
+		string "OTA Auth Token"
+		default "minino_ota_2024"
+		help
+			Token for authenticating OTA firmware updates via HTTP.
+			Clients must send this token in the Authorization header.
+	endmenu
+
 	menu "Debug"
 
 		menu "Modules"
