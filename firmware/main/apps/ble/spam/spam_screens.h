@@ -8,4 +8,3 @@ void ble_screens_display_scanning_text(const char* name);
 void ble_screens_display_ble_spam(void);
 
 #endif  // SPAM_SCREENS_H
-

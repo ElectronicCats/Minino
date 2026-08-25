@@ -21,7 +21,8 @@ static error_stats_t stats = {0};
 static const char* component_names[] = {"WiFi",   "BLE",     "GPS",   "Zigbee",
                                         "Thread", "SD Card", "Flash", "UI",
                                         "System", "Other"};
-#define COMPONENT_NAMES_COUNT (sizeof(component_names) / sizeof(component_names[0]))
+#define COMPONENT_NAMES_COUNT \
+  (sizeof(component_names) / sizeof(component_names[0]))
 
 esp_err_t error_handler_init(void) {
   if (handler_initialized) {
@@ -57,7 +58,8 @@ void error_handler_report(const error_info_t* error) {
     return;
   }
 
-  if (error_handler_mutex && xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
+  if (error_handler_mutex &&
+      xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
     // Actualizar estadísticas
     stats.total_errors++;
     switch (error->severity) {
@@ -79,11 +81,12 @@ void error_handler_report(const error_info_t* error) {
 
   // Determinar emoji y nivel de log con bounds check
   const char* severity_emoji[] = {"ℹ️ ", "⚠️ ", "❌", "🚨"};
-  const char* emoji = (error->severity < 4) ? severity_emoji[error->severity] : "❓";
+  const char* emoji =
+      (error->severity < 4) ? severity_emoji[error->severity] : "❓";
 
   // Log estructurado con bounds check
-  const char* component_name = (error->component < COMPONENT_NAMES_COUNT) 
-                                   ? component_names[error->component] 
+  const char* component_name = (error->component < COMPONENT_NAMES_COUNT)
+                                   ? component_names[error->component]
                                    : "Unknown";
   const char* error_name = esp_err_to_name(error->error_code);
   const char* message = error->message ? error->message : "No message";
@@ -91,37 +94,36 @@ void error_handler_report(const error_info_t* error) {
   // Log según severidad
   switch (error->severity) {
     case ERROR_SEVERITY_INFO:
-      ESP_LOGI(TAG, "%s [%s] %s (%s) - %s", emoji,
-               component_name, message, error_name,
-               error->file ? error->file : "");
+      ESP_LOGI(TAG, "%s [%s] %s (%s) - %s", emoji, component_name, message,
+               error_name, error->file ? error->file : "");
       break;
 
     case ERROR_SEVERITY_WARNING:
-      ESP_LOGW(TAG, "%s [%s] %s (%s) at %s:%d", emoji,
-               component_name, message, error_name,
-               error->file ? error->file : "unknown", error->line);
+      ESP_LOGW(TAG, "%s [%s] %s (%s) at %s:%d", emoji, component_name, message,
+               error_name, error->file ? error->file : "unknown", error->line);
       break;
 
     case ERROR_SEVERITY_ERROR:
     case ERROR_SEVERITY_CRITICAL:
     default:
-      ESP_LOGE(TAG, "%s [%s] %s (%s) at %s:%d", emoji,
-               component_name, message, error_name,
-               error->file ? error->file : "unknown", error->line);
+      ESP_LOGE(TAG, "%s [%s] %s (%s) at %s:%d", emoji, component_name, message,
+               error_name, error->file ? error->file : "unknown", error->line);
       break;
   }
 
   // Intentar recuperación si existe función
   if (error->recovery_func != NULL) {
     ESP_LOGI(TAG, "🔧 Intentando recuperación automática...");
-    if (error_handler_mutex && xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
+    if (error_handler_mutex &&
+        xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
       stats.recoveries_attempted++;
       xSemaphoreGive(error_handler_mutex);
     }
 
     error->recovery_func();
 
-    if (error_handler_mutex && xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
+    if (error_handler_mutex &&
+        xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
       stats.recoveries_successful++;
       xSemaphoreGive(error_handler_mutex);
     }
@@ -143,7 +145,8 @@ void error_handler_report(const error_info_t* error) {
     }
 
     if (auto_restart_enabled) {
-      if (error_handler_mutex && xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
+      if (error_handler_mutex &&
+          xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
         stats.restarts_triggered++;
         xSemaphoreGive(error_handler_mutex);
       }
@@ -166,7 +169,8 @@ void error_handler_set_restart_callback(void (*callback)(void)) {
 
 error_stats_t error_handler_get_stats(void) {
   error_stats_t s = {0};
-  if (error_handler_mutex && xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
+  if (error_handler_mutex &&
+      xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
     s = stats;
     xSemaphoreGive(error_handler_mutex);
   } else {
@@ -193,7 +197,8 @@ void error_handler_print_stats(void) {
 }
 
 void error_handler_reset_stats(void) {
-  if (error_handler_mutex && xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
+  if (error_handler_mutex &&
+      xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
     stats = (error_stats_t) {0};
     xSemaphoreGive(error_handler_mutex);
   } else {

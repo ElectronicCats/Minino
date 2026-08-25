@@ -87,7 +87,8 @@ static int cmd_wifi_save_credentials(int argc, char** argv) {
     return -1;
   }
   const char* ssid = join_args.ssid->sval[0];
-  const char* pass = (join_args.password->count > 0) ? join_args.password->sval[0] : "";
+  const char* pass =
+      (join_args.password->count > 0) ? join_args.password->sval[0] : "";
 
   cmd_wifi_handle_credentials(ssid, pass);
   ESP_LOGI(__func__, "Credentials saved for SSID: %s", ssid);
@@ -131,7 +132,8 @@ static int cmd_wifi_delete_crendentials(int argc, char** argv) {
       preferences_remove(wifi_ssid);
       preferences_remove(wifi_apk);
     } else {
-      if (preferences_get_string(wifi_apk, wifi_ssid, sizeof(wifi_ssid)) == ESP_OK) {
+      if (preferences_get_string(wifi_apk, wifi_ssid, sizeof(wifi_ssid)) ==
+          ESP_OK) {
         wifi_list[new_counter] = strdup(wifi_ssid);
         if (wifi_list[new_counter] != NULL) {
           new_counter++;

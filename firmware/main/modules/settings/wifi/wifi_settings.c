@@ -170,7 +170,8 @@ static void wifi_settings_show_list() {
     char wifi_ap[16];
     snprintf(wifi_ap, sizeof(wifi_ap), "wifi%d", i);
     s_wifi_list_buf[i][0] = '\0';
-    esp_err_t err = preferences_get_string(wifi_ap, s_wifi_list_buf[i], sizeof(s_wifi_list_buf[i]));
+    esp_err_t err = preferences_get_string(wifi_ap, s_wifi_list_buf[i],
+                                           sizeof(s_wifi_list_buf[i]));
     if (err != ESP_OK) {
       snprintf(s_wifi_list_buf[i], sizeof(s_wifi_list_buf[i]), "Unknown");
     }

@@ -40,41 +40,43 @@ static esp_ble_adv_params_t s_ble_adv_params = {
 
 // 802.11 Probe Request Frame matching Flock Safety Tier 4 (IE fingerprint)
 static uint8_t s_flock_frame[] = {
-    0x40, 0x00, 0x00, 0x00,              // Frame Control: Probe Request, Duration: 0
+    0x40, 0x00, 0x00, 0x00,  // Frame Control: Probe Request, Duration: 0
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // DA: Broadcast
     0x70, 0xc9, 0x4e, 0x12, 0x34, 0x56,  // SA: Flock Safety OUI (70:c9:4e)
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // BSSID: Broadcast
     0x00, 0x00,                          // Sequence Control (offset 22)
     // Payload IEs matching surv_ie_matches_flock:
-    0x00, 0x00,                          // Tag 0: len 0 (wildcard SSID)
-    0x02, 0x02, 0xaa, 0xbb,              // Tag 2
-    0x0c, 0x01, 0x00,                    // Tag 12
-    0x7f, 0x08, 0, 0, 0, 0, 0, 0, 0, 0x40, // Tag 127
-    0xdd, 0x07, 0x50, 0x6f, 0x9a, 0x16, 0x03, 0x01, 0x03, // Vendor LiteON
-    0x2d, 0x02, 0x00, 0x00,              // Tag 45
-    0xbf, 0x02, 0x00, 0x00,              // Tag 191
-    0xdd, 0x07, 0x00, 0x50, 0xf2, 0x08, 0x00, 0x00, 0x00  // Vendor WFA
+    0x00, 0x00,                             // Tag 0: len 0 (wildcard SSID)
+    0x02, 0x02, 0xaa, 0xbb,                 // Tag 2
+    0x0c, 0x01, 0x00,                       // Tag 12
+    0x7f, 0x08, 0, 0, 0, 0, 0, 0, 0, 0x40,  // Tag 127
+    0xdd, 0x07, 0x50, 0x6f, 0x9a, 0x16, 0x03, 0x01, 0x03,  // Vendor LiteON
+    0x2d, 0x02, 0x00, 0x00,                                // Tag 45
+    0xbf, 0x02, 0x00, 0x00,                                // Tag 191
+    0xdd, 0x07, 0x00, 0x50, 0xf2, 0x08, 0x00, 0x00, 0x00   // Vendor WFA
 };
 
-// Apple AirTag BLE Advertisement payload (Total 31 bytes: 3 bytes Flags + 28 bytes Apple MFR)
+// Apple AirTag BLE Advertisement payload (Total 31 bytes: 3 bytes Flags + 28
+// bytes Apple MFR)
 static const uint8_t s_airtag_payload[] = {
-    0x02, 0x01, 0x1a,                    // Flags: len 2, type 0x01 (Flags), val 0x1a
-    0x1b, 0xff, 0x4c, 0x00, 0x12, 0x19, 0x10, // Apple MFR: len 27 (0x1b), type 0xff, Apple ID 0x004c, sub 0x12
-    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-    0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e,
-    0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15
-};
+    0x02, 0x01, 0x1a,  // Flags: len 2, type 0x01 (Flags), val 0x1a
+    0x1b, 0xff, 0x4c, 0x00, 0x12, 0x19, 0x10,  // Apple MFR: len 27 (0x1b), type
+                                               // 0xff, Apple ID 0x004c, sub
+                                               // 0x12
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c,
+    0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15};
 
 // Axon BodyCam BLE Advertisement payload
 static const uint8_t s_axon_payload[] = {
-    0x02, 0x01, 0x06,                    // Flags
-    0x0c, 0x09, 'A', 'x', 'o', 'n', ' ', 'B', 'o', 'd', 'y', ' ', '3' // Complete Local Name
+    0x02, 0x01, 0x06,  // Flags
+    0x0c, 0x09, 'A',  'x', 'o', 'n', ' ',
+    'B',  'o',  'd',  'y', ' ', '3'  // Complete Local Name
 };
 
 // Skimmer HC-05 BLE Advertisement payload
 static const uint8_t s_skimmer_payload[] = {
-    0x02, 0x01, 0x06,                    // Flags
-    0x06, 0x09, 'H', 'C', '-', '0', '5'  // Complete Local Name HC-05
+    0x02, 0x01, 0x06,                     // Flags
+    0x06, 0x09, 'H',  'C', '-', '0', '5'  // Complete Local Name HC-05
 };
 
 static void send_flock_wifi(void) {
@@ -85,13 +87,16 @@ static void send_flock_wifi(void) {
   s_packet_count++;
 }
 
-static void send_ble_adv(const uint8_t* payload, uint8_t len, const uint8_t* oui, uint32_t dwell_ms) {
+static void send_ble_adv(const uint8_t* payload,
+                         uint8_t len,
+                         const uint8_t* oui,
+                         uint32_t dwell_ms) {
   esp_bd_addr_t rand_mac;
   esp_fill_random(rand_mac, 6);
   if (oui != NULL) {
     memcpy(rand_mac, oui, 3);
   } else {
-    rand_mac[0] |= 0xC0; // Static random address bits per BLE spec
+    rand_mac[0] |= 0xC0;  // Static random address bits per BLE spec
   }
 
   esp_ble_gap_set_rand_addr(rand_mac);
@@ -228,7 +233,8 @@ static void surv_sim_start(surv_sim_mode_t mode) {
 
   menus_module_set_app_state(true, surv_sim_input_cb);
 
-  if (xTaskCreate(sim_worker_task, "surv_sim", 4096, NULL, 5, &s_sim_task_handle) != pdPASS) {
+  if (xTaskCreate(sim_worker_task, "surv_sim", 4096, NULL, 5,
+                  &s_sim_task_handle) != pdPASS) {
     ESP_LOGE(TAG, "Failed to create simulator task");
   }
 }

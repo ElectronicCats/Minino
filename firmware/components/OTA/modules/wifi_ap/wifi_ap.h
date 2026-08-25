@@ -1,7 +1,7 @@
 #pragma once
 
-#include "wifi_ap_config.h"
 #include "esp_netif.h"
+#include "wifi_ap_config.h"
 
 // Network Interface Object for the Station and Access Point
 extern esp_netif_t* esp_netif_sta;

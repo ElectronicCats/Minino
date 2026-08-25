@@ -172,7 +172,8 @@ static void thread_gps_event_handler_cb(gps_t* gps) {
 static void warthread_packet_handler(const otRadioFrame* aFrame,
                                      bool aIsTx,
                                      void* aContext) {
-  if (aFrame == NULL || aFrame->mLength < 16 || gps_ctx == NULL || gps_ctx->sats_in_use == 0) {
+  if (aFrame == NULL || aFrame->mLength < 16 || gps_ctx == NULL ||
+      gps_ctx->sats_in_use == 0) {
     return;
   }
 
@@ -228,23 +229,23 @@ static void warthread_packet_handler(const otRadioFrame* aFrame,
 
   // ""DestinationPAN,Destination,ExtendedSource,Channel,UDPSource,UDPDestination,Protocol,""
   snprintf(csv_line_buffer, sizeof(csv_line_buffer),
-          "0x%04x,0x%04x,%s,%d,%s,%s,%s,%f,%f,%f,%f,%s,%s,%s\n",
-          destination_pan, destination, extd_source_str, current_channel,
-          udp_source_str, udp_destination_str, protocol_type,
-          // CurrentLatitude
-          gps_ctx->latitude,
-          // CurrentLongitude
-          gps_ctx->longitude,
-          // AltitudeMeters
-          gps_ctx->altitude,
-          // AccuracyMeters
-          GPS_ACCURACY,
-          // RCOIs
-          "",
-          // MfgrId
-          "",
-          // Type
-          "Thread");
+           "0x%04x,0x%04x,%s,%d,%s,%s,%s,%f,%f,%f,%f,%s,%s,%s\n",
+           destination_pan, destination, extd_source_str, current_channel,
+           udp_source_str, udp_destination_str, protocol_type,
+           // CurrentLatitude
+           gps_ctx->latitude,
+           // CurrentLongitude
+           gps_ctx->longitude,
+           // AltitudeMeters
+           gps_ctx->altitude,
+           // AccuracyMeters
+           GPS_ACCURACY,
+           // RCOIs
+           "",
+           // MfgrId
+           "",
+           // Type
+           "Thread");
 
   if (context_session.session_records_count >= MAX_CSV_LINES) {
     ESP_LOGW(TAG, "Max CSV lines reached, writing to file");
@@ -344,7 +345,8 @@ void warthread_module_exit() {
     free(csv_file_name);
     csv_file_name = NULL;
   }
-  if (context_session.session_str != NULL && strlen(context_session.session_str) > 0) {
+  if (context_session.session_str != NULL &&
+      strlen(context_session.session_str) > 0) {
     free(context_session.session_str);
     context_session.session_str = "";
   }

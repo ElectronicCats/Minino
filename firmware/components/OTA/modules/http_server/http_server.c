@@ -4,11 +4,11 @@
  *  Created on: 17-Jul-2023
  *      Author: xpress_embedo
  */
+#include <string.h>
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
 #include "esp_timer.h"
-#include <string.h>
 #include "sys/param.h"
 
 #include "http_server.h"
@@ -474,7 +474,8 @@ static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
       }
 
       char* body_start_p = header_end ? (header_end + 4) : ota_buffer;
-      int body_part_len = header_end ? (recv_len - (body_start_p - ota_buffer)) : recv_len;
+      int body_part_len =
+          header_end ? (recv_len - (body_start_p - ota_buffer)) : recv_len;
       ESP_LOGI(TAG, "http_server_ota_update_handler: OTA File Size: %d",
                content_len);
       /*
@@ -564,9 +565,9 @@ static esp_err_t http_server_ota_status_handler(httpd_req_t* req) {
   char ota_JSON[128];
   ESP_LOGI(TAG, "OTA Status Requested");
   snprintf(ota_JSON, sizeof(ota_JSON),
-          "{\"ota_update_status\":%d,\"current_fw_version\":"
-          "\"%s\"}",
-          fw_update_status, CURRENT_FW_VERSION);
+           "{\"ota_update_status\":%d,\"current_fw_version\":"
+           "\"%s\"}",
+           fw_update_status, CURRENT_FW_VERSION);
 
   httpd_resp_set_type(req, "application/json");
   httpd_resp_send(req, ota_JSON, strlen(ota_JSON));

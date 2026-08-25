@@ -34,7 +34,8 @@ static bool flash_storage_exist_subitem(char* main_tree, char* subitem) {
   uint16_t main_count = preferences_get_ushort(FS_TREE_MAIN_COUNT, 0);
 
   for (int i = 0; i < main_count; i++) {
-    snprintf(idx_main_item, sizeof(idx_main_item), "%d%.10s", i, FS_TREE_MAIN_PREFIX);
+    snprintf(idx_main_item, sizeof(idx_main_item), "%d%.10s", i,
+             FS_TREE_MAIN_PREFIX);
     err = preferences_get_string(idx_main_item, main_item, MAX_LEN_STRING);
     if (err != ESP_OK) {
       ESP_LOGW(TAG, "No item found: %s", esp_err_to_name(err));
@@ -69,7 +70,8 @@ static void flash_storage_update_subitem(storage_contex_t* storage_context) {
   uint16_t main_count = preferences_get_ushort(FS_TREE_MAIN_COUNT, 0);
 
   for (int i = 0; i < main_count; i++) {
-    snprintf(idx_main_item, sizeof(idx_main_item), "%d%.10s", i, FS_TREE_MAIN_PREFIX);
+    snprintf(idx_main_item, sizeof(idx_main_item), "%d%.10s", i,
+             FS_TREE_MAIN_PREFIX);
     err = preferences_get_string(idx_main_item, main_item, MAX_LEN_STRING);
     if (err != ESP_OK) {
       ESP_LOGW(TAG, "No item found: %s", esp_err_to_name(err));
@@ -90,7 +92,8 @@ static void flash_storage_update_subitem(storage_contex_t* storage_context) {
       continue;
     }
     if (strcmp(tree_subitem, storage_context->item_storage_name) == 0) {
-      snprintf(tree_subitem_str, sizeof(tree_subitem_str), "%.14sv", idx_subitem);
+      snprintf(tree_subitem_str, sizeof(tree_subitem_str), "%.14sv",
+               idx_subitem);
       err = preferences_put_string(tree_subitem_str,
                                    storage_context->items_storage_value);
       if (err != ESP_OK) {
@@ -109,7 +112,8 @@ static bool flash_storage_exist_main_item(char* base_name) {
   uint16_t main_count = preferences_get_ushort(FS_TREE_MAIN_COUNT, 0);
 
   for (int i = 0; i < main_count; i++) {
-    snprintf(idx_main_item, sizeof(idx_main_item), "%d%.10s", i, FS_TREE_MAIN_PREFIX);
+    snprintf(idx_main_item, sizeof(idx_main_item), "%d%.10s", i,
+             FS_TREE_MAIN_PREFIX);
     err = preferences_get_string(idx_main_item, main_item, MAX_LEN_STRING);
     if (err != ESP_OK) {
       ESP_LOGW(TAG, "No item found: %s", esp_err_to_name(err));
@@ -154,7 +158,8 @@ static void flash_storage_save_subitem(storage_contex_t* storage_context) {
   uint16_t main_count = preferences_get_ushort(FS_TREE_MAIN_COUNT, 0);
 
   for (int i = 0; i < main_count; i++) {
-    snprintf(idx_main_item, sizeof(idx_main_item), "%d%.10s", i, FS_TREE_MAIN_PREFIX);
+    snprintf(idx_main_item, sizeof(idx_main_item), "%d%.10s", i,
+             FS_TREE_MAIN_PREFIX);
     err = preferences_get_string(idx_main_item, main_item, MAX_LEN_STRING);
     if (err != ESP_OK) {
       ESP_LOGW(TAG, "No item found: %s", esp_err_to_name(err));
@@ -167,7 +172,8 @@ static void flash_storage_save_subitem(storage_contex_t* storage_context) {
 
   snprintf(idx_subitem_count, sizeof(idx_subitem_count), "%.14sc", main_item);
   uint16_t subitem_count = preferences_get_ushort(idx_subitem_count, 0);
-  snprintf(idx_subitem, sizeof(idx_subitem), "%d%.10s", subitem_count, idx_main_item);
+  snprintf(idx_subitem, sizeof(idx_subitem), "%d%.10s", subitem_count,
+           idx_main_item);
 
   err = preferences_put_string(idx_subitem, storage_context->item_storage_name);
   if (err != ESP_OK) {
@@ -196,7 +202,8 @@ void flash_storage_show_list(char* main_tree) {
   uint16_t main_count = preferences_get_ushort(FS_TREE_MAIN_COUNT, 0);
 
   for (int i = 0; i < main_count; i++) {
-    snprintf(idx_main_item, sizeof(idx_main_item), "%d%.10s", i, FS_TREE_MAIN_PREFIX);
+    snprintf(idx_main_item, sizeof(idx_main_item), "%d%.10s", i,
+             FS_TREE_MAIN_PREFIX);
     err = preferences_get_string(idx_main_item, main_item, MAX_LEN_STRING);
     if (err != ESP_OK) {
       ESP_LOGW(TAG, "No item found: %s", esp_err_to_name(err));
@@ -245,7 +252,8 @@ void flash_storage_delete_list_item(char* main_tree, char* subitem) {
   uint16_t main_count = preferences_get_ushort(FS_TREE_MAIN_COUNT, 0);
 
   for (int i = 0; i < main_count; i++) {
-    snprintf(idx_main_item, sizeof(idx_main_item), "%d%.10s", i, FS_TREE_MAIN_PREFIX);
+    snprintf(idx_main_item, sizeof(idx_main_item), "%d%.10s", i,
+             FS_TREE_MAIN_PREFIX);
     err = preferences_get_string(idx_main_item, main_item, MAX_LEN_STRING);
     if (err != ESP_OK) {
       ESP_LOGW(TAG, "Main item not found: %s", esp_err_to_name(err));
@@ -320,7 +328,8 @@ void flash_storage_get_list(char* main_tree,
   uint16_t main_count = preferences_get_ushort(FS_TREE_MAIN_COUNT, 0);
 
   for (int i = 0; i < main_count; i++) {
-    snprintf(idx_main_item, sizeof(idx_main_item), "%d%.10s", i, FS_TREE_MAIN_PREFIX);
+    snprintf(idx_main_item, sizeof(idx_main_item), "%d%.10s", i,
+             FS_TREE_MAIN_PREFIX);
     err = preferences_get_string(idx_main_item, main_item, MAX_LEN_STRING);
     if (err != ESP_OK) {
       ESP_LOGW(TAG, "Main item not found: %s", esp_err_to_name(err));
@@ -377,7 +386,8 @@ storage_contex_t* flash_storage_get_item(char* main_tree, char* subitem) {
   uint16_t main_count = preferences_get_ushort(FS_TREE_MAIN_COUNT, 0);
 
   for (int i = 0; i < main_count; i++) {
-    snprintf(idx_main_item, sizeof(idx_main_item), "%d%.10s", i, FS_TREE_MAIN_PREFIX);
+    snprintf(idx_main_item, sizeof(idx_main_item), "%d%.10s", i,
+             FS_TREE_MAIN_PREFIX);
     err = preferences_get_string(idx_main_item, main_item, MAX_LEN_STRING);
     if (err != ESP_OK) {
       ESP_LOGW(TAG, "No item found: %s", esp_err_to_name(err));
@@ -398,7 +408,8 @@ storage_contex_t* flash_storage_get_item(char* main_tree, char* subitem) {
       continue;
     }
     if (strcmp(tree_subitem, subitem) == 0) {
-      snprintf(tree_subitem_str, sizeof(tree_subitem_str), "%.14sv", idx_subitem);
+      snprintf(tree_subitem_str, sizeof(tree_subitem_str), "%.14sv",
+               idx_subitem);
       err = preferences_get_string(tree_subitem_str, tree_subitem_val,
                                    MAX_LEN_STRING);
       if (err != ESP_OK) {

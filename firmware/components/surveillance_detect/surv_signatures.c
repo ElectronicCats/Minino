@@ -327,11 +327,10 @@ const surv_name_entry_t* surv_signatures_ble_names(void) {
 
 // Nombres exactos de modulos comunes de skimmers y sniffers BLE/SPP
 static const char* const SKIMMER_NAMES[] = {
-    "HC-03", "HC-05", "HC-06", "HC-08", "HC-11", "HC-12",
-    "JDY-08", "JDY-10", "JDY-16", "JDY-18", "JDY-23", "JDY-30", "JDY-31", "JDY-33",
-    "AT-09", "BT05", "MLT-BT05", "CC2540", "CC2541", "HM-10", "HM-11",
-    "DX-BT04", "SPP-CA", "BT-401"
-};
+    "HC-03",  "HC-05",  "HC-06",  "HC-08",   "HC-11",    "HC-12",
+    "JDY-08", "JDY-10", "JDY-16", "JDY-18",  "JDY-23",   "JDY-30",
+    "JDY-31", "JDY-33", "AT-09",  "BT05",    "MLT-BT05", "CC2540",
+    "CC2541", "HM-10",  "HM-11",  "DX-BT04", "SPP-CA",   "BT-401"};
 
 uint16_t surv_signatures_skimmer_count(void) {
   return (uint16_t) (sizeof(SKIMMER_NAMES) / sizeof(SKIMMER_NAMES[0]));

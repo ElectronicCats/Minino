@@ -17,10 +17,9 @@
 #include "web_file_browser_module.h"
 
 static char s_sd_card_info_str[6][32];
-char* sd_card_info_2[6] = {
-    s_sd_card_info_str[0], s_sd_card_info_str[1], s_sd_card_info_str[2],
-    s_sd_card_info_str[3], s_sd_card_info_str[4], s_sd_card_info_str[5]
-};
+char* sd_card_info_2[6] = {s_sd_card_info_str[0], s_sd_card_info_str[1],
+                           s_sd_card_info_str[2], s_sd_card_info_str[3],
+                           s_sd_card_info_str[4], s_sd_card_info_str[5]};
 general_menu_t SD_inf = {.menu_count = 6,
                          .menu_items = sd_card_info_2,
                          .menu_level = GENERAL_MENU_MAIN};
@@ -33,7 +32,8 @@ void update_sd_card_info() {
 
   if (sd_card_is_not_mounted()) {
     s_sd_card_info_str[0][0] = '\0';
-    snprintf(s_sd_card_info_str[1], sizeof(s_sd_card_info_str[1]), "No SD Card");
+    snprintf(s_sd_card_info_str[1], sizeof(s_sd_card_info_str[1]),
+             "No SD Card");
     s_sd_card_info_str[2][0] = '\0';
     s_sd_card_info_str[3][0] = '\0';
     s_sd_card_info_str[4][0] = '\0';
@@ -41,13 +41,14 @@ void update_sd_card_info() {
   } else {
     sd_card_info_t sd_info = sd_card_get_info();
     s_sd_card_info_str[0][0] = '\0';
-    snprintf(s_sd_card_info_str[1], sizeof(s_sd_card_info_str[1]), "SD Card Info");
-    snprintf(s_sd_card_info_str[2], sizeof(s_sd_card_info_str[2]), "Name: %.16s",
-             sd_info.name ? sd_info.name : "SD");
-    snprintf(s_sd_card_info_str[3], sizeof(s_sd_card_info_str[3]), "Space: %.2fGB",
-             ((float) sd_info.total_space) / 1024.0f);
-    snprintf(s_sd_card_info_str[4], sizeof(s_sd_card_info_str[4]), "Speed: %.2fMHz",
-             sd_info.speed);
+    snprintf(s_sd_card_info_str[1], sizeof(s_sd_card_info_str[1]),
+             "SD Card Info");
+    snprintf(s_sd_card_info_str[2], sizeof(s_sd_card_info_str[2]),
+             "Name: %.16s", sd_info.name ? sd_info.name : "SD");
+    snprintf(s_sd_card_info_str[3], sizeof(s_sd_card_info_str[3]),
+             "Space: %.2fGB", ((float) sd_info.total_space) / 1024.0f);
+    snprintf(s_sd_card_info_str[4], sizeof(s_sd_card_info_str[4]),
+             "Speed: %.2fMHz", sd_info.speed);
     snprintf(s_sd_card_info_str[5], sizeof(s_sd_card_info_str[5]), "Type: %s",
              sd_info.type ? sd_info.type : "Unknown");
   }

@@ -117,10 +117,12 @@ esp_err_t task_manager_delete(TaskHandle_t handle) {
   // Buscar tarea en el registry
   for (uint32_t i = 0; i < task_count; i++) {
     if (task_registry[i].handle == handle) {
-      ESP_LOGI(TAG, "Tarea eliminada: '%s'", task_registry[i].name ? task_registry[i].name : "unknown");
-      
+      ESP_LOGI(TAG, "Tarea eliminada: '%s'",
+               task_registry[i].name ? task_registry[i].name : "unknown");
+
       // Compactar el registry PRIMERO antes de llamar a vTaskDelete
-      // Esto previene que si una tarea se elimina a sí misma, la compactación se omita
+      // Esto previene que si una tarea se elimina a sí misma, la compactación
+      // se omita
       for (uint32_t j = i; j < task_count - 1; j++) {
         task_registry[j] = task_registry[j + 1];
       }
@@ -139,7 +141,8 @@ esp_err_t task_manager_delete(TaskHandle_t handle) {
 }
 
 void task_manager_list_all(void) {
-  if (task_manager_mutex && xSemaphoreTake(task_manager_mutex, portMAX_DELAY) == pdTRUE) {
+  if (task_manager_mutex &&
+      xSemaphoreTake(task_manager_mutex, portMAX_DELAY) == pdTRUE) {
     ESP_LOGI(TAG, "Total de tareas: %lu / %d", task_count, MAX_TASKS);
     ESP_LOGI(TAG, "");
 
@@ -147,10 +150,12 @@ void task_manager_list_all(void) {
       task_info_t* info = &task_registry[i];
       const char* status = info->is_running ? "RUN" : "STOP";
       uint32_t uptime_sec =
-          (xTaskGetTickCount() * portTICK_PERIOD_MS - info->created_at_ms) / 1000;
+          (xTaskGetTickCount() * portTICK_PERIOD_MS - info->created_at_ms) /
+          1000;
 
-      ESP_LOGI(TAG, "[%2lu] %s %-20s | Pri:%2d | Stack:%5d | Uptime:%lus", i + 1,
-               status, info->name ? info->name : "unknown", info->priority, info->stack_size, uptime_sec);
+      ESP_LOGI(TAG, "[%2lu] %s %-20s | Pri:%2d | Stack:%5d | Uptime:%lus",
+               i + 1, status, info->name ? info->name : "unknown",
+               info->priority, info->stack_size, uptime_sec);
     }
     xSemaphoreGive(task_manager_mutex);
   }
@@ -158,7 +163,8 @@ void task_manager_list_all(void) {
 
 uint32_t task_manager_get_count(void) {
   uint32_t count = 0;
-  if (task_manager_mutex && xSemaphoreTake(task_manager_mutex, portMAX_DELAY) == pdTRUE) {
+  if (task_manager_mutex &&
+      xSemaphoreTake(task_manager_mutex, portMAX_DELAY) == pdTRUE) {
     count = task_count;
     xSemaphoreGive(task_manager_mutex);
   } else {
@@ -168,7 +174,8 @@ uint32_t task_manager_get_count(void) {
 }
 
 task_info_t* task_manager_get_info(TaskHandle_t handle) {
-  if (task_manager_mutex && xSemaphoreTake(task_manager_mutex, portMAX_DELAY) == pdTRUE) {
+  if (task_manager_mutex &&
+      xSemaphoreTake(task_manager_mutex, portMAX_DELAY) == pdTRUE) {
     for (uint32_t i = 0; i < task_count; i++) {
       if (task_registry[i].handle == handle) {
         task_info_t* info = &task_registry[i];
@@ -199,7 +206,8 @@ bool task_manager_get_info_copy(TaskHandle_t handle, task_info_t* out_info) {
 }
 
 void task_manager_update_watermarks(void) {
-  if (task_manager_mutex && xSemaphoreTake(task_manager_mutex, portMAX_DELAY) == pdTRUE) {
+  if (task_manager_mutex &&
+      xSemaphoreTake(task_manager_mutex, portMAX_DELAY) == pdTRUE) {
     for (uint32_t i = 0; i < task_count; i++) {
       if (task_registry[i].is_running && task_registry[i].handle != NULL) {
         eTaskState state = eTaskGetState(task_registry[i].handle);
@@ -217,7 +225,8 @@ void task_manager_update_watermarks(void) {
 
 void task_manager_print_stack_usage(void) {
   task_manager_update_watermarks();
-  if (task_manager_mutex && xSemaphoreTake(task_manager_mutex, portMAX_DELAY) == pdTRUE) {
+  if (task_manager_mutex &&
+      xSemaphoreTake(task_manager_mutex, portMAX_DELAY) == pdTRUE) {
     for (uint32_t i = 0; i < task_count; i++) {
       if (!task_registry[i].is_running)
         continue;
@@ -228,7 +237,10 @@ void task_manager_print_stack_usage(void) {
       size_t used = (info->stack_size > watermark_bytes)
                         ? (info->stack_size - watermark_bytes)
                         : 0;
-      float usage_percent = info->stack_size > 0 ? (((float) used / (float) info->stack_size) * 100.0f) : 0.0f;
+      float usage_percent =
+          info->stack_size > 0
+              ? (((float) used / (float) info->stack_size) * 100.0f)
+              : 0.0f;
 
       const char* status;
       if (watermark < 128) {
@@ -240,7 +252,8 @@ void task_manager_print_stack_usage(void) {
       }
 
       ESP_LOGI(TAG, "[%2lu] %-20s | %5zu/%5d bytes (%.1f%%) | %s", i + 1,
-               info->name ? info->name : "unknown", used, info->stack_size, usage_percent, status);
+               info->name ? info->name : "unknown", used, info->stack_size,
+               usage_percent, status);
     }
     xSemaphoreGive(task_manager_mutex);
   }
@@ -250,7 +263,8 @@ bool task_manager_check_stack_overflow_risk(void) {
   task_manager_update_watermarks();
   bool risk = false;
 
-  if (task_manager_mutex && xSemaphoreTake(task_manager_mutex, portMAX_DELAY) == pdTRUE) {
+  if (task_manager_mutex &&
+      xSemaphoreTake(task_manager_mutex, portMAX_DELAY) == pdTRUE) {
     for (uint32_t i = 0; i < task_count; i++) {
       if (task_registry[i].is_running) {
         if (task_registry[i].stack_watermark < 128) {  // < 512 bytes

@@ -76,11 +76,13 @@ static void module_main_cb_event(uint8_t button_name, uint8_t button_event) {
   }
   switch (button_name) {
     case BUTTON_UP:
-      current_item = (current_item == 0) ? (TRACKERS_COUNT - 1) : (current_item - 1);
+      current_item =
+          (current_item == 0) ? (TRACKERS_COUNT - 1) : (current_item - 1);
       module_display_menu(current_item);
       break;
     case BUTTON_DOWN:
-      current_item = (current_item + 1 >= TRACKERS_COUNT) ? 0 : (current_item + 1);
+      current_item =
+          (current_item + 1 >= TRACKERS_COUNT) ? 0 : (current_item + 1);
       module_display_menu(current_item);
       break;
     case BUTTON_RIGHT:
@@ -130,11 +132,15 @@ static void module_list_cb_event(uint8_t button_name, uint8_t button_event) {
 
   switch (button_name) {
     case BUTTON_UP:
-      current_item = (current_item == 0) ? (trackers_count > 0 ? trackers_count - 1 : 0) : (current_item - 1);
+      current_item = (current_item == 0)
+                         ? (trackers_count > 0 ? trackers_count - 1 : 0)
+                         : (current_item - 1);
       module_display_menu(current_item);
       break;
     case BUTTON_DOWN:
-      current_item = (trackers_count > 0 && current_item + 1 >= trackers_count) ? 0 : (current_item + 1);
+      current_item = (trackers_count > 0 && current_item + 1 >= trackers_count)
+                         ? 0
+                         : (current_item + 1);
       module_display_menu(current_item);
       break;
     case BUTTON_RIGHT:
@@ -145,7 +151,8 @@ static void module_list_cb_event(uint8_t button_name, uint8_t button_event) {
         break;
       }
       char tracker_mac[20];
-      snprintf(tracker_mac, sizeof(tracker_mac), "%02X:%02X:%02X:%02X:%02X:%02X",
+      snprintf(tracker_mac, sizeof(tracker_mac),
+               "%02X:%02X:%02X:%02X:%02X:%02X",
                scanned_airtags[current_item].mac_address[0],
                scanned_airtags[current_item].mac_address[1],
                scanned_airtags[current_item].mac_address[2],

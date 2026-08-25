@@ -4,6 +4,8 @@
 #include "esp_timer.h"
 #include "sd_card.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "general_radio_selection.h"
 #include "general_screens.h"
 #include "general_scrolling_text.h"
@@ -13,8 +15,6 @@
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
 
 /* Minimum interval between OLED refreshes (microseconds) = 700ms.
  * The NMEA parser fires GPS_UPDATE once all sentences in a cycle are
@@ -93,8 +93,10 @@ void gps_screen_running_test(void) {
 
 static void gps_screens_test(gps_t* gps) {
   static int last_sats = -1;
-  if (gps == NULL) return;
-  if (last_sats == gps->sats_in_use && gps->sats_in_use == 0) return;
+  if (gps == NULL)
+    return;
+  if (last_sats == gps->sats_in_use && gps->sats_in_use == 0)
+    return;
   last_sats = gps->sats_in_use;
 
   char str[32];
@@ -104,7 +106,8 @@ static void gps_screens_test(gps_t* gps) {
     snprintf(str, sizeof(str), "Signal: None    ");
     snprintf(str2, sizeof(str2), "Sats: 0         ");
   } else {
-    snprintf(str, sizeof(str), "Signal: %-8s", gps_module_get_signal_strength(gps));
+    snprintf(str, sizeof(str), "Signal: %-8s",
+             gps_module_get_signal_strength(gps));
     snprintf(str2, sizeof(str2), "Sats: %-10d", gps->sats_in_use);
   }
 
@@ -112,11 +115,11 @@ static void gps_screens_test(gps_t* gps) {
   oled_screen_display_text(str, 0, 1, OLED_DISPLAY_NORMAL);
   oled_screen_display_text(str2, 0, 2, OLED_DISPLAY_NORMAL);
 
-  snprintf(str, sizeof(str), "Date: %04d/%02d/%02d", gps->date.year, gps->date.month,
-           gps->date.day);
+  snprintf(str, sizeof(str), "Date: %04d/%02d/%02d", gps->date.year,
+           gps->date.month, gps->date.day);
   oled_screen_display_text(str, 0, 3, OLED_DISPLAY_NORMAL);
-  snprintf(str, sizeof(str), "Time: %02d:%02d:%02d  ", gps->tim.hour, gps->tim.minute,
-           gps->tim.second);
+  snprintf(str, sizeof(str), "Time: %02d:%02d:%02d  ", gps->tim.hour,
+           gps->tim.minute, gps->tim.second);
   oled_screen_display_text(str, 0, 4, OLED_DISPLAY_NORMAL);
   oled_screen_display_show();
 }
@@ -143,10 +146,8 @@ static void gps_screens_update_date_and_time(gps_t* gps) {
   }
 
   /* Only redraw if second, time, date or satellites changed */
-  if (last_sats == gps->sats_in_use &&
-      last_sec == gps->tim.second &&
-      last_min == gps->tim.minute &&
-      last_hour == gps->tim.hour &&
+  if (last_sats == gps->sats_in_use && last_sec == gps->tim.second &&
+      last_min == gps->tim.minute && last_hour == gps->tim.hour &&
       last_day == gps->date.day) {
     return;
   }
@@ -165,15 +166,16 @@ static void gps_screens_update_date_and_time(gps_t* gps) {
   char line[32];
   oled_screen_display_text_center("UTC Date-Time", 0, OLED_DISPLAY_NORMAL);
 
-  snprintf(line, sizeof(line), "Signal: %-8s", gps_module_get_signal_strength(gps));
+  snprintf(line, sizeof(line), "Signal: %-8s",
+           gps_module_get_signal_strength(gps));
   oled_screen_display_text(line, 0, 1, OLED_DISPLAY_NORMAL);
 
-  snprintf(line, sizeof(line), "Date: %04d/%02d/%02d", gps->date.year, gps->date.month,
-           gps->date.day);
+  snprintf(line, sizeof(line), "Date: %04d/%02d/%02d", gps->date.year,
+           gps->date.month, gps->date.day);
   oled_screen_display_text(line, 0, 3, OLED_DISPLAY_NORMAL);
 
-  snprintf(line, sizeof(line), "Time: %02d:%02d:%02d  ", gps->tim.hour, gps->tim.minute,
-           gps->tim.second);
+  snprintf(line, sizeof(line), "Time: %02d:%02d:%02d  ", gps->tim.hour,
+           gps->tim.minute, gps->tim.second);
   oled_screen_display_text(line, 0, 4, OLED_DISPLAY_NORMAL);
 }
 
@@ -213,7 +215,8 @@ static void gps_screens_update_location(gps_t* gps) {
   }
 
   char line[32];
-  snprintf(line, sizeof(line), "Signal: %-8s", gps_module_get_signal_strength(gps));
+  snprintf(line, sizeof(line), "Signal: %-8s",
+           gps_module_get_signal_strength(gps));
   oled_screen_display_text(line, 0, 0, OLED_DISPLAY_NORMAL);
   oled_screen_display_text("Latitude:       ", 0, 2, OLED_DISPLAY_NORMAL);
   snprintf(line, sizeof(line), "  %.05f N     ", gps->latitude);
@@ -448,7 +451,8 @@ static void gps_screens_update_speed(gps_t* gps) {
   static float last_spd = -999.0f;
 
   if (gps == NULL || gps->sats_in_use == 0) {
-    if (last_sats == 0) return;
+    if (last_sats == 0)
+      return;
     last_sats = 0;
     oled_screen_clear_buffer();
     oled_screen_display_text_center("Speed", 0, OLED_DISPLAY_NORMAL);
@@ -471,7 +475,8 @@ static void gps_screens_update_speed(gps_t* gps) {
 
   char line[32];
   oled_screen_display_text_center("Speed", 0, OLED_DISPLAY_NORMAL);
-  snprintf(line, sizeof(line), "Signal: %-8s", gps_module_get_signal_strength(gps));
+  snprintf(line, sizeof(line), "Signal: %-8s",
+           gps_module_get_signal_strength(gps));
   oled_screen_display_text(line, 0, 1, OLED_DISPLAY_NORMAL);
   snprintf(line, sizeof(line), "Speed: %.02fm/s   ", gps->speed);
   oled_screen_display_text(line, 0, 3, OLED_DISPLAY_NORMAL);
@@ -599,7 +604,8 @@ void gps_screens_update_handler(gps_t* gps) {
   // it does not clear/redraw the display on every call.
   if (current != MENU_GPS_ROUTE) {
     int64_t now_us = esp_timer_get_time();
-    if ((now_us - gps_screen_last_refresh_us) < GPS_SCREEN_REFRESH_INTERVAL_US) {
+    if ((now_us - gps_screen_last_refresh_us) <
+        GPS_SCREEN_REFRESH_INTERVAL_US) {
       return;
     }
     gps_screen_last_refresh_us = now_us;

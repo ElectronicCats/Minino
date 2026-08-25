@@ -30,7 +30,8 @@ static const general_menu_t card_info_menu_ctx = {
 };
 
 void general_screen_truncate_text(char* p_text, char* p_truncated_text) {
-  if (!p_text || !p_truncated_text) return;
+  if (!p_text || !p_truncated_text)
+    return;
   size_t len = strlen(p_text);
   if (len <= (MAX_LINE_CHAR - 3)) {
     strncpy(p_truncated_text, p_text, MAX_LINE_CHAR);
@@ -52,7 +53,8 @@ static void general_screen_display_selected_item(char* item_text,
 }
 
 static void general_screen_increment_option() {
-  if (scrolling_menu_ctx == NULL || scrolling_menu_ctx->menu_count == 0) return;
+  if (scrolling_menu_ctx == NULL || scrolling_menu_ctx->menu_count == 0)
+    return;
   scrolling_option++;
   if (scrolling_option >= scrolling_menu_ctx->menu_count) {
     scrolling_option = 0;
@@ -60,7 +62,8 @@ static void general_screen_increment_option() {
 }
 
 static void general_screen_decrement_option() {
-  if (scrolling_menu_ctx == NULL || scrolling_menu_ctx->menu_count == 0) return;
+  if (scrolling_menu_ctx == NULL || scrolling_menu_ctx->menu_count == 0)
+    return;
   if (scrolling_option == 0) {
     scrolling_option = scrolling_menu_ctx->menu_count - 1;
   } else {

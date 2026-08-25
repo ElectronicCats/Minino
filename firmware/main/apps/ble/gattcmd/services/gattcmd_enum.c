@@ -275,8 +275,7 @@ static void gattcmd_enum_gattc_profile_event_handler(
       if (p_data->read.status != ESP_GATT_OK) {
         break;
       }
-      printf("| %04x| %04x \t\t| ", p_data->read.handle,
-             p_data->read.handle);
+      printf("| %04x| %04x \t\t| ", p_data->read.handle, p_data->read.handle);
       for (int v = 0; v < p_data->read.value_len; v++) {
         printf("%02x ", p_data->read.value[v]);
       }

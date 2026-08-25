@@ -70,7 +70,8 @@ static char* parse_dns_name(char* raw_name,
                             char* packet_end,
                             char* parsed_name,
                             size_t parsed_name_max_len) {
-  if (raw_name == NULL || packet_end == NULL || parsed_name == NULL || raw_name >= packet_end || parsed_name_max_len == 0) {
+  if (raw_name == NULL || packet_end == NULL || parsed_name == NULL ||
+      raw_name >= packet_end || parsed_name_max_len == 0) {
     return NULL;
   }
   char* label = raw_name;
@@ -78,7 +79,7 @@ static char* parse_dns_name(char* raw_name,
   int name_len = 0;
 
   while (label < packet_end && *label != 0) {
-    uint8_t sub_name_len = (uint8_t)(*label);
+    uint8_t sub_name_len = (uint8_t) (*label);
     if ((label + 1 + sub_name_len) >= packet_end) {
       return NULL;
     }
@@ -152,8 +153,10 @@ static int parse_dns_request(char* req,
 
   // Respond to all questions based on configured rules
   for (int qd_i = 0; qd_i < qd_count; qd_i++) {
-    char* name_end_ptr = parse_dns_name(cur_qd_ptr, packet_end, name, sizeof(name));
-    if (name_end_ptr == NULL || (name_end_ptr + sizeof(dns_question_t)) > packet_end) {
+    char* name_end_ptr =
+        parse_dns_name(cur_qd_ptr, packet_end, name, sizeof(name));
+    if (name_end_ptr == NULL ||
+        (name_end_ptr + sizeof(dns_question_t)) > packet_end) {
       ESP_LOGE(TAG, "Failed to parse DNS question");
       return -1;
     }

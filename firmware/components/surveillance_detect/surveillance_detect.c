@@ -76,8 +76,7 @@ uint32_t surv_queue_overflows(void) {
 // contratista a tier confirmatorio.
 // surv_clamp_tier se define en surv_types.h como surv_surv_clamp_tier().
 
-void IRAM_ATTR wifi_sniffer_cb(void* buf,
-                               wifi_promiscuous_pkt_type_t type) {
+void IRAM_ATTR wifi_sniffer_cb(void* buf, wifi_promiscuous_pkt_type_t type) {
   (void) type;
   const wifi_promiscuous_pkt_t* p = (const wifi_promiscuous_pkt_t*) buf;
   if (p->rx_ctrl.rssi < SURV_RSSI_MIN) {
@@ -119,8 +118,8 @@ void IRAM_ATTR wifi_sniffer_cb(void* buf,
         ev.klass = e->klass;
         ev.tier =
             surv_clamp_tier(surv_ie_matches_flock(ies, ielen) ? SURV_TIER_IE_SIG
-                                                         : SURV_TIER_PROBE,
-                       e->tier);
+                                                              : SURV_TIER_PROBE,
+                            e->tier);
         surv_queue_push(&ev, e->points);
         return;
       }

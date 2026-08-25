@@ -31,7 +31,8 @@ static QueueHandle_t wifi_app_q_handle;  // Queue Handle used to Manipulate the
                                          // main queue of events
 
 // netif objects are defined in wifi_app.c and declared extern in wifi_app.h
-// We only use them here via the extern declarations from wifi_ap.h -> wifi_app.h
+// We only use them here via the extern declarations from wifi_ap.h ->
+// wifi_app.h
 
 // Private Function Definitions
 static BaseType_t wifi_app_send_msg(wifi_app_msg_e msg_id);

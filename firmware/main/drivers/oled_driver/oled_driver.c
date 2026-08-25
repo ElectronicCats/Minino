@@ -79,7 +79,8 @@ void oled_driver_display_image(oled_driver_t* dev,
                                int seg,
                                uint8_t* images,
                                int width) {
-  if (dev == NULL || images == NULL || page < 0 || page >= dev->_pages || seg < 0 || seg >= dev->_width) {
+  if (dev == NULL || images == NULL || page < 0 || page >= dev->_pages ||
+      seg < 0 || seg >= dev->_width) {
     return;
   }
   int valid_width = (seg + width > dev->_width) ? (dev->_width - seg) : width;
@@ -113,8 +114,7 @@ void oled_driver_display_text(oled_driver_t* dev,
     if (char_idx >= 128) {
       char_idx = '?';
     }
-    memcpy(image, font8x8_basic_tr[char_idx + encrypt] + typography,
-           8);
+    memcpy(image, font8x8_basic_tr[char_idx + encrypt] + typography, 8);
     if (invert)
       oled_driver_invert(image, 8);
     if (dev->_flip)
@@ -528,15 +528,16 @@ void oled_driver_draw_pixel(oled_driver_t* dev,
                             int xpos,
                             int ypos,
                             bool invert) {
-  if (dev == NULL || xpos < 0 || xpos >= dev->_width || ypos < 0 || ypos >= dev->_height) {
+  if (dev == NULL || xpos < 0 || xpos >= dev->_width || ypos < 0 ||
+      ypos >= dev->_height) {
     return;
   }
-  uint8_t _page = (uint8_t)(ypos / 8);
+  uint8_t _page = (uint8_t) (ypos / 8);
   if (_page >= dev->_pages) {
     return;
   }
-  uint8_t _bits = (uint8_t)(ypos % 8);
-  uint8_t _seg = (uint8_t)xpos;
+  uint8_t _bits = (uint8_t) (ypos % 8);
+  uint8_t _seg = (uint8_t) xpos;
   uint8_t wk0 = dev->_page[_page]._segs[_seg];
   uint8_t wk1 = 1 << _bits;
   ESP_LOGD(TAG, "ypos=%d _page=%d _bits=%d wk0=0x%02x wk1=0x%02x", ypos, _page,

@@ -92,7 +92,8 @@ void uart_bridge_app_task(void* args) {
     if (bytes_from_uart > 0) {
       int written = 0;
       while (written < bytes_from_uart && !uart_bridge_exit) {
-        int res = usb_serial_jtag_write_bytes(buffer + written, bytes_from_uart - written, pdMS_TO_TICKS(10));
+        int res = usb_serial_jtag_write_bytes(
+            buffer + written, bytes_from_uart - written, pdMS_TO_TICKS(10));
         if (res > 0) {
           written += res;
         } else {

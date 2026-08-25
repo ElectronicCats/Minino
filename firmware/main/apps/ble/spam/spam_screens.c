@@ -230,4 +230,3 @@ void ble_screens_display_scanning_text(const char* name) {
     current_model_name[sizeof(current_model_name) - 1] = '\0';
   }
 }
-

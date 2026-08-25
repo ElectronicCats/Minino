@@ -54,7 +54,8 @@ int8_t ieee_sniffer_get_rssi() {
 }
 
 void ieee_sniffer_set_channel(uint8_t channel) {
-  if (channel < IEEE_SNIFFER_CHANNEL_MIN || channel > IEEE_SNIFFER_CHANNEL_MAX) {
+  if (channel < IEEE_SNIFFER_CHANNEL_MIN ||
+      channel > IEEE_SNIFFER_CHANNEL_MAX) {
     ESP_LOGE(TAG_IEEE_SNIFFER, "Invalid channel %d", channel);
     return;
   }
@@ -309,8 +310,8 @@ static void debug_print_packet(uint8_t* packet, uint8_t packet_length) {
         uint16_t checksum = *((uint16_t*) &packet[position]);
         printf("Checksum: %04x\n", checksum);
       } else {
-        ESP_LOGW(TAG_IEEE_SNIFFER, "Truncated 802.15.4 frame received (len: %u)",
-                 packet_length);
+        ESP_LOGW(TAG_IEEE_SNIFFER,
+                 "Truncated 802.15.4 frame received (len: %u)", packet_length);
       }
       break;
     }

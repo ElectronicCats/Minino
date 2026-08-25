@@ -48,7 +48,8 @@ void leds_on() {
   return;
 #endif
 
-  if (!s_leds_initialized) return;
+  if (!s_leds_initialized)
+    return;
   led_controller_led_on(&s_left_led);
   led_controller_led_on(&s_right_led);
 }
@@ -58,7 +59,8 @@ void leds_off() {
   return;
 #endif
 
-  if (!s_leds_initialized) return;
+  if (!s_leds_initialized)
+    return;
   led_controller_led_off(&s_left_led);
   led_controller_led_off(&s_right_led);
 }
@@ -68,8 +70,10 @@ void leds_set_brightness(uint8_t led, uint8_t brightness) {
   return;
 #endif
 
-  if (!s_leds_initialized) return;
-  led_controller_set_duty(led == LED_LEFT ? &s_left_led : &s_right_led, brightness);
+  if (!s_leds_initialized)
+    return;
+  led_controller_set_duty(led == LED_LEFT ? &s_left_led : &s_right_led,
+                          brightness);
 }
 
 void led_left_on() {
@@ -77,7 +81,8 @@ void led_left_on() {
   return;
 #endif
 
-  if (!s_leds_initialized) return;
+  if (!s_leds_initialized)
+    return;
   led_controller_led_on(&s_left_led);
 }
 
@@ -86,7 +91,8 @@ void led_left_off() {
   return;
 #endif
 
-  if (!s_leds_initialized) return;
+  if (!s_leds_initialized)
+    return;
   led_controller_led_off(&s_left_led);
 }
 
@@ -95,7 +101,8 @@ void led_right_on() {
   return;
 #endif
 
-  if (!s_leds_initialized) return;
+  if (!s_leds_initialized)
+    return;
   led_controller_led_on(&s_right_led);
 }
 
@@ -104,7 +111,8 @@ void led_right_off() {
   return;
 #endif
 
-  if (!s_leds_initialized) return;
+  if (!s_leds_initialized)
+    return;
   led_controller_led_off(&s_right_led);
 }
 
@@ -118,25 +126,28 @@ void led_start_blink(uint8_t led,
   return;
 #endif
 
-  if (!s_leds_initialized) return;
-  led_controller_start_blink_effect(led == LED_LEFT ? &s_left_led : &s_right_led,
-                                    duty, pulse_count, time_on, time_off,
-                                    time_out);
+  if (!s_leds_initialized)
+    return;
+  led_controller_start_blink_effect(
+      led == LED_LEFT ? &s_left_led : &s_right_led, duty, pulse_count, time_on,
+      time_off, time_out);
 }
 void led_start_breath(uint8_t led, uint16_t period_ms) {
 #ifndef CONFIG_LEDS_COMPONENT_ENABLED
   return;
 #endif
 
-  if (!s_leds_initialized) return;
-  led_controller_start_breath_effect(led == LED_LEFT ? &s_left_led : &s_right_led,
-                                     period_ms);
+  if (!s_leds_initialized)
+    return;
+  led_controller_start_breath_effect(
+      led == LED_LEFT ? &s_left_led : &s_right_led, period_ms);
 }
 void led_stop(uint8_t led) {
 #ifndef CONFIG_LEDS_COMPONENT_ENABLED
   return;
 #endif
 
-  if (!s_leds_initialized) return;
+  if (!s_leds_initialized)
+    return;
   led_controller_stop_any_effect(led == LED_LEFT ? &s_left_led : &s_right_led);
 }

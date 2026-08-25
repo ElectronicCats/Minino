@@ -188,7 +188,8 @@ char* gps_module_get_signal_strength(gps_t* gps) {
  */
 gps_t* gps_module_get_instance(void* event_data) {
   gps_t* gps = (gps_t*) event_data;
-  if (!gps) return NULL;
+  if (!gps)
+    return NULL;
 
   uint16_t year = gps->date.year;
   if (year < 100) {

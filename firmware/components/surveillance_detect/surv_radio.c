@@ -92,8 +92,7 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event,
       ble_try_start_scan(30);
       break;
     case ESP_GAP_BLE_SCAN_START_COMPLETE_EVT:
-      s_ble_scanning =
-          (param->scan_start_cmpl.status == ESP_BT_STATUS_SUCCESS);
+      s_ble_scanning = (param->scan_start_cmpl.status == ESP_BT_STATUS_SUCCESS);
       if (!s_ble_scanning) {
         ESP_LOGW(TAG, "BLE scan start fallo: 0x%x",
                  param->scan_start_cmpl.status);
@@ -309,8 +308,8 @@ esp_err_t surv_radio_start(surv_profile_t p, bool active_scan) {
   // y arrancara el escaneo si s_running ya es true y hay deseo de escanear.
   if (p != SURV_PROFILE_FLOCK) {
     s_ble_scan_desired = true;
-    s_ble_scan_params.scan_type = active_scan ? BLE_SCAN_TYPE_ACTIVE
-                                              : BLE_SCAN_TYPE_PASSIVE;
+    s_ble_scan_params.scan_type =
+        active_scan ? BLE_SCAN_TYPE_ACTIVE : BLE_SCAN_TYPE_PASSIVE;
     ret = esp_ble_gap_set_scan_params(&s_ble_scan_params);
     if (ret != ESP_OK) {
       ESP_LOGE(TAG, "set_scan_params: %s", esp_err_to_name(ret));

@@ -207,8 +207,10 @@ esp_err_t list_files_handler(httpd_req_t* req) {
   size_t query_len = 300;
   char* query_str = (char*) malloc(query_len);
   if (path == NULL || query_str == NULL) {
-    if (path) free(path);
-    if (query_str) free(query_str);
+    if (path)
+      free(path);
+    if (query_str)
+      free(query_str);
     httpd_resp_send_500(req);
     return ESP_FAIL;
   }
@@ -342,7 +344,8 @@ static esp_err_t delete_get_handler(httpd_req_t* req) {
   }
 
   if (!is_valid_safe_path(filepath)) {
-    ESP_LOGW(TAG, "Blocked path traversal/invalid path in delete: %s", filepath);
+    ESP_LOGW(TAG, "Blocked path traversal/invalid path in delete: %s",
+             filepath);
     httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Access Denied");
     free(filepath);
     free(buf);
@@ -400,7 +403,8 @@ static esp_err_t download_get_handler(httpd_req_t* req) {
   }
 
   if (!is_valid_safe_path(filepath)) {
-    ESP_LOGW(TAG, "Blocked path traversal/invalid path in download: %s", filepath);
+    ESP_LOGW(TAG, "Blocked path traversal/invalid path in download: %s",
+             filepath);
     httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "Access Denied");
     free(filepath);
     free(buf);

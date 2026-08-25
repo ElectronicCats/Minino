@@ -125,7 +125,8 @@ uint8_t surv_match_ble_adv(const uint8_t* adv,
           push_hit(out, &n, SURV_CLASS_AIRTAG, 4, "AirTag");
         } else if (d[2] == 0x02 && dlen >= 4 && d[3] == 0x15) {
           push_hit(out, &n, SURV_CLASS_IBEACON, 2, "iBeacon");
-        } else if (d[2] == 0x07 || d[2] == 0x10 || d[2] == 0x0B || d[2] == 0x09) {
+        } else if (d[2] == 0x07 || d[2] == 0x10 || d[2] == 0x0B ||
+                   d[2] == 0x09) {
           push_hit(out, &n, SURV_CLASS_APPLE_NEARBY, 2, "Apple Dev");
         }
       } else if (company == 0x0075) {  // Samsung
@@ -137,7 +138,8 @@ uint8_t surv_match_ble_adv(const uint8_t* adv,
       }
     }
 
-    if (ad_type == 0x02 || ad_type == 0x03) {  // 16-bit Service UUIDs (Complete/Incomplete)
+    if (ad_type == 0x02 ||
+        ad_type == 0x03) {  // 16-bit Service UUIDs (Complete/Incomplete)
       for (uint8_t u = 0; u + 1 < dlen; u += 2) {
         uint16_t uuid = (uint16_t) (d[u] | (d[u + 1] << 8));
         for (uint16_t i = 0; i < surv_signatures_uuid_count(); i++) {

@@ -93,7 +93,8 @@ static void wifi_attack_rogueap(void* args) {
              .max_connection = 1},
   };
   if (ap_record->authmode != WIFI_AUTH_OPEN) {
-    strncpy((char*) ap_config.ap.password, "dummypassword", sizeof(ap_config.ap.password));
+    strncpy((char*) ap_config.ap.password, "dummypassword",
+            sizeof(ap_config.ap.password));
   }
   memcpy(ap_config.ap.ssid, ap_record->ssid, sizeof(ap_config.ap.ssid));
 
@@ -121,7 +122,8 @@ void wifi_attacks_module_stop() {
 
 void wifi_attack_handle_attacks(wifi_attacks_types_t attack_type,
                                 wifi_ap_record_t* ap_target) {
-  if (ap_target == NULL) return;
+  if (ap_target == NULL)
+    return;
   s_target_ap_record = *ap_target;
 
   ESP_LOGW(TAG_WIFI_ATTACK_MODULE, "Starting attack: %d %s", attack_type,
@@ -139,16 +141,16 @@ void wifi_attack_handle_attacks(wifi_attacks_types_t attack_type,
       running_rogueap_attack = true;
       ESP_LOGI(TAG_WIFI_ATTACK_MODULE, "Starting rogue attack: %s",
                s_target_ap_record.ssid);
-      xTaskCreate(wifi_attack_rogueap, "wifi_attack_rogueap", 4096, &s_target_ap_record,
-                  5, &task_rogue_attack);
+      xTaskCreate(wifi_attack_rogueap, "wifi_attack_rogueap", 4096,
+                  &s_target_ap_record, 5, &task_rogue_attack);
       break;
     case WIFI_ATTACK_COMBINE:
       running_broadcast_attack = true;
       running_rogueap_attack = true;
       ESP_LOGI(TAG_WIFI_ATTACK_MODULE, "Starting combined attack: %s",
                s_target_ap_record.ssid);
-      xTaskCreate(wifi_attack_rogueap, "wifi_attack_rogueap", 4096, &s_target_ap_record,
-                  5, &task_rogue_attack);
+      xTaskCreate(wifi_attack_rogueap, "wifi_attack_rogueap", 4096,
+                  &s_target_ap_record, 5, &task_rogue_attack);
       xTaskCreate(wifi_attack_brod_send_deauth_frame,
                   "wifi_attack_brod_create_task", 4096, &s_target_ap_record, 5,
                   &task_brod_attack);

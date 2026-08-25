@@ -79,10 +79,11 @@ static float parse_lat_long(esp_gps_t* esp_gps) {
  * @return uint8_t result of converting
  */
 static inline uint8_t convert_two_digit2number(const char* digit_char) {
-  if (!isdigit((unsigned char) digit_char[0]) || !isdigit((unsigned char) digit_char[1])) {
+  if (!isdigit((unsigned char) digit_char[0]) ||
+      !isdigit((unsigned char) digit_char[1])) {
     return 0;
   }
-  return (uint8_t)(10 * (digit_char[0] - '0') + (digit_char[1] - '0'));
+  return (uint8_t) (10 * (digit_char[0] - '0') + (digit_char[1] - '0'));
 }
 
 /**
@@ -102,7 +103,8 @@ static void parse_utc_time(esp_gps_t* esp_gps) {
     uint16_t tmp = 0;
     uint8_t i = 7;
     uint8_t digits = 0;
-    while (esp_gps->item_str[i] && isdigit((unsigned char) esp_gps->item_str[i]) && digits < 3) {
+    while (esp_gps->item_str[i] &&
+           isdigit((unsigned char) esp_gps->item_str[i]) && digits < 3) {
       tmp = 10 * tmp + (esp_gps->item_str[i] - '0');
       i++;
       digits++;
@@ -661,9 +663,9 @@ static void nmea_parser_task_entry(void* arg) {
 
   while (esp_gps->is_running) {
     // Read data from UART using DMA with 50ms timeout
-    int len = uart_read_bytes(esp_gps->uart_port, esp_gps->buffer,
-                              NMEA_PARSER_RUNTIME_BUFFER_SIZE - 1,
-                              pdMS_TO_TICKS(50));
+    int len =
+        uart_read_bytes(esp_gps->uart_port, esp_gps->buffer,
+                        NMEA_PARSER_RUNTIME_BUFFER_SIZE - 1, pdMS_TO_TICKS(50));
 
     if (esp_gps->is_running && len > 0) {
       // Null-terminate the buffer

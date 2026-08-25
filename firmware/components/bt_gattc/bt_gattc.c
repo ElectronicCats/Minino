@@ -495,7 +495,8 @@ void bt_gattc_task_begin(void) {
   }
 
   if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_UNINITIALIZED) {
-    esp_bluedroid_config_t bluedroid_config = BT_BLUEDROID_INIT_CONFIG_DEFAULT();
+    esp_bluedroid_config_t bluedroid_config =
+        BT_BLUEDROID_INIT_CONFIG_DEFAULT();
     ret = esp_bluedroid_init_with_cfg(&bluedroid_config);
     if (ret == ESP_OK) {
       esp_bluedroid_enable();
@@ -530,8 +531,10 @@ void bt_gattc_task_begin(void) {
 void bt_gattc_task_stop(void) {
   ESP_LOGI(TAG_BT_GATTC, "stop_ble_client_task");
   esp_ble_gap_stop_scanning();
-  if (ble_client_gattc_profile_tab[DEVICE_PROFILE].gattc_if != ESP_GATT_IF_NONE) {
-    esp_ble_gattc_app_unregister(ble_client_gattc_profile_tab[DEVICE_PROFILE].gattc_if);
+  if (ble_client_gattc_profile_tab[DEVICE_PROFILE].gattc_if !=
+      ESP_GATT_IF_NONE) {
+    esp_ble_gattc_app_unregister(
+        ble_client_gattc_profile_tab[DEVICE_PROFILE].gattc_if);
     ble_client_gattc_profile_tab[DEVICE_PROFILE].gattc_if = ESP_GATT_IF_NONE;
   }
   if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_ENABLED) {

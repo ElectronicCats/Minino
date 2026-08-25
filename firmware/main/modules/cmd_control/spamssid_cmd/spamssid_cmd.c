@@ -33,7 +33,8 @@ static void get_ssid() {
   flash_storage_get_list(GENFLASH_STORAGE_SPAM, list, &list_count);
   for (int i = 0; i < list_count && i < 99; i++) {
     if (list[i].item_storage_name != NULL) {
-      strncpy(spam_ssids_list[i], list[i].item_storage_name, sizeof(spam_ssids_list[i]) - 1);
+      strncpy(spam_ssids_list[i], list[i].item_storage_name,
+              sizeof(spam_ssids_list[i]) - 1);
       spam_ssids_list[i][sizeof(spam_ssids_list[i]) - 1] = '\0';
     } else {
       spam_ssids_list[i][0] = '\0';
@@ -95,7 +96,8 @@ static int save_ssid_cmd(int argc, char** argv) {
     ESP_LOGE(__func__, "Memory allocation failed");
     return 1;
   }
-  strncpy(new_ssid.items_storage_value, ssdi_save_args.value->sval[0], GENFLASH_STORAGE_MAX_LEN_STR - 1);
+  strncpy(new_ssid.items_storage_value, ssdi_save_args.value->sval[0],
+          GENFLASH_STORAGE_MAX_LEN_STR - 1);
   new_ssid.items_storage_value[GENFLASH_STORAGE_MAX_LEN_STR - 1] = '\0';
   flash_storage_save_list_items(&new_ssid);
   return 0;

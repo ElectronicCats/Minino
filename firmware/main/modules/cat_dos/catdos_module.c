@@ -165,7 +165,8 @@ static void* http_get_task(void* pvParameters) {
   int s;
 
   char request[128];
-  snprintf(request, sizeof(request), "GET %s HTTP/1.0\r\nHost: %s:%s\r\n\r\n", endpoint, host, port);
+  snprintf(request, sizeof(request), "GET %s HTTP/1.0\r\nHost: %s:%s\r\n\r\n",
+           endpoint, host, port);
   running_attack = true;
 
   while (running_attack) {

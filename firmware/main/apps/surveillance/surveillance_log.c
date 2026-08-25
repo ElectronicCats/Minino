@@ -9,13 +9,14 @@
 
 #define TAG "surv_log"
 
-#define SURV_CSV_HEADER                                                  \
-  FORMAT_VERSION ",appRelease=" APP_VERSION ",model=" MODEL              \
-  ",release=" RELEASE ",device=" DEVICE ",display=" DISPLAY              \
-  ",board=" BOARD ",brand=" BRAND ",star=" STAR ",body=" BODY            \
-  ",subBody=" SUB_BODY "\n"                                              \
-  "MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,"  \
-  "CurrentLongitude,AltitudeMeters,AccuracyMeters,RCOIs,MfgrId,Type,"    \
+#define SURV_CSV_HEADER                                                 \
+  FORMAT_VERSION                                                        \
+  ",appRelease=" APP_VERSION ",model=" MODEL ",release=" RELEASE        \
+  ",device=" DEVICE ",display=" DISPLAY ",board=" BOARD ",brand=" BRAND \
+  ",star=" STAR ",body=" BODY ",subBody=" SUB_BODY                      \
+  "\n"                                                                  \
+  "MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude," \
+  "CurrentLongitude,AltitudeMeters,AccuracyMeters,RCOIs,MfgrId,Type,"   \
   "Class,Tier,Method,Score\n"
 
 static char s_csv_name[64] = SURV_DIR_NAME "/detections.csv";
@@ -84,8 +85,8 @@ static const char* method_name(uint8_t tier) {
 
 static const char* mac_str(const uint8_t mac[6]) {
   static char buf[18];
-  snprintf(buf, sizeof(buf), MAC_ADDRESS_FORMAT, mac[0], mac[1], mac[2],
-           mac[3], mac[4], mac[5]);
+  snprintf(buf, sizeof(buf), MAC_ADDRESS_FORMAT, mac[0], mac[1], mac[2], mac[3],
+           mac[4], mac[5]);
   return buf;
 }
 
@@ -190,8 +191,8 @@ void surveillance_log_detection(const surv_event_t* ev,
            "%s,,,%s,%d,%u,%d,%s,%s,%.1f,%.1f,,,%s,%s,%d,%s,%d\n",
            mac_str(ev->mac), date_str(gps), ev->channel, freq_of(ev->channel),
            ev->rssi, lat, lon, alt, (double) GPS_ACCURACY,
-           ev->proto == SURV_PROTO_WIFI ? "WIFI" : "BLE",
-           class_name(ev->klass), ev->tier, method_name(ev->tier), score);
+           ev->proto == SURV_PROTO_WIFI ? "WIFI" : "BLE", class_name(ev->klass),
+           ev->tier, method_name(ev->tier), score);
 
   append_buffered(line);
 }
@@ -201,7 +202,8 @@ void surveillance_log_gpx_waypoint(const surv_event_t* ev, const gps_t* gps) {
     return;
   }
 
-  // Waypoints for confirmed high-certainty detections (Tier 3 Probe and Tier 4 IE Sig)
+  // Waypoints for confirmed high-certainty detections (Tier 3 Probe and Tier 4
+  // IE Sig)
   if (ev->tier < SURV_TIER_PROBE) {
     return;
   }

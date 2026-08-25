@@ -526,7 +526,8 @@ void bt_gatts_task_begin(void) {
   }
 
   if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_UNINITIALIZED) {
-    esp_bluedroid_config_t bluedroid_config = BT_BLUEDROID_INIT_CONFIG_DEFAULT();
+    esp_bluedroid_config_t bluedroid_config =
+        BT_BLUEDROID_INIT_CONFIG_DEFAULT();
     ret = esp_bluedroid_init_with_cfg(&bluedroid_config);
     if (ret == ESP_OK) {
       esp_bluedroid_enable();

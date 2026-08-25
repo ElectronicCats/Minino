@@ -203,7 +203,8 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
             printf("Destination PAN:               0x%04x\n", pan_id);
             printf("Destination    :               0x%04x\n", short_dst_addr);
           }
-          snprintf(dst_addr_str, sizeof(dst_addr_str), "0x%04x", short_dst_addr);
+          snprintf(dst_addr_str, sizeof(dst_addr_str), "0x%04x",
+                   short_dst_addr);
           break;
         case ADDR_MODE_LONG:
           pan_id = *((uint16_t*) &packet[position]);
@@ -212,9 +213,9 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
             dst_addr[idx] = packet[position + sizeof(dst_addr) - 1 - idx];
           }
           position += sizeof(dst_addr);
-          snprintf(dst_addr_str, sizeof(dst_addr_str), ZB_ADDRESS_FORMAT, dst_addr[0], dst_addr[1],
-                   dst_addr[2], dst_addr[3], dst_addr[4], dst_addr[5],
-                   dst_addr[6], dst_addr[7]);
+          snprintf(dst_addr_str, sizeof(dst_addr_str), ZB_ADDRESS_FORMAT,
+                   dst_addr[0], dst_addr[1], dst_addr[2], dst_addr[3],
+                   dst_addr[4], dst_addr[5], dst_addr[6], dst_addr[7]);
           printf("On PAN %04x to long address %s\n", pan_id, dst_addr_str);
           break;
         default: {
@@ -234,7 +235,8 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
           short_src_addr = *((uint16_t*) &packet[position]);
           position += sizeof(uint16_t);
           printf("Source:                        0x%04x\n", short_src_addr);
-          snprintf(src_addr_str, sizeof(src_addr_str), "0x%04x", short_src_addr);
+          snprintf(src_addr_str, sizeof(src_addr_str), "0x%04x",
+                   short_src_addr);
           break;
         }
         case ADDR_MODE_LONG: {
@@ -247,9 +249,9 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
               "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n",
               src_addr[0], src_addr[1], src_addr[2], src_addr[3], src_addr[4],
               src_addr[5], src_addr[6], src_addr[7]);
-          snprintf(src_addr_str, sizeof(src_addr_str), ZB_ADDRESS_FORMAT, src_addr[0], src_addr[1],
-                   src_addr[2], src_addr[3], src_addr[4], src_addr[5],
-                   src_addr[6], src_addr[7]);
+          snprintf(src_addr_str, sizeof(src_addr_str), ZB_ADDRESS_FORMAT,
+                   src_addr[0], src_addr[1], src_addr[2], src_addr[3],
+                   src_addr[4], src_addr[5], src_addr[6], src_addr[7]);
           break;
         }
         default: {
@@ -386,7 +388,8 @@ void warbee_module_exit() {
     free(csv_file_name);
     csv_file_name = NULL;
   }
-  if (context_session.session_str != NULL && strlen(context_session.session_str) > 0) {
+  if (context_session.session_str != NULL &&
+      strlen(context_session.session_str) > 0) {
     free(context_session.session_str);
     context_session.session_str = "";
   }
