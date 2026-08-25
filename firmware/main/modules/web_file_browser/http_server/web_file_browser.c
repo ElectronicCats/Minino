@@ -30,8 +30,9 @@ static esp_err_t list_files_handler(httpd_req_t* req);
 static esp_err_t download_get_handler(httpd_req_t* req);
 static esp_err_t delete_get_handler(httpd_req_t* req);
 static esp_err_t style_css_handler(httpd_req_t* req);
+static bool is_valid_safe_path(const char* path);
 
-char* mount_path = NULL;
+char mount_path[WFB_MOUNT_PATH_LEN] = {0};
 bool show_hidden_files = false;
 
 static void web_file_browser_show_event(uint8_t event, void* context) {
@@ -47,7 +48,6 @@ void web_file_browser_begin() {
 
   if (http_server_handle == NULL) {
     http_server_handle = web_file_browser_start();
-    mount_path = (char*) malloc(WFB_MOUNT_PATH_LEN);
   } else {
     web_file_browser_show_event(WEB_FILE_BROWSER_ALREADY_EV, NULL);
   }
@@ -206,21 +206,43 @@ esp_err_t list_files_handler(httpd_req_t* req) {
 
   size_t query_len = 300;
   char* query_str = (char*) malloc(query_len);
+  if (path == NULL || query_str == NULL) {
+    if (path) free(path);
+    if (query_str) free(query_str);
+    httpd_resp_send_500(req);
+    return ESP_FAIL;
+  }
+
   if (httpd_req_get_url_query_str(req, query_str, query_len) == ESP_OK) {
     if (httpd_query_key_value(query_str, "root", mount_path,
                               WFB_MOUNT_PATH_LEN) == ESP_OK) {
       strncpy(path, mount_path, WFB_MOUNT_PATH_LEN);
+      path[WFB_MOUNT_PATH_LEN - 1] = '\0';
     } else if (httpd_query_key_value(query_str, "path", path, path_len) !=
                ESP_OK) {
+      free(path);
+      free(query_str);
       httpd_resp_send_500(req);
       return ESP_FAIL;
     }
   } else {
     strncpy(path, mount_path, WFB_MOUNT_PATH_LEN);
+    path[WFB_MOUNT_PATH_LEN - 1] = '\0';
   }
+
+  if (!is_valid_safe_path(path)) {
+    ESP_LOGE(TAG, "Invalid or unsafe path: %s", path);
+    free(path);
+    free(query_str);
+    httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid path");
+    return ESP_FAIL;
+  }
+
   dir = opendir(path);
   if (dir == NULL) {
     ESP_LOGE(TAG, "Error Opening Directory %s", path);
+    free(path);
+    free(query_str);
     httpd_resp_send_500(req);
     return ESP_FAIL;
   }

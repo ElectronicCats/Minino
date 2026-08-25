@@ -134,7 +134,9 @@ void gps_module_start_scan() {
   /* register event handler for NMEA parser library */
   nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
 
-  gps_screens_show_waiting_signal();
+  if (gps_event_callback == NULL) {
+    gps_screens_show_waiting_signal();
+  }
 }
 
 /**
@@ -186,8 +188,12 @@ char* gps_module_get_signal_strength(gps_t* gps) {
  */
 gps_t* gps_module_get_instance(void* event_data) {
   gps_t* gps = (gps_t*) event_data;
+  if (!gps) return NULL;
 
-  uint16_t year = gps->date.year + YEAR_BASE;
+  uint16_t year = gps->date.year;
+  if (year < 100) {
+    year += YEAR_BASE;
+  }
   uint8_t month = gps->date.month;
   uint8_t day = gps->date.day;
 

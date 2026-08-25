@@ -66,7 +66,7 @@ static void wardriving_screens_thread_animation_task() {
     static uint8_t idx = 0;
     oled_screen_display_bitmap(thread_sniffer_bitmap_arr[idx], 0, 0, 32, 32,
                                OLED_DISPLAY_NORMAL);
-    idx = ++idx > 3 ? 0 : idx;
+    idx = (idx + 1 > 3) ? 0 : (idx + 1);
     vTaskDelay(500 / portTICK_PERIOD_MS);
   }
   vTaskDelete(NULL);
@@ -172,8 +172,7 @@ static void thread_gps_event_handler_cb(gps_t* gps) {
 static void warthread_packet_handler(const otRadioFrame* aFrame,
                                      bool aIsTx,
                                      void* aContext) {
-  if (gps_ctx == NULL || gps_ctx->sats_in_use == 0) {
-    ESP_LOGW(TAG, "No GPS signal, packet not saved");
+  if (aFrame == NULL || aFrame->mLength < 16 || gps_ctx == NULL || gps_ctx->sats_in_use == 0) {
     return;
   }
 
@@ -205,6 +204,9 @@ static void warthread_packet_handler(const otRadioFrame* aFrame,
   if (frame_control_field == THREAD_FCF_IEEE_PACKET) {
     strncpy(protocol_type, PROTOCOL_TYPE_IEEE, sizeof(protocol_type) - 1);
   } else if (frame_control_field == THREAD_FCF_MLE_PACKET) {
+    if (aFrame->mLength < (position + 8)) {
+      return;
+    }
     strncpy(protocol_type, PROTOCOL_TYPE_MLE, sizeof(protocol_type) - 1);
     position += sizeof(uint8_t);
     position += sizeof(uint8_t);

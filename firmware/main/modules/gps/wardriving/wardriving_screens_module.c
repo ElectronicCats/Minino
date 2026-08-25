@@ -33,7 +33,7 @@ void wardriving_screens_wifi_animation_task() {
     static uint8_t idx = 0;
     oled_screen_display_bitmap(epd_bitmap_wifi_loading[idx], 0, 0, 56, 56,
                                OLED_DISPLAY_NORMAL);
-    idx = ++idx > 3 ? 0 : idx;
+    idx = (idx + 1 > 3) ? 0 : (idx + 1);
     vTaskDelay(500 / portTICK_PERIOD_MS);
   }
   vTaskDelete(NULL);

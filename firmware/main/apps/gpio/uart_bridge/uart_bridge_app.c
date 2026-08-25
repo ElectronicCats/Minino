@@ -90,10 +90,18 @@ void uart_bridge_app_task(void* args) {
     int bytes_from_uart =
         uart_read_bytes(UART_NUM_0, buffer, sizeof(buffer), pdMS_TO_TICKS(10));
     if (bytes_from_uart > 0) {
-      usb_serial_jtag_write_bytes(buffer, bytes_from_uart, 0);
+      int written = 0;
+      while (written < bytes_from_uart && !uart_bridge_exit) {
+        int res = usb_serial_jtag_write_bytes(buffer + written, bytes_from_uart - written, pdMS_TO_TICKS(10));
+        if (res > 0) {
+          written += res;
+        } else {
+          break;
+        }
+      }
     }
 
-    vTaskDelay(pdMS_TO_TICKS(100));
+    taskYIELD();
   }
 
   uart_bridge_end();

@@ -30,17 +30,18 @@ static const general_menu_t card_info_menu_ctx = {
 };
 
 void general_screen_truncate_text(char* p_text, char* p_truncated_text) {
-  // Truncate the text if it is longer than the screen width and add 3 dots
-  char* p_truncated_text_ptr = p_truncated_text;
-  for (uint8_t i = 0; i < (MAX_LINE_CHAR - 3); i++) {
-    *p_truncated_text_ptr = *p_text;
-    p_text++;
-    p_truncated_text_ptr++;
+  if (!p_text || !p_truncated_text) return;
+  size_t len = strlen(p_text);
+  if (len <= (MAX_LINE_CHAR - 3)) {
+    strncpy(p_truncated_text, p_text, MAX_LINE_CHAR);
+    p_truncated_text[MAX_LINE_CHAR - 1] = '\0';
+    return;
   }
-  *p_truncated_text_ptr++ = '.';
-  *p_truncated_text_ptr++ = '.';
-  *p_truncated_text_ptr++ = '.';
-  *p_truncated_text_ptr = '\0';
+  strncpy(p_truncated_text, p_text, MAX_LINE_CHAR - 3);
+  p_truncated_text[MAX_LINE_CHAR - 3] = '.';
+  p_truncated_text[MAX_LINE_CHAR - 2] = '.';
+  p_truncated_text[MAX_LINE_CHAR - 1] = '.';
+  p_truncated_text[MAX_LINE_CHAR] = '\0';
 }
 
 static void general_screen_display_selected_item(char* item_text,
@@ -51,6 +52,7 @@ static void general_screen_display_selected_item(char* item_text,
 }
 
 static void general_screen_increment_option() {
+  if (scrolling_menu_ctx == NULL || scrolling_menu_ctx->menu_count == 0) return;
   scrolling_option++;
   if (scrolling_option >= scrolling_menu_ctx->menu_count) {
     scrolling_option = 0;
@@ -58,9 +60,12 @@ static void general_screen_increment_option() {
 }
 
 static void general_screen_decrement_option() {
-  scrolling_option = scrolling_option-- == 0
-                         ? scrolling_menu_ctx->menu_count - 1
-                         : scrolling_option;
+  if (scrolling_menu_ctx == NULL || scrolling_menu_ctx->menu_count == 0) return;
+  if (scrolling_option == 0) {
+    scrolling_option = scrolling_menu_ctx->menu_count - 1;
+  } else {
+    scrolling_option--;
+  }
 }
 
 static void general_screen_display_breadcrumb() {

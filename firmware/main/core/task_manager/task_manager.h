@@ -121,6 +121,7 @@ uint32_t task_manager_get_count(void);
  * @return Puntero a task_info_t o NULL si no se encuentra
  */
 task_info_t* task_manager_get_info(TaskHandle_t handle);
+bool task_manager_get_info_copy(TaskHandle_t handle, task_info_t* out_info);
 
 /**
  * @brief Actualiza stack watermarks de todas las tareas

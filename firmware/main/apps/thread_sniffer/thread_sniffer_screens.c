@@ -23,7 +23,7 @@ static void thread_sniffer_scanning_animation() {
 #endif
   oled_screen_display_bitmap(thread_sniffer_bitmap_arr[frame], x, y, 32, 32,
                              OLED_DISPLAY_NORMAL);
-  frame = ++frame > 3 ? 0 : frame;
+  frame = (frame + 1 > 3) ? 0 : (frame + 1);
 }
 
 #ifdef CONFIG_RESOLUTION_128X64

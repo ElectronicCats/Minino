@@ -24,12 +24,16 @@ static void update_list(file_manager_context_t* ctx) {
                              OLED_DISPLAY_NORMAL);
   } else {
     for (uint8_t i = 0; i < (MIN(ctx->items_count, MAX_ITEMS_NUM - 1)); i++) {
-      char* str = (char*) malloc(30);
-      sprintf(str, "%s%s", ctx->file_items_arr[i + items_offset]->name,
-              ctx->file_items_arr[i + items_offset]->is_dir ? ">" : "");
+      if (ctx->file_items_arr[i + items_offset] == NULL ||
+          ctx->file_items_arr[i + items_offset]->name == NULL) {
+        continue;
+      }
+      char str[64];
+      snprintf(str, sizeof(str), "%s%s",
+               ctx->file_items_arr[i + items_offset]->name,
+               ctx->file_items_arr[i + items_offset]->is_dir ? ">" : "");
       oled_screen_display_text(str, 0, i + 1,
                                ctx->selected_item == i + items_offset);
-      free(str);
     }
   }
   oled_screen_display_show();

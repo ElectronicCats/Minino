@@ -181,10 +181,32 @@ task_info_t* task_manager_get_info(TaskHandle_t handle) {
   return NULL;
 }
 
+bool task_manager_get_info_copy(TaskHandle_t handle, task_info_t* out_info) {
+  if (out_info == NULL || task_manager_mutex == NULL) {
+    return false;
+  }
+  if (xSemaphoreTake(task_manager_mutex, portMAX_DELAY) == pdTRUE) {
+    for (uint32_t i = 0; i < task_count; i++) {
+      if (task_registry[i].handle == handle) {
+        *out_info = task_registry[i];
+        xSemaphoreGive(task_manager_mutex);
+        return true;
+      }
+    }
+    xSemaphoreGive(task_manager_mutex);
+  }
+  return false;
+}
+
 void task_manager_update_watermarks(void) {
   if (task_manager_mutex && xSemaphoreTake(task_manager_mutex, portMAX_DELAY) == pdTRUE) {
     for (uint32_t i = 0; i < task_count; i++) {
       if (task_registry[i].is_running && task_registry[i].handle != NULL) {
+        eTaskState state = eTaskGetState(task_registry[i].handle);
+        if (state == eDeleted) {
+          task_registry[i].is_running = false;
+          continue;
+        }
         task_registry[i].stack_watermark =
             uxTaskGetStackHighWaterMark(task_registry[i].handle);
       }
@@ -202,7 +224,10 @@ void task_manager_print_stack_usage(void) {
 
       task_info_t* info = &task_registry[i];
       UBaseType_t watermark = info->stack_watermark;
-      size_t used = info->stack_size - (watermark * sizeof(StackType_t));
+      size_t watermark_bytes = watermark * sizeof(StackType_t);
+      size_t used = (info->stack_size > watermark_bytes)
+                        ? (info->stack_size - watermark_bytes)
+                        : 0;
       float usage_percent = info->stack_size > 0 ? (((float) used / (float) info->stack_size) * 100.0f) : 0.0f;
 
       const char* status;

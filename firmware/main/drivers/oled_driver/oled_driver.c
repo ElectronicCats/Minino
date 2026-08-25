@@ -79,13 +79,20 @@ void oled_driver_display_image(oled_driver_t* dev,
                                int seg,
                                uint8_t* images,
                                int width) {
+  if (dev == NULL || images == NULL || page < 0 || page >= dev->_pages || seg < 0 || seg >= dev->_width) {
+    return;
+  }
+  int valid_width = (seg + width > dev->_width) ? (dev->_width - seg) : width;
+  if (valid_width <= 0) {
+    return;
+  }
   if (dev->_address == SPIAddress) {
-    spi_display_image(dev, page, seg, images, width);
+    spi_display_image(dev, page, seg, images, valid_width);
   } else {
-    i2c_display_image(dev, page, seg, images, width);
+    i2c_display_image(dev, page, seg, images, valid_width);
   }
   // Set to internal buffer
-  memcpy(&dev->_page[page]._segs[seg], images, width);
+  memcpy(&dev->_page[page]._segs[seg], images, valid_width);
 }
 
 void oled_driver_display_text(oled_driver_t* dev,
@@ -93,7 +100,7 @@ void oled_driver_display_text(oled_driver_t* dev,
                               char* text,
                               int x,
                               bool invert) {
-  if (page >= dev->_pages)
+  if (dev == NULL || text == NULL || page < 0 || page >= dev->_pages)
     return;
   int _text_len = strlen(text);
   if (_text_len > 16)
@@ -102,20 +109,17 @@ void oled_driver_display_text(oled_driver_t* dev,
   uint8_t seg = x;
   uint8_t image[8];
   for (uint8_t i = 0; i < _text_len; i++) {
-    memcpy(image, font8x8_basic_tr[(uint8_t) text[i] + encrypt] + typography,
+    uint8_t char_idx = (uint8_t) text[i];
+    if (char_idx >= 128) {
+      char_idx = '?';
+    }
+    memcpy(image, font8x8_basic_tr[char_idx + encrypt] + typography,
            8);
     if (invert)
       oled_driver_invert(image, 8);
     if (dev->_flip)
       oled_driver_flip(image, 8);
     oled_driver_display_image(dev, page, seg, image, 8);
-#if 0
-		if (dev->_address == SPIAddress) {
-			spi_display_image(dev, page, seg, image, 8);
-		} else {
-			i2c_display_image(dev, page, seg, image, 8);
-		}
-#endif
     seg = seg + 8;
   }
 }
@@ -126,7 +130,7 @@ void oled_driver_display_text_x3(oled_driver_t* dev,
                                  char* text,
                                  int text_len,
                                  bool invert) {
-  if (page >= dev->_pages)
+  if (dev == NULL || text == NULL || page < 0 || (page + 2) >= dev->_pages)
     return;
   int _text_len = text_len;
   if (_text_len > 5)
@@ -135,7 +139,13 @@ void oled_driver_display_text_x3(oled_driver_t* dev,
   uint8_t seg = 0;
 
   for (uint8_t nn = 0; nn < _text_len; nn++) {
-    uint8_t const* const in_columns = font8x8_basic_tr[(uint8_t) text[nn]];
+    if (seg + 24 > dev->_width)
+      break;
+    uint8_t char_code = (uint8_t) text[nn];
+    if (char_code >= 128)
+      char_code = '?';
+
+    uint8_t const* const in_columns = font8x8_basic_tr[char_code];
 
     // make the character 3x as high
     out_column_t out_columns[8];
@@ -518,9 +528,15 @@ void oled_driver_draw_pixel(oled_driver_t* dev,
                             int xpos,
                             int ypos,
                             bool invert) {
-  uint8_t _page = (ypos / 8);
-  uint8_t _bits = (ypos % 8);
-  uint8_t _seg = xpos;
+  if (dev == NULL || xpos < 0 || xpos >= dev->_width || ypos < 0 || ypos >= dev->_height) {
+    return;
+  }
+  uint8_t _page = (uint8_t)(ypos / 8);
+  if (_page >= dev->_pages) {
+    return;
+  }
+  uint8_t _bits = (uint8_t)(ypos % 8);
+  uint8_t _seg = (uint8_t)xpos;
   uint8_t wk0 = dev->_page[_page]._segs[_seg];
   uint8_t wk1 = 1 << _bits;
   ESP_LOGD(TAG, "ypos=%d _page=%d _bits=%d wk0=0x%02x wk1=0x%02x", ypos, _page,

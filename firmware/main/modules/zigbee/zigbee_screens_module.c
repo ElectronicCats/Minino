@@ -43,7 +43,7 @@ void zigbee_screens_module_creating_network_failed() {
 
 void zigbee_screens_module_waiting_for_devices() {
   static uint8_t dots = 0;
-  dots = ++dots > 3 ? 0 : dots;
+  dots = (dots + 1 > 3) ? 0 : (dots + 1);
   genera_screen_display_card_information("Waiting for", "devices");
   // Print dots from lef to right
   for (int i = 0; i < 3; i++) {
@@ -95,7 +95,7 @@ void zigbee_screens_module_display_status(uint8_t status) {
 
 void zigbee_screens_light_joining(void) {
   static uint8_t dots = 0;
-  dots = ++dots > 3 ? 0 : dots;
+  dots = (dots + 1 > 3) ? 0 : (dots + 1);
   genera_screen_display_card_information("ZB Light", "Joining...");
   for (int i = 0; i < 3; i++) {
     oled_screen_display_text(i < dots ? "." : "", 56 + (i * 8), 4,
@@ -187,7 +187,7 @@ void zigbee_screens_display_scanning_animation() {
   static uint8_t frame = 0;
   oled_screen_display_bitmap(zigbee_bitmap_allArray[frame], x, y, 32, 32,
                              OLED_DISPLAY_NORMAL);
-  frame = ++frame > zigbee_bitmap_allArray_LEN - 1 ? 0 : frame;
+  frame = (frame + 1 >= zigbee_bitmap_allArray_LEN) ? 0 : (frame + 1);
 }
 
 void zigbee_screens_display_scanning_text(int count) {

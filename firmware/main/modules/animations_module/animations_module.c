@@ -167,15 +167,19 @@ void animations_module_pause() {
   }
   xSemaphoreTakeRecursive(anim_mutex, portMAX_DELAY);
   if (anim_ctx && anim_ctx->task_handle) {
-    // Release mutex while waiting for the task to pause itself
-    // The task sets _is_paused = true during vTaskDelay where it holds no mutex
+    TaskHandle_t target_task = anim_ctx->task_handle;
     xSemaphoreGiveRecursive(anim_mutex);
-    while (!get_paused()) {
-      vTaskDelay(1);
+    uint32_t timeout_ms = 200;
+    while (!get_paused() && get_running() && timeout_ms > 0) {
+      vTaskDelay(pdMS_TO_TICKS(5));
+      if (timeout_ms >= 5) {
+        timeout_ms -= 5;
+      } else {
+        break;
+      }
     }
-    // Re-acquire mutex to safely check context and suspend
     xSemaphoreTakeRecursive(anim_mutex, portMAX_DELAY);
-    if (anim_ctx && anim_ctx->task_handle) {
+    if (anim_ctx && anim_ctx->task_handle == target_task && get_running()) {
       vTaskSuspend(anim_ctx->task_handle);
     }
   } else {
