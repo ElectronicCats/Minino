@@ -67,14 +67,21 @@ struct dns_server_handle {
    .-seperated name returns the pointer to the next part of the packet
 */
 static char* parse_dns_name(char* raw_name,
+                            char* packet_end,
                             char* parsed_name,
                             size_t parsed_name_max_len) {
+  if (raw_name == NULL || packet_end == NULL || parsed_name == NULL || raw_name >= packet_end || parsed_name_max_len == 0) {
+    return NULL;
+  }
   char* label = raw_name;
   char* name_itr = parsed_name;
   int name_len = 0;
 
-  do {
-    int sub_name_len = *label;
+  while (label < packet_end && *label != 0) {
+    uint8_t sub_name_len = (uint8_t)(*label);
+    if ((label + 1 + sub_name_len) >= packet_end) {
+      return NULL;
+    }
     // (len + 1) since we are adding  a '.'
     name_len += (sub_name_len + 1);
     if (name_len > parsed_name_max_len) {
@@ -85,11 +92,19 @@ static char* parse_dns_name(char* raw_name,
     memcpy(name_itr, label + 1, sub_name_len);
     name_itr[sub_name_len] = '.';
     name_itr += (sub_name_len + 1);
-    label += sub_name_len + 1;
-  } while (*label != 0);
+    label += (sub_name_len + 1);
+  }
+
+  if (label >= packet_end || *label != 0) {
+    return NULL;
+  }
 
   // Terminate the final string, replacing the last '.'
-  parsed_name[name_len - 1] = '\0';
+  if (name_len > 0) {
+    parsed_name[name_len - 1] = '\0';
+  } else {
+    parsed_name[0] = '\0';
+  }
   // Return pointer to first char after the name
   return label + 1;
 }
@@ -100,7 +115,7 @@ static int parse_dns_request(char* req,
                              char* dns_reply,
                              size_t dns_reply_max_len,
                              dns_server_handle_t h) {
-  if (req_len > dns_reply_max_len) {
+  if (req_len < sizeof(dns_header_t) || req_len > dns_reply_max_len) {
     return -1;
   }
 
@@ -132,13 +147,14 @@ static int parse_dns_request(char* req,
   // Pointer to current answer and question
   char* cur_ans_ptr = dns_reply + req_len;
   char* cur_qd_ptr = dns_reply + sizeof(dns_header_t);
+  char* packet_end = dns_reply + req_len;
   char name[128];
 
   // Respond to all questions based on configured rules
   for (int qd_i = 0; qd_i < qd_count; qd_i++) {
-    char* name_end_ptr = parse_dns_name(cur_qd_ptr, name, sizeof(name));
-    if (name_end_ptr == NULL) {
-      ESP_LOGE(TAG, "Failed to parse DNS question: %s", cur_qd_ptr);
+    char* name_end_ptr = parse_dns_name(cur_qd_ptr, packet_end, name, sizeof(name));
+    if (name_end_ptr == NULL || (name_end_ptr + sizeof(dns_question_t)) > packet_end) {
+      ESP_LOGE(TAG, "Failed to parse DNS question");
       return -1;
     }
 

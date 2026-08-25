@@ -96,11 +96,17 @@ void wifi_driver_init_apsta(void) {
 }
 
 void wifi_driver_init_sta(void) {
+  if (wifi_driver_initialized) {
+    wifi_driver_deinit();
+  }
+
   esp_err_t err = esp_netif_init();
-  if (err != ESP_OK) {
+  if (err == ESP_ERR_INVALID_STATE) {
+    ESP_LOGI(TAG_WIFI_DRIVER, "netif already initialized");
+  } else if (err != ESP_OK) {
     ESP_LOGE(TAG_WIFI_DRIVER, "Error initializing netif: %s",
              esp_err_to_name(err));
-    esp_restart();
+    // No reiniciar - seguir intentando
   }
   err = esp_event_loop_create_default();
   if (err == ESP_ERR_INVALID_STATE) {

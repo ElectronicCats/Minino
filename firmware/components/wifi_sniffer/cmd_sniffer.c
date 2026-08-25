@@ -387,13 +387,17 @@ static esp_err_t sniffer_stop(sniffer_runtime_t* sniffer) {
 
   /* stop sniffer local task */
   sniffer->is_running = false;
-  /* wait for task over */
-  if (sniffer->packets_to_sniff != 0) {
-    xSemaphoreTake(sniffer->sem_task_over, portMAX_DELAY);
+  /* wait for task over only if called from a different task */
+  if (sniffer->task != NULL && xTaskGetCurrentTaskHandle() != sniffer->task) {
+    if (sniffer->sem_task_over != NULL && sniffer->packets_to_sniff != 0) {
+      xSemaphoreTake(sniffer->sem_task_over, portMAX_DELAY);
+    }
   }
 
-  vSemaphoreDelete(sniffer->sem_task_over);
-  sniffer->sem_task_over = NULL;
+  if (sniffer->sem_task_over != NULL) {
+    vSemaphoreDelete(sniffer->sem_task_over);
+    sniffer->sem_task_over = NULL;
+  }
   /* make sure to free all resources in the left items */
   UBaseType_t left_items = uxQueueMessagesWaiting(sniffer->work_queue);
 

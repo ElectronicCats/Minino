@@ -39,6 +39,7 @@ static const char* config_dump_menu[] = {"Dump to SD", "No dump"};
 
 static uint16_t last_index_selected = 0;
 static httpd_handle_t server = NULL;
+static dns_server_handle_t dns_server = NULL;
 static uint16_t retries = 0;
 static char wifi_ap_name[CAPTIVE_PORTAL_MAX_NAME];
 static TaskHandle_t scanning_task_handle = NULL;
@@ -496,19 +497,23 @@ static httpd_handle_t start_webserver(void) {
 }
 
 static void captive_module_disable_wifi() {
-  ESP_ERROR_CHECK(esp_wifi_stop());
-  ESP_ERROR_CHECK(esp_wifi_deinit());
+  if (dns_server) {
+    stop_dns_server(dns_server);
+    dns_server = NULL;
+  }
+  if (server) {
+    httpd_stop(server);
+    server = NULL;
+    ESP_LOGW("CAPTIVE", "HTTP server stopped");
+  }
+  esp_wifi_stop();
+  esp_wifi_deinit();
   esp_netif_t* netif = esp_netif_get_handle_from_ifkey(CAPTIVE_PORTAL_NET_NAME);
   if (netif) {
     esp_netif_destroy(netif);
     ESP_LOGW("CAPTIVE", "Netif destroyed");
   }
-  if (server) {
-    httpd_stop(server);
-    ESP_LOGW("CAPTIVE", "HTTP server stopped");
-  }
 
-  ESP_ERROR_CHECK(esp_event_loop_delete_default());
   captive_module_main();
 }
 
@@ -519,11 +524,9 @@ static void captive_module_wifi_begin() {
 
   ESP_ERROR_CHECK(esp_netif_init());
   esp_err_t errr = esp_event_loop_create_default();
-  if (errr != ESP_OK) {
-    ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to create event loop: %s",
+  if (errr != ESP_OK && errr != ESP_ERR_INVALID_STATE) {
+    ESP_LOGW(TAG_WIFI_SCANNER_MODULE, "Event loop create: %s",
              esp_err_to_name(errr));
-    esp_event_loop_delete_default();
-    esp_event_loop_create_default();
   }
   ESP_ERROR_CHECK(nvs_flash_init());
 
@@ -533,7 +536,7 @@ static void captive_module_wifi_begin() {
 
   dns_server_config_t config = DNS_SERVER_CONFIG_SINGLE(
       "*" /* all A queries */, "WIFI_AP_DEF" /* softAP netif ID */);
-  start_dns_server(&config);
+  dns_server = start_dns_server(&config);
 
   if (sd_card_is_not_mounted()) {
     sprintf(captive_context.portal, "Default");
@@ -694,13 +697,15 @@ static void captive_module_show_running() {
 static void captive_module_redirect_selector_handler(uint8_t option) {
   preferences_put_string(CAPTIVE_PORTAL_REDIRECT_FS_KEY,
                          redirect_list.ent[option]);
-  sprintf(captive_context.redirect, redirect_list.ent[option]);
+  snprintf(captive_context.redirect, sizeof(captive_context.redirect), "%s",
+           redirect_list.ent[option]);
   captive_module_main();
 }
 
 static void captive_module_portal_selector_handler(uint8_t option) {
   preferences_put_string(CAPTIVE_PORTAL_FS_KEY, portals_list.ent[option]);
-  sprintf(captive_context.portal, portals_list.ent[option]);
+  snprintf(captive_context.portal, sizeof(captive_context.portal), "%s",
+           portals_list.ent[option]);
   captive_module_main();
 }
 

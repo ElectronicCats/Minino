@@ -134,13 +134,13 @@ static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event) {
   switch (button_name) {
     case BUTTON_UP:
       if (current_wifi_state.state != DEAUTH_STATE_IDLE) {
-        current_item = current_item-- == 0 ? MENUCOUNT - 1 : current_item;
+        current_item = (current_item == 0) ? (MENUCOUNT - 1) : (current_item - 1);
         deauth_display_menu(current_item, menu_stadistics);
       }
       break;
     case BUTTON_DOWN:
       if (current_wifi_state.state != DEAUTH_STATE_IDLE) {
-        current_item = ++current_item > MENUCOUNT - 1 ? 0 : current_item;
+        current_item = (current_item + 1 >= MENUCOUNT) ? 0 : (current_item + 1);
         deauth_display_menu(current_item, menu_stadistics);
       }
       break;
@@ -226,12 +226,12 @@ static void deauth_module_cb_event_select_ap(uint8_t button_name,
   }
   switch (button_name) {
     case BUTTON_UP:
-      current_item = current_item-- == 0 ? ap_records->count - 1 : current_item;
+      current_item = (current_item == 0) ? (ap_records->count > 0 ? ap_records->count - 1 : 0) : (current_item - 1);
       deauth_display_scanned_ap(ap_records->records, ap_records->count,
                                 current_item);
       break;
     case BUTTON_DOWN:
-      current_item = ++current_item > ap_records->count - 1 ? 0 : current_item;
+      current_item = (ap_records->count > 0 && current_item + 1 >= ap_records->count) ? 0 : (current_item + 1);
       deauth_display_scanned_ap(ap_records->records, ap_records->count,
                                 current_item);
       break;
@@ -258,11 +258,11 @@ static void deauth_module_cb_event_attacks(uint8_t button_name,
   }
   switch (button_name) {
     case BUTTON_UP:
-      current_item = current_item-- == 0 ? ATTACKSCOUNT - 1 : current_item;
+      current_item = (current_item == 0) ? (ATTACKSCOUNT - 1) : (current_item - 1);
       deauth_display_attacks(current_item, menu_stadistics);
       break;
     case BUTTON_DOWN:
-      current_item = ++current_item > ATTACKSCOUNT - 1 ? 0 : current_item;
+      current_item = (current_item + 1 >= ATTACKSCOUNT) ? 0 : (current_item + 1);
       deauth_display_attacks(current_item, menu_stadistics);
       break;
     case BUTTON_RIGHT:

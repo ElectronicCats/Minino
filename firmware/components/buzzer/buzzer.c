@@ -9,7 +9,7 @@
 #define LEDC_MODE                   LEDC_LOW_SPEED_MODE
 #define LEDC_CHANNEL                LEDC_CHANNEL_2
 #define LEDC_DUTY_RES               LEDC_TIMER_13_BIT  // 13 bits resolution
-#define BUZZER_DEFAULT_DUTTY        (4096)             // 50% duty
+#define BUZZER_DEFAULT_DUTTY        (6144)             // 75% duty
 #define BUZZER_DEFAULT_FREQUENCY_HZ (4000)             // 4 kHz
 
 typedef struct {
@@ -28,6 +28,7 @@ static buzzer_t buzzer = {
     .timer_handle = NULL,
 };
 
+void buzzer_configure();
 static void buzzer_timer_callback(void* arg) {
   buzzer_stop();
 }
@@ -61,6 +62,8 @@ void buzzer_begin(uint8_t pin) {
     };
     esp_timer_create(&timer_args, &buzzer.timer_handle);
   }
+
+  buzzer_configure();
 }
 
 void buzzer_configure() {
@@ -111,7 +114,7 @@ void buzzer_play() {
   if (!buzzer.enabled) {
     return;
   }
-  buzzer_configure();
+
   ledc_set_duty(LEDC_MODE, LEDC_CHANNEL, buzzer.duty);
   ledc_update_duty(LEDC_MODE, LEDC_CHANNEL);
 }
@@ -141,7 +144,7 @@ void buzzer_stop() {
   return;
 #endif
 
-  if (buzzer.timer_handle != NULL) {
+  if (buzzer.timer_handle != NULL && esp_timer_is_active(buzzer.timer_handle)) {
     esp_timer_stop(buzzer.timer_handle);
   }
 

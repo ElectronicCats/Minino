@@ -241,11 +241,11 @@ static void ssid_spam_main_cb(uint8_t button_name, uint8_t button_event) {
       }
       break;
     case BUTTON_UP:
-      current_item = current_item-- == 0 ? SPAM_COUNT - 1 : current_item;
+      current_item = (current_item == 0) ? (SPAM_COUNT - 1) : (current_item - 1);
       general_screen_display_menu(current_item);
       break;
     case BUTTON_DOWN:
-      current_item = ++current_item > SPAM_COUNT - 1 ? 0 : current_item;
+      current_item = (current_item + 1 >= SPAM_COUNT) ? 0 : (current_item + 1);
       general_screen_display_menu(current_item);
       break;
     default:

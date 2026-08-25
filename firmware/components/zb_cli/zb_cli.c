@@ -173,6 +173,9 @@ static void zb_stack_main_task(void* pvParameters) {
   esp_zb_stack_main_loop();
 
   esp_zb_console_deinit();
+  /* El stack Zigbee termino: liberar el candado de radio para que otras
+   * apps (p. ej. Surveillance) puedan usarla sin reiniciar el dispositivo. */
+  radio_selector_set_stack_initialized(false);
   vTaskDelete(NULL);
 }
 

