@@ -545,8 +545,7 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event,
   switch (event) {
     case ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT:
       last_event_status = param->adv_data_raw_cmpl.status;
-      if (expected_event == ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT &&
-          adv_sem != NULL) {
+      if (adv_sem != NULL) {
         xSemaphoreGive(adv_sem);
       }
       break;
@@ -556,55 +555,41 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event,
       if (last_event_status == ESP_BT_STATUS_SUCCESS) {
         is_advertising_active = true;
       }
-      if (expected_event == ESP_GAP_BLE_ADV_START_COMPLETE_EVT &&
-          adv_sem != NULL) {
+      if (adv_sem != NULL) {
         xSemaphoreGive(adv_sem);
       }
       break;
 
     case ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT:
       last_event_status = param->adv_stop_cmpl.status;
-      is_advertising_active = false;
-      if (expected_event == ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT &&
-          adv_sem != NULL) {
+      if (last_event_status == ESP_BT_STATUS_SUCCESS) {
+        is_advertising_active = false;
+      }
+      if (adv_sem != NULL) {
         xSemaphoreGive(adv_sem);
       }
       break;
 
     case ESP_GAP_BLE_SET_STATIC_RAND_ADDR_EVT:
       last_event_status = param->set_rand_addr_cmpl.status;
-      if (expected_event == ESP_GAP_BLE_SET_STATIC_RAND_ADDR_EVT &&
-          adv_sem != NULL) {
+      if (adv_sem != NULL) {
         xSemaphoreGive(adv_sem);
       }
       break;
 
     case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT:
-      break;
-
     default:
       break;
   }
 }
 
-/*
- * Robust zero-latency GAP helper: drains stale semaphores and sets
- * expected_event BEFORE dispatching the asynchronous API call.
- */
-static bool execute_gap_step(esp_err_t err,
-                             esp_gap_ble_cb_event_t evt,
-                             TickType_t timeout) {
-  if (err != ESP_OK || adv_sem == NULL) {
-    expected_event = 0;
+static bool wait_gap_event(esp_err_t ret, TickType_t timeout) {
+  if (ret != ESP_OK || adv_sem == NULL) {
     return false;
   }
-  expected_event = evt;
   if (xSemaphoreTake(adv_sem, timeout) == pdTRUE) {
-    bool success = (last_event_status == ESP_BT_STATUS_SUCCESS);
-    expected_event = 0;
-    return success;
+    return (last_event_status == ESP_BT_STATUS_SUCCESS);
   }
-  expected_event = 0;
   return false;
 }
 
@@ -623,14 +608,17 @@ static void start_adv(void* pvParameters) {
 
     uint8_t model_idx = active_indices[adv_index];
 
+    /* Update display immediately at cycle start */
+    if (display_records_cb != NULL && running_task) {
+      display_records_cb(spam_models[model_idx].name);
+    }
+
     /* 1. Stop advertising if active before updating MAC/Payload */
     if (is_advertising_active) {
       xSemaphoreTake(adv_sem, 0);
       esp_err_t ret = esp_ble_gap_stop_advertising();
-      if (!execute_gap_step(ret, ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT,
-                            pdMS_TO_TICKS(150))) {
+      if (!wait_gap_event(ret, pdMS_TO_TICKS(150))) {
         vTaskDelay(pdMS_TO_TICKS(20));
-        continue;
       }
       is_advertising_active = false;
     }
@@ -644,10 +632,8 @@ static void start_adv(void* pvParameters) {
     generate_random_mac(rand_addr);
     xSemaphoreTake(adv_sem, 0);
     esp_err_t ret = esp_ble_gap_set_rand_addr(rand_addr);
-    if (!execute_gap_step(ret, ESP_GAP_BLE_SET_STATIC_RAND_ADDR_EVT,
-                          pdMS_TO_TICKS(150))) {
+    if (!wait_gap_event(ret, pdMS_TO_TICKS(150))) {
       vTaskDelay(pdMS_TO_TICKS(20));
-      continue;
     }
 
     if (!running_task) {
@@ -660,39 +646,30 @@ static void start_adv(void* pvParameters) {
     /* 4. Configure advertising payload */
     xSemaphoreTake(adv_sem, 0);
     ret = esp_ble_gap_config_adv_data_raw(payload_buffer, payload_len);
-    if (!execute_gap_step(ret, ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT,
-                          pdMS_TO_TICKS(150))) {
+    if (!wait_gap_event(ret, pdMS_TO_TICKS(150))) {
       vTaskDelay(pdMS_TO_TICKS(20));
-      continue;
     }
 
     if (!running_task) {
       break;
     }
 
-    /* 5. Update display safely before transmission */
-    if (display_records_cb != NULL && running_task) {
-      display_records_cb(spam_models[model_idx].name);
-    }
-
-    /* 6. Start advertising */
+    /* 5. Start advertising */
     xSemaphoreTake(adv_sem, 0);
     ret = esp_ble_gap_start_advertising(&ble_adv_params);
-    if (execute_gap_step(ret, ESP_GAP_BLE_ADV_START_COMPLETE_EVT,
-                         pdMS_TO_TICKS(150))) {
+    if (wait_gap_event(ret, pdMS_TO_TICKS(150))) {
       is_advertising_active = true;
     } else {
       is_advertising_active = false;
       vTaskDelay(pdMS_TO_TICKS(30));
-      continue;
     }
 
-    /* 7. Dwell for ~250ms in 50ms slices for fast exit response */
+    /* 6. Dwell for ~250ms in 50ms slices for fast exit response */
     for (int i = 0; i < 5 && running_task; i++) {
       vTaskDelay(pdMS_TO_TICKS(50));
     }
 
-    /* 8. Advance to next model within current active mode */
+    /* 7. Advance to next model within current active mode */
     adv_index = (adv_index + 1) % active_indices_count;
   }
 
@@ -701,7 +678,6 @@ static void start_adv(void* pvParameters) {
     esp_ble_gap_stop_advertising();
     is_advertising_active = false;
   }
-  expected_event = 0;
 
   adv_task_handle = NULL;
   vTaskDelete(NULL);
