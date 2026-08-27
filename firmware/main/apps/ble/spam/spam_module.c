@@ -6,6 +6,7 @@
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "spam_screens.h"
+#include "wifi_controller.h"
 
 static void ble_module_state_machine(uint8_t button_name, uint8_t button_event);
 
@@ -18,8 +19,9 @@ static void ble_module_state_machine(uint8_t button_name,
   switch (button_name) {
     case BUTTON_LEFT:
       bt_spam_register_cb(NULL);
-      bt_spam_app_stop();
       animations_task_stop();
+      bt_spam_app_stop();
+      oled_screen_clear();
       menus_module_exit_app();
       break;
     case BUTTON_RIGHT:
@@ -35,6 +37,7 @@ static void ble_spam_start_mode(bt_spam_mode_t mode, const char* title) {
 #if !defined(CONFIG_BLE_MODULE_DEBUG)
   esp_log_level_set(TAG_BLE_MODULE, ESP_LOG_NONE);
 #endif
+  wifi_driver_deinit_if_started();
   menus_module_set_app_state(true, ble_module_state_machine);
   oled_screen_clear();
   ble_screens_start_scanning_animation(title);

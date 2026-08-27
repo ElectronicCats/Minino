@@ -705,13 +705,16 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
 
+  esp_err_t ret;
   if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_IDLE) {
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-    esp_err_t ret = esp_bt_controller_init(&bt_cfg);
+    ret = esp_bt_controller_init(&bt_cfg);
     if (ret != ESP_OK) {
       ESP_LOGE(TAG, "bt_controller_init failed: %s", esp_err_to_name(ret));
       return;
     }
+  }
+  if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_INITED) {
     ret = esp_bt_controller_enable(ESP_BT_MODE_BLE);
     if (ret != ESP_OK) {
       ESP_LOGE(TAG, "bt_controller_enable failed: %s", esp_err_to_name(ret));
@@ -720,11 +723,14 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
   }
 
   if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_UNINITIALIZED) {
-    esp_err_t ret = esp_bluedroid_init();
+    esp_bluedroid_config_t bluedroid_config = BT_BLUEDROID_INIT_CONFIG_DEFAULT();
+    ret = esp_bluedroid_init_with_cfg(&bluedroid_config);
     if (ret != ESP_OK) {
       ESP_LOGE(TAG, "bluedroid_init failed: %s", esp_err_to_name(ret));
       return;
     }
+  }
+  if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_INITIALIZED) {
     ret = esp_bluedroid_enable();
     if (ret != ESP_OK) {
       ESP_LOGE(TAG, "bluedroid_enable failed: %s", esp_err_to_name(ret));
@@ -732,19 +738,19 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
     }
   }
 
-  /* Set maximum RF TX power on ESP32-C6 for maximum range and RSSI bypass */
-  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P20);
-  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P20);
-
   if (adv_sem == NULL) {
     adv_sem = xSemaphoreCreateBinary();
   }
 
-  esp_err_t ret = esp_ble_gap_register_callback(esp_gap_cb);
+  ret = esp_ble_gap_register_callback(esp_gap_cb);
   if (ret != ESP_OK) {
     ESP_LOGE(TAG, "gap_register_callback failed: %s", esp_err_to_name(ret));
     return;
   }
+
+  /* Set maximum RF TX power on ESP32-C6 */
+  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P20);
+  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P20);
 
   current_mode = mode;
   rebuild_active_indices(current_mode);
@@ -778,10 +784,4 @@ void bt_spam_app_stop(void) {
   /* Guarantee advertising is stopped at the controller level */
   esp_ble_gap_stop_advertising();
   is_advertising_active = false;
-
-  /* Clean up semaphore */
-  if (adv_sem != NULL) {
-    vSemaphoreDelete(adv_sem);
-    adv_sem = NULL;
-  }
 }
