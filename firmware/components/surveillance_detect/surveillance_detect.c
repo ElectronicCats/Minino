@@ -190,7 +190,10 @@ static void engine_task(void* arg) {
   vTaskDelete(NULL);
 }
 
-esp_err_t surv_begin(surv_profile_t profile, bool active_scan) {
+// Pasos comunes a surv_begin() y surv_begin_phased() (mux de "Scan All"):
+// preparar el matcher y el engine, pero SIN lanzar el stack de radio, que
+// cada variante decide por su cuenta.
+static esp_err_t surv_begin_common(surv_profile_t profile, bool active_scan) {
   if (s_running) {
     return ESP_ERR_INVALID_STATE;
   }
@@ -210,11 +213,36 @@ esp_err_t surv_begin(surv_profile_t profile, bool active_scan) {
     s_running = false;
     return ESP_ERR_NO_MEM;
   }
-  esp_err_t err = surv_radio_start(profile, active_scan);
+  return ESP_OK;
+}
+
+esp_err_t surv_begin(surv_profile_t profile, bool active_scan) {
+  esp_err_t err = surv_begin_common(profile, active_scan);
   if (err != ESP_OK) {
-    surv_stop();
+    return err;
   }
+  surv_radio_start(profile, active_scan);
   return err;
+}
+
+// Variante del mux de "Scan All": arranca la infraestructura comun y luego
+// una sola ventana de radio (BLE o WiFi) que flipa fase y reinicia al
+// terminar. Devuelve el error de surv_begin_common (el de start_once se
+// degrada a stop).
+esp_err_t surv_begin_phased(surv_profile_t profile, bool active_scan,
+                            surv_radio_phase_t phase,
+                            void (*on_phase_done)(void)) {
+  esp_err_t err = surv_begin_common(profile, active_scan);
+  if (err != ESP_OK) {
+    return err;
+  }
+  esp_err_t rerr = surv_radio_start_once(profile, active_scan, phase,
+                                         on_phase_done);
+  if (rerr != ESP_OK) {
+    surv_stop();
+    return rerr;
+  }
+  return ESP_OK;
 }
 
 void surv_stop(void) {

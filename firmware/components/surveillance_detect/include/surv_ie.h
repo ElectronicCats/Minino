@@ -20,9 +20,19 @@
 
 #define SURV_IE_SSID_TAG   0
 #define SURV_IE_VENDOR_TAG 221
-#define SURV_IE_MAX_TOKS   16
-#define SURV_IE_MAX_SIGS   8
+// Maximo de tokens de UNA firma (compilada u overlay). Limita el almacen de
+// s_extra y cuantos tokens admite una linea +iesig del overlay.
+#define SURV_IE_MAX_TOKS 16
+#define SURV_IE_MAX_SIGS 8
 #define SURV_IE_VENDOR_MAX 8  // la referencia codifica hasta 8 bytes de vendor
+// Limite de tokens al RECORRER una trama. No es un limite de firma: la
+// referencia construye la firma en un buffer de 128 caracteres y falla cuando
+// el token no cabe; 64 es el maximo de tokens que caben en esos 128 caracteres
+// (el token minimo es 1 digito + coma), asi que este cap no se alcanza antes
+// que el presupuesto de la referencia y el comparador la sigue al pie de la
+// letra en tramas largas. Un cap mas pequeno diverge de ella en tramas con
+// muchas IE pequenas por delante del ancla de LiteON.
+#define SURV_IE_WALK_CAP 64
 
 typedef struct {
   uint8_t tag;

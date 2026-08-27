@@ -10,6 +10,13 @@ static TaskHandle_t trackers_scan_timer_task = NULL;
 static bluetooth_traker_scanner_cb_t display_records_cb = NULL;
 static int trackers_scan_duration = 0;
 static bool trackers_scanner_active = false;
+// Guarda de reentrada para trackers_scanner_stop(). El teardown de BT es
+// bloqueante y corre tanto desde el handler de boton como desde
+// task_tracker_timer (auto-stop por duracion); si ambos entran a la vez,
+// cada uno esperaria el semaforo de esp_bluedroid_disable()/controller que el
+// otro consume, y la UI se congela para siempre.
+static bool trackers_stop_in_progress = false;
+static portMUX_TYPE trackers_stop_mux = portMUX_INITIALIZER_UNLOCKED;
 
 static void task_tracker_timer();
 static void tracker_dissector(esp_ble_gap_cb_param_t* scan_rst,
@@ -94,9 +101,14 @@ static void task_tracker_timer() {
 }
 
 void trackers_scanner_stop() {
-  if (!trackers_scanner_active) {
+  portENTER_CRITICAL(&trackers_stop_mux);
+  if (trackers_stop_in_progress || !trackers_scanner_active) {
+    portEXIT_CRITICAL(&trackers_stop_mux);
     return;
   }
+  trackers_stop_in_progress = true;
+  portEXIT_CRITICAL(&trackers_stop_mux);
+
   trackers_scanner_active = false;
   trackers_scan_duration = 0;
   bt_gattc_task_stop();
@@ -106,6 +118,10 @@ void trackers_scanner_stop() {
   if (task_to_delete != NULL && task_to_delete != xTaskGetCurrentTaskHandle()) {
     vTaskDelete(task_to_delete);
   }
+
+  portENTER_CRITICAL(&trackers_stop_mux);
+  trackers_stop_in_progress = false;
+  portEXIT_CRITICAL(&trackers_stop_mux);
 }
 
 static void tracker_dissector(esp_ble_gap_cb_param_t* scan_rst,
@@ -121,15 +137,27 @@ static void tracker_dissector(esp_ble_gap_cb_param_t* scan_rst,
   // Esta app solo muestra rastreadores personales. El resto de clases que el
   // disector compartido reconoce (Flock, Axon, drones) las consume la app de
   // vigilancia, no esta.
+  // El dissector compartido solo da la etiqueta de clase (p.ej. "AirTag");
+  // el fabricante no vive en ella. Se mapea por clase para que la UI muestre
+  // name="AirTag" vendor="Apple" en vez de la misma etiqueta dos veces, como
+  // hacia el disector local que esto reemplaza.
   for (uint8_t i = 0; i < n; i++) {
     switch (hits[i].klass) {
       case SURV_CLASS_AIRTAG:
-      case SURV_CLASS_SMARTTAG:
-      case SURV_CLASS_TILE:
       case SURV_CLASS_APPLE_NEARBY:
         tracker_record->is_tracker = true;
         tracker_record->name = (char*) hits[i].label;
-        tracker_record->vendor = (char*) hits[i].label;
+        tracker_record->vendor = "Apple";
+        break;
+      case SURV_CLASS_SMARTTAG:
+        tracker_record->is_tracker = true;
+        tracker_record->name = (char*) hits[i].label;
+        tracker_record->vendor = "Samsung";
+        break;
+      case SURV_CLASS_TILE:
+        tracker_record->is_tracker = true;
+        tracker_record->name = (char*) hits[i].label;
+        tracker_record->vendor = "Tile";
         break;
       default:
         break;

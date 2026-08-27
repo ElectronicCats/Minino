@@ -34,6 +34,14 @@ typedef enum {
 
 typedef enum { SURV_PROTO_BLE = 0, SURV_PROTO_WIFI } surv_proto_t;
 
+// Fase de radio del mux de "Scan All": cada ventana corre en un boot en frio
+// propio (BLE o WiFi), porque en el ESP32-C6 la re-init BLE tras un ciclo
+// WiFi falla (0x1) dentro de la misma sesion.
+typedef enum {
+  SURV_PHASE_BLE,
+  SURV_PHASE_WIFI,
+} surv_radio_phase_t;
+
 #define SURV_TIER_SSID   0
 #define SURV_TIER_ADDR13 1
 #define SURV_TIER_ADDR2  2

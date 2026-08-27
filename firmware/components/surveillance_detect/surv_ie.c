@@ -66,6 +66,10 @@ int surv_ie_is_wildcard_probe(const uint8_t* ies, int len) {
 
 #define PHANTOM_SKIP_CAP 16
 #define TLV_RESYNC_MAX   64
+// Buffer de string de la referencia: alli fySigAppend falla cuando un token no
+// cabe, y ese fallo aborta el intento entero. build_tokens lo refleja para no
+// ser mas permisivos que ella en tramas largas.
+#define REF_SIG_CAP 128
 
 static bool liteon_vendor_at(const uint8_t* ies, int len, int pos) {
   return pos + 9 <= len && ies[pos] == VEN && ies[pos + 1] == 7 &&
@@ -118,7 +122,8 @@ static int tlv_resync(const uint8_t* ies, int len, int start) {
 }
 
 // Recorre los TLV produciendo tokens. Devuelve el numero de tokens, o -1 si el
-// recorrido fallo o no cabe en `cap`.
+// recorrido fallo, la firma no cabe en `cap` tokens o la trama supera el
+// equivalente del buffer de string de 128 caracteres de la referencia.
 static int build_tokens(const uint8_t* ies,
                         int len,
                         surv_ie_tok_t* out,
@@ -129,6 +134,16 @@ static int build_tokens(const uint8_t* ies,
   int i = 0;
   int n = 0;
   uint8_t phantom_skips = 0;
+  // Espejo del buffer de string de la referencia: alli fySigAppend falla
+  // cuando un token no cabe en 128 caracteres y aborta el intento entero
+  // (lo que a su vez aborta el match; no hay "parcial se ignora"). Sin este
+  // limite seriamos mas permisivos que ella en tramas cuya firma no cabe.
+  // Ver SURV_IE_WALK_CAP en surv_ie.h: 64 tokens caben siempre que la firma
+  // quepa en el presupuesto, asi que `cap` nunca se alcanza antes que ese
+  // limite.
+  int slen = 0;
+  // Coste en caracteres del token tal como la referencia lo serializa: para
+  // vendor "221:" + hex, para el resto los digitos decimales del tag.
 
   while (i + 2 <= len) {
     uint8_t id = ies[i];
@@ -165,6 +180,24 @@ static int build_tokens(const uint8_t* ies,
     if (n >= cap) {
       return -1;  // la referencia falla igual al desbordar su buffer de string
     }
+    // Separador y token, en el mismo orden y con los mismos limites que
+    // fySigAppend de la referencia (la coma primero si no es el primer token,
+    // y >= cap rechaza en ambos pasos).
+    if (slen != 0) {
+      if (slen + 1 >= REF_SIG_CAP) {
+        return -1;
+      }
+      slen += 1;
+    }
+    int plen = (id == VEN && elen >= 4)
+                   ? 4 + 2 * (elen < SURV_IE_VENDOR_MAX ? elen
+                                                       : SURV_IE_VENDOR_MAX)
+                   : (id >= 100 ? 3 : (id >= 10 ? 2 : 1));
+    if (slen + plen >= REF_SIG_CAP) {
+      return -1;
+    }
+    slen += plen;
+
     memset(&out[n], 0, sizeof(out[n]));
     out[n].tag = id;
     if (id == VEN && elen >= 4) {
@@ -247,8 +280,8 @@ static bool match_tokens(const surv_ie_tok_t* t,
 }
 
 static bool matches_at_len(const uint8_t* ies, int len) {
-  surv_ie_tok_t toks[SURV_IE_MAX_TOKS];
-  int n = build_tokens(ies, len, toks, SURV_IE_MAX_TOKS);
+  surv_ie_tok_t toks[SURV_IE_WALK_CAP];
+  int n = build_tokens(ies, len, toks, SURV_IE_WALK_CAP);
   if (n <= 0) {
     return false;
   }

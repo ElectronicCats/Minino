@@ -193,6 +193,72 @@ static void run_corpus(void) {
     check(s_buf, n);
   }
 
+  // cola canonica: ancla LiteON + 45 + 191 + vendor WFA. Es lo que la
+  // referencia deja como "2,12,127," + esta cola tras canonizar, y por tanto
+  // la unica parte que debe casar para detectar.
+  static const uint8_t CANON_TAIL[] = {
+      0xdd, 0x07, 0x50, 0x6f, 0x9a, 0x16, 0x03, 0x01, 0x03,
+      0x2d, 0x02, 0x00, 0x00,                                          // tag 45
+      0xbf, 0x02, 0x00, 0x00,                                          // tag 191
+      0xdd, 0x07, 0x00, 0x50, 0xf2, 0x08, 0x00, 0x00, 0x00,  // vendor WFA
+  };
+
+  // cadenas de mas de 16 tokens con basura delante del ancla. Historia: el
+  // primer cap de SURV_IE_MAX_TOKS (=16) hacia que build_tokens devolviera -1
+  // al llenarse, y una trama con >=17 IEs y el ancla de LiteON atras NO se
+  // detectaba, mientras la referencia (buffer de string de 128 caracteres)
+  // canoniciza y SI la detecta. Estos casos son exactamente lo que el tope de
+  // recorrido y el espejo del presupuesto deben cubrir; si se degradan, esto
+  // falla.
+  for (int t = 0; t < 20000; t++) {
+    int n = 0;
+    // 13..22 tokens de basura de 4 chars en string ("240," = 4): con la cola
+    // de 36 chars queda bajo los 128 de la referencia.
+    int njunk = (int) (rnd() % 10) + 13;
+    for (int k = 0; k < njunk && n < 200; k++) {
+      uint8_t tag = (uint8_t) (240 + (rnd() % 8));  // 240..247, jamas tags de sig
+      int el = (int) ((rnd() >> 16) % 3);
+      if (n + 2 + el > 200)
+        break;
+      s_buf[n++] = tag;
+      s_buf[n++] = (uint8_t) el;
+      for (int q = 0; q < el; q++) {
+        s_buf[n + q] = (uint8_t) rnd();
+      }
+      n += el;
+    }
+    if (n + (int) sizeof(CANON_TAIL) > 200)
+      continue;
+    memcpy(s_buf + n, CANON_TAIL, sizeof(CANON_TAIL));
+    n += (int) sizeof(CANON_TAIL);
+    check(s_buf, n);
+  }
+
+  // la misma zona con tokens de 2-4 chars: la referencia alcanza runs de
+  // tokens mas largos dentro de sus 128 caracteres, y el lado equivalente del
+  // espejo de presupuesto (que ambos fallen o matcheen igual) se ejerce aqui.
+  for (int t = 0; t < 20000; t++) {
+    int n = 0;
+    int njunk = (int) (rnd() % 24) + 24;
+    for (int k = 0; k < njunk && n < 200; k++) {
+      uint8_t tag = (uint8_t) ((rnd() % 247) + 1);  // 1..247, sin 0
+      int el = (int) ((rnd() >> 16) % 2);
+      if (n + 2 + el > 200)
+        break;
+      s_buf[n++] = tag;
+      s_buf[n++] = (uint8_t) el;
+      for (int q = 0; q < el; q++) {
+        s_buf[n + q] = (uint8_t) rnd();
+      }
+      n += el;
+    }
+    if (n + (int) sizeof(CANON_TAIL) > 200)
+      continue;
+    memcpy(s_buf + n, CANON_TAIL, sizeof(CANON_TAIL));
+    n += (int) sizeof(CANON_TAIL);
+    check(s_buf, n);
+  }
+
   // firma con IEs aleatorios detras
   for (int t = 0; t < 20000; t++) {
     memcpy(s_buf, FLOCK_IES, sizeof(FLOCK_IES));

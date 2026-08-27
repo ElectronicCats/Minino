@@ -14,6 +14,8 @@ void wifi_driver_init_apsta(void);
 void wifi_driver_init_sta(void);
 void wifi_driver_init_null(void);
 void wifi_driver_deinit();
+void wifi_driver_deinit_if_started(void);
+bool wifi_driver_get_initialized(void);
 void wifi_driver_sta_disconnect();
 void wifi_driver_set_ap_mac(const uint8_t* mac_ap);
 void wifi_driver_get_ap_mac(uint8_t* mac_ap);
