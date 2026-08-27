@@ -15,6 +15,7 @@
 #include "resistor_detector.h"
 #include "sd_card.h"
 #include "sleep_mode.h"
+#include "surveillance_module.h"
 #include "uart_bridge.h"
 
 // Core components

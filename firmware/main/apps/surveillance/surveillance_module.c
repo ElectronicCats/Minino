@@ -2,6 +2,7 @@
 #include "surveillance_module.h"
 #include <string.h>
 #include "esp_log.h"
+#include "esp_system.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "gps_hw.h"
@@ -18,6 +19,14 @@
 #include "surveillance_screens.h"
 
 #define TAG "surv_app"
+
+// Fase persistida del mux de "Scan All". En el ESP32-C6 no caben BLE+WiFi a
+// la vez y tras tocar WiFi el scan BLE ya no re-arranca (0x1) en la misma
+// sesion, asi que cada ventana corre en un boot en frio: la app guarda aqui
+// la fase siguiente y hace esp_restart(); al reiniciar se auto-relanza.
+#define SURV_MUX_KEY          "surv_mux"
+#define SURV_MUX_PHASE_BLE    1
+#define SURV_MUX_PHASE_WIFI   2
 
 static bool s_app_running = false;
 static surv_event_t s_last_event;
@@ -123,6 +132,8 @@ static void gui_update_task(void* arg) {
   vTaskDelete(NULL);
 }
 
+static void start_radio_for_profile(void);
+
 static void surveillance_input_cb(uint8_t button_name, uint8_t button_event) {
   if (button_event != BUTTON_PRESS_DOWN) {
     return;
@@ -152,13 +163,13 @@ static void surveillance_input_cb(uint8_t button_name, uint8_t button_event) {
       // Rotar perfil
       s_profile = (surv_profile_t) ((s_profile + 1) % 3);
       surv_stop();
-      surv_begin(s_profile, s_active_scan);
+      start_radio_for_profile();
       break;
     case BUTTON_RIGHT:
       // Toggle scan activo
       s_active_scan = !s_active_scan;
       surv_stop();
-      surv_begin(s_profile, s_active_scan);
+      start_radio_for_profile();
       break;
     case BUTTON_BOOT:
       s_have_event = false;
@@ -166,6 +177,12 @@ static void surveillance_input_cb(uint8_t button_name, uint8_t button_event) {
     default:
       break;
   }
+}
+
+// Arranca el stack de radio del perfil activo.
+static void start_radio_for_profile(void) {
+  preferences_put_uchar(SURV_MUX_KEY, 0);
+  surv_begin(s_profile, s_active_scan);
 }
 
 void surveillance_module_begin_all(void) {
@@ -219,7 +236,7 @@ void surveillance_module_begin(void) {
 
   menus_module_set_app_state(true, surveillance_input_cb);
   surv_register_cb(on_detection);
-  surv_begin(s_profile, s_active_scan);
+  start_radio_for_profile();
 
   if (xTaskCreate(gui_update_task, "surv_gui", 4096, NULL, 4, &s_gui_task) !=
       pdPASS) {
@@ -229,14 +246,33 @@ void surveillance_module_begin(void) {
 
 void surveillance_module_stop(void) {
   s_app_running = false;
+  ESP_LOGI(TAG, "stop: salida por back");
+
+  // 1. Esperar a que la tarea de GUI termine para evitar colisiones I2C en la pantalla OLED
+  while (s_gui_task != NULL) {
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
+
+  // 2. Detener el motor y la radio de vigilancia
+  surv_stop();
+
+  // 3. Limpiar cualquier estado persistido
+  preferences_put_uchar(SURV_MUX_KEY, 0);
   surveillance_log_flush();
+
   if (gps_hw_get_state()) {
     gps_module_stop_read();
     gps_module_unregister_cb();
   }
   s_have_gps = false;
 
-  surv_stop();
+  // 4. Restaurar el estado de menus y pantalla
+  menus_module_set_default_input();
   oled_screen_clear();
   menus_module_restart();
+}
+
+void surveillance_module_boot_resume(void) {
+  // Desactivado: el escaneo corre en la misma sesion sin reinicios de chip
+  preferences_put_uchar(SURV_MUX_KEY, 0);
 }
