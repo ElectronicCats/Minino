@@ -101,6 +101,20 @@ static void push_hit(surv_ble_hit_t* out,
   (*n)++;
 }
 
+// Busca uuid en la tabla de firmas UUID y lo empuja via push_hit si matchea.
+// Factorizado porque 0x02/0x03 (lista) llaman esto una vez por cada UUID de
+// 16 bits en la estructura AD, mientras que 0x16 (service data) lo llama una
+// sola vez con los primeros dos bytes.
+static void push_uuid_hit(uint16_t uuid, surv_ble_hit_t* out, uint8_t* n) {
+  for (uint16_t i = 0; i < surv_signatures_uuid_count(); i++) {
+    if (surv_signatures_uuids()[i].uuid == uuid) {
+      push_hit(out, n, surv_signatures_uuids()[i].klass,
+               surv_signatures_uuids()[i].points,
+               surv_signatures_uuids()[i].label);
+    }
+  }
+}
+
 uint8_t surv_match_ble_adv(const uint8_t* adv,
                            uint8_t adv_len,
                            surv_ble_hit_t out[SURV_BLE_MAX_HITS]) {
@@ -138,27 +152,16 @@ uint8_t surv_match_ble_adv(const uint8_t* adv,
       }
     }
 
-    if (ad_type == 0x02 ||
-        ad_type == 0x03) {  // 16-bit Service UUIDs (Complete/Incomplete)
-      for (uint8_t u = 0; u + 1 < dlen; u += 2) {
-        uint16_t uuid = (uint16_t) (d[u] | (d[u + 1] << 8));
-        for (uint16_t i = 0; i < surv_signatures_uuid_count(); i++) {
-          if (surv_signatures_uuids()[i].uuid == uuid) {
-            push_hit(out, &n, surv_signatures_uuids()[i].klass,
-                     surv_signatures_uuids()[i].points,
-                     surv_signatures_uuids()[i].label);
-          }
-        }
+    if (ad_type == 0x02 || ad_type == 0x03) {
+      // Listas (incompleta/completa) de UUIDs de 16 bits: pueden traer mas
+      // de uno empaquetado en la misma estructura AD.
+      for (uint8_t u = 0; (uint16_t) (u + 2) <= dlen; u = (uint8_t) (u + 2)) {
+        push_uuid_hit((uint16_t) (d[u] | (d[u + 1] << 8)), out, &n);
       }
-    } else if (ad_type == 0x16 && dlen >= 2) {  // Service Data (16-bit UUID)
-      uint16_t uuid = (uint16_t) (d[0] | (d[1] << 8));
-      for (uint16_t i = 0; i < surv_signatures_uuid_count(); i++) {
-        if (surv_signatures_uuids()[i].uuid == uuid) {
-          push_hit(out, &n, surv_signatures_uuids()[i].klass,
-                   surv_signatures_uuids()[i].points,
-                   surv_signatures_uuids()[i].label);
-        }
-      }
+    } else if (ad_type == 0x16 && dlen >= 2) {
+      // Service data: solo los primeros dos bytes son el UUID, el resto es
+      // el payload del servicio (no otro UUID).
+      push_uuid_hit((uint16_t) (d[0] | (d[1] << 8)), out, &n);
     }
 
     if (ad_type == 0x08 || ad_type == 0x09) {  // nombre corto / completo

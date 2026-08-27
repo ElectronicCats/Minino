@@ -241,7 +241,11 @@ typedef struct { uint8_t tag; uint8_t vlen; uint8_t vendor[7]; } surv_ie_tok_t;
 Mismo resultado, sin formateo de strings en el callback.
 
 Se conservan tal cual los parches de campo de flock-you, que son hallazgos
-reales y no ruido:
+reales y no ruido. **No es opcional:** la primera implementacion los omitio y,
+medida contra el algoritmo original sobre 25 000 entradas, fallo 3020 — todas
+en la direccion de no reconocer camaras que la referencia si reconoce, y sin
+que ningun test convencional lo delatara. La equivalencia se verifica ahora con
+un test diferencial permanente que ejecuta los dos algoritmos en paralelo.
 
 - *Phantom overflow*: TLVs con longitud imposible, se saltan hasta 16 por trama.
 - Resync de TLV cuando el recorrido se desalinea.

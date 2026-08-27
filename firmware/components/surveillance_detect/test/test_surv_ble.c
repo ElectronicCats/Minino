@@ -110,6 +110,35 @@ TEST_CASE("dos UUID de la misma clase producen un solo hit", "[surv][ble]") {
   TEST_ASSERT_EQUAL_INT(SURV_CLASS_TILE, hits[0].klass);
 }
 
+// AD type 0x03 es una LISTA de UUIDs de 16 bits: puede traer varios en la
+// misma estructura, a diferencia de 0x16 (service data), donde solo los
+// primeros dos bytes son UUID y el resto es payload.
+TEST_CASE("una lista de UUIDs con dos entradas produce dos hits",
+          "[surv][ble]") {
+  // Una sola estructura AD, tipo 0x03, con Tile (0xFEED) y Ray-Ban Meta
+  // (0xFD5F) empaquetados uno detras del otro.
+  const uint8_t adv[] = {0x05, 0x03, 0xed, 0xfe, 0x5f, 0xfd};
+  surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
+  uint8_t n = surv_match_ble_adv(adv, sizeof(adv), hits);
+  TEST_ASSERT_EQUAL_UINT8(2, n);
+  TEST_ASSERT_EQUAL_INT(SURV_CLASS_TILE, hits[0].klass);
+  TEST_ASSERT_EQUAL_INT(SURV_CLASS_GLASSES, hits[1].klass);
+}
+
+// 0x16 es service DATA, no una lista: solo los primeros dos bytes son UUID,
+// el resto es el payload del servicio y no debe leerse como otro UUID.
+TEST_CASE("service data 0x16 no lee el payload como una lista de UUIDs",
+          "[surv][ble]") {
+  // UUID Tile (0xFEED) seguido de bytes de payload que, leidos como UUID,
+  // matchean Ray-Ban Meta (0xFD5F). Si 0x16 se tratara como lista, esto daria
+  // dos hits en vez de uno.
+  const uint8_t adv[] = {0x05, 0x16, 0xed, 0xfe, 0x5f, 0xfd};
+  surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
+  uint8_t n = surv_match_ble_adv(adv, sizeof(adv), hits);
+  TEST_ASSERT_EQUAL_UINT8(1, n);
+  TEST_ASSERT_EQUAL_INT(SURV_CLASS_TILE, hits[0].klass);
+}
+
 TEST_CASE("cinco clases se recortan al tope de SURV_BLE_MAX_HITS",
           "[surv][ble]") {
   // GLASSES, ODID, SMARTTAG, TILE y SKIMMER: cinco clases distintas.

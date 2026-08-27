@@ -15,6 +15,7 @@ static esp_bt_uuid_t ble_client_remote_filter_char_uuid;
 static esp_bt_uuid_t ble_client_notify_descr_uuid;
 static esp_ble_scan_params_t ble_client_ble_scan_params;
 static bt_client_event_cb_t bt_client_event_cb;
+static bool s_passive_scan = false;
 
 struct gattc_profile_inst ble_client_gattc_profile_tab[DEVICE_PROFILES] = {
     [DEVICE_PROFILE] = {
@@ -57,13 +58,22 @@ esp_bt_uuid_t bt_gattc_set_default_ble_notify_descr_uuid() {
 
 esp_ble_scan_params_t bt_gattc_set_default_ble_scan_params() {
   esp_ble_scan_params_t ble_scan_params = {
-      .scan_type = BLE_SCAN_TYPE_ACTIVE,
+      .scan_type =
+          s_passive_scan ? BLE_SCAN_TYPE_PASSIVE : BLE_SCAN_TYPE_ACTIVE,
       .own_addr_type = BLE_ADDR_TYPE_PUBLIC,
       .scan_filter_policy = BLE_SCAN_FILTER_ALLOW_ALL,
       .scan_interval = 0x003,
       .scan_window = 0x003,
       .scan_duplicate = BLE_SCAN_DUPLICATE_DISABLE};
+  // One-shot: consume the request so a passive-scan opt-in from one
+  // consumer (e.g. trackers_scanner) never lingers as the silent default
+  // for the next consumer that builds scan params without asking for it.
+  s_passive_scan = false;
   return ble_scan_params;
+}
+
+void bt_gattc_set_passive_scan(bool passive) {
+  s_passive_scan = passive;
 }
 
 void bt_gattc_set_remote_device_name(const char* device_name) {
