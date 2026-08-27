@@ -1,6 +1,8 @@
 #include "spam_screens.h"
 #include <string.h>
 #include "animations_task.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "oled_screen.h"
 
 // 'ble_loading-1', 128x32px
@@ -193,9 +195,21 @@ static const unsigned char* const ble_bitmap_scan_attack_allArray[4] = {
 
 static char current_screen_title[24] = "BLE SPAM";
 static char current_model_name[32] = "Starting...";
+static SemaphoreHandle_t text_mutex = NULL;
 
 static void ble_screens_display_scanning_animation(void) {
   static uint8_t frame = 0;
+  char local_model_name[17];
+
+  if (text_mutex != NULL && xSemaphoreTake(text_mutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+    strncpy(local_model_name, current_model_name, sizeof(local_model_name) - 1);
+    local_model_name[sizeof(local_model_name) - 1] = '\0';
+    xSemaphoreGive(text_mutex);
+  } else {
+    strncpy(local_model_name, "Spamming...", sizeof(local_model_name));
+    local_model_name[sizeof(local_model_name) - 1] = '\0';
+  }
+
   oled_screen_clear_buffer();
   oled_screen_display_text_center("< Back", 0, OLED_DISPLAY_NORMAL);
   oled_screen_display_text_center(current_screen_title, 1, OLED_DISPLAY_NORMAL);
@@ -203,9 +217,9 @@ static void ble_screens_display_scanning_animation(void) {
 #ifdef CONFIG_RESOLUTION_128X64
   oled_screen_display_bitmap(ble_bitmap_scan_attack_allArray[frame], 0, 16, 128,
                              32, OLED_DISPLAY_NORMAL);
-  oled_screen_display_text_center(current_model_name, 7, OLED_DISPLAY_INVERT);
+  oled_screen_display_text_center(local_model_name, 7, OLED_DISPLAY_INVERT);
 #else
-  oled_screen_display_text_center(current_model_name, 2, OLED_DISPLAY_INVERT);
+  oled_screen_display_text_center(local_model_name, 2, OLED_DISPLAY_INVERT);
 #endif
 
   frame = (frame + 1) % 4;
@@ -213,20 +227,31 @@ static void ble_screens_display_scanning_animation(void) {
 }
 
 void ble_screens_start_scanning_animation(const char* title) {
+  if (text_mutex == NULL) {
+    text_mutex = xSemaphoreCreateMutex();
+  }
   if (title != NULL) {
     strncpy(current_screen_title, title, sizeof(current_screen_title) - 1);
     current_screen_title[sizeof(current_screen_title) - 1] = '\0';
   } else {
     strncpy(current_screen_title, "BLE SPAM", sizeof(current_screen_title));
+    current_screen_title[sizeof(current_screen_title) - 1] = '\0';
   }
-  strncpy(current_model_name, "Starting...", sizeof(current_model_name));
+  if (text_mutex != NULL && xSemaphoreTake(text_mutex, pdMS_TO_TICKS(20)) == pdTRUE) {
+    strncpy(current_model_name, "Starting...", sizeof(current_model_name) - 1);
+    current_model_name[sizeof(current_model_name) - 1] = '\0';
+    xSemaphoreGive(text_mutex);
+  }
   oled_screen_clear();
   animations_task_run(ble_screens_display_scanning_animation, 100, NULL);
 }
 
 void ble_screens_display_scanning_text(const char* name) {
-  if (name != NULL) {
-    strncpy(current_model_name, name, sizeof(current_model_name) - 1);
-    current_model_name[sizeof(current_model_name) - 1] = '\0';
+  if (name != NULL && text_mutex != NULL) {
+    if (xSemaphoreTake(text_mutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+      strncpy(current_model_name, name, sizeof(current_model_name) - 1);
+      current_model_name[sizeof(current_model_name) - 1] = '\0';
+      xSemaphoreGive(text_mutex);
+    }
   }
 }

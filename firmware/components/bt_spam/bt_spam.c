@@ -598,8 +598,11 @@ static bool execute_gap_step(esp_err_t err,
     expected_event = 0;
     return false;
   }
+  expected_event = evt;
   if (xSemaphoreTake(adv_sem, timeout) == pdTRUE) {
-    return (last_event_status == ESP_BT_STATUS_SUCCESS);
+    bool success = (last_event_status == ESP_BT_STATUS_SUCCESS);
+    expected_event = 0;
+    return success;
   }
   expected_event = 0;
   return false;
@@ -623,10 +626,12 @@ static void start_adv(void* pvParameters) {
     /* 1. Stop advertising if active before updating MAC/Payload */
     if (is_advertising_active) {
       xSemaphoreTake(adv_sem, 0);
-      expected_event = ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT;
       esp_err_t ret = esp_ble_gap_stop_advertising();
-      execute_gap_step(ret, ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT,
-                       pdMS_TO_TICKS(50));
+      if (!execute_gap_step(ret, ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT,
+                            pdMS_TO_TICKS(150))) {
+        vTaskDelay(pdMS_TO_TICKS(20));
+        continue;
+      }
       is_advertising_active = false;
     }
 
@@ -638,10 +643,12 @@ static void start_adv(void* pvParameters) {
     esp_bd_addr_t rand_addr;
     generate_random_mac(rand_addr);
     xSemaphoreTake(adv_sem, 0);
-    expected_event = ESP_GAP_BLE_SET_STATIC_RAND_ADDR_EVT;
     esp_err_t ret = esp_ble_gap_set_rand_addr(rand_addr);
-    execute_gap_step(ret, ESP_GAP_BLE_SET_STATIC_RAND_ADDR_EVT,
-                     pdMS_TO_TICKS(50));
+    if (!execute_gap_step(ret, ESP_GAP_BLE_SET_STATIC_RAND_ADDR_EVT,
+                          pdMS_TO_TICKS(150))) {
+      vTaskDelay(pdMS_TO_TICKS(20));
+      continue;
+    }
 
     if (!running_task) {
       break;
@@ -652,10 +659,12 @@ static void start_adv(void* pvParameters) {
 
     /* 4. Configure advertising payload */
     xSemaphoreTake(adv_sem, 0);
-    expected_event = ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT;
     ret = esp_ble_gap_config_adv_data_raw(payload_buffer, payload_len);
-    execute_gap_step(ret, ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT,
-                     pdMS_TO_TICKS(50));
+    if (!execute_gap_step(ret, ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT,
+                          pdMS_TO_TICKS(150))) {
+      vTaskDelay(pdMS_TO_TICKS(20));
+      continue;
+    }
 
     if (!running_task) {
       break;
@@ -668,10 +677,15 @@ static void start_adv(void* pvParameters) {
 
     /* 6. Start advertising */
     xSemaphoreTake(adv_sem, 0);
-    expected_event = ESP_GAP_BLE_ADV_START_COMPLETE_EVT;
     ret = esp_ble_gap_start_advertising(&ble_adv_params);
-    execute_gap_step(ret, ESP_GAP_BLE_ADV_START_COMPLETE_EVT,
-                     pdMS_TO_TICKS(50));
+    if (execute_gap_step(ret, ESP_GAP_BLE_ADV_START_COMPLETE_EVT,
+                         pdMS_TO_TICKS(150))) {
+      is_advertising_active = true;
+    } else {
+      is_advertising_active = false;
+      vTaskDelay(pdMS_TO_TICKS(30));
+      continue;
+    }
 
     /* 7. Dwell for ~250ms in 50ms slices for fast exit response */
     for (int i = 0; i < 5 && running_task; i++) {
@@ -687,6 +701,7 @@ static void start_adv(void* pvParameters) {
     esp_ble_gap_stop_advertising();
     is_advertising_active = false;
   }
+  expected_event = 0;
 
   adv_task_handle = NULL;
   vTaskDelete(NULL);
@@ -748,9 +763,17 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
     return;
   }
 
-  /* Set maximum RF TX power on ESP32-C6 */
-  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P20);
-  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P20);
+  /* Set RF TX power with fallback */
+  if (esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P20) != ESP_OK) {
+    if (esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P15) != ESP_OK) {
+      esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
+    }
+  }
+  if (esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P20) != ESP_OK) {
+    if (esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P15) != ESP_OK) {
+      esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9);
+    }
+  }
 
   current_mode = mode;
   rebuild_active_indices(current_mode);
