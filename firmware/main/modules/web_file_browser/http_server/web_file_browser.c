@@ -35,6 +35,33 @@ static bool is_valid_safe_path(const char* path);
 char mount_path[WFB_MOUNT_PATH_LEN] = {0};
 bool show_hidden_files = false;
 
+static void html_escape_and_send(httpd_req_t* req, const char* str) {
+  const char* p = str;
+  while (*p) {
+    switch (*p) {
+      case '<':
+        httpd_resp_sendstr_chunk(req, "&lt;");
+        break;
+      case '>':
+        httpd_resp_sendstr_chunk(req, "&gt;");
+        break;
+      case '&':
+        httpd_resp_sendstr_chunk(req, "&amp;");
+        break;
+      case '"':
+        httpd_resp_sendstr_chunk(req, "&quot;");
+        break;
+      case '\'':
+        httpd_resp_sendstr_chunk(req, "&#39;");
+        break;
+      default:
+        httpd_resp_send_chunk(req, p, 1);
+        break;
+    }
+    p++;
+  }
+}
+
 static void web_file_browser_show_event(uint8_t event, void* context) {
   if (wfb_show_event_cb != NULL) {
     wfb_show_event_cb(event, context);
@@ -146,22 +173,21 @@ static void send_dirs(DIR* dir, char* path, httpd_req_t* req) {
       continue;
     }
     size_t filepath_len = strlen(path) + strlen(ent->d_name) + 2;
-    ;
     char* filepath = (char*) malloc(filepath_len);
+    if (filepath == NULL) {
+      continue;
+    }
     snprintf(filepath, filepath_len, "%s/%s", path, ent->d_name);
 
-    char* size_str = files_ops_format_size(files_ops_get_file_size_2(filepath));
     if (ent->d_type == DT_DIR) {
       httpd_resp_sendstr_chunk(
           req, "<span class=\"folder\">&#128193;</span> <a href=\"/list?path=");
-      httpd_resp_sendstr_chunk(req, filepath);
+      html_escape_and_send(req, filepath);
       httpd_resp_sendstr_chunk(req, "\">");
-      httpd_resp_sendstr_chunk(req, ent->d_name);
+      html_escape_and_send(req, ent->d_name);
       httpd_resp_sendstr_chunk(req, "/</a><br>");
     }
     free(filepath);
-    free(size_str);
-    printf("%s/%s\n", path, ent->d_name);
   }
 }
 static void send_files(DIR* dir, char* path, httpd_req_t* req) {
@@ -172,8 +198,10 @@ static void send_files(DIR* dir, char* path, httpd_req_t* req) {
       continue;
     }
     size_t filepath_len = strlen(path) + strlen(ent->d_name) + 2;
-    ;
     char* filepath = (char*) malloc(filepath_len);
+    if (filepath == NULL) {
+      continue;
+    }
     snprintf(filepath, filepath_len, "%s/%s", path, ent->d_name);
 
     char* size_str = files_ops_format_size(files_ops_get_file_size_2(filepath));
@@ -181,21 +209,20 @@ static void send_files(DIR* dir, char* path, httpd_req_t* req) {
       httpd_resp_sendstr_chunk(
           req,
           "<span class=\"file\">&#x1F4E5;</span> <a href=\"/download?path=");
-      httpd_resp_sendstr_chunk(req, filepath);
+      html_escape_and_send(req, filepath);
       httpd_resp_sendstr_chunk(req, "\">");
-      httpd_resp_sendstr_chunk(req, ent->d_name);
+      html_escape_and_send(req, ent->d_name);
       httpd_resp_sendstr_chunk(req, "</a> (");
       httpd_resp_sendstr_chunk(req, size_str);
       httpd_resp_sendstr_chunk(req, ") <a href=\"/delete?path=");
-      httpd_resp_sendstr_chunk(req, filepath);
+      html_escape_and_send(req, filepath);
       httpd_resp_sendstr_chunk(
           req,
           "\" onclick=\"return confirm('Are you sure you want to permanently "
-          "remove this file?');\">❌</a><br>");
+          "remove this file?');\">&#x274C;</a><br>");
     }
     free(filepath);
     free(size_str);
-    printf("%s/%s\n", path, ent->d_name);
   }
 }
 
@@ -284,8 +311,6 @@ esp_err_t list_files_handler(httpd_req_t* req) {
   httpd_resp_send_chunk(req, "</div></div></body></html>",
                         strlen("</div></div></body></html>"));
   httpd_resp_send_chunk(req, "", 0);
-  printf("----------------------------------------\n");
-  printf("----------------------------------------\n");
 
   return ESP_OK;
 }
@@ -294,8 +319,10 @@ static bool is_valid_safe_path(const char* path) {
   if (path == NULL || strlen(path) == 0) {
     return false;
   }
-  // Prevent directory traversal attacks
-  if (strstr(path, "..") != NULL) {
+  // Prevent directory traversal attacks (encoded and literal)
+  if (strstr(path, "..") != NULL || strstr(path, "%2e") != NULL ||
+      strstr(path, "%2E") != NULL || strstr(path, "%2f") != NULL ||
+      strstr(path, "%2F") != NULL) {
     return false;
   }
   // Must be strictly within valid mount points
@@ -426,9 +453,21 @@ static esp_err_t download_get_handler(httpd_req_t* req) {
   } else {
     file_name++;
   }
+  // Sanitize filename for Content-Disposition header
+  char safe_name[128];
+  int j = 0;
+  for (int i = 0; file_name[i] && j < (int) sizeof(safe_name) - 2; i++) {
+    char c = file_name[i];
+    if (c == '"' || c == '\\' || c == '\r' || c == '\n') {
+      safe_name[j++] = '_';
+    } else {
+      safe_name[j++] = c;
+    }
+  }
+  safe_name[j] = '\0';
   char content_disposition_header[256];
   snprintf(content_disposition_header, sizeof(content_disposition_header),
-           "attachment; filename=\"%s\"", file_name);
+           "attachment; filename=\"%s\"", safe_name);
 
   httpd_resp_set_type(req, "application/octet-stream");
   httpd_resp_set_hdr(req, "Content-Disposition", content_disposition_header);
