@@ -21,18 +21,19 @@
 
 Minino is an original multiprotocol, and multiband board made for sniffing, communicating, and attacking IoT (Internet of Things) devices. It was designed as a mini Cat that integrates the powerful ESP32C6 and a GPS, microSD with OLED.  This board is a mini Swiss army knife for IoT security researchers, developers, and enthusiasts. 
 
-Minino can operate in 6 different technologies:
-- BLE (Airtags scanner and SPAM)
-- Wi-Fi (Sniffer and deauthenticator)
+Minino can operate in 7 different technologies:
+- BLE (Trackers scanner for AirTag, SmartTag, Tile & BLE SPAM)
+- Wi-Fi (Sniffer, deauthenticator, and attacks)
+- Surveillance Detection (Flock Safety ALPR, Body Cams, Skimmers)
 - Zigbee (Sniffer over CLI and Spoofing)
 - Thread
 - Matter
-- GPS (WarDriving)
+- GPS (WarDriving & Evidence Logging)
 
 ## Features
 - Compatible with Pycatsniffer of Catsniffer
 - Compatible with Wireshark
-- WarDriving
+- WarDriving (WiFi, Zigbee, Thread, BLE, Surveillance)
 - Sniffing multiprotocol
 - Support file .pcap in microSD
 - File Manager Web
@@ -45,64 +46,101 @@ Minino can operate in 6 different technologies:
 `[] Features coming soon [x] Working features`
 
 >[!IMPORTANT]
-> OTA require 8MB, if you want build it for other memory capacity, compile without the OTA.
+> OTA requires 8MB. If you want to build for other memory capacities, compile without OTA.
 
+### Menu: Applications (`Applications`)
 
-### WIFI
-- [x] Wardriving
-- [x] WiFi sniffer
-- [x] WiFi deauther
-- [x] DOS Attack (Control with Console and Minino)
-- [x] Analyzer
-- [x] SSID Spammer
-- [x] WiFi deauthentication detector
+#### WiFi (`Applications > WiFi`)
+- [x] **Wardriving**: Geotagged WiFi AP discovery with GPS coordinates.
+- [x] **WiFi Sniffer / Analyzer**: Real-time 2.4 GHz channel traffic monitoring and AP summary.
+- [x] **WiFi Deauther**: Injects 802.11 deauthentication frames to disconnect target devices.
+- [x] **Deauth Scan (Detector)**: Continuously monitors the airwaves for active deauth attacks.
+- [x] **DOS Attack (CatDoS)**: Wireless Denial of Service and beacon flooding.
+- [x] **SSID Spammer**: Broadcasts thousands of fake WiFi Access Points simultaneously.
+- [x] **Captive Portal**: Rogue AP with captive portal web server for testing.
+- [x] **DroneID Scanner**: Listens for and decodes ASTM F3411 Remote ID drone telemetry and GPS location.
+- [x] **DroneID Transmitter**: Broadcasts simulated Drone Remote ID beacons.
+- [x] **Modbus TCP**: Industrial IoT and SCADA Modbus TCP endpoint scanner.
+- [x] **Flock / ALPR Detector**: Detects Flock Safety ALPR cameras, body cams, and skimmers.
+- [x] **Flock Simulator**: Transmits test surveillance telemetry beacons for detection auditing.
 - [ ] Wireshark integration
 
-### BLE
-- [x] BLE ADV Sniffer (Wireshark Integration)
-- [x] BLE Spammer
-- [x] BLE Spoffing (HID device, audio control)
-- [x] BLE Trackers Scanner (AirTags, Tile, etc)
-- [x] Wireshark integration
+#### BLE (`Applications > Bluetooth`)
+- [x] **BLE Spammer**: Floods advertisement popups targeting iOS (Apple), Android, Windows, and Samsung devices.
+- [x] **BLE HID Spoofing**: Emulates Bluetooth Human Interface Devices (keyboard, mouse, media remote).
+- [x] **BLE ADV Sniffer**: Raw advertisement packet sniffer with Wireshark serial streaming.
+- [x] **BLE Trackers Scanner**: Detects and tracks Apple AirTags, Samsung SmartTags, Tile, and Chipolo with RSSI signal and distance estimation.
+- [x] **Wireshark integration**: Real-time BLE packet capture over serial.
 
-### Zigbee
-- [x] Zigbee sniffer
-- [x] Zigbee spoofing (Switch End Device)
-- [x] Wardriving
-- [x] Wireshark integration
+#### Zigbee (`Applications > Zigbee`)
+- [x] **Zigbee Sniffer**: IEEE 802.15.4 over-the-air packet sniffer.
+- [x] **Zigbee Spoofing**: End Device emulation (smart light bulbs and switches).
+- [x] **Wardriving**: Geotagged Zigbee network reconnaissance.
+- [x] **Wireshark integration**: Zigbee frame capture streaming to Wireshark.
 
-### Thread
-- [x] Thread sniffer
-- [x] Thread broadcast
+#### Thread (`Applications > Thread`)
+- [x] **Thread Sniffer**: IEEE 802.15.4 / 6LoWPAN Thread network packet sniffer.
+- [x] **Thread Broadcast**: Injects multicast and broadcast packets into Thread networks.
 - [ ] Wardriving
 - [x] Wireshark integration
 
-### Matter
+#### Matter (`Applications > Matter`)
 - [ ] Matter protocol support
 - [ ] Matter CLI
 - [ ] Matter Spoof
 
-### Tools
-- [x] OTA Firmware Update
-- [x] GPS Location
-- [x] GPS Speed
-- [x] GPS Time
+#### GPS (`Applications > GPS`)
+- [x] **Wardriving**: Geotagged reconnaissance (WiFi, Zigbee, Thread) logged to SD card.
+- [x] **Location**: Displays real-time latitude, longitude, and altitude coordinates.
+- [x] **Speed**: Displays GPS ground speed (km/h) and heading direction.
+- [x] **Date & Time**: Atomic clock synchronization and RTC update.
+- [x] **Route**: Route and waypoint recording to SD card (.gpx / .csv).
+- [x] **Num Sats**: Displays active satellite constellation and SNR signal quality.
 - [ ] GPS Sleep
-- [x] SD
-- [x] File Manager Web (Local AP and WIFI access)
-- [x] File Manager Local
-- [x] Serial CMD Commander
-- [x] I2C Scanner
-- [x] UART bridge via Minino console (UART2)
 
+#### GPIO (`Applications > GPIO`)
+- [x] **I2C Scanner**: Scans external I2C bus (SDA/SCL) device addresses.
+- [x] **UART Bridge**: Hardware serial bridge / pass-through console on UART2.
 
-### Settings
-- [x] Change screensaver
-- [x] Change time screensaver
-- [x] Stealth mode (Disable animation, leds and sound) 
-- [x] APP selection
-- [x] Light Sleep Mode
+#### File Manager (`Applications > File Manager`)
+- [x] **File Manager Local**: On-device microSD file browser using OLED screen and buttons.
+- [x] **File Manager Web**: Embedded HTTP web server for WiFi-based file downloads and uploads.
+
+---
+
+### Menu: Settings (`Settings`)
+- [x] **Display**: Configures OLED screensaver style and timeout.
+- [x] **Logs Output**: Configures serial and on-screen log levels.
+- [x] **SD Card Settings**: Displays SD capacity, checks format integrity, and provides FAT32 formatting.
+- [x] **WiFi Settings**: Manages WiFi station credentials and radio settings.
+- [x] **Stealth Mode**: Disables all LEDs, buzzer sounds, and screen animations for silent operation.
+- [x] **Light Sleep Mode**: Low-power sleep mode for battery saving.
 - [ ] Deep Sleep Mode
+
+---
+
+### Menu: About (`About`)
+- [x] **Version & License**: Displays firmware version, build date, and licensing details.
+- [x] **Credits & Legal**: Contributor credits and responsible disclosure notice.
+- [x] **OTA Firmware Update**: Over-The-Air firmware updates via WiFi.
+
+---
+
+## BLE Trackers Scanner
+Minino includes a dedicated scanner and tracker for Bluetooth Low Energy beacon devices:
+- **Supported Ecosystems**: Apple Find My / AirTags, Samsung Galaxy SmartTag / SmartTag2, Tile (Mate, Pro, Slim), and Chipolo.
+- **Proximity & Signal Monitoring**: Real-time RSSI signal tracking, proximity approximation, and packet reception rates.
+- **Detailed Inspection**: Live viewing of device MAC address, manufacturer payload, registered status, and last-seen timestamps.
+- **Paging & Filtering**: Navigate easily across multiple active trackers in range.
+
+## Surveillance & Flock Safety Detector
+Minino features an advanced passive detection engine designed to detect physical surveillance infrastructure in real time:
+- **Flock Safety / ALPR Detection**: Detects Automated License Plate Readers (ALPR) such as Flock Safety cameras, Falcon systems, and Raven audio detection units.
+- **Multi-Vector Fingerprinting**:
+  - **WiFi**: Matches known OUI vendor prefixes (35+ Flock OUIs, DeFlock database), surveillance SSIDs (`flocksafety`, `pigvision`, `fs ext`, `penguin`, etc.), and 802.11 Information Element (IE) signatures.
+  - **BLE**: Identifies characteristic advertising beacons and vendor payloads (e.g. Xuntong BLE modules, Flock battery diagnostics).
+- **Body Cameras & Skimmers**: Identifies Axon Body Worn Cameras and common Bluetooth-based payment skimmers.
+- **Evidence Capture & GPS**: Automatically stores detected devices with GPS coordinates (`.csv` / `.gpx`) and captures raw network traffic (`.pcap`) on the microSD card.
 
 
 Inspired by projects such as [Amini Project](https://github.com/Ocelot-Offensive-Security/Arsenal) and [USBNugget](https://github.com/HakCat-Tech/USB-Nugget).
