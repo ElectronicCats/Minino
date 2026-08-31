@@ -16,6 +16,7 @@ jobs:
           git clone --depth 1 -b release/v5.5 --filter=blob:none --sparse \
               https://github.com/espressif/esp-idf.git "$RUNNER_TEMP/esp-idf"
           git -C "$RUNNER_TEMP/esp-idf" sparse-checkout set components/unity
+          git -C "$RUNNER_TEMP/esp-idf" submodule update --init --depth 1 components/unity/unity
       - name: Run surveillance_detect host tests
         run: make -C firmware/components/surveillance_detect/test run-tests
         env:
