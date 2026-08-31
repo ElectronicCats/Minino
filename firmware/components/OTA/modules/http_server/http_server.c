@@ -382,9 +382,9 @@ static bool http_server_check_ota_auth(httpd_req_t* req) {
       token = buf;
     }
     size_t token_len = strlen(token);
-    while (token_len > 0 && (token[token_len - 1] == ' ' ||
-                             token[token_len - 1] == '\r' ||
-                             token[token_len - 1] == '\n')) {
+    while (token_len > 0 &&
+           (token[token_len - 1] == ' ' || token[token_len - 1] == '\r' ||
+            token[token_len - 1] == '\n')) {
       token_len--;
     }
     const char* expected = OTA_AUTH_TOKEN;

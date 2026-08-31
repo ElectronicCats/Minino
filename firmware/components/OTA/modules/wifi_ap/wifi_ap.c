@@ -136,19 +136,20 @@ static void wifi_app_event_handler_init(void) {
   // Initialize the default ESP Event Loop
   esp_err_t err = esp_event_loop_create_default();
   if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
-    ESP_LOGE(TAG, "esp_event_loop_create_default failed: %s", esp_err_to_name(err));
+    ESP_LOGE(TAG, "esp_event_loop_create_default failed: %s",
+             esp_err_to_name(err));
   }
 
   // Event handler for the connection
   esp_event_handler_instance_t wifi_handler_event_instance;
   esp_event_handler_instance_t ip_handler_event_instance;
 
-  esp_event_handler_instance_register(
-      WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_app_event_handler, NULL,
-      &wifi_handler_event_instance);
-  esp_event_handler_instance_register(
-      IP_EVENT, ESP_EVENT_ANY_ID, &wifi_app_event_handler, NULL,
-      &ip_handler_event_instance);
+  esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID,
+                                      &wifi_app_event_handler, NULL,
+                                      &wifi_handler_event_instance);
+  esp_event_handler_instance_register(IP_EVENT, ESP_EVENT_ANY_ID,
+                                      &wifi_app_event_handler, NULL,
+                                      &ip_handler_event_instance);
 }
 
 /*

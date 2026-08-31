@@ -1,6 +1,5 @@
 #include "bt_spam.h"
 #include <string.h>
-#include "gap_dispatcher.h"
 #include "esp_bt.h"
 #include "esp_bt_main.h"
 #include "esp_err.h"
@@ -11,6 +10,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
+#include "gap_dispatcher.h"
 
 static const char* TAG = "bt_spam";
 
@@ -623,7 +623,8 @@ void bt_spam_set_chained_gap_cb(esp_gap_ble_cb_t cb) {
 
 static inline void drain_sem(void) {
   if (adv_sem != NULL) {
-    while (xSemaphoreTake(adv_sem, 0) == pdTRUE) {}
+    while (xSemaphoreTake(adv_sem, 0) == pdTRUE) {
+    }
   }
 }
 
@@ -675,10 +676,13 @@ static void start_adv(void* pvParameters) {
       }
       float fragmentation = 0.0f;
       if (free_heap > 0) {
-        fragmentation = ((float)(free_heap - largest_block) / (float)free_heap) * 100.0f;
+        fragmentation =
+            ((float) (free_heap - largest_block) / (float) free_heap) * 100.0f;
       }
-      ESP_LOGI(TAG, "Heap: free=%zu KB, min=%zu KB, largest=%zu KB, frag=%.1f%%",
-               free_heap / 1024, min_free / 1024, largest_block / 1024, fragmentation);
+      ESP_LOGI(TAG,
+               "Heap: free=%zu KB, min=%zu KB, largest=%zu KB, frag=%.1f%%",
+               free_heap / 1024, min_free / 1024, largest_block / 1024,
+               fragmentation);
       last_heap_log_cycle = cycle_count;
     }
 
@@ -708,7 +712,8 @@ static void start_adv(void* pvParameters) {
 
     /* 3. Configure advertising payload on the fly */
     drain_sem();
-    esp_err_t ret = esp_ble_gap_config_adv_data_raw(payload_buffer, payload_len);
+    esp_err_t ret =
+        esp_ble_gap_config_adv_data_raw(payload_buffer, payload_len);
     if (ret == ESP_OK) {
       wait_gap_event(ret, pdMS_TO_TICKS(50));
     }
@@ -746,7 +751,9 @@ static void start_adv(void* pvParameters) {
   /* Final heap report */
   size_t free_heap = heap_caps_get_free_size(MALLOC_CAP_8BIT);
   size_t min_free = heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT);
-  ESP_LOGI(TAG, "Spam stopped. Final heap: free=%zu KB, min during run=%zu KB, overall min=%zu KB",
+  ESP_LOGI(TAG,
+           "Spam stopped. Final heap: free=%zu KB, min during run=%zu KB, "
+           "overall min=%zu KB",
            free_heap / 1024, min_free_heap_during_spam / 1024, min_free / 1024);
   cycle_count = 0;
   last_heap_log_cycle = 0;
@@ -793,7 +800,8 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
 
   // Initialize Bluedroid if not already done
   if (!bluedroid_initialized) {
-    esp_bluedroid_config_t bluedroid_config = BT_BLUEDROID_INIT_CONFIG_DEFAULT();
+    esp_bluedroid_config_t bluedroid_config =
+        BT_BLUEDROID_INIT_CONFIG_DEFAULT();
     ret = esp_bluedroid_init_with_cfg(&bluedroid_config);
     if (ret != ESP_OK) {
       ESP_LOGE(TAG, "bluedroid_init failed: %s", esp_err_to_name(ret));
@@ -912,7 +920,8 @@ esp_err_t bt_spam_set_tx_power(esp_power_level_t power_level) {
   return ret;
 }
 
-esp_err_t bt_spam_set_adv_interval(uint16_t min_interval, uint16_t max_interval) {
+esp_err_t bt_spam_set_adv_interval(uint16_t min_interval,
+                                   uint16_t max_interval) {
   if (min_interval > max_interval || min_interval < 0x20) {
     return ESP_ERR_INVALID_ARG;
   }
@@ -928,11 +937,14 @@ esp_err_t bt_spam_set_adv_interval(uint16_t min_interval, uint16_t max_interval)
       is_advertising_active = true;
     }
   }
-  ESP_LOGI(TAG, "Adv interval set: min=0x%04x, max=0x%04x", min_interval, max_interval);
+  ESP_LOGI(TAG, "Adv interval set: min=0x%04x, max=0x%04x", min_interval,
+           max_interval);
   return ESP_OK;
 }
 
-esp_err_t bt_spam_get_heap_stats(uint32_t* free_kb, uint32_t* min_kb, float* fragmentation) {
+esp_err_t bt_spam_get_heap_stats(uint32_t* free_kb,
+                                 uint32_t* min_kb,
+                                 float* fragmentation) {
   if (free_kb == NULL || min_kb == NULL || fragmentation == NULL) {
     return ESP_ERR_INVALID_ARG;
   }
@@ -944,7 +956,8 @@ esp_err_t bt_spam_get_heap_stats(uint32_t* free_kb, uint32_t* min_kb, float* fra
   *min_kb = min_free / 1024;
 
   if (free_heap > 0) {
-    *fragmentation = ((float)(free_heap - largest_block) / (float)free_heap) * 100.0f;
+    *fragmentation =
+        ((float) (free_heap - largest_block) / (float) free_heap) * 100.0f;
   } else {
     *fragmentation = 100.0f;
   }
@@ -998,10 +1011,14 @@ esp_err_t bt_spam_set_power_profile(bt_spam_power_profile_t profile) {
     }
   }
 
-  ESP_LOGI(TAG, "Power profile set to %d (TX power: %d, adv interval: 0x%04x-0x%04x)",
-           profile,
-           (profile == BT_SPAM_POWER_HIGH) ? 9 : (profile == BT_SPAM_POWER_BALANCED) ? 6 : 3,
-           ble_adv_params.adv_int_min, ble_adv_params.adv_int_max);
+  ESP_LOGI(
+      TAG,
+      "Power profile set to %d (TX power: %d, adv interval: 0x%04x-0x%04x)",
+      profile,
+      (profile == BT_SPAM_POWER_HIGH)       ? 9
+      : (profile == BT_SPAM_POWER_BALANCED) ? 6
+                                            : 3,
+      ble_adv_params.adv_int_min, ble_adv_params.adv_int_max);
   return ret;
 }
 

@@ -17,10 +17,12 @@
 #include "trackers_scanner.h"
 #include "trackers_screens.h"
 
-#define TAG "trackers_app"
-#define TRACKERS_DIR_NAME  SD_CARD_PATH "/trackers"
-#define TRACKERS_CSV_NAME  TRACKERS_DIR_NAME "/trackers.csv"
-#define TRACKERS_CSV_HEADER "MAC,Name,Vendor,RSSI,DistanceMeters,FirstSeen,Latitude,Longitude,Altitude,ValidGPS\n"
+#define TAG               "trackers_app"
+#define TRACKERS_DIR_NAME SD_CARD_PATH "/trackers"
+#define TRACKERS_CSV_NAME TRACKERS_DIR_NAME "/trackers.csv"
+#define TRACKERS_CSV_HEADER                                                    \
+  "MAC,Name,Vendor,RSSI,DistanceMeters,FirstSeen,Latitude,Longitude,Altitude," \
+  "ValidGPS\n"
 
 static bool s_app_running = false;
 static bool s_scanning = false;
@@ -54,9 +56,9 @@ static const char* tracker_date_str(const gps_t* gps) {
     if (year < 100) {
       year += 2000;
     }
-    snprintf(buf, sizeof(buf), "%04u-%02u-%02u %02u:%02u:%02u",
-             year, gps->date.month, gps->date.day,
-             gps->tim.hour, gps->tim.minute, gps->tim.second);
+    snprintf(buf, sizeof(buf), "%04u-%02u-%02u %02u:%02u:%02u", year,
+             gps->date.month, gps->date.day, gps->tim.hour, gps->tim.minute,
+             gps->tim.second);
     return buf;
   }
   snprintf(buf, sizeof(buf), "uptime_%llu",
@@ -64,12 +66,14 @@ static const char* tracker_date_str(const gps_t* gps) {
   return buf;
 }
 
-static void log_tracker_to_sd(const tracker_profile_t* record, const gps_t* gps) {
+static void log_tracker_to_sd(const tracker_profile_t* record,
+                              const gps_t* gps) {
   if (!s_sd_logging || record == NULL) {
     return;
   }
   // Guardar datos únicamente cuando el GPS haya triangulado una posición válida
-  if (gps == NULL || !gps->valid || (gps->latitude == 0.0f && gps->longitude == 0.0f)) {
+  if (gps == NULL || !gps->valid ||
+      (gps->latitude == 0.0f && gps->longitude == 0.0f)) {
     return;
   }
 
@@ -83,13 +87,12 @@ static void log_tracker_to_sd(const tracker_profile_t* record, const gps_t* gps)
   char line[256];
   snprintf(line, sizeof(line),
            "%02X:%02X:%02X:%02X:%02X:%02X,%s,%s,%d,%.1f,%s,%s,%s,%.1f,%s\n",
-           record->mac_address[0], record->mac_address[1], record->mac_address[2],
-           record->mac_address[3], record->mac_address[4], record->mac_address[5],
+           record->mac_address[0], record->mac_address[1],
+           record->mac_address[2], record->mac_address[3],
+           record->mac_address[4], record->mac_address[5],
            record->name ? record->name : "Unknown",
-           record->vendor ? record->vendor : "Unknown",
-           record->rssi, record->distance,
-           tracker_date_str(gps), lat, lon, alt,
-           "true");
+           record->vendor ? record->vendor : "Unknown", record->rssi,
+           record->distance, tracker_date_str(gps), lat, lon, alt, "true");
 
   sd_card_append_to_file(TRACKERS_CSV_NAME, line);
 }
@@ -121,9 +124,10 @@ static void on_tracker_found(tracker_profile_t record) {
   if (s_trackers_mutex != NULL &&
       xSemaphoreTake(s_trackers_mutex, pdMS_TO_TICKS(50)) == pdTRUE) {
     int idx = trackers_scanner_find_profile_by_mac(s_trackers, s_tracker_count,
-                                                    record.mac_address);
+                                                   record.mac_address);
     if (idx == -1) {
-      trackers_scanner_add_tracker_profile(&s_trackers, &s_tracker_count, record);
+      trackers_scanner_add_tracker_profile(&s_trackers, &s_tracker_count,
+                                           record);
       s_last_index = s_tracker_count - 1;
       ESP_LOGI(TAG, "New tracker: %s (%s) %.1fm", record.name, record.vendor,
                record.distance);
@@ -157,7 +161,8 @@ static void gui_update_task(void* arg) {
       if (s_trackers_mutex != NULL &&
           xSemaphoreTake(s_trackers_mutex, pdMS_TO_TICKS(50)) == pdTRUE) {
         count = s_tracker_count;
-        if (s_tracker_count > 0 && s_last_index < s_tracker_count && s_trackers != NULL) {
+        if (s_tracker_count > 0 && s_last_index < s_tracker_count &&
+            s_trackers != NULL) {
           name = s_trackers[s_last_index].name;
           vendor = s_trackers[s_last_index].vendor;
           rssi = s_trackers[s_last_index].rssi;
@@ -169,9 +174,8 @@ static void gui_update_task(void* arg) {
         xSemaphoreGive(s_trackers_mutex);
       }
 
-      trackers_screens_show_status(count, name, vendor, rssi,
-                                   distance, gps_valid, gps_lat, gps_lon,
-                                   s_scanning);
+      trackers_screens_show_status(count, name, vendor, rssi, distance,
+                                   gps_valid, gps_lat, gps_lon, s_scanning);
     }
     vTaskDelay(pdMS_TO_TICKS(250));
   }
@@ -258,7 +262,8 @@ void trackers_module_begin(void) {
         sd_card_append_to_file(TRACKERS_CSV_NAME, (char*) TRACKERS_CSV_HEADER);
       }
       s_sd_logging = true;
-      ESP_LOGI(TAG, "Trackers logging to SD initialized at %s", TRACKERS_CSV_NAME);
+      ESP_LOGI(TAG, "Trackers logging to SD initialized at %s",
+               TRACKERS_CSV_NAME);
     }
   }
 

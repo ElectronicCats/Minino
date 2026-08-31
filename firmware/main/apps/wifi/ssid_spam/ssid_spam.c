@@ -103,9 +103,11 @@ void split_text_into_array(const char* input,
 static void list_ssid_cb(uint8_t selection) {
   char menu_selected[32];
   if (strlen(ssids_list[selection]) + 7 > 16) {
-    snprintf(menu_selected, sizeof(menu_selected), "[%s]", ssids_list[selection]);
+    snprintf(menu_selected, sizeof(menu_selected), "[%s]",
+             ssids_list[selection]);
   } else {
-    snprintf(menu_selected, sizeof(menu_selected), "SSID [%s]", ssids_list[selection]);
+    snprintf(menu_selected, sizeof(menu_selected), "SSID [%s]",
+             ssids_list[selection]);
   }
   if (ssids_main_list[0] != NULL) {
     free(ssids_main_list[0]);
@@ -168,8 +170,7 @@ static void spam_task(void* pvParameters) {
     if (seqnum[line] > 0xfff)
       seqnum[line] = 0;
 
-    esp_wifi_80211_tx(WIFI_IF_AP, beacon,
-                      sizeof(beacon_raw) + ssid_len, false);
+    esp_wifi_80211_tx(WIFI_IF_AP, beacon, sizeof(beacon_raw) + ssid_len, false);
 
     if (++line >= total_lines)
       line = 0;

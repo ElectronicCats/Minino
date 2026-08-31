@@ -22,8 +22,8 @@
 #define SURV_IE_VENDOR_TAG 221
 // Maximo de tokens de UNA firma (compilada u overlay). Limita el almacen de
 // s_extra y cuantos tokens admite una linea +iesig del overlay.
-#define SURV_IE_MAX_TOKS 16
-#define SURV_IE_MAX_SIGS 8
+#define SURV_IE_MAX_TOKS   16
+#define SURV_IE_MAX_SIGS   8
 #define SURV_IE_VENDOR_MAX 8  // la referencia codifica hasta 8 bytes de vendor
 // Limite de tokens al RECORRER una trama. No es un limite de firma: la
 // referencia construye la firma en un buffer de 128 caracteres y falla cuando

@@ -1,7 +1,7 @@
 #include "bt_gattc.h"
-#include "gap_dispatcher.h"
 #include "esp_bt.h"
 #include "esp_log.h"
+#include "gap_dispatcher.h"
 #include "inttypes.h"
 
 // GATT Client
@@ -506,7 +506,8 @@ void bt_gattc_task_begin(void) {
     if (ret == ESP_OK) {
       esp_bt_controller_enable(ESP_BT_MODE_BLE);
     }
-  } else if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_INITED) {
+  } else if (esp_bt_controller_get_status() ==
+             ESP_BT_CONTROLLER_STATUS_INITED) {
     esp_bt_controller_enable(ESP_BT_MODE_BLE);
   }
 

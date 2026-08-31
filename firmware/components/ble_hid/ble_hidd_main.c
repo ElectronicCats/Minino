@@ -7,10 +7,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "gap_dispatcher.h"
 #include "esp_bt.h"
 #include "esp_log.h"
 #include "esp_mac.h"
+#include "gap_dispatcher.h"
 
 #include "driver/gpio.h"
 #include "esp_bt_defs.h"

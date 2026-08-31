@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "surv_radio.h"
 #include <string.h>
-#include "gap_dispatcher.h"
 #include "esp_bt.h"
 #include "esp_bt_main.h"
 #include "esp_err.h"
@@ -12,6 +11,7 @@
 #include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "gap_dispatcher.h"
 #include "surv_engine.h"
 #include "surv_match.h"
 #include "surv_signatures.h"
@@ -44,7 +44,7 @@ static portMUX_TYPE s_ble_mux = portMUX_INITIALIZER_UNLOCKED;
 // Reintentos de arranque del scan dentro de una ventana. Un fallo 0x1
 // repetido a lo loco (storm de set_scan_params) inunda el log y pelea con el
 // sniffer WiFi: limite y cadena de reintentos espaciados en el tiempo.
-#define BLE_START_MAX_RETRIES 4
+#define BLE_START_MAX_RETRIES  4
 #define BLE_START_RETRY_GAP_MS 300
 static volatile uint8_t s_ble_start_retries = 0;
 
@@ -101,8 +101,7 @@ static void ble_try_start_scan(uint32_t seconds) {
     // los scan params aun estaban pendientes), reconfigurarlos dispara
     // SCAN_PARAM_SET_COMPLETE_EVT y vuelve a intentar el arranque. Sin esto,
     // un fallo temprano deja el escaneo muerto para toda la sesion.
-    if (s_running && s_ble_scan_desired &&
-        s_profile != SURV_PROFILE_FLOCK) {
+    if (s_running && s_ble_scan_desired && s_profile != SURV_PROFILE_FLOCK) {
       if (s_ble_start_retries < BLE_START_MAX_RETRIES) {
         s_ble_start_retries++;
         vTaskDelay(pdMS_TO_TICKS(BLE_START_RETRY_GAP_MS));
@@ -123,8 +122,7 @@ static uint32_t s_dbg_last_log_ms = 0;
 
 static void ble_dbg_summary_locked(uint32_t now_ms) {
   const uint32_t dbg_interval = 2000;
-  if ((now_ms - s_dbg_last_log_ms) >= dbg_interval ||
-      s_dbg_last_log_ms == 0) {
+  if ((now_ms - s_dbg_last_log_ms) >= dbg_interval || s_dbg_last_log_ms == 0) {
     ESP_LOGI(TAG, "ble rx: adv=%lu hits=%lu scanning=%d desired=%d",
              (unsigned long) s_dbg_adv_seen, (unsigned long) s_dbg_adv_hits,
              (int) s_ble_scanning, (int) s_ble_scan_desired);
@@ -144,8 +142,9 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event,
         ble_try_start_scan(30);
       } else {
         // Sin params validos el arranque no puede triunfar: no llamar a
-        // start_scanning y dejar que el reintento de ble_try_start_scan re-dispare
-        // set_scan_params (SCAN_PARAM_SET_COMPLETE_EVT de nuevo) cuando toque.
+        // start_scanning y dejar que el reintento de ble_try_start_scan
+        // re-dispare set_scan_params (SCAN_PARAM_SET_COMPLETE_EVT de nuevo)
+        // cuando toque.
         ESP_LOGW(TAG, "scan params set fallo: 0x%x",
                  param->scan_param_cmpl.status);
       }
@@ -533,7 +532,7 @@ void surv_radio_stop(void) {
 // corre su ventana y entrega el control al siguiente boot.
 // ---------------------------------------------------------------------------
 
-#define MUX_BLE_WINDOW_MS 6000
+#define MUX_BLE_WINDOW_MS  6000
 #define MUX_WIFI_WINDOW_MS 14000
 
 // Tarea de una sola iteracion: ejecuta la ventana de la fase y, si nadie la
@@ -566,7 +565,8 @@ static void mux_radio_task(void* arg) {
   vTaskDelete(NULL);
 }
 
-esp_err_t surv_radio_start_once(surv_profile_t p, bool active_scan,
+esp_err_t surv_radio_start_once(surv_profile_t p,
+                                bool active_scan,
                                 surv_radio_phase_t phase,
                                 void (*on_phase_done)(void)) {
   if (p != SURV_PROFILE_SURVEIL) {

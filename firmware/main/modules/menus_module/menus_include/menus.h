@@ -30,8 +30,8 @@
 #include "sleep_mode_scenes.h"
 #include "ssid_spam.h"
 #include "stealth_mode.h"
-#include "surveillance_module.h"
 #include "surv_sim_module.h"
+#include "surveillance_module.h"
 #include "uart_bridge_app.h"
 #include "warbee_module.h"  // Deprecated since v1.1.14.0
 #include "wardriving_module.h"
@@ -229,15 +229,15 @@ menu_t menus[] = {
      .on_enter_cb = about_module_display_legal_menu,
      .on_exit_cb = NULL,
      .is_visible = true},
-    // Uncomment to show the Demo app
-    // {.display_name = "Hello APP",
-    //  .menu_idx              = MENU_HELLO,
-    //  .parent_idx            = MENU_APPLICATIONS,
-    //  .entry_cmd             = "hello",
-    //  .last_selected_submenu = 0,
-    //  .on_enter_cb           = hello_main,
-    //  .on_exit_cb            = NULL,
-    //  .is_visible            = true},
+// Uncomment to show the Demo app
+// {.display_name = "Hello APP",
+//  .menu_idx              = MENU_HELLO,
+//  .parent_idx            = MENU_APPLICATIONS,
+//  .entry_cmd             = "hello",
+//  .last_selected_submenu = 0,
+//  .on_enter_cb           = hello_main,
+//  .on_exit_cb            = NULL,
+//  .is_visible            = true},
 #ifdef CONFIG_WIFI_APPS_ENABLE
     {.display_name = "WiFi",
      .menu_idx = MENU_WIFI_APPS,

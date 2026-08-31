@@ -113,7 +113,8 @@ void wifi_attacks_module_stop() {
   running_broadcast_attack = false;
   running_rogueap_attack = false;
   // Give tasks a moment to terminate cooperatively
-  for (int i = 0; i < 10 && (task_brod_attack != NULL || task_rogue_attack != NULL); i++) {
+  for (int i = 0;
+       i < 10 && (task_brod_attack != NULL || task_rogue_attack != NULL); i++) {
     vTaskDelay(pdMS_TO_TICKS(20));
   }
   if (task_brod_attack != NULL) {

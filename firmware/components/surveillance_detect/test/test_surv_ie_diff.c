@@ -198,8 +198,8 @@ static void run_corpus(void) {
   // la unica parte que debe casar para detectar.
   static const uint8_t CANON_TAIL[] = {
       0xdd, 0x07, 0x50, 0x6f, 0x9a, 0x16, 0x03, 0x01, 0x03,
-      0x2d, 0x02, 0x00, 0x00,                                          // tag 45
-      0xbf, 0x02, 0x00, 0x00,                                          // tag 191
+      0x2d, 0x02, 0x00, 0x00,                                // tag 45
+      0xbf, 0x02, 0x00, 0x00,                                // tag 191
       0xdd, 0x07, 0x00, 0x50, 0xf2, 0x08, 0x00, 0x00, 0x00,  // vendor WFA
   };
 
@@ -216,7 +216,8 @@ static void run_corpus(void) {
     // de 36 chars queda bajo los 128 de la referencia.
     int njunk = (int) (rnd() % 10) + 13;
     for (int k = 0; k < njunk && n < 200; k++) {
-      uint8_t tag = (uint8_t) (240 + (rnd() % 8));  // 240..247, jamas tags de sig
+      uint8_t tag =
+          (uint8_t) (240 + (rnd() % 8));  // 240..247, jamas tags de sig
       int el = (int) ((rnd() >> 16) % 3);
       if (n + 2 + el > 200)
         break;

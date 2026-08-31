@@ -190,10 +190,10 @@ static int build_tokens(const uint8_t* ies,
       }
       slen += 1;
     }
-    int plen = (id == VEN && elen >= 4)
-                   ? 4 + 2 * (elen < SURV_IE_VENDOR_MAX ? elen
-                                                       : SURV_IE_VENDOR_MAX)
-                   : (id >= 100 ? 3 : (id >= 10 ? 2 : 1));
+    int plen =
+        (id == VEN && elen >= 4)
+            ? 4 + 2 * (elen < SURV_IE_VENDOR_MAX ? elen : SURV_IE_VENDOR_MAX)
+            : (id >= 100 ? 3 : (id >= 10 ? 2 : 1));
     if (slen + plen >= REF_SIG_CAP) {
       return -1;
     }

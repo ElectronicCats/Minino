@@ -9,7 +9,7 @@
 #include "freertos/task.h"
 
 #define GAP_SUBSCRIBER_MAX 16
-#define TAG "gap_dispatcher"
+#define TAG                "gap_dispatcher"
 
 typedef struct {
   esp_gap_ble_cb_t cb;

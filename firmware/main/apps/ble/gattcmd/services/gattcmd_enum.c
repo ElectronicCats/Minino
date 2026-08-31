@@ -1,5 +1,5 @@
-#include "services/gattcmd_service.h"
 #include "gap_dispatcher.h"
+#include "services/gattcmd_service.h"
 
 #include "esp_bt.h"
 #include "esp_bt_main.h"

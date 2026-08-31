@@ -137,8 +137,7 @@ esp_err_t preferences_remove(const char* key) {
 
   err = nvs_commit(_nvs_handler);
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Error (%s) committing key removal!",
-             esp_err_to_name(err));
+    ESP_LOGE(TAG, "Error (%s) committing key removal!", esp_err_to_name(err));
     xSemaphoreGive(_pref_mutex);
     return err;
   }

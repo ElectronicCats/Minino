@@ -124,9 +124,9 @@ static const char* date_str(const gps_t* gps) {
     if (year < 100) {
       year += 2000;
     }
-    snprintf(buf, sizeof(buf), "%04u-%02u-%02u %02u:%02u:%02u",
-             year, gps->date.month, gps->date.day,
-             gps->tim.hour, gps->tim.minute, gps->tim.second);
+    snprintf(buf, sizeof(buf), "%04u-%02u-%02u %02u:%02u:%02u", year,
+             gps->date.month, gps->date.day, gps->tim.hour, gps->tim.minute,
+             gps->tim.second);
     return buf;
   }
   snprintf(buf, sizeof(buf), "uptime_%llu",
@@ -216,7 +216,8 @@ void surveillance_log_detection(const surv_event_t* ev,
   }
 
   // Guardar datos únicamente cuando el GPS haya triangulado una posición válida
-  if (gps == NULL || !gps->valid || (gps->latitude == 0.0f && gps->longitude == 0.0f)) {
+  if (gps == NULL || !gps->valid ||
+      (gps->latitude == 0.0f && gps->longitude == 0.0f)) {
     return;
   }
 
@@ -252,9 +253,10 @@ void surveillance_log_gpx_waypoint(const surv_event_t* ev, const gps_t* gps) {
   // Rate-limiting: do not duplicate waypoint for same MAC within 15 seconds
   uint32_t now_s = (uint32_t) (esp_timer_get_time() / 1000000);
   for (int i = 0; i < MAX_RECENT_WPTS; i++) {
-    if (s_recent_wpt_times[i] > 0 && memcmp(s_recent_wpt_macs[i], ev->mac, 6) == 0) {
+    if (s_recent_wpt_times[i] > 0 &&
+        memcmp(s_recent_wpt_macs[i], ev->mac, 6) == 0) {
       if (now_s - s_recent_wpt_times[i] < 15) {
-        return; // Skip duplicate waypoint within 15s window
+        return;  // Skip duplicate waypoint within 15s window
       }
       break;
     }
@@ -266,14 +268,14 @@ void surveillance_log_gpx_waypoint(const surv_event_t* ev, const gps_t* gps) {
 
   char wpt[256];
   int wpt_len = snprintf(wpt, sizeof(wpt),
-           "  <wpt lat=\"%.6f\" lon=\"%.6f\">\n"
-           "    <name>%s (%s)</name>\n"
-           "    <desc>Tier %d %s | Ch %d | %d dBm</desc>\n"
-           "    <sym>camera</sym>\n"
-           "  </wpt>\n",
-           gps->latitude, gps->longitude, class_name(ev->klass),
-           mac_str(ev->mac), ev->tier, method_name(ev->tier), ev->channel,
-           ev->rssi);
+                         "  <wpt lat=\"%.6f\" lon=\"%.6f\">\n"
+                         "    <name>%s (%s)</name>\n"
+                         "    <desc>Tier %d %s | Ch %d | %d dBm</desc>\n"
+                         "    <sym>camera</sym>\n"
+                         "  </wpt>\n",
+                         gps->latitude, gps->longitude, class_name(ev->klass),
+                         mac_str(ev->mac), ev->tier, method_name(ev->tier),
+                         ev->channel, ev->rssi);
 
   if (wpt_len <= 0) {
     return;

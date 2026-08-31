@@ -230,7 +230,8 @@ static void debug_print_packet(uint8_t* packet, uint8_t packet_length) {
       break;
     }
     case FRAME_TYPE_DATA: {
-      if (!check_bounds(position, sizeof(uint8_t), packet_length)) return;
+      if (!check_bounds(position, sizeof(uint8_t), packet_length))
+        return;
       uint8_t sequence_number = packet[position];
       position += sizeof(uint8_t);
       printf("Secuence Number:               %u\n", sequence_number);
@@ -247,13 +248,15 @@ static void debug_print_packet(uint8_t* packet, uint8_t packet_length) {
           break;
         }
         case ADDR_MODE_SHORT: {
-          if (!check_bounds(position, sizeof(uint16_t) * 2, packet_length)) return;
+          if (!check_bounds(position, sizeof(uint16_t) * 2, packet_length))
+            return;
           pan_id = read_uint16_safe(&packet[position]);
           position += sizeof(uint16_t);
           short_dst_addr = read_uint16_safe(&packet[position]);
           position += sizeof(uint16_t);
           if (pan_id == 0xFFFF && short_dst_addr == 0xFFFF) {
-            if (!check_bounds(position, sizeof(uint16_t), packet_length)) return;
+            if (!check_bounds(position, sizeof(uint16_t), packet_length))
+              return;
             pan_id = read_uint16_safe(&packet[position]);  // srcPan
             position += sizeof(uint16_t);
             printf("Broadcast on PAN %04x\n", pan_id);
@@ -264,7 +267,9 @@ static void debug_print_packet(uint8_t* packet, uint8_t packet_length) {
           break;
         }
         case ADDR_MODE_LONG: {
-          if (!check_bounds(position, sizeof(uint16_t) + sizeof(dst_addr), packet_length)) return;
+          if (!check_bounds(position, sizeof(uint16_t) + sizeof(dst_addr),
+                            packet_length))
+            return;
           pan_id = read_uint16_safe(&packet[position]);
           position += sizeof(uint16_t);
           for (uint8_t idx = 0; idx < sizeof(dst_addr); idx++) {
@@ -291,14 +296,16 @@ static void debug_print_packet(uint8_t* packet, uint8_t packet_length) {
           break;
         }
         case ADDR_MODE_SHORT: {
-          if (!check_bounds(position, sizeof(uint16_t), packet_length)) return;
+          if (!check_bounds(position, sizeof(uint16_t), packet_length))
+            return;
           short_src_addr = read_uint16_safe(&packet[position]);
           position += sizeof(uint16_t);
           printf("Source:                        0x%04x\n", short_src_addr);
           break;
         }
         case ADDR_MODE_LONG: {
-          if (!check_bounds(position, sizeof(src_addr), packet_length)) return;
+          if (!check_bounds(position, sizeof(src_addr), packet_length))
+            return;
           for (uint8_t idx = 0; idx < sizeof(src_addr); idx++) {
             src_addr[idx] = packet[position + sizeof(src_addr) - 1 - idx];
           }
@@ -335,7 +342,8 @@ static void debug_print_packet(uint8_t* packet, uint8_t packet_length) {
       break;
     }
     case FRAME_TYPE_ACK: {
-      if (!check_bounds(position, sizeof(uint8_t), packet_length)) return;
+      if (!check_bounds(position, sizeof(uint8_t), packet_length))
+        return;
       uint8_t sequence_number = packet[position++];
       printf("Ack (%u)\n", sequence_number);
       break;

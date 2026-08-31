@@ -70,7 +70,8 @@ void files_ops_incremental_name(const char* dir_path,
   int idx = 0;
   bool idx_found = false;
   char indexed_name[64];
-  if (dir_path == NULL || base_name == NULL || extension == NULL || path_ptr == NULL) {
+  if (dir_path == NULL || base_name == NULL || extension == NULL ||
+      path_ptr == NULL) {
     return;
   }
   while (!idx_found && idx < 10000) {

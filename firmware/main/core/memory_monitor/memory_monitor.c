@@ -37,8 +37,7 @@ static float calculate_fragmentation(size_t total_free, size_t largest_block) {
  */
 static heap_alert_level_t get_alert_level_from_free(size_t free_bytes) {
   size_t w, c, e;
-  if (monitor_mutex &&
-      xSemaphoreTake(monitor_mutex, portMAX_DELAY) == pdTRUE) {
+  if (monitor_mutex && xSemaphoreTake(monitor_mutex, portMAX_DELAY) == pdTRUE) {
     w = threshold_warning;
     c = threshold_critical;
     e = threshold_emergency;
@@ -201,8 +200,7 @@ heap_stats_t heap_monitor_get_stats(void) {
 }
 
 void heap_monitor_set_alert_callback(heap_alert_callback_t callback) {
-  if (monitor_mutex &&
-      xSemaphoreTake(monitor_mutex, portMAX_DELAY) == pdTRUE) {
+  if (monitor_mutex && xSemaphoreTake(monitor_mutex, portMAX_DELAY) == pdTRUE) {
     alert_callback = callback;
     xSemaphoreGive(monitor_mutex);
   }
@@ -211,8 +209,7 @@ void heap_monitor_set_alert_callback(heap_alert_callback_t callback) {
 void heap_monitor_set_thresholds(size_t warning_kb,
                                  size_t critical_kb,
                                  size_t emergency_kb) {
-  if (monitor_mutex &&
-      xSemaphoreTake(monitor_mutex, portMAX_DELAY) == pdTRUE) {
+  if (monitor_mutex && xSemaphoreTake(monitor_mutex, portMAX_DELAY) == pdTRUE) {
     threshold_warning = warning_kb * 1024;
     threshold_critical = critical_kb * 1024;
     threshold_emergency = emergency_kb * 1024;

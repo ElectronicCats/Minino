@@ -229,15 +229,16 @@ esp_err_t surv_begin(surv_profile_t profile, bool active_scan) {
 // una sola ventana de radio (BLE o WiFi) que flipa fase y reinicia al
 // terminar. Devuelve el error de surv_begin_common (el de start_once se
 // degrada a stop).
-esp_err_t surv_begin_phased(surv_profile_t profile, bool active_scan,
+esp_err_t surv_begin_phased(surv_profile_t profile,
+                            bool active_scan,
                             surv_radio_phase_t phase,
                             void (*on_phase_done)(void)) {
   esp_err_t err = surv_begin_common(profile, active_scan);
   if (err != ESP_OK) {
     return err;
   }
-  esp_err_t rerr = surv_radio_start_once(profile, active_scan, phase,
-                                         on_phase_done);
+  esp_err_t rerr =
+      surv_radio_start_once(profile, active_scan, phase, on_phase_done);
   if (rerr != ESP_OK) {
     surv_stop();
     return rerr;

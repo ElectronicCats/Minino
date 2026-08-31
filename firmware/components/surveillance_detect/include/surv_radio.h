@@ -18,7 +18,8 @@ uint8_t surv_radio_current_channel(void);
 // para SURV_PROFILE_SURVEIL: en el ESP32-C6 cada stack de radio solo
 // funciona bien como primer usuario de cada boot, y el re-init BLE tras un
 // ciclo WiFi falla (0x1), asi que "Scan All" alterna con reinicios.
-esp_err_t surv_radio_start_once(surv_profile_t p, bool active_scan,
+esp_err_t surv_radio_start_once(surv_profile_t p,
+                                bool active_scan,
                                 surv_radio_phase_t phase,
                                 void (*on_phase_done)(void));
 

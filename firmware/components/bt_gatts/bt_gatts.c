@@ -1,7 +1,7 @@
 #include "bt_gatts.h"
-#include "gap_dispatcher.h"
 #include "esp_bt.h"
 #include "esp_log.h"
+#include "gap_dispatcher.h"
 #include "inttypes.h"
 
 static uint8_t adv_config_done = 0;
@@ -336,7 +336,8 @@ void ble_server_gatt_profiles_event_handler(esp_gatts_cb_event_t event,
     case ESP_GATTS_EXEC_WRITE_EVT:
       ESP_LOGI(TAG_BT_GATTS, "ESP_GATTS_EXEC_WRITE_EVT");
       esp_ble_gatts_send_response(gatts_if, param->exec_write.conn_id,
-                                  param->exec_write.trans_id, ESP_GATT_OK, NULL);
+                                  param->exec_write.trans_id, ESP_GATT_OK,
+                                  NULL);
       ble_server_exce_write_event(&a_prepare_write_env, param);
       break;
     case ESP_GATTS_MTU_EVT:
@@ -566,8 +567,10 @@ void bt_gatts_task_begin(void) {
 void bt_gatts_task_stop(void) {
   ESP_LOGI(TAG_BT_GATTS, "Stopping BLE task");
   esp_ble_gap_stop_advertising();
-  if (ble_server_gatt_profile_tab[DEVICE_PROFILE].gatts_if != ESP_GATT_IF_NONE) {
-    esp_ble_gatts_app_unregister(ble_server_gatt_profile_tab[DEVICE_PROFILE].gatts_if);
+  if (ble_server_gatt_profile_tab[DEVICE_PROFILE].gatts_if !=
+      ESP_GATT_IF_NONE) {
+    esp_ble_gatts_app_unregister(
+        ble_server_gatt_profile_tab[DEVICE_PROFILE].gatts_if);
     ble_server_gatt_profile_tab[DEVICE_PROFILE].gatts_if = ESP_GATT_IF_NONE;
   }
   gap_dispatcher_unregister(ble_server_gap_event_handler);

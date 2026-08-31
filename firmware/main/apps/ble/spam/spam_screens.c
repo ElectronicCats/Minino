@@ -201,7 +201,8 @@ static void ble_screens_display_scanning_animation(void) {
   static uint8_t frame = 0;
   char local_model_name[17];
 
-  if (text_mutex != NULL && xSemaphoreTake(text_mutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+  if (text_mutex != NULL &&
+      xSemaphoreTake(text_mutex, pdMS_TO_TICKS(10)) == pdTRUE) {
     strncpy(local_model_name, current_model_name, sizeof(local_model_name) - 1);
     local_model_name[sizeof(local_model_name) - 1] = '\0';
     xSemaphoreGive(text_mutex);
@@ -237,7 +238,8 @@ void ble_screens_start_scanning_animation(const char* title) {
     strncpy(current_screen_title, "BLE SPAM", sizeof(current_screen_title));
     current_screen_title[sizeof(current_screen_title) - 1] = '\0';
   }
-  if (text_mutex != NULL && xSemaphoreTake(text_mutex, pdMS_TO_TICKS(20)) == pdTRUE) {
+  if (text_mutex != NULL &&
+      xSemaphoreTake(text_mutex, pdMS_TO_TICKS(20)) == pdTRUE) {
     strncpy(current_model_name, "Starting...", sizeof(current_model_name) - 1);
     current_model_name[sizeof(current_model_name) - 1] = '\0';
     xSemaphoreGive(text_mutex);

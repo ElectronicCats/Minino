@@ -24,9 +24,9 @@
 // la vez y tras tocar WiFi el scan BLE ya no re-arranca (0x1) en la misma
 // sesion, asi que cada ventana corre en un boot en frio: la app guarda aqui
 // la fase siguiente y hace esp_restart(); al reiniciar se auto-relanza.
-#define SURV_MUX_KEY          "surv_mux"
-#define SURV_MUX_PHASE_BLE    1
-#define SURV_MUX_PHASE_WIFI   2
+#define SURV_MUX_KEY        "surv_mux"
+#define SURV_MUX_PHASE_BLE  1
+#define SURV_MUX_PHASE_WIFI 2
 
 static bool s_app_running = false;
 static surv_event_t s_last_event;
@@ -258,7 +258,8 @@ void surveillance_module_stop(void) {
   s_app_running = false;
   ESP_LOGI(TAG, "stop: salida por back");
 
-  // 1. Esperar a que la tarea de GUI termine para evitar colisiones I2C en la pantalla OLED
+  // 1. Esperar a que la tarea de GUI termine para evitar colisiones I2C en la
+  // pantalla OLED
   while (s_gui_task != NULL) {
     vTaskDelay(pdMS_TO_TICKS(10));
   }

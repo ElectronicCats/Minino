@@ -67,7 +67,8 @@ void odrone_id_begin(uint8_t num_drones,
   ble_drone.init(true);
   ble_drone.updateLocation(latitude, longitude);
   odrone_id_set_wifi_ap(channel);
-  xTaskCreate(&spoofing_task, "spoofing_task", 4096, NULL, 5, &s_spoofing_task_handle);
+  xTaskCreate(&spoofing_task, "spoofing_task", 4096, NULL, 5,
+              &s_spoofing_task_handle);
 }
 
 void odrone_id_stop(void) {
