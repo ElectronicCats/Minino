@@ -113,7 +113,7 @@ void error_handler_report(const error_info_t* error) {
 
   // Intentar recuperación si existe función
   if (error->recovery_func != NULL) {
-    ESP_LOGI(TAG, "🔧 Intentando recuperación automática...");
+    ESP_LOGI(TAG, "Intentando recuperacion automatica...");
     if (error_handler_mutex &&
         xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
       stats.recoveries_attempted++;
@@ -127,44 +127,65 @@ void error_handler_report(const error_info_t* error) {
       stats.recoveries_successful++;
       xSemaphoreGive(error_handler_mutex);
     }
-    ESP_LOGI(TAG, "✅ Recuperación exitosa");
+    ESP_LOGI(TAG, "Recuperacion exitosa");
+  }
+
+  // Capturar callbacks bajo mutex para evitar race condition
+  error_callback_t saved_error_callback = NULL;
+  void (*saved_restart_callback)(void) = NULL;
+  bool saved_auto_restart = false;
+
+  if (error_handler_mutex &&
+      xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
+    saved_error_callback = error_callback;
+    saved_restart_callback = restart_callback;
+    saved_auto_restart = auto_restart_enabled;
+    xSemaphoreGive(error_handler_mutex);
   }
 
   // Llamar callback personalizado si existe
-  if (error_callback != NULL) {
-    error_callback(error);
+  if (saved_error_callback != NULL) {
+    saved_error_callback(error);
   }
 
-  // Manejar restart si es crítico
+  // Manejar restart si es critico
   if (error->severity == ERROR_SEVERITY_CRITICAL && error->requires_restart) {
-    ESP_LOGE(TAG, "💥 Error crítico requiere reinicio del sistema");
+    ESP_LOGE(TAG, "Error critico requiere reinicio del sistema");
 
-    if (restart_callback != NULL) {
+    if (saved_restart_callback != NULL) {
       ESP_LOGI(TAG, "Ejecutando callback pre-restart...");
-      restart_callback();
+      saved_restart_callback();
     }
 
-    if (auto_restart_enabled) {
+    if (saved_auto_restart) {
       if (error_handler_mutex &&
           xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
         stats.restarts_triggered++;
         xSemaphoreGive(error_handler_mutex);
       }
-      ESP_LOGE(TAG, "🔄 Reiniciando en 3 segundos...");
+      ESP_LOGE(TAG, "Reiniciando en 3 segundos...");
       vTaskDelay(pdMS_TO_TICKS(3000));
       esp_restart();
     } else {
-      ESP_LOGW(TAG, "Auto-restart deshabilitado, requiere intervención manual");
+      ESP_LOGW(TAG, "Auto-restart deshabilitado, requiere intervencion manual");
     }
   }
 }
 
 void error_handler_set_callback(error_callback_t callback) {
-  error_callback = callback;
+  if (error_handler_mutex &&
+      xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
+    error_callback = callback;
+    xSemaphoreGive(error_handler_mutex);
+  }
 }
 
 void error_handler_set_restart_callback(void (*callback)(void)) {
-  restart_callback = callback;
+  if (error_handler_mutex &&
+      xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
+    restart_callback = callback;
+    xSemaphoreGive(error_handler_mutex);
+  }
 }
 
 error_stats_t error_handler_get_stats(void) {
@@ -208,6 +229,10 @@ void error_handler_reset_stats(void) {
 }
 
 void error_handler_set_auto_restart(bool enabled) {
-  auto_restart_enabled = enabled;
+  if (error_handler_mutex &&
+      xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
+    auto_restart_enabled = enabled;
+    xSemaphoreGive(error_handler_mutex);
+  }
   ESP_LOGI(TAG, "Auto-restart %s", enabled ? "habilitado" : "deshabilitado");
 }

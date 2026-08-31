@@ -51,33 +51,19 @@ static uint8_t get_menu_idx_over_cmd(char* entry_cmd) {
   return 0;
 }
 
+static uint8_t s_submenu_indices[MENU_COUNT];
+static uint8_t* s_submenu_ptrs[MENU_COUNT];
+
 static void update_menus() {
-  if (menus_ctx->submenus_idx != NULL) {
-    for (uint8_t i = 0; i < menus_ctx->submenus_count; i++) {
-      free(menus_ctx->submenus_idx[i]);
-    }
-    free(menus_ctx->submenus_idx);
-  }
-  menus_ctx->submenus_idx = NULL;
   menus_ctx->submenus_count = 0;
-  for (uint8_t i = 0; i < menus_ctx->menus_count; i++) {
+  for (uint8_t i = 0; i < menus_ctx->menus_count && menus_ctx->submenus_count < MENU_COUNT; i++) {
     if (menus[i].is_visible && menus[i].parent_idx == menus_ctx->current_menu) {
+      s_submenu_indices[menus_ctx->submenus_count] = i;
+      s_submenu_ptrs[menus_ctx->submenus_count] = &s_submenu_indices[menus_ctx->submenus_count];
       menus_ctx->submenus_count++;
     }
   }
-  if (!menus_ctx->submenus_count) {
-    return;
-  }
-  menus_ctx->submenus_idx =
-      malloc(menus_ctx->submenus_count * sizeof(uint8_t*));
-  uint8_t submenu_idx = 0;
-  for (uint8_t i = 0; i < menus_ctx->menus_count; i++) {
-    if (menus[i].is_visible && menus[i].parent_idx == menus_ctx->current_menu) {
-      menus_ctx->submenus_idx[submenu_idx] = malloc(sizeof(uint8_t));
-      *menus_ctx->submenus_idx[submenu_idx] = i;
-      submenu_idx++;
-    }
-  }
+  menus_ctx->submenus_idx = s_submenu_ptrs;
 }
 
 static void display_menus() {

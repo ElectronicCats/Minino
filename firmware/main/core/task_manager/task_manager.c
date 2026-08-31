@@ -1,7 +1,10 @@
 #include "task_manager.h"
 #include "esp_log.h"
 #include "freertos/semphr.h"
+#include "stdlib.h"
 #include "string.h"
+
+#define TASK_NAME_MAX_LEN 32
 
 static const char* TAG = "task_manager";
 
@@ -79,7 +82,7 @@ esp_err_t task_manager_create(TaskFunction_t task_func,
 
   // Registrar en el manager
   task_info_t* info = &task_registry[task_count];
-  info->name = name;
+  info->name = strndup(name, TASK_NAME_MAX_LEN - 1);
   info->handle = task_handle;
   info->priority = priority;
   info->stack_size = stack_size;
@@ -120,9 +123,10 @@ esp_err_t task_manager_delete(TaskHandle_t handle) {
       ESP_LOGI(TAG, "Tarea eliminada: '%s'",
                task_registry[i].name ? task_registry[i].name : "unknown");
 
+      // Guardar nombre antes de compactar para evitar use-after-free
+      char* deleted_name = (char*) task_registry[i].name;
+
       // Compactar el registry PRIMERO antes de llamar a vTaskDelete
-      // Esto previene que si una tarea se elimina a sí misma, la compactación
-      // se omita
       for (uint32_t j = i; j < task_count - 1; j++) {
         task_registry[j] = task_registry[j + 1];
       }
@@ -131,6 +135,7 @@ esp_err_t task_manager_delete(TaskHandle_t handle) {
 
       xSemaphoreGive(task_manager_mutex);
       vTaskDelete(handle);
+      free(deleted_name);
       return ESP_OK;
     }
   }
