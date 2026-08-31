@@ -2,6 +2,7 @@
 #include "surveillance_log.h"
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
@@ -183,14 +184,16 @@ esp_err_t surveillance_log_begin(void) {
   memset(s_recent_wpt_times, 0, sizeof(s_recent_wpt_times));
   s_log_initialized = true;
 
-  // Initialize CSV with Header if not present
-  if (!s_csv_header_written) {
+  // Initialize CSV with Header only if file doesn't exist or is empty
+  struct stat st_csv;
+  if (stat(s_csv_name, &st_csv) != 0 || st_csv.st_size == 0) {
     sd_card_append_to_file(s_csv_name, (char*) SURV_CSV_HEADER);
-    s_csv_header_written = true;
   }
+  s_csv_header_written = true;
 
-  // Initialize GPX header if not present
-  if (!s_gpx_header_written) {
+  // Initialize GPX header only if file doesn't exist or is empty
+  struct stat st_gpx;
+  if (stat(s_gpx_name, &st_gpx) != 0 || st_gpx.st_size == 0) {
     const char* gpx_header =
         "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
         "<gpx version=\"1.1\" creator=\"Minino Surveillance\" "
@@ -212,16 +215,18 @@ void surveillance_log_detection(const surv_event_t* ev,
     return;
   }
 
+  // Guardar datos únicamente cuando el GPS haya triangulado una posición válida
+  if (gps == NULL || !gps->valid || (gps->latitude == 0.0f && gps->longitude == 0.0f)) {
+    return;
+  }
+
   char line[SURV_CSV_LINE];
   char lat[16] = "";
   char lon[16] = "";
-  double alt = 0.0;
+  double alt = gps->altitude;
 
-  if (gps != NULL && (gps->valid || (gps->latitude != 0.0f && gps->longitude != 0.0f))) {
-    snprintf(lat, sizeof(lat), "%.6f", gps->latitude);
-    snprintf(lon, sizeof(lon), "%.6f", gps->longitude);
-    alt = gps->altitude;
-  }
+  snprintf(lat, sizeof(lat), "%.6f", gps->latitude);
+  snprintf(lon, sizeof(lon), "%.6f", gps->longitude);
 
   snprintf(line, sizeof(line),
            "%s,,,%s,%d,%u,%d,%s,%s,%.1f,%.1f,,,%s,%s,%d,%s,%d\n",
