@@ -112,8 +112,8 @@ int mount() {
       .max_transfer_sz = 4000,
   };
   ret = spi_bus_initialize(host.slot, &bus_cfg, SPI_DMA_CH_AUTO);
-  if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to initialize bus.");
+  if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+    ESP_LOGE(TAG, "Failed to initialize bus: %s", esp_err_to_name(ret));
     return ESP_ERR_NO_MEM;
   }
 
@@ -133,15 +133,12 @@ int mount() {
                "Failed to mount filesystem. "
                "If you want the card to be formatted, set "
                "format_if_mount_failed = true.");
-      spi_bus_free(host.slot);
       return ESP_ERR_NOT_SUPPORTED;
     } else {
       ESP_LOGE(TAG,
                "Failed to initialize the card (%s). "
                "Make sure SD card lines have pull-up resistors in place.",
                esp_err_to_name(ret));
-      // Free the bus after mounting failed
-      spi_bus_free(host.slot);
       return ESP_ERR_NOT_FOUND;
     }
   }
@@ -153,14 +150,10 @@ int mount() {
 }
 
 esp_err_t unmount() {
-  esp_err_t ret;
-
   if (sd_card_is_not_mounted()) {
     ESP_LOGE(TAG, "SD card not mounted");
     return ESP_ERR_NOT_ALLOWED;
   }
-
-  sdmmc_host_t host = SDSPI_HOST_DEFAULT();
 
   /* unmount sd card */
   if (esp_vfs_fat_sdcard_unmount(MOUNT_POINT, card) != ESP_OK) {
@@ -170,17 +163,14 @@ esp_err_t unmount() {
   card = NULL;
   s_sd_card_mounted = false;
 
-  ret = spi_bus_free(host.slot);
-  if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to deinitialize bus.");
-    return ESP_FAIL;
-  }
-
   ESP_LOGI(TAG, "Card unmounted");
   return ESP_OK;
 }
 
 void sd_card_begin() {
+  if (s_sd_mutex == NULL) {
+    s_sd_mutex = xSemaphoreCreateMutex();
+  }
 #if !defined(CONFIG_SD_CARD_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
@@ -198,19 +188,20 @@ esp_err_t sd_card_mount() {
   }
 
   err = mount();
-  if (err == ESP_OK) {
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to mount SD card: %s", esp_err_to_name(err));
     return err;
-  } else {
-    ESP_LOGE(TAG, "Failed to mount SD card");
   }
-  return err;
+
+  return ESP_OK;
 }
 
 esp_err_t sd_card_unmount() {
   if (sd_card_is_not_mounted()) {
-    ESP_LOGE(TAG, "SD card not mounted");
+    ESP_LOGW(TAG, "SD card not mounted");
     return ESP_OK;
   }
+
   return unmount();
 }
 
@@ -256,6 +247,11 @@ static void sd_card_build_full_path(const char* path,
                                     char* full_path,
                                     size_t max_len) {
   if (path == NULL || full_path == NULL || max_len == 0) {
+    return;
+  }
+  // Sanitize path against directory traversal
+  if (strstr(path, "..") != NULL || strchr(path, '\\') != NULL) {
+    full_path[0] = '\0';
     return;
   }
   if (strncmp(path, MOUNT_POINT, strlen(MOUNT_POINT)) == 0) {

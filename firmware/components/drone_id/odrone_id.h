@@ -13,6 +13,7 @@ void odrone_id_begin(uint8_t num_drones,
                      uint8_t channel,
                      float latitude,
                      float longitude);
+void odrone_id_stop(void);
 
 void odrone_id_set_num_spoofers(uint8_t num_drones);
 void odrone_id_set_wifi_ap(uint8_t channel);

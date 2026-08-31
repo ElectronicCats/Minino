@@ -53,8 +53,10 @@ static void show_splash_screen() {
   int x_direction = 1;
 
   while (screen_saver_running) {
+    oled_screen_clear_buffer();
     oled_screen_display_bitmap(logo->bitmap, start_x_position, start_y_position,
                                logo->width, logo->height, OLED_DISPLAY_NORMAL);
+    oled_screen_display_show();
 
     start_x_position += x_direction;
     start_y_position += y_direction;
@@ -65,7 +67,7 @@ static void show_splash_screen() {
     if (start_y_position <= 0 || start_y_position >= h_screen_space) {
       y_direction = -y_direction;
     }
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    vTaskDelay(pdMS_TO_TICKS(50));
   }
 
   vTaskDelete(NULL);
@@ -76,7 +78,7 @@ void screen_saver_run() {
     return;
   }
   oled_screen_clear();
-  xTaskCreate(show_splash_screen, "show_splash_screen", 4096, NULL, 5, NULL);
+  xTaskCreate(show_splash_screen, "show_splash_screen", 2048, NULL, 5, NULL);
 }
 
 void screen_saver_stop() {

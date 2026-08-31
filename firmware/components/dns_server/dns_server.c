@@ -140,7 +140,11 @@ static int parse_dns_request(char* req,
   uint16_t qd_count = ntohs(header->qd_count);
   header->an_count = htons(qd_count);
 
-  int reply_len = qd_count * sizeof(dns_answer_t) + req_len;
+  // Validate qd_count to prevent integer overflow
+  if (qd_count > 64) {
+    return -1;
+  }
+  size_t reply_len = (size_t) qd_count * sizeof(dns_answer_t) + req_len;
   if (reply_len > dns_reply_max_len) {
     return -1;
   }
@@ -151,6 +155,7 @@ static int parse_dns_request(char* req,
   char* packet_end = dns_reply + req_len;
   char name[128];
 
+  int an_count = 0;
   // Respond to all questions based on configured rules
   for (int qd_i = 0; qd_i < qd_count; qd_i++) {
     char* name_end_ptr =
@@ -183,7 +188,7 @@ static int parse_dns_request(char* req,
                 esp_netif_get_handle_from_ifkey(h->entry[i].if_key), &ip_info);
             ip.addr = ip_info.ip.addr;
             break;
-          } else if (h->entry->ip.addr != IPADDR_ANY) {
+          } else if (h->entry[i].ip.addr != IPADDR_ANY) {
             ip.addr = h->entry[i].ip.addr;
             break;
           }
@@ -191,6 +196,7 @@ static int parse_dns_request(char* req,
       }
       if (ip.addr ==
           IPADDR_ANY) {  // no rule applies, continue with another question
+        cur_qd_ptr = name_end_ptr + sizeof(dns_question_t);
         continue;
       }
       dns_answer_t* answer = (dns_answer_t*) cur_ans_ptr;
@@ -205,9 +211,13 @@ static int parse_dns_request(char* req,
 
       answer->addr_len = htons(sizeof(ip.addr));
       answer->ip_addr = ip.addr;
+      cur_ans_ptr += sizeof(dns_answer_t);
+      an_count++;
     }
+    cur_qd_ptr = name_end_ptr + sizeof(dns_question_t);
   }
-  return reply_len;
+  header->an_count = htons(an_count);
+  return (cur_ans_ptr - dns_reply);
 }
 
 /*
@@ -215,7 +225,7 @@ static int parse_dns_request(char* req,
     replies to all type A queries with the IP of the softAP
 */
 void dns_server_task(void* pvParameters) {
-  char rx_buffer[128];
+  char rx_buffer[512];
   char addr_str[128];
   int addr_family;
   int ip_protocol;
@@ -321,7 +331,10 @@ dns_server_handle_t start_dns_server(dns_server_config_t* config) {
 void stop_dns_server(dns_server_handle_t handle) {
   if (handle) {
     handle->started = false;
-    vTaskDelete(handle->task);
+    // Esperar a que la tarea se detenga antes de liberar
+    if (handle->task != NULL) {
+      vTaskDelay(pdMS_TO_TICKS(100));
+    }
     free(handle);
   }
 }

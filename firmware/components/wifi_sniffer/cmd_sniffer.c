@@ -257,10 +257,10 @@ static void queue_packet(void* recv_packet,
     memcpy(packet_to_queue, recv_packet, packet_info->length);
     packet_info->payload = packet_to_queue;
     if (snf_rt.work_queue) {
-      /* send packet_info */
-      if (xQueueSend(snf_rt.work_queue, packet_info,
-                     pdMS_TO_TICKS(SNIFFER_PROCESS_PACKET_TIMEOUT_MS)) !=
-          pdTRUE) {
+      /* send packet_info from promiscuous RX callback context.
+       * Never block here: the queue full case means the sniffer task is
+       * overloaded, block the WiFi driver would stall traffic. */
+      if (xQueueSend(snf_rt.work_queue, packet_info, 0) != pdTRUE) {
         ESP_LOGE(TAG, "sniffer work queue full");
         free(packet_info->payload);
       }
@@ -280,8 +280,10 @@ static void wifi_sniffer_cb(void* recv_buf, wifi_promiscuous_pkt_type_t type) {
 
   /* For now, the sniffer only dumps the length of the MISC type frame */
   if (type != WIFI_PKT_MISC && !sniffer->rx_ctrl.rx_state) {
-    packet_info.length -= SNIFFER_PAYLOAD_FCS_LEN;
-    queue_packet(sniffer->payload, &packet_info);
+    if (packet_info.length > SNIFFER_PAYLOAD_FCS_LEN) {
+      packet_info.length -= SNIFFER_PAYLOAD_FCS_LEN;
+      queue_packet(sniffer->payload, &packet_info);
+    }
   }
 }
 

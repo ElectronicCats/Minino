@@ -49,18 +49,18 @@ size_t files_ops_get_file_size_2(const char* filepath) {
 bool files_ops_exists(const char* dir_path,
                       const char* name,
                       const char* extension) {
-  char* full_path = (char*) malloc(256);
-  sprintf(full_path, "%s/%s%s", dir_path, name, extension);
+  char full_path[256];
+  if (dir_path == NULL || name == NULL || extension == NULL) {
+    return false;
+  }
+  snprintf(full_path, sizeof(full_path), "%s/%s%s", dir_path, name, extension);
 
   FILE* file = fopen(full_path, "r");
   if (file) {
     fclose(file);
-    free(full_path);
     return true;
-  } else {
-    free(full_path);
-    return false;
   }
+  return false;
 }
 
 void files_ops_incremental_name(const char* dir_path,
@@ -69,15 +69,17 @@ void files_ops_incremental_name(const char* dir_path,
                                 char* path_ptr) {
   int idx = 0;
   bool idx_found = false;
-  char* indexed_name = (char*) malloc(32);
-  while (!idx_found) {
-    sprintf(indexed_name, "%s%02d", base_name, idx);
+  char indexed_name[64];
+  if (dir_path == NULL || base_name == NULL || extension == NULL || path_ptr == NULL) {
+    return;
+  }
+  while (!idx_found && idx < 10000) {
+    snprintf(indexed_name, sizeof(indexed_name), "%s%02d", base_name, idx);
     if (files_ops_exists(dir_path, indexed_name, extension)) {
       idx++;
     } else {
       idx_found = true;
     }
   }
-  sprintf(path_ptr, "%s/%s%s", dir_path, indexed_name, extension);
-  free(indexed_name);
+  snprintf(path_ptr, 256, "%s/%s%s", dir_path, indexed_name, extension);
 }

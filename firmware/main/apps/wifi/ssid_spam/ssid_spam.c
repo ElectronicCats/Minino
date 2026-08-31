@@ -72,7 +72,21 @@ void spam_main_menu() {
 void split_text_into_array(const char* input,
                            char* output_array[],
                            uint16_t* count) {
+  if (!input) {
+    *count = 0;
+    return;
+  }
+  for (uint16_t i = 0; i < *count && i < MAX_STRINGS; i++) {
+    if (output_array[i]) {
+      free(output_array[i]);
+      output_array[i] = NULL;
+    }
+  }
   char* temp = strdup(input);
+  if (!temp) {
+    *count = 0;
+    return;
+  }
   char* token = strtok(temp, ",");
   int idx = 0;
 
@@ -87,24 +101,25 @@ void split_text_into_array(const char* input,
 }
 
 static void list_ssid_cb(uint8_t selection) {
-  char* menu_selected = malloc(17);
+  char menu_selected[32];
   if (strlen(ssids_list[selection]) + 7 > 16) {
-    sprintf(menu_selected, "[%s]", ssids_list[selection]);
+    snprintf(menu_selected, sizeof(menu_selected), "[%s]", ssids_list[selection]);
   } else {
-    sprintf(menu_selected, "SSID [%s]", ssids_list[selection]);
+    snprintf(menu_selected, sizeof(menu_selected), "SSID [%s]", ssids_list[selection]);
   }
-  if (ssids_main_list[0] == NULL) {
-    ssids_main_list[0] = malloc(17);
+  if (ssids_main_list[0] != NULL) {
+    free(ssids_main_list[0]);
   }
   ssids_main_list[0] = strdup(menu_selected);
 
   storage_contex_t* item_ctx;
   item_ctx =
       flash_storage_get_item(GENFLASH_STORAGE_SPAM, ssids_list[selection]);
-  split_text_into_array(item_ctx->items_storage_value, ssids_attack,
-                        &total_lines);
+  if (item_ctx && item_ctx->items_storage_value) {
+    split_text_into_array(item_ctx->items_storage_value, ssids_attack,
+                          &total_lines);
+  }
   spam_main_menu();
-  free(menu_selected);
 }
 
 void spam_display_list_ssid() {
@@ -124,28 +139,25 @@ void spam_display_list_ssid() {
   general_submenu(spam_menu_list_ssid);
 }
 
-static void spam_task(void* pvParameter) {
-  if (total_lines == 0) {
-    ESP_LOGE("SSIDSpam", "No SSIDs loaded, stopping task");
-    vTaskDelete(NULL);
-    return;
-  }
-
-  uint8_t line = 0;
-  uint16_t seqnum[MAX_STRINGS];
+static void spam_task(void* pvParameters) {
+  uint16_t line = 0;
+  uint8_t beacon[128];
+  uint16_t seqnum[total_lines];
   memset(seqnum, 0, sizeof(seqnum));
 
-  for (;;) {
-    vTaskDelay(100 / total_lines / portTICK_PERIOD_MS);
+  while (1) {
+    vTaskDelay(pdMS_TO_TICKS(100));
+    if (total_lines == 0 || ssids_attack[line] == NULL) {
+      continue;
+    }
+    size_t ssid_len = strlen(ssids_attack[line]);
+    if (ssid_len > sizeof(beacon) - sizeof(beacon_raw)) {
+      ssid_len = sizeof(beacon) - sizeof(beacon_raw);
+    }
+    memcpy(beacon, beacon_raw, sizeof(beacon_raw));
+    memcpy(beacon + sizeof(beacon_raw), ssids_attack[line], ssid_len);
 
-    uint8_t beacon[200];
-    memcpy(beacon, beacon_raw, BEACON_SSID_OFFSET - 1);
-    beacon[BEACON_SSID_OFFSET - 1] = strlen(ssids_attack[line]);
-    memcpy(&beacon[BEACON_SSID_OFFSET], ssids_attack[line],
-           strlen(ssids_attack[line]));
-    memcpy(&beacon[BEACON_SSID_OFFSET + strlen(ssids_attack[line])],
-           &beacon_raw[BEACON_SSID_OFFSET],
-           sizeof(beacon_raw) - BEACON_SSID_OFFSET);
+    beacon[37] = ssid_len;
 
     beacon[SRCADDR_OFFSET + 5] = line;
     beacon[BSSID_OFFSET + 5] = line;
@@ -157,7 +169,7 @@ static void spam_task(void* pvParameter) {
       seqnum[line] = 0;
 
     esp_wifi_80211_tx(WIFI_IF_AP, beacon,
-                      sizeof(beacon_raw) + strlen(ssids_attack[line]), false);
+                      sizeof(beacon_raw) + ssid_len, false);
 
     if (++line >= total_lines)
       line = 0;
@@ -168,33 +180,39 @@ static void ssid_spam_init() {
   esp_err_t ret = nvs_flash_init();
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
       ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-    ESP_ERROR_CHECK(nvs_flash_erase());
-    ret = nvs_flash_init();
+    nvs_flash_erase();
+    nvs_flash_init();
   }
-  ESP_ERROR_CHECK(ret);
 
-  ESP_ERROR_CHECK(esp_netif_init());
-  ESP_ERROR_CHECK(esp_event_loop_create_default());
+  ret = esp_netif_init();
+  if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+    ESP_LOGE("ssid_spam", "netif_init error: %s", esp_err_to_name(ret));
+  }
+  ret = esp_event_loop_create_default();
+  if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+    ESP_LOGE("ssid_spam", "event_loop_create error: %s", esp_err_to_name(ret));
+  }
   esp_netif_create_default_wifi_ap();
 
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 
-  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-  ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+  ret = esp_wifi_init(&cfg);
+  if (ret == ESP_OK) {
+    esp_wifi_set_storage(WIFI_STORAGE_RAM);
+    esp_wifi_set_mode(WIFI_MODE_AP);
+    wifi_config_t ap_config = {.ap = {.ssid = "NotSuspisiusCat",
+                                      .ssid_len = 0,
+                                      .password = "dummypassword",
+                                      .channel = 1,
+                                      .authmode = WIFI_AUTH_WPA2_PSK,
+                                      .ssid_hidden = 1,
+                                      .max_connection = 4,
+                                      .beacon_interval = 60000}};
 
-  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
-  wifi_config_t ap_config = {.ap = {.ssid = "NotSuspisiusCat",
-                                    .ssid_len = 0,
-                                    .password = "dummypassword",
-                                    .channel = 1,
-                                    .authmode = WIFI_AUTH_WPA2_PSK,
-                                    .ssid_hidden = 1,
-                                    .max_connection = 4,
-                                    .beacon_interval = 60000}};
-
-  ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_config));
-  ESP_ERROR_CHECK(esp_wifi_start());
-  ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
+    esp_wifi_set_config(WIFI_IF_AP, &ap_config);
+    esp_wifi_start();
+    esp_wifi_set_ps(WIFI_PS_NONE);
+  }
 
   xTaskCreate(&spam_task, "spam_task", 4096, NULL, 5, &spam_task_handle);
 }

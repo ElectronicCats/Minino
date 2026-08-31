@@ -27,9 +27,6 @@ static bool gps_enabled = false;
 static bool gps_advanced_configured = false;
 
 void gps_hw_init() {
-#ifndef CONFIG_GPS_ENABLED
-  return;
-#endif
   gpio_config_t io_conf;
   io_conf.mode = GPIO_MODE_OUTPUT;
   io_conf.pin_bit_mask = (1ULL << GPS_ON_OFF_PIN);
@@ -50,9 +47,6 @@ void gps_hw_init() {
 }
 
 void gps_hw_on() {
-#ifndef CONFIG_GPS_ENABLED
-  return;
-#endif
   gpio_set_level(GPS_ON_OFF_PIN, 1);
   gps_enabled = true;
   vTaskDelay(pdMS_TO_TICKS(300));
@@ -63,17 +57,11 @@ void gps_hw_on() {
 }
 
 void gps_hw_off() {
-#ifndef CONFIG_GPS_ENABLED
-  return;
-#endif
   gpio_set_level(GPS_ON_OFF_PIN, 0);
   gps_enabled = false;
 }
 
 void gsp_hw_save_state() {
-#ifndef CONFIG_GPS_ENABLED
-  return;
-#endif
   preferences_put_bool(GPS_ENABLED_MEM, gps_enabled);
 }
 

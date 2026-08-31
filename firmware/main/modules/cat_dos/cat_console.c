@@ -163,6 +163,7 @@ restart:
     ctrl_c_callback();
     unregister_ctrl_c_handler();
   }
+  vTaskDelay(pdMS_TO_TICKS(500));
   goto restart;
 
   ESP_LOGE(TAG, "Finished console");

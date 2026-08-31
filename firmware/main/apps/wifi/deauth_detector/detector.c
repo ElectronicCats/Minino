@@ -42,7 +42,9 @@ static void packet_handler(void* buf, wifi_promiscuous_pkt_type_t type) {
              rx_ctrl.channel, mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
     ESP_LOGI(TAG, "Deauth packet detected");
     total_deauth_packets_count++;
-    deauth_packets_count_list[rx_ctrl.channel - 1]++;
+    if (rx_ctrl.channel >= 1 && rx_ctrl.channel <= 14) {
+      deauth_packets_count_list[rx_ctrl.channel - 1]++;
+    }
   }
   // 500 ms
   if ((current_time - last_update) * portTICK_PERIOD_MS >= 500) {

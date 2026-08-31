@@ -21,7 +21,7 @@
 
 static const int SPI_Command_Mode = 0;
 static const int SPI_Data_Mode = 1;
-static const int SPI_Frequency = 1000000;  // 1MHz
+static const int SPI_Frequency = 10000000;  // 10MHz
 
 void spi_master_init(oled_driver_t* dev,
                      int16_t GPIO_MOSI,
@@ -61,7 +61,7 @@ void spi_master_init(oled_driver_t* dev,
   ESP_LOGI(TAG, "SPI HOST_ID=%d", HOST_ID);
   ret = spi_bus_initialize(HOST_ID, &spi_bus_config, SPI_DMA_CH_AUTO);
   ESP_LOGI(TAG, "spi_bus_initialize=%d", ret);
-  assert(ret == ESP_OK);
+  assert(ret == ESP_OK || ret == ESP_ERR_INVALID_STATE);
 
   spi_device_interface_config_t devcfg;
   memset(&devcfg, 0, sizeof(spi_device_interface_config_t));

@@ -23,6 +23,7 @@ static void droneid_scanner_show_list();
 static void droneid_scanner_show_details();
 
 static void droneid_scanner_exit() {
+  droneid_scanner_stop();
   for (int i = 0; i < num_drones; i++) {
     if (droneid_list[i] != NULL) {
       free(droneid_list[i]);

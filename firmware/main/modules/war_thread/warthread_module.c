@@ -357,4 +357,6 @@ void warthread_module_exit() {
   vTaskDelay(pdMS_TO_TICKS(100));
   openthread_disable_promiscous_mode();
   openthread_deinit();
+  radio_selector_set_stack_initialized(false);
+  radio_selector_set_platform_configured(false);
 }

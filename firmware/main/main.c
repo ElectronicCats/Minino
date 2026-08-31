@@ -72,6 +72,7 @@ void app_main() {
   flash_fs_begin(flash_fs_screens_handler);
   keyboard_module_begin();
   menus_module_begin();
+  sleep_mode_begin();
   preferences_put_bool("wifi_connected", false);
   flash_storage_begin();
 

@@ -48,27 +48,28 @@ void button_init(uint32_t button_num, uint8_t mask) {
           },
   };
   button_handle_t btn = iot_button_create(&btn_cfg);
-  assert(btn);
-  esp_err_t err =
-      iot_button_register_cb(btn, BUTTON_PRESS_DOWN, button_event_cb,
-                             (void*) (BUTTON_PRESS_DOWN | mask));
-  err |= iot_button_register_cb(btn, BUTTON_PRESS_UP, button_event_cb,
-                                (void*) (BUTTON_PRESS_UP | mask));
-  err |= iot_button_register_cb(btn, BUTTON_PRESS_REPEAT, button_event_cb,
-                                (void*) (BUTTON_PRESS_REPEAT | mask));
-  err |= iot_button_register_cb(btn, BUTTON_PRESS_REPEAT_DONE, button_event_cb,
-                                (void*) (BUTTON_PRESS_REPEAT_DONE | mask));
-  err |= iot_button_register_cb(btn, BUTTON_SINGLE_CLICK, button_event_cb,
-                                (void*) (BUTTON_SINGLE_CLICK | mask));
-  err |= iot_button_register_cb(btn, BUTTON_DOUBLE_CLICK, button_event_cb,
-                                (void*) (BUTTON_DOUBLE_CLICK | mask));
-  err |= iot_button_register_cb(btn, BUTTON_LONG_PRESS_START, button_event_cb,
-                                (void*) (BUTTON_LONG_PRESS_START | mask));
-  err |= iot_button_register_cb(btn, BUTTON_LONG_PRESS_HOLD, button_event_cb,
-                                (void*) (BUTTON_LONG_PRESS_HOLD | mask));
-  err |= iot_button_register_cb(btn, BUTTON_LONG_PRESS_UP, button_event_cb,
-                                (void*) (BUTTON_LONG_PRESS_UP | mask));
-  ESP_ERROR_CHECK(err);
+  if (!btn) {
+    ESP_LOGE("keyboard_module", "Failed to create button %" PRIu32, button_num);
+    return;
+  }
+  iot_button_register_cb(btn, BUTTON_PRESS_DOWN, button_event_cb,
+                         (void*) (uintptr_t) (BUTTON_PRESS_DOWN | mask));
+  iot_button_register_cb(btn, BUTTON_PRESS_UP, button_event_cb,
+                         (void*) (uintptr_t) (BUTTON_PRESS_UP | mask));
+  iot_button_register_cb(btn, BUTTON_PRESS_REPEAT, button_event_cb,
+                         (void*) (uintptr_t) (BUTTON_PRESS_REPEAT | mask));
+  iot_button_register_cb(btn, BUTTON_PRESS_REPEAT_DONE, button_event_cb,
+                         (void*) (uintptr_t) (BUTTON_PRESS_REPEAT_DONE | mask));
+  iot_button_register_cb(btn, BUTTON_SINGLE_CLICK, button_event_cb,
+                         (void*) (uintptr_t) (BUTTON_SINGLE_CLICK | mask));
+  iot_button_register_cb(btn, BUTTON_DOUBLE_CLICK, button_event_cb,
+                         (void*) (uintptr_t) (BUTTON_DOUBLE_CLICK | mask));
+  iot_button_register_cb(btn, BUTTON_LONG_PRESS_START, button_event_cb,
+                         (void*) (uintptr_t) (BUTTON_LONG_PRESS_START | mask));
+  iot_button_register_cb(btn, BUTTON_LONG_PRESS_HOLD, button_event_cb,
+                         (void*) (uintptr_t) (BUTTON_LONG_PRESS_HOLD | mask));
+  iot_button_register_cb(btn, BUTTON_LONG_PRESS_UP, button_event_cb,
+                         (void*) (uintptr_t) (BUTTON_LONG_PRESS_UP | mask));
 }
 
 /**

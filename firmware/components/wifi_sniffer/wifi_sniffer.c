@@ -59,9 +59,9 @@ esp_err_t wifi_sniffer_start() {
     return ret;
   }
 
-  char* channel_str = (char*) malloc(4);
+  char channel_str[8];
   uint8_t channel = wifi_sniffer_get_channel();
-  snprintf(channel_str, 4, "%d", channel);
+  snprintf(channel_str, sizeof(channel_str), "%u", channel);
   char* sniffer_argv[] = {"sniffer",   "-i", "wlan",      "-c",
                           channel_str, "-n", "2147483647"};
   uint8_t sniffer_argc = 7;

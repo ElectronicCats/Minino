@@ -7,7 +7,7 @@
 #include "preferences.h"
 
 #define FS_TREE_MAIN_COUNT    "fsmc"
-#define FS_TREE_SUBITEM_COUNT "fsmc"
+#define FS_TREE_SUBITEM_COUNT "fssc"
 #define FS_TREE_MAIN_PREFIX   "fsm"
 #define FS_TREE_SUBITEM_SUFIX "si"
 #define MAX_LEN_STRING        1024
@@ -314,6 +314,7 @@ void flash_storage_delete_list_item(char* main_tree, char* subitem) {
 
   for (int j = 0; j < counter_items; j++) {
     flash_storage_save_subitem(&list[j]);
+    free(list[j].main_storage_name);
     free(list[j].item_storage_name);
     free(list[j].items_storage_value);
   }
@@ -358,23 +359,18 @@ void flash_storage_get_list(char* main_tree,
       continue;
     }
 
-    storage_contex_t* item = malloc(sizeof(storage_contex_t));
-    if (!item) {
-      ESP_LOGE(TAG, "Failed to allocate memory for storage_contex_t");
-      break;
-    }
-    item->main_storage_name = strdup(main_tree);
-    item->item_storage_name = strdup(tree_subitem);
-    item->items_storage_value = strdup(tree_subitem_val);
+    list_storage[counter_items].main_storage_name = strdup(main_tree);
+    list_storage[counter_items].item_storage_name = strdup(tree_subitem);
+    list_storage[counter_items].items_storage_value = strdup(tree_subitem_val);
 
-    if (!item->main_storage_name || !item->item_storage_name ||
-        !item->items_storage_value) {
+    if (!list_storage[counter_items].main_storage_name ||
+        !list_storage[counter_items].item_storage_name ||
+        !list_storage[counter_items].items_storage_value) {
       ESP_LOGE(TAG, "Failed to allocate memory for strings");
-      free(item);
       break;
     }
 
-    list_storage[counter_items++] = *item;
+    counter_items++;
   }
 
   *list_count = counter_items;

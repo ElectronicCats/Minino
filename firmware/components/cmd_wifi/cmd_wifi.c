@@ -66,10 +66,9 @@ static int cmd_wifi_connect_index(int argc, char** argv) {
   }
   int count = preferences_get_int("count_ap", 0);
   int index = atoi(connect_args.index->sval[0]);
-  if (index > count) {
-    ESP_LOGW(__func__, "Error parsing arguments");
-    printf("Error parsing arguments\n");
-    arg_print_errors(stderr, connect_args.end, argv[0]);
+  if (index < 0 || index >= count || count <= 0) {
+    ESP_LOGW(__func__, "Index out of range: %d (count: %d)", index, count);
+    printf("Index out of range\n");
     return 1;
   }
   return wifi_ap_manager_connect_index(index);

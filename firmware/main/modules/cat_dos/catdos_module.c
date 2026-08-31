@@ -216,47 +216,33 @@ static void catdos_module_send_attack_task(void* pvParameters) {
                       &task_atack);
 
   pthread_attr_t attr;
-  pthread_t thread1, thread2, thread3, thread4, thread5, thread6, thread7,
-      thread8;
+  pthread_t threads[8];
   int res;
+  int created = 0;
 
-  res = pthread_create(&thread1, NULL, (void*) http_get_task, NULL);
-  assert(res == 0);
   res = pthread_attr_init(&attr);
-  assert(res == 0);
+  if (res != 0) {
+    ESP_LOGE(CATDOS_TAG, "Failed to init pthread attr: %d", res);
+    vTaskDelete(NULL);
+    return;
+  }
   pthread_attr_setstacksize(&attr, 16384);
-  res = pthread_create(&thread2, &attr, (void*) http_get_task, NULL);
-  assert(res == 0);
-  res = pthread_create(&thread3, NULL, (void*) http_get_task, NULL);
-  assert(res == 0);
-  res = pthread_create(&thread4, NULL, (void*) http_get_task, NULL);
-  assert(res == 0);
-  res = pthread_create(&thread5, NULL, (void*) http_get_task, NULL);
-  assert(res == 0);
-  res = pthread_create(&thread6, NULL, (void*) http_get_task, NULL);
-  assert(res == 0);
-  res = pthread_create(&thread7, NULL, (void*) http_get_task, NULL);
-  assert(res == 0);
-  res = pthread_create(&thread8, NULL, (void*) http_get_task, NULL);
-  assert(res == 0);
 
-  res = pthread_join(thread1, NULL);
-  assert(res == 0);
-  res = pthread_join(thread2, NULL);
-  assert(res == 0);
-  res = pthread_join(thread3, NULL);
-  assert(res == 0);
-  res = pthread_join(thread4, NULL);
-  assert(res == 0);
-  res = pthread_join(thread5, NULL);
-  assert(res == 0);
-  res = pthread_join(thread6, NULL);
-  assert(res == 0);
-  res = pthread_join(thread7, NULL);
-  assert(res == 0);
-  res = pthread_join(thread8, NULL);
-  assert(res == 0);
+  for (int i = 0; i < 8; i++) {
+    res = pthread_create(&threads[i], i == 1 ? &attr : NULL,
+                         (void*) http_get_task, NULL);
+    if (res != 0) {
+      ESP_LOGE(CATDOS_TAG, "Failed to create thread %d: %d", i, res);
+      break;
+    }
+    created++;
+  }
 
+  for (int i = 0; i < created; i++) {
+    pthread_join(threads[i], NULL);
+  }
+
+  pthread_attr_destroy(&attr);
   vTaskDelete(NULL);
 }
 

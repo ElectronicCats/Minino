@@ -353,6 +353,19 @@ static esp_err_t http_server_favicon_handler(httpd_req_t* req) {
 }
 
 /**
+ * @brief Constant-time comparison to prevent timing side-channel attacks
+ */
+static bool secure_memcmp(const void* a, const void* b, size_t len) {
+  const volatile uint8_t* x = (const volatile uint8_t*) a;
+  const volatile uint8_t* y = (const volatile uint8_t*) b;
+  volatile uint8_t diff = 0;
+  for (size_t i = 0; i < len; i++) {
+    diff |= x[i] ^ y[i];
+  }
+  return diff == 0;
+}
+
+/**
  * @brief Check OTA authorization token from HTTP header
  * @param req HTTP request to check
  * @return true if authorized, false otherwise
@@ -368,7 +381,16 @@ static bool http_server_check_ota_auth(httpd_req_t* req) {
     } else {
       token = buf;
     }
-    if (strcmp(token, OTA_AUTH_TOKEN) == 0) {
+    size_t token_len = strlen(token);
+    while (token_len > 0 && (token[token_len - 1] == ' ' ||
+                             token[token_len - 1] == '\r' ||
+                             token[token_len - 1] == '\n')) {
+      token_len--;
+    }
+    const char* expected = OTA_AUTH_TOKEN;
+    size_t expected_len = strlen(expected);
+    if (token_len == expected_len &&
+        secure_memcmp(token, expected, expected_len)) {
       authorized = true;
     }
   }

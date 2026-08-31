@@ -33,16 +33,16 @@ void general_screen_truncate_text(char* p_text, char* p_truncated_text) {
   if (!p_text || !p_truncated_text)
     return;
   size_t len = strlen(p_text);
-  if (len <= (MAX_LINE_CHAR - 3)) {
-    strncpy(p_truncated_text, p_text, MAX_LINE_CHAR);
+  if (len < MAX_LINE_CHAR) {
+    strncpy(p_truncated_text, p_text, MAX_LINE_CHAR - 1);
     p_truncated_text[MAX_LINE_CHAR - 1] = '\0';
     return;
   }
-  strncpy(p_truncated_text, p_text, MAX_LINE_CHAR - 3);
+  strncpy(p_truncated_text, p_text, MAX_LINE_CHAR - 4);
+  p_truncated_text[MAX_LINE_CHAR - 4] = '.';
   p_truncated_text[MAX_LINE_CHAR - 3] = '.';
   p_truncated_text[MAX_LINE_CHAR - 2] = '.';
-  p_truncated_text[MAX_LINE_CHAR - 1] = '.';
-  p_truncated_text[MAX_LINE_CHAR] = '\0';
+  p_truncated_text[MAX_LINE_CHAR - 1] = '\0';
 }
 
 static void general_screen_display_selected_item(char* item_text,

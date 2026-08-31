@@ -97,6 +97,7 @@ void buzzer_set_freq(uint32_t freq) {
   return;
 #endif
   buzzer.freq = freq;
+  ledc_set_freq(LEDC_MODE, LEDC_TIMER, freq);
 }
 
 void buzzer_set_duty(uint32_t duty) {

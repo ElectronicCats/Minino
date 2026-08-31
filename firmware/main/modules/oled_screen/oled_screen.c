@@ -58,8 +58,14 @@ void oled_screen_begin() {
 
 void oled_screen_get_last_buffer() {
   xSemaphoreTake(oled_mutex, portMAX_DELAY);
+  if (last_buffer != NULL) {
+    free(last_buffer);
+    last_buffer = NULL;
+  }
   last_buffer = (uint8_t*) malloc(dev._pages * dev._width * sizeof(uint8_t));
-  oled_driver_get_buffer(&dev, last_buffer);
+  if (last_buffer != NULL) {
+    oled_driver_get_buffer(&dev, last_buffer);
+  }
   xSemaphoreGive(oled_mutex);
 }
 
@@ -181,7 +187,7 @@ void oled_screen_draw_rect(int x, int y, int width, int height, bool invert) {
 
 void oled_screen_draw_line(int x1, int y1, int x2, int y2, bool invert) {
   xSemaphoreTake(oled_mutex, portMAX_DELAY);
-  oled_driver_draw_line(&dev, x1, y2, x2, y2, invert);
+  oled_driver_draw_line(&dev, x1, y1, x2, y2, invert);
   xSemaphoreGive(oled_mutex);
 }
 
@@ -222,12 +228,16 @@ void oled_screen_display_card_border() {
 void oled_screen_display_text_splited(char* p_text,
                                       int* p_started_page,
                                       int invert) {
+  if (p_text == NULL || p_started_page == NULL) {
+    return;
+  }
   if (strlen(p_text) > MAX_LINE_CHAR) {
-    char temp[100];
-    strncpy(temp, p_text, 100);
+    char temp[128];
+    strncpy(temp, p_text, sizeof(temp) - 1);
+    temp[sizeof(temp) - 1] = '\0';
 
     char* token = strtok(temp, " ");
-    char current_line[MAX_LINE_CHAR] = "";
+    char current_line[MAX_LINE_CHAR * 2] = "";
     while (token != NULL) {
       if (strlen(current_line) + strlen(token) + 1 <= MAX_LINE_CHAR) {
         if (strlen(current_line) > 0) {
@@ -237,7 +247,8 @@ void oled_screen_display_text_splited(char* p_text,
       } else {
         oled_screen_display_text(current_line, 3, *p_started_page, invert);
         (*p_started_page)++;
-        strcpy(current_line, token);
+        strncpy(current_line, token, sizeof(current_line) - 1);
+        current_line[sizeof(current_line) - 1] = '\0';
       }
       token = strtok(NULL, " ");
     }

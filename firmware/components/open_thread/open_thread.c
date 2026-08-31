@@ -373,15 +373,25 @@ void openthread_init() {
 #if !defined(CONFIG_OPEN_THREAD_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
-  esp_log_level_set(TAG, ESP_LOG_NONE);
 
   esp_vfs_eventfd_config_t eventfd_config = {
       .max_fds = 3,
   };
 
-  ESP_ERROR_CHECK(nvs_flash_init());
-  ESP_ERROR_CHECK(esp_event_loop_create_default());
-  ESP_ERROR_CHECK(esp_netif_init());
-  ESP_ERROR_CHECK(esp_vfs_eventfd_register(&eventfd_config));
+  esp_err_t ret = nvs_flash_init();
+  if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    nvs_flash_erase();
+    nvs_flash_init();
+  }
+
+  ret = esp_netif_init();
+  if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+    ESP_LOGE(TAG, "netif init failed: %s", esp_err_to_name(ret));
+  }
+  ret = esp_event_loop_create_default();
+  if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+    ESP_LOGE(TAG, "event loop create failed: %s", esp_err_to_name(ret));
+  }
+  esp_vfs_eventfd_register(&eventfd_config);
   xTaskCreate(ot_task_worker, "ot_cli_main", 1024 * 5, NULL, 10, NULL);
 }

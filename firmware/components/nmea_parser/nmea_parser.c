@@ -65,11 +65,11 @@ typedef struct {
  * @return float Latitude or Longitude value (unit: degree)
  */
 static float parse_lat_long(esp_gps_t* esp_gps) {
-  float ll = strtof(esp_gps->item_str, NULL);
+  double ll = strtod(esp_gps->item_str, NULL);
   int deg = ((int) ll) / 100;
-  float min = ll - (deg * 100);
-  ll = deg + min / 60.0f;
-  return ll;
+  double min = ll - (deg * 100);
+  ll = deg + (min / 60.0);
+  return (float) ll;
 }
 
 /**
@@ -635,14 +635,22 @@ static void __attribute__((unused)) esp_handle_uart_pattern(
     esp_gps_t* esp_gps) {
   int pos = uart_pattern_pop_pos(esp_gps->uart_port);
   if (pos != -1) {
+    if (pos >= NMEA_PARSER_RUNTIME_BUFFER_SIZE) {
+      pos = NMEA_PARSER_RUNTIME_BUFFER_SIZE - 1;
+    }
     /* read one line(include '\n') */
     int read_len = uart_read_bytes(esp_gps->uart_port, esp_gps->buffer, pos + 1,
                                    100 / portTICK_PERIOD_MS);
-    /* make sure the line is a standard string */
-    esp_gps->buffer[read_len] = '\0';
-    /* Send new line to handle */
-    if (gps_decode(esp_gps, read_len + 1) != ESP_OK) {
-      ESP_LOGW(TAG, "GPS decode line failed");
+    if (read_len > 0) {
+      if (read_len >= NMEA_PARSER_RUNTIME_BUFFER_SIZE) {
+        read_len = NMEA_PARSER_RUNTIME_BUFFER_SIZE - 1;
+      }
+      /* make sure the line is a standard string */
+      esp_gps->buffer[read_len] = '\0';
+      /* Send new line to handle */
+      if (gps_decode(esp_gps, read_len + 1) != ESP_OK) {
+        ESP_LOGW(TAG, "GPS decode line failed");
+      }
     }
   } else {
     ESP_LOGW(TAG, "Pattern Queue Size too small");

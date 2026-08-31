@@ -58,6 +58,9 @@ static void gps_event_handler(void* event_handler_arg,
     case GPS_UPDATE:
       /* update GPS information */
       gps_t* gps = gps_module_get_instance(event_data);
+      if (gps == NULL) {
+        break;
+      }
       if (gps_event_callback != NULL) {
         gps_event_callback(gps);
         return;

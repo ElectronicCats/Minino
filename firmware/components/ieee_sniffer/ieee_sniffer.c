@@ -135,7 +135,10 @@ void ieee_sniffer_channel_hop() {
   esp_ieee802154_disable();
   while (running) {
     esp_ieee802154_enable();
-    ieee_sniffer_set_channel(current_channel + 1);
+    uint8_t next_channel = (current_channel >= IEEE_SNIFFER_CHANNEL_MAX)
+                               ? IEEE_SNIFFER_CHANNEL_MIN
+                               : (current_channel + 1);
+    ieee_sniffer_set_channel(next_channel);
     esp_ieee802154_receive();
     vTaskDelay(HOPPING_TIME / portTICK_PERIOD_MS);
     esp_ieee802154_disable();
@@ -175,6 +178,16 @@ static void debug_handler_task(void* pvParameters) {
   }
   ESP_LOGE("debug_handler_task", "Terminated");
   vTaskDelete(NULL);
+}
+
+static inline bool check_bounds(uint8_t pos, size_t needed, uint8_t total) {
+  return (pos + needed <= total);
+}
+
+static inline uint16_t read_uint16_safe(const uint8_t* buf) {
+  uint16_t val;
+  memcpy(&val, buf, sizeof(uint16_t));
+  return val;
 }
 
 static void debug_print_packet(uint8_t* packet, uint8_t packet_length) {
@@ -217,6 +230,7 @@ static void debug_print_packet(uint8_t* packet, uint8_t packet_length) {
       break;
     }
     case FRAME_TYPE_DATA: {
+      if (!check_bounds(position, sizeof(uint8_t), packet_length)) return;
       uint8_t sequence_number = packet[position];
       position += sizeof(uint8_t);
       printf("Secuence Number:               %u\n", sequence_number);
@@ -233,12 +247,14 @@ static void debug_print_packet(uint8_t* packet, uint8_t packet_length) {
           break;
         }
         case ADDR_MODE_SHORT: {
-          pan_id = *((uint16_t*) &packet[position]);
+          if (!check_bounds(position, sizeof(uint16_t) * 2, packet_length)) return;
+          pan_id = read_uint16_safe(&packet[position]);
           position += sizeof(uint16_t);
-          short_dst_addr = *((uint16_t*) &packet[position]);
+          short_dst_addr = read_uint16_safe(&packet[position]);
           position += sizeof(uint16_t);
           if (pan_id == 0xFFFF && short_dst_addr == 0xFFFF) {
-            pan_id = *((uint16_t*) &packet[position]);  // srcPan
+            if (!check_bounds(position, sizeof(uint16_t), packet_length)) return;
+            pan_id = read_uint16_safe(&packet[position]);  // srcPan
             position += sizeof(uint16_t);
             printf("Broadcast on PAN %04x\n", pan_id);
           } else {
@@ -248,7 +264,8 @@ static void debug_print_packet(uint8_t* packet, uint8_t packet_length) {
           break;
         }
         case ADDR_MODE_LONG: {
-          pan_id = *((uint16_t*) &packet[position]);
+          if (!check_bounds(position, sizeof(uint16_t) + sizeof(dst_addr), packet_length)) return;
+          pan_id = read_uint16_safe(&packet[position]);
           position += sizeof(uint16_t);
           for (uint8_t idx = 0; idx < sizeof(dst_addr); idx++) {
             dst_addr[idx] = packet[position + sizeof(dst_addr) - 1 - idx];
@@ -274,12 +291,14 @@ static void debug_print_packet(uint8_t* packet, uint8_t packet_length) {
           break;
         }
         case ADDR_MODE_SHORT: {
-          short_src_addr = *((uint16_t*) &packet[position]);
+          if (!check_bounds(position, sizeof(uint16_t), packet_length)) return;
+          short_src_addr = read_uint16_safe(&packet[position]);
           position += sizeof(uint16_t);
           printf("Source:                        0x%04x\n", short_src_addr);
           break;
         }
         case ADDR_MODE_LONG: {
+          if (!check_bounds(position, sizeof(src_addr), packet_length)) return;
           for (uint8_t idx = 0; idx < sizeof(src_addr); idx++) {
             src_addr[idx] = packet[position + sizeof(src_addr) - 1 - idx];
           }
@@ -307,7 +326,7 @@ static void debug_print_packet(uint8_t* packet, uint8_t packet_length) {
         printf("Data: ==================================================\n");
         ESP_LOG_BUFFER_HEX(TAG_IEEE_SNIFFER, data, data_length);
 
-        uint16_t checksum = *((uint16_t*) &packet[position]);
+        uint16_t checksum = read_uint16_safe(&packet[position]);
         printf("Checksum: %04x\n", checksum);
       } else {
         ESP_LOGW(TAG_IEEE_SNIFFER,
@@ -316,6 +335,7 @@ static void debug_print_packet(uint8_t* packet, uint8_t packet_length) {
       break;
     }
     case FRAME_TYPE_ACK: {
+      if (!check_bounds(position, sizeof(uint8_t), packet_length)) return;
       uint8_t sequence_number = packet[position++];
       printf("Ack (%u)\n", sequence_number);
       break;
