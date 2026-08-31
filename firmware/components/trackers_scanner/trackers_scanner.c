@@ -91,10 +91,7 @@ static void task_tracker_timer() {
   ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task started");
   trackers_scan_duration = 0;
   while (trackers_scanner_active) {
-    if (++trackers_scan_duration >= TRACKER_SCAN_DURATION) {
-      trackers_scanner_stop();
-      break;
-    }
+    trackers_scan_duration++;
     vTaskDelay(pdMS_TO_TICKS(1000));
   }
   trackers_scan_timer_task = NULL;
