@@ -2,6 +2,7 @@
 //
 // Fingerprint de IE. Procedencia y motivo del diseno binario: ver surv_ie.h.
 #include "surv_ie.h"
+#include <stdlib.h>
 #include <string.h>
 
 #define VEN SURV_IE_VENDOR_TAG
@@ -280,19 +281,26 @@ static bool match_tokens(const surv_ie_tok_t* t,
 }
 
 static bool matches_at_len(const uint8_t* ies, int len) {
-  surv_ie_tok_t toks[SURV_IE_WALK_CAP];
+  surv_ie_tok_t* toks = malloc(SURV_IE_WALK_CAP * sizeof(surv_ie_tok_t));
+  if (toks == NULL) {
+    return false;
+  }
   int n = build_tokens(ies, len, toks, SURV_IE_WALK_CAP);
   if (n <= 0) {
+    free(toks);
     return false;
   }
   if (match_tokens(toks, n, FLOCK_SIG, FLOCK_SIG_LEN)) {
+    free(toks);
     return true;
   }
   for (uint8_t s = 0; s < s_extra_count; s++) {
     if (match_tokens(toks, n, s_extra[s], (int) s_extra_len[s])) {
+      free(toks);
       return true;
     }
   }
+  free(toks);
   return false;
 }
 

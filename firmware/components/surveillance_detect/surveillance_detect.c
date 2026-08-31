@@ -208,7 +208,7 @@ static esp_err_t surv_begin_common(surv_profile_t profile, bool active_scan) {
   s_overflows = 0;
   radio_selector_set_surveillance();
   s_running = true;
-  if (xTaskCreate(engine_task, "surv_engine", 4096, NULL, 5, &s_engine_task) !=
+  if (xTaskCreate(engine_task, "surv_engine", 8192, NULL, 5, &s_engine_task) !=
       pdPASS) {
     s_running = false;
     return ESP_ERR_NO_MEM;

@@ -21,12 +21,16 @@
  */
 typedef struct {
   int rssi;
+  float distance;
   char* name;
   char* vendor;
   uint8_t mac_address[6];
   uint8_t adv_data[31];
   uint8_t adv_data_length;
   bool is_tracker;
+  double gps_latitude;
+  double gps_longitude;
+  bool gps_valid;
 } tracker_profile_t;
 
 /**
@@ -95,4 +99,12 @@ void trackers_scanner_add_tracker_profile(tracker_profile_t** profiles,
 int trackers_scanner_find_profile_by_mac(tracker_profile_t* profiles,
                                          uint16_t num_profiles,
                                          uint8_t mac_address[6]);
+
+/**
+ * @brief Estimate distance from RSSI using log-distance path loss model
+ *
+ * @param rssi The RSSI value in dBm
+ * @return float Estimated distance in meters
+ */
+float trackers_scanner_rssi_to_distance(int rssi);
 #endif  // TRACKERS_SCANNER_H

@@ -1,5 +1,7 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#pragma once
+#include <stdbool.h>
 #include <stdint.h>
-#ifndef TRACKERS_MODULE_H
-  #define TRACKERS_MODULE_H
-void trackers_module_begin();
-#endif  // TRACKERS_MODULE_H
+
+void trackers_module_begin(void);
+void trackers_module_stop(void);

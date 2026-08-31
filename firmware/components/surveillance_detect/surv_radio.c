@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "surv_radio.h"
 #include <string.h>
+#include "gap_dispatcher.h"
 #include "esp_bt.h"
 #include "esp_bt_main.h"
 #include "esp_err.h"
@@ -57,9 +58,9 @@ static esp_ble_scan_params_t s_ble_scan_params = {
     .scan_type = BLE_SCAN_TYPE_ACTIVE,
     .own_addr_type = BLE_ADDR_TYPE_PUBLIC,
     .scan_filter_policy = BLE_SCAN_FILTER_ALLOW_ALL,
-    .scan_interval = 0x50,
-    .scan_window = 0x50,
-    .scan_duplicate = BLE_SCAN_DUPLICATE_ENABLE,
+    .scan_interval = 0x20,
+    .scan_window = 0x20,
+    .scan_duplicate = BLE_SCAN_DUPLICATE_DISABLE,
 };
 
 static bool channel_allowed(uint8_t ch) {
@@ -138,8 +139,16 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event,
   }
   switch (event) {
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT:
-      ESP_LOGI(TAG, "scan params set -> start_scanning(30)");
-      ble_try_start_scan(30);
+      if (param->scan_param_cmpl.status == ESP_BT_STATUS_SUCCESS) {
+        ESP_LOGI(TAG, "scan params OK -> start_scanning(30)");
+        ble_try_start_scan(30);
+      } else {
+        // Sin params validos el arranque no puede triunfar: no llamar a
+        // start_scanning y dejar que el reintento de ble_try_start_scan re-dispare
+        // set_scan_params (SCAN_PARAM_SET_COMPLETE_EVT de nuevo) cuando toque.
+        ESP_LOGW(TAG, "scan params set fallo: 0x%x",
+                 param->scan_param_cmpl.status);
+      }
       break;
     case ESP_GAP_BLE_SCAN_START_COMPLETE_EVT:
       s_ble_scanning = (param->scan_start_cmpl.status == ESP_BT_STATUS_SUCCESS);
@@ -361,9 +370,9 @@ static esp_err_t ble_controller_enable(void) {
       return ret;
     }
   }
-  ret = esp_ble_gap_register_callback(ble_gap_cb);
+  ret = gap_dispatcher_register(ble_gap_cb);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "gap_register_callback: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG, "gap_dispatcher_register: %s", esp_err_to_name(ret));
     return ret;
   }
   return ESP_OK;
@@ -405,19 +414,14 @@ static void scan_ble_window(uint32_t ms) {
     vTaskDelay(pdMS_TO_TICKS(500));
     return;
   }
-  if (!s_ble_scanning) {
-    s_ble_start_retries = 0;
-    s_ble_scan_params.scan_type =
-        s_active_scan ? BLE_SCAN_TYPE_ACTIVE : BLE_SCAN_TYPE_PASSIVE;
-    s_ble_scan_desired = true;
-    // Dar al controlador re-inicializado tiempo de asentar el PHY antes de
-    // pedirle el scan (tras un ciclo WiFi-BLE-WiFi el arranque cojea).
-    vTaskDelay(pdMS_TO_TICKS(100));
-    // Asincrono: con SCAN_PARAM_SET_COMPLETE_EVT ble_gap_cb arranca el
-    // escaneo; ble_window_ms tambien lo intenta para el caso de params ya
-    // vigentes (TRACKERS continuo).
-    esp_ble_gap_set_scan_params(&s_ble_scan_params);
-  }
+  s_ble_start_retries = 0;
+  s_ble_scan_params.scan_type =
+      s_active_scan ? BLE_SCAN_TYPE_ACTIVE : BLE_SCAN_TYPE_PASSIVE;
+  s_ble_scan_desired = true;
+  // Dar al controlador re-inicializado tiempo de asentar el PHY antes de
+  // pedirle el scan.
+  vTaskDelay(pdMS_TO_TICKS(100));
+  esp_ble_gap_set_scan_params(&s_ble_scan_params);
   ble_window_ms(ms);
   if (s_profile == SURV_PROFILE_SURVEIL) {
     ble_controller_disable();
@@ -478,6 +482,11 @@ esp_err_t surv_radio_start(surv_profile_t p, bool active_scan) {
   //  - TRACKERS: asegurar que Wi-Fi queda fuera si venimos de otro perfil.
   if (p == SURV_PROFILE_TRACKERS) {
     wifi_driver_deinit_if_started();
+    // En el ESP32-C6 WiFi y BT comparten PHY: tras esp_wifi_deinit hace falta
+    // que la teardown termine de soltar el RF antes de que radio_task encienda
+    // el controlador BT, o el scan BLE (SCAN_START_COMPLETE) falla con 0x1.
+    // Misma regla que el inter-window de SURVEIL (RADIO_SWITCH_DELAY_MS).
+    vTaskDelay(pdMS_TO_TICKS(RADIO_SWITCH_DELAY_MS));
   }
   //  - FLOCK: prender Wi-Fi una vez; el loop lo mantiene encendido.
   if (p == SURV_PROFILE_FLOCK && !wifi_driver_get_initialized()) {
@@ -502,6 +511,7 @@ void surv_radio_stop(void) {
   s_on_phase_done = NULL;
   esp_wifi_set_promiscuous(false);
   esp_ble_gap_stop_scanning();
+  gap_dispatcher_unregister(ble_gap_cb);
   // Esperar a que la tarea radio_task termine y se auto-elimine. Sin esto,
   // surv_radio_start() podria ejecutarse antes de que la tarea anterior haya
   // liberado el CPU, provocando condiciones de carrera en los recursos de

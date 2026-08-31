@@ -1,123 +1,152 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 #include "trackers_module.h"
+#include <math.h>
+#include <string.h>
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
+#include "freertos/task.h"
+#include "gps_hw.h"
+#include "gps_module.h"
 #include "menus_module.h"
+#include "oled_screen.h"
 #include "trackers_scanner.h"
 #include "trackers_screens.h"
 
-static uint16_t current_item = 0;
-static uint16_t trackers_count = 0;
-static bool trackers_scanned = false;
-static tracker_profile_t* scanned_airtags = NULL;
-static SemaphoreHandle_t trackers_mutex = NULL;
-char* tracker_information[4] = {
-    NULL,
-    NULL,
-    "MAC ADDRS",
-    NULL,
-};
+#define TAG "trackers_app"
 
-static void tracker_information_free(void) {
-  if (tracker_information[0] != NULL) {
-    free(tracker_information[0]);
-    tracker_information[0] = NULL;
-  }
-  if (tracker_information[1] != NULL) {
-    free(tracker_information[1]);
-    tracker_information[1] = NULL;
-  }
-  if (tracker_information[3] != NULL) {
-    free(tracker_information[3]);
-    tracker_information[3] = NULL;
+static bool s_app_running = false;
+static bool s_scanning = false;
+static bool s_in_help = false;
+static uint8_t s_help_page = 0;
+static TaskHandle_t s_gui_task = NULL;
+
+static tracker_profile_t* s_trackers = NULL;
+static uint16_t s_tracker_count = 0;
+static uint16_t s_last_index = 0;
+
+static gps_t s_latest_gps;
+static bool s_have_gps = false;
+static portMUX_TYPE s_gps_mux = portMUX_INITIALIZER_UNLOCKED;
+
+static void trackers_gps_event_cb(gps_t* gps) {
+  if (gps != NULL) {
+    portENTER_CRITICAL(&s_gps_mux);
+    s_latest_gps = *gps;
+    s_have_gps = true;
+    portEXIT_CRITICAL(&s_gps_mux);
   }
 }
 
-static const general_menu_t trackers_information = {
-    .menu_items = tracker_information,
-    .menu_count = 4,
-    .menu_level = GENERAL_TREE_APP_INFORMATION,
-};
+static void on_tracker_found(tracker_profile_t record) {
+  if (!s_app_running) {
+    return;
+  }
 
-static void module_main_cb_event(uint8_t button_name, uint8_t button_event);
-static void module_list_cb_event(uint8_t button_name, uint8_t button_event);
+  record.gps_latitude = 0.0;
+  record.gps_longitude = 0.0;
+  record.gps_valid = false;
 
-static void module_reset_menu() {
-  tracker_information_free();
-  current_item = 0;
-  module_register_menu(GENERAL_TREE_APP_SUBMENU);
-  module_display_menu(current_item);
-  menus_module_set_app_state(true, module_list_cb_event);
-}
+  portENTER_CRITICAL(&s_gps_mux);
+  if (s_have_gps) {
+    record.gps_latitude = s_latest_gps.latitude;
+    record.gps_longitude = s_latest_gps.longitude;
+    record.gps_valid = true;
+  }
+  portEXIT_CRITICAL(&s_gps_mux);
 
-static void module_handle_trackers(tracker_profile_t record) {
-  xSemaphoreTake(trackers_mutex, portMAX_DELAY);
-  int device_exists = trackers_scanner_find_profile_by_mac(
-      scanned_airtags, trackers_count, record.mac_address);
-  if (device_exists == -1) {
-    if (scanned_airtags == NULL) {
-      module_register_menu(GENERAL_TREE_APP_MENU);
-    }
-    module_add_tracker_to_list(record.name);
-    module_display_device_detected(record.name);
-    trackers_scanner_add_tracker_profile(&scanned_airtags, &trackers_count,
-                                         record);
+  record.distance = trackers_scanner_rssi_to_distance(record.rssi);
+
+  int idx = trackers_scanner_find_profile_by_mac(s_trackers, s_tracker_count,
+                                                  record.mac_address);
+  if (idx == -1) {
+    trackers_scanner_add_tracker_profile(&s_trackers, &s_tracker_count, record);
+    s_last_index = s_tracker_count - 1;
+    ESP_LOGI(TAG, "New tracker: %s (%s) %.1fm", record.name, record.vendor,
+             record.distance);
   } else {
-    scanned_airtags[device_exists].rssi = record.rssi;
-    module_update_tracker_name(scanned_airtags[device_exists].name,
-                               device_exists);
+    s_trackers[idx].rssi = record.rssi;
+    s_trackers[idx].distance = record.distance;
+    s_trackers[idx].gps_latitude = record.gps_latitude;
+    s_trackers[idx].gps_longitude = record.gps_longitude;
+    s_trackers[idx].gps_valid = record.gps_valid;
+    s_last_index = idx;
   }
-  xSemaphoreGive(trackers_mutex);
 }
 
-static void module_main_cb_event(uint8_t button_name, uint8_t button_event) {
+static void gui_update_task(void* arg) {
+  (void) arg;
+  while (s_app_running) {
+    if (!s_in_help) {
+      const char* name = NULL;
+      const char* vendor = NULL;
+      int8_t rssi = 0;
+      float distance = -1.0f;
+      bool gps_valid = false;
+      double gps_lat = 0.0;
+      double gps_lon = 0.0;
+
+      if (s_tracker_count > 0 && s_last_index < s_tracker_count) {
+        name = s_trackers[s_last_index].name;
+        vendor = s_trackers[s_last_index].vendor;
+        rssi = s_trackers[s_last_index].rssi;
+        distance = s_trackers[s_last_index].distance;
+        gps_valid = s_trackers[s_last_index].gps_valid;
+        gps_lat = s_trackers[s_last_index].gps_latitude;
+        gps_lon = s_trackers[s_last_index].gps_longitude;
+      }
+
+      trackers_screens_show_status(s_tracker_count, name, vendor, rssi,
+                                   distance, gps_valid, gps_lat, gps_lon,
+                                   s_scanning);
+    }
+    vTaskDelay(pdMS_TO_TICKS(250));
+  }
+  s_gui_task = NULL;
+  vTaskDelete(NULL);
+}
+
+static void trackers_input_cb(uint8_t button_name, uint8_t button_event) {
   if (button_event != BUTTON_PRESS_DOWN) {
     return;
   }
+
+  if (s_in_help) {
+    if (button_name == BUTTON_LEFT || button_name == BUTTON_BOOT ||
+        button_name == BUTTON_UP) {
+      s_in_help = false;
+      oled_screen_clear();
+    } else if (button_name == BUTTON_DOWN) {
+      s_help_page = (s_help_page + 1) % 2;
+      trackers_screens_show_help(s_help_page);
+    }
+    return;
+  }
+
   switch (button_name) {
+    case BUTTON_LEFT:
+      trackers_module_stop();
+      break;
     case BUTTON_UP:
-      current_item =
-          (current_item == 0) ? (TRACKERS_COUNT - 1) : (current_item - 1);
-      module_display_menu(current_item);
+      s_in_help = true;
+      s_help_page = 0;
+      trackers_screens_show_help(s_help_page);
       break;
     case BUTTON_DOWN:
-      current_item =
-          (current_item + 1 >= TRACKERS_COUNT) ? 0 : (current_item + 1);
-      module_display_menu(current_item);
-      break;
-    case BUTTON_RIGHT:
-      if (current_item == TRACKERS_SCAN && !trackers_scanned) {
-        trackers_scanned = true;
-        module_update_scan_state(trackers_scanned);
-        module_display_scanning();
-        trackers_scanner_register_cb(module_handle_trackers);
-        trackers_scanner_start();
-      } else if (current_item == TRACKERS_LIST) {
-        current_item = 0;
-        module_register_menu(GENERAL_TREE_APP_SUBMENU);
-        module_display_menu(current_item);
-        menus_module_set_app_state(true, module_list_cb_event);
-      }
-      break;
-    case BUTTON_LEFT:
-      if (current_item == TRACKERS_LIST) {
-        module_register_menu(GENERAL_TREE_APP_MENU);
-        module_display_menu(current_item);
-        menus_module_set_app_state(true, module_main_cb_event);
-      } else {
-        tracker_information_free();
+      if (s_scanning) {
         trackers_scanner_stop();
-        if (trackers_mutex) {
-          xSemaphoreTake(trackers_mutex, portMAX_DELAY);
-          if (scanned_airtags != NULL) {
-            free(scanned_airtags);
-            scanned_airtags = NULL;
-          }
-          trackers_count = 0;
-          trackers_scanned = false;
-          xSemaphoreGive(trackers_mutex);
+        s_scanning = false;
+        if (gps_hw_get_state()) {
+          gps_module_stop_read();
+          gps_module_unregister_cb();
         }
-        menus_module_restart();
+      } else {
+        if (gps_hw_get_state()) {
+          gps_module_register_cb(trackers_gps_event_cb);
+          gps_module_start_scan();
+        }
+        trackers_scanner_register_cb(on_tracker_found);
+        trackers_scanner_start();
+        s_scanning = true;
       }
       break;
     default:
@@ -125,80 +154,63 @@ static void module_main_cb_event(uint8_t button_name, uint8_t button_event) {
   }
 }
 
-static void module_list_cb_event(uint8_t button_name, uint8_t button_event) {
-  if (button_event != BUTTON_PRESS_DOWN) {
-    return;
+void trackers_module_begin(void) {
+  s_app_running = true;
+  s_in_help = false;
+  s_scanning = false;
+  s_tracker_count = 0;
+  s_last_index = 0;
+  s_have_gps = false;
+
+  if (s_trackers != NULL) {
+    free(s_trackers);
+    s_trackers = NULL;
   }
 
-  switch (button_name) {
-    case BUTTON_UP:
-      current_item = (current_item == 0)
-                         ? (trackers_count > 0 ? trackers_count - 1 : 0)
-                         : (current_item - 1);
-      module_display_menu(current_item);
-      break;
-    case BUTTON_DOWN:
-      current_item = (trackers_count > 0 && current_item + 1 >= trackers_count)
-                         ? 0
-                         : (current_item + 1);
-      module_display_menu(current_item);
-      break;
-    case BUTTON_RIGHT:
-      tracker_information_free();
-      xSemaphoreTake(trackers_mutex, portMAX_DELAY);
-      if (scanned_airtags == NULL || current_item >= trackers_count) {
-        xSemaphoreGive(trackers_mutex);
-        break;
-      }
-      char tracker_mac[20];
-      snprintf(tracker_mac, sizeof(tracker_mac),
-               "%02X:%02X:%02X:%02X:%02X:%02X",
-               scanned_airtags[current_item].mac_address[0],
-               scanned_airtags[current_item].mac_address[1],
-               scanned_airtags[current_item].mac_address[2],
-               scanned_airtags[current_item].mac_address[3],
-               scanned_airtags[current_item].mac_address[4],
-               scanned_airtags[current_item].mac_address[5]);
-      char tracker_rssi[18];
-      snprintf(tracker_rssi, sizeof(tracker_rssi), "RSSI: %d",
-               scanned_airtags[current_item].rssi);
-      char tracker_name[18];
-      snprintf(tracker_name, sizeof(tracker_name), "Name: %s",
-               scanned_airtags[current_item].name);
-      tracker_information[0] = strdup(tracker_name);
-      tracker_information[1] = strdup(tracker_rssi);
-      tracker_information[3] = strdup(tracker_mac);
-      xSemaphoreGive(trackers_mutex);
-      general_register_scrolling_menu(&trackers_information);
-      general_screen_display_scrolling_text_handler(module_reset_menu);
-      break;
-    case BUTTON_LEFT:
-      tracker_information_free();
-      trackers_scanner_stop();
-      if (trackers_mutex) {
-        xSemaphoreTake(trackers_mutex, portMAX_DELAY);
-        if (scanned_airtags != NULL) {
-          free(scanned_airtags);
-          scanned_airtags = NULL;
-        }
-        trackers_count = 0;
-        trackers_scanned = false;
-        xSemaphoreGive(trackers_mutex);
-      }
-      menus_module_set_app_state(true, module_main_cb_event);
-      module_register_menu(GENERAL_TREE_APP_MENU);
-      module_display_menu(current_item);
-      break;
-    default:
-      break;
+  menus_module_set_app_state(true, trackers_input_cb);
+
+  if (gps_hw_get_state()) {
+    gps_module_register_cb(trackers_gps_event_cb);
+    gps_module_start_scan();
+  }
+  trackers_scanner_register_cb(on_tracker_found);
+  trackers_scanner_start();
+  s_scanning = true;
+
+  if (xTaskCreate(gui_update_task, "trk_gui", 4096, NULL, 4, &s_gui_task) !=
+      pdPASS) {
+    ESP_LOGE(TAG, "Failed to create gui update task");
   }
 }
 
-void trackers_module_begin() {
-  if (trackers_mutex == NULL) {
-    trackers_mutex = xSemaphoreCreateMutex();
+void trackers_module_stop(void) {
+  s_app_running = false;
+  ESP_LOGI(TAG, "stop: exit via back");
+
+  while (s_gui_task != NULL) {
+    vTaskDelay(pdMS_TO_TICKS(10));
   }
-  module_register_menu(GENERAL_TREE_APP_MENU);
-  module_display_menu(current_item);
-  menus_module_set_app_state(true, module_main_cb_event);
+
+  if (s_scanning) {
+    trackers_scanner_stop();
+    s_scanning = false;
+  }
+
+  if (gps_hw_get_state()) {
+    gps_module_stop_read();
+    gps_module_unregister_cb();
+  }
+  portENTER_CRITICAL(&s_gps_mux);
+  s_have_gps = false;
+  portEXIT_CRITICAL(&s_gps_mux);
+
+  if (s_trackers != NULL) {
+    free(s_trackers);
+    s_trackers = NULL;
+  }
+  s_tracker_count = 0;
+
+  menus_module_set_default_input();
+  oled_screen_clear();
+  menus_module_restart();
 }

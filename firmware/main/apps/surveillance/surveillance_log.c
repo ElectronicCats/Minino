@@ -4,6 +4,8 @@
 #include <string.h>
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "sd_card.h"
 #include "wardriving_common.h"
 
@@ -19,13 +21,37 @@
   "CurrentLongitude,AltitudeMeters,AccuracyMeters,RCOIs,MfgrId,Type,"   \
   "Class,Tier,Method,Score\n"
 
+#define SURV_GPX_BUF_SZ 2048
+#define MAX_RECENT_WPTS 16
+
 static char s_csv_name[64] = SURV_DIR_NAME "/detections.csv";
 static char s_gpx_name[64] = SURV_DIR_NAME "/surveillance.gpx";
 static char s_buf[SURV_CSV_BUF_SZ];
+static char s_gpx_buf[SURV_GPX_BUF_SZ];
 static uint16_t s_lines = 0;
 static bool s_log_initialized = false;
 static bool s_gpx_header_written = false;
 static bool s_csv_header_written = false;
+static SemaphoreHandle_t s_log_mutex = NULL;
+
+static uint8_t s_recent_wpt_macs[MAX_RECENT_WPTS][6];
+static uint32_t s_recent_wpt_times[MAX_RECENT_WPTS];
+static uint8_t s_recent_wpt_idx = 0;
+
+static void log_lock(void) {
+  if (s_log_mutex == NULL) {
+    s_log_mutex = xSemaphoreCreateMutex();
+  }
+  if (s_log_mutex != NULL) {
+    xSemaphoreTake(s_log_mutex, portMAX_DELAY);
+  }
+}
+
+static void log_unlock(void) {
+  if (s_log_mutex != NULL) {
+    xSemaphoreGive(s_log_mutex);
+  }
+}
 
 static const char* class_name(surv_class_t k) {
   switch (k) {
@@ -92,13 +118,15 @@ static const char* mac_str(const uint8_t mac[6]) {
 
 static const char* date_str(const gps_t* gps) {
   static char buf[32];
-  if (gps != NULL && gps->valid) {
-    char* full = get_full_date_time((gps_t*) gps);
-    if (full != NULL) {
-      snprintf(buf, sizeof(buf), "%s", full);
-      free(full);
-      return buf;
+  if (gps != NULL && (gps->valid || gps->date.year > 0)) {
+    uint16_t year = gps->date.year;
+    if (year < 100) {
+      year += 2000;
     }
+    snprintf(buf, sizeof(buf), "%04u-%02u-%02u %02u:%02u:%02u",
+             year, gps->date.month, gps->date.day,
+             gps->tim.hour, gps->tim.minute, gps->tim.second);
+    return buf;
   }
   snprintf(buf, sizeof(buf), "uptime_%llu",
            (unsigned long long) (esp_timer_get_time() / 1000));
@@ -116,6 +144,7 @@ static void append_buffered(const char* line) {
   if (line == NULL) {
     return;
   }
+  log_lock();
   size_t cur_len = strlen(s_buf);
   size_t line_len = strlen(line);
 
@@ -129,23 +158,29 @@ static void append_buffered(const char* line) {
 
   strncat(s_buf, line, sizeof(s_buf) - strlen(s_buf) - 1);
   s_lines++;
+  log_unlock();
 }
 
 esp_err_t surveillance_log_begin(void) {
+  log_lock();
   esp_err_t err = sd_card_mount();
   if (err != ESP_OK) {
     ESP_LOGW(TAG, "SD Card not mounted, logging to SD disabled");
+    log_unlock();
     return err;
   }
 
   err = sd_card_create_dir(SURV_DIR_NAME);
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Failed to create %s directory", SURV_DIR_NAME);
+    log_unlock();
     return err;
   }
 
   s_buf[0] = '\0';
+  s_gpx_buf[0] = '\0';
   s_lines = 0;
+  memset(s_recent_wpt_times, 0, sizeof(s_recent_wpt_times));
   s_log_initialized = true;
 
   // Initialize CSV with Header if not present
@@ -166,6 +201,7 @@ esp_err_t surveillance_log_begin(void) {
 
   ESP_LOGI(TAG, "Surveillance log initialized at %s and %s", s_csv_name,
            s_gpx_name);
+  log_unlock();
   return ESP_OK;
 }
 
@@ -181,7 +217,7 @@ void surveillance_log_detection(const surv_event_t* ev,
   char lon[16] = "";
   double alt = 0.0;
 
-  if (gps != NULL && gps->valid) {
+  if (gps != NULL && (gps->valid || (gps->latitude != 0.0f && gps->longitude != 0.0f))) {
     snprintf(lat, sizeof(lat), "%.6f", gps->latitude);
     snprintf(lon, sizeof(lon), "%.6f", gps->longitude);
     alt = gps->altitude;
@@ -208,8 +244,23 @@ void surveillance_log_gpx_waypoint(const surv_event_t* ev, const gps_t* gps) {
     return;
   }
 
+  // Rate-limiting: do not duplicate waypoint for same MAC within 15 seconds
+  uint32_t now_s = (uint32_t) (esp_timer_get_time() / 1000000);
+  for (int i = 0; i < MAX_RECENT_WPTS; i++) {
+    if (s_recent_wpt_times[i] > 0 && memcmp(s_recent_wpt_macs[i], ev->mac, 6) == 0) {
+      if (now_s - s_recent_wpt_times[i] < 15) {
+        return; // Skip duplicate waypoint within 15s window
+      }
+      break;
+    }
+  }
+
+  memcpy(s_recent_wpt_macs[s_recent_wpt_idx], ev->mac, 6);
+  s_recent_wpt_times[s_recent_wpt_idx] = now_s;
+  s_recent_wpt_idx = (s_recent_wpt_idx + 1) % MAX_RECENT_WPTS;
+
   char wpt[256];
-  snprintf(wpt, sizeof(wpt),
+  int wpt_len = snprintf(wpt, sizeof(wpt),
            "  <wpt lat=\"%.6f\" lon=\"%.6f\">\n"
            "    <name>%s (%s)</name>\n"
            "    <desc>Tier %d %s | Ch %d | %d dBm</desc>\n"
@@ -219,11 +270,26 @@ void surveillance_log_gpx_waypoint(const surv_event_t* ev, const gps_t* gps) {
            mac_str(ev->mac), ev->tier, method_name(ev->tier), ev->channel,
            ev->rssi);
 
-  sd_card_append_to_file(s_gpx_name, wpt);
+  if (wpt_len <= 0) {
+    return;
+  }
+
+  log_lock();
+  size_t cur_len = strlen(s_gpx_buf);
+  if (cur_len + (size_t) wpt_len >= sizeof(s_gpx_buf) - 1) {
+    if (cur_len > 0) {
+      sd_card_append_to_file(s_gpx_name, s_gpx_buf);
+      s_gpx_buf[0] = '\0';
+    }
+  }
+  strncat(s_gpx_buf, wpt, sizeof(s_gpx_buf) - strlen(s_gpx_buf) - 1);
+  log_unlock();
 }
 
 void surveillance_log_flush(void) {
+  log_lock();
   if (!s_log_initialized) {
+    log_unlock();
     return;
   }
 
@@ -231,6 +297,11 @@ void surveillance_log_flush(void) {
     sd_card_append_to_file(s_csv_name, s_buf);
     s_buf[0] = '\0';
     s_lines = 0;
+  }
+
+  if (strlen(s_gpx_buf) > 0) {
+    sd_card_append_to_file(s_gpx_name, s_gpx_buf);
+    s_gpx_buf[0] = '\0';
   }
 
   if (s_gpx_header_written) {
@@ -241,4 +312,5 @@ void surveillance_log_flush(void) {
 
   s_log_initialized = false;
   ESP_LOGI(TAG, "Surveillance log flushed and closed");
+  log_unlock();
 }

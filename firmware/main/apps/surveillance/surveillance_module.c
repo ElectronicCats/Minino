@@ -39,11 +39,14 @@ static bool s_active_scan = false;
 static TaskHandle_t s_gui_task = NULL;
 static gps_t s_latest_gps;
 static bool s_have_gps = false;
+static portMUX_TYPE s_gps_mux = portMUX_INITIALIZER_UNLOCKED;
 
 static void surv_gps_event_cb(gps_t* gps) {
   if (gps != NULL) {
+    portENTER_CRITICAL(&s_gps_mux);
     s_latest_gps = *gps;
     s_have_gps = true;
+    portEXIT_CRITICAL(&s_gps_mux);
   }
 }
 
@@ -101,9 +104,19 @@ static void on_detection(const surv_event_t* ev, uint8_t score) {
   if (ev != NULL) {
     s_last_event = *ev;
     s_have_event = true;
-    surveillance_log_detection(ev, score, s_have_gps ? &s_latest_gps : NULL);
+    gps_t gps_snap;
+    bool have_gps = false;
+
+    portENTER_CRITICAL(&s_gps_mux);
     if (s_have_gps) {
-      surveillance_log_gpx_waypoint(ev, &s_latest_gps);
+      gps_snap = s_latest_gps;
+      have_gps = true;
+    }
+    portEXIT_CRITICAL(&s_gps_mux);
+
+    surveillance_log_detection(ev, score, have_gps ? &gps_snap : NULL);
+    if (have_gps) {
+      surveillance_log_gpx_waypoint(ev, &gps_snap);
     }
   }
   s_last_score = score;
@@ -160,8 +173,9 @@ static void surveillance_input_cb(uint8_t button_name, uint8_t button_event) {
       surveillance_screens_show_help(s_help_page);
       break;
     case BUTTON_DOWN:
-      // Rotar perfil
-      s_profile = (surv_profile_t) ((s_profile + 1) % 3);
+      // Rotar entre Flock (WiFi) y Trackers (BLE)
+      s_profile = (s_profile == SURV_PROFILE_FLOCK) ? SURV_PROFILE_TRACKERS
+                                                    : SURV_PROFILE_FLOCK;
       surv_stop();
       start_radio_for_profile();
       break;
@@ -186,7 +200,7 @@ static void start_radio_for_profile(void) {
 }
 
 void surveillance_module_begin_all(void) {
-  s_profile = SURV_PROFILE_SURVEIL;
+  s_profile = SURV_PROFILE_TRACKERS;
   surveillance_module_begin();
 }
 
@@ -218,12 +232,8 @@ void surveillance_module_begin(void) {
   s_in_help = false;
   s_have_event = false;
   s_last_score = 0;
-  if (s_profile > SURV_PROFILE_TRACKERS) {
-    s_profile = (surv_profile_t) preferences_get_uchar("surv_profile",
-                                                       SURV_PROFILE_SURVEIL);
-    if (s_profile > SURV_PROFILE_TRACKERS) {
-      s_profile = SURV_PROFILE_SURVEIL;
-    }
+  if (s_profile > SURV_PROFILE_TRACKERS || s_profile == SURV_PROFILE_SURVEIL) {
+    s_profile = SURV_PROFILE_TRACKERS;
   }
   s_active_scan = preferences_get_uchar("surv_active", 0) != 0;
 
@@ -264,7 +274,9 @@ void surveillance_module_stop(void) {
     gps_module_stop_read();
     gps_module_unregister_cb();
   }
+  portENTER_CRITICAL(&s_gps_mux);
   s_have_gps = false;
+  portEXIT_CRITICAL(&s_gps_mux);
 
   // 4. Restaurar el estado de menus y pantalla
   menus_module_set_default_input();

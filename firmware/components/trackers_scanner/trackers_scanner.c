@@ -1,5 +1,6 @@
 
 #include "trackers_scanner.h"
+#include <math.h>
 #include <string.h>
 #include "bt_gattc.h"
 #include "esp_bt.h"
@@ -212,4 +213,24 @@ int trackers_scanner_find_profile_by_mac(tracker_profile_t* profiles,
 
 bool trackers_scanner_is_active() {
   return trackers_scanner_active;
+}
+
+float trackers_scanner_rssi_to_distance(int rssi) {
+  // Log-distance path loss model: d = 10^((TxPower - RSSI) / (10 * n))
+  // TxPower = RSSI at 1 meter (calibrated for typical BLE trackers)
+  // n = path loss exponent (2.0 = free space, 2.5-3.5 = indoor/obstructed)
+  const float tx_power = -59.0f;
+  const float path_loss_exponent = 2.5f;
+  if (rssi == 0) {
+    return -1.0f;
+  }
+  float ratio = (tx_power - (float) rssi) / (10.0f * path_loss_exponent);
+  float distance = powf(10.0f, ratio);
+  if (distance < 0.1f) {
+    distance = 0.1f;
+  }
+  if (distance > 100.0f) {
+    distance = 100.0f;
+  }
+  return distance;
 }
