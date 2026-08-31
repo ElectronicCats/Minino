@@ -134,8 +134,9 @@ static void chek_for_fatal_false(bool ok, const char* err_tag) {
   }
 }
 
+static FILE* s_pcap_fp = NULL;
+
 static esp_err_t pcap_start() {
-  FILE* fp = NULL;
   bool save_in_sd = false;
   if (sd_card_mount() == ESP_OK) {
     save_in_sd = true;
@@ -163,10 +164,10 @@ static esp_err_t pcap_start() {
   files_ops_incremental_name(save_in_sd ? pcap_dir : FLASH_FS, "thread",
                              ".pcap", pcap_path);
   ESP_LOGI(TAG, "PCAP file path: %s", pcap_path);
-  fp = fopen(pcap_path, "w");
-  chek_for_fatal_false(fp, "open file failed");
+  s_pcap_fp = fopen(pcap_path, "w");
+  chek_for_fatal_false(s_pcap_fp, "open file failed");
   pcap_config_t pcap_cfg = {
-      .fp = fp,
+      .fp = s_pcap_fp,
       .major_version = PCAP_DEFAULT_VERSION_MAJOR,
       .minor_version = PCAP_DEFAULT_VERSION_MINOR,
       .time_zone = PCAP_DEFAULT_TIME_ZONE_GMT,
@@ -177,7 +178,7 @@ static esp_err_t pcap_start() {
   chek_for_fatal_error(
       pcap_write_header(thread_pcap.pcap_handle, THREAD_SNIFFER_PCAP_LINKTYPE),
       "Write header failed");
-  fflush(pcap_cfg.fp);
+  fflush(s_pcap_fp);
   thread_pcap.is_writing = true;
   ESP_LOGI(TAG, "PCAP session started successfully");
 
@@ -189,8 +190,13 @@ static esp_err_t pcap_start() {
 }
 
 static esp_err_t pcap_stop() {
-  chek_for_fatal_error(pcap_del_session(thread_pcap.pcap_handle),
-                       "stop pcap session failed");
+  if (thread_pcap.pcap_handle != NULL) {
+    pcap_del_session(thread_pcap.pcap_handle);
+  }
+  if (s_pcap_fp != NULL) {
+    fclose(s_pcap_fp);
+    s_pcap_fp = NULL;
+  }
   thread_pcap.is_opened = false;
   thread_pcap.is_writing = false;
   thread_pcap.link_type_set = false;

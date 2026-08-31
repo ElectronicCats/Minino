@@ -3,6 +3,7 @@
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "freertos/task.h"
 
 static const char* TAG = "heap_monitor";
@@ -12,6 +13,7 @@ static bool monitor_initialized = false;
 static bool monitor_running = false;
 static esp_timer_handle_t monitor_timer = NULL;
 static heap_alert_callback_t alert_callback = NULL;
+static SemaphoreHandle_t monitor_mutex = NULL;
 
 // Umbrales de alerta (en bytes)
 static size_t threshold_warning = 50 * 1024;    // 50 KB
@@ -34,11 +36,23 @@ static float calculate_fragmentation(size_t total_free, size_t largest_block) {
  * @brief Determina el nivel de alerta basado en memoria libre
  */
 static heap_alert_level_t get_alert_level_from_free(size_t free_bytes) {
-  if (free_bytes < threshold_emergency) {
+  size_t w, c, e;
+  if (monitor_mutex && xSemaphoreTake(monitor_mutex, portMAX_DELAY) == pdTRUE) {
+    w = threshold_warning;
+    c = threshold_critical;
+    e = threshold_emergency;
+    xSemaphoreGive(monitor_mutex);
+  } else {
+    w = threshold_warning;
+    c = threshold_critical;
+    e = threshold_emergency;
+  }
+
+  if (free_bytes < e) {
     return HEAP_ALERT_EMERGENCY;
-  } else if (free_bytes < threshold_critical) {
+  } else if (free_bytes < c) {
     return HEAP_ALERT_CRITICAL;
-  } else if (free_bytes < threshold_warning) {
+  } else if (free_bytes < w) {
     return HEAP_ALERT_WARNING;
   }
   return HEAP_ALERT_NONE;
@@ -73,8 +87,14 @@ static void monitor_timer_callback(void* arg) {
     }
 
     // Llamar callback personalizado si existe
-    if (alert_callback != NULL) {
-      alert_callback(current_level, &stats);
+    heap_alert_callback_t saved_cb = NULL;
+    if (monitor_mutex &&
+        xSemaphoreTake(monitor_mutex, portMAX_DELAY) == pdTRUE) {
+      saved_cb = alert_callback;
+      xSemaphoreGive(monitor_mutex);
+    }
+    if (saved_cb != NULL) {
+      saved_cb(current_level, &stats);
     }
   }
 
@@ -88,6 +108,14 @@ esp_err_t heap_monitor_init(void) {
   }
 
   ESP_LOGI(TAG, "Inicializando Memory Monitor");
+
+  if (monitor_mutex == NULL) {
+    monitor_mutex = xSemaphoreCreateMutex();
+    if (monitor_mutex == NULL) {
+      ESP_LOGE(TAG, "Error creando mutex para Memory Monitor");
+      return ESP_ERR_NO_MEM;
+    }
+  }
 
   // Obtener estadísticas iniciales
   heap_stats_t initial_stats = heap_monitor_get_stats();
@@ -172,15 +200,21 @@ heap_stats_t heap_monitor_get_stats(void) {
 }
 
 void heap_monitor_set_alert_callback(heap_alert_callback_t callback) {
-  alert_callback = callback;
+  if (monitor_mutex && xSemaphoreTake(monitor_mutex, portMAX_DELAY) == pdTRUE) {
+    alert_callback = callback;
+    xSemaphoreGive(monitor_mutex);
+  }
 }
 
 void heap_monitor_set_thresholds(size_t warning_kb,
                                  size_t critical_kb,
                                  size_t emergency_kb) {
-  threshold_warning = warning_kb * 1024;
-  threshold_critical = critical_kb * 1024;
-  threshold_emergency = emergency_kb * 1024;
+  if (monitor_mutex && xSemaphoreTake(monitor_mutex, portMAX_DELAY) == pdTRUE) {
+    threshold_warning = warning_kb * 1024;
+    threshold_critical = critical_kb * 1024;
+    threshold_emergency = emergency_kb * 1024;
+    xSemaphoreGive(monitor_mutex);
+  }
 
   ESP_LOGI(
       TAG,

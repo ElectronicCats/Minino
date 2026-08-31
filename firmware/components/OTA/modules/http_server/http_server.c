@@ -4,6 +4,7 @@
  *  Created on: 17-Jul-2023
  *      Author: xpress_embedo
  */
+#include <string.h>
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
@@ -20,6 +21,7 @@
 #define HTTP_SERVER_RECEIVE_WAIT_TIMEOUT (10u)  // in seconds
 #define HTTP_SERVER_SEND_WAIT_TIMEOUT    (10u)  // in seconds
 #define HTTP_SERVER_MONITOR_QUEUE_LEN    (3u)
+#define OTA_AUTH_TOKEN                   CONFIG_OTA_AUTH_TOKEN
 
 // Private Variables
 static const char TAG[] = "http_server";
@@ -90,6 +92,11 @@ void http_server_stop(void) {
     ESP_LOGI(TAG, "http_server_stop: stopping HTTP server monitor");
     task_http_server_monitor = NULL;
   }
+
+  if (http_server_monitor_q_handle) {
+    vQueueDelete(http_server_monitor_q_handle);
+    http_server_monitor_q_handle = NULL;
+  }
 }
 
 /*
@@ -158,13 +165,13 @@ static httpd_handle_t http_server_configure(void) {
   // Generate the default configuration
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
 
-  // create HTTP Server Monitor Task
-  xTaskCreate(&http_server_monitor, "http_server_monitor", 4 * 1024u, NULL, 3u,
-              &task_http_server_monitor);
-
   // create a message queue
   http_server_monitor_q_handle =
       xQueueCreate(HTTP_SERVER_MONITOR_QUEUE_LEN, sizeof(http_server_q_msg_t));
+
+  // create HTTP Server Monitor Task
+  xTaskCreate(&http_server_monitor, "http_server_monitor", 4 * 1024u, NULL, 3u,
+              &task_http_server_monitor);
 
   // No need to specify the core id as this is esp32s2 with single core
 
@@ -346,6 +353,56 @@ static esp_err_t http_server_favicon_handler(httpd_req_t* req) {
 }
 
 /**
+ * @brief Constant-time comparison to prevent timing side-channel attacks
+ */
+static bool secure_memcmp(const void* a, const void* b, size_t len) {
+  const volatile uint8_t* x = (const volatile uint8_t*) a;
+  const volatile uint8_t* y = (const volatile uint8_t*) b;
+  volatile uint8_t diff = 0;
+  for (size_t i = 0; i < len; i++) {
+    diff |= x[i] ^ y[i];
+  }
+  return diff == 0;
+}
+
+/**
+ * @brief Check OTA authorization token from HTTP header
+ * @param req HTTP request to check
+ * @return true if authorized, false otherwise
+ */
+static bool http_server_check_ota_auth(httpd_req_t* req) {
+  char buf[512];
+  int ret = httpd_req_get_hdr_value_str(req, "Authorization", buf, sizeof(buf));
+  bool authorized = false;
+  if (ret == ESP_OK) {
+    const char* token = strstr(buf, "Bearer ");
+    if (token) {
+      token += 7;
+    } else {
+      token = buf;
+    }
+    size_t token_len = strlen(token);
+    while (token_len > 0 &&
+           (token[token_len - 1] == ' ' || token[token_len - 1] == '\r' ||
+            token[token_len - 1] == '\n')) {
+      token_len--;
+    }
+    const char* expected = OTA_AUTH_TOKEN;
+    size_t expected_len = strlen(expected);
+    if (token_len == expected_len &&
+        secure_memcmp(token, expected, expected_len)) {
+      authorized = true;
+    }
+  }
+  if (!authorized) {
+    ESP_LOGW(TAG, "OTA request rejected: invalid or missing auth token");
+    httpd_resp_set_status(req, "401 Unauthorized");
+    httpd_resp_send(req, "Unauthorized", -1);
+  }
+  return authorized;
+}
+
+/**
  * @brief Receives the *.bin file via the web page and handles the firmware
  * update
  * @param req HTTP request for which the uri needs to be handled
@@ -353,6 +410,10 @@ static esp_err_t http_server_favicon_handler(httpd_req_t* req) {
  * started
  */
 static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
+  if (!http_server_check_ota_auth(req)) {
+    return ESP_FAIL;
+  }
+
   esp_err_t error;
   esp_ota_handle_t ota_handle;
   char ota_buffer[1024];
@@ -405,6 +466,10 @@ static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
       // If there is some other error apart from Timeout, then exit with fail
       ESP_LOGI(TAG, "http_server_ota_update_handler: OTA Other Error, %d",
                recv_len);
+      if (is_req_body_started) {
+        esp_ota_abort(ota_handle);
+      }
+      is_ota_running = false;
       OTA_call_show_event_cb(OTA_SHOW_RESULT_EVENT, &flash_successful);
       return ESP_FAIL;
     }
@@ -419,14 +484,20 @@ static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
     // the information in the header that we need
     if (!is_req_body_started) {
       is_req_body_started = true;
-      // Now we have to identify from where the binary file content is starting
-      // this can be done by actually checking the escape characters i.e.
-      // \r\n\r\n Get the location of the *.bin file content (remove the web
-      // form data) the strstr will return the pointer to the \r\n\r\n in the
-      // ota_buffer and then by adding 4 we reach to the start of the binary
-      // content/start
-      char* body_start_p = strstr(ota_buffer, "\r\n\r\n") + 4u;
-      int body_part_len = recv_len - (body_start_p - ota_buffer);
+      // Identify from where the binary file content starts.
+      // Search for \r\n\r\n boundary safely within the received bytes
+      char* header_end = NULL;
+      for (int i = 0; i <= recv_len - 4; i++) {
+        if (ota_buffer[i] == '\r' && ota_buffer[i + 1] == '\n' &&
+            ota_buffer[i + 2] == '\r' && ota_buffer[i + 3] == '\n') {
+          header_end = &ota_buffer[i];
+          break;
+        }
+      }
+
+      char* body_start_p = header_end ? (header_end + 4) : ota_buffer;
+      int body_part_len =
+          header_end ? (recv_len - (body_start_p - ota_buffer)) : recv_len;
       ESP_LOGI(TAG, "http_server_ota_update_handler: OTA File Size: %d",
                content_len);
       /*
@@ -496,6 +567,7 @@ static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
   } else {
     http_server_monitor_send_msg(HTTP_MSG_WIFI_OTA_UPDATE_FAILED);
   }
+  is_ota_running = false;
   OTA_call_show_event_cb(OTA_SHOW_RESULT_EVENT, &flash_successful);
   return ESP_OK;
 }
@@ -508,12 +580,16 @@ static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
  * @return ESP_OK
  */
 static esp_err_t http_server_ota_status_handler(httpd_req_t* req) {
-  char ota_JSON[100];
+  if (!http_server_check_ota_auth(req)) {
+    return ESP_FAIL;
+  }
+
+  char ota_JSON[128];
   ESP_LOGI(TAG, "OTA Status Requested");
-  sprintf(ota_JSON,
-          "{\"ota_update_status\":%d,\"current_fw_version\":"
-          "\"%s\"}",
-          fw_update_status, CURRENT_FW_VERSION);
+  snprintf(ota_JSON, sizeof(ota_JSON),
+           "{\"ota_update_status\":%d,\"current_fw_version\":"
+           "\"%s\"}",
+           fw_update_status, CURRENT_FW_VERSION);
 
   httpd_resp_set_type(req, "application/json");
   httpd_resp_send(req, ota_JSON, strlen(ota_JSON));

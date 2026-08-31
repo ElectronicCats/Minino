@@ -1,7 +1,11 @@
 #include "sd_card.h"
 
 #include <dirent.h>
+#include <errno.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include "driver/sdmmc_host.h"
 #include "driver/sdspi_host.h"
 #include "driver/spi_common.h"
@@ -40,10 +44,29 @@ const char* f_result_to_name[] = {"FR_OK",
                                   "FR_TOO_MANY_OPEN_FILES",
                                   "FR_INVALID_PARAMETER"};
 
+#include "freertos/semphr.h"
+
 static const char* TAG = "sd_card";
-sdmmc_card_t* card;
+sdmmc_card_t* card = NULL;
 bool _format_if_mount_failed = false;
 sd_card_info_t _sd_card_info;
+static bool s_sd_card_mounted = false;
+static SemaphoreHandle_t s_sd_mutex = NULL;
+
+static void sd_card_lock() {
+  if (s_sd_mutex == NULL) {
+    s_sd_mutex = xSemaphoreCreateMutex();
+  }
+  if (s_sd_mutex != NULL) {
+    xSemaphoreTake(s_sd_mutex, portMAX_DELAY);
+  }
+}
+
+static void sd_card_unlock() {
+  if (s_sd_mutex != NULL) {
+    xSemaphoreGive(s_sd_mutex);
+  }
+}
 
 esp_err_t sd_card_fill_info(const sdmmc_card_t* card);
 
@@ -89,8 +112,8 @@ int mount() {
       .max_transfer_sz = 4000,
   };
   ret = spi_bus_initialize(host.slot, &bus_cfg, SPI_DMA_CH_AUTO);
-  if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to initialize bus.");
+  if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+    ESP_LOGE(TAG, "Failed to initialize bus: %s", esp_err_to_name(ret));
     return ESP_ERR_NO_MEM;
   }
 
@@ -110,51 +133,44 @@ int mount() {
                "Failed to mount filesystem. "
                "If you want the card to be formatted, set "
                "format_if_mount_failed = true.");
-      spi_bus_free(host.slot);
       return ESP_ERR_NOT_SUPPORTED;
     } else {
       ESP_LOGE(TAG,
                "Failed to initialize the card (%s). "
                "Make sure SD card lines have pull-up resistors in place.",
                esp_err_to_name(ret));
-      // Free the bus after mounting failed
-      spi_bus_free(host.slot);
       return ESP_ERR_NOT_FOUND;
     }
   }
   /* print card info if mount successfully */
   // sdmmc_card_print_info(stdout, card);
   sd_card_fill_info(card);
+  s_sd_card_mounted = true;
   return ESP_OK;
 }
 
 esp_err_t unmount() {
-  esp_err_t ret;
-
   if (sd_card_is_not_mounted()) {
     ESP_LOGE(TAG, "SD card not mounted");
     return ESP_ERR_NOT_ALLOWED;
   }
 
-  sdmmc_host_t host = SDSPI_HOST_DEFAULT();
-
   /* unmount sd card */
-  // TODO: use esp_vfs_fat_sdcard_unmount instead
   if (esp_vfs_fat_sdcard_unmount(MOUNT_POINT, card) != ESP_OK) {
     ESP_LOGE(TAG, "Card unmount failed");
     return ESP_FAIL;
   }
-  ret = spi_bus_free(host.slot);
-  if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Failed to deinitialize bus.");
-    return ESP_FAIL;
-  }
+  card = NULL;
+  s_sd_card_mounted = false;
 
   ESP_LOGI(TAG, "Card unmounted");
   return ESP_OK;
 }
 
 void sd_card_begin() {
+  if (s_sd_mutex == NULL) {
+    s_sd_mutex = xSemaphoreCreateMutex();
+  }
 #if !defined(CONFIG_SD_CARD_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
@@ -172,19 +188,20 @@ esp_err_t sd_card_mount() {
   }
 
   err = mount();
-  if (err == ESP_OK) {
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to mount SD card: %s", esp_err_to_name(err));
     return err;
-  } else {
-    ESP_LOGE(TAG, "Failed to mount SD card");
   }
-  return err;
+
+  return ESP_OK;
 }
 
 esp_err_t sd_card_unmount() {
   if (sd_card_is_not_mounted()) {
-    ESP_LOGE(TAG, "SD card not mounted");
+    ESP_LOGW(TAG, "SD card not mounted");
     return ESP_OK;
   }
+
   return unmount();
 }
 
@@ -219,24 +236,63 @@ esp_err_t sd_card_format() {
 }
 
 bool sd_card_is_mounted() {
-  return sd_card_create_dir(".minino") == ESP_OK;
+  return s_sd_card_mounted && (card != NULL);
 }
 
 bool sd_card_is_not_mounted() {
   return !sd_card_is_mounted();
 }
 
+static void sd_card_build_full_path(const char* path,
+                                    char* full_path,
+                                    size_t max_len) {
+  if (path == NULL || full_path == NULL || max_len == 0) {
+    return;
+  }
+  // Sanitize path against directory traversal
+  if (strstr(path, "..") != NULL || strchr(path, '\\') != NULL) {
+    full_path[0] = '\0';
+    return;
+  }
+  if (strncmp(path, MOUNT_POINT, strlen(MOUNT_POINT)) == 0) {
+    snprintf(full_path, max_len, "%s", path);
+  } else if (path[0] == '/') {
+    snprintf(full_path, max_len, "%s%s", MOUNT_POINT, path);
+  } else {
+    snprintf(full_path, max_len, "%s/%s", MOUNT_POINT, path);
+  }
+}
+
 esp_err_t sd_card_create_dir(const char* dir_name) {
-  FRESULT res = f_mkdir(dir_name);
-  if (res == FR_OK) {
-    ESP_LOGI(TAG, "Directory created");
-    return ESP_OK;
-  } else if (res == FR_EXIST) {
-    ESP_LOGW(TAG, "Directory already exists");
+  if (sd_card_is_not_mounted()) {
+    ESP_LOGE(TAG, "SD card not mounted");
+    return ESP_FAIL;
+  }
+
+  if (dir_name == NULL) {
+    return ESP_ERR_INVALID_ARG;
+  }
+
+  char full_path[256];
+  sd_card_build_full_path(dir_name, full_path, sizeof(full_path));
+
+  struct stat st;
+  if (stat(full_path, &st) == 0) {
+    if (S_ISDIR(st.st_mode)) {
+      return ESP_OK;
+    }
+  }
+
+  sd_card_lock();
+  int res = mkdir(full_path, 0777);
+  sd_card_unlock();
+
+  if (res == 0 || errno == EEXIST) {
+    ESP_LOGI(TAG, "Directory ready: %s", full_path);
     return ESP_OK;
   } else {
-    ESP_LOGE(TAG, "Failed to create directory, reason: %s",
-             f_result_to_name[res]);
+    ESP_LOGE(TAG, "Failed to create directory %s: %s", full_path,
+             strerror(errno));
     return ESP_FAIL;
   }
 }
@@ -259,26 +315,33 @@ esp_err_t sd_card_create_file(const char* path) {
     return ESP_FAIL;
   }
 
-  uint16_t path_len = strlen(path);
-  char full_path[path_len + 1 + strlen(MOUNT_POINT)];
-  sprintf(full_path, "%s/%s", MOUNT_POINT, path);
+  if (path == NULL) {
+    ESP_LOGE(TAG, "Path is NULL");
+    return ESP_ERR_INVALID_ARG;
+  }
 
+  char full_path[256];
+  sd_card_build_full_path(path, full_path, sizeof(full_path));
+
+  sd_card_lock();
   // Try to read it to check if it exists
   FILE* file = fopen(full_path, "r");
   if (file != NULL) {
     ESP_LOGE(TAG, "File already exists");
     fclose(file);
+    sd_card_unlock();
     return ESP_ERR_FILE_EXISTS;
   }
 
-  fclose(file);
   file = fopen(full_path, "w");
   if (file == NULL) {
     ESP_LOGE(TAG, "Failed to open file for writing");
+    sd_card_unlock();
     return ESP_FAIL;
   }
 
   fclose(file);
+  sd_card_unlock();
   return ESP_OK;
 }
 
@@ -293,14 +356,15 @@ esp_err_t sd_card_read_file(const char* path) {
     return ESP_FAIL;
   }
 
-  uint16_t path_len = strlen(path);
-  char full_path[path_len + 1 + strlen(MOUNT_POINT)];
-  sprintf(full_path, "%s/%s", MOUNT_POINT, path);
+  char full_path[256];
+  sd_card_build_full_path(path, full_path, sizeof(full_path));
 
+  sd_card_lock();
   ESP_LOGI(TAG, "Reading file %s", full_path);
   FILE* file = fopen(full_path, "r");
   if (file == NULL) {
     ESP_LOGE(TAG, "Failed to open file for reading");
+    sd_card_unlock();
     return ESP_FAIL;
   }
 
@@ -315,6 +379,7 @@ esp_err_t sd_card_read_file(const char* path) {
     ESP_LOGI(TAG, "'%s'", line);
   }
   fclose(file);
+  sd_card_unlock();
 
   return ESP_OK;
 }
@@ -325,18 +390,25 @@ esp_err_t sd_card_write_file(const char* path, char* data) {
     return ESP_FAIL;
   }
 
-  uint8_t path_len = strlen(path);
-  char full_path[path_len + 1 + strlen(MOUNT_POINT)];
-  sprintf(full_path, "%s/%s", MOUNT_POINT, path);
+  if (path == NULL || data == NULL) {
+    ESP_LOGE(TAG, "Invalid argument: path or data is NULL");
+    return ESP_ERR_INVALID_ARG;
+  }
 
+  char full_path[256];
+  sd_card_build_full_path(path, full_path, sizeof(full_path));
+
+  sd_card_lock();
   ESP_LOGI(TAG, "Opening file w %s", full_path);
   FILE* file = fopen(full_path, "w");
   if (file == NULL) {
     ESP_LOGE(TAG, "Failed to open file for writing");
+    sd_card_unlock();
     return ESP_FAIL;
   }
-  fprintf(file, data);
+  fputs(data, file);
   fclose(file);
+  sd_card_unlock();
   ESP_LOGI(TAG, "File written");
 
   return ESP_OK;
@@ -348,29 +420,39 @@ esp_err_t sd_card_append_to_file(const char* path, char* data) {
     return ESP_FAIL;
   }
 
-  char full_path[64];
-  sprintf(full_path, "%s/%s", MOUNT_POINT, path);
+  if (path == NULL || data == NULL) {
+    ESP_LOGE(TAG, "Invalid argument: path or data is NULL");
+    return ESP_ERR_INVALID_ARG;
+  }
 
+  char full_path[256];
+  sd_card_build_full_path(path, full_path, sizeof(full_path));
+
+  sd_card_lock();
   ESP_LOGI(TAG, "Opening file a %s", full_path);
   FILE* file = fopen(full_path, "a");
   if (file == NULL) {
     ESP_LOGE(TAG, "Failed to open file for writing");
+    sd_card_unlock();
     return ESP_FAIL;
   }
   size_t data_len = strlen(data);
   size_t written = fwrite(data, 1, data_len, file);
   if (written != data_len) {
     ESP_LOGE(TAG, "Failed to write all data to file: wrote %d of %d bytes",
-             written, data_len);
+             (int) written, (int) data_len);
     fclose(file);
+    sd_card_unlock();
     return ESP_FAIL;
   }
   if (fflush(file) != 0) {
     ESP_LOGE(TAG, "Failed to flush file");
     fclose(file);
+    sd_card_unlock();
     return ESP_FAIL;
   }
   fclose(file);
+  sd_card_unlock();
   ESP_LOGI(TAG, "File written");
 
   return ESP_OK;
@@ -383,7 +465,7 @@ size_t sd_card_get_file_size(FILE* file) {
   long current_ptr = ftell(file);
   fseek(file, 0, SEEK_END);
   size_t file_size = ftell(file);
-  fseek(file, 0, current_ptr);
+  fseek(file, current_ptr, SEEK_SET);
   return file_size;
 }
 

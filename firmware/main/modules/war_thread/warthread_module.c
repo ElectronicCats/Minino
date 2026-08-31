@@ -66,7 +66,7 @@ static void wardriving_screens_thread_animation_task() {
     static uint8_t idx = 0;
     oled_screen_display_bitmap(thread_sniffer_bitmap_arr[idx], 0, 0, 32, 32,
                                OLED_DISPLAY_NORMAL);
-    idx = ++idx > 3 ? 0 : idx;
+    idx = (idx + 1 > 3) ? 0 : (idx + 1);
     vTaskDelay(500 / portTICK_PERIOD_MS);
   }
   vTaskDelete(NULL);
@@ -172,47 +172,45 @@ static void thread_gps_event_handler_cb(gps_t* gps) {
 static void warthread_packet_handler(const otRadioFrame* aFrame,
                                      bool aIsTx,
                                      void* aContext) {
-  if (gps_ctx->sats_in_use == 0) {
-    ESP_LOGW(TAG, "No GPS signa dont saved");
+  if (aFrame == NULL || aFrame->mLength < 16 || gps_ctx == NULL ||
+      gps_ctx->sats_in_use == 0) {
     return;
   }
 
   uint8_t position = 0;
-  char* protocol_type = malloc(24);
-  char* udp_source_str = malloc(8);
-  char* udp_destination_str = malloc(8);
+  char protocol_type[24] = {0};
+  char udp_source_str[16] = {0};
+  char udp_destination_str[16] = {0};
+  char extd_source_str[24] = {0};
+  char csv_line_buffer[CSV_LINE_SIZE] = {0};
+
   // IEEE 802.15.4 Base Frame
   uint16_t frame_control_field = *((uint16_t*) &aFrame->mPsdu[position]);
   position += sizeof(uint16_t);
-  // uint8_t sequence_number = *((uint8_t*) &aFrame->mPsdu[position]);
   position += sizeof(uint8_t);
   uint16_t destination_pan = *((uint16_t*) &aFrame->mPsdu[position]);
   position += sizeof(uint16_t);
   uint16_t destination = *((uint16_t*) &aFrame->mPsdu[position]);
   position += sizeof(uint16_t);
   uint8_t extd_source[8] = {0};
-  char* extd_source_str = malloc(24);
   for (uint8_t idx = 0; idx < sizeof(extd_source); idx++) {
     extd_source[idx] = aFrame->mPsdu[position + sizeof(extd_source) - 1 - idx];
   }
   position += sizeof(extd_source);
-  sprintf(extd_source_str, ZB_ADDRESS_FORMAT, extd_source[0], extd_source[1],
-          extd_source[2], extd_source[3], extd_source[4], extd_source[5],
-          extd_source[6], extd_source[7]);
+  snprintf(extd_source_str, sizeof(extd_source_str), ZB_ADDRESS_FORMAT,
+           extd_source[0], extd_source[1], extd_source[2], extd_source[3],
+           extd_source[4], extd_source[5], extd_source[6], extd_source[7]);
 
-  // uint8_t fcs = *((uint8_t*) &aFrame->mPsdu[position]);
   position += sizeof(uint8_t);
   if (frame_control_field == THREAD_FCF_IEEE_PACKET) {
-    strcpy(protocol_type, PROTOCOL_TYPE_IEEE);
-    sprintf(udp_source_str, "%s", "");
-    sprintf(udp_destination_str, "%s", "");
+    strncpy(protocol_type, PROTOCOL_TYPE_IEEE, sizeof(protocol_type) - 1);
   } else if (frame_control_field == THREAD_FCF_MLE_PACKET) {
-    strcpy(protocol_type, PROTOCOL_TYPE_MLE);
-    // 2 bytes from IPHC Header offset
+    if (aFrame->mLength < (position + 8)) {
+      return;
+    }
+    strncpy(protocol_type, PROTOCOL_TYPE_MLE, sizeof(protocol_type) - 1);
     position += sizeof(uint8_t);
-    // uint8_t mle_destination = *((uint8_t*) &aFrame->mPsdu[position]);
     position += sizeof(uint8_t);
-    // Header Compresion offset
     position += sizeof(uint8_t);
     uint16_t mle_udp_source_port =
         lwip_ntohs(*((uint16_t*) &aFrame->mPsdu[position]));
@@ -220,38 +218,34 @@ static void warthread_packet_handler(const otRadioFrame* aFrame,
     uint16_t mle_udp_destination_port =
         lwip_ntohs(*((uint16_t*) &aFrame->mPsdu[position]));
     position += sizeof(uint16_t);
-    // uint16_t mle_udp_checksum =
-    //     lwip_ntohs(*((uint16_t*) &aFrame->mPsdu[position]));
     position += sizeof(uint16_t);
 
-    sprintf(udp_source_str, "%d", mle_udp_source_port);
-    sprintf(udp_destination_str, "%d", mle_udp_destination_port);
-
+    snprintf(udp_source_str, sizeof(udp_source_str), "%d", mle_udp_source_port);
+    snprintf(udp_destination_str, sizeof(udp_destination_str), "%d",
+             mle_udp_destination_port);
   } else {
     return;
   }
 
-  char* csv_line_buffer = malloc(CSV_LINE_SIZE);
-
   // ""DestinationPAN,Destination,ExtendedSource,Channel,UDPSource,UDPDestination,Protocol,""
-  sprintf(csv_line_buffer,
-          "0x%04x,0x%04x,%s,%d,%s,%s,%s,%f,%f,%f,%f,%s,%s,%s\n",
-          destination_pan, destination, extd_source_str, current_channel,
-          udp_source_str, udp_destination_str, protocol_type,
-          // CurrentLatitude
-          gps_ctx->latitude,
-          // CurrentLongitude
-          gps_ctx->longitude,
-          // AltitudeMeters
-          gps_ctx->altitude,
-          // AccuracyMeters
-          GPS_ACCURACY,
-          // RCOIs
-          "",
-          // MfgrId
-          "",
-          // Type
-          "Thread");
+  snprintf(csv_line_buffer, sizeof(csv_line_buffer),
+           "0x%04x,0x%04x,%s,%d,%s,%s,%s,%f,%f,%f,%f,%s,%s,%s\n",
+           destination_pan, destination, extd_source_str, current_channel,
+           udp_source_str, udp_destination_str, protocol_type,
+           // CurrentLatitude
+           gps_ctx->latitude,
+           // CurrentLongitude
+           gps_ctx->longitude,
+           // AltitudeMeters
+           gps_ctx->altitude,
+           // AccuracyMeters
+           GPS_ACCURACY,
+           // RCOIs
+           "",
+           // MfgrId
+           "",
+           // Type
+           "Thread");
 
   if (context_session.session_records_count >= MAX_CSV_LINES) {
     ESP_LOGW(TAG, "Max CSV lines reached, writing to file");
@@ -280,14 +274,6 @@ static void warthread_packet_handler(const otRadioFrame* aFrame,
   context_session.session_records_count++;
   wardriving_screens_module_scanning(context_session.session_records_count,
                                      gps_module_get_signal_strength(gps_ctx));
-  if (csv_line_buffer != NULL) {
-    free(csv_line_buffer);
-  }
-  if (protocol_type != NULL) {
-    free(protocol_type);
-    free(udp_source_str);
-    free(udp_destination_str);
-  }
 }
 
 void warthread_module_begin() {
@@ -338,6 +324,16 @@ void warthread_module_begin() {
 
 void warthread_module_exit() {
   running_thread_channel_hopp = false;
+  if (scanning_thread_channel_task_handle != NULL) {
+    vTaskDelete(scanning_thread_channel_task_handle);
+    scanning_thread_channel_task_handle = NULL;
+  }
+  if (scanning_thread_animation_task_handle != NULL) {
+    vTaskDelete(scanning_thread_animation_task_handle);
+    scanning_thread_animation_task_handle = NULL;
+  }
+  gps_module_stop_read();
+  gps_module_unregister_cb();
   sd_card_read_file(csv_file_name);
   sd_card_unmount();
 
@@ -349,13 +345,18 @@ void warthread_module_exit() {
     free(csv_file_name);
     csv_file_name = NULL;
   }
+  if (context_session.session_str != NULL &&
+      strlen(context_session.session_str) > 0) {
+    free(context_session.session_str);
+    context_session.session_str = "";
+  }
 
   if (!running) {
     return;
   }
-  vTaskDelay(pdMS_TO_TICKS(500));
+  vTaskDelay(pdMS_TO_TICKS(100));
   openthread_disable_promiscous_mode();
-  vTaskDelay(pdMS_TO_TICKS(500));
   openthread_deinit();
-  vTaskDelay(pdMS_TO_TICKS(500));
+  radio_selector_set_stack_initialized(false);
+  radio_selector_set_platform_configured(false);
 }

@@ -67,14 +67,22 @@ struct dns_server_handle {
    .-seperated name returns the pointer to the next part of the packet
 */
 static char* parse_dns_name(char* raw_name,
+                            char* packet_end,
                             char* parsed_name,
                             size_t parsed_name_max_len) {
+  if (raw_name == NULL || packet_end == NULL || parsed_name == NULL ||
+      raw_name >= packet_end || parsed_name_max_len == 0) {
+    return NULL;
+  }
   char* label = raw_name;
   char* name_itr = parsed_name;
   int name_len = 0;
 
-  do {
-    int sub_name_len = *label;
+  while (label < packet_end && *label != 0) {
+    uint8_t sub_name_len = (uint8_t) (*label);
+    if ((label + 1 + sub_name_len) >= packet_end) {
+      return NULL;
+    }
     // (len + 1) since we are adding  a '.'
     name_len += (sub_name_len + 1);
     if (name_len > parsed_name_max_len) {
@@ -85,11 +93,19 @@ static char* parse_dns_name(char* raw_name,
     memcpy(name_itr, label + 1, sub_name_len);
     name_itr[sub_name_len] = '.';
     name_itr += (sub_name_len + 1);
-    label += sub_name_len + 1;
-  } while (*label != 0);
+    label += (sub_name_len + 1);
+  }
+
+  if (label >= packet_end || *label != 0) {
+    return NULL;
+  }
 
   // Terminate the final string, replacing the last '.'
-  parsed_name[name_len - 1] = '\0';
+  if (name_len > 0) {
+    parsed_name[name_len - 1] = '\0';
+  } else {
+    parsed_name[0] = '\0';
+  }
   // Return pointer to first char after the name
   return label + 1;
 }
@@ -100,7 +116,7 @@ static int parse_dns_request(char* req,
                              char* dns_reply,
                              size_t dns_reply_max_len,
                              dns_server_handle_t h) {
-  if (req_len > dns_reply_max_len) {
+  if (req_len < sizeof(dns_header_t) || req_len > dns_reply_max_len) {
     return -1;
   }
 
@@ -124,7 +140,11 @@ static int parse_dns_request(char* req,
   uint16_t qd_count = ntohs(header->qd_count);
   header->an_count = htons(qd_count);
 
-  int reply_len = qd_count * sizeof(dns_answer_t) + req_len;
+  // Validate qd_count to prevent integer overflow
+  if (qd_count > 64) {
+    return -1;
+  }
+  size_t reply_len = (size_t) qd_count * sizeof(dns_answer_t) + req_len;
   if (reply_len > dns_reply_max_len) {
     return -1;
   }
@@ -132,13 +152,17 @@ static int parse_dns_request(char* req,
   // Pointer to current answer and question
   char* cur_ans_ptr = dns_reply + req_len;
   char* cur_qd_ptr = dns_reply + sizeof(dns_header_t);
+  char* packet_end = dns_reply + req_len;
   char name[128];
 
+  int an_count = 0;
   // Respond to all questions based on configured rules
   for (int qd_i = 0; qd_i < qd_count; qd_i++) {
-    char* name_end_ptr = parse_dns_name(cur_qd_ptr, name, sizeof(name));
-    if (name_end_ptr == NULL) {
-      ESP_LOGE(TAG, "Failed to parse DNS question: %s", cur_qd_ptr);
+    char* name_end_ptr =
+        parse_dns_name(cur_qd_ptr, packet_end, name, sizeof(name));
+    if (name_end_ptr == NULL ||
+        (name_end_ptr + sizeof(dns_question_t)) > packet_end) {
+      ESP_LOGE(TAG, "Failed to parse DNS question");
       return -1;
     }
 
@@ -164,7 +188,7 @@ static int parse_dns_request(char* req,
                 esp_netif_get_handle_from_ifkey(h->entry[i].if_key), &ip_info);
             ip.addr = ip_info.ip.addr;
             break;
-          } else if (h->entry->ip.addr != IPADDR_ANY) {
+          } else if (h->entry[i].ip.addr != IPADDR_ANY) {
             ip.addr = h->entry[i].ip.addr;
             break;
           }
@@ -172,6 +196,7 @@ static int parse_dns_request(char* req,
       }
       if (ip.addr ==
           IPADDR_ANY) {  // no rule applies, continue with another question
+        cur_qd_ptr = name_end_ptr + sizeof(dns_question_t);
         continue;
       }
       dns_answer_t* answer = (dns_answer_t*) cur_ans_ptr;
@@ -186,9 +211,13 @@ static int parse_dns_request(char* req,
 
       answer->addr_len = htons(sizeof(ip.addr));
       answer->ip_addr = ip.addr;
+      cur_ans_ptr += sizeof(dns_answer_t);
+      an_count++;
     }
+    cur_qd_ptr = name_end_ptr + sizeof(dns_question_t);
   }
-  return reply_len;
+  header->an_count = htons(an_count);
+  return (cur_ans_ptr - dns_reply);
 }
 
 /*
@@ -196,7 +225,7 @@ static int parse_dns_request(char* req,
     replies to all type A queries with the IP of the softAP
 */
 void dns_server_task(void* pvParameters) {
-  char rx_buffer[128];
+  char rx_buffer[512];
   char addr_str[128];
   int addr_family;
   int ip_protocol;
@@ -302,7 +331,10 @@ dns_server_handle_t start_dns_server(dns_server_config_t* config) {
 void stop_dns_server(dns_server_handle_t handle) {
   if (handle) {
     handle->started = false;
-    vTaskDelete(handle->task);
+    // Esperar a que la tarea se detenga antes de liberar
+    if (handle->task != NULL) {
+      vTaskDelay(pdMS_TO_TICKS(100));
+    }
     free(handle);
   }
 }

@@ -1,4 +1,5 @@
 #include "drone_id_screens.h"
+#include "drone_id.h"
 #include "drone_id_preferences.h"
 #include "drone_id_scenes.h"
 #include "menus_module.h"
@@ -11,6 +12,7 @@ static void main_screen_input_cb(uint8_t button, uint8_t event) {
              button == BUTTON_RIGHT) {
     return;  // No hacer nada
   }
+  drone_id_stop();
   drone_id_scenes_main();
 }
 

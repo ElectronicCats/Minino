@@ -9,6 +9,19 @@ static bool run_once = false;
 static uint8_t default_ap_mac[6];
 static esp_err_t err;
 
+// Config cohesionada con el presupuesto de RAM del ESP32-C6. El default de
+// ESP-IDF reserva 32 buffers dinamicos de Rx (cada uno ~1.7 KB) que, junto al
+// stack BT en coexistencia, dejan al dispositivo sin heap y hacen fallar el
+// init del controlador Bluetooth con ESP_ERR_NO_MEM. El sniffer 802.11 es de
+// por si con perdidas: 8 buffers dinamicos bastan.
+static wifi_init_config_t wifi_slim_init_config(void) {
+  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+  cfg.static_rx_buf_num = 4;
+  cfg.dynamic_rx_buf_num = 8;
+  cfg.dynamic_tx_buf_num = 8;
+  return cfg;
+}
+
 wifi_config_t wifi_driver_access_point_begin() {
   // #if !defined(CONFIG_WIFI_CONTROLLER_DEBUG)
   //   esp_log_level_set(TAG_WIFI_DRIVER, ESP_LOG_NONE);
@@ -83,7 +96,7 @@ void wifi_driver_init_apsta(void) {
     netif_default_created = true;
   }
 
-  wifi_init_config_t wifi_init_config = WIFI_INIT_CONFIG_DEFAULT();
+  wifi_init_config_t wifi_init_config = wifi_slim_init_config();
 
   ESP_ERROR_CHECK(esp_wifi_init(&wifi_init_config));
   ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
@@ -96,11 +109,17 @@ void wifi_driver_init_apsta(void) {
 }
 
 void wifi_driver_init_sta(void) {
+  if (wifi_driver_initialized) {
+    wifi_driver_deinit();
+  }
+
   esp_err_t err = esp_netif_init();
-  if (err != ESP_OK) {
+  if (err == ESP_ERR_INVALID_STATE) {
+    ESP_LOGI(TAG_WIFI_DRIVER, "netif already initialized");
+  } else if (err != ESP_OK) {
     ESP_LOGE(TAG_WIFI_DRIVER, "Error initializing netif: %s",
              esp_err_to_name(err));
-    esp_restart();
+    // No reiniciar - seguir intentando
   }
   err = esp_event_loop_create_default();
   if (err == ESP_ERR_INVALID_STATE) {
@@ -119,7 +138,7 @@ void wifi_driver_init_sta(void) {
     assert(sta_netif);
   }
 
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+  wifi_init_config_t cfg = wifi_slim_init_config();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
@@ -139,7 +158,7 @@ void wifi_driver_init_null(void) {
              esp_err_to_name(err));
     esp_restart();
   }
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+  wifi_init_config_t cfg = wifi_slim_init_config();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
   // ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
@@ -150,6 +169,19 @@ void wifi_driver_deinit() {
   ESP_ERROR_CHECK(esp_wifi_stop());
   ESP_ERROR_CHECK(esp_wifi_deinit());
   wifi_driver_initialized = false;
+}
+
+// Libera el radio 2.4GHz para otros stacks (p.ej. BLE puro) sin asumir que
+// Wi-Fi estuviera iniciado: deinit() directo haria abort() si nunca se
+// inicializo, porque ESP_ERROR_CHECK no perdona ESP_ERR_WIFI_NOT_INIT.
+void wifi_driver_deinit_if_started(void) {
+  if (wifi_driver_initialized) {
+    wifi_driver_deinit();
+  }
+}
+
+bool wifi_driver_get_initialized(void) {
+  return wifi_driver_initialized;
 }
 
 void wifi_driver_sta_disconnect() {

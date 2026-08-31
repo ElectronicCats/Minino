@@ -1,0 +1,222 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+#include "surv_ie.h"
+#include "surv_match.h"
+#include "surv_overlay.h"
+#include "surv_test.h"
+
+TEST_CASE("un OUI anadido pasa a matchear", "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+oui,aa:bb:cc,flock,5,2\n");
+  TEST_ASSERT_EQUAL_UINT16(1, st.added);
+  surv_match_init();
+  const uint8_t mac[6] = {0xaa, 0xbb, 0xcc, 0x00, 0x00, 0x01};
+  const surv_oui_entry_t* e = surv_match_oui(mac);
+  TEST_ASSERT_NOT_NULL(e);
+  TEST_ASSERT_EQUAL_INT(SURV_CLASS_FLOCK, e->klass);
+}
+
+TEST_CASE("un OUI quitado deja de matchear", "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("-oui,70:c9:4e\n");
+  TEST_ASSERT_EQUAL_UINT16(1, st.removed);
+  surv_match_init();
+  const uint8_t mac[6] = {0x70, 0xc9, 0x4e, 0x11, 0x22, 0x33};
+  TEST_ASSERT_NULL(surv_match_oui(mac));
+}
+
+TEST_CASE("los comentarios y las lineas vacias se ignoran", "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("# comentario\n\n   \n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(0, st.removed);
+  TEST_ASSERT_EQUAL_UINT16(0, st.skipped);
+}
+
+TEST_CASE("una linea malformada se cuenta como saltada", "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse(
+      "+oui,noesunamac,flock,5,2\n"
+      "+oui,aa:bb\n"
+      "basura\n"
+      "+oui,dd:ee:ff,flock,5,2\n");
+  TEST_ASSERT_EQUAL_UINT16(1, st.added);
+  TEST_ASSERT_EQUAL_UINT16(3, st.skipped);
+}
+
+TEST_CASE("un texto nulo o vacio no rompe", "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse(NULL);
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  st = surv_overlay_parse("");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+}
+
+TEST_CASE("una keyword de SSID anadida pasa a matchear", "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+ssid,mikamara,cam,3\n");
+  TEST_ASSERT_EQUAL_UINT16(1, st.added);
+  const surv_kw_entry_t* e = surv_match_ssid("red-MiKaMaRa-2");
+  TEST_ASSERT_NOT_NULL(e);
+  TEST_ASSERT_EQUAL_INT(SURV_CLASS_CAM, e->klass);
+}
+
+TEST_CASE("un UUID anadido pasa a matchear", "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+uuid,fd6f,cam,3\n");
+  TEST_ASSERT_EQUAL_UINT16(1, st.added);
+  const uint8_t adv[] = {0x03, 0x03, 0x6f, 0xfd};
+  surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
+  TEST_ASSERT_EQUAL_UINT8(1, surv_match_ble_adv(adv, sizeof(adv), hits));
+  TEST_ASSERT_EQUAL_INT(SURV_CLASS_CAM, hits[0].klass);
+}
+
+TEST_CASE("una firma IE del overlay se suma a la compilada",
+          "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+iesig,45,191\n");
+  TEST_ASSERT_EQUAL_UINT16(1, st.added);
+  const uint8_t ies[] = {0x00, 0x00, 0x2d, 0x02, 0x00,
+                         0x00, 0xbf, 0x02, 0x00, 0x00};
+  TEST_ASSERT_TRUE(surv_ie_matches_flock(ies, sizeof(ies)));
+  surv_overlay_reset();
+  TEST_ASSERT_FALSE(surv_ie_matches_flock(ies, sizeof(ies)));
+}
+
+TEST_CASE("una firma IE malformada se salta", "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+iesig,221:abc\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
+// vlen es vestigial: el matcher decide comparar bytes de vendor mirando solo
+// tag==221 (SURV_IE_VENDOR_TAG), nunca vlen. Un token "221" pelado, sin los
+// 14 hex del payload, se "parsearia" bien y despues jamas haria match con
+// nada en silencio si no se rechaza aqui.
+TEST_CASE("un token 221 sin payload de vendor se salta", "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+iesig,221\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
+// atoi("xyz") devuelve 0 en silencio, y un token con tag 0 es indistinguible
+// del elemento SSID: tokens_match_sig lo salta ANTES de compararlo contra la
+// firma, asi que la firma nunca se completa y queda muerta -ocupando ademas
+// uno de los 8 huecos de overlay-. Mismo modo de fallo que el 221 sin
+// payload.
+TEST_CASE("un token de tag 0 se salta", "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+iesig,0,45\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
+TEST_CASE("un token no numerico se salta en vez de leerse como tag 0",
+          "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+iesig,xyz,45\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
+// Una firma con mas tokens de los que caben en SURV_IE_MAX_TOKS se salta
+// entera: aplicarla truncada dejaria cargada una firma que el usuario no
+// escribio, y ese error tambien seria silencioso.
+TEST_CASE("una firma iesig con mas tokens de los permitidos se salta entera",
+          "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st =
+      surv_overlay_parse("+iesig,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
+// parse_oui debe exigir exactamente "xx:xx:xx": aceptar una MAC completa
+// donde se esperaba un OUI hace que el usuario crea que apunto a un solo
+// equipo cuando en realidad apunto a todo un prefijo de fabricante.
+TEST_CASE("un OUI con una MAC completa se rechaza en vez de truncarse",
+          "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st =
+      surv_overlay_parse("+oui,aa:bb:cc:dd:ee:ff,flock,5,2\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+  surv_match_init();
+  const uint8_t mac[6] = {0xaa, 0xbb, 0xcc, 0x00, 0x00, 0x01};
+  TEST_ASSERT_NULL(surv_match_oui(mac));
+}
+
+TEST_CASE("un OUI con basura al final del tercer octeto se rechaza",
+          "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+oui,aa:bb:ccdd,flock,5,2\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
+// atoi("xyz") devuelve 0 en silencio: un campo de puntos no numerico cargaria
+// una entrada de 0 puntos, invisible e inerte, en vez de contar como saltada
+// (que el usuario si ve en pantalla). parse_ie_token ya resuelve esto con
+// strtol mas chequeo de puntero final; estas tres pruebas cubren los otros
+// tres lugares donde el mismo bug existia: +oui, +ssid y +uuid.
+TEST_CASE("un +oui con puntos no numericos se salta en vez de cargar 0",
+          "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+oui,aa:bb:cc,flock,xyz,2\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
+TEST_CASE("un +oui con tier no numerico se salta en vez de cargar 0",
+          "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+oui,aa:bb:cc,flock,5,xyz\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
+TEST_CASE("un +ssid con puntos no numericos se salta en vez de cargar 0",
+          "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+ssid,mikamara,cam,xyz\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
+TEST_CASE("un +uuid con puntos no numericos se salta en vez de cargar 0",
+          "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+uuid,fd6f,cam,xyz\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
+// La longitud total (8) por si sola no basta: si el ultimo octeto trae
+// basura pegada a un solo digito hex valido, "aa:bb:c!" tambien mide 8
+// caracteres. Solo el %n de sscanf (cuantos caracteres consumio realmente el
+// ultimo campo) detecta que el tercer octeto no se completo. Sin ese chequeo
+// esta forma se colaria con el mismo bug que la MAC completa o el
+// "aa:bb:ccdd", solo que mas angosto.
+TEST_CASE("un OUI de 8 caracteres con basura en el ultimo octeto se rechaza",
+          "[surv][overlay]") {
+  surv_overlay_reset();
+  surv_overlay_stats_t st = surv_overlay_parse("+oui,aa:bb:c!,flock,5,2\n");
+  TEST_ASSERT_EQUAL_UINT16(0, st.added);
+  TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
+}
+
+TEST_CASE("se respeta el tope de 256 OUIs", "[surv][overlay]") {
+  surv_overlay_reset();
+  char buf[64];
+  surv_overlay_stats_t st = {0};
+  for (int i = 0; i < 300; i++) {
+    snprintf(buf, sizeof(buf), "+oui,%02x:%02x:%02x,cam,3,2\n",
+             (i >> 16) & 0xff, (i >> 8) & 0xff, i & 0xff);
+    surv_overlay_stats_t r = surv_overlay_parse(buf);
+    st.added += r.added;
+    st.skipped += r.skipped;
+  }
+  TEST_ASSERT_LESS_OR_EQUAL_UINT16(256, st.added);
+  TEST_ASSERT_GREATER_THAN_UINT16(0, st.skipped);
+}

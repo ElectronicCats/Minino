@@ -10,77 +10,56 @@ static volatile bool led_event_running = false;
 void led_control_ble_tracking(void) {
   led_start_blink(LED_LEFT, 150, 3, 100, 100, 400);
   led_start_blink(LED_RIGHT, 150, 3, 100, 100, 400);
-  vTaskSuspend(NULL);  ///////////////////////
 }
 
 void led_control_ble_spam_breathing(void) {
   led_start_breath(LED_LEFT, 100);
   led_start_breath(LED_RIGHT, 100);
-  vTaskSuspend(NULL);  ///////////////////////
 }
 
 void led_control_wifi_scanning(void) {
   led_start_breath(LED_LEFT, 100);
   led_start_breath(LED_RIGHT, 100);
-  vTaskSuspend(NULL);  ///////////////////////
 }
 
 void led_control_wifi_attacking(void) {
   led_start_blink(LED_LEFT, 255, 5, 50, 50, 100);
   led_start_blink(LED_RIGHT, 255, 3, 100, 100, 200);
-  vTaskSuspend(NULL);  ///////////////////////
 }
 
 void led_control_zigbee_scanning(void) {
   led_start_blink(LED_LEFT, 255, 3, 50, 50, 150);
   led_start_blink(LED_RIGHT, 255, 3, 50, 50, 150);
-  vTaskSuspend(NULL);  ///////////////////////
 }
 
 void led_control_pulse_leds(void) {
-  leds_on();
-  vTaskDelay(150 / portTICK_PERIOD_MS);
-  leds_off();
-  vTaskSuspend(NULL);  ///////////////////////
+  led_start_blink(LED_LEFT, 255, 1, 150, 10, 0);
+  led_start_blink(LED_RIGHT, 255, 1, 150, 10, 0);
 }
 
 void led_control_pulse_led_right(void) {
-  led_right_on();
-  vTaskDelay(150 / portTICK_PERIOD_MS);
-  led_right_off();
-  vTaskSuspend(NULL);  ///////////////////////
+  led_start_blink(LED_RIGHT, 255, 1, 150, 10, 0);
 }
 
 void led_control_pulse_led_left(void) {
-  led_left_on();
-  vTaskDelay(150 / portTICK_PERIOD_MS);
-  led_left_off();
-  vTaskSuspend(NULL);  ///////////////////////
+  led_start_blink(LED_LEFT, 255, 1, 150, 10, 0);
 }
 
 void led_control_stop(void) {
-  if (led_event_running == false)
-    return;
   led_event_running = false;
   leds_off();
-  task_manager_delete(led_evenet_task);
-  led_evenet_task = NULL;
-}
-
-static void effect_wrapper(void* pvParameters) {
-  effect_control func = (effect_control) pvParameters;
-  func();
+  if (led_evenet_task != NULL) {
+    task_manager_delete(led_evenet_task);
+    led_evenet_task = NULL;
+  }
 }
 
 void led_control_run_effect(effect_control effect_function) {
 #ifndef CONFIG_LEDS_COMPONENT_ENABLED
   return;
 #endif
-  // effect_function();
-  led_event_running = true;
-  task_manager_create(effect_wrapper, "led_effect",
-                      TASK_STACK_SMALL,  // 2KB (LEDs es simple)
-                      (void*) effect_function,
-                      TASK_PRIORITY_LOW,  // UI/LEDs baja prioridad
-                      &led_evenet_task);
+  if (effect_function != NULL) {
+    led_event_running = true;
+    effect_function();
+  }
 }

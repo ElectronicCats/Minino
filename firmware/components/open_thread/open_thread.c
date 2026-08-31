@@ -181,6 +181,7 @@ otIp6Address openthread_get_my_ipv6address() {
 void openthread_factory_reset() {
   esp_openthread_lock_acquire(portMAX_DELAY);
   otInstanceFactoryReset(esp_openthread_get_instance());
+  esp_openthread_lock_release();
 }
 
 otError openthread_ipmaddr_subscribe(const char* address) {
@@ -213,8 +214,14 @@ void print_data() {
   otOperationalDatasetTlvs dataset;
 
   const otNetifAddress* unicastAddrs = otIp6GetUnicastAddresses(instance);
-  mAddr = unicastAddrs->mNext->mAddress;
-  print_otIp6Address(&mAddr);
+  if (unicastAddrs != NULL) {
+    if (unicastAddrs->mNext != NULL) {
+      mAddr = unicastAddrs->mNext->mAddress;
+    } else {
+      mAddr = unicastAddrs->mAddress;
+    }
+    print_otIp6Address(&mAddr);
+  }
 
   error = otDatasetGetActiveTlvs(instance, &dataset);
   if (!ERR) {
@@ -289,10 +296,12 @@ otError openthread_udp_send(otUdpSocket* mSocket,
   uint8_t* payload = (uint8_t*) malloc(data_size);
   if (!payload) {
     ESP_LOGE(TAG, "Failed to allocate memory for data");
+    esp_openthread_lock_release();
     return error;
   }
   memcpy(payload, data, data_size);
   otMessageAppend(message, payload, data_size);
+  free(payload);
 
   error = otUdpSend(instance, mSocket, message, &messageInfo);
   esp_openthread_lock_release();
@@ -306,8 +315,9 @@ otError openthread_enable_promiscous_mode(otLinkPcapCallback promiscuous_cb) {
   otIp6SetEnabled(instance, false);
   otThreadSetEnabled(instance, false);
   error = otLinkSetPromiscuous(instance, true);
-  if (ERR) {
+  if (error != OT_ERROR_NONE) {
     printf("ERR\n");
+    esp_openthread_lock_release();
     return error;
   }
   otLinkSetPcapCallback(instance, promiscuous_cb, NULL);
@@ -363,15 +373,26 @@ void openthread_init() {
 #if !defined(CONFIG_OPEN_THREAD_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
-  esp_log_level_set(TAG, ESP_LOG_NONE);
 
   esp_vfs_eventfd_config_t eventfd_config = {
       .max_fds = 3,
   };
 
-  ESP_ERROR_CHECK(nvs_flash_init());
-  ESP_ERROR_CHECK(esp_event_loop_create_default());
-  ESP_ERROR_CHECK(esp_netif_init());
-  ESP_ERROR_CHECK(esp_vfs_eventfd_register(&eventfd_config));
+  esp_err_t ret = nvs_flash_init();
+  if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
+      ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    nvs_flash_erase();
+    nvs_flash_init();
+  }
+
+  ret = esp_netif_init();
+  if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+    ESP_LOGE(TAG, "netif init failed: %s", esp_err_to_name(ret));
+  }
+  ret = esp_event_loop_create_default();
+  if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+    ESP_LOGE(TAG, "event loop create failed: %s", esp_err_to_name(ret));
+  }
+  esp_vfs_eventfd_register(&eventfd_config);
   xTaskCreate(ot_task_worker, "ot_cli_main", 1024 * 5, NULL, 10, NULL);
 }

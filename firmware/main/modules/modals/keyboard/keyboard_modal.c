@@ -19,33 +19,41 @@ static void keyboard_event_press_down(uint8_t button_name) {
       keyboard_screens_update_text(kb_ctx);
       break;
     case BUTTON_RIGHT:
-      kb_ctx->current_char = ++kb_ctx->current_char < kb_ctx->text_length
-                                 ? kb_ctx->current_char
+      kb_ctx->current_char = (kb_ctx->current_char + 1 < kb_ctx->text_length)
+                                 ? (kb_ctx->current_char + 1)
                                  : 0;
       keyboard_screens_update_text(kb_ctx);
       break;
-    case BUTTON_UP:
-      kb_ctx->new_text[kb_ctx->current_char] =
-          ++kb_ctx->new_text[kb_ctx->current_char] > 'z' ||
-                  kb_ctx->new_text[kb_ctx->current_char] < '0'
-              ? '0'
-          : kb_ctx->new_text[kb_ctx->current_char] < 'a' &&
-                  kb_ctx->new_text[kb_ctx->current_char] > '9'
-              ? 'a'
-              : kb_ctx->new_text[kb_ctx->current_char];
+    case BUTTON_UP: {
+      char ch = kb_ctx->new_text[kb_ctx->current_char];
+      if (ch >= '0' && ch < '9') {
+        ch++;
+      } else if (ch == '9') {
+        ch = 'a';
+      } else if (ch >= 'a' && ch < 'z') {
+        ch++;
+      } else {
+        ch = '0';
+      }
+      kb_ctx->new_text[kb_ctx->current_char] = ch;
       keyboard_screens_update_text(kb_ctx);
       break;
-    case BUTTON_DOWN:
-      kb_ctx->new_text[kb_ctx->current_char] =
-          --kb_ctx->new_text[kb_ctx->current_char] < '0' ||
-                  kb_ctx->new_text[kb_ctx->current_char] > 'z'
-              ? 'z'
-          : kb_ctx->new_text[kb_ctx->current_char] > '9' &&
-                  kb_ctx->new_text[kb_ctx->current_char] < 'a'
-              ? '9'
-              : kb_ctx->new_text[kb_ctx->current_char];
+    }
+    case BUTTON_DOWN: {
+      char ch = kb_ctx->new_text[kb_ctx->current_char];
+      if (ch > 'a' && ch <= 'z') {
+        ch--;
+      } else if (ch == 'a') {
+        ch = '9';
+      } else if (ch > '0' && ch <= '9') {
+        ch--;
+      } else {
+        ch = 'z';
+      }
+      kb_ctx->new_text[kb_ctx->current_char] = ch;
       keyboard_screens_update_text(kb_ctx);
       break;
+    }
     case BUTTON_BOOT:
       break;
     default:
@@ -85,14 +93,18 @@ char* keyboard_modal_write(char* text, char* banner) {
   menus_module_set_app_state(true, keyboard_modal_input_cb);
   keyboard_screens_show(kb_ctx);
   keyboard_screens_update_text(kb_ctx);
-  while (!kb_ctx->consumed)
-    ;
+  while (!kb_ctx->consumed) {
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
+  char* new_text = NULL;
   if (kb_ctx->consumed > 0) {
-    char* new_text = (char*) malloc(kb_ctx->text_length + 1);
-    strcpy(new_text, kb_ctx->new_text);
-    free(kb_ctx);
-    return new_text;
+    new_text = strdup(kb_ctx->new_text);
+  }
+  if (kb_ctx->new_text != NULL) {
+    free(kb_ctx->new_text);
+    kb_ctx->new_text = NULL;
   }
   free(kb_ctx);
-  return NULL;
+  kb_ctx = NULL;
+  return new_text;
 }

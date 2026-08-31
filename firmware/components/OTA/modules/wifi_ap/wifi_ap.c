@@ -30,9 +30,9 @@ static const char TAG[] = "WIFI_APP";    // Used for ESP Serial console Message
 static QueueHandle_t wifi_app_q_handle;  // Queue Handle used to Manipulate the
                                          // main queue of events
 
-// netif objects for station and access point modes
-esp_netif_t* esp_netif_sta = NULL;
-esp_netif_t* esp_netif_ap = NULL;
+// netif objects are defined in wifi_app.c and declared extern in wifi_app.h
+// We only use them here via the extern declarations from wifi_ap.h ->
+// wifi_app.h
 
 // Private Function Definitions
 static BaseType_t wifi_app_send_msg(wifi_app_msg_e msg_id);
@@ -134,18 +134,22 @@ static void wifi_app_task(void* pvParameter) {
  */
 static void wifi_app_event_handler_init(void) {
   // Initialize the default ESP Event Loop
-  ESP_ERROR_CHECK(esp_event_loop_create_default());
+  esp_err_t err = esp_event_loop_create_default();
+  if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
+    ESP_LOGE(TAG, "esp_event_loop_create_default failed: %s",
+             esp_err_to_name(err));
+  }
 
   // Event handler for the connection
   esp_event_handler_instance_t wifi_handler_event_instance;
   esp_event_handler_instance_t ip_handler_event_instance;
 
-  ESP_ERROR_CHECK(esp_event_handler_instance_register(
-      WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_app_event_handler, NULL,
-      &wifi_handler_event_instance));
-  ESP_ERROR_CHECK(esp_event_handler_instance_register(
-      IP_EVENT, ESP_EVENT_ANY_ID, &wifi_app_event_handler, NULL,
-      &ip_handler_event_instance));
+  esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID,
+                                      &wifi_app_event_handler, NULL,
+                                      &wifi_handler_event_instance);
+  esp_event_handler_instance_register(IP_EVENT, ESP_EVENT_ANY_ID,
+                                      &wifi_app_event_handler, NULL,
+                                      &ip_handler_event_instance);
 }
 
 /*
@@ -153,11 +157,17 @@ static void wifi_app_event_handler_init(void) {
  */
 static void wifi_app_default_wifi_init(void) {
   // Initialize the TCP Stack i.e. the ESP Network Interface
-  ESP_ERROR_CHECK(esp_netif_init());
+  esp_err_t err = esp_netif_init();
+  if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
+    ESP_LOGE(TAG, "esp_netif_init failed: %s", esp_err_to_name(err));
+  }
 
   // Setup WiFi Station with the Default WiFi Configuration
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+  err = esp_wifi_init(&cfg);
+  if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
+    ESP_LOGE(TAG, "esp_wifi_init failed: %s", esp_err_to_name(err));
+  }
   ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
   esp_netif_sta = esp_netif_create_default_wifi_sta();

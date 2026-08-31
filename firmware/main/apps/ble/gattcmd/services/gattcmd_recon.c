@@ -1,3 +1,4 @@
+#include "gap_dispatcher.h"
 #include "services/gattcmd_service.h"
 
 #include "esp_bt.h"
@@ -299,15 +300,21 @@ static void gattcmd_recon_gattc_profile_event_handler(
       if (p_data->read.status != ESP_GATT_OK) {
         break;
       }
-      printf("|\t %04x\t |\t\t\t\t\t |\t\t| %s |\n", p_data->read.handle,
-             p_data->read.value);
+      printf("|\t %04x\t |\t\t\t\t\t |\t\t| ", p_data->read.handle);
+      for (int v = 0; v < p_data->read.value_len; v++) {
+        printf("%02x ", p_data->read.value[v]);
+      }
+      printf("|\n");
       break;
     case ESP_GATTC_READ_DESCR_EVT:
       if (p_data->read.status != ESP_GATT_OK) {
         break;
       }
-      printf("| %04x| %04x \t\t| %s |\n", p_data->read.handle,
-             p_data->read.handle, p_data->read.value);
+      printf("| %04x| %04x \t\t| ", p_data->read.handle, p_data->read.handle);
+      for (int v = 0; v < p_data->read.value_len; v++) {
+        printf("%02x ", p_data->read.value[v]);
+      }
+      printf("|\n");
       desc_count_readed++;
       if (desc_count == desc_count_readed) {
         ESP_LOGW("HERE", "Restart connection");
@@ -460,7 +467,7 @@ static void gattcmd_recon_gap_cb(esp_gap_ble_cb_event_t event,
         ESP_LOGE(TAG, "Authentication failed, reason: 0x%x",
                  param->ble_security.auth_cmpl.fail_reason);
       }
-      esp_ble_gap_disconnect(param->scan_rst.bda);
+      esp_ble_gap_disconnect(param->ble_security.auth_cmpl.bd_addr);
       connect = false;
       get_server = false;
       break;
@@ -511,8 +518,9 @@ static void gattcmd_recon_gattc_cb(esp_gattc_cb_event_t event,
     } else {
       ESP_LOGI(GATTCMD_ENUM_TAG, "reg app failed, app_id %04x, status %d",
                param->reg.app_id, param->reg.status);
-      if (param->reg.status == 128)
-        esp_restart();
+      if (param->reg.status == 128) {
+        ESP_LOGE(GATTCMD_ENUM_TAG, "reg app failed with status 128, skipping");
+      }
       return;
     }
   }
@@ -548,9 +556,9 @@ void gattcmd_recon_begin(const char* bt_addr_str) {
     ESP_LOGI(TAG, "Recon begin: scanning all devices");
   }
   // register the  callback function to the gap module
-  esp_err_t ret = esp_ble_gap_register_callback(gattcmd_recon_gap_cb);
+  esp_err_t ret = gap_dispatcher_register(gattcmd_recon_gap_cb);
   if (ret) {
-    ESP_LOGE(GATTCMD_ENUM_TAG, "%s gap register failed, error code = %x",
+    ESP_LOGE(GATTCMD_ENUM_TAG, "%s gap dispatcher register failed, code = %x",
              __func__, ret);
     return;
   }

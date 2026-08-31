@@ -12,7 +12,7 @@ typedef enum {
 
 typedef void (*ota_show_event_cb_t)(uint8_t, void*);
 
-bool is_ota_running = false;
+extern bool is_ota_running;
 
 void OTA_init();
 void OTA_set_show_event_cb(ota_show_event_cb_t cb);

@@ -227,26 +227,13 @@ esp_err_t led_stop_blink_effect(led_t* led) {
     return ESP_FAIL;
   }
   if (led_effects[i].effect_state == LED_EFFECT_BLINK) {
-    // Stop and delete the blink effect timer
-    esp_err_t err = esp_timer_stop(led_effects[i].blink_effect.timer);
-    if (err != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to stop blink effect timer: %s",
-               esp_err_to_name(err));
-      return err;
-    }
+    esp_timer_stop(led_effects[i].blink_effect.timer);
+    esp_timer_delete(led_effects[i].blink_effect.timer);
 
-    err = esp_timer_delete(led_effects[i].blink_effect.timer);
-    if (err != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to delete blink effect timer: %s",
-               esp_err_to_name(err));
-      return err;
-    }
-
-    // Reset the blink effect data and effect state
     memset(&led_effects[i].blink_effect, 0, sizeof(led_blink_t));
     led_effects[i].effect_state = LED_EFFECT_NONE;
-    ESP_LOGI(TAG, "Blink effect stopped for LED");
     set_duty(led, 0);
+    ESP_LOGI(TAG, "Blink effect stopped for LED");
     return ESP_OK;
   }
 
@@ -280,31 +267,18 @@ esp_err_t led_stop_breath_effect(led_t* led) {
   }
 
   if (led_effects[i].effect_state == LED_EFFECT_BREATH) {
-    // Stop and delete the breath effect timer
-    esp_err_t err = esp_timer_stop(led_effects[i].breath_effect.timer);
-    if (err != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to stop breath effect timer: %s",
-               esp_err_to_name(err));
-      return err;
-    }
+    esp_timer_stop(led_effects[i].breath_effect.timer);
+    esp_timer_delete(led_effects[i].breath_effect.timer);
 
-    err = esp_timer_delete(led_effects[i].breath_effect.timer);
-    if (err != ESP_OK) {
-      ESP_LOGE(TAG, "Failed to delete breath effect timer: %s",
-               esp_err_to_name(err));
-      return err;
-    }
-
-    // Reset the breath effect data and effect state
     memset(&led_effects[i].breath_effect, 0, sizeof(led_breath_t));
     led_effects[i].effect_state = LED_EFFECT_NONE;
 
-    ESP_LOGI(TAG, "Breath effect stopped for LED");
     set_duty(led, 0);
+    ESP_LOGI(TAG, "Breath effect stopped for LED");
     return ESP_OK;
   }
 
-  ESP_LOGW(TAG, "Blink effect not active for the specified LED");
+  ESP_LOGW(TAG, "Breath effect not active for the specified LED");
   return ESP_FAIL;
 }
 
@@ -455,15 +429,9 @@ esp_err_t led_controller_start_blink_effect(led_t* led,
 
   switch (led_effects[i].effect_state) {
     case LED_EFFECT_BLINK:
-      // Update the existing blink effect
-      led_effects[i].blink_effect.duty = duty;
-      led_effects[i].blink_effect.pulse_count = pulse_count;
-      led_effects[i].blink_effect.time_on = time_on;
-      led_effects[i].blink_effect.time_off = time_off;
-      led_effects[i].blink_effect.time_out = time_out;
-      return ESP_OK;
+      led_stop_blink_effect(led);
+      break;
     case LED_EFFECT_BREATH:
-      // Stop the breath effect before starting the blink effect
       led_stop_breath_effect(led);
       break;
     default:
@@ -490,7 +458,6 @@ esp_err_t led_controller_start_blink_effect(led_t* led,
     led_effects[i].blink_effect.pulse_count = pulse_count;
     led_effects[i].blink_effect.time_on = time_on;
     led_effects[i].blink_effect.time_off = time_off;
-    led_effects[i].blink_effect.time_out = time_out;
     led_effects[i].blink_effect.time_out = time_out;
     led_effects[i].blink_effect.timer = timer;
     led_effects[i].blink_effect.state = false;
@@ -521,18 +488,15 @@ esp_err_t led_controller_stop_any_effect(led_t* led) {
 
   switch (led_effects[index].effect_state) {
     case LED_EFFECT_BREATH:
-      // Stop and clean up the breath effect for the LED
       led_stop_breath_effect(led);
-      // ...
       break;
     case LED_EFFECT_BLINK:
-      // Stop and clean up the blink effect for the LED
       led_stop_blink_effect(led);
       break;
     default:
       set_duty(led, 0);
+      break;
   }
-  led_effects[index].effect_state = LED_EFFECT_NONE;
   return ESP_OK;
 }
 

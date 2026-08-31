@@ -1,6 +1,6 @@
 #pragma once
 
-#define FORMAT_VERSION "ElecCats-1.0"
+#define FORMAT_VERSION "WigleWifi-1.4"
 #define APP_VERSION    CONFIG_PROJECT_VERSION
 #define MODEL          "MININO"
 #define RELEASE        APP_VERSION

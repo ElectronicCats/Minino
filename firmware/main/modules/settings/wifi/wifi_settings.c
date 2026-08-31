@@ -74,7 +74,7 @@ static void wifi_settings_connecting_animation() {
   static uint8_t idx = 0;
   oled_screen_display_bitmap(wifi_loading[idx], x, 2, width, height,
                              OLED_DISPLAY_NORMAL);
-  idx = ++idx > 3 ? 0 : idx;
+  idx = (idx + 1 > 3) ? 0 : (idx + 1);
   oled_screen_display_show();
 }
 
@@ -97,26 +97,28 @@ static void wifi_settings_show_connection_cb(bool state) {
   wifi_settings_show_list();
 }
 
+static void wifi_settings_show_forget() {
+  general_submenu_menu_t menu_opts = {0};
+  menu_opts.options = option_yn;
+  menu_opts.options_count = 2;
+  menu_opts.select_cb = wifi_settings_yn_handler;
+  menu_opts.selected_option = 0;
+  menu_opts.exit_cb = wifi_settings_show_list;
+  menu_opts.modal = true;
+  menu_opts.modal_title = "Are you sure?";
+  general_submenu(menu_opts);
+}
+
 static void wifi_settings_selected_handler(uint8_t option) {
   switch (option) {
-    case WIFI_OPT_CONNECT: {
+    case WIFI_OPT_CONNECT:
       wifi_settings_show_connecting();
       wifi_ap_manager_connect_index_cb(selected_ap,
                                        wifi_settings_show_connection_cb);
       break;
-    }
-    case WIFI_OPT_FORGET: {
-      general_submenu_menu_t menu_opts = {0};
-      menu_opts.options = option_yn;
-      menu_opts.options_count = 2;
-      menu_opts.select_cb = wifi_settings_yn_handler;
-      menu_opts.selected_option = 0;
-      menu_opts.exit_cb = wifi_settings_show_list;
-      menu_opts.modal = true;
-      menu_opts.modal_title = "Are you sure?";
-      general_submenu(menu_opts);
+    case WIFI_OPT_FORGET:
+      wifi_settings_show_forget();
       break;
-    }
     default:
       break;
   }
@@ -124,20 +126,22 @@ static void wifi_settings_selected_handler(uint8_t option) {
 
 static void wifi_settings_show_options_list(uint8_t option) {
   selected_ap = option;
-  general_submenu_menu_t menu_opts = {0};
-  menu_opts.options = options_list;
-  menu_opts.options_count = 2;
-  menu_opts.select_cb = wifi_settings_selected_handler;
-  menu_opts.selected_option = 0;
-  menu_opts.exit_cb = wifi_settings_show_list;
-  menu_opts.modal = true;
-  menu_opts.modal_title = "Options";
-  general_submenu(menu_opts);
+  general_submenu_menu_t menu_options = {0};
+  menu_options.options = options_list;
+  menu_options.options_count = 2;
+  menu_options.select_cb = wifi_settings_selected_handler;
+  menu_options.selected_option = 0;
+  menu_options.exit_cb = wifi_settings_show_list;
+
+  general_submenu(menu_options);
 }
 
 static void wifi_settings_exit_app() {
-  wifi_ap_manager_unregister_callback();
-  wifi_settings_scenes_main();
+  menus_module_exit_app();
+}
+
+void wifi_settings_scenes_main() {
+  menus_module_exit_app();
 }
 
 static void wifi_settings_show_no_ap_main() {
@@ -150,23 +154,28 @@ static void wifi_settings_show_no_ap_main() {
   wifi_settings_scenes_main();
 }
 
+static char s_wifi_list_buf[20][64];
+
 static void wifi_settings_show_list() {
   aps_count = preferences_get_int("count_ap", 0);
 
-  if (aps_count == 0) {
+  if (aps_count <= 0) {
     wifi_settings_show_no_ap_main();
     return;
   }
+  if (aps_count > 20) {
+    aps_count = 20;
+  }
   for (int i = 0; i < aps_count; i++) {
-    char wifi_ap[100];
-    char wifi_ssid[100];
-    sprintf(wifi_ap, "wifi%d", i);
-    esp_err_t err = preferences_get_string(wifi_ap, wifi_ssid, 100);
+    char wifi_ap[16];
+    snprintf(wifi_ap, sizeof(wifi_ap), "wifi%d", i);
+    s_wifi_list_buf[i][0] = '\0';
+    esp_err_t err = preferences_get_string(wifi_ap, s_wifi_list_buf[i],
+                                           sizeof(s_wifi_list_buf[i]));
     if (err != ESP_OK) {
-      continue;
+      snprintf(s_wifi_list_buf[i], sizeof(s_wifi_list_buf[i]), "Unknown");
     }
-    wifi_list[i] = malloc(sizeof(wifi_ssid));
-    wifi_list[i] = strdup(wifi_ssid);
+    wifi_list[i] = s_wifi_list_buf[i];
   }
   general_submenu_menu_t menu_aps = {0};
   menu_aps.options = wifi_list;

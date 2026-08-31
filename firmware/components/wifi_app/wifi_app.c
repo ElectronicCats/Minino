@@ -10,6 +10,7 @@
 
 #include "wifi_app.h"
 
+esp_netif_t* esp_netif_sta = NULL;
 esp_netif_t* esp_netif_ap = NULL;
 
 void wifi_ap_init(void) {

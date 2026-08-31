@@ -8,7 +8,7 @@ static int IDLE_TIMEOUT_S = 30;
 
 static const char* TAG = "keyboard";
 static input_callback_t input_callback = NULL;
-esp_timer_handle_t idle_timer;
+esp_timer_handle_t idle_timer = NULL;
 static bool lock_input = false;
 
 static const char* button_to_name[] = {
@@ -23,9 +23,15 @@ static const char* event_to_name[] = {
 
 static void button_event_cb(void* arg, void* data);
 
+static void keyboard_idle_timer_cb(void* arg) {
+  // Idle callback placeholder
+}
+
 void keyboard_module_reset_idle_timer() {
-  esp_timer_stop(idle_timer);
-  esp_timer_start_once(idle_timer, IDLE_TIMEOUT_S * 1000 * 1000);
+  if (idle_timer != NULL) {
+    esp_timer_stop(idle_timer);
+    esp_timer_start_once(idle_timer, (uint64_t) IDLE_TIMEOUT_S * 1000 * 1000);
+  }
 }
 
 void keyboard_module_set_lock(bool lock) {
@@ -42,27 +48,28 @@ void button_init(uint32_t button_num, uint8_t mask) {
           },
   };
   button_handle_t btn = iot_button_create(&btn_cfg);
-  assert(btn);
-  esp_err_t err =
-      iot_button_register_cb(btn, BUTTON_PRESS_DOWN, button_event_cb,
-                             (void*) (BUTTON_PRESS_DOWN | mask));
-  err |= iot_button_register_cb(btn, BUTTON_PRESS_UP, button_event_cb,
-                                (void*) (BUTTON_PRESS_UP | mask));
-  err |= iot_button_register_cb(btn, BUTTON_PRESS_REPEAT, button_event_cb,
-                                (void*) (BUTTON_PRESS_REPEAT | mask));
-  err |= iot_button_register_cb(btn, BUTTON_PRESS_REPEAT_DONE, button_event_cb,
-                                (void*) (BUTTON_PRESS_REPEAT_DONE | mask));
-  err |= iot_button_register_cb(btn, BUTTON_SINGLE_CLICK, button_event_cb,
-                                (void*) (BUTTON_SINGLE_CLICK | mask));
-  err |= iot_button_register_cb(btn, BUTTON_DOUBLE_CLICK, button_event_cb,
-                                (void*) (BUTTON_DOUBLE_CLICK | mask));
-  err |= iot_button_register_cb(btn, BUTTON_LONG_PRESS_START, button_event_cb,
-                                (void*) (BUTTON_LONG_PRESS_START | mask));
-  err |= iot_button_register_cb(btn, BUTTON_LONG_PRESS_HOLD, button_event_cb,
-                                (void*) (BUTTON_LONG_PRESS_HOLD | mask));
-  err |= iot_button_register_cb(btn, BUTTON_LONG_PRESS_UP, button_event_cb,
-                                (void*) (BUTTON_LONG_PRESS_UP | mask));
-  ESP_ERROR_CHECK(err);
+  if (!btn) {
+    ESP_LOGE("keyboard_module", "Failed to create button %" PRIu32, button_num);
+    return;
+  }
+  iot_button_register_cb(btn, BUTTON_PRESS_DOWN, button_event_cb,
+                         (void*) (uintptr_t) (BUTTON_PRESS_DOWN | mask));
+  iot_button_register_cb(btn, BUTTON_PRESS_UP, button_event_cb,
+                         (void*) (uintptr_t) (BUTTON_PRESS_UP | mask));
+  iot_button_register_cb(btn, BUTTON_PRESS_REPEAT, button_event_cb,
+                         (void*) (uintptr_t) (BUTTON_PRESS_REPEAT | mask));
+  iot_button_register_cb(btn, BUTTON_PRESS_REPEAT_DONE, button_event_cb,
+                         (void*) (uintptr_t) (BUTTON_PRESS_REPEAT_DONE | mask));
+  iot_button_register_cb(btn, BUTTON_SINGLE_CLICK, button_event_cb,
+                         (void*) (uintptr_t) (BUTTON_SINGLE_CLICK | mask));
+  iot_button_register_cb(btn, BUTTON_DOUBLE_CLICK, button_event_cb,
+                         (void*) (uintptr_t) (BUTTON_DOUBLE_CLICK | mask));
+  iot_button_register_cb(btn, BUTTON_LONG_PRESS_START, button_event_cb,
+                         (void*) (uintptr_t) (BUTTON_LONG_PRESS_START | mask));
+  iot_button_register_cb(btn, BUTTON_LONG_PRESS_HOLD, button_event_cb,
+                         (void*) (uintptr_t) (BUTTON_LONG_PRESS_HOLD | mask));
+  iot_button_register_cb(btn, BUTTON_LONG_PRESS_UP, button_event_cb,
+                         (void*) (uintptr_t) (BUTTON_LONG_PRESS_UP | mask));
 }
 
 /**
@@ -99,6 +106,14 @@ void keyboard_module_begin() {
 #if !defined(CONFIG_KEYBOARD_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
+  if (idle_timer == NULL) {
+    const esp_timer_create_args_t timer_args = {
+        .callback = keyboard_idle_timer_cb,
+        .arg = NULL,
+        .name = "kbd_idle_timer",
+    };
+    esp_timer_create(&timer_args, &idle_timer);
+  }
   button_init(BOOT_BUTTON_PIN, BOOT_BUTTON_MASK);
   button_init(LEFT_BUTTON_PIN, LEFT_BUTTON_MASK);
   button_init(RIGHT_BUTTON_PIN, RIGHT_BUTTON_MASK);

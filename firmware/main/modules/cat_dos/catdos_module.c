@@ -123,7 +123,7 @@ void catdos_module_display_connecting() {
   static uint8_t idx = 0;
   oled_screen_display_bitmap(wifi_loading[idx], x, 1, width, height,
                              OLED_DISPLAY_NORMAL);
-  idx = ++idx > 3 ? 0 : idx;
+  idx = (idx + 1 > 3) ? 0 : (idx + 1);
   oled_screen_display_show();
 }
 
@@ -156,7 +156,7 @@ void catdos_module_set_target(char* host, char* port, char* endpoint) {
   printf("Host: %s %s %s\n", host, port, endpoint);
 }
 
-static void http_get_task(void* pvParameters) {
+static void* http_get_task(void* pvParameters) {
   const struct addrinfo hints = {
       .ai_family = AF_INET,
       .ai_socktype = SOCK_STREAM,
@@ -164,8 +164,9 @@ static void http_get_task(void* pvParameters) {
   struct addrinfo* res;
   int s;
 
-  char* request = (char*) malloc(128);
-  sprintf(request, "GET %s HTTP/1.0\r\nHost: %s:%s\r\n", endpoint, host, port);
+  char request[128];
+  snprintf(request, sizeof(request), "GET %s HTTP/1.0\r\nHost: %s:%s\r\n\r\n",
+           endpoint, host, port);
   running_attack = true;
 
   while (running_attack) {
@@ -203,57 +204,45 @@ static void http_get_task(void* pvParameters) {
     }
     close(s);
   }
-  // running_attack = false;
+  task_atack = NULL;
   vTaskDelete(NULL);
+  return NULL;
 }
 
 static void catdos_module_send_attack_task(void* pvParameters) {
   ESP_LOGI(CATDOS_TAG, "Sending attack");
-  task_manager_create(&http_get_task, "http_get_task", TASK_STACK_MEDIUM, NULL,
-                      TASK_PRIORITY_NORMAL, &task_atack);
+  task_manager_create((TaskFunction_t) http_get_task, "http_get_task",
+                      TASK_STACK_MEDIUM, NULL, TASK_PRIORITY_NORMAL,
+                      &task_atack);
 
   pthread_attr_t attr;
-  pthread_t thread1, thread2, thread3, thread4, thread5, thread6, thread7,
-      thread8;
+  pthread_t threads[8];
   int res;
+  int created = 0;
 
-  res = pthread_create(&thread1, NULL, (void*) http_get_task, NULL);
-  assert(res == 0);
   res = pthread_attr_init(&attr);
-  assert(res == 0);
+  if (res != 0) {
+    ESP_LOGE(CATDOS_TAG, "Failed to init pthread attr: %d", res);
+    vTaskDelete(NULL);
+    return;
+  }
   pthread_attr_setstacksize(&attr, 16384);
-  res = pthread_create(&thread2, &attr, (void*) http_get_task, NULL);
-  assert(res == 0);
-  res = pthread_create(&thread3, NULL, (void*) http_get_task, NULL);
-  assert(res == 0);
-  res = pthread_create(&thread4, NULL, (void*) http_get_task, NULL);
-  assert(res == 0);
-  res = pthread_create(&thread5, NULL, (void*) http_get_task, NULL);
-  assert(res == 0);
-  res = pthread_create(&thread6, NULL, (void*) http_get_task, NULL);
-  assert(res == 0);
-  res = pthread_create(&thread7, NULL, (void*) http_get_task, NULL);
-  assert(res == 0);
-  res = pthread_create(&thread8, NULL, (void*) http_get_task, NULL);
-  assert(res == 0);
 
-  res = pthread_join(thread1, NULL);
-  assert(res == 0);
-  res = pthread_join(thread2, NULL);
-  assert(res == 0);
-  res = pthread_join(thread3, NULL);
-  assert(res == 0);
-  res = pthread_join(thread4, NULL);
-  assert(res == 0);
-  res = pthread_join(thread5, NULL);
-  assert(res == 0);
-  res = pthread_join(thread6, NULL);
-  assert(res == 0);
-  res = pthread_join(thread7, NULL);
-  assert(res == 0);
-  res = pthread_join(thread8, NULL);
-  assert(res == 0);
+  for (int i = 0; i < 8; i++) {
+    res = pthread_create(&threads[i], i == 1 ? &attr : NULL,
+                         (void*) http_get_task, NULL);
+    if (res != 0) {
+      ESP_LOGE(CATDOS_TAG, "Failed to create thread %d: %d", i, res);
+      break;
+    }
+    created++;
+  }
 
+  for (int i = 0; i < created; i++) {
+    pthread_join(threads[i], NULL);
+  }
+
+  pthread_attr_destroy(&attr);
   vTaskDelete(NULL);
 }
 
@@ -319,19 +308,16 @@ static void catdos_module_show_target() {
   int err = catdos_module_get_target();
 
   if (err == 0) {
-    target_details[1] = malloc(32);
     target_details[1] = strdup(host);
   } else {
     target_details[1] = "Not set";
   }
   if (err == 0) {
-    target_details[3] = malloc(32);
     target_details[3] = strdup(port);
   } else {
     target_details[3] = "Not set";
   }
   if (err == 0) {
-    target_details[5] = malloc(32);
     target_details[5] = strdup(endpoint);
   } else {
     target_details[5] = "Not set";
@@ -342,7 +328,7 @@ static void catdos_module_show_target() {
 
   general_submenu_menu_t submenu_target = {0};
   submenu_target.options = (const char**) target_details;
-  submenu_target.options_count = sizeof(main_menu_options) / sizeof(char*);
+  submenu_target.options_count = sizeof(target_details) / sizeof(char*);
   submenu_target.select_cb = NULL;
   submenu_target.selected_option = 0;
   submenu_target.exit_cb = catdos_module_show_menu;
@@ -425,7 +411,6 @@ static void catdos_module_show_aps() {
     if (err != ESP_OK) {
       continue;
     }
-    wifi_list[i] = malloc(sizeof(wifi_ssid));
     wifi_list[i] = strdup(wifi_ssid);
   }
   general_submenu_menu_t menu_aps = {0};

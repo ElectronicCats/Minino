@@ -51,5 +51,6 @@ typedef struct {
 } uav_data;
 
 void droneid_scanner_begin(void);
+void droneid_scanner_stop(void);
 
 #endif

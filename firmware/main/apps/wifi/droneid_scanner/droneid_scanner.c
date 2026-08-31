@@ -118,6 +118,12 @@ static void droneid_scanner_process_task(void* pvParameters) {
       continue;
 
     memset(currentUAV, 0, sizeof(uav_data));
+
+    // Validar longitud minima antes de leer del payload
+    if (packet_len < 16) {
+      free(currentUAV);
+      continue;
+    }
     store_mac(currentUAV, payload);
 
     uint8_t astm_1std[3] = {0x50, 0x6f, 0x9a};
@@ -138,9 +144,13 @@ static void droneid_scanner_process_task(void* pvParameters) {
     } else if (payload[0] == 0x80) {
       int offset = BEACON_OFFSET;
       bool parsed = false;
-      while (offset < packet_len) {
+      while (offset < packet_len - 1) {
         int payload_type = payload[offset];
         int payload_len = payload[offset + 1];
+        if (payload_len == 0) {
+          offset += 2;
+          continue;
+        }
         if (!parsed) {
           if ((payload_type == 0xdd) &&
               ((memcmp(&payload[offset + 2], astm_1std, sizeof(astm_1std)) ==
@@ -240,4 +250,23 @@ void droneid_scanner_begin() {
               &channel_task_handle);
   xTaskCreate(droneid_scanner_process_task, "id_proc", 4096, NULL, 5,
               &process_task_handle);
+}
+
+void droneid_scanner_stop(void) {
+  if (channel_task_handle != NULL) {
+    vTaskDelete(channel_task_handle);
+    channel_task_handle = NULL;
+  }
+  if (process_task_handle != NULL) {
+    vTaskDelete(process_task_handle);
+    process_task_handle = NULL;
+  }
+  if (packet_queue != NULL) {
+    vQueueDelete(packet_queue);
+    packet_queue = NULL;
+  }
+  esp_wifi_set_promiscuous(false);
+  esp_wifi_stop();
+  esp_wifi_deinit();
+  ESP_LOGI(TAG, "Droneid scanner stopped");
 }

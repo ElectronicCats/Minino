@@ -19,6 +19,9 @@ void radio_selector_set_thread() {
 void radio_selector_set_zigbee_light() {
   radio_selected_option = RADIO_SELECT_ZIGBEE_LIGHT;
 }
+void radio_selector_set_surveillance() {
+  radio_selected_option = RADIO_SELECT_SURVEILLANCE;
+}
 static bool platform_configured = false;
 static bool stack_initialized = false;
 bool radio_selector_is_platform_configured() {

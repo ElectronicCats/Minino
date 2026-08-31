@@ -26,6 +26,8 @@
 #include "freertos/task.h"
 #include "sdkconfig.h"
 
+static const char* TAG = "catdos_cmd";
+
 #ifdef CONFIG_FREERTOS_USE_STATS_FORMATTING_FUNCTIONS
   #define WITH_TASKS_INFO 1
 #endif
@@ -51,9 +53,12 @@ static int cmd_catdos_web_set_config(int argc, char** argv) {
     arg_print_errors(stderr, cmd_catdos_web_args.end, argv[0]);
     return 1;
   }
-  assert(cmd_catdos_web_args.host->count == 1);
-  assert(cmd_catdos_web_args.port->count == 1);
-  assert(cmd_catdos_web_args.endpoint->count == 1);
+  if (cmd_catdos_web_args.host->count != 1 ||
+      cmd_catdos_web_args.port->count != 1 ||
+      cmd_catdos_web_args.endpoint->count != 1) {
+    ESP_LOGE(TAG, "Missing required arguments: host, port, endpoint");
+    return 1;
+  }
   const char* host = cmd_catdos_web_args.host->sval[0];
   const char* port = cmd_catdos_web_args.port->sval[0];
   const char* endpoint = cmd_catdos_web_args.endpoint->sval[0];

@@ -143,9 +143,11 @@ void drone_export_gps_data(ODID_UAS_Data* UAS_Data,
   for (int i = 0; i < ODID_BASIC_ID_MAX_MESSAGES; i++) {
     if (!UAS_Data->BasicIDValid[i])
       continue;
+    char uasid_tmp[ODID_ID_SIZE + 1] = {0};
+    memcpy(uasid_tmp, UAS_Data->BasicID[i].UASID, ODID_ID_SIZE);
     mprintf("\t\t\t\"UAType%d\": %d,\n", i, UAS_Data->BasicID[i].UAType);
     mprintf("\t\t\t\"IDType%d\": %d,\n", i, UAS_Data->BasicID[i].IDType);
-    mprintf("\t\t\t\"UASID%d\": %s,\n", i, UAS_Data->BasicID[i].UASID);
+    mprintf("\t\t\t\"UASID%d\": \"%s\",\n", i, uasid_tmp);
   }
   mprintf("\t\t},\n");
 
@@ -178,13 +180,19 @@ void drone_export_gps_data(ODID_UAS_Data* UAS_Data,
   mprintf("\t\t\t\"Length\": %d,\n", UAS_Data->Auth[0].Length);
   mprintf("\t\t\t\"Timestamp\": %lu,\n", UAS_Data->Auth[0].Timestamp);
   for (int i = 0; i <= UAS_Data->Auth[0].LastPageIndex; i++) {
-    mprintf("\t\t\t\"AuthData Page %d,\": %s\n", i, UAS_Data->Auth[i].AuthData);
+    mprintf("\t\t\t\"AuthDataPage%d\": \"", i);
+    for (int b = 0; b < ODID_AUTH_PAGE_NONZERO_DATA_SIZE; b++) {
+      mprintf("%02X", (unsigned char) UAS_Data->Auth[i].AuthData[b]);
+    }
+    mprintf("\",\n");
   }
   mprintf("\t\t},\n");
 
   mprintf("\t\t\"SelfID\": {\n");
+  char desc_tmp[ODID_STR_SIZE + 1] = {0};
+  memcpy(desc_tmp, UAS_Data->SelfID.Desc, ODID_STR_SIZE);
   mprintf("\t\t\t\"Description Type\": %d,\n", UAS_Data->SelfID.DescType);
-  mprintf("\t\t\t\"Description\": %s,\n", UAS_Data->SelfID.Desc);
+  mprintf("\t\t\t\"Description\": \"%s\",\n", desc_tmp);
   mprintf("\t\t},\n");
 
   mprintf("\t\t\"Operator\": {\n");
@@ -209,9 +217,11 @@ void drone_export_gps_data(ODID_UAS_Data* UAS_Data,
   mprintf("\t\t}\n");
 
   mprintf("\t\t\"OperatorID\": {\n");
+  char opid_tmp[ODID_ID_SIZE + 1] = {0};
+  memcpy(opid_tmp, UAS_Data->OperatorID.OperatorId, ODID_ID_SIZE);
   mprintf("\t\t\t\"OperatorIdType\": %d,\n",
           UAS_Data->OperatorID.OperatorIdType);
-  mprintf("\t\t\t\"OperatorId\": \"%s\",\n", UAS_Data->OperatorID.OperatorId);
+  mprintf("\t\t\t\"OperatorId\": \"%s\",\n", opid_tmp);
   mprintf("\t\t},\n");
 
   mprintf("\t}\n}");
@@ -628,6 +638,8 @@ int odid_wifi_receive_message_pack_nan_action_frame(ODID_UAS_Data* UAS_Data,
     return -EINVAL;
   len += sizeof(*nsda);
 
+  if (buf_size < (len + sizeof(*si) + sizeof(*nsdea)))
+    return -EINVAL;
   si = (struct ODID_service_info*) (buf + len);
   ret = odid_message_process_pack(UAS_Data, buf + len + sizeof(*si),
                                   buf_size - len - sizeof(*nsdea));

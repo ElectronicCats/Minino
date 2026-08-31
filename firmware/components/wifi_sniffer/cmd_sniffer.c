@@ -257,10 +257,10 @@ static void queue_packet(void* recv_packet,
     memcpy(packet_to_queue, recv_packet, packet_info->length);
     packet_info->payload = packet_to_queue;
     if (snf_rt.work_queue) {
-      /* send packet_info */
-      if (xQueueSend(snf_rt.work_queue, packet_info,
-                     pdMS_TO_TICKS(SNIFFER_PROCESS_PACKET_TIMEOUT_MS)) !=
-          pdTRUE) {
+      /* send packet_info from promiscuous RX callback context.
+       * Never block here: the queue full case means the sniffer task is
+       * overloaded, block the WiFi driver would stall traffic. */
+      if (xQueueSend(snf_rt.work_queue, packet_info, 0) != pdTRUE) {
         ESP_LOGE(TAG, "sniffer work queue full");
         free(packet_info->payload);
       }
@@ -280,8 +280,10 @@ static void wifi_sniffer_cb(void* recv_buf, wifi_promiscuous_pkt_type_t type) {
 
   /* For now, the sniffer only dumps the length of the MISC type frame */
   if (type != WIFI_PKT_MISC && !sniffer->rx_ctrl.rx_state) {
-    packet_info.length -= SNIFFER_PAYLOAD_FCS_LEN;
-    queue_packet(sniffer->payload, &packet_info);
+    if (packet_info.length > SNIFFER_PAYLOAD_FCS_LEN) {
+      packet_info.length -= SNIFFER_PAYLOAD_FCS_LEN;
+      queue_packet(sniffer->payload, &packet_info);
+    }
   }
 }
 
@@ -387,13 +389,17 @@ static esp_err_t sniffer_stop(sniffer_runtime_t* sniffer) {
 
   /* stop sniffer local task */
   sniffer->is_running = false;
-  /* wait for task over */
-  if (sniffer->packets_to_sniff != 0) {
-    xSemaphoreTake(sniffer->sem_task_over, portMAX_DELAY);
+  /* wait for task over only if called from a different task */
+  if (sniffer->task != NULL && xTaskGetCurrentTaskHandle() != sniffer->task) {
+    if (sniffer->sem_task_over != NULL && sniffer->packets_to_sniff != 0) {
+      xSemaphoreTake(sniffer->sem_task_over, portMAX_DELAY);
+    }
   }
 
-  vSemaphoreDelete(sniffer->sem_task_over);
-  sniffer->sem_task_over = NULL;
+  if (sniffer->sem_task_over != NULL) {
+    vSemaphoreDelete(sniffer->sem_task_over);
+    sniffer->sem_task_over = NULL;
+  }
   /* make sure to free all resources in the left items */
   UBaseType_t left_items = uxQueueMessagesWaiting(sniffer->work_queue);
 

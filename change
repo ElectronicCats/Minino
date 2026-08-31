@@ -416,36 +416,7 @@ generate_changelog() {
 }
 
 change() {
-    latest_tag=$(get_latest_tag)
-    echo "El tag más reciente es: $latest_tag"
-    # next_tag=$1
-
-    # # Obtener el tag más reciente (top_tag)
-    # top_tag=$(top_log_tag)
-    # top_ver=$(rm_tag_prefix "$top_tag")
-    # next_ver=$(rm_tag_prefix "$next_tag")
-    # date=$(tag_date_or_today "$next_tag")
-    # repo_url=$(remote_url_clean)
-
-    # # Definir el rango de commits entre el top_tag y el next_tag
-    # commit_range=$(next_commit_range "$top_tag")
-
-    # # Crear el nuevo archivo de changelog
-    # new_log_file="changelog_$next_ver.md"
-
-    # # Agregar el encabezado al nuevo archivo
-    # echo "## [$next_ver] - $date" > $new_log_file
-
-    # # Formatear y agregar los commits del rango entre top_tag y next_tag
-    # format_commits "$commit_range" >> $new_log_file
-
-    # # Agregar el bloque "Unreleased" con el enlace correspondiente
-    # echo "[Unreleased]: $repo_url/compare/$next_tag...HEAD" >> $new_log_file
-    # echo "[$next_ver]: $repo_url/compare/$top_tag...$next_tag" >> $new_log_file
-
-    # # Obtener y agregar la parte del archivo original log_file desde el tag más reciente hasta el final
-    # sed -n "/^## \[$next_ver\] - [1-9][0-9-]*$/,/^\[Unreleased\]: https:[^ ]*$/p;" $log_file |
-    #     sed '$d' >> $new_log_file
+    generate_changelog
 }
 
 #### Args ####

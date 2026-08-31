@@ -30,6 +30,15 @@ void drone_id_begin() {
   drone_id_screens_main();
 }
 
+void drone_id_stop(void) {
+  drone_id_preferences_t* prefs = drone_id_preferences_get();
+  if (prefs->location_source == DRONE_PREF_LOCATION_SOURCE_GPS) {
+    gps_module_unregister_cb();
+    gps_module_stop_read();
+  }
+  odrone_id_stop();
+}
+
 void drone_id_set_location_source(uint8_t location_source) {
   drone_id_preferences_t* prefs = drone_id_preferences_get();
   prefs->location_source = location_source;

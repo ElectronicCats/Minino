@@ -54,7 +54,7 @@ static void wardriving_screens_zigbee_animation_task() {
     static uint8_t idx = 0;
     oled_screen_display_bitmap(zigbee_bitmap_allArray[idx], 0, 0, 32, 32,
                                OLED_DISPLAY_NORMAL);
-    idx = ++idx > 3 ? 0 : idx;
+    idx = (idx + 1 > 3) ? 0 : (idx + 1);
     vTaskDelay(500 / portTICK_PERIOD_MS);
   }
   vTaskDelete(NULL);
@@ -158,8 +158,8 @@ static void warbee_gps_event_handler_cb(gps_t* gps) {
 }
 
 static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
-  if (gps_ctx->sats_in_use == 0) {
-    ESP_LOGW("Warbee", "No GPS signa dont savel");
+  if (gps_ctx == NULL || gps_ctx->sats_in_use == 0) {
+    ESP_LOGW("Warbee", "No GPS signal, packet not saved");
     return;
   }
 
@@ -177,8 +177,8 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
   uint16_t short_dst_addr = 0;
   uint16_t short_src_addr = 0;
 
-  char* dst_addr_str = malloc(24);
-  char* src_addr_str = malloc(24);
+  char dst_addr_str[32] = "N/A";
+  char src_addr_str[32] = "N/A";
 
   switch (fcs->frameType) {
     case FRAME_TYPE_DATA:
@@ -203,7 +203,8 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
             printf("Destination PAN:               0x%04x\n", pan_id);
             printf("Destination    :               0x%04x\n", short_dst_addr);
           }
-          sprintf(dst_addr_str, "0x%04x", short_dst_addr);
+          snprintf(dst_addr_str, sizeof(dst_addr_str), "0x%04x",
+                   short_dst_addr);
           break;
         case ADDR_MODE_LONG:
           pan_id = *((uint16_t*) &packet[position]);
@@ -212,17 +213,15 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
             dst_addr[idx] = packet[position + sizeof(dst_addr) - 1 - idx];
           }
           position += sizeof(dst_addr);
-          sprintf(dst_addr_str, ZB_ADDRESS_FORMAT, dst_addr[0], dst_addr[1],
-                  dst_addr[2], dst_addr[3], dst_addr[4], dst_addr[5],
-                  dst_addr[6], dst_addr[7]);
+          snprintf(dst_addr_str, sizeof(dst_addr_str), ZB_ADDRESS_FORMAT,
+                   dst_addr[0], dst_addr[1], dst_addr[2], dst_addr[3],
+                   dst_addr[4], dst_addr[5], dst_addr[6], dst_addr[7]);
           printf("On PAN %04x to long address %s\n", pan_id, dst_addr_str);
           break;
         default: {
           ESP_LOGE(TAG_IEEE_SNIFFER,
                    "With reserved destination address type, ignoring packet\n");
           free(csv_line_buffer);
-          free(dst_addr_str);
-          free(src_addr_str);
           return;
         }
       }
@@ -236,7 +235,8 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
           short_src_addr = *((uint16_t*) &packet[position]);
           position += sizeof(uint16_t);
           printf("Source:                        0x%04x\n", short_src_addr);
-          sprintf(src_addr_str, "0x%04x", short_src_addr);
+          snprintf(src_addr_str, sizeof(src_addr_str), "0x%04x",
+                   short_src_addr);
           break;
         }
         case ADDR_MODE_LONG: {
@@ -249,23 +249,24 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
               "%02x:%02x:%02x:%02x:%02x:%02x:%02x:%02x\n",
               src_addr[0], src_addr[1], src_addr[2], src_addr[3], src_addr[4],
               src_addr[5], src_addr[6], src_addr[7]);
-          sprintf(src_addr_str, ZB_ADDRESS_FORMAT, src_addr[0], src_addr[1],
-                  src_addr[2], src_addr[3], src_addr[4], src_addr[5],
-                  src_addr[6], src_addr[7]);
+          snprintf(src_addr_str, sizeof(src_addr_str), ZB_ADDRESS_FORMAT,
+                   src_addr[0], src_addr[1], src_addr[2], src_addr[3],
+                   src_addr[4], src_addr[5], src_addr[6], src_addr[7]);
           break;
         }
         default: {
           ESP_LOGE(TAG_IEEE_SNIFFER,
                    "With reserved source address type, ignoring packet");
           free(csv_line_buffer);
-          free(dst_addr_str);
-          free(src_addr_str);
           return;
         }
       }
 
       break;
     case FRAME_TYPE_BEACON:
+      snprintf(dst_addr_str, sizeof(dst_addr_str), "Broadcast");
+      snprintf(src_addr_str, sizeof(src_addr_str), "0x%04x", short_src_addr);
+      break;
     default:
       printf("Packet ignored because of frame type (%u)\n", fcs->frameType);
       break;
@@ -309,8 +310,6 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
     if (new_csv_buffer == NULL) {
       ESP_LOGE(TAG, "Failed to allocate memory for csv_file_buffer");
       free(csv_line_buffer);
-      free(dst_addr_str);
-      free(src_addr_str);
       return;
     }
     context_session.session_str = get_str_date_time(gps_ctx);
@@ -329,8 +328,6 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
 
   context_session.session_records_count++;
   free(csv_line_buffer);
-  free(dst_addr_str);
-  free(src_addr_str);
 }
 
 void warbee_module_begin() {
@@ -374,7 +371,13 @@ void warbee_module_begin() {
 
 void warbee_module_exit() {
   ESP_LOGI("Warbee", "Warbee module end");
+  if (scanning_zigbee_animation_task_handle != NULL) {
+    vTaskDelete(scanning_zigbee_animation_task_handle);
+    scanning_zigbee_animation_task_handle = NULL;
+  }
   ieee_sniffer_stop();
+  gps_module_stop_read();
+  gps_module_unregister_cb();
   sd_card_read_file(csv_file_name);
   sd_card_unmount();
   if (csv_file_buffer) {
@@ -384,5 +387,10 @@ void warbee_module_exit() {
   if (csv_file_name) {
     free(csv_file_name);
     csv_file_name = NULL;
+  }
+  if (context_session.session_str != NULL &&
+      strlen(context_session.session_str) > 0) {
+    free(context_session.session_str);
+    context_session.session_str = "";
   }
 }

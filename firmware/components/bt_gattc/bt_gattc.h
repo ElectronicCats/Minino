@@ -128,4 +128,17 @@ esp_ble_scan_params_t bt_gattc_set_default_ble_scan_params();
 void bt_gattc_set_ble_scan_params(gattc_scan_params_t* scan_params);
 void bt_gattc_set_cb(bt_client_event_cb_t event_cb);
 void bt_gattc_set_remote_device_name(const char* device_name);
+/**
+ * @brief Select active or passive BLE scanning for the very next call to
+ *        bt_gattc_set_default_ble_scan_params(). One-shot: that call
+ *        consumes the request and resets the flag, so it never lingers as
+ *        the silent default for a later, unrelated consumer of bt_gattc
+ *        that never asked for passive scanning.
+ *
+ * @param passive true for passive scanning (no scan requests transmitted),
+ *                false for active scanning (the default).
+ *
+ * @return void
+ */
+void bt_gattc_set_passive_scan(bool passive);
 #endif  // BT_GATTC_H

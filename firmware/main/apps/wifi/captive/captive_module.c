@@ -39,6 +39,7 @@ static const char* config_dump_menu[] = {"Dump to SD", "No dump"};
 
 static uint16_t last_index_selected = 0;
 static httpd_handle_t server = NULL;
+static dns_server_handle_t dns_server = NULL;
 static uint16_t retries = 0;
 static char wifi_ap_name[CAPTIVE_PORTAL_MAX_NAME];
 static TaskHandle_t scanning_task_handle = NULL;
@@ -185,8 +186,8 @@ static void wifi_init_softap(void) {
   uint8_t esp_mac[6] = {0};
   esp_read_mac(esp_mac, ESP_MAC_WIFI_STA);
   char default_name[20];
-  sprintf(default_name, "%s_%02X:%02X", CONFIG_WIFI_AP_NAME, esp_mac[4],
-          esp_mac[5]);
+  snprintf(default_name, sizeof(default_name), "%s_%02X:%02X",
+           CONFIG_WIFI_AP_NAME, esp_mac[4], esp_mac[5]);
   strncpy((char*) wifi_config.ap.ssid, default_name,
           sizeof(wifi_config.ap.ssid));
   wifi_config.ap.ssid_len = strlen(default_name);
@@ -281,8 +282,8 @@ static esp_err_t captive_portal_root_get_handler(httpd_req_t* req) {
     return ESP_FAIL;
   }
 
-  sprintf(path, "%s/%s/%s", SD_CARD_PATH, CAPTIVE_PORTAL_PATH_NAME,
-          (char*) captive_context.portal);
+  snprintf(path, 1024, "%s/%s/%s", SD_CARD_PATH, CAPTIVE_PORTAL_PATH_NAME,
+           (char*) captive_context.portal);
 
   FILE* file = fopen(path, "r");
   if (file == NULL) {
@@ -496,19 +497,23 @@ static httpd_handle_t start_webserver(void) {
 }
 
 static void captive_module_disable_wifi() {
-  ESP_ERROR_CHECK(esp_wifi_stop());
-  ESP_ERROR_CHECK(esp_wifi_deinit());
+  if (dns_server) {
+    stop_dns_server(dns_server);
+    dns_server = NULL;
+  }
+  if (server) {
+    httpd_stop(server);
+    server = NULL;
+    ESP_LOGW("CAPTIVE", "HTTP server stopped");
+  }
+  esp_wifi_stop();
+  esp_wifi_deinit();
   esp_netif_t* netif = esp_netif_get_handle_from_ifkey(CAPTIVE_PORTAL_NET_NAME);
   if (netif) {
     esp_netif_destroy(netif);
     ESP_LOGW("CAPTIVE", "Netif destroyed");
   }
-  if (server) {
-    httpd_stop(server);
-    ESP_LOGW("CAPTIVE", "HTTP server stopped");
-  }
 
-  ESP_ERROR_CHECK(esp_event_loop_delete_default());
   captive_module_main();
 }
 
@@ -519,11 +524,9 @@ static void captive_module_wifi_begin() {
 
   ESP_ERROR_CHECK(esp_netif_init());
   esp_err_t errr = esp_event_loop_create_default();
-  if (errr != ESP_OK) {
-    ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to create event loop: %s",
+  if (errr != ESP_OK && errr != ESP_ERR_INVALID_STATE) {
+    ESP_LOGW(TAG_WIFI_SCANNER_MODULE, "Event loop create: %s",
              esp_err_to_name(errr));
-    esp_event_loop_delete_default();
-    esp_event_loop_create_default();
   }
   ESP_ERROR_CHECK(nvs_flash_init());
 
@@ -533,7 +536,7 @@ static void captive_module_wifi_begin() {
 
   dns_server_config_t config = DNS_SERVER_CONFIG_SINGLE(
       "*" /* all A queries */, "WIFI_AP_DEF" /* softAP netif ID */);
-  start_dns_server(&config);
+  dns_server = start_dns_server(&config);
 
   if (sd_card_is_not_mounted()) {
     sprintf(captive_context.portal, "Default");
@@ -682,7 +685,8 @@ static void captive_module_show_running() {
   // Here I increse the size of the body, I dont know if it is the necessary
   // size but it is necessary to incrase if it receive
   char body[128];
-  sprintf(body, "Using:%s | Waiting for user creds", captive_context.portal);
+  snprintf(body, sizeof(body), "Using:%s | Waiting for user creds",
+           captive_context.portal);
 
   general_notification_ctx_t notification = {0};
   notification.head = wifi_ap_name;
@@ -694,13 +698,15 @@ static void captive_module_show_running() {
 static void captive_module_redirect_selector_handler(uint8_t option) {
   preferences_put_string(CAPTIVE_PORTAL_REDIRECT_FS_KEY,
                          redirect_list.ent[option]);
-  sprintf(captive_context.redirect, redirect_list.ent[option]);
+  snprintf(captive_context.redirect, sizeof(captive_context.redirect), "%s",
+           redirect_list.ent[option]);
   captive_module_main();
 }
 
 static void captive_module_portal_selector_handler(uint8_t option) {
   preferences_put_string(CAPTIVE_PORTAL_FS_KEY, portals_list.ent[option]);
-  sprintf(captive_context.portal, portals_list.ent[option]);
+  snprintf(captive_context.portal, sizeof(captive_context.portal), "%s",
+           portals_list.ent[option]);
   captive_module_main();
 }
 

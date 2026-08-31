@@ -1,6 +1,7 @@
 #include "bt_gatts.h"
 #include "esp_bt.h"
 #include "esp_log.h"
+#include "gap_dispatcher.h"
 #include "inttypes.h"
 
 static uint8_t adv_config_done = 0;
@@ -106,7 +107,7 @@ void ble_server_write_event(esp_gatt_if_t gatts_if,
   esp_gatt_status_t status = ESP_GATT_OK;
   if (param->write.need_rsp) {
     if (param->write.is_prep) {
-      if (param->write.offset > PREPARE_BUF_MAX_SIZE) {
+      if (param->write.offset >= PREPARE_BUF_MAX_SIZE) {
         ESP_LOGW(TAG_BT_GATTS,
                  "invalid prepare write, offset = %d, value len = %d",
                  param->write.offset, param->write.len);
@@ -138,8 +139,11 @@ void ble_server_write_event(esp_gatt_if_t gatts_if,
         gatt_rsp->attr_value.handle = param->write.handle;
         gatt_rsp->attr_value.offset = param->write.offset;
         gatt_rsp->attr_value.auth_req = ESP_GATT_AUTH_REQ_NONE;
-        memcpy(gatt_rsp->attr_value.value, param->write.value,
-               param->write.len);
+        size_t copy_len = param->write.len;
+        if (copy_len > sizeof(gatt_rsp->attr_value.value)) {
+          copy_len = sizeof(gatt_rsp->attr_value.value);
+        }
+        memcpy(gatt_rsp->attr_value.value, param->write.value, copy_len);
 
         esp_err_t response_err = esp_ble_gatts_send_response(
             gatts_if, param->write.conn_id, param->write.trans_id, status,
@@ -172,15 +176,15 @@ void ble_server_write_event(esp_gatt_if_t gatts_if,
 void ble_server_exce_write_event(prepare_type_env_t* prepare_write_env,
                                  esp_ble_gatts_cb_param_t* param) {
   if (param->exec_write.exec_write_flag == ESP_GATT_PREP_WRITE_EXEC) {
-    ESP_LOG_BUFFER_HEX(TAG_BT_GATTS, prepare_write_env->prepare_buf,
-                       prepare_write_env->prepare_len);
-    ESP_LOG_BUFFER_CHAR(TAG_BT_GATTS, param->write.value, param->write.len);
+    if (prepare_write_env->prepare_buf && prepare_write_env->prepare_len > 0) {
+      ESP_LOG_BUFFER_HEX(TAG_BT_GATTS, prepare_write_env->prepare_buf,
+                         prepare_write_env->prepare_len);
+    }
   } else {
     ESP_LOGI(TAG_BT_GATTS, "ESP_GATT_PREP_WRITE_CANCEL");
   }
 
   // Clean up prepare buffer
-
   if (prepare_write_env->prepare_buf) {
     free(prepare_write_env->prepare_buf);
     prepare_write_env->prepare_buf = NULL;
@@ -331,8 +335,9 @@ void ble_server_gatt_profiles_event_handler(esp_gatts_cb_event_t event,
     }
     case ESP_GATTS_EXEC_WRITE_EVT:
       ESP_LOGI(TAG_BT_GATTS, "ESP_GATTS_EXEC_WRITE_EVT");
-      esp_ble_gatts_send_response(gatts_if, param->write.conn_id,
-                                  param->write.trans_id, ESP_GATT_OK, NULL);
+      esp_ble_gatts_send_response(gatts_if, param->exec_write.conn_id,
+                                  param->exec_write.trans_id, ESP_GATT_OK,
+                                  NULL);
       ble_server_exce_write_event(&a_prepare_write_env, param);
       break;
     case ESP_GATTS_MTU_EVT:
@@ -516,36 +521,22 @@ void bt_gatts_task_begin(void) {
 
   esp_err_t ret;
 
-  ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
-
-  esp_bt_controller_config_t bluetooth_config =
-      BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-  ret = esp_bt_controller_init(&bluetooth_config);
-  if (ret) {
-    ESP_LOGE(TAG_BT_GATTS, "%s initialize controller failed: %s", __func__,
-             esp_err_to_name(ret));
-    return;
+  if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_IDLE) {
+    esp_bt_controller_config_t bluetooth_config =
+        BT_CONTROLLER_INIT_CONFIG_DEFAULT();
+    ret = esp_bt_controller_init(&bluetooth_config);
+    if (ret == ESP_OK) {
+      esp_bt_controller_enable(ESP_BT_MODE_BLE);
+    }
   }
 
-  ret = esp_bt_controller_enable(ESP_BT_MODE_BLE);
-  if (ret) {
-    ESP_LOGE(TAG_BT_GATTS, "%s enable controller failed: %s", __func__,
-             esp_err_to_name(ret));
-    return;
-  }
-
-  esp_bluedroid_config_t bluedroid_config = BT_BLUEDROID_INIT_CONFIG_DEFAULT();
-  ret = esp_bluedroid_init_with_cfg(&bluedroid_config);
-  if (ret) {
-    ESP_LOGE(TAG_BT_GATTS, "%s initialize bluedroid failed: %s", __func__,
-             esp_err_to_name(ret));
-    return;
-  }
-  ret = esp_bluedroid_enable();
-  if (ret) {
-    ESP_LOGE(TAG_BT_GATTS, "%s enable bluetooth failed: %s", __func__,
-             esp_err_to_name(ret));
-    return;
+  if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_UNINITIALIZED) {
+    esp_bluedroid_config_t bluedroid_config =
+        BT_BLUEDROID_INIT_CONFIG_DEFAULT();
+    ret = esp_bluedroid_init_with_cfg(&bluedroid_config);
+    if (ret == ESP_OK) {
+      esp_bluedroid_enable();
+    }
   }
 
   ret = esp_ble_gatts_register_callback(gatts_event_handler);
@@ -553,9 +544,10 @@ void bt_gatts_task_begin(void) {
     ESP_LOGE(TAG_BT_GATTS, "gatts register error, error code = %x", ret);
     return;
   }
-  ret = esp_ble_gap_register_callback(ble_server_gap_event_handler);
+  ret = gap_dispatcher_register(ble_server_gap_event_handler);
   if (ret) {
-    ESP_LOGE(TAG_BT_GATTS, "gap register error, error code = %x", ret);
+    ESP_LOGE(TAG_BT_GATTS, "gap dispatcher register error, error code = %x",
+             ret);
     return;
   }
 
@@ -574,9 +566,12 @@ void bt_gatts_task_begin(void) {
 
 void bt_gatts_task_stop(void) {
   ESP_LOGI(TAG_BT_GATTS, "Stopping BLE task");
-  esp_bluedroid_disable();
-  esp_bluedroid_deinit();
-  esp_bt_controller_disable();
-  esp_bt_controller_deinit();
-  esp_bt_controller_mem_release(ESP_BT_MODE_BLE);
+  esp_ble_gap_stop_advertising();
+  if (ble_server_gatt_profile_tab[DEVICE_PROFILE].gatts_if !=
+      ESP_GATT_IF_NONE) {
+    esp_ble_gatts_app_unregister(
+        ble_server_gatt_profile_tab[DEVICE_PROFILE].gatts_if);
+    ble_server_gatt_profile_tab[DEVICE_PROFILE].gatts_if = ESP_GATT_IF_NONE;
+  }
+  gap_dispatcher_unregister(ble_server_gap_event_handler);
 }

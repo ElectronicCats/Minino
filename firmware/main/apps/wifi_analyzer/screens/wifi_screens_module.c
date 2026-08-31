@@ -52,7 +52,7 @@ void wifi_screens_display_sniffer_animation_task() {
   static uint8_t idx = 0;
   oled_screen_display_bitmap(epd_bitmap_wifi_loading[idx], x, 1, width, height,
                              OLED_DISPLAY_NORMAL);
-  idx = ++idx > 3 ? 0 : idx;
+  idx = (idx + 1 > 3) ? 0 : (idx + 1);
 }
 
 void wifi_screens_sniffer_animation_start() {

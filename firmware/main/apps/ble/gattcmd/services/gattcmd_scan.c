@@ -1,3 +1,4 @@
+#include "gap_dispatcher.h"
 #include "services/gattcmd_service.h"
 
 #include "esp_bt.h"
@@ -117,8 +118,8 @@ static void gattcmd_scan_gap_cb(esp_gap_ble_cb_event_t event,
           printf("|\t" ESP_BD_ADDR_STR " |\t %d \t\t|",
                  ESP_BD_ADDR_HEX(scan_result->scan_rst.bda),
                  scan_result->scan_rst.rssi);
-          if (adv_name != NULL) {
-            printf("<- %s\n", adv_name);
+          if (adv_name != NULL && adv_name_len > 0) {
+            printf("<- %.*s\n", (int) adv_name_len, (char*) adv_name);
           } else {
             printf("\n");
           }
@@ -172,8 +173,9 @@ static void gattcmd_scan_gattc_cb(esp_gattc_cb_event_t event,
     } else {
       ESP_LOGI(GATTCMD_SCAN_TAG, "reg app failed, app_id %04x, status %d",
                param->reg.app_id, param->reg.status);
-      if (param->reg.status == 128)
-        esp_restart();
+      if (param->reg.status == 128) {
+        ESP_LOGE(GATTCMD_SCAN_TAG, "reg app failed with status 128, skipping");
+      }
       return;
     }
   }
@@ -197,9 +199,9 @@ static void gattcmd_scan_gattc_cb(esp_gattc_cb_event_t event,
 
 void gattcmd_scan_begin(void) {
   // register the  callback function to the gap module
-  esp_err_t ret = esp_ble_gap_register_callback(gattcmd_scan_gap_cb);
+  esp_err_t ret = gap_dispatcher_register(gattcmd_scan_gap_cb);
   if (ret) {
-    ESP_LOGE(GATTCMD_SCAN_TAG, "%s gap register failed, error code = %x",
+    ESP_LOGE(GATTCMD_SCAN_TAG, "%s gap dispatcher register failed, code = %x",
              __func__, ret);
     return;
   }

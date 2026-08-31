@@ -108,13 +108,13 @@ static void thread_broadcast_input(uint8_t button_name, uint8_t button_event) {
       break;
     case BUTTON_UP:
       printf("channel++\n");
-      channel = ++channel > 26 ? 11 : channel;
+      channel = (channel + 1 > 26) ? 11 : (channel + 1);
       openthread_set_dataset(channel, 0x1234);
       open_thread_screens_display_broadcast_mode(channel);
       break;
     case BUTTON_DOWN:
       printf("channel--\n");
-      channel = --channel < 11 ? 26 : channel;
+      channel = (channel - 1 < 11) ? 26 : (channel - 1);
       openthread_set_dataset(channel, 0x1234);
       open_thread_screens_display_broadcast_mode(channel);
       break;

@@ -74,6 +74,7 @@ void ble_scanner_register_cb(bluetooth_adv_scanner_cb_t callback) {
 
 void ble_scanner_stop() {
   ble_scanner_active = false;
+  bt_gattc_task_stop();
 }
 
 bool ble_scanner_is_active() {
