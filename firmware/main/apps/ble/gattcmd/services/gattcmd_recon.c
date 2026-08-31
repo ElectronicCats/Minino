@@ -1,4 +1,5 @@
 #include "services/gattcmd_service.h"
+#include "gap_dispatcher.h"
 
 #include "esp_bt.h"
 #include "esp_bt_main.h"
@@ -517,8 +518,9 @@ static void gattcmd_recon_gattc_cb(esp_gattc_cb_event_t event,
     } else {
       ESP_LOGI(GATTCMD_ENUM_TAG, "reg app failed, app_id %04x, status %d",
                param->reg.app_id, param->reg.status);
-      if (param->reg.status == 128)
-        esp_restart();
+      if (param->reg.status == 128) {
+        ESP_LOGE(GATTCMD_ENUM_TAG, "reg app failed with status 128, skipping");
+      }
       return;
     }
   }
@@ -554,9 +556,9 @@ void gattcmd_recon_begin(const char* bt_addr_str) {
     ESP_LOGI(TAG, "Recon begin: scanning all devices");
   }
   // register the  callback function to the gap module
-  esp_err_t ret = esp_ble_gap_register_callback(gattcmd_recon_gap_cb);
+  esp_err_t ret = gap_dispatcher_register(gattcmd_recon_gap_cb);
   if (ret) {
-    ESP_LOGE(GATTCMD_ENUM_TAG, "%s gap register failed, error code = %x",
+    ESP_LOGE(GATTCMD_ENUM_TAG, "%s gap dispatcher register failed, code = %x",
              __func__, ret);
     return;
   }

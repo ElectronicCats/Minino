@@ -1,9 +1,11 @@
 #include "bt_spam.h"
 #include <string.h>
+#include "gap_dispatcher.h"
 #include "esp_bt.h"
 #include "esp_bt_main.h"
 #include "esp_err.h"
 #include "esp_gap_ble_api.h"
+#include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_random.h"
 #include "freertos/FreeRTOS.h"
@@ -21,6 +23,16 @@ static SemaphoreHandle_t adv_sem = NULL;
 static volatile esp_gap_ble_cb_event_t expected_event = 0;
 static volatile esp_bt_status_t last_event_status = ESP_BT_STATUS_SUCCESS;
 static bt_spam_mode_t current_mode = BT_SPAM_MODE_ALL;
+static bool bt_controller_initialized = false;
+static bool bluedroid_initialized = false;
+static bool gap_callback_registered = false;
+
+/* Chained GAP callback for other modules (e.g., bt_gattc) */
+static esp_gap_ble_cb_t chained_gap_cb = NULL;
+
+static uint32_t cycle_count = 0;
+static uint32_t last_heap_log_cycle = 0;
+static size_t min_free_heap_during_spam = 0;
 
 /*
  * ADV_TYPE_IND (connectable undirected advertising) allows adv_int down to 20ms
@@ -542,6 +554,7 @@ static uint8_t prepare_payload(int index, uint8_t* out_buffer) {
  */
 static void esp_gap_cb(esp_gap_ble_cb_event_t event,
                        esp_ble_gap_cb_param_t* param) {
+  /* Handle spam module events */
   switch (event) {
     case ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT:
       last_event_status = param->adv_data_raw_cmpl.status;
@@ -577,9 +590,40 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event,
       }
       break;
 
+    case ESP_GAP_BLE_ADV_TERMINATED_EVT:
+      is_advertising_active = false;
+      break;
+
     case ESP_GAP_BLE_UPDATE_CONN_PARAMS_EVT:
+      break;
+
+    case ESP_GAP_BLE_AUTH_CMPL_EVT:
+      break;
+
+    case ESP_GAP_BLE_SEC_REQ_EVT:
+      break;
+
     default:
       break;
+  }
+
+  /* Forward event to chained callback (e.g., bt_gattc for scanning) */
+  if (chained_gap_cb != NULL) {
+    chained_gap_cb(event, param);
+  }
+}
+
+/**
+ * @brief Set a chained GAP callback for other modules to receive events
+ * @param cb Callback to chain (can be NULL to clear)
+ */
+void bt_spam_set_chained_gap_cb(esp_gap_ble_cb_t cb) {
+  chained_gap_cb = cb;
+}
+
+static inline void drain_sem(void) {
+  if (adv_sem != NULL) {
+    while (xSemaphoreTake(adv_sem, 0) == pdTRUE) {}
   }
 }
 
@@ -599,6 +643,13 @@ static bool wait_gap_event(esp_err_t ret, TickType_t timeout) {
  */
 static void start_adv(void* pvParameters) {
   uint8_t payload_buffer[31];
+  min_free_heap_during_spam = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+  uint32_t mac_rot_cycle = 0;
+
+  esp_bd_addr_t rand_addr;
+  generate_random_mac(rand_addr);
+  esp_ble_gap_set_rand_addr(rand_addr);
+  vTaskDelay(pdMS_TO_TICKS(20));
 
   while (running_task) {
     if (active_indices_count == 0) {
@@ -613,63 +664,76 @@ static void start_adv(void* pvParameters) {
       display_records_cb(spam_models[model_idx].name);
     }
 
-    /* 1. Stop advertising if active before updating MAC/Payload */
-    if (is_advertising_active) {
-      xSemaphoreTake(adv_sem, 0);
-      esp_err_t ret = esp_ble_gap_stop_advertising();
-      if (!wait_gap_event(ret, pdMS_TO_TICKS(150))) {
-        vTaskDelay(pdMS_TO_TICKS(20));
+    /* Heap monitoring - log every 100 cycles (~25 seconds at 250ms/cycle) */
+    cycle_count++;
+    if (cycle_count - last_heap_log_cycle >= 100) {
+      size_t free_heap = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+      size_t min_free = heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT);
+      size_t largest_block = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
+      if (free_heap < min_free_heap_during_spam) {
+        min_free_heap_during_spam = free_heap;
       }
-      is_advertising_active = false;
+      float fragmentation = 0.0f;
+      if (free_heap > 0) {
+        fragmentation = ((float)(free_heap - largest_block) / (float)free_heap) * 100.0f;
+      }
+      ESP_LOGI(TAG, "Heap: free=%zu KB, min=%zu KB, largest=%zu KB, frag=%.1f%%",
+               free_heap / 1024, min_free / 1024, largest_block / 1024, fragmentation);
+      last_heap_log_cycle = cycle_count;
+    }
+
+    /* 1. Periodic MAC rotation every 8 cycles (~2s) with clean settling */
+    if (++mac_rot_cycle >= 8) {
+      mac_rot_cycle = 0;
+      if (is_advertising_active) {
+        drain_sem();
+        esp_ble_gap_stop_advertising();
+        wait_gap_event(ESP_OK, pdMS_TO_TICKS(50));
+        is_advertising_active = false;
+        vTaskDelay(pdMS_TO_TICKS(15));
+      }
+      generate_random_mac(rand_addr);
+      drain_sem();
+      esp_ble_gap_set_rand_addr(rand_addr);
+      wait_gap_event(ESP_OK, pdMS_TO_TICKS(50));
+      vTaskDelay(pdMS_TO_TICKS(15));
     }
 
     if (!running_task) {
       break;
     }
 
-    /* 2. Set fresh static random MAC address */
-    esp_bd_addr_t rand_addr;
-    generate_random_mac(rand_addr);
-    xSemaphoreTake(adv_sem, 0);
-    esp_err_t ret = esp_ble_gap_set_rand_addr(rand_addr);
-    if (!wait_gap_event(ret, pdMS_TO_TICKS(150))) {
-      vTaskDelay(pdMS_TO_TICKS(20));
-    }
-
-    if (!running_task) {
-      break;
-    }
-
-    /* 3. Prepare payload with dynamic randomized ephemeral fields */
+    /* 2. Prepare payload with dynamic randomized ephemeral fields */
     uint8_t payload_len = prepare_payload(model_idx, payload_buffer);
 
-    /* 4. Configure advertising payload */
-    xSemaphoreTake(adv_sem, 0);
-    ret = esp_ble_gap_config_adv_data_raw(payload_buffer, payload_len);
-    if (!wait_gap_event(ret, pdMS_TO_TICKS(150))) {
-      vTaskDelay(pdMS_TO_TICKS(20));
+    /* 3. Configure advertising payload on the fly */
+    drain_sem();
+    esp_err_t ret = esp_ble_gap_config_adv_data_raw(payload_buffer, payload_len);
+    if (ret == ESP_OK) {
+      wait_gap_event(ret, pdMS_TO_TICKS(50));
     }
 
     if (!running_task) {
       break;
     }
 
-    /* 5. Start advertising */
-    xSemaphoreTake(adv_sem, 0);
-    ret = esp_ble_gap_start_advertising(&ble_adv_params);
-    if (wait_gap_event(ret, pdMS_TO_TICKS(150))) {
-      is_advertising_active = true;
-    } else {
-      is_advertising_active = false;
-      vTaskDelay(pdMS_TO_TICKS(30));
+    /* 4. Start advertising if not active */
+    if (!is_advertising_active && running_task) {
+      drain_sem();
+      ret = esp_ble_gap_start_advertising(&ble_adv_params);
+      if (ret == ESP_OK) {
+        if (wait_gap_event(ret, pdMS_TO_TICKS(50))) {
+          is_advertising_active = true;
+        }
+      }
     }
 
-    /* 6. Dwell for ~250ms in 50ms slices for fast exit response */
+    /* 5. Dwell for ~250ms in 50ms slices for fast exit response */
     for (int i = 0; i < 5 && running_task; i++) {
       vTaskDelay(pdMS_TO_TICKS(50));
     }
 
-    /* 7. Advance to next model within current active mode */
+    /* 6. Advance to next model within current active mode */
     adv_index = (adv_index + 1) % active_indices_count;
   }
 
@@ -678,6 +742,15 @@ static void start_adv(void* pvParameters) {
     esp_ble_gap_stop_advertising();
     is_advertising_active = false;
   }
+
+  /* Final heap report */
+  size_t free_heap = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+  size_t min_free = heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT);
+  ESP_LOGI(TAG, "Spam stopped. Final heap: free=%zu KB, min during run=%zu KB, overall min=%zu KB",
+           free_heap / 1024, min_free_heap_during_spam / 1024, min_free / 1024);
+  cycle_count = 0;
+  last_heap_log_cycle = 0;
+  min_free_heap_during_spam = 0;
 
   adv_task_handle = NULL;
   vTaskDelete(NULL);
@@ -697,14 +770,19 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
 #endif
 
   esp_err_t ret;
-  if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_IDLE) {
+
+  // Initialize BT controller if not already done
+  if (!bt_controller_initialized) {
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     ret = esp_bt_controller_init(&bt_cfg);
     if (ret != ESP_OK) {
       ESP_LOGE(TAG, "bt_controller_init failed: %s", esp_err_to_name(ret));
       return;
     }
+    bt_controller_initialized = true;
   }
+
+  // Enable BT controller for BLE mode
   if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_INITED) {
     ret = esp_bt_controller_enable(ESP_BT_MODE_BLE);
     if (ret != ESP_OK) {
@@ -713,14 +791,18 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
     }
   }
 
-  if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_UNINITIALIZED) {
+  // Initialize Bluedroid if not already done
+  if (!bluedroid_initialized) {
     esp_bluedroid_config_t bluedroid_config = BT_BLUEDROID_INIT_CONFIG_DEFAULT();
     ret = esp_bluedroid_init_with_cfg(&bluedroid_config);
     if (ret != ESP_OK) {
       ESP_LOGE(TAG, "bluedroid_init failed: %s", esp_err_to_name(ret));
       return;
     }
+    bluedroid_initialized = true;
   }
+
+  // Enable Bluedroid
   if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_INITIALIZED) {
     ret = esp_bluedroid_enable();
     if (ret != ESP_OK) {
@@ -731,29 +813,31 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
 
   if (adv_sem == NULL) {
     adv_sem = xSemaphoreCreateBinary();
+    if (adv_sem == NULL) {
+      ESP_LOGE(TAG, "Failed to create adv_sem");
+      return;
+    }
   }
 
-  ret = esp_ble_gap_register_callback(esp_gap_cb);
+  // Register our GAP callback via the central dispatcher so that other
+  // modules (bt_gatts, ble_hid, surv_radio, gattcmd) can also receive GAP
+  // events without overwriting each other's registration.
+  ret = gap_dispatcher_register(esp_gap_cb);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "gap_register_callback failed: %s", esp_err_to_name(ret));
+    ESP_LOGE(TAG, "gap_dispatcher_register failed: %s", esp_err_to_name(ret));
     return;
   }
+  gap_callback_registered = true;
 
-  /* Set RF TX power with fallback */
-  if (esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P20) != ESP_OK) {
-    if (esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P15) != ESP_OK) {
-      esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
-    }
-  }
-  if (esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P20) != ESP_OK) {
-    if (esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P15) != ESP_OK) {
-      esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9);
-    }
-  }
+  /* Set RF TX power with fallback - use safe defaults for ESP32-C6 */
+  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
+  esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9);
 
   current_mode = mode;
   rebuild_active_indices(current_mode);
   adv_index = 0;
+  esp_ble_gap_stop_advertising();
+  drain_sem();
   is_advertising_active = false;
   running_task = true;
   xTaskCreate(&start_adv, "bt_spam_adv", 4096, NULL, 5, &adv_task_handle);
@@ -768,19 +852,159 @@ void bt_spam_app_stop(void) {
     xSemaphoreGive(adv_sem);
   }
 
-  /* Wait for task to exit cleanly */
+  /* Wait for task to exit cleanly - task cleans up advertising on exit */
   if (adv_task_handle != NULL) {
-    uint8_t retries = 50; /* 50 x 10ms = 500ms max wait */
+    uint8_t retries = 200; /* 200 x 10ms = 2s max wait */
     while (adv_task_handle != NULL && retries-- > 0) {
       vTaskDelay(pdMS_TO_TICKS(10));
     }
     if (adv_task_handle != NULL) {
+      ESP_LOGW(TAG, "Adv task didn't exit cleanly, forcing delete");
       vTaskDelete(adv_task_handle);
       adv_task_handle = NULL;
     }
   }
 
-  /* Guarantee advertising is stopped at the controller level */
-  esp_ble_gap_stop_advertising();
-  is_advertising_active = false;
+  /* Ensure advertising is stopped at the controller level */
+  if (is_advertising_active) {
+    esp_ble_gap_stop_advertising();
+    /* Wait for stop event */
+    vTaskDelay(pdMS_TO_TICKS(100));
+    is_advertising_active = false;
+  }
+
+  /* Note: We don't deinit bluedroid/controller here because they may be
+   * used by other modules. They are initialized once and kept alive. */
+}
+
+void bt_spam_app_deinit(void) {
+  bt_spam_app_stop();
+
+  if (bluedroid_initialized) {
+    esp_bluedroid_disable();
+    esp_bluedroid_deinit();
+    bluedroid_initialized = false;
+  }
+
+  if (bt_controller_initialized) {
+    esp_bt_controller_disable();
+    esp_bt_controller_deinit();
+    bt_controller_initialized = false;
+  }
+
+  if (adv_sem != NULL) {
+    vSemaphoreDelete(adv_sem);
+    adv_sem = NULL;
+  }
+
+  gap_callback_registered = false;
+  display_records_cb = NULL;
+}
+
+esp_err_t bt_spam_set_tx_power(esp_power_level_t power_level) {
+  esp_err_t ret = esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, power_level);
+  if (ret == ESP_OK) {
+    ret = esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, power_level);
+  }
+  if (ret == ESP_OK) {
+    ESP_LOGI(TAG, "TX power set to %d dBm", power_level);
+  }
+  return ret;
+}
+
+esp_err_t bt_spam_set_adv_interval(uint16_t min_interval, uint16_t max_interval) {
+  if (min_interval > max_interval || min_interval < 0x20) {
+    return ESP_ERR_INVALID_ARG;
+  }
+  ble_adv_params.adv_int_min = min_interval;
+  ble_adv_params.adv_int_max = max_interval;
+
+  if (is_advertising_active && running_task) {
+    esp_ble_gap_stop_advertising();
+    is_advertising_active = false;
+    vTaskDelay(pdMS_TO_TICKS(50));
+    esp_err_t ret = esp_ble_gap_start_advertising(&ble_adv_params);
+    if (ret == ESP_OK) {
+      is_advertising_active = true;
+    }
+  }
+  ESP_LOGI(TAG, "Adv interval set: min=0x%04x, max=0x%04x", min_interval, max_interval);
+  return ESP_OK;
+}
+
+esp_err_t bt_spam_get_heap_stats(uint32_t* free_kb, uint32_t* min_kb, float* fragmentation) {
+  if (free_kb == NULL || min_kb == NULL || fragmentation == NULL) {
+    return ESP_ERR_INVALID_ARG;
+  }
+  size_t free_heap = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+  size_t min_free = heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT);
+  size_t largest_block = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
+
+  *free_kb = free_heap / 1024;
+  *min_kb = min_free / 1024;
+
+  if (free_heap > 0) {
+    *fragmentation = ((float)(free_heap - largest_block) / (float)free_heap) * 100.0f;
+  } else {
+    *fragmentation = 100.0f;
+  }
+  return ESP_OK;
+}
+
+static bt_spam_power_profile_t current_power_profile = BT_SPAM_POWER_HIGH;
+
+esp_err_t bt_spam_set_power_profile(bt_spam_power_profile_t profile) {
+  if (profile > BT_SPAM_POWER_LOW) {
+    return ESP_ERR_INVALID_ARG;
+  }
+
+  current_power_profile = profile;
+
+  esp_err_t ret = ESP_OK;
+  switch (profile) {
+    case BT_SPAM_POWER_HIGH:
+      ret = esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
+      if (ret == ESP_OK) {
+        ret = esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9);
+      }
+      ble_adv_params.adv_int_min = 0x20;  // 20ms
+      ble_adv_params.adv_int_max = 0x30;  // 30ms
+      break;
+    case BT_SPAM_POWER_BALANCED:
+      ret = esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P6);
+      if (ret == ESP_OK) {
+        ret = esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P6);
+      }
+      ble_adv_params.adv_int_min = 0x40;  // 40ms
+      ble_adv_params.adv_int_max = 0x60;  // 60ms
+      break;
+    case BT_SPAM_POWER_LOW:
+      ret = esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P3);
+      if (ret == ESP_OK) {
+        ret = esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P3);
+      }
+      ble_adv_params.adv_int_min = 0x80;  // 80ms
+      ble_adv_params.adv_int_max = 0xA0;  // 100ms
+      break;
+  }
+
+  if (is_advertising_active && running_task && ret == ESP_OK) {
+    esp_ble_gap_stop_advertising();
+    is_advertising_active = false;
+    vTaskDelay(pdMS_TO_TICKS(50));
+    ret = esp_ble_gap_start_advertising(&ble_adv_params);
+    if (ret == ESP_OK) {
+      is_advertising_active = true;
+    }
+  }
+
+  ESP_LOGI(TAG, "Power profile set to %d (TX power: %d, adv interval: 0x%04x-0x%04x)",
+           profile,
+           (profile == BT_SPAM_POWER_HIGH) ? 9 : (profile == BT_SPAM_POWER_BALANCED) ? 6 : 3,
+           ble_adv_params.adv_int_min, ble_adv_params.adv_int_max);
+  return ret;
+}
+
+bt_spam_power_profile_t bt_spam_get_power_profile(void) {
+  return current_power_profile;
 }

@@ -59,19 +59,22 @@ esp_err_t esp_hidd_profile_init(void) {
 esp_err_t esp_hidd_profile_deinit(void) {
   uint16_t hidd_svc_hdl = hidd_le_env.hidd_inst.att_tbl[HIDD_LE_IDX_SVC];
   if (!hidd_le_env.enabled) {
-    ESP_LOGE(HID_LE_PRF_TAG, "HID device profile already initialized");
+    ESP_LOGW(HID_LE_PRF_TAG, "HID device profile not enabled");
     return ESP_OK;
   }
 
   if (hidd_svc_hdl != 0) {
     esp_ble_gatts_stop_service(hidd_svc_hdl);
     esp_ble_gatts_delete_service(hidd_svc_hdl);
-  } else {
-    return ESP_FAIL;
   }
 
-  /* register the HID device profile to the BTA_GATTS module*/
-  esp_ble_gatts_app_unregister(hidd_le_env.gatt_if);
+  /* unregister the HID device profile from the GATTS module */
+  if (hidd_le_env.gatt_if != ESP_GATT_IF_NONE) {
+    esp_ble_gatts_app_unregister(hidd_le_env.gatt_if);
+  }
+
+  hidd_le_env.enabled = false;
+  memset(&hidd_le_env, 0, sizeof(hidd_le_env_t));
 
   return ESP_OK;
 }

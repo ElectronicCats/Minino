@@ -1,4 +1,5 @@
 #include "bt_gattc.h"
+#include "gap_dispatcher.h"
 #include "esp_bt.h"
 #include "esp_log.h"
 #include "inttypes.h"
@@ -77,9 +78,10 @@ void bt_gattc_set_passive_scan(bool passive) {
 }
 
 void bt_gattc_set_remote_device_name(const char* device_name) {
-  memccpy(remote_device_name, device_name, 0, strlen(device_name));
-  strcpy(remote_device_name, device_name);
-  search_by_name = true;
+  if (device_name != NULL) {
+    strlcpy(remote_device_name, device_name, sizeof(remote_device_name));
+    search_by_name = true;
+  }
 }
 
 void bt_gattc_set_ble_scan_params(gattc_scan_params_t* scan_params) {
@@ -244,6 +246,7 @@ void ble_client_gattc_event_handler(esp_gattc_cb_event_t event,
           }
           /* free char_elem_result */
           free(char_elem_result);
+          char_elem_result = NULL;
         } else {
           ESP_LOGE(TAG_BT_GATTC, "no char found");
         }
@@ -396,8 +399,8 @@ void ble_client_esp_gap_cb(esp_gap_ble_cb_event_t event,
                                               ESP_BLE_AD_TYPE_NAME_CMPL,
                                               &adv_name_len);
           ESP_LOGI(TAG_BT_GATTC, "searched Device Name Len %d", adv_name_len);
-          ESP_LOG_BUFFER_CHAR(TAG_BT_GATTC, adv_name, adv_name_len);
           if (adv_name != NULL) {
+            ESP_LOG_BUFFER_CHAR(TAG_BT_GATTC, adv_name, adv_name_len);
             if (strlen(remote_device_name) == adv_name_len &&
                 strncmp((char*) adv_name, remote_device_name, adv_name_len) ==
                     0 &&
@@ -495,6 +498,7 @@ void bt_gattc_task_begin(void) {
 
   esp_err_t ret;
 
+  // Initialize BT controller if not already done
   if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_IDLE) {
     esp_bt_controller_config_t bluetooth_config =
         BT_CONTROLLER_INIT_CONFIG_DEFAULT();
@@ -502,8 +506,11 @@ void bt_gattc_task_begin(void) {
     if (ret == ESP_OK) {
       esp_bt_controller_enable(ESP_BT_MODE_BLE);
     }
+  } else if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_INITED) {
+    esp_bt_controller_enable(ESP_BT_MODE_BLE);
   }
 
+  // Initialize Bluedroid if not already done
   if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_UNINITIALIZED) {
     esp_bluedroid_config_t bluedroid_config =
         BT_BLUEDROID_INIT_CONFIG_DEFAULT();
@@ -511,12 +518,15 @@ void bt_gattc_task_begin(void) {
     if (ret == ESP_OK) {
       esp_bluedroid_enable();
     }
+  } else if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_INITIALIZED) {
+    esp_bluedroid_enable();
   }
 
-  ret = esp_ble_gap_register_callback(ble_client_esp_gap_cb);
-  if (ret) {
-    ESP_LOGE(TAG_BT_GATTC, "gap register error, error code = %x", ret);
-    return;
+  /* Register our GAP callback with the central gap dispatcher so we receive
+   * GAP events reliably regardless of whether other BLE modules are active. */
+  ret = gap_dispatcher_register(ble_client_esp_gap_cb);
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG_BT_GATTC, "gap_dispatcher_register failed, error = %x", ret);
   }
 
   ret = esp_ble_gattc_register_callback(ble_client_esp_gattc_cb);
@@ -547,13 +557,8 @@ void bt_gattc_task_stop(void) {
         ble_client_gattc_profile_tab[DEVICE_PROFILE].gattc_if);
     ble_client_gattc_profile_tab[DEVICE_PROFILE].gattc_if = ESP_GATT_IF_NONE;
   }
-  if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_ENABLED) {
-    esp_bluedroid_disable();
-  }
-  if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_INITIALIZED) {
-    esp_bluedroid_deinit();
-  }
-  if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_ENABLED) {
-    esp_bt_controller_disable();
-  }
+  /* Unregister from central GAP dispatcher */
+  gap_dispatcher_unregister(ble_client_esp_gap_cb);
+  /* Note: We don't fully deinit bluedroid/controller here because other
+   * modules (like BLE spam) may be using them. They are managed centrally. */
 }

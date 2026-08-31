@@ -3,5 +3,5 @@ idf_component_register(SRCS "ble_hidd_main.c"
                             "hid_dev.c"
                             "hid_device_le_prf.c"
                     INCLUDE_DIRS "."
-                    PRIV_REQUIRES bt nvs_flash esp_driver_gpio)
+                    PRIV_REQUIRES bt nvs_flash esp_driver_gpio gap_dispatcher)
                     target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-unused-const-variable)

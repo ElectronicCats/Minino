@@ -37,6 +37,9 @@ static void ble_spam_start_mode(bt_spam_mode_t mode, const char* title) {
 #if !defined(CONFIG_BLE_MODULE_DEBUG)
   esp_log_level_set(TAG_BLE_MODULE, ESP_LOG_NONE);
 #endif
+  if (bt_spam_is_running()) {
+    bt_spam_app_stop();
+  }
   wifi_driver_deinit_if_started();
   menus_module_set_app_state(true, ble_module_state_machine);
   oled_screen_clear();

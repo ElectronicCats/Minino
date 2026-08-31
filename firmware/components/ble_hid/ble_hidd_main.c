@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "gap_dispatcher.h"
 #include "esp_bt.h"
 #include "esp_log.h"
 #include "esp_mac.h"
@@ -278,10 +279,10 @@ void ble_hid_begin() {
     ESP_LOGE(HID_DEMO_TAG, "%s init hid profile failed", __func__);
   }
 
-  /// register the callback function to the gap module
-  ret = esp_ble_gap_register_callback(gap_event_handler);
+  /// register the callback function to the gap module via central dispatcher
+  ret = gap_dispatcher_register(gap_event_handler);
   if (ret != ESP_OK) {
-    ESP_LOGE(HID_DEMO_TAG, "esp_ble_gap_register_callback failed: %d", ret);
+    ESP_LOGE(HID_DEMO_TAG, "gap_dispatcher_register failed: %d", ret);
   }
   esp_hidd_register_callbacks(hidd_event_callback);
 

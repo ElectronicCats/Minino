@@ -1,4 +1,5 @@
 #include "services/gattcmd_service.h"
+#include "gap_dispatcher.h"
 
 #include "esp_bt.h"
 #include "esp_bt_main.h"
@@ -326,24 +327,16 @@ static void gattcmd_enum_gap_cb(esp_gap_ble_cb_event_t event,
       esp_ble_gap_cb_param_t* scan_result = (esp_ble_gap_cb_param_t*) param;
       switch (scan_result->scan_rst.search_evt) {
         case ESP_GAP_SEARCH_INQ_RES_EVT:
-          adv_name = esp_ble_resolve_adv_data_by_type(
-              scan_result->scan_rst.ble_adv,
-              scan_result->scan_rst.adv_data_len +
-                  scan_result->scan_rst.scan_rsp_len,
-              ESP_BLE_AD_TYPE_NAME_CMPL, &adv_name_len);
-          if (adv_name_len > 0)
-            if (adv_name != NULL) {
-              if (memcmp(target_bda, scan_result->scan_rst.bda, 6) == 0) {
-                if (connect == false) {
-                  connect = true;
-                  esp_ble_gap_stop_scanning();
-                  esp_ble_gattc_open(
-                      enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if,
-                      scan_result->scan_rst.bda,
-                      scan_result->scan_rst.ble_addr_type, true);
-                }
-              }
+          if (memcmp(target_bda, scan_result->scan_rst.bda, 6) == 0) {
+            if (connect == false) {
+              connect = true;
+              esp_ble_gap_stop_scanning();
+              esp_ble_gattc_open(
+                  enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if,
+                  scan_result->scan_rst.bda,
+                  scan_result->scan_rst.ble_addr_type, true);
             }
+          }
           break;
         case ESP_GAP_SEARCH_INQ_CMPL_EVT:
           break;
@@ -393,8 +386,9 @@ static void gattcmd_enum_gattc_cb(esp_gattc_cb_event_t event,
     } else {
       ESP_LOGI(GATTCMD_ENUM_TAG, "reg app failed, app_id %04x, status %d",
                param->reg.app_id, param->reg.status);
-      if (param->reg.status == 128)
-        esp_restart();
+      if (param->reg.status == 128) {
+        ESP_LOGE(GATTCMD_ENUM_TAG, "reg app failed with status 128, skipping");
+      }
       return;
     }
   }
@@ -424,9 +418,9 @@ static void parse_address_colon(const char* str, uint8_t addr[6]) {
 void gattcmd_enum_begin(char* saddress) {
   parse_address_colon(saddress, target_bda);
   // register the  callback function to the gap module
-  esp_err_t ret = esp_ble_gap_register_callback(gattcmd_enum_gap_cb);
+  esp_err_t ret = gap_dispatcher_register(gattcmd_enum_gap_cb);
   if (ret) {
-    ESP_LOGE(GATTCMD_ENUM_TAG, "%s gap register failed, error code = %x",
+    ESP_LOGE(GATTCMD_ENUM_TAG, "%s gap dispatcher register failed, code = %x",
              __func__, ret);
     return;
   }
