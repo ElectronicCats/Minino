@@ -36,7 +36,7 @@ BOARDS = minino bsides dragonjar ekoparty bugcon bsseattle
 
 mergebins:
 	@for board in $(BOARDS); do \
-		cd build-$$board && esptool.py --chip esp32c6 merge_bin -o $$board`Bin.bin` @flash_args && cd ..; \
+		(cd build-$$board && esptool.py --chip esp32c6 merge_bin -o $${board}Bin.bin @flash_args) || exit 1; \
 	done
 
 clean_builds:
@@ -49,7 +49,7 @@ builds:
 		rm -rf build-$$board; \
 	done
 	@for board in $(BOARDS); do \
-		idf.py @profiles/$$board/profile build; \
+		idf.py @profiles/$$board/profile build || exit 1; \
 	done
 
 .PHONY: test_port setup compile flash monitor clean all ff binmerge mergebins clean_builds builds
