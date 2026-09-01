@@ -5,6 +5,7 @@
 #include "freertos/semphr.h"
 #include "oled_screen.h"
 
+#ifdef CONFIG_RESOLUTION_128X64
 // 'ble_loading-1', 128x32px
 static const unsigned char ble_bitmap_ble_loading_1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -192,6 +193,7 @@ static const unsigned char ble_bitmap_ble_loading_4[] = {
 static const unsigned char* const ble_bitmap_scan_attack_allArray[4] = {
     ble_bitmap_ble_loading_1, ble_bitmap_ble_loading_2,
     ble_bitmap_ble_loading_3, ble_bitmap_ble_loading_4};
+#endif
 
 static char current_screen_title[24] = "BLE SPAM";
 static char current_model_name[32] = "Starting...";
