@@ -39,9 +39,9 @@ void surv_sim_screens_show(const char* mode_name,
     snprintf(buf, sizeof(buf), "Tx:  %-6lu pkts", (unsigned long) packet_count);
     oled_screen_display_text(buf, 0, 4, false);
 
-    oled_screen_display_text("Emision continua", 0, 5, false);
+    oled_screen_display_text("Continuous TX", 0, 5, false);
 
-    oled_screen_display_text("< Salir", 0, 7, true);
+    oled_screen_display_text("< Exit", 0, 7, true);
   } else {
     snprintf(buf, sizeof(buf), "SIM [TX] %-4s %c",
              mode_name ? mode_name : "ALL", spin);
@@ -54,7 +54,7 @@ void surv_sim_screens_show(const char* mode_name,
     snprintf(buf, sizeof(buf), "Tx:%-5lu pkts", (unsigned long) packet_count);
     oled_screen_display_text(buf, 0, 2, false);
 
-    oled_screen_display_text("< Salir", 0, 3, true);
+    oled_screen_display_text("< Exit", 0, 3, true);
   }
 
   oled_screen_display_show();

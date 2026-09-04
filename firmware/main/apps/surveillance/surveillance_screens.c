@@ -79,7 +79,7 @@ void surveillance_screens_show_status(uint8_t score,
     if (last_label != NULL && last_label[0] != '\0') {
       snprintf(buf, sizeof(buf), "Tgt:%-12s", last_label);
     } else {
-      snprintf(buf, sizeof(buf), "Tgt:(Buscando...)");
+      snprintf(buf, sizeof(buf), "Tgt:(Searching)");
     }
     oled_screen_display_text(buf, 0, 2, false);
 
@@ -87,7 +87,7 @@ void surveillance_screens_show_status(uint8_t score,
     if (last_label != NULL && last_label[0] != '\0') {
       snprintf(buf, sizeof(buf), "Trs:%-12s", tier_to_detail(last_tier));
     } else {
-      snprintf(buf, sizeof(buf), "Trs:Sin amenazas");
+      snprintf(buf, sizeof(buf), "Trs:No threats");
     }
     oled_screen_display_text(buf, 0, 3, false);
 
@@ -95,7 +95,7 @@ void surveillance_screens_show_status(uint8_t score,
     if (last_label != NULL && last_label[0] != '\0') {
       snprintf(buf, sizeof(buf), "%4ddBm %s", rssi, rssi_to_bars(rssi));
     } else {
-      snprintf(buf, sizeof(buf), "Sig: Monitoreo");
+      snprintf(buf, sizeof(buf), "Sig: Monitoring");
     }
     oled_screen_display_text(buf, 0, 4, false);
 
@@ -109,7 +109,7 @@ void surveillance_screens_show_status(uint8_t score,
 
     // Pagina 6: Metricas / Buffer
     if (overflows > 0) {
-      snprintf(buf, sizeof(buf), "Cola ovf: %lu", (unsigned long) overflows);
+      snprintf(buf, sizeof(buf), "Queue ovf: %lu", (unsigned long) overflows);
       oled_screen_display_text(buf, 0, 6, false);
     }
 
@@ -126,7 +126,7 @@ void surveillance_screens_show_status(uint8_t score,
     if (last_label != NULL && last_label[0] != '\0') {
       snprintf(buf, sizeof(buf), "Tgt:%-8s T%d", last_label, last_tier);
     } else {
-      snprintf(buf, sizeof(buf), "Tgt: Escaneando");
+      snprintf(buf, sizeof(buf), "Tgt: Scanning");
     }
     oled_screen_display_text(buf, 0, 2, false);
 
@@ -142,22 +142,22 @@ void surveillance_screens_show_status(uint8_t score,
 }
 
 static const char* const HELP_LINES[] = {
-    "=== VIGILANCIA ===",
-    "Detector pasivo de",
-    "camaras y rastreo.",
+    "= SURVEILLANCE =",
+    "Passive cam &",
+    "tracker detect.",
     "",
-    "Flock/ALPR opera",
-    "en EUA y Canada.",
-    "En MX es normal",
-    "ver score 0 CLEAR.",
+    "Flock/ALPR works",
+    "in US & Canada.",
+    "Score 0 CLEAR is",
+    "normal elsewhere",
     "",
-    "Firmas microSD en:",
+    "SD signatures:",
     "surveil/",
     "signatures.csv",
     "",
-    "Controles:",
-    "^:Ayuda  v:Modo",
-    ">:Scan   <:Salir",
+    "Controls:",
+    "^:Help   v:Mode",
+    ">:Scan   <:Exit",
 };
 
 void surveillance_screens_show_help(uint8_t page) {
@@ -173,8 +173,8 @@ void surveillance_screens_show_help(uint8_t page) {
 
 void surveillance_screens_show_radio_busy(void) {
   oled_screen_clear();
-  oled_screen_display_text("! RADIO OCUPADO !", 0, 1, true);
-  oled_screen_display_text("802.15.4 activo", 0, 3, false);
-  oled_screen_display_text("Reinicia Minino", 0, 5, false);
+  oled_screen_display_text("! RADIO BUSY !", 0, 1, true);
+  oled_screen_display_text("802.15.4 active", 0, 3, false);
+  oled_screen_display_text("Restart Minino", 0, 5, false);
   oled_screen_display_show();
 }

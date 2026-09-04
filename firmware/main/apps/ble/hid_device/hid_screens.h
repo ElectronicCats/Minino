@@ -24,8 +24,8 @@ enum {
   HID_DEVICE_COUNT
 } hid_device_item = HID_DEVICE_VOL_UP;
 char* hid_device_items[HID_DEVICE_COUNT] = {
-    "Volumen Up", "Volumen Down", "Play",       "Pause",
-    "Stop",       "Mute",         "Next Track", "Previous Track"};
+    "Volume Up", "Volume Down", "Play",       "Pause",
+    "Stop",      "Mute",        "Next Track", "Previous Track"};
 
 void hid_module_register_menu(menu_tree_t menu);
 void hid_clear_screen();
