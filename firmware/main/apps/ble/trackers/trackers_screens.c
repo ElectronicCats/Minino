@@ -34,12 +34,12 @@ static const char* distance_label(float d) {
     return "<1m";
   }
   if (d < 5.0f) {
-    return "Cerca";
+    return "Near";
   }
   if (d < 20.0f) {
-    return "Medio";
+    return "Mid";
   }
-  return "Lejos";
+  return "Far";
 }
 
 void trackers_screens_show_status(uint8_t tracker_count,
@@ -71,7 +71,7 @@ void trackers_screens_show_status(uint8_t tracker_count,
     if (last_name != NULL && last_name[0] != '\0') {
       snprintf(buf, sizeof(buf), "Dev:%-11s", last_name);
     } else {
-      snprintf(buf, sizeof(buf), "Dev:(Buscando...)");
+      snprintf(buf, sizeof(buf), "Dev:(Searching)");
     }
     oled_screen_display_text(buf, 0, 2, false);
 
@@ -85,7 +85,7 @@ void trackers_screens_show_status(uint8_t tracker_count,
     if (rssi != 0) {
       snprintf(buf, sizeof(buf), "%4ddBm %s", rssi, rssi_to_bars(rssi));
     } else {
-      snprintf(buf, sizeof(buf), "Sig: Monitoreo");
+      snprintf(buf, sizeof(buf), "Sig: Monitoring");
     }
     oled_screen_display_text(buf, 0, 4, false);
 
@@ -93,7 +93,7 @@ void trackers_screens_show_status(uint8_t tracker_count,
       snprintf(buf, sizeof(buf), "Dst:%5.1fm %s", distance,
                distance_label(distance));
     } else {
-      snprintf(buf, sizeof(buf), "Dst: Sin datos");
+      snprintf(buf, sizeof(buf), "Dst: No data");
     }
     oled_screen_display_text(buf, 0, 5, false);
 
@@ -103,7 +103,7 @@ void trackers_screens_show_status(uint8_t tracker_count,
       snprintf(buf, sizeof(buf), "    %.4f", gps_lon);
       oled_screen_display_text(buf, 0, 7, false);
     } else {
-      snprintf(buf, sizeof(buf), "GPS: Sin fix");
+      snprintf(buf, sizeof(buf), "GPS: No fix");
       oled_screen_display_text(buf, 0, 6, false);
       oled_screen_display_text("^Help vMode", 0, 7, true);
     }
@@ -121,7 +121,7 @@ void trackers_screens_show_status(uint8_t tracker_count,
     if (rssi != 0) {
       snprintf(buf, sizeof(buf), "%4ddBm %s", rssi, rssi_to_bars(rssi));
     } else {
-      snprintf(buf, sizeof(buf), "Sig: Monitoreo");
+      snprintf(buf, sizeof(buf), "Sig: Monitoring");
     }
     oled_screen_display_text(buf, 0, 2, false);
 
@@ -134,21 +134,21 @@ void trackers_screens_show_status(uint8_t tracker_count,
 
 static const char* const HELP_LINES[] = {
     "=== TRACKERS ===",
-    "Detecta AirTag,",
+    "Detects AirTag,",
     "SmartTag, Tile",
-    "y otros rastreadores",
-    "BLE (Bluetooth).",
+    "and other BLE",
+    "trackers.",
     "",
-    "Muestra distancia",
-    "estimada por RSSI.",
+    "Shows estimated",
+    "dist by RSSI.",
     "",
-    "Si GPS activo:",
-    "captura coordenadas",
-    "de cada tracker.",
+    "If GPS active:",
+    "logs tracker",
+    "coordinates.",
     "",
-    "Controles:",
-    "^:Ayuda  v:Scan",
-    "<:Salir",
+    "Controls:",
+    "^:Help   v:Scan",
+    "<:Exit",
 };
 
 void trackers_screens_show_help(uint8_t page) {

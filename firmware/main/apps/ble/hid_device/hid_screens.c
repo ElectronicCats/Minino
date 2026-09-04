@@ -42,14 +42,14 @@ void hid_module_display_device_information(char* title, char* body) {
 
 void hid_module_display_notify_volumen_up() {
   led_control_run_effect(led_control_pulse_led_right);
-  genera_screen_display_notify_information("Notify", "Volumen Up");
+  genera_screen_display_notify_information("Notify", "Volume Up");
   vTaskDelay(500 / portTICK_PERIOD_MS);
   // general_screen_display_menu(hid_current_item);
 }
 
 void hid_module_display_notify_volumen_down() {
   led_control_run_effect(led_control_pulse_led_left);
-  genera_screen_display_notify_information("Notify", "Volumen Down");
+  genera_screen_display_notify_information("Notify", "Volume Down");
   vTaskDelay(500 / portTICK_PERIOD_MS);
   // general_screen_display_menu(hid_current_item);
 }
