@@ -119,7 +119,8 @@ bool screen_saver_get_idle_state() {
   bool idle = screen_saver_running;
   screen_saver_stop();
   esp_timer_stop(screen_saver_idle_timer);
-  esp_timer_start_once(screen_saver_idle_timer, (uint64_t)IDLE_TIMEOUT_S * 1000 * 1000);
+  esp_timer_start_once(screen_saver_idle_timer,
+                       (uint64_t) IDLE_TIMEOUT_S * 1000 * 1000);
   return idle;
 }
 

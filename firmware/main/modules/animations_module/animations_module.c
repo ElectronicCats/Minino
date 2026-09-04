@@ -95,7 +95,8 @@ void animations_module_set_pos(uint8_t x, uint8_t y) {
 
 static void task_delay() {
   set_paused(true);
-  vTaskDelay(pdMS_TO_TICKS(anim_ctx->animation->duration_ms[anim_ctx->current_frame]));
+  vTaskDelay(
+      pdMS_TO_TICKS(anim_ctx->animation->duration_ms[anim_ctx->current_frame]));
   set_paused(false);
 }
 
