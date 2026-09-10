@@ -16,7 +16,8 @@ TESTS := test_surv_signatures.c \
         test_surv_ie.c \
         test_surv_ie_diff.c \
         test_surv_engine.c \
-        test_surv_overlay.c
+        test_surv_overlay.c \
+        test_wardriving.c
 
 # Codigo de terceros para el test diferencial. Se compila aparte y SIN -Werror:
 # es un extracto literal de flock-you y no se toca para acallar avisos, porque

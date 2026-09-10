@@ -110,16 +110,14 @@ esp_err_t wifi_module_init_sniffer() {
       case ESP_ERR_NOT_SUPPORTED:
         ESP_LOGI(TAG, "SD card not supported");
         wifi_screeens_show_sd_not_supported();
-        wifi_sniffer_set_destination_internal();
-        break;
+        return err;
       default:
         ESP_LOGE(TAG, "SD card mount failed: reason: %s", esp_err_to_name(err));
         /* fall through */
       case ESP_ERR_NOT_FOUND:
         ESP_LOGW(TAG, "SD card not found");
         wifi_screeens_show_sd_not_found();
-        wifi_sniffer_set_destination_internal();
-        break;
+        return err;
     }
   }
   err = wifi_sniffer_start();
@@ -127,7 +125,11 @@ esp_err_t wifi_module_init_sniffer() {
     xSemaphoreTake(state_mutex, portMAX_DELAY);
     analizer_initialized = false;
     xSemaphoreGive(state_mutex);
-    out_of_mem_handler();
+    if (err == ESP_ERR_NO_MEM) {
+      out_of_mem_handler();
+    } else {
+      wifi_module_summary_exit_cb();
+    }
     return err;
   }
   led_control_run_effect(led_control_zigbee_scanning);
@@ -135,9 +137,7 @@ esp_err_t wifi_module_init_sniffer() {
 }
 
 static void wifi_module_summary_exit_cb() {
-  if (analizer_initialized) {
-    wifi_sniffer_close_file();
-  }
+  wifi_sniffer_close_file();
   xSemaphoreTake(summary_mutex, portMAX_DELAY);
   wifi_analizer_free_summary();
   xSemaphoreGive(summary_mutex);
@@ -154,6 +154,7 @@ void wifi_module_analyzer_run_exit() {
   wifi_sniffer_stop();
   led_control_stop();
   wifi_sniffer_load_summary();
+  wifi_sniffer_close_file();
   analyzer_summary_menu.menu_count = get_summary_rows_count();
   general_register_scrolling_menu(&analyzer_summary_menu);
   general_screen_display_scrolling_text_handler(wifi_module_summary_exit_cb);

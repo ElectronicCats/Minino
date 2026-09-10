@@ -33,7 +33,7 @@
 
 static const char* TAG = "cmd_pcap";
 
-#define PCAP_FILE_NAME_MAX_LEN              CONFIG_SNIFFER_PCAP_FILE_NAME_MAX_LEN
+#define PCAP_FILE_NAME_MAX_LEN              (256)
 #define PCAP_MEMORY_BUFFER_SIZE             CONFIG_SNIFFER_PCAP_MEMORY_SIZE
 #define SNIFFER_PROCESS_APPTRACE_TIMEOUT_US (100)
 #define SNIFFER_APPTRACE_RETRY              (10)
@@ -209,11 +209,12 @@ static esp_err_t pcap_open(pcap_cmd_runtime_t* pcap) {
 
   if (wifi_sniffer_is_destination_sd()) {
     create_pcaps_dir();
-    char* pcap_dir = (char*) malloc(30);
-    sprintf(pcap_dir, "%s/%s", ANALIZER_SD_CARD, ANALIZER_PCAPS_PATH);
+    char pcap_dir[64];
+    snprintf(pcap_dir, sizeof(pcap_dir), "%s/%s", ANALIZER_SD_CARD,
+             ANALIZER_PCAPS_PATH);
     files_ops_incremental_name(pcap_dir, "analizer", ".pcap", pcap->filename);
-    free(pcap_dir);
     fp = fopen(pcap->filename, "wb+");
+    ESP_LOGI(TAG, "Opened SD pcap file: %s (fp=%p)", pcap->filename, fp);
   } else if (wifi_sniffer_is_destination_internal()) {
     flash_fs_mount();
     // Remove leftover .pcap files from previous sessions to reclaim space,
@@ -224,9 +225,10 @@ static esp_err_t pcap_open(pcap_cmd_runtime_t* pcap) {
       return space_ret;  // ESP_ERR_NO_MEM → triggers out_of_mem_cb correctly
     }
     // Always overwrite the same filename so we never accumulate old captures.
-    snprintf(pcap->filename, PCAP_FILE_NAME_MAX_LEN, "%s/analizer00.pcap",
+    snprintf(pcap->filename, sizeof(pcap->filename), "%s/analizer00.pcap",
              ANALIZER_FLASH_FS);
     fp = fopen(pcap->filename, "wb+");
+    ESP_LOGI(TAG, "Opened flash pcap file: %s (fp=%p)", pcap->filename, fp);
   } else {
     ESP_LOGE(TAG, "pcap file destination hasn't specified");
   }
@@ -246,12 +248,6 @@ static esp_err_t pcap_open(pcap_cmd_runtime_t* pcap) {
 err:
   if (fp) {
     fclose(fp);
-  }
-  // If the file could not be opened and we don't already have a specific error
-  // code, promote ESP_FAIL to ESP_ERR_NO_MEM so the caller's out_of_mem_cb
-  // fires correctly (ESP_FAIL would be silently ignored after our earlier fix).
-  if (ret == ESP_FAIL) {
-    ret = ESP_ERR_NO_MEM;
   }
   return ret;
 }
@@ -362,129 +358,13 @@ long pcap_cmd_get_file_size(FILE* file) {
 }
 
 esp_err_t pcap_cmd_print_summary(pcap_file_handle_t pcap, FILE* print_file) {
-  summary_cb(pcap->file);
+  if (pcap && pcap->file && summary_cb) {
+    fflush(pcap->file);
+    fseek(pcap->file, 0L, SEEK_SET);
+    summary_cb(pcap->file);
+    fseek(pcap->file, 0L, SEEK_END);
+  }
   return ESP_OK;
-
-  esp_err_t ret = ESP_OK;
-  long size = pcap_cmd_get_file_size(pcap->file);
-  char* packet_payload = NULL;
-  ESP_RETURN_ON_FALSE(pcap && print_file, ESP_ERR_INVALID_ARG, TAG,
-                      "invalid argument");
-  // file empty is allowed, so return ESP_OK
-  ESP_RETURN_ON_FALSE(size, ESP_OK, TAG, "pcap file is empty");
-  // packet index (by bytes)
-  uint32_t index = 0;
-  pcap_file_header_t file_header;
-  size_t real_read =
-      fread(&file_header, sizeof(pcap_file_header_t), 1, pcap->file);
-  ESP_RETURN_ON_FALSE(real_read == 1, ESP_FAIL, TAG,
-                      "read pcap file header failed");
-  index += sizeof(pcap_file_header_t);
-  // print pcap header information
-  fprintf(print_file,
-          "--------------------------------------------------------------------"
-          "----\n");
-  fprintf(print_file, "Pcap packet Head:\n");
-  fprintf(print_file,
-          "--------------------------------------------------------------------"
-          "----\n");
-  fprintf(print_file, "Magic Number: %" PRIx32 "\n", file_header.magic);
-  fprintf(print_file, "Major Version: %d\n", file_header.major);
-  fprintf(print_file, "Minor Version: %d\n", file_header.minor);
-  fprintf(print_file, "SnapLen: %" PRIu32 "\n", file_header.snaplen);
-  fprintf(print_file, "LinkType: %" PRIu32 "\n", file_header.link_type);
-  fprintf(print_file,
-          "--------------------------------------------------------------------"
-          "----\n");
-  uint32_t packet_num = 0;
-  pcap_packet_header_t packet_header;
-  while (index < size) {
-    real_read =
-        fread(&packet_header, sizeof(pcap_packet_header_t), 1, pcap->file);
-    ESP_GOTO_ON_FALSE(real_read == 1, ESP_FAIL, err, TAG,
-                      "read pcap packet header failed");
-    // print packet header information
-    fprintf(print_file, "Packet %" PRIu32 ":\n", packet_num);
-    fprintf(print_file, "Timestamp (Seconds): %" PRIu32 "\n",
-            packet_header.seconds);
-    fprintf(print_file, "Timestamp (Microseconds): %" PRIu32 "\n",
-            packet_header.microseconds);
-    fprintf(print_file, "Capture Length: %" PRIu32 "\n",
-            packet_header.capture_length);
-    fprintf(print_file, "Packet Length: %" PRIu32 "\n",
-            packet_header.packet_length);
-    size_t payload_length = packet_header.capture_length;
-    packet_payload = malloc(payload_length);
-    ESP_GOTO_ON_FALSE(packet_payload, ESP_ERR_NO_MEM, err, TAG,
-                      "no mem to save packet payload");
-    real_read = fread(packet_payload, payload_length, 1, pcap->file);
-    ESP_GOTO_ON_FALSE(real_read == 1, ESP_FAIL, err, TAG, "read payload error");
-    // print packet information
-    if (file_header.link_type == PCAP_LINK_TYPE_802_11) {
-      // Frame Control Field is coded as LSB first
-      fprintf(print_file, "Frame Type: %2x\n", (packet_payload[0] >> 2) & 0x03);
-      fprintf(print_file, "Frame Subtype: %2x\n",
-              (packet_payload[0] >> 4) & 0x0F);
-      fprintf(print_file, "Destination: ");
-      for (int j = 0; j < 5; j++) {
-        fprintf(print_file, "%2x ", packet_payload[4 + j]);
-      }
-      fprintf(print_file, "%2x\n", packet_payload[9]);
-      fprintf(print_file, "Source: ");
-      for (int j = 0; j < 5; j++) {
-        fprintf(print_file, "%2x ", packet_payload[10 + j]);
-      }
-      fprintf(print_file, "%2x\n", packet_payload[15]);
-      // Check if the frame is a Beacon frame or Probe Response frame
-      uint8_t frame_type = (packet_payload[0] >> 2) & 0x03;
-      uint8_t frame_subtype = (packet_payload[0] >> 4) & 0x0F;
-      if ((frame_type == 0 && frame_subtype == 8) ||  // Beacon frame
-          (frame_type == 0 && frame_subtype == 5)) {  // Probe Response frame
-        // The BSSID is located in the Address 3 field
-        fprintf(print_file, "BSSID: ");
-        for (int j = 0; j < 5; j++) {
-          fprintf(print_file, "%2x ", packet_payload[16 + j]);
-        }
-        fprintf(print_file, "%2x\n", packet_payload[21]);
-        // The SSID parameter set is located after the fixed parameters (36
-        // bytes)
-        uint8_t ssid_length = packet_payload[37];
-        fprintf(print_file, "SSID: ");
-        for (int j = 0; j < ssid_length; j++) {
-          fprintf(print_file, "%c", packet_payload[38 + j]);
-        }
-        fprintf(print_file, "\n");
-        // The DS Parameter Set, which contains the channel, is located after
-        // the SSID
-        uint8_t supported_rates_length = packet_payload[38 + ssid_length + 1];
-        fprintf(print_file, "Channel: %d\n",
-                packet_payload[38 + ssid_length + supported_rates_length + 4]);
-      }
-      fprintf(print_file,
-              "----------------------------------------------------------------"
-              "--------\n");
-    } else {
-      fprintf(print_file, "Unknown link type:%" PRIu32 "\n",
-              file_header.link_type);
-      fprintf(print_file,
-              "----------------------------------------------------------------"
-              "--------\n");
-    }
-    free(packet_payload);
-    packet_payload = NULL;
-    index += packet_header.capture_length + sizeof(pcap_packet_header_t);
-    packet_num++;
-  }
-  fprintf(print_file, "Pcap packet Number: %" PRIu32 "\n", packet_num);
-  fprintf(print_file,
-          "--------------------------------------------------------------------"
-          "----\n");
-  return ret;
-err:
-  if (packet_payload) {
-    free(packet_payload);
-  }
-  return ret;
 }
 
 int do_pcap_cmd(int argc, char* argv[]) {
@@ -506,13 +386,10 @@ int do_pcap_cmd(int argc, char* argv[]) {
   }
 
   if (wifi_sniffer_is_destination_sd()) {
-    /* set pcap file name: "-f" option */
-    int len = snprintf(pcap_cmd_rt.filename, sizeof(pcap_cmd_rt.filename),
-                       "%s/%s.pcap", CONFIG_SNIFFER_MOUNT_POINT,
-                       pcap_args.file->sval[0]);
-    if (len >= sizeof(pcap_cmd_rt.filename)) {
-      ESP_LOGW(TAG,
-               "pcap file name too long, try to enlarge memory in menuconfig");
+    /* Set default filename only if not yet initialized */
+    if (!pcap_cmd_rt.is_opened && pcap_cmd_rt.filename[0] == '\0') {
+      snprintf(pcap_cmd_rt.filename, sizeof(pcap_cmd_rt.filename), "%s/%s.pcap",
+               CONFIG_SNIFFER_MOUNT_POINT, pcap_args.file->sval[0]);
     }
 
     /* Check if needs to be parsed and shown: "--summary" option */
@@ -525,8 +402,7 @@ int do_pcap_cmd(int argc, char* argv[]) {
             pcap_cmd_print_summary(pcap_cmd_rt.pcap_handle, stdout), err, TAG,
             "pcap print summary failed");
       } else {
-        FILE* fp;
-        fp = fopen(pcap_cmd_rt.filename, "rb");
+        FILE* fp = fopen(pcap_cmd_rt.filename, "rb");
         ESP_GOTO_ON_FALSE(fp, ESP_FAIL, err, TAG, "open file failed");
         pcap_config_t pcap_config = {
             .fp = fp,
