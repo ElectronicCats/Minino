@@ -40,8 +40,8 @@ void wardriving_screens_wifi_animation_task() {
 }
 
 void wardriving_screens_module_scanning(uint32_t packets, char* signal) {
-  char* packets_str = (char*) malloc(20);
-  sprintf(packets_str, "%ld", packets);
+  char packets_str[16];
+  snprintf(packets_str, sizeof(packets_str), "%-8lu", (unsigned long) packets);
 
   // oled_screen_clear_buffer();
   uint8_t x = 64;
@@ -61,16 +61,19 @@ void wardriving_screens_module_scanning(uint32_t packets, char* signal) {
     y = 0;
   }
 
+  char signal_str[16];
+  snprintf(signal_str, sizeof(signal_str), "%-8s",
+           signal != NULL ? signal : "None");
+
   uint8_t yy = y;
-  oled_screen_display_text("Packets", x, yy++, OLED_DISPLAY_INVERT);
+  oled_screen_display_text("Packets ", x, yy++, OLED_DISPLAY_INVERT);
   oled_screen_display_text(packets_str, x, yy++, OLED_DISPLAY_INVERT);
   yy++;
-  if (strcmp(signal, "None") != 1) {
-    oled_screen_display_text("GPS", x, yy++, OLED_DISPLAY_INVERT);
-    oled_screen_display_text(signal, x, yy++, OLED_DISPLAY_INVERT);
+  if (signal != NULL && strcmp(signal, "None") != 0) {
+    oled_screen_display_text("GPS     ", x, yy++, OLED_DISPLAY_INVERT);
+    oled_screen_display_text(signal_str, x, yy++, OLED_DISPLAY_INVERT);
   }
   oled_screen_display_show();
-  free(packets_str);
 }
 
 void wardriving_screens_module_loading_text() {

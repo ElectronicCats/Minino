@@ -300,6 +300,7 @@ void wardriving_gps_event_handler_cb(gps_t* gps) {
   }
 
   if (!running_wifi_scanner_animation) {
+    oled_screen_clear();
     vTaskResume(scanning_wifi_animation_task_handle);
     running_wifi_scanner_animation = true;
   }
