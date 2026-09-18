@@ -16,6 +16,7 @@
 #include "esp_check.h"
 #include "esp_log.h"
 #include "esp_spiffs.h"
+#include "esp_system.h"
 #include "esp_wifi.h"
 #include "sdkconfig.h"
 #include "task_manager.h"
@@ -26,6 +27,8 @@
 #define SNIFFER_PROCESS_PACKET_TIMEOUT_MS (100)
 #define SNIFFER_RX_FCS_ERR                (0X41)
 #define SNIFFER_DECIMAL_NUM               (10)
+#define SNIFFER_SAFE_QUEUE_LEN            (16)
+#define SNIFFER_MIN_FREE_HEAP             (32768)
 #define PCAP_FLASH_MAX_PACKETS \
   (900)  // Fallback maximum packets when saving to flash
 #define PCAP_FLASH_MIN_FREE_BYTES \
@@ -252,6 +255,10 @@ static void queue_packet(void* recv_packet,
       packet_info->length > SNIFFER_MAX_PACKET_LEN) {
     return;
   }
+  /* Protect system heap from exhaustion during high-traffic packet bursts */
+  if (esp_get_free_heap_size() < SNIFFER_MIN_FREE_HEAP) {
+    return;
+  }
   void* packet_to_queue = malloc(packet_info->length);
   if (packet_to_queue) {
     memcpy(packet_to_queue, recv_packet, packet_info->length);
@@ -261,12 +268,12 @@ static void queue_packet(void* recv_packet,
        * Never block here: the queue full case means the sniffer task is
        * overloaded, block the WiFi driver would stall traffic. */
       if (xQueueSend(snf_rt.work_queue, packet_info, 0) != pdTRUE) {
-        ESP_LOGE(TAG, "sniffer work queue full");
+        ESP_LOGD(TAG, "sniffer work queue full");
         free(packet_info->payload);
       }
     }
   } else {
-    ESP_LOGE(TAG, "No enough memory for promiscuous packet");
+    ESP_LOGD(TAG, "No enough memory for promiscuous packet");
   }
 }
 
@@ -444,8 +451,11 @@ static esp_err_t sniffer_start(sniffer_runtime_t* sniffer) {
                     "init pcap session failed");
 
   sniffer->is_running = true;
-  sniffer->work_queue = xQueueCreate(CONFIG_SNIFFER_WORK_QUEUE_LEN,
-                                     sizeof(sniffer_packet_info_t));
+  uint32_t queue_len = CONFIG_SNIFFER_WORK_QUEUE_LEN;
+  if (queue_len > SNIFFER_SAFE_QUEUE_LEN) {
+    queue_len = SNIFFER_SAFE_QUEUE_LEN;
+  }
+  sniffer->work_queue = xQueueCreate(queue_len, sizeof(sniffer_packet_info_t));
   ESP_GOTO_ON_FALSE(sniffer->work_queue, ESP_FAIL, err_queue, TAG,
                     "create work queue failed");
   sniffer->sem_task_over = xSemaphoreCreateBinary();
@@ -455,7 +465,7 @@ static esp_err_t sniffer_start(sniffer_runtime_t* sniffer) {
       sniffer_task, "wifi_sniffer",
       TASK_STACK_MEDIUM,  // 4KB (CONFIG_SNIFFER_TASK_STACK_SIZE)
       sniffer,
-      TASK_PRIORITY_NORMAL,  // Sniffer es prioridad normal
+      TASK_PRIORITY_HIGH,  // Higher priority to drain the queue swiftly
       &sniffer->task);
   ESP_GOTO_ON_FALSE(task_err == ESP_OK, ESP_FAIL, err_task, TAG,
                     "create task failed");

@@ -100,7 +100,7 @@ void wifi_sniffer_set_channel(uint8_t new_channel) {
 }
 
 bool wifi_sniffer_is_destination_sd() {
-  return preferences_get_bool("dest_sd", false);
+  return preferences_get_bool("dest_sd", true);
 }
 
 bool wifi_sniffer_is_destination_internal() {

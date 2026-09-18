@@ -162,6 +162,7 @@ static void thread_gps_event_handler_cb(gps_t* gps) {
   }
 
   if (running_thread_scanner_animation == false) {
+    oled_screen_clear();
     running_thread_scanner_animation = true;
     vTaskResume(scanning_thread_animation_task_handle);
     wardriving_screens_module_scanning(context_session.session_records_count,
