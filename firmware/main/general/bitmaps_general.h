@@ -11,6 +11,7 @@ typedef enum {
   MININO_ELECTRONICCATS,
   MININO_FACE_MINI,
   MININO_BABY_DRAGON,
+  MININO_RF_VILLAGE,
   MININO_COUNT
 } epd_bitmap_type_t;
 
@@ -316,6 +317,17 @@ const epd_bitmap_t minino_baby_dragon_bitmap = {
     .height = 32,
 };
 
+#if CONFIG_SCREEN_SAVER_RF_VILLAGE
+  #include "rf_village_bitmaps.h"
+const epd_bitmap_t rf_village_bitmap = {
+    .idx = MININO_RF_VILLAGE,
+    .name = "RF Village Mx",
+    .bitmap = rf_village_frame_0,
+    .width = RF_VILLAGE_WIDTH,
+    .height = RF_VILLAGE_HEIGHT,
+};
+#endif
+
 // 'pixil-frame-0', 32x32px
 const unsigned char michi_punch_1[] = {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -368,8 +380,11 @@ const epd_bitmap_t* screen_savers[] = {
   #if CONFIG_SCREEN_SAVER_BABY_DRAGON
     &minino_baby_dragon_bitmap,
   #endif
+  #if CONFIG_SCREEN_SAVER_RF_VILLAGE
+    &rf_village_bitmap,
+  #endif
 };
 
 char* epd_bitmaps_list[] = {"Letters",   "Face",        "PwnLabs", "EC",
-                            "Mini face", "Baby Dragon", NULL};
+                            "Mini face", "Baby Dragon", "RF Village Mx", NULL};
 #endif  // BITMAPS_GENERAL_H

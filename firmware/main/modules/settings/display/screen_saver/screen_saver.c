@@ -8,6 +8,11 @@
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
+#include "sdkconfig.h"
+
+#if CONFIG_SCREEN_SAVER_RF_VILLAGE
+  #include "rf_village_bitmaps.h"
+#endif
 
 static int IDLE_TIMEOUT_S = 30;
 
@@ -46,6 +51,23 @@ static void show_splash_screen(void* pvParameters) {
     get_logo = 0;
   }
   const epd_bitmap_t* logo = screen_savers[get_logo];
+
+#if CONFIG_SCREEN_SAVER_RF_VILLAGE
+  if (logo->idx == MININO_RF_VILLAGE) {
+    screen_saver_running = true;
+    size_t frame = 0;
+    while (screen_saver_running) {
+      oled_screen_display_bitmap(rf_village_frames[frame], 0, 0, logo->width,
+                                 logo->height, OLED_DISPLAY_NORMAL);
+      oled_screen_display_show();
+      vTaskDelay(pdMS_TO_TICKS(rf_village_durations_ms[frame]));
+      frame = (frame + 1) % RF_VILLAGE_FRAMES;
+    }
+    screen_saver_task_handle = NULL;
+    vTaskDelete(NULL);
+    return;
+  }
+#endif
 
   screen_saver_running = true;
   int w_screen_space = SCREEN_WIDTH2 - logo->width;
