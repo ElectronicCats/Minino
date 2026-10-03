@@ -35,8 +35,11 @@ static uint16_t gps_route_points_saved = 0;
 
 static const char* TAG = "route";
 
-static const char* config_menu_options[] = {"AGNSS", "Power mode", "Advanced",
-                                            "Update Rate"};
+static const char* config_menu_options[] = {
+    "External GPS", "Baudrate", "AGNSS", "Power mode", "Advanced",
+    "Update Rate"};
+static const char* external_options[] = {"Disable", "Enable"};
+static const char* baudrate_options[] = {"9600", "38400", "57600", "115200"};
 static const char* agnss_options[] = {"Disable", "Enable"};
 static const char* power_options[] = {"Normal", "LOW_POWER", "STANDBY"};
 static const char* advanced_options[] = {"Disable", "Enable"};
@@ -73,6 +76,8 @@ const general_menu_t gps_help_menu = {.menu_count = 9,
                                       .menu_level = GENERAL_TREE_APP_MENU};
 
 typedef enum {
+  CONFIG_EXTERNAL,
+  CONFIG_BAUDRATE,
   CONFIG_AGNSS,
   CONFIG_POWWER,
   CONFIG_ADVANCED,
@@ -488,6 +493,42 @@ void gps_screens_show_waiting_signal() {
   oled_screen_display_show();
 }
 
+static void external_radio_handler(uint8_t option) {
+  gps_hw_set_external(option == 1);
+  gps_module_restart_scan();
+}
+
+static void gps_screens_show_external(void) {
+  general_radio_selection_menu_t settings = {0};
+  settings.banner = "External GPS";
+  settings.options = external_options;
+  settings.options_count = sizeof(external_options) / sizeof(char*);
+  settings.select_cb = external_radio_handler;
+  settings.style = RADIO_SELECTION_OLD_STYLE;
+  settings.exit_cb = gps_screens_show_config;
+  settings.current_option = gps_hw_is_external() ? 1 : 0;
+  general_radio_selection(settings);
+}
+
+static void baudrate_radio_handler(uint8_t option) {
+  gps_hw_set_baud_index(option);
+  if (gps_hw_is_external()) {
+    gps_module_restart_scan();
+  }
+}
+
+static void gps_screens_show_baudrate(void) {
+  general_radio_selection_menu_t settings = {0};
+  settings.banner = "Baudrate";
+  settings.options = baudrate_options;
+  settings.options_count = sizeof(baudrate_options) / sizeof(char*);
+  settings.select_cb = baudrate_radio_handler;
+  settings.style = RADIO_SELECTION_OLD_STYLE;
+  settings.exit_cb = gps_screens_show_config;
+  settings.current_option = gps_hw_get_baud_index();
+  general_radio_selection(settings);
+}
+
 static void agnss_radio_handler(uint8_t option) {
   preferences_put_int(AGNSS_OPTIONS_PREF_KEY, option);
   gps_module_reconfigure_options(GPS_INIT_AGNSS_ONLY);
@@ -561,6 +602,12 @@ static void gps_screens_show_urate(void) {
 static void config_main_handler(uint8_t option) {
   last_config_selection = option;
   switch (option) {
+    case CONFIG_EXTERNAL:
+      gps_screens_show_external();
+      break;
+    case CONFIG_BAUDRATE:
+      gps_screens_show_baudrate();
+      break;
     case CONFIG_AGNSS:
       gps_screens_show_agnss();
       break;

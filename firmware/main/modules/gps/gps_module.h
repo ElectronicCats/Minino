@@ -48,6 +48,13 @@ void gps_module_begin();
 void gps_module_start_scan();
 
 /**
+ * @brief Restart NMEA scan with current source/baud settings
+ *
+ * @return void
+ */
+void gps_module_restart_scan(void);
+
+/**
  * @brief Stop reading the GPS module
  *
  * @return void

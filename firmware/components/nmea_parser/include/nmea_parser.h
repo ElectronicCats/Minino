@@ -126,7 +126,8 @@ typedef struct {
 typedef struct {
   struct {
     uart_port_t uart_port;        /*!< UART port number */
-    uint32_t rx_pin;              /*!< UART Rx Pin number */
+    int tx_pin;                   /*!< UART Tx Pin number (or UART_PIN_NO_CHANGE) */
+    int rx_pin;                   /*!< UART Rx Pin number (or UART_PIN_NO_CHANGE) */
     uint32_t baud_rate;           /*!< UART baud rate */
     uart_word_length_t data_bits; /*!< UART data bits length */
     uart_parity_t parity;         /*!< UART parity */
@@ -147,6 +148,7 @@ typedef void* nmea_parser_handle_t;
  */
 #define NMEA_PARSER_CONFIG_DEFAULT()                      \
   {.uart = {.uart_port = UART_NUM_1,                      \
+            .tx_pin = CONFIG_NMEA_PARSER_UART_TXD,        \
             .rx_pin = CONFIG_NMEA_PARSER_UART_RXD,        \
             .baud_rate = CONFIG_NMEA_PARSE_UART_BAUDRATE, \
             .data_bits = UART_DATA_8_BITS,                \
