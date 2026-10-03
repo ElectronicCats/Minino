@@ -1,4 +1,5 @@
 #include "task_manager.h"
+#include <inttypes.h>
 #include "esp_log.h"
 #include "freertos/semphr.h"
 #include "stdlib.h"
@@ -97,7 +98,7 @@ esp_err_t task_manager_create(TaskFunction_t task_func,
     *handle = task_handle;
   }
 
-  ESP_LOGI(TAG, "Tarea creada: '%s' (stack=%d, priority=%d, #%lu)", name,
+  ESP_LOGI(TAG, "Tarea creada: '%s' (stack=%d, priority=%d, #%" PRIu32 ")", name,
            stack_size, priority, task_count);
 
   xSemaphoreGive(task_manager_mutex);
@@ -148,7 +149,7 @@ esp_err_t task_manager_delete(TaskHandle_t handle) {
 void task_manager_list_all(void) {
   if (task_manager_mutex &&
       xSemaphoreTake(task_manager_mutex, portMAX_DELAY) == pdTRUE) {
-    ESP_LOGI(TAG, "Total de tareas: %lu / %d", task_count, MAX_TASKS);
+    ESP_LOGI(TAG, "Total de tareas: %" PRIu32 " / %d", task_count, MAX_TASKS);
     ESP_LOGI(TAG, "");
 
     for (uint32_t i = 0; i < task_count; i++) {
@@ -158,7 +159,9 @@ void task_manager_list_all(void) {
           (xTaskGetTickCount() * portTICK_PERIOD_MS - info->created_at_ms) /
           1000;
 
-      ESP_LOGI(TAG, "[%2lu] %s %-20s | Pri:%2d | Stack:%5d | Uptime:%lus",
+      ESP_LOGI(TAG,
+               "[%2" PRIu32 "] %s %-20s | Pri:%2d | Stack:%5d | Uptime:%" PRIu32
+               "s",
                i + 1, status, info->name ? info->name : "unknown",
                info->priority, info->stack_size, uptime_sec);
     }
@@ -256,9 +259,9 @@ void task_manager_print_stack_usage(void) {
         status = "OK";
       }
 
-      ESP_LOGI(TAG, "[%2lu] %-20s | %5zu/%5d bytes (%.1f%%) | %s", i + 1,
-               info->name ? info->name : "unknown", used, info->stack_size,
-               usage_percent, status);
+      ESP_LOGI(TAG, "[%2" PRIu32 "] %-20s | %5zu/%5d bytes (%.1f%%) | %s",
+               i + 1, info->name ? info->name : "unknown", used,
+               info->stack_size, usage_percent, status);
     }
     xSemaphoreGive(task_manager_mutex);
   }
@@ -273,9 +276,11 @@ bool task_manager_check_stack_overflow_risk(void) {
     for (uint32_t i = 0; i < task_count; i++) {
       if (task_registry[i].is_running) {
         if (task_registry[i].stack_watermark < 128) {  // < 512 bytes
-          ESP_LOGE(TAG, "Stack overflow risk: '%s' (solo %lu bytes libres)",
+          ESP_LOGE(TAG,
+                   "Stack overflow risk: '%s' (solo %" PRIu32 " bytes libres)",
                    task_registry[i].name ? task_registry[i].name : "unknown",
-                   task_registry[i].stack_watermark * sizeof(StackType_t));
+                   (uint32_t) (task_registry[i].stack_watermark *
+                               sizeof(StackType_t)));
           risk = true;
           break;
         }

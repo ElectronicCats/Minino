@@ -23,8 +23,46 @@ static const char* TAG = "gps_hw";
 #define GPS_UART_RX_PIN 4
 #define GPS_UART_TX_PIN 5
 
+static const uint32_t gps_baudrate_values[GPS_BAUD_COUNT] = {9600, 38400, 57600,
+                                                            115200};
+
 static bool gps_enabled = false;
 static bool gps_advanced_configured = false;
+
+bool gps_hw_is_external(void) {
+  return preferences_get_int(GPS_EXTERNAL_PREF_KEY, 0) == 1;
+}
+
+uint8_t gps_hw_get_baud_index(void) {
+  int index = preferences_get_int(GPS_BAUD_PREF_KEY, GPS_BAUD_9600);
+  if (index < 0 || index >= GPS_BAUD_COUNT) {
+    return GPS_BAUD_9600;
+  }
+  return (uint8_t) index;
+}
+
+uint32_t gps_hw_get_baudrate(void) {
+  return gps_baudrate_values[gps_hw_get_baud_index()];
+}
+
+void gps_hw_set_baud_index(uint8_t index) {
+  if (index >= GPS_BAUD_COUNT) {
+    index = GPS_BAUD_9600;
+  }
+  preferences_put_int(GPS_BAUD_PREF_KEY, index);
+}
+
+void gps_hw_set_external(bool enabled) {
+  preferences_put_int(GPS_EXTERNAL_PREF_KEY, enabled ? 1 : 0);
+  if (enabled) {
+    // Keep internal ATGM powered off while using J2 / UART0
+    gpio_set_level(GPS_ON_OFF_PIN, 0);
+  } else if (gps_enabled) {
+    gpio_set_level(GPS_ON_OFF_PIN, 1);
+    vTaskDelay(pdMS_TO_TICKS(300));
+    gps_hw_init_preferences(GPS_INIT_ALL);
+  }
+}
 
 void gps_hw_init() {
   gpio_config_t io_conf;
@@ -35,6 +73,13 @@ void gps_hw_init() {
   gpio_config(&io_conf);
 
   gps_enabled = preferences_get_bool(GPS_ENABLED_MEM, false);
+
+  if (gps_hw_is_external()) {
+    // External GPS on J2: never power the onboard ATGM336H
+    gpio_set_level(GPS_ON_OFF_PIN, 0);
+    return;
+  }
+
   gpio_set_level(GPS_ON_OFF_PIN, gps_enabled ? 1 : 0);
 
   if (gps_enabled) {
@@ -47,8 +92,15 @@ void gps_hw_init() {
 }
 
 void gps_hw_on() {
-  gpio_set_level(GPS_ON_OFF_PIN, 1);
   gps_enabled = true;
+
+  if (gps_hw_is_external()) {
+    // Apps gate only; J2 NMEA, no internal enable / PMTK
+    gpio_set_level(GPS_ON_OFF_PIN, 0);
+    return;
+  }
+
+  gpio_set_level(GPS_ON_OFF_PIN, 1);
   vTaskDelay(pdMS_TO_TICKS(300));
 
   // Configure GPS when it's enabled (if GPS is not currently active/scanning)
@@ -262,6 +314,11 @@ void gps_hw_set_update_rate(uint8_t rate) {
  * @note Advanced configuration is only done once per boot unless reset
  */
 void gps_hw_configure_options(uint8_t init_type) {
+  if (gps_hw_is_external()) {
+    ESP_LOGI(TAG, "Skip PMTK configure in external GPS mode");
+    return;
+  }
+
   switch (init_type) {
     case GPS_INIT_ALL:
       // Configure advanced settings (only once per boot)
@@ -356,6 +413,11 @@ void gps_hw_reset_advanced_config(void) {
  * @return true if successful, false otherwise
  */
 bool gps_hw_init_preferences(uint8_t init_type) {
+  if (gps_hw_is_external()) {
+    ESP_LOGI(TAG, "Skip internal UART/PMTK init in external GPS mode");
+    return true;
+  }
+
   uart_config_t uart_config = {
       .baud_rate = 115200,
       .data_bits = UART_DATA_8_BITS,

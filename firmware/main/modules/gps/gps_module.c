@@ -1,7 +1,9 @@
+#include <inttypes.h>
 #include "esp_log.h"
 #include "stdint.h"
 
 #include "animations_task.h"
+#include "driver/uart.h"
 #include "general_animations.h"
 #include "general_notification.h"
 #include "general_radio_selection.h"
@@ -12,15 +14,50 @@
 #include "modals_module.h"
 #include "oled_screen.h"
 #include "preferences.h"
+#include "uart_bridge.h"
 #include "wardriving_module.h"
 
 #define YEAR_BASE (2000)  // date in GPS starts from 2000
+
+/* Restored after external GPS releases UART0 (main.c installs uart_bridge) */
+#define GPS_UART0_BRIDGE_BAUD   921600
+#define GPS_UART0_BRIDGE_BUF    1024
 
 static const char* TAG = "gps_module";
 
 nmea_parser_handle_t nmea_hdl = NULL;
 gps_event_callback_t gps_event_callback = NULL;
 static bool is_uart_installed = false;
+static bool gps_released_uart0_bridge = false;
+
+static void gps_module_release_uart0_bridge(void) {
+  if (!uart_is_driver_installed(UART_NUM_0)) {
+    return;
+  }
+  // Boot installs uart_bridge on UART0/J2; free it for external NMEA
+  ESP_LOGI(TAG, "Releasing UART0 from uart_bridge for external GPS");
+  uart_driver_delete(UART_NUM_0);
+  gps_released_uart0_bridge = true;
+}
+
+static void gps_module_restore_uart0_bridge(void) {
+  if (!gps_released_uart0_bridge) {
+    return;
+  }
+  uart_config_t uart_config = {
+      .baud_rate = GPS_UART0_BRIDGE_BAUD,
+      .data_bits = UART_DATA_8_BITS,
+      .parity = UART_PARITY_DISABLE,
+      .stop_bits = UART_STOP_BITS_1,
+      .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+  };
+  if (uart_bridge_begin(uart_config, GPS_UART0_BRIDGE_BUF) == ESP_OK) {
+    ESP_LOGI(TAG, "Restored uart_bridge on UART0");
+  } else {
+    ESP_LOGW(TAG, "Failed to restore uart_bridge on UART0");
+  }
+  gps_released_uart0_bridge = false;
+}
 
 void gps_module_check_state();
 
@@ -122,7 +159,6 @@ void gps_module_start_scan() {
   if (is_uart_installed) {
     return;
   }
-  is_uart_installed = true;
 
 #if !defined(CONFIG_GPS_MODULE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
@@ -132,14 +168,43 @@ void gps_module_start_scan() {
 
   /* NMEA parser configuration */
   nmea_parser_config_t config = NMEA_PARSER_CONFIG_DEFAULT();
+
+  if (gps_hw_is_external()) {
+    // J2 = UART0 (TXD0/RXD0). Boot uart_bridge holds this port.
+    ESP_LOGI(TAG, "External GPS on UART0 @ %" PRIu32 " baud",
+             gps_hw_get_baudrate());
+    gps_module_release_uart0_bridge();
+    config.uart.uart_port = UART_NUM_0;
+    config.uart.tx_pin = UART_PIN_NO_CHANGE;
+    config.uart.rx_pin = UART_PIN_NO_CHANGE;
+    config.uart.baud_rate = gps_hw_get_baudrate();
+  }
+
   /* init NMEA parser library */
   nmea_hdl = nmea_parser_init(&config);
+  if (nmea_hdl == NULL) {
+    ESP_LOGE(TAG, "NMEA parser init failed");
+    gps_module_restore_uart0_bridge();
+    return;
+  }
+
+  is_uart_installed = true;
   /* register event handler for NMEA parser library */
   nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
 
   if (gps_event_callback == NULL) {
     gps_screens_show_waiting_signal();
   }
+}
+
+void gps_module_restart_scan(void) {
+  if (!is_uart_installed) {
+    return;
+  }
+  gps_event_callback_t saved_cb = gps_event_callback;
+  gps_module_stop_read();
+  gps_event_callback = saved_cb;
+  gps_module_start_scan();
 }
 
 /**
@@ -161,6 +226,8 @@ void gps_module_stop_read() {
   /* Now safe to deinit NMEA parser library */
   nmea_parser_deinit(nmea_hdl);
   nmea_hdl = NULL;
+
+  gps_module_restore_uart0_bridge();
 }
 
 /**
@@ -471,6 +538,11 @@ void gps_module_reset_state() {
  * @param init_type Type of configuration to apply (see enum in gps_hw.h)
  */
 void gps_module_reconfigure_options(uint8_t init_type) {
+  if (gps_hw_is_external()) {
+    ESP_LOGI(TAG, "Skip reconfigure in external GPS mode");
+    return;
+  }
+
   // Check if GPS is currently active (NMEA parser has UART installed)
   if (is_uart_installed && nmea_hdl != NULL) {
     // GPS is active, configure directly without touching UART

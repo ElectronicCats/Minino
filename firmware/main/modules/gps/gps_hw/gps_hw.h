@@ -5,7 +5,9 @@
 #include <stdint.h>
 #include "gps_module.h"
 
-#define GPS_ENABLED_MEM "gps_enabled"
+#define GPS_ENABLED_MEM       "gps_enabled"
+#define GPS_EXTERNAL_PREF_KEY "gpsext"
+#define GPS_BAUD_PREF_KEY     "gpsbaud"
 
 enum {
   GPS_INIT_ALL,
@@ -16,12 +18,27 @@ enum {
   GPS_INIT_POWER_ONLY,
 };
 
+enum {
+  GPS_BAUD_9600 = 0,
+  GPS_BAUD_38400,
+  GPS_BAUD_57600,
+  GPS_BAUD_115200,
+  GPS_BAUD_COUNT,
+};
+
 // Basic GPS hardware control
 void gps_hw_init(void);
 void gps_hw_on(void);
 void gps_hw_off(void);
 void gsp_hw_save_state(void);
 bool gps_hw_get_state(void);
+
+// External GPS (J2 / UART0) source control
+bool gps_hw_is_external(void);
+void gps_hw_set_external(bool enabled);
+uint32_t gps_hw_get_baudrate(void);
+void gps_hw_set_baud_index(uint8_t index);
+uint8_t gps_hw_get_baud_index(void);
 
 // GPS configuration functions
 void gps_hw_configure_options(uint8_t init_type);
