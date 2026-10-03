@@ -21,6 +21,7 @@ static char* about_credits_text[] = {
     "- Roberto",
     "- Francisco",
     "  @deimoshall",
+    "- @d3v.k0",
     "and Electronic",
     "Cats team",
 };
@@ -34,7 +35,7 @@ static char* about_legal_text[] = {
 
 static const general_menu_t about_credits_menu = {
     .menu_items = about_credits_text,
-    .menu_count = 14,
+    .menu_count = 16,
     .menu_level = GENERAL_TREE_APP_INFORMATION,
 };
 
