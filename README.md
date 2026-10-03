@@ -109,7 +109,7 @@ Minino can operate in 7 different technologies:
 ---
 
 ### Menu: Settings (`Settings`)
-- [x] **Display**: Configures OLED screensaver style (including the animated "RF Village Mx") and timeout.
+- [x] **Display**: Configures OLED screensaver style and timeout.
 - [x] **Logs Output**: Configures serial and on-screen log levels.
 - [x] **SD Card Settings**: Displays SD capacity, checks format integrity, and provides FAT32 formatting.
 - [x] **WiFi Settings**: Manages WiFi station credentials and radio settings.

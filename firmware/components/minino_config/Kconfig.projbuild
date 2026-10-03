@@ -849,7 +849,7 @@ menu "General project"
 						bool "Baby Dragon"
 						default y
 				config SCREEN_SAVER_RF_VILLAGE
-						bool "RF Village Mx"
+						bool "RFVillage Mx"
 						default y
 		endmenu
 

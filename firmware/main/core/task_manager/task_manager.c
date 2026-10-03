@@ -275,7 +275,8 @@ bool task_manager_check_stack_overflow_risk(void) {
         if (task_registry[i].stack_watermark < 128) {  // < 512 bytes
           ESP_LOGE(TAG, "Stack overflow risk: '%s' (solo %lu bytes libres)",
                    task_registry[i].name ? task_registry[i].name : "unknown",
-                   task_registry[i].stack_watermark * sizeof(StackType_t));
+                   (unsigned long) (task_registry[i].stack_watermark *
+                                    sizeof(StackType_t)));
           risk = true;
           break;
         }

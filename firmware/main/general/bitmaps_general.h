@@ -321,7 +321,7 @@ const epd_bitmap_t minino_baby_dragon_bitmap = {
   #include "rf_village_bitmaps.h"
 const epd_bitmap_t rf_village_bitmap = {
     .idx = MININO_RF_VILLAGE,
-    .name = "RF Village Mx",
+    .name = "RFVillage Mx",
     .bitmap = rf_village_frame_0,
     .width = RF_VILLAGE_WIDTH,
     .height = RF_VILLAGE_HEIGHT,
@@ -386,5 +386,5 @@ const epd_bitmap_t* screen_savers[] = {
 };
 
 char* epd_bitmaps_list[] = {"Letters",   "Face",        "PwnLabs", "EC",
-                            "Mini face", "Baby Dragon", "RF Village Mx", NULL};
+                            "Mini face", "Baby Dragon", "RFVillage Mx", NULL};
 #endif  // BITMAPS_GENERAL_H

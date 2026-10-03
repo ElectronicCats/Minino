@@ -7,6 +7,7 @@
 */
 #include "cmd_sniffer.h"
 
+#include <inttypes.h>
 #include <string.h>
 #include <sys/fcntl.h>
 #include <sys/unistd.h>
@@ -174,7 +175,8 @@ static bool should_stop_flash_sniffing(int32_t sniffed_packets) {
   // Check if we've reached the calculated limit
   if (sniffed_packets >= (int32_t) max_packets) {
     ESP_LOGW(TAG,
-             "Flash packet limit reached: %d packets (calculated from %zu "
+             "Flash packet limit reached: %" PRIu32
+             " packets (calculated from %zu "
              "bytes free)",
              max_packets, free_size);
     return true;
@@ -186,7 +188,9 @@ static bool should_stop_flash_sniffing(int32_t sniffed_packets) {
     // Re-check available space more aggressively near the limit
     size_t current_free = total_size - used_size;
     if (current_free < (PCAP_FLASH_MIN_FREE_BYTES * 1.2)) {
-      ESP_LOGW(TAG, "Approaching flash limit: %d/%d packets, %zu bytes free",
+      ESP_LOGW(TAG,
+               "Approaching flash limit: %" PRId32 "/%" PRIu32
+               " packets, %zu bytes free",
                sniffed_packets, max_packets, current_free);
       return true;
     }
