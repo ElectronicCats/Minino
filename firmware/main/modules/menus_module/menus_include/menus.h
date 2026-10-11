@@ -21,6 +21,7 @@
 #include "gps_settings.h"
 #include "i2c_scanner.h"
 #include "logs_output.h"
+#include "menu_style.h"
 #include "modbus_dos.h"
 #include "modbus_tcp_scenes.h"
 #include "open_thread_module.h"  // Deprecated since v1.1.14.0
@@ -145,6 +146,7 @@ typedef enum {
   MENU_SETTINGS_SD_CARD_FORMAT,
   MENU_STEALTH_MODE,
   MENU_SLEEP_MODE,
+  MENU_SETTINGS_MENU_STYLE,
   // MENU_ZB_CLI, // Deprecated since v1.1.14.0
   /* Menu count */
   MENU_COUNT,  // Keep this at the end
@@ -725,6 +727,13 @@ menu_t menus[] = {
      .parent_idx = MENU_SETTINGS,
      .last_selected_submenu = 0,
      .on_enter_cb = stealth_mode_open_menu,
+     .on_exit_cb = NULL,
+     .is_visible = true},
+    {.display_name = "Menu Style",
+     .menu_idx = MENU_SETTINGS_MENU_STYLE,
+     .parent_idx = MENU_SETTINGS,
+     .last_selected_submenu = 0,
+     .on_enter_cb = menu_style_open_menu,
      .on_exit_cb = NULL,
      .is_visible = true},
     {.display_name = "Sleep Mode",

@@ -5,6 +5,7 @@
 #include "buzzer.h"
 #include "esp_log.h"
 #include "led_events.h"
+#include "menu_views.h"
 #include "menus_screens.h"
 #include "modals_module.h"
 #include "oled_screen.h"
@@ -70,7 +71,7 @@ static void update_menus() {
 }
 
 static void display_menus() {
-  menus_screens_display_menus_f(menus_ctx);
+  menu_views_render(menus_ctx);
 }
 
 static void refresh_menus() {
