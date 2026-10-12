@@ -54,8 +54,8 @@ static void render_icon_list(menus_manager_t* ctx) {
     if (i == sel) {
       menu_gfx_frame(0, y - 1, 120, rh - 1);
     }
-    menu_icon_for(ITEM_NAME(ctx, i))(2, y);
-    menu_gfx_text_clip(18, y + 2, ITEM_NAME(ctx, i), 100, true);
+    menu_icon_for(ITEM_NAME(ctx, i))(3, y);
+    menu_gfx_text_clip(18, y + 1, ITEM_NAME(ctx, i), 100, true);
   }
   menu_gfx_scrollbar(n, rows, top);
   oled_screen_display_show();
