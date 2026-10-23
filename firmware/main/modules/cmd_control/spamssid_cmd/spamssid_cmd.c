@@ -134,7 +134,7 @@ void cmd_spamssid_register_commands() {
   ssdi_save_args.end = arg_end(2);
 
   ssdi_delete_args.idx = arg_str1(NULL, NULL, "<idx>", "Index of the SSID");
-  ssdi_delete_args.end = arg_end(1);
+  ssdi_delete_args.end = arg_end(2);
 
   esp_console_cmd_t spamssid_save_cmd = {
       .command = "spam_save",

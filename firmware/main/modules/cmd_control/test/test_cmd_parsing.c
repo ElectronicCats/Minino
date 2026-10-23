@@ -264,8 +264,22 @@ esp_err_t esdr_host_run(void) {
   return 0;
 }
 
+static void register_all_commands_once(void) {
+  static bool registered = false;
+  if (!registered) {
+    cmd_control_register_launch_cmd();
+    cmd_control_register_sdr_cmd();
+    cmd_control_register_system_commands();
+    cmd_control_register_uart_bridge_commands();
+    register_catdos_commands();
+    cmd_spamssid_register_commands();
+    cmd_control_register_threshold_cmd();
+    registered = true;
+  }
+}
+
 void setUp(void) {
-  s_command_count = 0;
+  register_all_commands_once();
   s_task_created = false;
   s_last_launched_app[0] = '\0';
   s_uart_written_data[0] = '\0';
@@ -277,14 +291,6 @@ void setUp(void) {
   s_saved_spam_val[0] = '\0';
   s_deleted_spam_item[0] = '\0';
   s_mock_reset_reason = ESP_RST_POWERON;
-
-  /* Register commands for testing */
-  cmd_control_register_launch_cmd();
-  cmd_control_register_sdr_cmd();
-  cmd_control_register_system_commands();
-  cmd_control_register_uart_bridge_commands();
-  register_catdos_commands();
-  cmd_spamssid_register_commands();
 }
 
 void tearDown(void) {}
@@ -553,7 +559,6 @@ void test_print_reset_reason_unknown_code_no_null_dereference(void) {
 }
 
 void test_threshold_command_parsing(void) {
-  cmd_control_register_threshold_cmd();
   esp_console_cmd_func_t th_fn = find_command("threshold");
   TEST_ASSERT_NOT_NULL(th_fn);
 
@@ -579,8 +584,6 @@ void test_threshold_command_parsing(void) {
 }
 
 void test_spectrum_advanced_commands_parsing(void) {
-  cmd_control_register_threshold_cmd();
-
   /* spectrum_audio */
   esp_console_cmd_func_t aud_fn = find_command("spectrum_audio");
   TEST_ASSERT_NOT_NULL(aud_fn);

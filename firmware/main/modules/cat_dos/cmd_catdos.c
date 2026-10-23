@@ -91,7 +91,7 @@ static void cmd_catdos_register_catdos_web(void) {
       arg_str1(NULL, NULL, "<port>", "Port of the target.");
   cmd_catdos_web_args.endpoint =
       arg_str1(NULL, NULL, "<endpoint>", "Endpoint of the target.");
-  cmd_catdos_web_args.end = arg_end(3);
+  cmd_catdos_web_args.end = arg_end(4);
 
   const esp_console_cmd_t cmd = {.command = "web_config",
                                  .help = "Configure the web target",

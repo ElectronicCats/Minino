@@ -7,7 +7,7 @@ ARGTABLE3 := $(IDF_PATH)/components/console/argtable3
 SRCDIR    := ..
 CATDOSDIR := ../../cat_dos
 
-CFLAGS    := -std=gnu99 -Wall -Wextra -Werror -g \
+CFLAGS    := -std=gnu99 -Wall -Wextra -Werror -g -fno-strict-aliasing \
              -I. -Imock -I$(SRCDIR) -I$(SRCDIR)/gpio -I$(SRCDIR)/spamssid_cmd \
              -I$(CATDOSDIR) -I../../app_manager -I../../keyboard -I../../oled_screen -I$(UNITY) -I$(IDF_PATH)/components/console -I$(ARGTABLE3)
 

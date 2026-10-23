@@ -537,7 +537,7 @@ void cmd_control_register_uart_bridge_commands() {
                                 "Message to send\n\n"
                                 "\tExample: print hello\n"
                                 "\tExample: print \"hello world\"");
-  print_args.end = arg_end(1);
+  print_args.end = arg_end(2);
 
   esp_console_cmd_t uart_bridge_print_cmd = {
       .command = "print",
@@ -551,7 +551,7 @@ void cmd_control_register_uart_bridge_commands() {
                                   "Message to send\n\n"
                                   "\tExample: println hello\n"
                                   "\tExample: println \"hello world\"");
-  println_args.end = arg_end(1);
+  println_args.end = arg_end(2);
 
   esp_console_cmd_t uart_bridge_println_cmd = {
       .command = "println",
@@ -631,7 +631,7 @@ void cmd_control_register_uart_bridge_commands() {
       arg_int1(NULL, NULL, "<buffer_size>",
                "Size in bytes of the buffer to read data into\n"
                "\tExample: 1024");
-  uart_bridge_config_buffer_size_args.end = arg_end(1);
+  uart_bridge_config_buffer_size_args.end = arg_end(2);
 
   esp_console_cmd_t uart_bridge_set_buffer_size_cmd = {
       .command = "uart_bridge_set_buffer_size",
@@ -646,7 +646,7 @@ void cmd_control_register_uart_bridge_commands() {
                "Baud rate\n"
                "\tFree to choose, but common values are:\n"
                "\t9600, 115200, 230400, 460800, 921600");
-  uart_bridge_config_baud_rate_args.end = arg_end(1);
+  uart_bridge_config_baud_rate_args.end = arg_end(2);
 
   esp_console_cmd_t uart_bridge_set_baud_rate_cmd = {
       .command = "uart_bridge_set_baud_rate",
@@ -664,7 +664,7 @@ void cmd_control_register_uart_bridge_commands() {
                "\t1: 6 bits\n"
                "\t2: 7 bits\n"
                "\t3: 8 bits");
-  uart_bridge_config_data_bits_args.end = arg_end(1);
+  uart_bridge_config_data_bits_args.end = arg_end(2);
 
   esp_console_cmd_t uart_bridge_set_data_bits_cmd = {
       .command = "uart_bridge_set_data_bits",
@@ -680,7 +680,7 @@ void cmd_control_register_uart_bridge_commands() {
                                                    "\t0: disable\n"
                                                    "\t2: odd\n"
                                                    "\t3: even");
-  uart_bridge_config_parity_args.end = arg_end(1);
+  uart_bridge_config_parity_args.end = arg_end(2);
 
   esp_console_cmd_t uart_bridge_set_parity_cmd = {
       .command = "uart_bridge_set_parity",
@@ -697,7 +697,7 @@ void cmd_control_register_uart_bridge_commands() {
                "\t1: 1 bit\n"
                "\t2: 1.5 bits\n"
                "\t3: 2 bits");
-  uart_bridge_config_stop_bits_args.end = arg_end(1);
+  uart_bridge_config_stop_bits_args.end = arg_end(2);
 
   esp_console_cmd_t uart_bridge_set_stop_bits_cmd = {
       .command = "uart_bridge_set_stop_bits",
@@ -715,7 +715,7 @@ void cmd_control_register_uart_bridge_commands() {
                "\t1: enable RX hardware flow control (rts)\n"
                "\t2: enable TX hardware flow control (cts)\n"
                "\t3: enable hardware flow control");
-  uart_bridge_config_flow_ctrl_args.end = arg_end(1);
+  uart_bridge_config_flow_ctrl_args.end = arg_end(2);
 
   esp_console_cmd_t uart_bridge_set_flow_ctrl_cmd = {
       .command = "uart_bridge_set_flow_ctrl",
