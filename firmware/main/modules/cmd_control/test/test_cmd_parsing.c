@@ -221,8 +221,13 @@ uint8_t flash_storage_get_list(char* main_name,
                                storage_contex_t* list,
                                uint8_t capacity) {
   (void) main_name;
-  (void) list;
-  (void) capacity;
+  static char mock_item1[] = "ssid1";
+  static char mock_item2[] = "ssid2";
+  if (list && capacity >= 2) {
+    memset(list, 0, capacity * sizeof(storage_contex_t));
+    list[0].item_storage_name = mock_item1;
+    list[1].item_storage_name = mock_item2;
+  }
   return 2;
 }
 
