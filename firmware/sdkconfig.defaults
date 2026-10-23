@@ -144,5 +144,39 @@ CONFIG_SCREEN_SAVER_MINI_FACE=y
 CONFIG_SCREEN_SAVER_BABY_DRAGON=y
 # end of Screen Savers Configuration
 
-# UART
 CONFIG_UART_ISR_IN_IRAM=y
+
+
+# The SDR build variant needs the whole of SRAM block 2 (0x40840000) as the
+# capture bank, so the application image has to fit below it. Moving the Wi-Fi
+# and PHY hot code out of IRAM gives back 45 KB of SRAM, the same trade the
+# esp-sdr project makes ("Leave enough non-modem SRAM for static data and
+# task stacks"). The Wi-Fi gets a little slower; nothing changes functionally.
+# CONFIG_ESP_WIFI_IRAM_OPT is not set
+# CONFIG_ESP_WIFI_EXTRA_IRAM_OPT is not set
+# CONFIG_ESP_WIFI_RX_IRAM_OPT is not set
+# CONFIG_ESP_WIFI_SLP_IRAM_OPT is not set
+# CONFIG_ESP_PHY_IRAM_OPT is not set
+# CONFIG_PM_SLP_IRAM_OPT is not set
+
+# The Bluetooth stack and the apps that need it. This is Minino's own switch
+# and not ESP-IDF's CONFIG_BT_ENABLED: the build has to know the answer
+# before the Kconfig step runs, and the resolved sdkconfig does not exist
+# yet on a fresh build (see cmake/minino_kconfig.cmake).
+CONFIG_MININO_BT_STACK=y
+
+# The Zigbee and the Thread stacks, and the apps that need them. These three
+# switches have to be pinned here: the build reads them before the Kconfig
+# step runs, when the resolved sdkconfig does not exist yet (see
+# cmake/minino_kconfig.cmake).
+# CONFIG_MININO_ZIGBEE_STACK is not set
+# CONFIG_MININO_OPENTHREAD_STACK is not set
+
+# The SDR app: the capture bank is reserved and the image is capped below it.
+#
+# Off by default: the capture bank takes a whole SRAM block out of the heap
+# and the linker script caps the image below it, and the image with the
+# Zigbee and the Thread stacks does not fit under that cap (it is 45 KB
+# over). The SDR build variant (sdkconfig.sdr) turns the app on and the two
+# stacks off, which is what makes it fit.
+CONFIG_SDR_ENABLE=y

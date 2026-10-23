@@ -39,11 +39,7 @@ hardware/minino-backups/
 /**/build-ota/
 /**/build-noota/
 /**/managed_components/
-/firmware/build-bSides
-/firmware/build-bugCon
-/firmware/build-dragonJar
-/firmware/build-ekoParty
-/firmware/build-minino
+/firmware/build-*/
 /firmware/minino-release-*
 /**/minino-release-*.zip
 
@@ -51,6 +47,16 @@ hardware/minino-backups/
 /**/sdkconfig
 /**/sdkconfig.old
 /**/dependencies.lock
+
+# SDR launcher
+# The secondary OTA slot is filled with an ESP-IDF build of ESPARGOS esp-sdr,
+# built on demand by firmware/tools/flash_dual_app.sh into these directories.
+/build-sdr/
+/firmware/build-sdr/
+
+# Out of tree checkout of the upstream SDR firmware (see tools/flash_dual_app.sh)
+/esp-sdr/
+/esp-sdr-zephyr/
 
 # CPL file in csv
 minino-all-pos.csv
