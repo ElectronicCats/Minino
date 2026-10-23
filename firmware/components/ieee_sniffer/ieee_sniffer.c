@@ -76,40 +76,46 @@ void ieee_sniffer_set_channel(uint8_t channel) {
   }
 }
 
-static void ieee_sniffer_configure() {
-#if !defined(CONFIG_IEEE_SNIFFER_DEBUG)
-  esp_log_level_set(TAG_IEEE_SNIFFER, ESP_LOG_NONE);
-#endif
-
-  packet_rx_queue = xQueueCreate(8, 128);
-  xTaskCreate(debug_handler_task, "debug_handler_task", 8192, NULL, 20,
-              &debug_task_hdl);
-
+/*
+ * Applies the PIB settings that have to be (re)applied every time the driver is
+ * enabled.
+ *
+ * esp_ieee802154_enable() -> ieee802154_mac_init() -> ieee802154_pib_init(),
+ * which memsets the whole PIB and leaves rx_when_idle = false. The channel-hop
+ * loop enables/disables the driver once per hop, so configuring only once (as
+ * this used to) meant the radio slept after the first frame of every dwell:
+ * War-Bee recorded one 802.15.4 frame per 3.5 s channel. It also silently
+ * dropped the extended address, the promiscuous flag and the coordinator bit on
+ * every hop.
+ */
+static bool ieee_sniffer_apply_driver_config() {
   err = esp_ieee802154_enable();
   if (err != ESP_OK) {
     ESP_LOGE(TAG_IEEE_SNIFFER, "Error enabling IEEE 802.15.4 driver: %s",
              esp_err_to_name(err));
-    return;
+    return false;
   }
   err = esp_ieee802154_set_coordinator(false);
   if (err != ESP_OK) {
     ESP_LOGE(TAG_IEEE_SNIFFER, "Error setting coordinator: %s",
              esp_err_to_name(err));
-    return;
+    return false;
   }
   err = esp_ieee802154_set_promiscuous(true);
   if (err != ESP_OK) {
     ESP_LOGE(TAG_IEEE_SNIFFER, "Error setting promiscuous mode: %s",
              esp_err_to_name(err));
-    return;
+    return false;
   }
   err = esp_ieee802154_set_channel(current_channel);
   if (err != ESP_OK) {
     ESP_LOGE(TAG_IEEE_SNIFFER, "Error setting channel: %s",
              esp_err_to_name(err));
-    return;
+    return false;
   }
-  ESP_ERROR_CHECK(esp_ieee802154_set_rx_when_idle(true));
+  /* Must come before receive(): next_operation() consults it to decide whether
+     to keep the radio armed after a frame. */
+  esp_ieee802154_set_rx_when_idle(true);
   uint8_t eui64[8] = {0};
   esp_read_mac(eui64, ESP_MAC_IEEE802154);
   uint8_t eui64_rev[8] = {0};
@@ -117,7 +123,30 @@ static void ieee_sniffer_configure() {
     eui64_rev[7 - i] = eui64[i];
   }
   esp_ieee802154_set_extended_address(eui64_rev);
-  ESP_ERROR_CHECK(esp_ieee802154_receive());
+  err = esp_ieee802154_receive();
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_IEEE_SNIFFER, "Error starting receive: %s",
+             esp_err_to_name(err));
+    return false;
+  }
+  return true;
+}
+
+/* One-time setup: the logging level, the queue and the debug task. */
+static void ieee_sniffer_configure() {
+#if !defined(CONFIG_IEEE_SNIFFER_DEBUG)
+  esp_log_level_set(TAG_IEEE_SNIFFER, ESP_LOG_NONE);
+#endif
+
+  if (packet_rx_queue == NULL) {
+    packet_rx_queue = xQueueCreate(8, 128);
+  }
+  if (debug_task_hdl == NULL) {
+    xTaskCreate(debug_handler_task, "debug_handler_task", 8192, NULL, 20,
+                &debug_task_hdl);
+  }
+
+  ieee_sniffer_apply_driver_config();
 }
 
 void ieee_sniffer_begin(void* args) {
@@ -131,15 +160,19 @@ void ieee_sniffer_begin(void* args) {
 
 void ieee_sniffer_channel_hop() {
   running = true;
-  ieee_sniffer_configure();
+  ieee_sniffer_configure(); /* creates the queue/task and enables once */
   esp_ieee802154_disable();
   while (running) {
-    esp_ieee802154_enable();
+    /* Every enable wipes the PIB (rx_when_idle, extended address, ...), so the
+       configuration has to be re-applied on each hop. */
+    if (!ieee_sniffer_apply_driver_config()) {
+      vTaskDelay(HOPPING_TIME / portTICK_PERIOD_MS);
+      continue;
+    }
     uint8_t next_channel = (current_channel >= IEEE_SNIFFER_CHANNEL_MAX)
                                ? IEEE_SNIFFER_CHANNEL_MIN
                                : (current_channel + 1);
     ieee_sniffer_set_channel(next_channel);
-    esp_ieee802154_receive();
     vTaskDelay(HOPPING_TIME / portTICK_PERIOD_MS);
     esp_ieee802154_disable();
   }

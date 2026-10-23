@@ -17,11 +17,11 @@ gabriel.c.cox@intel.com
 
 #define ENABLE_DEBUG 1
 
-const float SPEED_DIV[2] = {0.25f, 0.75f};
-const float VSPEED_DIV = 0.5f;
-const int32_t LATLON_MULT = 10000000;
-const float ALT_DIV = 0.5f;
-const int ALT_ADDER = 1000;
+static const float SPEED_DIV[2] = {0.25f, 0.75f};
+static const float VSPEED_DIV = 0.5f;
+static const int32_t LATLON_MULT = 10000000;
+static const float ALT_DIV = 0.5f;
+static const int ALT_ADDER = 1000;
 
 static char* safe_dec_copyfill(char* dstStr, const char* srcStr, int dstSize);
 static int intRangeMax(int64_t inValue, int startRange, int endRange);
@@ -1012,7 +1012,11 @@ ODID_messagetype_t decodeOpenDroneID(ODID_UAS_Data* uasData, uint8_t* msgData) {
  * @param dstSize Destination size
  */
 static char* safe_dec_copyfill(char* dstStr, const char* srcStr, int dstSize) {
+  if (!dstStr || dstSize <= 0)
+    return NULL;
   memset(dstStr, 0, dstSize);  // fills destination with nulls
+  if (!srcStr)
+    return dstStr;
   strncpy(dstStr, srcStr,
           dstSize - 1);  // copy only up to dst size-1 (no overruns)
   return dstStr;
@@ -1323,6 +1327,8 @@ float decodeTimestampAccuracy(ODID_Timestamp_accuracy_t Accuracy) {
  */
 
 void printByteArray(uint8_t* byteArray, uint16_t asize, int spaced) {
+  if (!byteArray)
+    return;
   if (ENABLE_DEBUG) {
     int x;
     for (x = 0; x < asize; x++) {
@@ -1341,6 +1347,8 @@ void printByteArray(uint8_t* byteArray, uint16_t asize, int spaced) {
  * @param BasicID structure to be printed
  */
 void printBasicID_data(ODID_BasicID_data* BasicID) {
+  if (!BasicID)
+    return;
   // Ensure the ID is null-terminated
   char buf[ODID_ID_SIZE + 1] = {0};
   memcpy(buf, BasicID->UASID, ODID_ID_SIZE);
@@ -1355,6 +1363,8 @@ void printBasicID_data(ODID_BasicID_data* BasicID) {
  * @param Location structure to be printed
  */
 void printLocation_data(ODID_Location_data* Location) {
+  if (!Location)
+    return;
   const char ODID_Location_data_format[] =
       "Status: %d\nDirection: %.1f\nSpeedHori: %.2f\nSpeedVert: "
       "%.2f\nLat/Lon: %.7f, %.7f\nAlt: Baro, Geo, Height above %s: %.2f, "
@@ -1380,12 +1390,14 @@ void printLocation_data(ODID_Location_data* Location) {
  * @param Auth structure to be printed
  */
 void printAuth_data(ODID_Auth_data* Auth) {
+  if (!Auth)
+    return;
   if (Auth->DataPage == 0) {
     const char ODID_Auth_data_format[] =
         "AuthType: %d\nDataPage: %d\nLastPageIndex: %d\nLength: %d\n"
         "Timestamp: %lu\nAuthData: ";
     printf(ODID_Auth_data_format, Auth->AuthType, Auth->DataPage,
-           Auth->LastPageIndex, Auth->Length, (uint32_t) Auth->Timestamp);
+           Auth->LastPageIndex, Auth->Length, (unsigned long) Auth->Timestamp);
 
     for (int i = 0; i < ODID_AUTH_PAGE_ZERO_DATA_SIZE; i++)
       printf("0x%02X ", Auth->AuthData[i]);
@@ -1405,6 +1417,8 @@ void printAuth_data(ODID_Auth_data* Auth) {
  * @param SelfID structure to be printed
  */
 void printSelfID_data(ODID_SelfID_data* SelfID) {
+  if (!SelfID)
+    return;
   // Ensure the description is null-terminated
   char buf[ODID_STR_SIZE + 1] = {0};
   memcpy(buf, SelfID->Desc, ODID_STR_SIZE);
@@ -1419,6 +1433,8 @@ void printSelfID_data(ODID_SelfID_data* SelfID) {
  * @param System_data structure to be printed
  */
 void printSystem_data(ODID_System_data* System_data) {
+  if (!System_data)
+    return;
   const char ODID_System_data_format[] =
       "Operator Location Type: %d\n"
       "Classification Type: %d\nLat/Lon: %.7f, %.7f\n"
@@ -1439,6 +1455,8 @@ void printSystem_data(ODID_System_data* System_data) {
  * @param OperatorID structure to be printed
  */
 void printOperatorID_data(ODID_OperatorID_data* operatorID) {
+  if (!operatorID)
+    return;
   // Ensure the ID is null-terminated
   char buf[ODID_ID_SIZE + 1] = {0};
   memcpy(buf, operatorID->OperatorId, ODID_ID_SIZE);

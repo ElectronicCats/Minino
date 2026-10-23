@@ -330,6 +330,41 @@ menu "General project"
 					help
 						Enable Zigbee Switch debug.
 
+				config MININO_BT_STACK
+					bool "Enable Bluetooth stack"
+					default y
+					help
+						Enable the Bluetooth stack and the apps that need it.
+						Disabling this takes the Bluetooth components out of
+						the build.
+
+						This is a Minino-level switch: the components' own
+						Kconfig symbols (CONFIG_BT_ENABLED and friends)
+						belong to the upstream components and are left alone.
+						The project needs its own because the build has to
+						know the answer before the Kconfig step runs, when
+						the resolved sdkconfig does not exist yet (see
+						cmake/minino_kconfig.cmake).
+
+			config MININO_ZIGBEE_STACK
+					bool "Enable Zigbee/Thread stack"
+					default y
+					help
+						Enable the Zigbee/Thread stack (espressif__esp-zigbee-lib,
+						openthread, ieee802154). Disabling this frees ~30+ KB of DRAM
+						and is required for the SDR build variant.
+
+						This is a Minino-level switch: the components' own
+						Kconfig symbols (CONFIG_OPENTHREAD_ENABLED and friends)
+						belong to the upstream components and are left alone.
+
+				config MININO_OPENTHREAD_STACK
+					bool "Enable OpenThread"
+					default y
+					depends on MININO_ZIGBEE_STACK
+					help
+						Enable OpenThread stack. Requires MININO_ZIGBEE_STACK.
+
 			endmenu
 
 	endmenu
@@ -803,6 +838,28 @@ menu "General project"
     				default n if !BOARD_MININO
 					help
 						Enable or disable OTA feature.
+
+			################################# SDR ####################################
+
+			config SDR_ENABLE
+					bool "Enable SDR"
+					default n
+					help
+						Show the Applications > SDR entry: the native I/Q
+						capture app. It drives the C6 dump engine in-process
+						and saves bursts to the SD card.
+
+						The engine needs the whole of SRAM block 2
+						(0x40840000) as its capture bank, so the application
+						image has to fit below it: the build caps the SRAM
+						flow segment at the block boundary and reserves the
+						block from the heap. If the image does not fit, the
+						link fails with "SDR: the DRAM image overlaps the
+						capture bank" instead of corrupting the heap at
+						capture time. See docs/esp-sdr-integration.md.
+
+						With this off, nothing reserves the bank and the
+						SDR entry is not in the menu.
 
 			########################### FILE MANAGER #############################
 

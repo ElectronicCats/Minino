@@ -209,6 +209,26 @@ extern esp_err_t nmea_parser_add_handler(nmea_parser_handle_t nmea_hdl,
 extern esp_err_t nmea_parser_remove_handler(nmea_parser_handle_t nmea_hdl,
                                             esp_event_handler_t event_handler);
 
+/**
+ * @brief Manually decode NMEA statements from a buffer (for host testing or external stream)
+ *
+ * @param nmea_hdl handle of NMEA parser
+ * @param data buffer containing NMEA statements
+ * @param len number of bytes to decode
+ * @return esp_err_t ESP_OK on success, ESP_ERR_INVALID_ARG on error
+ */
+extern esp_err_t nmea_parser_decode(nmea_parser_handle_t nmea_hdl,
+                                    const char* data,
+                                    size_t len);
+
+/**
+ * @brief Get the latest parsed GPS data from parser instance
+ *
+ * @param nmea_hdl handle of NMEA parser
+ * @return const gps_t* pointer to internal gps_t data or NULL if handle invalid
+ */
+extern const gps_t* nmea_parser_get_gps_data(nmea_parser_handle_t nmea_hdl);
+
 #ifdef __cplusplus
 }
 #endif

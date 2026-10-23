@@ -85,9 +85,13 @@ void Spoofer::update() {
   utm_data.alt_msl_m = utm_data.base_alt_m + z;
   utm_data.alt_agl_m = z;
 
-  // update the lat long degrees
-  utm_data.latitude_d = utm_data.base_latitude + (y / m_deg_lat);
-  utm_data.longitude_d = utm_data.base_longitude + (x / m_deg_long);
+  // update the lat long degrees (guard against division by zero if uninitialized or polar)
+  if (std::fabs(m_deg_lat) > 1e-6) {
+    utm_data.latitude_d = utm_data.base_latitude + (y / m_deg_lat);
+  }
+  if (std::fabs(m_deg_long) > 1e-6) {
+    utm_data.longitude_d = utm_data.base_longitude + (x / m_deg_long);
+  }
 
   // transmit things
   squitter.transmit(&utm_data);

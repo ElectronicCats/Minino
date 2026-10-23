@@ -128,7 +128,11 @@ static int buf_fill_ieee80211_beacon(uint8_t* buf,
 void drone_export_gps_data(ODID_UAS_Data* UAS_Data,
                            char* buf,
                            size_t buf_size) {
+  if (!UAS_Data || !buf || buf_size == 0) {
+    return;
+  }
   ptrdiff_t len = 0;
+  buf[0] = '\0';
 
 #define mprintf(...)                                                  \
   {                                                                   \
@@ -178,8 +182,8 @@ void drone_export_gps_data(ODID_UAS_Data* UAS_Data,
   mprintf("\t\t\t\"AuthType\": %d,\n", UAS_Data->Auth[0].AuthType);
   mprintf("\t\t\t\"LastPageIndex\": %d,\n", UAS_Data->Auth[0].LastPageIndex);
   mprintf("\t\t\t\"Length\": %d,\n", UAS_Data->Auth[0].Length);
-  mprintf("\t\t\t\"Timestamp\": %lu,\n", UAS_Data->Auth[0].Timestamp);
-  for (int i = 0; i <= UAS_Data->Auth[0].LastPageIndex; i++) {
+  mprintf("\t\t\t\"Timestamp\": %lu,\n", (unsigned long) UAS_Data->Auth[0].Timestamp);
+  for (int i = 0; i <= UAS_Data->Auth[0].LastPageIndex && i < ODID_AUTH_MAX_PAGES; i++) {
     mprintf("\t\t\t\"AuthDataPage%d\": \"", i);
     for (int b = 0; b < ODID_AUTH_PAGE_NONZERO_DATA_SIZE; b++) {
       mprintf("%02X", (unsigned char) UAS_Data->Auth[i].AuthData[b]);
@@ -213,7 +217,7 @@ void drone_export_gps_data(ODID_UAS_Data* UAS_Data,
   mprintf("\t\t\t\"ClassEU\": %d,\n", UAS_Data->System.ClassEU);
   mprintf("\t\t\t\"OperatorAltitudeGeo\": %f,\n",
           (double) UAS_Data->System.OperatorAltitudeGeo);
-  mprintf("\t\t\t\"Timestamp\": %lu,\n", UAS_Data->System.Timestamp);
+  mprintf("\t\t\t\"Timestamp\": %lu,\n", (unsigned long) UAS_Data->System.Timestamp);
   mprintf("\t\t}\n");
 
   mprintf("\t\t\"OperatorID\": {\n");
@@ -307,6 +311,8 @@ int odid_message_build_pack(ODID_UAS_Data* UAS_Data,
 int odid_wifi_build_nan_sync_beacon_frame(char* mac,
                                           uint8_t* buf,
                                           size_t buf_size) {
+  if (!mac || !buf)
+    return -EINVAL;
   /* Broadcast address */
   uint8_t target_addr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t wifi_alliance_oui[3] = {0x50, 0x6F, 0x9A};
@@ -396,6 +402,8 @@ int odid_wifi_build_message_pack_nan_action_frame(ODID_UAS_Data* UAS_Data,
                                                   uint8_t send_counter,
                                                   uint8_t* buf,
                                                   size_t buf_size) {
+  if (!UAS_Data || !mac || !buf)
+    return -EINVAL;
   /* Neighbor Awareness Networking Specification v3.0 in section 2.8.1
    * NAN Network ID calls for the destination mac to be 51-6F-9A-01-00-00 */
   uint8_t target_addr[6] = {0x51, 0x6F, 0x9A, 0x01, 0x00, 0x00};
@@ -510,12 +518,12 @@ int odid_wifi_build_message_pack_beacon_frame(ODID_UAS_Data* UAS_Data,
     return ret;
 
   /* SSID: 1-32 bytes */
-  if (len + sizeof(*ssid_s) > buf_size)
+  if (!SSID || (SSID_len == 0) || (SSID_len > 32))
+    return -EINVAL;
+  if (len + sizeof(*ssid_s) + SSID_len > buf_size)
     return -ENOMEM;
 
   ssid_s = (struct ieee80211_ssid*) (buf + len);
-  if (!SSID || (SSID_len == 0) || (SSID_len > 32))
-    return -EINVAL;
   ssid_s->element_id = IEEE80211_ELEMID_SSID;
   ssid_s->length = (uint8_t) SSID_len;
   memcpy(ssid_s->ssid, SSID, ssid_s->length);
@@ -566,7 +574,11 @@ int odid_wifi_build_message_pack_beacon_frame(ODID_UAS_Data* UAS_Data,
 int odid_message_process_pack(ODID_UAS_Data* UAS_Data,
                               uint8_t* pack,
                               size_t buflen) {
+  if (!UAS_Data || !pack || buflen < 3)
+    return -EINVAL;
   ODID_MessagePack_encoded* msg_pack_enc = (ODID_MessagePack_encoded*) pack;
+  if (msg_pack_enc->MsgPackSize > ODID_PACK_MAX_MESSAGES)
+    return -EINVAL;
   size_t size =
       sizeof(*msg_pack_enc) -
       ODID_MESSAGE_SIZE * (ODID_PACK_MAX_MESSAGES - msg_pack_enc->MsgPackSize);
@@ -585,6 +597,8 @@ int odid_wifi_receive_message_pack_nan_action_frame(ODID_UAS_Data* UAS_Data,
                                                     char* mac,
                                                     uint8_t* buf,
                                                     size_t buf_size) {
+  if (!UAS_Data || !mac || !buf)
+    return -EINVAL;
   struct ieee80211_mgmt* mgmt;
   struct nan_service_discovery* nsd;
   struct nan_service_descriptor_attribute* nsda;

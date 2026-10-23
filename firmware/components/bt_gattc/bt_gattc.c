@@ -1,6 +1,8 @@
 #include "bt_gattc.h"
+#include "radio_lease.h"
 #include "esp_bt.h"
 #include "esp_log.h"
+#include "gatt_dispatcher.h"
 #include "gap_dispatcher.h"
 #include "inttypes.h"
 
@@ -17,8 +19,13 @@ static esp_bt_uuid_t ble_client_notify_descr_uuid;
 static esp_ble_scan_params_t ble_client_ble_scan_params;
 static bt_client_event_cb_t bt_client_event_cb;
 static bool s_passive_scan = false;
+/* True while a scan started by this client is running (set on a confirmed
+ * start / re-armed restart, cleared on the stop completion). The stop path
+ * uses it so it never kills a scan that another BLE app (gattcmd, the ADV
+ * scanner restart loop) owns by then. */
+static volatile bool s_scan_started = false;
 
-struct gattc_profile_inst ble_client_gattc_profile_tab[DEVICE_PROFILES] = {
+static struct gattc_profile_inst ble_client_gattc_profile_tab[DEVICE_PROFILES] = {
     [DEVICE_PROFILE] = {
         .gattc_cb = ble_client_gattc_event_handler,
         .gattc_if = ESP_GATT_IF_NONE,
@@ -151,8 +158,6 @@ void ble_client_gattc_event_handler(esp_gattc_cb_event_t event,
       }
       ESP_LOGI(TAG_BT_GATTC, "discover service complete conn_id %d",
                param->dis_srvc_cmpl.conn_id);
-      esp_ble_gattc_search_service(gattc_if, param->cfg_mtu.conn_id,
-                                   &ble_client_remote_filter_service_uuid);
       break;
     case ESP_GATTC_CFG_MTU_EVT:
       if (param->cfg_mtu.status != ESP_GATT_OK) {
@@ -162,6 +167,8 @@ void ble_client_gattc_event_handler(esp_gattc_cb_event_t event,
       ESP_LOGI(
           TAG_BT_GATTC, "ESP_GATTC_CFG_MTU_EVT, Status %d, MTU %d, conn_id %d",
           param->cfg_mtu.status, param->cfg_mtu.mtu, param->cfg_mtu.conn_id);
+      esp_ble_gattc_search_service(gattc_if, param->cfg_mtu.conn_id,
+                                   &ble_client_remote_filter_service_uuid);
       break;
     case ESP_GATTC_SEARCH_RES_EVT: {
       ESP_LOGI(TAG_BT_GATTC, "SEARCH RES: conn_id = %x is primary service %d",
@@ -368,9 +375,18 @@ void ble_client_esp_gap_cb(esp_gap_ble_cb_event_t event,
   uint8_t adv_name_len = 0;
   switch (event) {
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
+      /* An expressive radio owner (BLE spam, BLE HID) has asked for exclusive
+       * radio: starting a scan now would be rejected by the controller, and
+       * the scanners' restart loops would then keep hammering the rejection
+       * for the whole session. Leave the radio to the owner. */
+      if (!radio_lease_ble_scan_allowed()) {
+        break;
+      }
       // the unit of the duration is second
       uint32_t duration = SCAN_DURATION;
-      esp_ble_gap_start_scanning(duration);
+      if (esp_ble_gap_start_scanning(duration) == ESP_OK) {
+        s_scan_started = true;
+      }
       break;
     }
     case ESP_GAP_BLE_SCAN_START_COMPLETE_EVT:
@@ -378,8 +394,10 @@ void ble_client_esp_gap_cb(esp_gap_ble_cb_event_t event,
       if (param->scan_start_cmpl.status != ESP_BT_STATUS_SUCCESS) {
         ESP_LOGE(TAG_BT_GATTC, "scan start failed, error status = %x",
                  param->scan_start_cmpl.status);
+        s_scan_started = false;
         break;
       }
+      s_scan_started = true;
       ESP_LOGI(TAG_BT_GATTC, "scan start success");
 
       break;
@@ -420,6 +438,13 @@ void ble_client_esp_gap_cb(esp_gap_ble_cb_event_t event,
           }
           break;
         case ESP_GAP_SEARCH_INQ_CMPL_EVT:
+          if (!is_connected) {
+            if (s_scan_started && radio_lease_ble_scan_allowed()) {
+              if (esp_ble_gap_start_scanning(SCAN_DURATION) == ESP_OK) {
+                s_scan_started = true;
+              }
+            }
+          }
           break;
         default:
           break;
@@ -433,6 +458,7 @@ void ble_client_esp_gap_cb(esp_gap_ble_cb_event_t event,
                  param->scan_stop_cmpl.status);
         break;
       }
+      s_scan_started = false;
       ESP_LOGI(TAG_BT_GATTC, "stop scan successfully");
       break;
 
@@ -491,55 +517,51 @@ void ble_client_esp_gattc_cb(esp_gattc_cb_event_t event,
   } while (0);
 }
 
-void bt_gattc_task_begin(void) {
+esp_err_t bt_gattc_task_begin(void) {
 #if !defined(CONFIG_BT_GATTC_DEBUG)
   esp_log_level_set(TAG_BT_GATTC, ESP_LOG_NONE);
 #endif
 
-  esp_err_t ret;
+  esp_err_t ret = ESP_OK;
 
-  // Initialize BT controller if not already done
-  if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_IDLE) {
-    esp_bt_controller_config_t bluetooth_config =
-        BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-    ret = esp_bt_controller_init(&bluetooth_config);
-    if (ret == ESP_OK) {
-      esp_bt_controller_enable(ESP_BT_MODE_BLE);
-    }
-  } else if (esp_bt_controller_get_status() ==
-             ESP_BT_CONTROLLER_STATUS_INITED) {
-    esp_bt_controller_enable(ESP_BT_MODE_BLE);
-  }
-
-  // Initialize Bluedroid if not already done
-  if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_UNINITIALIZED) {
-    esp_bluedroid_config_t bluedroid_config =
-        BT_BLUEDROID_INIT_CONFIG_DEFAULT();
-    ret = esp_bluedroid_init_with_cfg(&bluedroid_config);
-    if (ret == ESP_OK) {
-      esp_bluedroid_enable();
-    }
-  } else if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_INITIALIZED) {
-    esp_bluedroid_enable();
+  /* Brings up the controller and Bluedroid, and holds a BLE claim for as long as
+     this client is running: the surveillance detector used to disable Bluedroid
+     whenever one of its windows ended, silently killing the trackers scanner and
+     the gatt console commands. */
+  ret = radio_lease_ble_acquire();
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG_BT_GATTC, "could not acquire the BLE stack: %x", ret);
+    return ret;
   }
 
   /* Register our GAP callback with the central gap dispatcher so we receive
    * GAP events reliably regardless of whether other BLE modules are active. */
   ret = gap_dispatcher_register(ble_client_esp_gap_cb);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG_BT_GATTC, "gap_dispatcher_register failed, error = %x", ret);
+    ESP_LOGE(TAG_BT_GATTC, "gap dispatcher register error, error code = %x",
+             ret);
+    radio_lease_ble_release();
+    return ret;
   }
 
-  ret = esp_ble_gattc_register_callback(ble_client_esp_gattc_cb);
-  if (ret) {
+  /* Via the central GATTC dispatcher: the single Bluedroid callback slot used
+   * to be stolen by whoever registered last (the gatt console services), and
+   * the previous holder silently stopped receiving events. */
+  ret = gatt_dispatcher_register(ble_client_esp_gattc_cb);
+  if (ret != ESP_OK) {
     ESP_LOGE(TAG_BT_GATTC, "gattc register error, error code = %x", ret);
-    return;
+    gap_dispatcher_unregister(ble_client_esp_gap_cb);
+    radio_lease_ble_release();
+    return ret;
   }
 
   ret = esp_ble_gattc_app_register(DEVICE_PROFILE);
   if (ret) {
     ESP_LOGE(TAG_BT_GATTC, "gattc app register error, error code = %x", ret);
-    return;
+    gatt_dispatcher_unregister(ble_client_esp_gattc_cb);
+    gap_dispatcher_unregister(ble_client_esp_gap_cb);
+    radio_lease_ble_release();
+    return ret;
   }
 
   esp_err_t local_mtu_ret = esp_ble_gatt_set_local_mtu(500);
@@ -547,19 +569,28 @@ void bt_gattc_task_begin(void) {
     ESP_LOGE(TAG_BT_GATTC, "set local  MTU failed, error code = %x",
              local_mtu_ret);
   }
+  return ESP_OK;
 }
 
 void bt_gattc_task_stop(void) {
   ESP_LOGI(TAG_BT_GATTC, "stop_ble_client_task");
-  esp_ble_gap_stop_scanning();
+  /* Only stop a scan this client actually owns: stopping unconditionally
+   * killed the scan of another still-running consumer, which then sat waiting
+   * for results that never came. */
+  if (s_scan_started) {
+    esp_ble_gap_stop_scanning();
+    s_scan_started = false;
+  }
   if (ble_client_gattc_profile_tab[DEVICE_PROFILE].gattc_if !=
       ESP_GATT_IF_NONE) {
     esp_ble_gattc_app_unregister(
         ble_client_gattc_profile_tab[DEVICE_PROFILE].gattc_if);
     ble_client_gattc_profile_tab[DEVICE_PROFILE].gattc_if = ESP_GATT_IF_NONE;
   }
+  gatt_dispatcher_unregister(ble_client_esp_gattc_cb);
   /* Unregister from central GAP dispatcher */
   gap_dispatcher_unregister(ble_client_esp_gap_cb);
-  /* Note: We don't fully deinit bluedroid/controller here because other
-   * modules (like BLE spam) may be using them. They are managed centrally. */
+  /* The stack itself is only torn down when this was the last claim; other
+   * modules (BLE spam, BLE HID, ...) hold their own. */
+  radio_lease_ble_release();
 }

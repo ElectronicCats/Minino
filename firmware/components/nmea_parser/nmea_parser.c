@@ -92,10 +92,14 @@ static inline uint8_t convert_two_digit2number(const char* digit_char) {
  * @param esp_gps esp_gps_t type object
  */
 static void parse_utc_time(esp_gps_t* esp_gps) {
+  if (!esp_gps) {
+    return;
+  }
   size_t len = strlen(esp_gps->item_str);
   if (len < 6) {
     return;
   }
+  esp_gps->parent.tim.thousand = 0;
   esp_gps->parent.tim.hour = convert_two_digit2number(esp_gps->item_str + 0);
   esp_gps->parent.tim.minute = convert_two_digit2number(esp_gps->item_str + 2);
   esp_gps->parent.tim.second = convert_two_digit2number(esp_gps->item_str + 4);
@@ -219,14 +223,13 @@ static void parse_gsv(esp_gps_t* esp_gps) {
           (uint8_t) strtol(esp_gps->item_str, NULL, 10);
       break;
     default:
-      if (esp_gps->item_num >= 4 && esp_gps->item_num <= 19) {
+      if (esp_gps->item_num >= 4 && esp_gps->item_num <= 19 && esp_gps->sat_num > 0) {
         uint8_t item_num =
             esp_gps->item_num - 4; /* Normalize item number from 4-19 to 0-15 */
-        uint8_t index;
-        uint32_t value;
-        index = 4 * (esp_gps->sat_num - 1) + item_num / 4; /* Get array index */
+        uint8_t index =
+            4 * (esp_gps->sat_num - 1) + item_num / 4; /* Get array index */
         if (index < GPS_MAX_SATELLITES_IN_VIEW) {
-          value = strtol(esp_gps->item_str, NULL, 10);
+          uint32_t value = strtol(esp_gps->item_str, NULL, 10);
           switch (item_num % 4) {
             case 0:
               esp_gps->parent.sats_desc_in_view[index].num = (uint8_t) value;
@@ -290,12 +293,14 @@ static void parse_rmc(esp_gps_t* esp_gps) {
       esp_gps->parent.cog = strtof(esp_gps->item_str, NULL);
       break;
     case 9: /* Process date */
-      esp_gps->parent.date.day =
-          convert_two_digit2number(esp_gps->item_str + 0);
-      esp_gps->parent.date.month =
-          convert_two_digit2number(esp_gps->item_str + 2);
-      esp_gps->parent.date.year =
-          convert_two_digit2number(esp_gps->item_str + 4);
+      if (strlen(esp_gps->item_str) >= 6) {
+        esp_gps->parent.date.day =
+            convert_two_digit2number(esp_gps->item_str + 0);
+        esp_gps->parent.date.month =
+            convert_two_digit2number(esp_gps->item_str + 2);
+        esp_gps->parent.date.year =
+            convert_two_digit2number(esp_gps->item_str + 4);
+      }
       break;
     case 10: /* Process magnetic variation */
       esp_gps->parent.variation = strtof(esp_gps->item_str, NULL);
@@ -383,13 +388,17 @@ static void parse_zda(esp_gps_t* esp_gps) {
     case 1: /* Process UTC time */
       parse_utc_time(esp_gps);
       break;
-    case 2: /* Process date */
+    case 2: /* Process day */
       esp_gps->parent.date.day =
-          convert_two_digit2number(esp_gps->item_str + 0);
+          (uint8_t) strtol(esp_gps->item_str, NULL, 10);
+      break;
+    case 3: /* Process month */
       esp_gps->parent.date.month =
-          convert_two_digit2number(esp_gps->item_str + 2);
+          (uint8_t) strtol(esp_gps->item_str, NULL, 10);
+      break;
+    case 4: /* Process year */
       esp_gps->parent.date.year =
-          convert_two_digit2number(esp_gps->item_str + 4);
+          (uint16_t) strtol(esp_gps->item_str, NULL, 10);
 #if defined(CONFIG_NMEA_PARSER_DEBUG)
       ESP_LOGD(TAG, "ZDA date parsed: %d/%02d/%02d", esp_gps->parent.date.year,
                esp_gps->parent.date.month, esp_gps->parent.date.day);
@@ -500,8 +509,12 @@ out:
  * @return esp_err_t ESP_OK on success, ESP_FAIL on error
  */
 static esp_err_t gps_decode(esp_gps_t* esp_gps, size_t len) {
+  if (!esp_gps || !esp_gps->buffer || len == 0) {
+    return ESP_ERR_INVALID_ARG;
+  }
   const uint8_t* d = esp_gps->buffer;
-  while (*d) {
+  const uint8_t* end = esp_gps->buffer + len;
+  while (d < end && *d) {
     /* Start of a statement */
     if (*d == '$') {
       /* Reset runtime information */
@@ -544,8 +557,8 @@ static esp_err_t gps_decode(esp_gps_t* esp_gps, size_t len) {
     else if (*d == '\r') {
       /* Convert received CRC from string (hex) to number */
       uint8_t crc = (uint8_t) strtol(esp_gps->item_str, NULL, 16);
-      /* CRC passed */
-      if (esp_gps->crc == crc) {
+      /* CRC passed only if asterisk was encountered and CRC matches */
+      if (esp_gps->asterisk && esp_gps->crc == crc) {
         switch (esp_gps->cur_statement) {
 #if CONFIG_NMEA_STATEMENT_GGA
           case STATEMENT_GGA:
@@ -564,7 +577,8 @@ static esp_err_t gps_decode(esp_gps_t* esp_gps, size_t len) {
 #endif
 #if CONFIG_NMEA_STATEMENT_GSV
           case STATEMENT_GSV:
-            if (esp_gps->sat_num == esp_gps->sat_count) {
+            if (esp_gps->sat_count > 0 &&
+                esp_gps->sat_num == esp_gps->sat_count) {
               esp_gps->parsed_statement |= 1 << STATEMENT_GSV;
             }
             break;
@@ -586,8 +600,9 @@ static esp_err_t gps_decode(esp_gps_t* esp_gps, size_t len) {
             break;
         }
         /* Check if all statements have been parsed */
-        if (((esp_gps->parsed_statement) & esp_gps->all_statements) ==
-            esp_gps->all_statements) {
+        if (esp_gps->all_statements != 0 &&
+            (((esp_gps->parsed_statement) & esp_gps->all_statements) ==
+             esp_gps->all_statements)) {
           esp_gps->parsed_statement = 0;
           /* Call user callback to notify that GPS information has been updated
            */
@@ -596,16 +611,15 @@ static esp_err_t gps_decode(esp_gps_t* esp_gps, size_t len) {
                                    GPS_UPDATE, &(esp_gps->parent));
           }
         }
+        if (esp_gps->cur_statement == STATEMENT_UNKNOWN) {
+          /* Call user callback to notify that one unknown statement has been met */
+          if (esp_gps->event_handler) {
+            esp_gps->event_handler(esp_gps->event_handler_arg, ESP_NMEA_EVENT,
+                                   GPS_UNKNOWN, esp_gps->buffer);
+          }
+        }
       } else {
         ESP_LOGD(TAG, "CRC Error for statement:%s", esp_gps->buffer);
-      }
-      if (esp_gps->cur_statement == STATEMENT_UNKNOWN) {
-        /* Call user callback to notify that one unknown statement has been met
-         */
-        if (esp_gps->event_handler) {
-          esp_gps->event_handler(esp_gps->event_handler_arg, ESP_NMEA_EVENT,
-                                 GPS_UNKNOWN, esp_gps->buffer);
-        }
       }
     }
     /* Other non-space character */
@@ -707,6 +721,11 @@ nmea_parser_handle_t nmea_parser_init(const nmea_parser_config_t* config) {
 #if !defined(CONFIG_NMEA_PARSER_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
+
+  if (!config) {
+    ESP_LOGE(TAG, "configuration pointer is NULL");
+    return NULL;
+  }
 
   esp_gps_t* esp_gps = calloc(1, sizeof(esp_gps_t));
   if (!esp_gps) {
@@ -899,6 +918,7 @@ esp_err_t nmea_parser_remove_handler(nmea_parser_handle_t nmea_hdl,
   if (!esp_gps) {
     return ESP_ERR_INVALID_ARG;
   }
+  (void) event_handler;
 
   // Clear the callback
   esp_gps->event_handler = NULL;
@@ -906,4 +926,33 @@ esp_err_t nmea_parser_remove_handler(nmea_parser_handle_t nmea_hdl,
 
   ESP_LOGI(TAG, "Event handler unregistered");
   return ESP_OK;
+}
+
+/**
+ * @brief Manually decode NMEA statements from a buffer (for host testing or external stream)
+ */
+esp_err_t nmea_parser_decode(nmea_parser_handle_t nmea_hdl,
+                            const char* data,
+                            size_t len) {
+  esp_gps_t* esp_gps = (esp_gps_t*) nmea_hdl;
+  if (!esp_gps || !data || len == 0) {
+    return ESP_ERR_INVALID_ARG;
+  }
+  if (len >= NMEA_PARSER_RUNTIME_BUFFER_SIZE) {
+    len = NMEA_PARSER_RUNTIME_BUFFER_SIZE - 1;
+  }
+  memcpy(esp_gps->buffer, data, len);
+  esp_gps->buffer[len] = '\0';
+  return gps_decode(esp_gps, len);
+}
+
+/**
+ * @brief Get the latest parsed GPS data from parser instance
+ */
+const gps_t* nmea_parser_get_gps_data(nmea_parser_handle_t nmea_hdl) {
+  esp_gps_t* esp_gps = (esp_gps_t*) nmea_hdl;
+  if (!esp_gps) {
+    return NULL;
+  }
+  return &esp_gps->parent;
 }

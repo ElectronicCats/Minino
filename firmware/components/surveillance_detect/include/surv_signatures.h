@@ -41,9 +41,9 @@ typedef struct {
 // principio, deja la sincronizacion librada a la convencion: si alguien sube
 // uno sin subir el otro, surv_signatures_build_effective() escribe pasado el
 // final de un arreglo estatico sin ningun diagnostico del compilador.
-#define SURV_OVERLAY_MAX_OUIS  256
-#define SURV_OVERLAY_MAX_KWS   64
-#define SURV_OVERLAY_MAX_UUIDS 16
+#define SURV_OVERLAY_MAX_OUIS  64
+#define SURV_OVERLAY_MAX_KWS   16
+#define SURV_OVERLAY_MAX_UUIDS 8
 
 uint16_t surv_signatures_oui_count(void);
 const surv_oui_entry_t* surv_signatures_ouis(void);

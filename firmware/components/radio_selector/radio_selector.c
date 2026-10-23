@@ -3,7 +3,7 @@
 #include "esp_attr.h"
 #include "esp_ieee802154.h"
 
-uint8_t radio_selected_option;
+static uint8_t radio_selected_option;
 uint8_t radio_selector_get_selected_option() {
   return radio_selected_option;
 }

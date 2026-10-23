@@ -3,7 +3,7 @@
 #include "wifi_ap.h"
 
 bool is_ota_running = false;
-ota_show_event_cb_t ota_show_event_cb = NULL;
+static ota_show_event_cb_t ota_show_event_cb = NULL;
 
 void OTA_init() {
   wifi_app_start();

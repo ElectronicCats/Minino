@@ -8,8 +8,7 @@
  * @brief List to the names of attacks
  *
  */
-char* WIFI_ATTACKS_LIST[] = {"Broadcast", "Rouge AP",       "Combine",
-                             "Multi-AP",  "Captive Portal", NULL};
+extern char* WIFI_ATTACKS_LIST[];
 
 /**
  * @brief Structure to store deauth frame data

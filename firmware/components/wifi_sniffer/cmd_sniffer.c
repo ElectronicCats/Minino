@@ -6,6 +6,7 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 #include "cmd_sniffer.h"
+#include "radio_lease.h"
 
 #include <string.h>
 #include <sys/fcntl.h>
@@ -381,9 +382,10 @@ static esp_err_t sniffer_stop(sniffer_runtime_t* sniffer) {
 
   switch (sniffer->interf) {
     case SNIFFER_INTF_WLAN:
-      /* Disable wifi promiscuous mode */
-      ESP_GOTO_ON_ERROR(esp_wifi_set_promiscuous(false), err, TAG,
-                        "stop wifi promiscuous failed");
+      /* Leaving the shared slot; the driver is only stopped once every
+         consumer has left. */
+      ESP_GOTO_ON_ERROR(radio_lease_prom_release(RADIO_PROM_SNIFFER), err, TAG,
+                        "release promiscuous mode failed");
       break;
     case SNIFFER_INTF_ETH:
       // Ethernet support removed
@@ -474,10 +476,13 @@ static esp_err_t sniffer_start(sniffer_runtime_t* sniffer) {
     case SNIFFER_INTF_WLAN:
       /* Start WiFi Promiscuous Mode */
       wifi_filter.filter_mask = sniffer->filter;
-      esp_wifi_set_promiscuous_filter(&wifi_filter);
-      esp_wifi_set_promiscuous_rx_cb(wifi_sniffer_cb);
-      ESP_GOTO_ON_ERROR(esp_wifi_set_promiscuous(true), err_start, TAG,
-                        "create work queue failed");
+      radio_lease_prom_set_filter(&wifi_filter);
+      /* Claim the shared slot rather than overwriting the driver's single
+         callback, so a concurrent detector or the surveillance detector keeps
+         receiving frames. */
+      ESP_GOTO_ON_ERROR(
+          radio_lease_prom_acquire(RADIO_PROM_SNIFFER, wifi_sniffer_cb),
+          err_start, TAG, "claim promiscuous mode failed");
       esp_wifi_set_channel(sniffer->channel, WIFI_SECOND_CHAN_NONE);
       ESP_LOGI(TAG, "start WiFi promiscuous ok");
       break;

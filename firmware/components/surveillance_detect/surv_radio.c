@@ -12,6 +12,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "gap_dispatcher.h"
+#include "radio_lease.h"
 #include "surv_engine.h"
 #include "surv_match.h"
 #include "surv_signatures.h"
@@ -75,6 +76,29 @@ uint8_t surv_radio_current_channel(void) {
   return s_current_channel;
 }
 
+// ble_gap_cb() runs on Bluedroid's BTC_TASK, the single task that dispatches
+// every GAP/GATTS event in the system. Sleeping there stalls the whole
+// Bluetooth stack: any other task calling esp_ble_gap_start_advertising(),
+// stop_advertising() or a gattc operation blocks in btc_task_post() until the
+// delay expires, which is what makes the UI appear to freeze when a BLE scan
+// start fails while another BLE app is running. The retry therefore runs on a
+// short-lived task of its own.
+static void ble_scan_retry_task(void* arg) {
+  (void) arg;
+  vTaskDelay(pdMS_TO_TICKS(BLE_START_RETRY_GAP_MS));
+  if (s_running && s_ble_scan_desired && s_profile != SURV_PROFILE_FLOCK) {
+    esp_ble_gap_set_scan_params(&s_ble_scan_params);
+  }
+  vTaskDelete(NULL);
+}
+
+static void ble_schedule_scan_retry(void) {
+  if (xTaskCreate(ble_scan_retry_task, "surv_ble_retry", 2560, NULL, 4, NULL) !=
+      pdPASS) {
+    ESP_LOGW(TAG, "no se pudo crear la tarea de reintento de scan BLE");
+  }
+}
+
 // Intenta arrancar el escaneo solo si hay deseo activo y el controlador aun
 // no esta escaneando. Evita llamar start_scanning() sobre un escaneo ya en
 // curso: segun la version de Bluedroid, el segundo start puede DETENER el
@@ -104,8 +128,7 @@ static void ble_try_start_scan(uint32_t seconds) {
     if (s_running && s_ble_scan_desired && s_profile != SURV_PROFILE_FLOCK) {
       if (s_ble_start_retries < BLE_START_MAX_RETRIES) {
         s_ble_start_retries++;
-        vTaskDelay(pdMS_TO_TICKS(BLE_START_RETRY_GAP_MS));
-        esp_ble_gap_set_scan_params(&s_ble_scan_params);
+        ble_schedule_scan_retry();
       }
     }
   }
@@ -161,8 +184,7 @@ static void ble_gap_cb(esp_gap_ble_cb_event_t event,
             s_profile != SURV_PROFILE_FLOCK) {
           if (s_ble_start_retries < BLE_START_MAX_RETRIES) {
             s_ble_start_retries++;
-            vTaskDelay(pdMS_TO_TICKS(BLE_START_RETRY_GAP_MS));
-            esp_ble_gap_set_scan_params(&s_ble_scan_params);
+            ble_schedule_scan_retry();
           } else {
             ESP_LOGE(TAG, "BLE scan no arranca tras %d reintentos (ventana)",
                      (int) BLE_START_MAX_RETRIES);
@@ -257,8 +279,17 @@ static void wifi_window_ms(uint32_t ms) {
   if (!s_running) {
     return;
   }
-  esp_wifi_set_promiscuous_rx_cb(wifi_sniffer_cb);
-  esp_wifi_set_promiscuous(true);
+  /* Claim the shared promiscuous slot. This used to call
+     esp_wifi_set_promiscuous_rx_cb()/esp_wifi_set_promiscuous() directly, which
+     (a) replaced the single driver callback, so the deauth detector's
+     packet_handler and the analyzer's wifi_sniffer_cb stopped seeing frames,
+     and (b) turned promiscuous mode off at the end of the window, killing a
+     capture somebody else was relying on. */
+  if (radio_lease_prom_acquire(RADIO_PROM_SURVEILLANCE, wifi_sniffer_cb) !=
+      ESP_OK) {
+    ESP_LOGW(TAG, "no se pudo reclamar el modo promiscuo");
+    return;
+  }
 
   uint32_t elapsed = 0;
   uint8_t hop_idx = 0;
@@ -284,7 +315,7 @@ static void wifi_window_ms(uint32_t ms) {
     elapsed += SURV_DWELL_MS;
   }
 
-  esp_wifi_set_promiscuous(false);
+  radio_lease_prom_release(RADIO_PROM_SURVEILLANCE);
 }
 
 static void ble_window_ms(uint32_t ms) {
@@ -337,41 +368,33 @@ static void ble_release_classic_mem(void) {
 // Enciende el stack BLE (controlador + host Bluedroid + callback GAP) si no
 // estaba ya encendido. Si se lllama tras ble_controller_disable() vuelve a
 // partir de cero (memoria del controlador devuelta al heap).
+static bool s_ble_claimed = false; /* we currently hold one BLE lease claim */
+
+static void ble_claim_release(void) {
+  if (s_ble_claimed) {
+    s_ble_claimed = false;
+    radio_lease_ble_release();
+  }
+}
+
 static esp_err_t ble_controller_enable(void) {
-  esp_err_t ret;
-  if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_IDLE) {
-    esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-    ret = esp_bt_controller_init(&bt_cfg);
-    if (ret != ESP_OK) {
-      ESP_LOGE(TAG, "bt_controller_init: %s", esp_err_to_name(ret));
-      return ret;
-    }
+  if (s_ble_claimed) {
+    /* TRACKERS keeps its claim across windows; re-acquiring each time grew
+       the refcount without bound and the stack was never freed. */
+    return ESP_OK;
   }
-  if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_INITED) {
-    ret = esp_bt_controller_enable(ESP_BT_MODE_BLE);
-    if (ret != ESP_OK) {
-      ESP_LOGE(TAG, "bt_controller_enable: %s", esp_err_to_name(ret));
-      return ret;
-    }
+  /* Brings up the controller and Bluedroid and takes our BLE claim. */
+  esp_err_t ret = radio_lease_ble_acquire();
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG, "ble claim: %s", esp_err_to_name(ret));
+    return ret;
   }
-  if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_UNINITIALIZED) {
-    esp_bluedroid_config_t bd_cfg = BT_BLUEDROID_INIT_CONFIG_DEFAULT();
-    ret = esp_bluedroid_init_with_cfg(&bd_cfg);
-    if (ret != ESP_OK) {
-      ESP_LOGE(TAG, "bluedroid_init_with_cfg: %s", esp_err_to_name(ret));
-      return ret;
-    }
-  }
-  if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_INITIALIZED) {
-    ret = esp_bluedroid_enable();
-    if (ret != ESP_OK) {
-      ESP_LOGE(TAG, "bluedroid_enable: %s", esp_err_to_name(ret));
-      return ret;
-    }
-  }
+  s_ble_claimed = true;
+  /* GAP registration stays here: it is ours alone, not the lease's business. */
   ret = gap_dispatcher_register(ble_gap_cb);
   if (ret != ESP_OK) {
     ESP_LOGE(TAG, "gap_dispatcher_register: %s", esp_err_to_name(ret));
+    ble_claim_release();
     return ret;
   }
   return ESP_OK;
@@ -387,6 +410,17 @@ static void ble_controller_disable(void) {
     esp_ble_gap_stop_scanning();
     s_ble_scanning = false;
     vTaskDelay(pdMS_TO_TICKS(50));
+  }
+
+  /* Full Bluedroid + controller teardown is global. Every other BLE app holds a
+     radio_lease BLE claim for as long as it is running, and this used to pull
+     the stack out from under BLE spam, BLE HID, the trackers scanner and the
+     gatt console commands every time a window ended. Only the last claim may
+     take it down. */
+  if (radio_lease_ble_shared()) {
+    ESP_LOGD(TAG, "otro modulo sigue usando BLE (%u); no se apaga el stack",
+             (unsigned) radio_lease_ble_count());
+    return;
   }
   if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_ENABLED) {
     esp_bluedroid_disable();
@@ -423,6 +457,10 @@ static void scan_ble_window(uint32_t ms) {
   esp_ble_gap_set_scan_params(&s_ble_scan_params);
   ble_window_ms(ms);
   if (s_profile == SURV_PROFILE_SURVEIL) {
+    /* Release our own claim first, so ble_controller_disable() sees the real
+       number of other users and only tears the stack down if we were the last
+       one (which is the case that actually needs the RAM back). */
+    ble_claim_release();
     ble_controller_disable();
   }
 }
@@ -440,20 +478,22 @@ static void radio_task(void* arg) {
         if (!s_running) {
           break;
         }
-        if (wifi_driver_get_initialized()) {
-          wifi_driver_deinit();
-        }
+        /* Wi-Fi driver hand-over, symmetric acquire/release.
+           The claim only actually deinits the driver when nobody else holds
+           one: the analyzer, the deauth detector, the DroneID scanner and the
+           spectrum app all run on the same driver, and taking it down
+           mid-session was killing their captures. */
         vTaskDelay(pdMS_TO_TICKS(RADIO_SWITCH_DELAY_MS));
         if (!s_running) {
           break;
         }
-        if (!wifi_driver_get_initialized()) {
-          wifi_driver_init_sta();
+        if (radio_lease_wifi_acquire(RADIO_WIFI_MODE_STA) != ESP_OK) {
+          ESP_LOGW(TAG, "wifi window skipped: the radio is held by BLE");
+          vTaskDelay(pdMS_TO_TICKS(500));
+          break;
         }
         wifi_window_ms(14000);
-        if (wifi_driver_get_initialized()) {
-          wifi_driver_deinit();
-        }
+        radio_lease_wifi_release();
         vTaskDelay(pdMS_TO_TICKS(RADIO_SWITCH_DELAY_MS));
         break;
       case SURV_PROFILE_TRACKERS:
@@ -480,6 +520,9 @@ esp_err_t surv_radio_start(surv_profile_t p, bool active_scan) {
   ble_release_classic_mem();
   //  - TRACKERS: asegurar que Wi-Fi queda fuera si venimos de otro perfil.
   if (p == SURV_PROFILE_TRACKERS) {
+    /* Our own claim first; wifi_driver_deinit_if_started() only runs if the
+       release dropped the count to zero. */
+    radio_lease_wifi_release();
     wifi_driver_deinit_if_started();
     // En el ESP32-C6 WiFi y BT comparten PHY: tras esp_wifi_deinit hace falta
     // que la teardown termine de soltar el RF antes de que radio_task encienda
@@ -488,8 +531,9 @@ esp_err_t surv_radio_start(surv_profile_t p, bool active_scan) {
     vTaskDelay(pdMS_TO_TICKS(RADIO_SWITCH_DELAY_MS));
   }
   //  - FLOCK: prender Wi-Fi una vez; el loop lo mantiene encendido.
-  if (p == SURV_PROFILE_FLOCK && !wifi_driver_get_initialized()) {
-    wifi_driver_init_sta();
+  if (p == SURV_PROFILE_FLOCK) {
+    /* Held for the whole profile; released by surv_radio_stop(). */
+    radio_lease_wifi_acquire(RADIO_WIFI_MODE_STA);
   }
 
   s_running = true;
@@ -508,13 +552,14 @@ void surv_radio_stop(void) {
   // esp_restart() espurio.
   s_one_shot = false;
   s_on_phase_done = NULL;
-  esp_wifi_set_promiscuous(false);
+  radio_lease_prom_release(RADIO_PROM_SURVEILLANCE);
+  ble_claim_release();
+  radio_lease_wifi_release();
   esp_ble_gap_stop_scanning();
-  gap_dispatcher_unregister(ble_gap_cb);
   // Esperar a que la tarea radio_task termine y se auto-elimine. Sin esto,
-  // surv_radio_start() podria ejecutarse antes de que la tarea anterior haya
   // liberado el CPU, provocando condiciones de carrera en los recursos de
   // radio (WiFi promiscuo, BLE GAP).
+  gap_dispatcher_unregister(ble_gap_cb);
   while (s_radio_task != NULL) {
     vTaskDelay(pdMS_TO_TICKS(10));
   }
@@ -543,13 +588,9 @@ static void mux_radio_task(void* arg) {
     if (s_mux_phase == SURV_PHASE_BLE) {
       scan_ble_window(MUX_BLE_WINDOW_MS);
     } else {
-      if (!wifi_driver_get_initialized()) {
-        wifi_driver_init_sta();
-      }
+      radio_lease_wifi_acquire(RADIO_WIFI_MODE_STA);
       wifi_window_ms(MUX_WIFI_WINDOW_MS);
-      if (wifi_driver_get_initialized()) {
-        wifi_driver_deinit();
-      }
+      radio_lease_wifi_release();
     }
     break;
   }

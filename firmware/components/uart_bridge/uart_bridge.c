@@ -1,10 +1,13 @@
 #include "uart_bridge.h"
 #include <string.h>
 #include "esp_log.h"
+#include "driver/uart.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 static const char* TAG = "uart_bridge";
 
-uart_bridge_config_t uart_bridge_config;
+static uart_bridge_config_t uart_bridge_config;
 
 esp_err_t uart_bridge_begin(uart_config_t uart_config, int buffer_size) {
 #if !defined(CONFIG_UART_BRIDGE_DEBUG)
@@ -68,11 +71,57 @@ esp_err_t uart_bridge_write(const char* buffer, int buffer_size) {
   return ESP_OK;
 }
 
+/*
+ * esp_log_set_vprintf() sink that mirrors the logs onto UART0.
+ *
+ * Two things matter here:
+ *
+ *  - The return value. vsnprintf/vprintf must return the number of characters
+ *    that *would* have been written. This used to return 0, which makes every
+ *    printf() in the firmware report a length of zero.
+ *  - It must not block. uart_write_bytes() is a ring-buffer send with
+ *    portMAX_DELAY, and this sink is reached from every ESP_LOGx in the tree -
+ *    including the esp_timer task, which runs keyboard_module's button callback
+ *    (the log literally marked "DO NOT REMOVE THIS LOG"). If the USB host stops
+ *    draining, a blocking sink wedges the TX ring buffer and every task that
+ *    logs blocks forever, taking button input down with it.
+ *
+ * A short timeout bounds that. Log lines are dropped instead of freezing the
+ * system, which is the right trade for a diagnostic channel.
+ */
 int custom_log(const char* format, va_list args) {
   char buffer[256];
-  vsnprintf(buffer, sizeof(buffer), format, args);
-  uart_bridge_write(buffer, strlen(buffer));
-  return 0;
+  va_list args_copy;
+  va_copy(args_copy, args);
+  int needed = vsnprintf(buffer, sizeof(buffer), format, args_copy);
+  va_end(args_copy);
+  if (needed < 0) {
+    return 0;
+  }
+  size_t len = strlen(buffer);
+  if (len > 0) {
+    /* Bounded write.
+     *
+     * uart_write_bytes() is xRingbufferSend(..., portMAX_DELAY), so if the host
+     * stops draining, this sink blocks every task that logs - including the
+     * esp_timer task, which runs keyboard_module's button callback. ESP-IDF 5.5
+     * exposes no "tx free space" query, so the budget is enforced with
+     * uart_wait_tx_done(): when the TX pipeline is already backed up the line is
+     * dropped instead of wedging the system. Dropping diagnostics is the right
+     * trade for a log sink; a stalled host must not freeze the buttons.
+     *
+     * Residual: a burst from another task between the check and the write can
+     * still block, but it cannot persist - the next timeout drops the line and
+     * the ring buffer drains again.
+     *
+     * Never ESP_LOG* from inside this sink: esp_log_set_vprintf() routes the
+     * call straight back here and the failure would recurse forever. */
+    if (uart_wait_tx_done(UART_NUM_0, pdMS_TO_TICKS(5)) != ESP_OK) {
+      return needed;
+    }
+    uart_write_bytes(UART_NUM_0, buffer, len);
+  }
+  return needed;
 }
 
 void uart_bridge_set_logs_to_uart() {
