@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: Unlicense OR CC0-1.0
  */
 #include "ble_hidd_main.h"
-#include "radio_lease.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,6 +12,7 @@
 #include "esp_mac.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "radio_lease.h"
 
 #include "driver/gpio.h"
 #include "esp_bt_defs.h"
@@ -23,8 +23,8 @@
 #include "esp_gatts_api.h"
 #include "esp_hidd_prf_api.h"
 #include "gap_dispatcher.h"
-#include "hidd_le_prf_int.h"
 #include "hid_dev.h"
+#include "hidd_le_prf_int.h"
 
 /**
  * Brief:
@@ -81,8 +81,10 @@ static esp_ble_adv_data_t hidd_adv_data = {
     .set_scan_rsp = false,
     .include_name = false,
     .include_txpower = false,
-    .min_interval = 0x0006,  // slave connection min interval, Time = min_interval * 1.25 msec
-    .max_interval = 0x0010,  // slave connection max interval, Time = max_interval * 1.25 msec
+    .min_interval = 0x0006,  // slave connection min interval, Time =
+                             // min_interval * 1.25 msec
+    .max_interval = 0x0010,  // slave connection max interval, Time =
+                             // max_interval * 1.25 msec
     .appearance = 0x03c0,    // HID Generic
     .manufacturer_len = 0,
     .p_manufacturer_data = NULL,
@@ -97,7 +99,7 @@ static esp_ble_adv_data_t hidd_scan_rsp_data = {
     .set_scan_rsp = true,
     .include_name = true,
     .include_txpower = true,
-    .appearance = 0x03c0,    // HID Generic
+    .appearance = 0x03c0,  // HID Generic
     .flag = 0x6,
 };
 
@@ -174,14 +176,16 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event,
     case ESP_GAP_BLE_ADV_DATA_SET_COMPLETE_EVT:
       s_adv_config_done |= ADV_CONFIG_FLAG;
       if (s_adv_config_done == (ADV_CONFIG_FLAG | SCAN_RSP_CONFIG_FLAG)) {
-        ESP_LOGI(HID_DEMO_TAG, "Adv data and Scan Rsp set, starting advertising...");
+        ESP_LOGI(HID_DEMO_TAG,
+                 "Adv data and Scan Rsp set, starting advertising...");
         esp_ble_gap_start_advertising(&hidd_adv_params);
       }
       break;
     case ESP_GAP_BLE_SCAN_RSP_DATA_SET_COMPLETE_EVT:
       s_adv_config_done |= SCAN_RSP_CONFIG_FLAG;
       if (s_adv_config_done == (ADV_CONFIG_FLAG | SCAN_RSP_CONFIG_FLAG)) {
-        ESP_LOGI(HID_DEMO_TAG, "Scan Rsp and Adv data set, starting advertising...");
+        ESP_LOGI(HID_DEMO_TAG,
+                 "Scan Rsp and Adv data set, starting advertising...");
         esp_ble_gap_start_advertising(&hidd_adv_params);
       }
       break;
@@ -219,7 +223,8 @@ static void gap_event_handler(esp_gap_ble_cb_event_t event,
       if (param->ble_security.auth_cmpl.success) {
         sec_conn = true;
         is_connected = true;
-        ESP_LOGI(HID_DEMO_TAG, "Authentication / pairing completed successfully");
+        ESP_LOGI(HID_DEMO_TAG,
+                 "Authentication / pairing completed successfully");
         if (hid_event_callback != NULL) {
           hid_event_callback(true);
         }
@@ -262,7 +267,8 @@ static void hid_drop_bond(const esp_bd_addr_t bd_addr) {
   if (esp_ble_get_bond_device_list(&num, dev_list) == ESP_OK) {
     for (int i = 0; i < num; i++) {
       if (memcmp(bd_addr, dev_list[i].bd_addr, sizeof(esp_bd_addr_t)) == 0) {
-        ESP_LOGW(HID_DEMO_TAG, "deleting stale bond for %02x:%02x:%02x:%02x:%02x:%02x",
+        ESP_LOGW(HID_DEMO_TAG,
+                 "deleting stale bond for %02x:%02x:%02x:%02x:%02x:%02x",
                  bd_addr[0], bd_addr[1], bd_addr[2], bd_addr[3], bd_addr[4],
                  bd_addr[5]);
         esp_ble_remove_bond_device(dev_list[i].bd_addr);
@@ -277,15 +283,16 @@ static void hid_drop_bond(const esp_bd_addr_t bd_addr) {
    the report?" has exactly one answer. The UI needs it: the notification
    windows used to be drawn unconditionally, so pressing Volume Up with no host
    attached flashed a confirmation for something that was silently dropped. */
-static bool hid_send_consumer(const char* action, uint16_t key_cmd,
+static bool hid_send_consumer(const char* action,
+                              uint16_t key_cmd,
                               bool press) {
   if (!is_connected || !sec_conn) {
     ESP_LOGW(HID_DEMO_TAG, "%s ignored: connected=%d, secured=%d", action,
-             (int)is_connected, (int)sec_conn);
+             (int) is_connected, (int) sec_conn);
     return false;
   }
   ESP_LOGI(HID_DEMO_TAG, "%s: %s (conn_id=%d, sec=%d)", action,
-           press ? "PRESS" : "RELEASE", hid_conn_id, (int)sec_conn);
+           press ? "PRESS" : "RELEASE", hid_conn_id, (int) sec_conn);
   esp_hidd_send_consumer_value(hid_conn_id, key_cmd, press);
   return true;
 }
@@ -346,9 +353,9 @@ void ble_hid_begin() {
     return;
   }
 
-  /* Brings up the controller and Bluedroid, and holds a BLE claim for as long as
-     the profile is configured: the surveillance detector's window hand-over must
-     not deinit the stack underneath a paired host. */
+  /* Brings up the controller and Bluedroid, and holds a BLE claim for as long
+     as the profile is configured: the surveillance detector's window hand-over
+     must not deinit the stack underneath a paired host. */
   if ((ret = radio_lease_ble_acquire()) != ESP_OK) {
     ESP_LOGE(HID_DEMO_TAG, "could not acquire the BLE stack: %d", ret);
     return;
@@ -414,7 +421,8 @@ void ble_hid_begin() {
   int bond_num = esp_ble_get_bond_device_num();
   ESP_LOGI(HID_DEMO_TAG, "bonded devices in NVS: %d", bond_num);
   if (bond_num > 0) {
-    esp_ble_bond_dev_t* bond_list = malloc(sizeof(esp_ble_bond_dev_t) * bond_num);
+    esp_ble_bond_dev_t* bond_list =
+        malloc(sizeof(esp_ble_bond_dev_t) * bond_num);
     if (bond_list != NULL) {
       if (esp_ble_get_bond_device_list(&bond_num, bond_list) == ESP_OK) {
         for (int i = 0; i < bond_num; i++) {

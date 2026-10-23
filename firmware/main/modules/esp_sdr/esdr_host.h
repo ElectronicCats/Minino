@@ -17,8 +17,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "esp_err.h"
 #include "esdr_transport.h"
+#include "esp_err.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,8 +36,6 @@ extern "C" {
  * @return ESP_OK when the session ended normally.
  */
 esp_err_t esdr_host_run(void);
-
-
 
 #ifdef __cplusplus
 }

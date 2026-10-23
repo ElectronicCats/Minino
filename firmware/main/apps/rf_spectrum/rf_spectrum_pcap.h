@@ -20,10 +20,11 @@ extern "C" {
 /**
  * @brief Start capturing packets directly to a .pcap file on the MicroSD.
  *
- * Checks if SD is mounted, generates an incremental filename (/sdcard/spectrum_00.pcap),
- * and writes the 24-byte pcap global header.
+ * Checks if SD is mounted, generates an incremental filename
+ * (/sdcard/spectrum_00.pcap), and writes the 24-byte pcap global header.
  *
- * @return ESP_OK on success, ESP_ERR_NOT_FOUND if SD not mounted, or ESP_FAIL on file error.
+ * @return ESP_OK on success, ESP_ERR_NOT_FOUND if SD not mounted, or ESP_FAIL
+ * on file error.
  */
 esp_err_t rf_spectrum_pcap_start(void);
 

@@ -245,8 +245,8 @@ void gattcmd_scan_stop() {
   esp_err_t err = esp_ble_gap_stop_scanning();
   gap_dispatcher_unregister(gattcmd_scan_gap_cb);
   gatt_dispatcher_unregister(gattcmd_scan_gattc_cb);
-  if (err == ESP_OK && enum_gl_profile_tab[GATTCMD_PROFILE_IDX].gattc_if !=
-                           ESP_GATT_IF_NONE) {
+  if (err == ESP_OK &&
+      enum_gl_profile_tab[GATTCMD_PROFILE_IDX].gattc_if != ESP_GATT_IF_NONE) {
     esp_ble_gattc_app_unregister(
         enum_gl_profile_tab[GATTCMD_PROFILE_IDX].gattc_if);
     enum_gl_profile_tab[GATTCMD_PROFILE_IDX].gattc_if = ESP_GATT_IF_NONE;

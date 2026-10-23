@@ -7,5 +7,5 @@ if(_minino_opt_on)
                     REQUIRES openthread
                     PRIV_REQUIRES esp_event esp_netif nvs_flash)
 else()
-    idf_component_register()
+    idf_component_register(INCLUDE_DIRS "include")
 endif()

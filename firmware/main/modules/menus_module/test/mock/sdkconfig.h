@@ -24,9 +24,8 @@
 
 /* OTA_ENABLE and SDR_ENABLE are chained in the real Kconfig; the SDR entry is
    gated on both. */
-#define TEST_OWNS_FEATURE(name)                       \
-  _Pragma("GCC diagnostic push")                      \
-  _Pragma("GCC diagnostic pop")
+#define TEST_OWNS_FEATURE(name) \
+  _Pragma("GCC diagnostic push") _Pragma("GCC diagnostic pop")
 
 #ifndef TEST_CONFIG_WIFI_APPS_ENABLE
   #define TEST_CONFIG_WIFI_APPS_ENABLE 1
@@ -106,8 +105,8 @@
 #endif
 #if TEST_CONFIG_FILE_MANAGER_ENABLE
   #define CONFIG_FILE_MANAGER_ENABLE 1
-  #define CONFIG_FILE_MANAGER_LOCAL 1
-  #define CONFIG_FILE_MANAGER_WEB 1
+  #define CONFIG_FILE_MANAGER_LOCAL  1
+  #define CONFIG_FILE_MANAGER_WEB    1
 #endif
 #if TEST_CONFIG_OTA_ENABLE
   #define CONFIG_OTA_ENABLE 1

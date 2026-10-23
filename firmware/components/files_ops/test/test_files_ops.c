@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include "files_ops.h"
 #include "unity/unity.h"
@@ -11,7 +11,8 @@ static char test_temp_dir[128];
 
 void setUp(void) {
   // Create a dedicated temporary directory for file-based tests
-  snprintf(test_temp_dir, sizeof(test_temp_dir), "/tmp/files_ops_test_%d", (int) getpid());
+  snprintf(test_temp_dir, sizeof(test_temp_dir), "/tmp/files_ops_test_%d",
+           (int) getpid());
   mkdir(test_temp_dir, 0700);
 }
 
@@ -38,7 +39,8 @@ void test_path_traversal_direct_dotdot(void) {
   TEST_ASSERT_TRUE(files_ops_has_path_traversal("/.."));
   TEST_ASSERT_TRUE(files_ops_has_path_traversal("/../secret"));
   TEST_ASSERT_TRUE(files_ops_has_path_traversal("a/b/../../c"));
-  TEST_ASSERT_TRUE(files_ops_has_path_traversal("/sdcard/captures/../../internal/key"));
+  TEST_ASSERT_TRUE(
+      files_ops_has_path_traversal("/sdcard/captures/../../internal/key"));
 }
 
 void test_path_traversal_backslashes(void) {
@@ -100,13 +102,16 @@ void test_filename_validation_invalid(void) {
 void test_filename_sanitization(void) {
   char out[64];
 
-  TEST_ASSERT_TRUE(files_ops_sanitize_filename("my:file*name?.txt", out, sizeof(out)));
+  TEST_ASSERT_TRUE(
+      files_ops_sanitize_filename("my:file*name?.txt", out, sizeof(out)));
   TEST_ASSERT_EQUAL_STRING("my_file_name_.txt", out);
 
-  TEST_ASSERT_TRUE(files_ops_sanitize_filename("dir/sub\\path", out, sizeof(out)));
+  TEST_ASSERT_TRUE(
+      files_ops_sanitize_filename("dir/sub\\path", out, sizeof(out)));
   TEST_ASSERT_EQUAL_STRING("dir_sub_path", out);
 
-  TEST_ASSERT_TRUE(files_ops_sanitize_filename("..leading_dots", out, sizeof(out)));
+  TEST_ASSERT_TRUE(
+      files_ops_sanitize_filename("..leading_dots", out, sizeof(out)));
   TEST_ASSERT_EQUAL_STRING("leading_dots", out);
 
   TEST_ASSERT_TRUE(files_ops_sanitize_filename("....", out, sizeof(out)));
@@ -117,7 +122,8 @@ void test_filename_sanitization(void) {
 
   // Small buffer truncates cleanly
   char small_buf[5];
-  TEST_ASSERT_TRUE(files_ops_sanitize_filename("abcdefgh", small_buf, sizeof(small_buf)));
+  TEST_ASSERT_TRUE(
+      files_ops_sanitize_filename("abcdefgh", small_buf, sizeof(small_buf)));
   TEST_ASSERT_EQUAL_STRING("abcd", small_buf);
 }
 
@@ -127,14 +133,16 @@ void test_filename_sanitization(void) {
 
 void test_join_path_normal(void) {
   char out[128];
-  TEST_ASSERT_TRUE(files_ops_join_path("/sdcard", "capture", ".pcap", out, sizeof(out)));
+  TEST_ASSERT_TRUE(
+      files_ops_join_path("/sdcard", "capture", ".pcap", out, sizeof(out)));
   TEST_ASSERT_EQUAL_STRING("/sdcard/capture.pcap", out);
 }
 
 void test_join_path_trailing_slash(void) {
   char out[128];
   // Avoids double slashes: "/sdcard/" + "file" -> "/sdcard/file"
-  TEST_ASSERT_TRUE(files_ops_join_path("/sdcard/", "file", ".txt", out, sizeof(out)));
+  TEST_ASSERT_TRUE(
+      files_ops_join_path("/sdcard/", "file", ".txt", out, sizeof(out)));
   TEST_ASSERT_EQUAL_STRING("/sdcard/file.txt", out);
 
   // Root directory
@@ -144,10 +152,12 @@ void test_join_path_trailing_slash(void) {
 
 void test_join_path_no_extension(void) {
   char out[128];
-  TEST_ASSERT_TRUE(files_ops_join_path("/internal", "test_file", NULL, out, sizeof(out)));
+  TEST_ASSERT_TRUE(
+      files_ops_join_path("/internal", "test_file", NULL, out, sizeof(out)));
   TEST_ASSERT_EQUAL_STRING("/internal/test_file", out);
 
-  TEST_ASSERT_TRUE(files_ops_join_path("/internal", "test_file", "", out, sizeof(out)));
+  TEST_ASSERT_TRUE(
+      files_ops_join_path("/internal", "test_file", "", out, sizeof(out)));
   TEST_ASSERT_EQUAL_STRING("/internal/test_file", out);
 }
 
@@ -155,33 +165,41 @@ void test_join_path_rejection(void) {
   char out[128];
 
   // Path traversal in dir
-  TEST_ASSERT_FALSE(files_ops_join_path("/sdcard/../etc", "shadow", "", out, sizeof(out)));
+  TEST_ASSERT_FALSE(
+      files_ops_join_path("/sdcard/../etc", "shadow", "", out, sizeof(out)));
   TEST_ASSERT_EQUAL_STRING("", out);
 
   // Path traversal in name
-  TEST_ASSERT_FALSE(files_ops_join_path("/sdcard", "../evil", ".pcap", out, sizeof(out)));
+  TEST_ASSERT_FALSE(
+      files_ops_join_path("/sdcard", "../evil", ".pcap", out, sizeof(out)));
   TEST_ASSERT_EQUAL_STRING("", out);
 
   // Delimiter in name
-  TEST_ASSERT_FALSE(files_ops_join_path("/sdcard", "sub/file", ".txt", out, sizeof(out)));
+  TEST_ASSERT_FALSE(
+      files_ops_join_path("/sdcard", "sub/file", ".txt", out, sizeof(out)));
   TEST_ASSERT_EQUAL_STRING("", out);
 
   // Delimiter or traversal in extension
-  TEST_ASSERT_FALSE(files_ops_join_path("/sdcard", "file", "/bad_ext", out, sizeof(out)));
+  TEST_ASSERT_FALSE(
+      files_ops_join_path("/sdcard", "file", "/bad_ext", out, sizeof(out)));
   TEST_ASSERT_EQUAL_STRING("", out);
-  TEST_ASSERT_FALSE(files_ops_join_path("/sdcard", "file", "..evil", out, sizeof(out)));
+  TEST_ASSERT_FALSE(
+      files_ops_join_path("/sdcard", "file", "..evil", out, sizeof(out)));
   TEST_ASSERT_EQUAL_STRING("", out);
 
   // Null checks
-  TEST_ASSERT_FALSE(files_ops_join_path(NULL, "file", ".txt", out, sizeof(out)));
-  TEST_ASSERT_FALSE(files_ops_join_path("/sdcard", NULL, ".txt", out, sizeof(out)));
+  TEST_ASSERT_FALSE(
+      files_ops_join_path(NULL, "file", ".txt", out, sizeof(out)));
+  TEST_ASSERT_FALSE(
+      files_ops_join_path("/sdcard", NULL, ".txt", out, sizeof(out)));
   TEST_ASSERT_FALSE(files_ops_join_path("/sdcard", "file", ".txt", NULL, 0));
 }
 
 void test_join_path_buffer_bounds(void) {
   char out[10];
   // "/sdcard/file.txt" requires 17 bytes; 10 is too small
-  TEST_ASSERT_FALSE(files_ops_join_path("/sdcard", "file", ".txt", out, sizeof(out)));
+  TEST_ASSERT_FALSE(
+      files_ops_join_path("/sdcard", "file", ".txt", out, sizeof(out)));
   TEST_ASSERT_EQUAL_STRING("", out);
 }
 
@@ -235,7 +253,8 @@ void test_format_size_allocated(void) {
 void test_format_size_buf_overflow_prevention(void) {
   char small_buf[3];
   // "1.00KB" needs at least 7 bytes; 3 is insufficient
-  TEST_ASSERT_FALSE(files_ops_format_size_buf(1024, small_buf, sizeof(small_buf)));
+  TEST_ASSERT_FALSE(
+      files_ops_format_size_buf(1024, small_buf, sizeof(small_buf)));
   TEST_ASSERT_EQUAL_STRING("", small_buf);
 }
 
@@ -249,7 +268,8 @@ void test_get_file_size_null(void) {
 }
 
 void test_get_file_size_nonexistent(void) {
-  TEST_ASSERT_EQUAL_UINT32(0, files_ops_get_file_size_2("/path/does/not/exist_12345.bin"));
+  TEST_ASSERT_EQUAL_UINT32(
+      0, files_ops_get_file_size_2("/path/does/not/exist_12345.bin"));
 }
 
 void test_get_file_size_traversal_rejection(void) {
@@ -299,10 +319,12 @@ void test_exists_and_incremental_name(void) {
   char out_path[256];
 
   // In empty directory, index should be 00
-  TEST_ASSERT_TRUE(files_ops_incremental_name_buf(test_temp_dir, "analizer", ".pcap", out_path, sizeof(out_path)));
+  TEST_ASSERT_TRUE(files_ops_incremental_name_buf(
+      test_temp_dir, "analizer", ".pcap", out_path, sizeof(out_path)));
 
   char expected_path[512];
-  snprintf(expected_path, sizeof(expected_path), "%s/analizer00.pcap", test_temp_dir);
+  snprintf(expected_path, sizeof(expected_path), "%s/analizer00.pcap",
+           test_temp_dir);
   TEST_ASSERT_EQUAL_STRING(expected_path, out_path);
   TEST_ASSERT_FALSE(files_ops_exists(test_temp_dir, "analizer00", ".pcap"));
 
@@ -315,8 +337,10 @@ void test_exists_and_incremental_name(void) {
   TEST_ASSERT_TRUE(files_ops_exists(test_temp_dir, "analizer00", ".pcap"));
 
   // Next incremental call should now yield analizer01.pcap
-  TEST_ASSERT_TRUE(files_ops_incremental_name_buf(test_temp_dir, "analizer", ".pcap", out_path, sizeof(out_path)));
-  snprintf(expected_path, sizeof(expected_path), "%s/analizer01.pcap", test_temp_dir);
+  TEST_ASSERT_TRUE(files_ops_incremental_name_buf(
+      test_temp_dir, "analizer", ".pcap", out_path, sizeof(out_path)));
+  snprintf(expected_path, sizeof(expected_path), "%s/analizer01.pcap",
+           test_temp_dir);
   TEST_ASSERT_EQUAL_STRING(expected_path, out_path);
 
   // Legacy wrapper files_ops_incremental_name compatibility check
@@ -329,15 +353,18 @@ void test_incremental_name_traversal_blocked(void) {
   char out_path[256];
 
   // Traversal in base_name
-  TEST_ASSERT_FALSE(files_ops_incremental_name_buf(test_temp_dir, "../../evil", ".pcap", out_path, sizeof(out_path)));
+  TEST_ASSERT_FALSE(files_ops_incremental_name_buf(
+      test_temp_dir, "../../evil", ".pcap", out_path, sizeof(out_path)));
   TEST_ASSERT_EQUAL_STRING("", out_path);
 
   // Traversal in dir_path
-  TEST_ASSERT_FALSE(files_ops_incremental_name_buf("/tmp/../etc", "test", ".log", out_path, sizeof(out_path)));
+  TEST_ASSERT_FALSE(files_ops_incremental_name_buf(
+      "/tmp/../etc", "test", ".log", out_path, sizeof(out_path)));
   TEST_ASSERT_EQUAL_STRING("", out_path);
 
   // Traversal in extension
-  TEST_ASSERT_FALSE(files_ops_incremental_name_buf(test_temp_dir, "test", "/../evil", out_path, sizeof(out_path)));
+  TEST_ASSERT_FALSE(files_ops_incremental_name_buf(
+      test_temp_dir, "test", "/../evil", out_path, sizeof(out_path)));
   TEST_ASSERT_EQUAL_STRING("", out_path);
 
   // Legacy function also safely aborts
@@ -348,7 +375,8 @@ void test_incremental_name_traversal_blocked(void) {
 void test_incremental_name_buffer_bounds(void) {
   char tiny_buf[10];
   // Buffer size 10 is too small for path
-  TEST_ASSERT_FALSE(files_ops_incremental_name_buf(test_temp_dir, "analizer", ".pcap", tiny_buf, sizeof(tiny_buf)));
+  TEST_ASSERT_FALSE(files_ops_incremental_name_buf(
+      test_temp_dir, "analizer", ".pcap", tiny_buf, sizeof(tiny_buf)));
   TEST_ASSERT_EQUAL_STRING("", tiny_buf);
 }
 

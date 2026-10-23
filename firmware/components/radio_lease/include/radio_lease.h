@@ -9,8 +9,8 @@
  *    esp_wifi_set_promiscuous_rx_cb()/esp_wifi_set_promiscuous() directly, so
  *    the last one to start stole the callback from the others and a window
  *    ending with esp_wifi_set_promiscuous(false) killed a capture that somebody
- *    else was relying on. Now each consumer claims a slot and the driver is only
- *    touched on the 0->1 and 1->0 transitions; frames are fanned out to every
+ *    else was relying on. Now each consumer claims a slot and the driver is
+ * only touched on the 0->1 and 1->0 transitions; frames are fanned out to every
  *    holder.
  *
  *  - **The WiFi driver and the BLE stack.** The surveillance detector rotates
@@ -146,14 +146,15 @@ bool radio_lease_wifi_allowed(void);
 esp_err_t radio_lease_ble_acquire(void);
 esp_err_t radio_lease_ble_acquire_timeout(TickType_t timeout_ticks);
 
-esp_err_t radio_lease_wifi_acquire_timeout(radio_wifi_init_mode_t mode, TickType_t timeout_ticks);
+esp_err_t radio_lease_wifi_acquire_timeout(radio_wifi_init_mode_t mode,
+                                           TickType_t timeout_ticks);
 
 /**
  * @brief Drop a BLE stack claim
  *
  * Tears the stack down only when the last claim goes. Every BLE app has to hold
- * a claim for the duration of its session, otherwise the surveillance detector's
- * inter-window teardown would pull the stack out from under it.
+ * a claim for the duration of its session, otherwise the surveillance
+ * detector's inter-window teardown would pull the stack out from under it.
  */
 void radio_lease_ble_release(void);
 

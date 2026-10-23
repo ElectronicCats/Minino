@@ -35,19 +35,19 @@ static int s_calls_filler;
 static esp_gap_ble_cb_event_t s_last_event;
 
 static void cb_a(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param) {
-  (void)param;
+  (void) param;
   s_calls_a++;
   s_last_event = event;
 }
 
 static void cb_b(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param) {
-  (void)param;
+  (void) param;
   s_calls_b++;
   s_last_event = event;
 }
 
 static void cb_c(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param) {
-  (void)param;
+  (void) param;
   s_calls_c++;
   s_last_event = event;
 }
@@ -85,7 +85,8 @@ void tearDown(void) {
 
 /* --- the contract ------------------------------------------------------ */
 
-static void test_register_installs_the_dispatcher_as_the_bluedroid_handler(void) {
+static void test_register_installs_the_dispatcher_as_the_bluedroid_handler(
+    void) {
   TEST_ASSERT_NOT_NULL(gd_test_installed_handler());
 }
 
@@ -134,7 +135,7 @@ static void test_registering_later_does_not_starve_earlier_subscribers(void) {
 
   /* register() must not swap the Bluedroid slot for the new subscriber. */
   TEST_ASSERT_EQUAL(ESP_OK, gap_dispatcher_register(cb_b));
-  TEST_ASSERT_EQUAL_PTR((void*)handler, (void*)gd_test_installed_handler());
+  TEST_ASSERT_EQUAL_PTR((void*) handler, (void*) gd_test_installed_handler());
 
   fire(ESP_GAP_BLE_ADV_START_COMPLETE_EVT);
   TEST_ASSERT_EQUAL_INT(1, s_calls_a);
@@ -156,8 +157,9 @@ static void test_registering_after_a_bluedroid_restart_reclaims_the_slot(void) {
   TEST_ASSERT_NULL(gd_test_installed_handler());
 
   TEST_ASSERT_EQUAL(ESP_OK, gap_dispatcher_register(cb_b));
-  TEST_ASSERT_NOT_NULL_MESSAGE(gd_test_installed_handler(),
-                               "the dispatcher must reclaim the Bluedroid slot");
+  TEST_ASSERT_NOT_NULL_MESSAGE(
+      gd_test_installed_handler(),
+      "the dispatcher must reclaim the Bluedroid slot");
 
   fire(ESP_GAP_BLE_ADV_START_COMPLETE_EVT);
   TEST_ASSERT_EQUAL_INT(1, s_calls_b);
@@ -177,18 +179,38 @@ static void test_unregistering_an_unknown_callback_reports_not_found(void) {
 /* GAP_SUBSCRIBER_MAX distinct handlers, so the table really does fill up. The
    dispatcher compares callback pointers, so they have to be distinct
    addresses; a macro keeps them from drifting into duplicates. */
-#define FILLER(i)                                          \
-  static void cb_filler_##i(esp_gap_ble_cb_event_t event,  \
+#define FILLER(i)                                            \
+  static void cb_filler_##i(esp_gap_ble_cb_event_t event,    \
                             esp_ble_gap_cb_param_t* param) { \
-    (void)event;                                           \
-    (void)param;                                           \
-    s_calls_filler++;                                      \
+    (void) event;                                            \
+    (void) param;                                            \
+    s_calls_filler++;                                        \
   }
-FILLER(0) FILLER(1) FILLER(2) FILLER(3) FILLER(4)
-FILLER(5) FILLER(6) FILLER(7) FILLER(8) FILLER(9)
-FILLER(10) FILLER(11) FILLER(12) FILLER(13) FILLER(14)
-FILLER(15) FILLER(16) FILLER(17) FILLER(18) FILLER(19)
-FILLER(20) FILLER(21) FILLER(22) FILLER(23) FILLER(24)
+FILLER(0)
+FILLER(1)
+FILLER(2)
+FILLER(3)
+FILLER(4)
+FILLER(5)
+FILLER(6)
+FILLER(7)
+FILLER(8)
+FILLER(9)
+FILLER(10)
+FILLER(11)
+FILLER(12)
+FILLER(13)
+FILLER(14)
+FILLER(15)
+FILLER(16)
+FILLER(17)
+FILLER(18)
+FILLER(19)
+FILLER(20)
+FILLER(21)
+FILLER(22)
+FILLER(23)
+FILLER(24)
 
 static const esp_gap_ble_cb_t s_fillers[] = {
     cb_filler_0,  cb_filler_1,  cb_filler_2,  cb_filler_3,  cb_filler_4,
@@ -220,7 +242,7 @@ static void test_subscriber_table_is_bounded_and_reports_overflow(void) {
   TEST_ASSERT_GREATER_THAN(0, refused);
   /* Refusing new subscribers must not have dropped the earlier ones. */
   fire(ESP_GAP_BLE_ADV_START_COMPLETE_EVT);
-  TEST_ASSERT_EQUAL_INT((int)accepted, s_calls_filler);
+  TEST_ASSERT_EQUAL_INT((int) accepted, s_calls_filler);
   TEST_ASSERT_EQUAL_INT(1, s_calls_a);
 
   for (unsigned i = 0; i < sizeof(s_fillers) / sizeof(s_fillers[0]); i++) {

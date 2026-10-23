@@ -14,4 +14,4 @@ typedef struct {
 } esp_ble_gap_cb_param_t;
 
 typedef void (*esp_gap_ble_cb_t)(esp_gap_ble_cb_event_t event,
-                                 esp_ble_gap_cb_param_t *param);
+                                 esp_ble_gap_cb_param_t* param);

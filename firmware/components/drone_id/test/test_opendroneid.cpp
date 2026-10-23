@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #include <string.h>
-#include "opendroneid.h"
 #include "drone_id_test.h"
+#include "opendroneid.h"
 
 TEST_CASE("init functions handle NULL pointers safely", "[opendroneid]") {
   odid_initBasicIDData(NULL);
@@ -34,7 +34,8 @@ TEST_CASE("encode and decode BasicID message", "[opendroneid]") {
   TEST_ASSERT_EQUAL_STRING(data.UASID, dec.UASID);
 }
 
-TEST_CASE("encode and decode Location message with boundaries", "[opendroneid]") {
+TEST_CASE("encode and decode Location message with boundaries",
+          "[opendroneid]") {
   ODID_Location_data data;
   odid_initLocationData(&data);
   data.Status = ODID_STATUS_AIRBORNE;
@@ -99,7 +100,8 @@ TEST_CASE("encode and decode Auth message across pages", "[opendroneid]") {
   odid_initAuthData(&data1);
   data1.DataPage = 1;
   data1.AuthType = ODID_AUTH_UAS_ID_SIGNATURE;
-  memcpy(data1.AuthData, "abcdefghijklmnopqrstuvw", ODID_AUTH_PAGE_NONZERO_DATA_SIZE);
+  memcpy(data1.AuthData, "abcdefghijklmnopqrstuvw",
+         ODID_AUTH_PAGE_NONZERO_DATA_SIZE);
 
   ODID_Auth_encoded enc1;
   TEST_ASSERT_EQUAL_INT(ODID_SUCCESS, encodeAuthMessage(&enc1, &data1));
@@ -150,7 +152,8 @@ TEST_CASE("encode and decode System message", "[opendroneid]") {
   TEST_ASSERT_EQUAL_INT(ODID_SUCCESS, decodeSystemMessage(&dec, &enc));
   TEST_ASSERT_EQUAL_INT(data.OperatorLocationType, dec.OperatorLocationType);
   TEST_ASSERT_DOUBLE_WITHIN(1e-5, data.OperatorLatitude, dec.OperatorLatitude);
-  TEST_ASSERT_DOUBLE_WITHIN(1e-5, data.OperatorLongitude, dec.OperatorLongitude);
+  TEST_ASSERT_DOUBLE_WITHIN(1e-5, data.OperatorLongitude,
+                            dec.OperatorLongitude);
   TEST_ASSERT_EQUAL_UINT16(data.AreaRadius, dec.AreaRadius);
 }
 
@@ -170,7 +173,8 @@ TEST_CASE("encode and decode OperatorID message", "[opendroneid]") {
   TEST_ASSERT_EQUAL_STRING(data.OperatorId, dec.OperatorId);
 }
 
-TEST_CASE("encode and decode MessagePack with multiple messages", "[opendroneid]") {
+TEST_CASE("encode and decode MessagePack with multiple messages",
+          "[opendroneid]") {
   ODID_MessagePack_data packData;
   odid_initMessagePackData(&packData);
 
@@ -215,7 +219,10 @@ TEST_CASE("NULL safety across print and decode functions", "[opendroneid]") {
 
   ODID_UAS_Data uasData;
   odid_initUasData(&uasData);
-  TEST_ASSERT_EQUAL_INT(ODID_MESSAGETYPE_INVALID, decodeOpenDroneID(NULL, NULL));
-  TEST_ASSERT_EQUAL_INT(ODID_MESSAGETYPE_INVALID, decodeOpenDroneID(&uasData, NULL));
-  TEST_ASSERT_EQUAL_INT(ODID_MESSAGETYPE_INVALID, decodeOpenDroneID(NULL, (uint8_t*) &uasData));
+  TEST_ASSERT_EQUAL_INT(ODID_MESSAGETYPE_INVALID,
+                        decodeOpenDroneID(NULL, NULL));
+  TEST_ASSERT_EQUAL_INT(ODID_MESSAGETYPE_INVALID,
+                        decodeOpenDroneID(&uasData, NULL));
+  TEST_ASSERT_EQUAL_INT(ODID_MESSAGETYPE_INVALID,
+                        decodeOpenDroneID(NULL, (uint8_t*) &uasData));
 }

@@ -14,8 +14,8 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "gap_dispatcher.h"
-#include "radio_lease.h"
 #include "gattcmd_module.h"
+#include "radio_lease.h"
 #include "services/gattcmd_service.h"
 
 #define GATTC_TAG "GATTC_DEMO"
@@ -33,7 +33,8 @@ static bool gattcmd_shared_begin(void) {
      so we don't steal the stack from bt_spam, ble_hid, bt_gattc, etc. */
   ret = radio_lease_ble_acquire();
   if (ret != ESP_OK) {
-    ESP_LOGE(GATTC_TAG, "could not acquire the BLE stack: %s", esp_err_to_name(ret));
+    ESP_LOGE(GATTC_TAG, "could not acquire the BLE stack: %s",
+             esp_err_to_name(ret));
     return false;
   }
   return true;

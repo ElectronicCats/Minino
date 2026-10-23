@@ -130,7 +130,8 @@ bool esdr_parse_line(const char* line, esdr_request_t* out) {
     return true;
   }
 
-  if (sscanf(line, "RXRUN %u %u %u %u %c", &n, &rate, &repeats, &format, &extra) == 4) {
+  if (sscanf(line, "RXRUN %u %u %u %u %c", &n, &rate, &repeats, &format,
+             &extra) == 4) {
     out->cmd = ESDR_CMD_RXRUN;
     out->samples = n;
     out->rate = rate;
@@ -173,21 +174,21 @@ bool esdr_parse_line(const char* line, esdr_request_t* out) {
  * -------------------------------------------------------------------------- */
 
 size_t esdr_pack_iq8(uint32_t* words, size_t count) {
-  uint8_t* out = (uint8_t*)words;
+  uint8_t* out = (uint8_t*) words;
 
   for (size_t j = 0; j < count; j++) {
     uint32_t w = words[j];
 
     /* I lives in bits 9-0 and Q in bits 19-10; the viewer wants the upper
        eight bits of each ten bit field. */
-    out[2 * j] = (uint8_t)((w >> 2) & 0xffu);
-    out[2 * j + 1] = (uint8_t)((w >> 12) & 0xffu);
+    out[2 * j] = (uint8_t) ((w >> 2) & 0xffu);
+    out[2 * j + 1] = (uint8_t) ((w >> 12) & 0xffu);
   }
   return 2 * count;
 }
 
 size_t esdr_pack_iq10(uint32_t* words, size_t count) {
-  uint8_t* out = (uint8_t*)words;
+  uint8_t* out = (uint8_t*) words;
 
   /* Two samples in five bytes. The twenty bits of the dump word are already
      laid out as I in the low ten bits and Q in the high ten bits, which is
@@ -196,12 +197,12 @@ size_t esdr_pack_iq10(uint32_t* words, size_t count) {
     uint32_t a = words[j] & 0xfffffu;
     uint32_t b = (j + 1 < count) ? (words[j + 1] & 0xfffffu) : 0u;
 
-    out[0] = (uint8_t)a;
-    out[1] = (uint8_t)(a >> 8);
-    out[2] = (uint8_t)((a >> 16) | (b << 4));
+    out[0] = (uint8_t) a;
+    out[1] = (uint8_t) (a >> 8);
+    out[2] = (uint8_t) ((a >> 16) | (b << 4));
     if (j + 1 < count) {
-      out[3] = (uint8_t)(b >> 4);
-      out[4] = (uint8_t)(b >> 12);
+      out[3] = (uint8_t) (b >> 4);
+      out[4] = (uint8_t) (b >> 12);
     }
     out += 5;
   }
@@ -258,8 +259,8 @@ static size_t emit(char* out, size_t len, const char* text) {
 
 size_t esdr_reply_info(char* out, size_t len) {
   char text[64];
-  snprintf(text, sizeof(text), "%s %d burst %" PRIu32 "\n", ESDR_FAMILY_ID, ESDR_PROTOCOL_VERSION,
-           (uint32_t)ESDR_MAX_SAMPLES);
+  snprintf(text, sizeof(text), "%s %d burst %" PRIu32 "\n", ESDR_FAMILY_ID,
+           ESDR_PROTOCOL_VERSION, (uint32_t) ESDR_MAX_SAMPLES);
   return emit(out, len, text);
 }
 
@@ -285,7 +286,8 @@ size_t esdr_reply_caps(char* out, size_t len) {
      GPIO, GAIN, ALPF, LPF and SPECSTAT (the statistics records). The viewer
      hides its controls for the capabilities that are missing. */
   return emit(out, len,
-              "CAPS VERSION RXLIMITS HWAGC IQ8 SERIALLEASE TUNEEXT RX40 RX16 UARTBAUD SPEC SPECN "
+              "CAPS VERSION RXLIMITS HWAGC IQ8 SERIALLEASE TUNEEXT RX40 RX16 "
+              "UARTBAUD SPEC SPECN "
               "SPECCAPS DCT\n");
 }
 
@@ -294,20 +296,21 @@ size_t esdr_reply_caps(char* out, size_t len) {
    timestamp. */
 static void build_date_iso(char* out, size_t len) {
   static const char* months[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
+                                   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
   const char* date = __DATE__;
   int month = 0;
 
   for (int j = 0; j < 12; j++) {
-    if (date[0] == months[j][0] && date[1] == months[j][1] && date[2] == months[j][2]) {
+    if (date[0] == months[j][0] && date[1] == months[j][1] &&
+        date[2] == months[j][2]) {
       month = j + 1;
       break;
     }
   }
   /* "__DATE__" is "Mmm dd yyyy": the month is 0-2, the day starts at 4 (it is
      blank padded) and the year is 7-10. */
-  snprintf(out, len, "%c%c%c%c-%02d-%02d", date[7], date[8], date[9], date[10], month,
-           (int)strtol(&date[4], NULL, 10));
+  snprintf(out, len, "%c%c%c%c-%02d-%02d", date[7], date[8], date[9], date[10],
+           month, (int) strtol(&date[4], NULL, 10));
 }
 
 size_t esdr_reply_version(char* out, size_t len) {
@@ -343,8 +346,8 @@ size_t esdr_reply_limits(char* out, size_t len) {
 
 size_t esdr_reply_range(char* out, size_t len) {
   char text[64];
-  snprintf(text, sizeof(text), "RANGE %" PRIu32 " %" PRIu32 " 1\n", (uint32_t)ESDR_FREQ_MIN_MHZ,
-           (uint32_t)ESDR_FREQ_MAX_MHZ);
+  snprintf(text, sizeof(text), "RANGE %" PRIu32 " %" PRIu32 " 1\n",
+           (uint32_t) ESDR_FREQ_MIN_MHZ, (uint32_t) ESDR_FREQ_MAX_MHZ);
   return emit(out, len, text);
 }
 
@@ -362,14 +365,18 @@ size_t esdr_reply_sync(char* out, size_t len, uint64_t nonce) {
 
 size_t esdr_reply_gain(char* out, size_t len, bool manual, uint32_t index) {
   char text[64];
-  snprintf(text, sizeof(text), "GAIN %s %" PRIu32 " 0 0 0\n", manual ? "MANUAL" : "HARDWARE",
-           (uint32_t)index);
+  snprintf(text, sizeof(text), "GAIN %s %" PRIu32 " 0 0 0\n",
+           manual ? "MANUAL" : "HARDWARE", (uint32_t) index);
   return emit(out, len, text);
 }
 
-size_t esdr_reply_data(char* out, size_t len, uint32_t samples, uint32_t crc, uint32_t capture_us) {
+size_t esdr_reply_data(char* out,
+                       size_t len,
+                       uint32_t samples,
+                       uint32_t crc,
+                       uint32_t capture_us) {
   char text[64];
-  snprintf(text, sizeof(text), "DATA %" PRIu32 " %08" PRIx32 " %" PRIu32 "\n", (uint32_t)samples, crc,
-           (uint32_t)capture_us);
+  snprintf(text, sizeof(text), "DATA %" PRIu32 " %08" PRIx32 " %" PRIu32 "\n",
+           (uint32_t) samples, crc, (uint32_t) capture_us);
   return emit(out, len, text);
 }

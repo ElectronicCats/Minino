@@ -1,17 +1,17 @@
 #include <string.h>
-#include "wifi_controller.h"
-#include "radio_lease.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "radio_lease.h"
+#include "wifi_controller.h"
 
+#include "app_manager.h"
 #include "droneid_scanner_screens.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
-#include "wifi_service.h"
 #include "freertos/queue.h"
-#include "odid_wifi.h"
-#include "app_manager.h"
 #include "keyboard_module.h"
+#include "odid_wifi.h"
+#include "wifi_service.h"
 
 static const char* TAG = "DroneidScanner";
 
@@ -225,7 +225,8 @@ static int droneid_scanner_init_wifi(void) {
     return err;
   }
 
-  if (radio_lease_prom_acquire(RADIO_PROM_DRONEID_SCANNER, callback) != ESP_OK) {
+  if (radio_lease_prom_acquire(RADIO_PROM_DRONEID_SCANNER, callback) !=
+      ESP_OK) {
     ESP_LOGE(TAG, "could not claim promiscuous mode");
     return err;
   }
@@ -281,7 +282,6 @@ void droneid_scanner_stop(void) {
   ESP_LOGI(TAG, "Droneid scanner stopped");
 }
 
-
 // ---------------------------------------------------------------------------
 // app_manager callbacks
 // ---------------------------------------------------------------------------
@@ -293,7 +293,8 @@ static void droneid_scanner_on_enter(void) {
   droneid_scanner_screen_main();
 }
 
-static void droneid_scanner_on_input(uint8_t button_name, uint8_t button_event) {
+static void droneid_scanner_on_input(uint8_t button_name,
+                                     uint8_t button_event) {
   extern void droneid_scanner_handle_input(uint8_t, uint8_t);
   droneid_scanner_handle_input(button_name, button_event);
 }
@@ -312,9 +313,8 @@ void app_manager_enter_wrapper_droneid_scanner(void) {
 
 // App definition for app_manager
 const minino_app_t droneid_scanner_app = {
-  .name = "droneid_scanner",
-  .on_enter = droneid_scanner_on_enter,
-  .on_input = droneid_scanner_on_input,
-  .on_exit = droneid_scanner_on_exit,
+    .name = "droneid_scanner",
+    .on_enter = droneid_scanner_on_enter,
+    .on_input = droneid_scanner_on_input,
+    .on_exit = droneid_scanner_on_exit,
 };
-

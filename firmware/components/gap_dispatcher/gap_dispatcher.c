@@ -2,19 +2,19 @@
 
 #if CONFIG_BT_ENABLED
 
-#include "gap_dispatcher.h"
+  #include "gap_dispatcher.h"
 
-#include <stdbool.h>
-#include <string.h>
+  #include <stdbool.h>
+  #include <string.h>
 
-#include "esp_bt_main.h"
-#include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
-#include "freertos/task.h"
+  #include "esp_bt_main.h"
+  #include "esp_log.h"
+  #include "freertos/FreeRTOS.h"
+  #include "freertos/semphr.h"
+  #include "freertos/task.h"
 
-#define GAP_SUBSCRIBER_MAX 16
-#define TAG                "gap_dispatcher"
+  #define GAP_SUBSCRIBER_MAX 16
+  #define TAG                "gap_dispatcher"
 
 typedef struct {
   esp_gap_ble_cb_t cb;
@@ -27,7 +27,8 @@ static bool s_container_initialized = false;
    dispatcher installs itself into Bluedroid on every *transition* into
    ENABLED, because esp_ble_gap_register_callback() overwrites whatever the
    stack had, and a disable/enable cycle (surv_radio does this) wipes it. */
-static esp_bluedroid_status_t s_last_seen_status = ESP_BLUEDROID_STATUS_UNINITIALIZED;
+static esp_bluedroid_status_t s_last_seen_status =
+    ESP_BLUEDROID_STATUS_UNINITIALIZED;
 static portMUX_TYPE s_dispatcher_mux = portMUX_INITIALIZER_UNLOCKED;
 
 static void gap_dispatcher_dispatch(esp_gap_ble_cb_event_t event,

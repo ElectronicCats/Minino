@@ -5,14 +5,13 @@
 #include <string.h>
 
 #include "bitmaps_general.h"
-#include "general_scroll_split.h"
 #include "esp_log.h"
+#include "general_scroll_split.h"
 #include "keyboard_module.h"
 #include "menus_module.h"
 #include "oled_screen.h"
 
 general_scrolling_text_ctx* scroll_text_ctx;
-
 
 static void scroll_text_draw_window() {
   if (scroll_text_ctx == NULL) {

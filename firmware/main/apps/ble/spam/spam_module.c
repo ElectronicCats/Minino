@@ -8,9 +8,8 @@
 #include "oled_screen.h"
 #include "spam_screens.h"
 extern SemaphoreHandle_t text_mutex;
-#include "wifi_controller.h"
 #include "app_manager.h"
-
+#include "wifi_controller.h"
 
 // Selected spam mode (set by wrapper before entering app)
 static bt_spam_mode_t s_selected_spam_mode = BT_SPAM_MODE_APPLE;
@@ -83,7 +82,6 @@ void ble_module_begin(void) {
   ble_spam_all_begin();
 }
 
-
 // ---------------------------------------------------------------------------
 // app_manager callbacks
 // ---------------------------------------------------------------------------
@@ -104,8 +102,8 @@ static void ble_spam_on_enter(void) {
 
 static void ble_spam_on_input(uint8_t button_name, uint8_t button_event) {
   // Handled by ble_module_state_machine
-  (void)button_name;
-  (void)button_event;
+  (void) button_name;
+  (void) button_event;
 }
 
 static void ble_spam_on_exit(void) {
@@ -152,9 +150,8 @@ void app_manager_enter_wrapper_ble_spam_all(void) {
 
 // App definition for app_manager
 const minino_app_t ble_spam_app = {
-  .name = "ble_spam",
-  .on_enter = ble_spam_on_enter,
-  .on_input = ble_spam_on_input,
-  .on_exit = ble_spam_on_exit,
+    .name = "ble_spam",
+    .on_enter = ble_spam_on_enter,
+    .on_input = ble_spam_on_input,
+    .on_exit = ble_spam_on_exit,
 };
-

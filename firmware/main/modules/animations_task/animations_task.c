@@ -1,8 +1,8 @@
 #include "animations_task.h"
 
+#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "esp_log.h"
 #include "preferences.h"
 
 static const char* TAG = "animations_task";
@@ -62,8 +62,9 @@ void animations_task_stop() {
   // only then leave the task alone; the reboot it will ask for on the next
   // reset clears the mutex.
   if (animations_task_handle != NULL) {
-    ESP_LOGW(TAG, "animation task still busy after 500 ms, waiting longer "
-                  "instead of force-deleting it");
+    ESP_LOGW(TAG,
+             "animation task still busy after 500 ms, waiting longer "
+             "instead of force-deleting it");
     uint16_t extra = 150;  // up to 1.5 s more
     while (animations_task_handle != NULL && extra-- > 0) {
       vTaskDelay(pdMS_TO_TICKS(10));

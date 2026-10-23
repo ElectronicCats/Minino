@@ -16,14 +16,14 @@
 extern "C" {
 #endif
 
-#define C6_SDR_MAX_SAMPLES      16380u
+#define C6_SDR_MAX_SAMPLES 16380u
 
 /* The dump engine takes a clock divider in bits 15-16 of the control
    register. The rate codes are the ones the ESP-SDR burst protocol uses:
    0 is 80 MS/s, 1 is 40 MS/s and 6 is 16 MS/s. */
-#define C6_SDR_RATE_80MSPS       0u
-#define C6_SDR_RATE_40MSPS       1u
-#define C6_SDR_RATE_16MSPS       6u
+#define C6_SDR_RATE_80MSPS 0u
+#define C6_SDR_RATE_40MSPS 1u
+#define C6_SDR_RATE_16MSPS 6u
 
 /* The engine writes the words at the front of the capture bank: a capture
  * that does not fit in the reserved bytes would run into the heap. */
@@ -49,7 +49,8 @@ uint32_t c6_sdr_rx_get_freq(void);
  * @brief Capture a burst of raw I/Q samples into internal buffer.
  *
  * @param num_samples Number of words to capture (256 to 16380).
- * @param capture_us Optional pointer to store elapsed capture time in microseconds.
+ * @param capture_us Optional pointer to store elapsed capture time in
+ * microseconds.
  * @return true on success, false on timeout or error.
  */
 bool c6_sdr_rx_capture(uint32_t num_samples, uint32_t* capture_us);
@@ -60,10 +61,13 @@ bool c6_sdr_rx_capture(uint32_t num_samples, uint32_t* capture_us);
  * @param num_samples Number of words to capture (256 to 16380).
  * @param rate One of C6_SDR_RATE_80MSPS, C6_SDR_RATE_40MSPS or
  *             C6_SDR_RATE_16MSPS.
- * @param capture_us Optional pointer to store elapsed capture time in microseconds.
+ * @param capture_us Optional pointer to store elapsed capture time in
+ * microseconds.
  * @return true on success, false on timeout or error.
  */
-bool c6_sdr_rx_capture_rate(uint32_t num_samples, uint32_t rate, uint32_t* capture_us);
+bool c6_sdr_rx_capture_rate(uint32_t num_samples,
+                            uint32_t rate,
+                            uint32_t* capture_us);
 
 /**
  * @brief Get pointer to the internal I/Q sample buffer.
@@ -81,12 +85,14 @@ void c6_sdr_rx_stop(void);
 bool c6_sdr_rx_is_active(void);
 
 /**
- * @brief Start continuous wave (CW) RF carrier transmission on current frequency.
+ * @brief Start continuous wave (CW) RF carrier transmission on current
+ * frequency.
  */
 esp_err_t c6_sdr_tx_carrier_start(void);
 
 /**
- * @brief Stop continuous wave (CW) RF carrier transmission and restore RX chain.
+ * @brief Stop continuous wave (CW) RF carrier transmission and restore RX
+ * chain.
  */
 void c6_sdr_tx_carrier_stop(void);
 

@@ -7,7 +7,8 @@
 #include "freertos/FreeRTOS.h"
 
 /* Guards the consumer table. The registry itself is per-instance and small;
-   the lock only has to stop a frame being dispatched to a half-updated entry. */
+   the lock only has to stop a frame being dispatched to a half-updated entry.
+ */
 static portMUX_TYPE s_mux = portMUX_INITIALIZER_UNLOCKED;
 
 void radio_lease_registry_reset(radio_lease_registry_t* reg) {
@@ -91,8 +92,8 @@ uint8_t radio_lease_registry_dispatch(radio_lease_registry_t* reg,
 
   /* Snapshot under a critical section, call outside it. The WiFi promiscuous
      callback already runs on the WiFi task, and a consumer is free to start or
-     stop from inside its own handler (the analyzer does, when it hits its packet
-     limit). */
+     stop from inside its own handler (the analyzer does, when it hits its
+     packet limit). */
   radio_lease_rx_fn fn[RADIO_LEASE_MAX_USERS];
   void* ctx[RADIO_LEASE_MAX_USERS];
   uint8_t n = 0;

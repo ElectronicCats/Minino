@@ -2,12 +2,12 @@
 void droneid_scanner_cleanup(void);
 
 static const char* TAG = "droneid_scr";
+#include "app_manager.h"
 #include "drone_id_bmps.h"
 #include "esp_log.h"
 #include "general_scrolling_text.h"
 #include "general_submenu.h"
 #include "menus_module.h"
-#include "app_manager.h"
 #include "oled_screen.h"
 
 #define DRONEID_SCANNER_CHANNEL_POS  0
@@ -226,4 +226,3 @@ void droneid_scanner_handle_input(uint8_t button_name, uint8_t button_event) {
       break;
   }
 }
-

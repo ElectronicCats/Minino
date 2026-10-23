@@ -17,9 +17,9 @@
 #include "nvs_flash.h"
 #include "sd_card.h"
 
+#include "app_manager.h"
 #include "captive_module.h"
 #include "wifi_service.h"
-#include "app_manager.h"
 
 #define MININO_CAPTIVE_DEFAULT_SSID CONFIG_WIFI_AP_NAME
 #define MININO_CAPTIVE_DEFAULT_PASS ""
@@ -231,7 +231,8 @@ static void wifi_init_softap(void) {
     wifi_config.ap.authmode = WIFI_AUTH_OPEN;
   }
 
-  /* Modo ya configurado por la política del servicio; usamos la accessor para consistencia. */
+  /* Modo ya configurado por la política del servicio; usamos la accessor para
+   * consistencia. */
   if (!wifi_service_is_ap_get()) {
     ESP_LOGW(TAG, "WiFi no en modo AP; forzando modo AP");
     ESP_ERROR_CHECK(wifi_service_set_mode(WIFI_MODE_AP));
@@ -593,7 +594,8 @@ static uint16_t captive_module_get_sd_redirect() {
       continue;
     }
     if (redirect_list.count >= CAPTIVE_PORTAL_LIMIT_PORTALS) {
-      ESP_LOGW("CAPTIVE", "Maximum redirect portals reached (%d)", CAPTIVE_PORTAL_LIMIT_PORTALS);
+      ESP_LOGW("CAPTIVE", "Maximum redirect portals reached (%d)",
+               CAPTIVE_PORTAL_LIMIT_PORTALS);
       break;
     }
     redirect_list.ent[redirect_list.count] =
@@ -645,7 +647,8 @@ static uint16_t captive_module_get_sd_portals() {
       continue;
     }
     if (portals_list.count >= CAPTIVE_PORTAL_LIMIT_PORTALS) {
-      ESP_LOGW("CAPTIVE", "Maximum portals reached (%d)", CAPTIVE_PORTAL_LIMIT_PORTALS);
+      ESP_LOGW("CAPTIVE", "Maximum portals reached (%d)",
+               CAPTIVE_PORTAL_LIMIT_PORTALS);
       break;
     }
     portals_list.ent[portals_list.count] =
@@ -955,7 +958,6 @@ void captive_module_main(void) {
   general_submenu(main);
 }
 
-
 // ---------------------------------------------------------------------------
 // app_manager callbacks
 // ---------------------------------------------------------------------------
@@ -964,14 +966,16 @@ static void captive_on_enter(void) {
 }
 
 static void captive_on_input(uint8_t button_name, uint8_t button_event) {
-  // Screens install their own input handlers via general_submenu/general_radio_selection/general_notification
-  (void)button_name;
-  (void)button_event;
+  // Screens install their own input handlers via
+  // general_submenu/general_radio_selection/general_notification
+  (void) button_name;
+  (void) button_event;
 }
 
 static void captive_on_exit(void) {
-  // Cleanup is done in captive_module_disable_wifi which is called from notification on_exit
-  // But we need to ensure it's called if app exits without going through notification
+  // Cleanup is done in captive_module_disable_wifi which is called from
+  // notification on_exit But we need to ensure it's called if app exits without
+  // going through notification
   if (server) {
     httpd_stop(server);
     server = NULL;
@@ -1015,9 +1019,8 @@ void app_manager_enter_wrapper_captive(void) {
 
 // App definition for app_manager
 const minino_app_t captive_app = {
-  .name = "captive_portal",
-  .on_enter = captive_on_enter,
-  .on_input = captive_on_input,
-  .on_exit = captive_on_exit,
+    .name = "captive_portal",
+    .on_enter = captive_on_enter,
+    .on_input = captive_on_input,
+    .on_exit = captive_on_exit,
 };
-

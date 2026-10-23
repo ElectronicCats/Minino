@@ -18,13 +18,13 @@
 #include "resistor_detector.h"
 #include "sd_card.h"
 #if defined(CONFIG_MININO_OPENTHREAD_STACK)
-#include "thread_sniffer.h"
+  #include "thread_sniffer.h"
 #endif
 #include "radio_lease.h"
-#include "wifi_service.h"
 #include "sleep_mode.h"
 #include "surveillance_module.h"
 #include "uart_bridge.h"
+#include "wifi_service.h"
 
 // Core components
 #include "error_handler.h"
@@ -32,7 +32,7 @@
 #include "task_manager.h"
 
 #if defined(CONFIG_MININO_ZIGBEE_STACK)
-#include "zb_cli.h"
+  #include "zb_cli.h"
 #endif
 
 #define BAUD_RATE        921600

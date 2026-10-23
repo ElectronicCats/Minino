@@ -6,13 +6,14 @@
    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
    CONDITIONS OF ANY KIND, either express or implied.
 */
+#include "catdos_module.h"
 #include <esp_pthread.h>
 #include <pthread.h>
 #include <string.h>
 #include "animations_task.h"
+#include "app_manager.h"
 #include "bitmaps_general.h"
 #include "cat_console.h"
-#include "catdos_module.h"
 #include "cmd_wifi.h"
 #include "deauth_screens.h"
 #include "esp_log.h"
@@ -34,7 +35,6 @@
 #include "sdkconfig.h"
 #include "task_manager.h"
 #include "wifi_ap_manager.h"
-#include "app_manager.h"
 #include "wifi_bitmaps.h"
 
 static uint8_t last_main_selection = 0;
@@ -167,9 +167,9 @@ static void* http_get_task(void* pvParameters) {
   int s;
 
   char request[256];
-  int req_len = snprintf(request, sizeof(request),
-                         "GET %s HTTP/1.0\r\nHost: %s:%s\r\n\r\n",
-                         endpoint, host, port);
+  int req_len =
+      snprintf(request, sizeof(request),
+               "GET %s HTTP/1.0\r\nHost: %s:%s\r\n\r\n", endpoint, host, port);
   if (req_len < 0 || req_len >= (int) sizeof(request)) {
     ESP_LOGE(CATDOS_TAG, "Request string too long");
     task_atack = NULL;
@@ -431,7 +431,8 @@ static void catdos_module_show_aps() {
     char wifi_ap[32];
     char wifi_ssid[100];
     snprintf(wifi_ap, sizeof(wifi_ap), "wifi%d", i);
-    esp_err_t err = preferences_get_string(wifi_ap, wifi_ssid, sizeof(wifi_ssid));
+    esp_err_t err =
+        preferences_get_string(wifi_ap, wifi_ssid, sizeof(wifi_ssid));
     if (err != ESP_OK) {
       continue;
     }
@@ -499,7 +500,6 @@ void catdos_module_begin() {
   catdos_module_show_menu();
 }
 
-
 // ---------------------------------------------------------------------------
 // app_manager callbacks
 // ---------------------------------------------------------------------------
@@ -515,9 +515,10 @@ static void catdos_on_enter(void) {
 }
 
 static void catdos_on_input(uint8_t button_name, uint8_t button_event) {
-  // Input is handled by the menu callbacks installed via menus_module_set_app_state
-  (void)button_name;
-  (void)button_event;
+  // Input is handled by the menu callbacks installed via
+  // menus_module_set_app_state
+  (void) button_name;
+  (void) button_event;
 }
 
 static void catdos_on_exit(void) {
@@ -548,9 +549,8 @@ void app_manager_enter_wrapper_catdos(void) {
 
 // App definition for app_manager
 const minino_app_t catdos_app = {
-  .name = "catdos",
-  .on_enter = catdos_on_enter,
-  .on_input = catdos_on_input,
-  .on_exit = catdos_on_exit,
+    .name = "catdos",
+    .on_enter = catdos_on_enter,
+    .on_input = catdos_on_input,
+    .on_exit = catdos_on_exit,
 };
-

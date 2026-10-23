@@ -19,11 +19,11 @@
 
 /* Estado interno, protegido por s_wifi_mux. */
 typedef struct {
-  wifi_mode_t       mode;
-  wifi_interface_t  iface;
-  bool              is_up;
-  bool              is_sta;
-  bool              is_ap;
+  wifi_mode_t mode;
+  wifi_interface_t iface;
+  bool is_up;
+  bool is_sta;
+  bool is_ap;
   wifi_second_chan_t primary_chan;
   wifi_second_chan_t secondary_chan;
 } wifi_service_state_t;
@@ -43,11 +43,11 @@ bool wifi_service_deinit(void);
 esp_err_t wifi_service_set_mode(wifi_mode_t mode);
 
 /* Estado consultable. El modo y los flags STA/AP se leen del driver. */
-wifi_mode_t   wifi_service_mode_get(void);
+wifi_mode_t wifi_service_mode_get(void);
 wifi_interface_t wifi_service_iface_get(void);
-bool          wifi_service_is_up_get(void);
-bool          wifi_service_is_sta_get(void);
-bool          wifi_service_is_ap_get(void);
+bool wifi_service_is_up_get(void);
+bool wifi_service_is_sta_get(void);
+bool wifi_service_is_ap_get(void);
 wifi_second_chan_t wifi_service_primary_chan_get(void);
 wifi_second_chan_t wifi_service_secondary_chan_get(void);
 

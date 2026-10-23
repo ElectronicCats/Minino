@@ -1,9 +1,9 @@
 #include "odrone_id.h"
 
-#include "esp_log.h"
-#include "esp_wifi.h"
 #include "esp_bt_main.h"
 #include "esp_gap_ble_api.h"
+#include "esp_log.h"
+#include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -15,7 +15,7 @@
 #define TAG "odrone_id"
 
 static int num_spoofers = 16;
-static Spoofer* spoofers = nullptr;   /* heap: one per configured drone */
+static Spoofer* spoofers = nullptr;  /* heap: one per configured drone */
 static Spoofer* ble_drone = nullptr; /* heap: same reason */
 static bool add_ble_drone = false;
 

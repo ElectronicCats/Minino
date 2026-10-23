@@ -9,8 +9,8 @@
 #include "driver/sdmmc_host.h"
 #include "driver/sdspi_host.h"
 #include "driver/spi_common.h"
-#include "esp_err.h"
 #include "esp_console.h"
+#include "esp_err.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
 #include "ff.h"
@@ -92,8 +92,8 @@ void print_files_in_sd() {
 
 /** 'sdtest' command: mount the card and report what happened. */
 static int sdtest(int argc, char** argv) {
-  (void)argc;
-  (void)argv;
+  (void) argc;
+  (void) argv;
   if (sd_card_is_mounted()) {
     printf("sd_card: already mounted at %s\n", MOUNT_POINT);
     return 0;

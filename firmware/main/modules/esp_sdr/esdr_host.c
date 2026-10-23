@@ -25,13 +25,13 @@
 #include "esdr_host.h"
 
 #include "c6_sdr_rx.h"
+#include "driver/usb_serial_jtag.h"
 #include "esdr_burst_proto.h"
 #include "esdr_spectrum.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "driver/usb_serial_jtag.h"
 
 #include <string.h>
 
@@ -39,8 +39,8 @@ static const char* TAG = "esdr_host";
 
 /* The viewer gives up the receiver with RELEASE; a terminal user can send
    MININO, which is Minino's own escape. */
-#define ESDR_IDLE_EXIT_MS 60000 /* no traffic at all: the session is over */
-#define ESDR_READ_TIMEOUT_MS 100
+#define ESDR_IDLE_EXIT_MS     60000 /* no traffic at all: the session is over */
+#define ESDR_READ_TIMEOUT_MS  100
 #define ESDR_WRITE_TIMEOUT_MS 2000
 
 static char s_line[ESDR_LINE_MAX];
@@ -58,7 +58,7 @@ static bool s_overflow = false;
 #define ESDR_TX_CHUNK 64
 
 static void port_write(const void* data, size_t len) {
-  const uint8_t* p = (const uint8_t*)data;
+  const uint8_t* p = (const uint8_t*) data;
   size_t done = 0;
 
   while (done < len) {
@@ -66,14 +66,14 @@ static void port_write(const void* data, size_t len) {
     if (chunk > ESDR_TX_CHUNK) {
       chunk = ESDR_TX_CHUNK;
     }
-    int written =
-        usb_serial_jtag_write_bytes(p + done, chunk, pdMS_TO_TICKS(ESDR_WRITE_TIMEOUT_MS));
+    int written = usb_serial_jtag_write_bytes(
+        p + done, chunk, pdMS_TO_TICKS(ESDR_WRITE_TIMEOUT_MS));
     if (written <= 0) {
       /* The host is not reading or the port went away: there is nothing to
          do but give up on this session. */
       return;
     }
-    done += (size_t)written;
+    done += (size_t) written;
   }
 }
 
@@ -115,7 +115,7 @@ static void send_capture(uint32_t samples, esdr_format_t format) {
     return;
   }
 
-  uint32_t* words = (uint32_t*)c6_sdr_rx_get_buffer();
+  uint32_t* words = (uint32_t*) c6_sdr_rx_get_buffer();
   size_t bytes = 0;
   if (format == ESDR_FORMAT_IQ8) {
     bytes = esdr_pack_iq8(words, samples);
@@ -123,7 +123,7 @@ static void send_capture(uint32_t samples, esdr_format_t format) {
     bytes = esdr_pack_iq10(words, samples);
   }
 
-  uint32_t crc = esdr_crc32((const uint8_t*)words, bytes);
+  uint32_t crc = esdr_crc32((const uint8_t*) words, bytes);
   if (esdr_reply_data(reply, sizeof(reply), samples, crc, capture_us) == 0) {
     port_line("ERR reply\n");
     return;
@@ -166,7 +166,7 @@ uint64_t esdr_host_elapsed_ms(void) {
   if (s_session_start == 0) {
     s_session_start = esp_timer_get_time();
   }
-  return (uint64_t)((esp_timer_get_time() - s_session_start) / 1000);
+  return (uint64_t) ((esp_timer_get_time() - s_session_start) / 1000);
 }
 
 /* --------------------------------------------------------------------------
@@ -174,12 +174,16 @@ uint64_t esdr_host_elapsed_ms(void) {
  * -------------------------------------------------------------------------- */
 
 static bool rate_is_supported(uint32_t rate) {
-  return rate == ESDR_RATE_80MSPS || rate == ESDR_RATE_40MSPS || rate == ESDR_RATE_16MSPS;
+  return rate == ESDR_RATE_80MSPS || rate == ESDR_RATE_40MSPS ||
+         rate == ESDR_RATE_16MSPS;
 }
 
 /* La captura que pide el modo de espectros: el mismo motor de captura, con
    las palabras crudas en el banco. */
-static bool spectrum_acquire(uint32_t n, uint32_t rate, const uint32_t** words, uint32_t* elapsed_us) {
+static bool spectrum_acquire(uint32_t n,
+                             uint32_t rate,
+                             const uint32_t** words,
+                             uint32_t* elapsed_us) {
   uint32_t capture_us = 0;
   if (!c6_sdr_rx_capture_rate(n, rate, &capture_us)) {
     return false;
@@ -243,7 +247,8 @@ static void handle_command(const esdr_request_t* req) {
       break;
 
     case ESDR_CMD_FREQ:
-      if (req->freq_mhz < ESDR_FREQ_MIN_MHZ || req->freq_mhz > ESDR_FREQ_MAX_MHZ) {
+      if (req->freq_mhz < ESDR_FREQ_MIN_MHZ ||
+          req->freq_mhz > ESDR_FREQ_MAX_MHZ) {
         port_line("ERR frequency\n");
         break;
       }
@@ -274,7 +279,7 @@ static void handle_command(const esdr_request_t* req) {
         port_line("ERR samples\n");
         break;
       }
-      send_capture(req->samples, (esdr_format_t)req->format);
+      send_capture(req->samples, (esdr_format_t) req->format);
       break;
 
     case ESDR_CMD_RXRUN: {
@@ -289,7 +294,7 @@ static void handle_command(const esdr_request_t* req) {
         break;
       }
       for (uint32_t j = 0; j < req->repeats; j++) {
-        send_capture(req->samples, (esdr_format_t)req->format);
+        send_capture(req->samples, (esdr_format_t) req->format);
       }
       port_line("END\n");
       break;
@@ -332,7 +337,8 @@ static int poll_line(void) {
   uint8_t byte;
 
   for (unsigned k = 0; k < ESDR_LINE_MAX; k++) {
-    int n = usb_serial_jtag_read_bytes(&byte, 1, pdMS_TO_TICKS(ESDR_READ_TIMEOUT_MS));
+    int n = usb_serial_jtag_read_bytes(&byte, 1,
+                                       pdMS_TO_TICKS(ESDR_READ_TIMEOUT_MS));
     if (n != 1) {
       return 0;
     }
@@ -341,7 +347,7 @@ static int poll_line(void) {
     }
     if (byte != '\n') {
       if (s_used < ESDR_LINE_MAX - 1) {
-        s_line[s_used++] = (char)byte;
+        s_line[s_used++] = (char) byte;
       } else {
         s_overflow = true;
       }
@@ -418,7 +424,7 @@ esp_err_t esdr_host_run(void) {
        taking it back later would make the Wi-Fi driver print its own
        startup noise in the middle of the stream, and the browser would
        read that noise as a broken capture. */
-    if ((now - last_traffic) > (int64_t)ESDR_IDLE_EXIT_MS * 1000) {
+    if ((now - last_traffic) > (int64_t) ESDR_IDLE_EXIT_MS * 1000) {
       break;
     }
   }

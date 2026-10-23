@@ -9,7 +9,7 @@
 /* Profile table index of each service's single profile instance (there is
    one entry per service table). */
 #define GATTCMD_PROFILE_IDX 0
-#define INVALID_HANDLE 0
+#define INVALID_HANDLE      0
 
 /*
  * Unique Bluedroid GATTC app_ids. esp_ble_gattc_app_register() rejects

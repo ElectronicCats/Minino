@@ -68,7 +68,8 @@ uint64_t alt_unix_secs(int year,
     jd_1970 = (uint64_t) julian_day(1970, 1, 1, 1) * (uint64_t) 86400;
   }
 
-  uint64_t jd_curr = (uint64_t) julian_day(year, month, mday, 1) * (uint64_t) 86400;
+  uint64_t jd_curr =
+      (uint64_t) julian_day(year, month, mday, 1) * (uint64_t) 86400;
   if (jd_curr < jd_1970) {
     return 0;
   }

@@ -3,10 +3,10 @@
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_wifi.h"
-#include "wifi_service.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "preferences.h"
+#include "wifi_service.h"
 
 static const char* TAG = "ap_manager";
 static EventGroupHandle_t wifi_event_group = NULL;

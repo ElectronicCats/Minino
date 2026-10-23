@@ -76,7 +76,8 @@ exit:
   open_thread_module_exit();
 }
 
-void thread_sniffer_show_event_handler(thread_sniffer_events_t event, void* context) {
+void thread_sniffer_show_event_handler(thread_sniffer_events_t event,
+                                       void* context) {
   switch (event) {
     case THREAD_SNIFFER_START_EV:
       animations_task_run(thread_sniffer_scanning_animation, 100, NULL);

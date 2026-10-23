@@ -4,7 +4,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-#define TASK_STACK_LARGE 8192
+#define TASK_STACK_LARGE   8192
 #define TASK_PRIORITY_HIGH 10
 
 typedef void (*task_fn_t)(void*);

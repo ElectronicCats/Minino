@@ -1,9 +1,9 @@
 #include "ota_module.h"
 #include "OTA.h"
+#include "app_manager.h"
 #include "keyboard_module.h"
 #include "menus_module.h"
 #include "ota_module_screens.h"
-#include "app_manager.h"
 
 void ota_module_input(uint8_t button_name, uint8_t button_event);
 
@@ -30,7 +30,6 @@ void ota_module_input(uint8_t button_name, uint8_t button_event) {
       break;
   }
 }
-
 
 // ---------------------------------------------------------------------------
 // app_manager callbacks
@@ -60,9 +59,8 @@ void app_manager_enter_wrapper_ota(void) {
 
 // App definition for app_manager
 const minino_app_t ota_app = {
-  .name = "ota",
-  .on_enter = ota_on_enter,
-  .on_input = ota_on_input,
-  .on_exit = ota_on_exit,
+    .name = "ota",
+    .on_enter = ota_on_enter,
+    .on_input = ota_on_input,
+    .on_exit = ota_on_exit,
 };
-

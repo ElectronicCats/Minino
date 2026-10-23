@@ -179,18 +179,17 @@ extern const unsigned char michi_punch_2[];
 
 extern const unsigned char* punch_animation[2];
 
-/* Number of screen savers compiled in. The array size is config-dependent, so
-   it cannot be recovered with sizeof() from a declaration. */
-#define SCREEN_SAVERS_COUNT                                     \
-  ((CONFIG_SCREEN_SAVER_LETTERS ? 1 : 0) +                       \
-   (CONFIG_SCREEN_SAVER_FACE ? 1 : 0) +                          \
-   (CONFIG_SCREEN_SAVER_PWNLABS ? 1 : 0) +                       \
-   (CONFIG_SCREEN_SAVER_EC ? 1 : 0) +                            \
-   (CONFIG_SCREEN_SAVER_MINI_FACE ? 1 : 0) +                     \
-   (CONFIG_SCREEN_SAVER_BABY_DRAGON ? 1 : 0))
-extern const epd_bitmap_t* screen_savers[SCREEN_SAVERS_COUNT
-                                              ? SCREEN_SAVERS_COUNT
-                                              : 1];
+  /* Number of screen savers compiled in. The array size is config-dependent, so
+     it cannot be recovered with sizeof() from a declaration. */
+  #define SCREEN_SAVERS_COUNT                  \
+    ((CONFIG_SCREEN_SAVER_LETTERS ? 1 : 0) +   \
+     (CONFIG_SCREEN_SAVER_FACE ? 1 : 0) +      \
+     (CONFIG_SCREEN_SAVER_PWNLABS ? 1 : 0) +   \
+     (CONFIG_SCREEN_SAVER_EC ? 1 : 0) +        \
+     (CONFIG_SCREEN_SAVER_MINI_FACE ? 1 : 0) + \
+     (CONFIG_SCREEN_SAVER_BABY_DRAGON ? 1 : 0))
+extern const epd_bitmap_t*
+    screen_savers[SCREEN_SAVERS_COUNT ? SCREEN_SAVERS_COUNT : 1];
 
 extern char* epd_bitmaps_list[];
 #endif  // BITMAPS_GENERAL_H

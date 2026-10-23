@@ -24,7 +24,7 @@
 static const char* TAG = "menus_module";
 
 static menus_manager_t* menus_ctx;
-static menu_t* catalogue;  /* cached menus_get(), valid for the whole program */
+static menu_t* catalogue; /* cached menus_get(), valid for the whole program */
 static void menus_input_cb(uint8_t button_name, uint8_t button_event);
 static app_state2_t app_state = {.in_app = false,
                                  .input_callback = NULL,
@@ -32,7 +32,7 @@ static app_state2_t app_state = {.in_app = false,
 
 static menu_t* menu_at(menu_idx_t id) {
   menu_t* menu = menus_find(id);
-  return menu ? menu : &catalogue[0];  /* MENU_MAIN is always compiled in */
+  return menu ? menu : &catalogue[0]; /* MENU_MAIN is always compiled in */
 }
 
 /*
@@ -75,7 +75,8 @@ static void update_menus() {
   for (uint8_t i = 0;
        i < menus_ctx->menus_count && menus_ctx->submenus_count < MENU_COUNT;
        i++) {
-    if (catalogue[i].is_visible && catalogue[i].parent_idx == menus_ctx->current_menu) {
+    if (catalogue[i].is_visible &&
+        catalogue[i].parent_idx == menus_ctx->current_menu) {
       s_submenu_indices[menus_ctx->submenus_count] = i;
       s_submenu_ptrs[menus_ctx->submenus_count] =
           &s_submenu_indices[menus_ctx->submenus_count];
@@ -135,8 +136,7 @@ static void navigation_enter() {
       menus_ctx->selected_submenu;
   menus_ctx->current_menu =
       catalogue[*menus_ctx->submenus_idx[menus_ctx->selected_submenu]].menu_idx;
-  menus_ctx->parent_menu_idx =
-      menu_at(menus_ctx->current_menu)->parent_idx;
+  menus_ctx->parent_menu_idx = menu_at(menus_ctx->current_menu)->parent_idx;
   refresh_menus();
   menu_cb_t cb = menu_at(menus_ctx->current_menu)->on_enter_cb;
   if (cb) {
@@ -231,7 +231,8 @@ static void get_reset_menu() {
      Reject anything that does not resolve and start from the root. */
   if (menus_find((menu_idx_t) stored) == NULL) {
     if (stored != MENU_MAIN) {
-      ESP_LOGW(TAG, "MENUNUMBER %d is not compiled in, starting at the main menu",
+      ESP_LOGW(TAG,
+               "MENUNUMBER %d is not compiled in, starting at the main menu",
                stored);
     }
     stored = MENU_MAIN;
@@ -279,8 +280,7 @@ void menus_module_set_default_input() {
 void menus_module_return() {
   menus_module_set_default_input();
   menus_ctx->current_menu = menus_ctx->parent_menu_idx;
-  menus_ctx->parent_menu_idx =
-      menu_at(menus_ctx->current_menu)->parent_idx;
+  menus_ctx->parent_menu_idx = menu_at(menus_ctx->current_menu)->parent_idx;
   refresh_menus();
 }
 
@@ -326,7 +326,7 @@ void menus_module_set_menu(menu_idx_t menu_idx) {
 void menus_module_set_menu_over_cmd(const char* entry_cmd) {
   int idx = get_menu_idx_over_cmd(entry_cmd);
   if (idx < 0) {
-    return;  /* get_menu_idx_over_cmd() already logged the reason */
+    return; /* get_menu_idx_over_cmd() already logged the reason */
   }
   menus_module_set_menu(catalogue[idx].menu_idx);
 }

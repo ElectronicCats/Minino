@@ -44,15 +44,16 @@ static void test_wrapping_never_writes_past_the_reported_count(void) {
   general_scroll_text_free(lines, n);
 }
 
-static void test_no_input_produces_a_single_row_per_line_and_nothing_more(void) {
+static void test_no_input_produces_a_single_row_per_line_and_nothing_more(
+    void) {
   /* The property the old code got wrong in general: rows written == rows
      reported, and re-joining them reproduces the input without the wraps. */
   static const char* inputs[] = {
       "a",
       "abcd",
       "abcdefghijklmno",              /* exactly the limit */
-      "abcdefghijklmn",                /* one over the limit */
-      "abcdefghijklmnopqrstuvwxyzab",  /* two rows + 0 */
+      "abcdefghijklmn",               /* one over the limit */
+      "abcdefghijklmnopqrstuvwxyzab", /* two rows + 0 */
       "line one\nline two",
       "line one\n\n\nline two",
       "caaac\n c  c aac  acb  \n \nccb bcbbcaca a\n \n",
@@ -79,13 +80,12 @@ static void test_no_input_produces_a_single_row_per_line_and_nothing_more(void) 
     for (size_t j = 0;; j++) {
       char c = inputs[i][j];
       bool at_end = (c == '\0');
-      bool wrap = (!at_end && c != '\n' &&
-                   run >= GENERAL_SCROLL_MAX_LINE_LEN);
+      bool wrap = (!at_end && c != '\n' && run >= GENERAL_SCROLL_MAX_LINE_LEN);
       if (at_end || c == '\n' || wrap) {
         size_t e = j;
-        while (e > row_start && (inputs[i][e - 1] == ' ' ||
-                                 inputs[i][e - 1] == '\t' ||
-                                 inputs[i][e - 1] == '\r')) {
+        while (e > row_start &&
+               (inputs[i][e - 1] == ' ' || inputs[i][e - 1] == '\t' ||
+                inputs[i][e - 1] == '\r')) {
           e--;
         }
         if (e > row_start) {

@@ -34,7 +34,7 @@ static void get_ssid() {
   storage_contex_t list[FLASH_STORAGE_MAX_LIST_ITEMS];
 
   list_count = flash_storage_get_list(GENFLASH_STORAGE_SPAM, list,
-                                     FLASH_STORAGE_MAX_LIST_ITEMS);
+                                      FLASH_STORAGE_MAX_LIST_ITEMS);
   for (int i = 0; i < list_count && i < FLASH_STORAGE_MAX_LIST_ITEMS; i++) {
     if (list[i].item_storage_name != NULL) {
       strncpy(spam_ssids_list[i], list[i].item_storage_name,

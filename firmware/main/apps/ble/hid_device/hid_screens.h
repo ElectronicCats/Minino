@@ -4,12 +4,7 @@
 #ifndef HID_SCREENS_H
   #define HID_SCREENS_H
 
-enum {
-  HID_CONFIG_NAME,
-  HID_CONFIG_MAC,
-  HID_CONFIG_START,
-  HID_MENU_COUNT
-};
+enum { HID_CONFIG_NAME, HID_CONFIG_MAC, HID_CONFIG_START, HID_MENU_COUNT };
 extern char* hid_menu_items[];
 
 enum {

@@ -94,8 +94,8 @@ static bool _read_only;
 #include "esp_system.h"
 
 #include "esp_bt.h"
-#include "radio_lease.h"
 #include "esp_bt_main.h"
+#include "radio_lease.h"
 
 static esp_ble_adv_data_t advData;
 static esp_ble_adv_params_t advParams;

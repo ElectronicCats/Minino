@@ -16,7 +16,8 @@ TEST_CASE("julian_day calculates known astronomical dates", "[alt_unix_time]") {
   TEST_ASSERT_DOUBLE_WITHIN(0.05, 1842713.0, jd_333);
 }
 
-TEST_CASE("alt_unix_secs calculates Unix timestamps accurately", "[alt_unix_time]") {
+TEST_CASE("alt_unix_secs calculates Unix timestamps accurately",
+          "[alt_unix_time]") {
   // Epoch: 1970-01-01 00:00:00 -> 0
   uint64_t epoch = alt_unix_secs(1970, 1, 1, 0, 0, 0);
   TEST_ASSERT_EQUAL_UINT64(0, epoch);
@@ -30,7 +31,8 @@ TEST_CASE("alt_unix_secs calculates Unix timestamps accurately", "[alt_unix_time
   TEST_ASSERT_EQUAL_UINT64(1704067200, y2024);
 }
 
-TEST_CASE("alt_unix_secs protects against underflow for pre-1970 dates", "[alt_unix_time]") {
+TEST_CASE("alt_unix_secs protects against underflow for pre-1970 dates",
+          "[alt_unix_time]") {
   // Year before 1970 returns 0 and does not underflow to a huge uint64_t
   uint64_t pre_epoch = alt_unix_secs(1969, 12, 31, 23, 59, 59);
   TEST_ASSERT_EQUAL_UINT64(0, pre_epoch);

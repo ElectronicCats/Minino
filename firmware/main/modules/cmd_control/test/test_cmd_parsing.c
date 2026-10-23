@@ -8,8 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "unity.h"
 #include "argtable3/argtable3.h"
+#include "unity.h"
 
 #include "cat_console.h"
 #include "catdos_module.h"
@@ -112,11 +112,9 @@ bool menus_module_get_app_state(void) {
   return false;
 }
 
-void menus_module_exit_app(void) {
-}
+void menus_module_exit_app(void) {}
 
-void menus_module_refresh(void) {
-}
+void menus_module_refresh(void) {}
 
 menu_idx_t menus_module_get_current_menu(void) {
   return 0;
@@ -134,7 +132,6 @@ size_t oled_screen_ink(void) {
 
 void esp_sdr_module_begin(void) {}
 void esp_sdr_module_stop(void) {}
-
 
 esp_reset_reason_t esp_reset_reason(void) {
   return s_mock_reset_reason;
@@ -382,7 +379,8 @@ void test_uart_bridge_print_missing_argument_handled(void) {
 }
 
 void test_uart_bridge_set_buffer_size_bounds(void) {
-  esp_console_cmd_func_t set_buf_fn = find_command("uart_bridge_set_buffer_size");
+  esp_console_cmd_func_t set_buf_fn =
+      find_command("uart_bridge_set_buffer_size");
   TEST_ASSERT_NOT_NULL(set_buf_fn);
 
   /* Negative buffer size rejected */
@@ -408,7 +406,8 @@ void test_uart_bridge_set_buffer_size_bounds(void) {
 }
 
 void test_uart_bridge_set_baud_rate_validation(void) {
-  esp_console_cmd_func_t set_baud_fn = find_command("uart_bridge_set_baud_rate");
+  esp_console_cmd_func_t set_baud_fn =
+      find_command("uart_bridge_set_baud_rate");
   TEST_ASSERT_NOT_NULL(set_baud_fn);
 
   /* Negative / zero baud rejected */
@@ -433,15 +432,13 @@ void test_uart_bridge_set_config_bounds(void) {
   TEST_ASSERT_EQUAL_INT(1, set_cfg_fn(3, argv_missing));
 
   /* Invalid parity (must be 0, 2, or 3) */
-  char* argv_bad_parity[] = {"uart_bridge_set_config", "1024", "115200",
-                             "3",                       "4",      "1",
-                             "0",                       NULL};
+  char* argv_bad_parity[] = {
+      "uart_bridge_set_config", "1024", "115200", "3", "4", "1", "0", NULL};
   TEST_ASSERT_EQUAL_INT(1, set_cfg_fn(7, argv_bad_parity));
 
   /* Valid configuration */
-  char* argv_valid[] = {"uart_bridge_set_config", "1024", "115200",
-                        "3",                       "0",      "1",
-                        "0",                       NULL};
+  char* argv_valid[] = {
+      "uart_bridge_set_config", "1024", "115200", "3", "0", "1", "0", NULL};
   TEST_ASSERT_EQUAL_INT(0, set_cfg_fn(7, argv_valid));
   TEST_ASSERT_EQUAL_INT(1024, s_uart_config.buffer_size);
   TEST_ASSERT_EQUAL_INT(115200, s_uart_config.uart_config.baud_rate);
@@ -470,7 +467,8 @@ void test_catdos_web_config_string_overflow_prevented(void) {
   esp_console_cmd_func_t web_cfg_fn = find_command("web_config");
   TEST_ASSERT_NOT_NULL(web_cfg_fn);
 
-  /* String of 32 characters or more: must be rejected to prevent buffer overflow */
+  /* String of 32 characters or more: must be rejected to prevent buffer
+   * overflow */
   char long_host[64];
   memset(long_host, 'A', 35);
   long_host[35] = '\0';

@@ -85,7 +85,8 @@ void Spoofer::update() {
   utm_data.alt_msl_m = utm_data.base_alt_m + z;
   utm_data.alt_agl_m = z;
 
-  // update the lat long degrees (guard against division by zero if uninitialized or polar)
+  // update the lat long degrees (guard against division by zero if
+  // uninitialized or polar)
   if (std::fabs(m_deg_lat) > 1e-6) {
     utm_data.latitude_d = utm_data.base_latitude + (y / m_deg_lat);
   }

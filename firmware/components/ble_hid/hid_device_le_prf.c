@@ -660,8 +660,7 @@ void esp_hidd_prf_cb_hdl(esp_gatts_cb_event_t event,
     case ESP_GATTS_CLOSE_EVT:
       break;
     case ESP_GATTS_WRITE_EVT: {
-      ESP_LOGI(HID_LE_PRF_TAG,
-               "GATTS WRITE handle=%d, len=%d, val[0]=0x%02x",
+      ESP_LOGI(HID_LE_PRF_TAG, "GATTS WRITE handle=%d, len=%d, val[0]=0x%02x",
                param->write.handle, param->write.len,
                param->write.len > 0 ? param->write.value[0] : 0);
       esp_hidd_cb_param_t cb_param = {0};
@@ -764,8 +763,8 @@ void hidd_clcb_alloc(uint16_t conn_id, esp_bd_addr_t bda) {
 bool hidd_clcb_dealloc(uint16_t conn_id) {
   hidd_clcb_t* p_clcb = NULL;
 
-  for (p_clcb = hidd_le_env.hidd_clcb; p_clcb < hidd_le_env.hidd_clcb + HID_MAX_APPS;
-       p_clcb++) {
+  for (p_clcb = hidd_le_env.hidd_clcb;
+       p_clcb < hidd_le_env.hidd_clcb + HID_MAX_APPS; p_clcb++) {
     if (p_clcb->in_use && p_clcb->conn_id == conn_id) {
       memset(p_clcb, 0, sizeof(hidd_clcb_t));
       return true;

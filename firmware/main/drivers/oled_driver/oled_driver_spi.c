@@ -119,41 +119,42 @@ void spi_init(oled_driver_t* dev, int width, int height) {
   spi_master_write_command(dev, OLED_CMD_DISPLAY_OFF);          // 0xAE
   spi_master_write_command(dev, OLED_CMD_SET_DISPLAY_CLK_DIV);  // 0xD5
   spi_master_write_command(dev, 0x80);
-  spi_master_write_command(dev, OLED_CMD_SET_MUX_RATIO);        // 0xA8
+  spi_master_write_command(dev, OLED_CMD_SET_MUX_RATIO);  // 0xA8
   if (dev->_height == 64)
     spi_master_write_command(dev, 0x3F);
   if (dev->_height == 32)
     spi_master_write_command(dev, 0x1F);
-  spi_master_write_command(dev, OLED_CMD_SET_DISPLAY_OFFSET);    // 0xD3
+  spi_master_write_command(dev, OLED_CMD_SET_DISPLAY_OFFSET);  // 0xD3
   spi_master_write_command(dev, 0x00);
-  spi_master_write_command(dev, OLED_CMD_SET_DISPLAY_START_LINE);// 0x40
+  spi_master_write_command(dev, OLED_CMD_SET_DISPLAY_START_LINE);  // 0x40
 
   // Turn ON Built-in DC-DC charge pump for SH1106
-  spi_master_write_command(dev, SH1106_CMD_SET_CHARGE_PUMP);     // 0xAD
-  spi_master_write_command(dev, SH1106_CMD_CHARGE_PUMP_ON);      // 0x8B
-  spi_master_write_command(dev, SH1106_CMD_SET_PUMP_VOLTAGE_8V); // 0x32
+  spi_master_write_command(dev, SH1106_CMD_SET_CHARGE_PUMP);      // 0xAD
+  spi_master_write_command(dev, SH1106_CMD_CHARGE_PUMP_ON);       // 0x8B
+  spi_master_write_command(dev, SH1106_CMD_SET_PUMP_VOLTAGE_8V);  // 0x32
 
   if (dev->_flip) {
     spi_master_write_command(dev, OLED_CMD_SET_SEGMENT_REMAP_0);  // 0xA0
-    spi_master_write_command(dev, 0xC0);                          // 0xC0 COM scan normal
+    spi_master_write_command(dev, 0xC0);  // 0xC0 COM scan normal
   } else {
     spi_master_write_command(dev, OLED_CMD_SET_SEGMENT_REMAP_1);  // 0xA1
-    spi_master_write_command(dev, OLED_CMD_SET_COM_SCAN_MODE);    // 0xC8 COM scan remapped
+    spi_master_write_command(
+        dev, OLED_CMD_SET_COM_SCAN_MODE);  // 0xC8 COM scan remapped
   }
-  spi_master_write_command(dev, OLED_CMD_SET_COM_PIN_MAP);        // 0xDA
+  spi_master_write_command(dev, OLED_CMD_SET_COM_PIN_MAP);  // 0xDA
   if (dev->_height == 64)
     spi_master_write_command(dev, 0x12);
   if (dev->_height == 32)
     spi_master_write_command(dev, 0x02);
-  spi_master_write_command(dev, OLED_CMD_SET_CONTRAST);           // 0x81
+  spi_master_write_command(dev, OLED_CMD_SET_CONTRAST);  // 0x81
   spi_master_write_command(dev, 0x80);
-  spi_master_write_command(dev, OLED_CMD_SET_PRECHARGE);          // 0xD9
+  spi_master_write_command(dev, OLED_CMD_SET_PRECHARGE);  // 0xD9
   spi_master_write_command(dev, 0x1F);
-  spi_master_write_command(dev, OLED_CMD_SET_VCOMH_DESELCT);      // 0xDB
+  spi_master_write_command(dev, OLED_CMD_SET_VCOMH_DESELCT);  // 0xDB
   spi_master_write_command(dev, 0x40);
-  spi_master_write_command(dev, OLED_CMD_DISPLAY_RAM);            // 0xA4
-  spi_master_write_command(dev, OLED_CMD_DISPLAY_NORMAL);         // 0xA6
-  spi_master_write_command(dev, OLED_CMD_DISPLAY_ON);             // 0xAF
+  spi_master_write_command(dev, OLED_CMD_DISPLAY_RAM);     // 0xA4
+  spi_master_write_command(dev, OLED_CMD_DISPLAY_NORMAL);  // 0xA6
+  spi_master_write_command(dev, OLED_CMD_DISPLAY_ON);      // 0xAF
 
 #elif CONFIG_SSD1306
   spi_master_write_command(dev, OLED_CMD_DISPLAY_OFF);    // AE

@@ -1,15 +1,15 @@
+#include "cmd_control.h"
 #include <stdlib.h>
 #include <string.h>
-#include "cmd_control.h"
+#include "app_manager.h"
 #include "argtable3/argtable3.h"
+#include "esdr_host.h"
 #include "esp_console.h"
 #include "esp_log.h"
 #include "esp_sdr_module.h"
-#include "esdr_host.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "keyboard_module.h"
-#include "app_manager.h"
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "rf_spectrum.h"
@@ -22,7 +22,7 @@ static struct {
 } message_args;
 
 #define LAUNCH_TASK_STACK 6144
-#define LAUNCH_MAX_LEN 32
+#define LAUNCH_MAX_LEN    32
 
 typedef struct {
   char entry_cmd[LAUNCH_MAX_LEN];
@@ -62,12 +62,12 @@ static int launch_app(int argc, char** argv) {
     ESP_LOGE(TAG, "Out of memory launching app");
     return 1;
   }
-  strncpy(args->entry_cmd, message_args.app->sval[0], sizeof(args->entry_cmd) - 1);
+  strncpy(args->entry_cmd, message_args.app->sval[0],
+          sizeof(args->entry_cmd) - 1);
   args->entry_cmd[sizeof(args->entry_cmd) - 1] = '\0';
 
-  BaseType_t task_ret =
-      xTaskCreate(launch_app_task, "launch_app_task", LAUNCH_TASK_STACK, args,
-                  15, NULL);
+  BaseType_t task_ret = xTaskCreate(launch_app_task, "launch_app_task",
+                                    LAUNCH_TASK_STACK, args, 15, NULL);
   if (task_ret != pdPASS) {
     ESP_LOGE(TAG, "Failed to launch app task");
     free(args);
@@ -89,8 +89,9 @@ static int press_cmd(int argc, char** argv) {
   static const char* kButtons[] = {"boot", "left", "right", "up", "down"};
   if (argc < 2) {
     printf("Usage: press <boot|left|right|up|down> [event]\n");
-    printf("  event: press_down (default), press_up, long_press_hold, "
-           "single_click, double_click\n");
+    printf(
+        "  event: press_down (default), press_up, long_press_hold, "
+        "single_click, double_click\n");
     return 1;
   }
 
@@ -133,8 +134,8 @@ static int press_cmd(int argc, char** argv) {
 }
 
 static int exit_app_cmd(int argc, char** argv) {
-  (void)argc;
-  (void)argv;
+  (void) argc;
+  (void) argv;
   if (app_manager_is_active()) {
     printf("Exiting current application...\n");
     app_manager_exit();
@@ -195,46 +196,47 @@ void cmd_control_register_press_cmd() {
 }
 
 void cmd_control_register_launch_cmd() {
-  message_args.app = arg_str1(NULL, NULL, "<app>",
-                              "Name of the app to LAUNCH\n"
-                              "analyzer\n"
-                              "captive\n"
-                              "deauth\n"
-                              "deauth_scan\n"
-                              "dos\n"
-                              "ssid_spam\n"
-                              "drone_id\n"
-                              "droneid_scanner\n"
-                              "modbus_tcp\n"
-                              "flock\n"
-                              "flock_sim\n"
-                              "spam\n"
-                              "spam_apple\n"
-                              "spam_android\n"
-                              "spam_windows\n"
-                              "spam_samsung\n"
-                              "spam_all\n"
-                              "hid\n"
-                              "trackers\n"
-                              "switch\n"
-                              "light\n"
-                              "zigbee_sniffer\n"
-                              "broadcast\n"
-                              "thread_sniffer\n"
-                              "gps_wardriving\n"
-                              "i2c_scanner\n"
-                              "uart_bridge\n"
-                              "sdr\n"
-                              "spectrum\n"
-                              "file_manager\n"
-                              "ota"
+  message_args.app =
+      arg_str1(NULL, NULL, "<app>",
+               "Name of the app to LAUNCH\n"
+               "analyzer\n"
+               "captive\n"
+               "deauth\n"
+               "deauth_scan\n"
+               "dos\n"
+               "ssid_spam\n"
+               "drone_id\n"
+               "droneid_scanner\n"
+               "modbus_tcp\n"
+               "flock\n"
+               "flock_sim\n"
+               "spam\n"
+               "spam_apple\n"
+               "spam_android\n"
+               "spam_windows\n"
+               "spam_samsung\n"
+               "spam_all\n"
+               "hid\n"
+               "trackers\n"
+               "switch\n"
+               "light\n"
+               "zigbee_sniffer\n"
+               "broadcast\n"
+               "thread_sniffer\n"
+               "gps_wardriving\n"
+               "i2c_scanner\n"
+               "uart_bridge\n"
+               "sdr\n"
+               "spectrum\n"
+               "file_manager\n"
+               "ota"
 
-                              "\n\n"
-                              "Keep this list in sync with the entry_cmd fields in\n"
-                              "menus_data.c; menus_module_set_menu_over_cmd()\n"
-                              "matches them exactly.\n\n"
-                              "Example: launch analyzer\n"
-                              "Example: launch i2c_scanner");
+               "\n\n"
+               "Keep this list in sync with the entry_cmd fields in\n"
+               "menus_data.c; menus_module_set_menu_over_cmd()\n"
+               "matches them exactly.\n\n"
+               "Example: launch analyzer\n"
+               "Example: launch i2c_scanner");
   message_args.end = arg_end(2);
 
   esp_console_cmd_t launch_cmd = {.command = "launch",
@@ -246,12 +248,13 @@ void cmd_control_register_launch_cmd() {
 
   ESP_ERROR_CHECK(esp_console_cmd_register(&launch_cmd));
 
-  esp_console_cmd_t exit_cmd = {.command = "exit_app",
-                                .help = "Exit currently running application and return to menu",
-                                .category = "Minino",
-                                .hint = NULL,
-                                .func = &exit_app_cmd,
-                                .argtable = NULL};
+  esp_console_cmd_t exit_cmd = {
+      .command = "exit_app",
+      .help = "Exit currently running application and return to menu",
+      .category = "Minino",
+      .hint = NULL,
+      .func = &exit_app_cmd,
+      .argtable = NULL};
   ESP_ERROR_CHECK(esp_console_cmd_register(&exit_cmd));
 }
 
@@ -293,7 +296,9 @@ static int sdr_host(int argc, char** argv) {
 
   printf("Serving the ESP-SDR protocol on the USB port.\n");
   printf("Open https://espargos.net/espsdr/app/ and connect to this board.\n");
-  printf("The console comes back when the viewer sends RELEASE, or type MININO.\n");
+  printf(
+      "The console comes back when the viewer sends RELEASE, or type "
+      "MININO.\n");
   fflush(stdout);
 
   esp_err_t err = esdr_host_run();
@@ -331,8 +336,6 @@ void cmd_control_register_sdr_cmd() {
   ESP_ERROR_CHECK(esp_console_cmd_register(&sdr_host_cmd));
 }
 
-
-
 static int threshold_cmd_func(int argc, char** argv) {
   if (argc == 1) {
     int8_t th = rf_spectrum_get_threshold();
@@ -351,13 +354,14 @@ static int threshold_cmd_func(int argc, char** argv) {
   }
 
   int val = atoi(argv[1]);
-  if (val > 0) val = -val; /* Auto-negate if typed e.g. 75 instead of -75 */
+  if (val > 0)
+    val = -val; /* Auto-negate if typed e.g. 75 instead of -75 */
   if (val < -95 || val > -20) {
     printf("Error: Threshold must be between -95 and -20 dBm (or 'off')\n");
     return 1;
   }
 
-  rf_spectrum_set_threshold((int8_t)val);
+  rf_spectrum_set_threshold((int8_t) val);
   printf("Spectrum threshold set to %d dBm\n", val);
   return 0;
 }
@@ -376,7 +380,8 @@ static int spectrum_audio_cmd_func(int argc, char** argv) {
     printf("RF Spectrum audio Geiger: MUTED\n");
   } else if (strcmp(argv[1], "toggle") == 0) {
     rf_spectrum_toggle_audio();
-    printf("RF Spectrum audio Geiger: %s\n", rf_spectrum_get_audio_enabled() ? "ENABLED" : "MUTED");
+    printf("RF Spectrum audio Geiger: %s\n",
+           rf_spectrum_get_audio_enabled() ? "ENABLED" : "MUTED");
   } else {
     printf("Usage: spectrum_audio [on|off|toggle]\n");
     return 1;
@@ -387,7 +392,8 @@ static int spectrum_audio_cmd_func(int argc, char** argv) {
 static int spectrum_log_cmd_func(int argc, char** argv) {
   if (argc == 1) {
     bool en = rf_spectrum_get_sd_log_enabled();
-    printf("RF Spectrum SD Logging: %s (target: /sdcard/spectrum_log.csv)\n", en ? "RECORDING" : "IDLE");
+    printf("RF Spectrum SD Logging: %s (target: /sdcard/spectrum_log.csv)\n",
+           en ? "RECORDING" : "IDLE");
     return 0;
   }
   if (strcmp(argv[1], "on") == 0) {
@@ -398,7 +404,8 @@ static int spectrum_log_cmd_func(int argc, char** argv) {
     printf("RF Spectrum SD Logging: STOPPED\n");
   } else if (strcmp(argv[1], "toggle") == 0) {
     rf_spectrum_toggle_sd_log();
-    printf("RF Spectrum SD Logging: %s\n", rf_spectrum_get_sd_log_enabled() ? "STARTED" : "STOPPED");
+    printf("RF Spectrum SD Logging: %s\n",
+           rf_spectrum_get_sd_log_enabled() ? "STARTED" : "STOPPED");
   } else {
     printf("Usage: spectrum_log [on|off|toggle]\n");
     return 1;
@@ -409,7 +416,8 @@ static int spectrum_log_cmd_func(int argc, char** argv) {
 static int spectrum_band_cmd_func(int argc, char** argv) {
   if (argc == 1) {
     rf_protocol_t p = rf_spectrum_get_protocol();
-    printf("Current RF band: %s\n", (p == RF_PROTOCOL_ZIGBEE) ? "Zigbee / 802.15.4" : "Wi-Fi 2.4 GHz");
+    printf("Current RF band: %s\n",
+           (p == RF_PROTOCOL_ZIGBEE) ? "Zigbee / 802.15.4" : "Wi-Fi 2.4 GHz");
     return 0;
   }
   if (strcmp(argv[1], "wifi") == 0) {
@@ -439,7 +447,8 @@ static int spectrum_ids_cmd_func(int argc, char** argv) {
     uint16_t cnt = rf_spectrum_get_deauth_count(c);
     bool jam = rf_spectrum_has_jammer_alert(c);
     if (cnt > 0 || jam) {
-      printf("  CH %2d: %u deauths %s\n", c, cnt, jam ? "[JAMMER DETECTED!]" : "");
+      printf("  CH %2d: %u deauths %s\n", c, cnt,
+             jam ? "[JAMMER DETECTED!]" : "");
     }
   }
   return 0;
@@ -461,7 +470,8 @@ static int spectrum_pcap_cmd_func(int argc, char** argv) {
     printf("Usage: spectrum_pcap [on|off|toggle]\n");
     return 1;
   }
-  printf("RF Spectrum PCAP Capture: %s\n", rf_spectrum_get_pcap_enabled() ? "STARTED" : "STOPPED");
+  printf("RF Spectrum PCAP Capture: %s\n",
+         rf_spectrum_get_pcap_enabled() ? "STARTED" : "STOPPED");
   return 0;
 }
 
@@ -489,54 +499,62 @@ static int spectrum_drone_cmd_func(int argc, char** argv) {
 }
 
 void cmd_control_register_threshold_cmd(void) {
-  esp_console_cmd_t th_cmd = {.command = "threshold",
-                              .help = "Set or view RF Spectrum RSSI threshold filter (dBm or 'off')",
-                              .category = "RF",
-                              .hint = "[<dBm|off>]",
-                              .func = &threshold_cmd_func,
-                              .argtable = NULL};
+  esp_console_cmd_t th_cmd = {
+      .command = "threshold",
+      .help = "Set or view RF Spectrum RSSI threshold filter (dBm or 'off')",
+      .category = "RF",
+      .hint = "[<dBm|off>]",
+      .func = &threshold_cmd_func,
+      .argtable = NULL};
 
-  esp_console_cmd_t aud_cmd = {.command = "spectrum_audio",
-                               .help = "Control RF Spectrum audio Geiger feedback (on, off, toggle)",
-                               .category = "RF",
-                               .hint = "[<on|off|toggle>]",
-                               .func = &spectrum_audio_cmd_func,
-                               .argtable = NULL};
+  esp_console_cmd_t aud_cmd = {
+      .command = "spectrum_audio",
+      .help = "Control RF Spectrum audio Geiger feedback (on, off, toggle)",
+      .category = "RF",
+      .hint = "[<on|off|toggle>]",
+      .func = &spectrum_audio_cmd_func,
+      .argtable = NULL};
 
-  esp_console_cmd_t log_cmd = {.command = "spectrum_log",
-                               .help = "Control RF Spectrum MicroSD CSV logging (on, off, toggle)",
-                               .category = "RF",
-                               .hint = "[<on|off|toggle>]",
-                               .func = &spectrum_log_cmd_func,
-                               .argtable = NULL};
+  esp_console_cmd_t log_cmd = {
+      .command = "spectrum_log",
+      .help = "Control RF Spectrum MicroSD CSV logging (on, off, toggle)",
+      .category = "RF",
+      .hint = "[<on|off|toggle>]",
+      .func = &spectrum_log_cmd_func,
+      .argtable = NULL};
 
   esp_console_cmd_t pcap_cmd = {.command = "spectrum_pcap",
-                                .help = "Control RF Spectrum standard PCAP capture to MicroSD (on, off, toggle)",
+                                .help =
+                                    "Control RF Spectrum standard PCAP capture "
+                                    "to MicroSD (on, off, toggle)",
                                 .category = "RF",
                                 .hint = "[<on|off|toggle>]",
                                 .func = &spectrum_pcap_cmd_func,
                                 .argtable = NULL};
 
-  esp_console_cmd_t band_cmd = {.command = "spectrum_band",
-                                .help = "Switch RF Spectrum band (wifi, zigbee)",
-                                .category = "RF",
-                                .hint = "[<wifi|zigbee>]",
-                                .func = &spectrum_band_cmd_func,
-                                .argtable = NULL};
+  esp_console_cmd_t band_cmd = {
+      .command = "spectrum_band",
+      .help = "Switch RF Spectrum band (wifi, zigbee)",
+      .category = "RF",
+      .hint = "[<wifi|zigbee>]",
+      .func = &spectrum_band_cmd_func,
+      .argtable = NULL};
 
-  esp_console_cmd_t ids_cmd = {.command = "spectrum_ids",
-                               .help = "View or clear RF IDS deauth & jammer alerts (clear)",
-                               .category = "RF",
-                               .hint = "[clear]",
-                               .func = &spectrum_ids_cmd_func,
-                               .argtable = NULL};
+  esp_console_cmd_t ids_cmd = {
+      .command = "spectrum_ids",
+      .help = "View or clear RF IDS deauth & jammer alerts (clear)",
+      .category = "RF",
+      .hint = "[clear]",
+      .func = &spectrum_ids_cmd_func,
+      .argtable = NULL};
 
-  esp_console_cmd_t drone_cmd = {.command = "spectrum_drone",
-                                 .help = "View or clear DroneID / Remote ID detections (clear)",
-                                 .category = "RF",
-                                 .hint = "[clear]",
-                                 .func = &spectrum_drone_cmd_func,
-                                 .argtable = NULL};
+  esp_console_cmd_t drone_cmd = {
+      .command = "spectrum_drone",
+      .help = "View or clear DroneID / Remote ID detections (clear)",
+      .category = "RF",
+      .hint = "[clear]",
+      .func = &spectrum_drone_cmd_func,
+      .argtable = NULL};
 
   ESP_ERROR_CHECK(esp_console_cmd_register(&th_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&aud_cmd));
@@ -546,6 +564,3 @@ void cmd_control_register_threshold_cmd(void) {
   ESP_ERROR_CHECK(esp_console_cmd_register(&ids_cmd));
   ESP_ERROR_CHECK(esp_console_cmd_register(&drone_cmd));
 }
-
-
-

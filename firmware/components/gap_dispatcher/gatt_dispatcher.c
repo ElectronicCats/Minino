@@ -3,19 +3,19 @@
 #if CONFIG_BT_ENABLED
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 
-#include "gatt_dispatcher.h"
+  #include "gatt_dispatcher.h"
 
-#include <stdbool.h>
-#include <string.h>
+  #include <stdbool.h>
+  #include <string.h>
 
-#include "esp_bt_main.h"
-#include "esp_log.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
-#include "freertos/task.h"
+  #include "esp_bt_main.h"
+  #include "esp_log.h"
+  #include "freertos/FreeRTOS.h"
+  #include "freertos/semphr.h"
+  #include "freertos/task.h"
 
-#define GATT_SUBSCRIBER_MAX 8
-#define TAG                 "gatt_dispatcher"
+  #define GATT_SUBSCRIBER_MAX 8
+  #define TAG                 "gatt_dispatcher"
 
 typedef struct {
   esp_gattc_cb_t cb;

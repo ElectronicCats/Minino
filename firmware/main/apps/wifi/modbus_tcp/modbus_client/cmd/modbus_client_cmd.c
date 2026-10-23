@@ -51,9 +51,8 @@ static int cmd_modbus_write(int argc, char** argv) {
   }
 
   /* 13 header bytes + 2 per register / 1 per 8 coils. */
-  size_t payload_bytes =
-      (function_code == 0x0F) ? ((size_t) num_values + 7) / 8
-                              : (size_t) num_values * 2;
+  size_t payload_bytes = (function_code == 0x0F) ? ((size_t) num_values + 7) / 8
+                                                 : (size_t) num_values * 2;
   if (13 + payload_bytes > MODBUS_TCP_MAX_REQUEST_LEN) {
     ESP_LOGE(TAG,
              "too many values: %d would need %u bytes, the buffer holds %u",

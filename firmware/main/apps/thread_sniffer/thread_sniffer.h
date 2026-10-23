@@ -14,7 +14,8 @@ typedef enum {
 typedef void (*thread_sniffer_show_event_cb_t)(thread_sniffer_events_t, void*);
 
 /* Handler de eventos por defecto, definido en thread_sniffer_screens.c. */
-extern void thread_sniffer_show_event_handler(thread_sniffer_events_t event, void* context);
+extern void thread_sniffer_show_event_handler(thread_sniffer_events_t event,
+                                              void* context);
 
 void thread_sniffer_init();
 void thread_sniffer_run();

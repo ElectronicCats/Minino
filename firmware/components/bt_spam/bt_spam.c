@@ -1,7 +1,6 @@
 #include "bt_spam.h"
-#include "radio_lease.h"
-#include "bt_spam_gap_sync.h"
 #include <string.h>
+#include "bt_spam_gap_sync.h"
 #include "esp_bt.h"
 #include "esp_bt_main.h"
 #include "esp_err.h"
@@ -13,6 +12,7 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 #include "gap_dispatcher.h"
+#include "radio_lease.h"
 
 static const char* TAG = "bt_spam";
 
@@ -28,9 +28,10 @@ static TaskHandle_t adv_task_handle = NULL;
 static volatile bool adv_task_running = false;
 static SemaphoreHandle_t adv_sem = NULL;
 /* Which completion answered which request; see bt_spam_gap_sync.h. */
-static bt_spam_gap_sync_t gap_sync = {.completed = 0,
-                                      .last_event = ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT,
-                                      .last_status = ESP_BT_STATUS_SUCCESS};
+static bt_spam_gap_sync_t gap_sync = {
+    .completed = 0,
+    .last_event = ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT,
+    .last_status = ESP_BT_STATUS_SUCCESS};
 static bt_spam_mode_t current_mode = BT_SPAM_MODE_ALL;
 static bool gap_callback_registered = false;
 
@@ -603,7 +604,8 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event,
   /* Handle spam module events */
   switch (event) {
     case ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT:
-      bt_spam_gap_sync_complete(&gap_sync, event, param->adv_data_raw_cmpl.status);
+      bt_spam_gap_sync_complete(&gap_sync, event,
+                                param->adv_data_raw_cmpl.status);
       if (adv_sem != NULL) {
         xSemaphoreGive(adv_sem);
       }
@@ -630,7 +632,8 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event,
       break;
 
     case ESP_GAP_BLE_SET_STATIC_RAND_ADDR_EVT:
-      bt_spam_gap_sync_complete(&gap_sync, event, param->set_rand_addr_cmpl.status);
+      bt_spam_gap_sync_complete(&gap_sync, event,
+                                param->set_rand_addr_cmpl.status);
       if (adv_sem != NULL) {
         xSemaphoreGive(adv_sem);
       }
@@ -655,10 +658,11 @@ static void esp_gap_cb(esp_gap_ble_cb_event_t event,
           connect_records_cb(name, true);
         }
         /* No forced disconnect: esp_ble_gap_disconnect() needs the peer's BD
-           address, which this event does not carry, and reaching for GATTC would
-           take the single callback slot bt_gattc owns. Instead the link is left
-           to the peer - who drops it right after pairing - and the loop below
-           restarts advertising as soon as is_advertising_active clears. */
+           address, which this event does not carry, and reaching for GATTC
+           would take the single callback slot bt_gattc owns. Instead the link
+           is left to the peer - who drops it right after pairing - and the loop
+           below restarts advertising as soon as is_advertising_active clears.
+         */
         break;
       }
       break;
@@ -716,8 +720,10 @@ static inline void drain_sem(void) {
  * instead of being consumed as if it were the answer. The decision itself
  * lives in bt_spam_gap_sync.c, which has host unit tests.
  */
-static bool wait_gap_event(esp_gap_ble_cb_event_t wanted, esp_err_t ret,
-                           uint32_t mark, TickType_t timeout) {
+static bool wait_gap_event(esp_gap_ble_cb_event_t wanted,
+                           esp_err_t ret,
+                           uint32_t mark,
+                           TickType_t timeout) {
   if (ret != ESP_OK || adv_sem == NULL) {
     return false;
   }
@@ -777,7 +783,7 @@ static void start_adv(void* pvParameters) {
                  init_mac_mark, pdMS_TO_TICKS(150));
 
   ESP_LOGI(TAG, "start_adv task started (%d active models, %d KB free heap)",
-           active_indices_count, (int)(min_free_heap_during_spam / 1024));
+           active_indices_count, (int) (min_free_heap_during_spam / 1024));
 
   while (running_task) {
     if (active_indices_count == 0) {
@@ -828,8 +834,8 @@ static void start_adv(void* pvParameters) {
       uint32_t stop_mark = bt_spam_gap_sync_mark(&gap_sync);
       esp_err_t stop_ret = esp_ble_gap_stop_advertising();
       if (stop_ret == ESP_OK) {
-        wait_gap_event(ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT, stop_ret,
-                       stop_mark, pdMS_TO_TICKS(150));
+        wait_gap_event(ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT, stop_ret, stop_mark,
+                       pdMS_TO_TICKS(150));
       }
       is_advertising_active = false;
 
@@ -860,7 +866,8 @@ static void start_adv(void* pvParameters) {
      *    swaps the data in without tearing the advertisement down. */
     drain_sem();
     uint32_t data_mark = bt_spam_gap_sync_mark(&gap_sync);
-    esp_err_t ret = esp_ble_gap_config_adv_data_raw(payload_buffer, payload_len);
+    esp_err_t ret =
+        esp_ble_gap_config_adv_data_raw(payload_buffer, payload_len);
     if (!wait_gap_event(ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT, ret,
                         data_mark, pdMS_TO_TICKS(150))) {
       ESP_LOGW(TAG, "advertising data was not accepted, retrying next cycle");
@@ -879,8 +886,8 @@ static void start_adv(void* pvParameters) {
       drain_sem();
       uint32_t start_mark = bt_spam_gap_sync_mark(&gap_sync);
       ret = esp_ble_gap_start_advertising(&ble_adv_params);
-      if (wait_gap_event(ESP_GAP_BLE_ADV_START_COMPLETE_EVT, ret,
-                         start_mark, pdMS_TO_TICKS(150))) {
+      if (wait_gap_event(ESP_GAP_BLE_ADV_START_COMPLETE_EVT, ret, start_mark,
+                         pdMS_TO_TICKS(150))) {
         is_advertising_active = true;
       } else {
         is_advertising_active = false;
@@ -958,13 +965,13 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
   radio_lease_ble_block_scan();
 
   /* The random address can only be programmed while neither advertising nor
-      scanning, and advertising can only start once a random address exists, so a
-      scan left running by another BLE app (gattcmd, trackers, the ADV scanner)
+      scanning, and advertising can only start once a random address exists, so
+     a scan left running by another BLE app (gattcmd, trackers, the ADV scanner)
       deadlocks the two calls against each other:
           "Advertising or scanning now, can't set randaddress"
           "No random address yet, please set random address and try"
-      and spam never transmits. Stopping the scan here is what gives this app the
-      exclusive radio it needs. */
+      and spam never transmits. Stopping the scan here is what gives this app
+     the exclusive radio it needs. */
   if (esp_ble_gap_stop_scanning() != ESP_OK) {
     ESP_LOGD(TAG, "no scan to stop before starting spam");
   }
@@ -986,14 +993,17 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
   }
   gap_callback_registered = true;
 
-  /* Set maximum RF TX power on ESP32-C6 for proximity detection and RSSI trigger */
+  /* Set maximum RF TX power on ESP32-C6 for proximity detection and RSSI
+   * trigger */
   if (esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P20) != ESP_OK) {
     if (esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P15) != ESP_OK) {
       esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
     }
   }
-  if (esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P20) != ESP_OK) {
-    if (esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P15) != ESP_OK) {
+  if (esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P20) !=
+      ESP_OK) {
+    if (esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P15) !=
+        ESP_OK) {
       esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9);
     }
   }
@@ -1019,7 +1029,7 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
   BaseType_t task_ret =
       xTaskCreate(&start_adv, "bt_spam_adv", 4096, NULL, 5, &adv_task_handle);
   if (task_ret != pdPASS) {
-    ESP_LOGE(TAG, "Failed to create start_adv task: %d", (int)task_ret);
+    ESP_LOGE(TAG, "Failed to create start_adv task: %d", (int) task_ret);
     running_task = false;
     adv_task_running = false;
     goto error;
@@ -1062,7 +1072,8 @@ void bt_spam_app_stop(void) {
        * vTaskDelete(NULL) would delete THIS task (the caller, usually the
        * menus thread) instead. */
       TaskHandle_t task_to_delete = adv_task_handle;
-      if (task_to_delete != NULL && task_to_delete != xTaskGetCurrentTaskHandle()) {
+      if (task_to_delete != NULL &&
+          task_to_delete != xTaskGetCurrentTaskHandle()) {
         vTaskDelete(task_to_delete);
       }
       adv_task_handle = NULL;
@@ -1177,8 +1188,8 @@ esp_err_t bt_spam_set_power_profile(bt_spam_power_profile_t profile) {
       esp_power_level_t got;
       if (esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, want) == ESP_OK) {
         got = want;
-      } else if (esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV,
-                                      ESP_PWR_LVL_P15) == ESP_OK) {
+      } else if (esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P15) ==
+                 ESP_OK) {
         got = ESP_PWR_LVL_P15;
       } else {
         ret = esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
@@ -1186,7 +1197,7 @@ esp_err_t bt_spam_set_power_profile(bt_spam_power_profile_t profile) {
       }
       applied_dbm = (got == ESP_PWR_LVL_P20)   ? 20
                     : (got == ESP_PWR_LVL_P15) ? 15
-                                                : 9;
+                                               : 9;
       esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, got);
       ble_adv_params.adv_int_min = 0x20;  // 20ms
       ble_adv_params.adv_int_max = 0x30;  // 30ms

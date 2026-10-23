@@ -223,7 +223,8 @@ static void parse_gsv(esp_gps_t* esp_gps) {
           (uint8_t) strtol(esp_gps->item_str, NULL, 10);
       break;
     default:
-      if (esp_gps->item_num >= 4 && esp_gps->item_num <= 19 && esp_gps->sat_num > 0) {
+      if (esp_gps->item_num >= 4 && esp_gps->item_num <= 19 &&
+          esp_gps->sat_num > 0) {
         uint8_t item_num =
             esp_gps->item_num - 4; /* Normalize item number from 4-19 to 0-15 */
         uint8_t index =
@@ -389,8 +390,7 @@ static void parse_zda(esp_gps_t* esp_gps) {
       parse_utc_time(esp_gps);
       break;
     case 2: /* Process day */
-      esp_gps->parent.date.day =
-          (uint8_t) strtol(esp_gps->item_str, NULL, 10);
+      esp_gps->parent.date.day = (uint8_t) strtol(esp_gps->item_str, NULL, 10);
       break;
     case 3: /* Process month */
       esp_gps->parent.date.month =
@@ -612,7 +612,8 @@ static esp_err_t gps_decode(esp_gps_t* esp_gps, size_t len) {
           }
         }
         if (esp_gps->cur_statement == STATEMENT_UNKNOWN) {
-          /* Call user callback to notify that one unknown statement has been met */
+          /* Call user callback to notify that one unknown statement has been
+           * met */
           if (esp_gps->event_handler) {
             esp_gps->event_handler(esp_gps->event_handler_arg, ESP_NMEA_EVENT,
                                    GPS_UNKNOWN, esp_gps->buffer);
@@ -929,11 +930,12 @@ esp_err_t nmea_parser_remove_handler(nmea_parser_handle_t nmea_hdl,
 }
 
 /**
- * @brief Manually decode NMEA statements from a buffer (for host testing or external stream)
+ * @brief Manually decode NMEA statements from a buffer (for host testing or
+ * external stream)
  */
 esp_err_t nmea_parser_decode(nmea_parser_handle_t nmea_hdl,
-                            const char* data,
-                            size_t len) {
+                             const char* data,
+                             size_t len) {
   esp_gps_t* esp_gps = (esp_gps_t*) nmea_hdl;
   if (!esp_gps || !data || len == 0) {
     return ESP_ERR_INVALID_ARG;

@@ -210,7 +210,8 @@ extern esp_err_t nmea_parser_remove_handler(nmea_parser_handle_t nmea_hdl,
                                             esp_event_handler_t event_handler);
 
 /**
- * @brief Manually decode NMEA statements from a buffer (for host testing or external stream)
+ * @brief Manually decode NMEA statements from a buffer (for host testing or
+ * external stream)
  *
  * @param nmea_hdl handle of NMEA parser
  * @param data buffer containing NMEA statements

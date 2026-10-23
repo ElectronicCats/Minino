@@ -97,7 +97,8 @@ static int uart_bridge_println(int argc, char** argv) {
     arg_print_errors(stderr, println_args.end, argv ? argv[0] : "println");
     return 1;
   }
-  if (println_args.message->count != 1 || println_args.message->sval[0] == NULL) {
+  if (println_args.message->count != 1 ||
+      println_args.message->sval[0] == NULL) {
     return 1;
   }
   const char* message = println_args.message->sval[0];

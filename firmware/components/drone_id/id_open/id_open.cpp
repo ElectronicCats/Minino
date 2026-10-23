@@ -42,9 +42,9 @@
 
 #pragma GCC diagnostic warning "-Wunused-variable"
 
+#include <stdlib.h>
 #include <sys/time.h>
 #include <time.h>
-#include <stdlib.h>
 #include "esp_timer.h"
 
 extern "C" {

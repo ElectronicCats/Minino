@@ -8,6 +8,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+#include "app_manager.h"
 #include "coroutine.h"
 #include "file_manager_screens.h"
 #include "flash_fs.h"
@@ -15,7 +16,6 @@
 #include "menus_module.h"
 #include "modals_module.h"
 #include "sd_card.h"
-#include "app_manager.h"
 
 #define INTERNAL_ROOT "/internal"
 #define SD_CARD_ROOT  "/sdcard"
@@ -252,8 +252,8 @@ static void file_options_handler(int8_t selection) {
                           strlen(extension) + 3;
         char* new_path = (char*) malloc(path_len);
         if (new_path != NULL) {
-          snprintf(new_path, path_len, "%s/%s.%s", fm_ctx->current_path, new_name,
-                   extension);
+          snprintf(new_path, path_len, "%s/%s.%s", fm_ctx->current_path,
+                   new_name, extension);
           if (rename(fm_ctx->file_items_arr[fm_ctx->selected_item]->path,
                      new_path) == 0) {
             modals_module_show_info("Success", "File was renamed successfully ",
@@ -398,7 +398,6 @@ void file_manager_module_init() {
   start_coroutine(open_root_options, NULL);
 }
 
-
 // ---------------------------------------------------------------------------
 // app_manager callbacks
 // ---------------------------------------------------------------------------
@@ -409,8 +408,8 @@ static void file_manager_on_enter(void) {
 static void file_manager_on_input(uint8_t button_name, uint8_t button_event) {
   // Input is handled by file_manager_input_cb which is set via coroutines
   // The app state is set in open_root_options/open_root_directory
-  (void)button_name;
-  (void)button_event;
+  (void) button_name;
+  (void) button_event;
 }
 
 static void file_manager_on_exit(void) {
@@ -429,9 +428,8 @@ void app_manager_enter_wrapper_file_manager(void) {
 
 // App definition for app_manager
 const minino_app_t file_manager_app = {
-  .name = "file_manager",
-  .on_enter = file_manager_on_enter,
-  .on_input = file_manager_on_input,
-  .on_exit = file_manager_on_exit,
+    .name = "file_manager",
+    .on_enter = file_manager_on_enter,
+    .on_input = file_manager_on_input,
+    .on_exit = file_manager_on_exit,
 };
-

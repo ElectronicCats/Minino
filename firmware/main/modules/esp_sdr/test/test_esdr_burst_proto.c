@@ -141,7 +141,8 @@ static void test_the_caps_only_advertise_what_is_implemented(void) {
 
   TEST_ASSERT_TRUE(esdr_reply_caps(reply, sizeof(reply)) > 0);
   TEST_ASSERT_EQUAL_STRING(
-      "CAPS VERSION RXLIMITS HWAGC IQ8 SERIALLEASE TUNEEXT RX40 RX16 UARTBAUD SPEC SPECN SPECCAPS "
+      "CAPS VERSION RXLIMITS HWAGC IQ8 SERIALLEASE TUNEEXT RX40 RX16 UARTBAUD "
+      "SPEC SPECN SPECCAPS "
       "DCT\n",
       reply);
 
@@ -241,7 +242,8 @@ static void test_the_version_reply_is_the_json_the_viewer_parses(void) {
 static void test_the_data_header_is_the_one_the_viewer_parses(void) {
   char reply[ESDR_REPLY_MAX];
 
-  TEST_ASSERT_TRUE(esdr_reply_data(reply, sizeof(reply), 4096, 0xdeadbeefu, 217) > 0);
+  TEST_ASSERT_TRUE(
+      esdr_reply_data(reply, sizeof(reply), 4096, 0xdeadbeefu, 217) > 0);
   /* The viewer applies /^DATA (\d+) ([0-9a-fA-F]{1,8}) (\d+)$/ and compares
      the CRC it computes over the payload with the one in the header. */
   TEST_ASSERT_EQUAL_STRING("DATA 4096 deadbeef 217\n", reply);
@@ -259,13 +261,13 @@ static void test_the_eight_bit_format_is_i_then_q(void) {
 
   TEST_ASSERT_EQUAL_UINT32(2, esdr_pack_iq8(words, 1));
   /* I = -512 >> 2 = -128 = 0x80, Q = 511 >> 2 = 127 = 0x7F. */
-  TEST_ASSERT_EQUAL_HEX8(0x80, ((uint8_t*)words)[0]);
-  TEST_ASSERT_EQUAL_HEX8(0x7F, ((uint8_t*)words)[1]);
+  TEST_ASSERT_EQUAL_HEX8(0x80, ((uint8_t*) words)[0]);
+  TEST_ASSERT_EQUAL_HEX8(0x7F, ((uint8_t*) words)[1]);
 }
 
 static void test_the_ten_bit_format_is_twenty_bits_per_pair(void) {
   uint32_t words[2] = {0x7FE00u, 0x00000u};
-  uint8_t* out = (uint8_t*)words;
+  uint8_t* out = (uint8_t*) words;
 
   TEST_ASSERT_EQUAL_UINT32(5, esdr_pack_iq10(words, 2));
   /* The twenty bits of the word go out least significant bit first, so the
@@ -279,7 +281,7 @@ static void test_the_ten_bit_format_is_twenty_bits_per_pair(void) {
 
 static void test_the_ten_bit_format_decodes_the_way_the_viewer_does(void) {
   uint32_t words[2] = {0x7FE00u, 0x00000u};
-  uint8_t* bytes = (uint8_t*)words;
+  uint8_t* bytes = (uint8_t*) words;
 
   esdr_pack_iq10(words, 2);
 
@@ -287,17 +289,18 @@ static void test_the_ten_bit_format_decodes_the_way_the_viewer_does(void) {
      from the low ten bits and Q from the high ten. */
   uint32_t group = 0;
   for (int j = 0; j < 3; j++) {
-    group |= (uint32_t)bytes[j] << (8 * j);
+    group |= (uint32_t) bytes[j] << (8 * j);
   }
   /* The viewer sign extends the ten bit fields: "((word & 1023) << 22) >> 22"
      for I and the same for Q out of bits 10-19. */
-  TEST_ASSERT_EQUAL_INT(-512, (int)(((int32_t)(group & 0x3FFu) << 22) >> 22));
-  TEST_ASSERT_EQUAL_INT(511, (int)((((int32_t)((group >> 10) & 0x3FFu)) << 22) >> 22));
+  TEST_ASSERT_EQUAL_INT(-512, (int) (((int32_t) (group & 0x3FFu) << 22) >> 22));
+  TEST_ASSERT_EQUAL_INT(
+      511, (int) ((((int32_t) ((group >> 10) & 0x3FFu)) << 22) >> 22));
 }
 
 static void test_an_odd_tail_keeps_the_five_byte_group(void) {
   uint32_t words[3] = {0x7FE00u, 0x00000u, 0x00000u};
-  uint8_t* out = (uint8_t*)words;
+  uint8_t* out = (uint8_t*) words;
 
   /* Three samples: one full group of five bytes and a tail of three. */
   TEST_ASSERT_EQUAL_UINT32(8, esdr_pack_iq10(words, 3));
@@ -321,12 +324,15 @@ static void test_the_wire_size_matches_the_payload_the_viewer_reads(void) {
 
 static void test_the_crc_is_the_one_the_viewer_computes(void) {
   /* The browser uses the zlib crc32, so the vectors have to match it. */
-  TEST_ASSERT_EQUAL_HEX32(0x00000000u, esdr_crc32((const uint8_t*)"", 0));
-  TEST_ASSERT_EQUAL_HEX32(0xE8B7BE43u, esdr_crc32((const uint8_t*)"a", 1));
-  TEST_ASSERT_EQUAL_HEX32(0x352441C2u, esdr_crc32((const uint8_t*)"abc", 3));
-  TEST_ASSERT_EQUAL_HEX32(0xCBF43926u, esdr_crc32((const uint8_t*)"123456789", 9));
-  TEST_ASSERT_EQUAL_HEX32(0x414FA339u,
-                          esdr_crc32((const uint8_t*)"The quick brown fox jumps over the lazy dog", 43));
+  TEST_ASSERT_EQUAL_HEX32(0x00000000u, esdr_crc32((const uint8_t*) "", 0));
+  TEST_ASSERT_EQUAL_HEX32(0xE8B7BE43u, esdr_crc32((const uint8_t*) "a", 1));
+  TEST_ASSERT_EQUAL_HEX32(0x352441C2u, esdr_crc32((const uint8_t*) "abc", 3));
+  TEST_ASSERT_EQUAL_HEX32(0xCBF43926u,
+                          esdr_crc32((const uint8_t*) "123456789", 9));
+  TEST_ASSERT_EQUAL_HEX32(
+      0x414FA339u,
+      esdr_crc32((const uint8_t*) "The quick brown fox jumps over the lazy dog",
+                 43));
 }
 
 static void test_the_crc_covers_the_whole_payload(void) {

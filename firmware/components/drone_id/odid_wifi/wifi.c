@@ -182,8 +182,10 @@ void drone_export_gps_data(ODID_UAS_Data* UAS_Data,
   mprintf("\t\t\t\"AuthType\": %d,\n", UAS_Data->Auth[0].AuthType);
   mprintf("\t\t\t\"LastPageIndex\": %d,\n", UAS_Data->Auth[0].LastPageIndex);
   mprintf("\t\t\t\"Length\": %d,\n", UAS_Data->Auth[0].Length);
-  mprintf("\t\t\t\"Timestamp\": %lu,\n", (unsigned long) UAS_Data->Auth[0].Timestamp);
-  for (int i = 0; i <= UAS_Data->Auth[0].LastPageIndex && i < ODID_AUTH_MAX_PAGES; i++) {
+  mprintf("\t\t\t\"Timestamp\": %lu,\n",
+          (unsigned long) UAS_Data->Auth[0].Timestamp);
+  for (int i = 0;
+       i <= UAS_Data->Auth[0].LastPageIndex && i < ODID_AUTH_MAX_PAGES; i++) {
     mprintf("\t\t\t\"AuthDataPage%d\": \"", i);
     for (int b = 0; b < ODID_AUTH_PAGE_NONZERO_DATA_SIZE; b++) {
       mprintf("%02X", (unsigned char) UAS_Data->Auth[i].AuthData[b]);
@@ -217,7 +219,8 @@ void drone_export_gps_data(ODID_UAS_Data* UAS_Data,
   mprintf("\t\t\t\"ClassEU\": %d,\n", UAS_Data->System.ClassEU);
   mprintf("\t\t\t\"OperatorAltitudeGeo\": %f,\n",
           (double) UAS_Data->System.OperatorAltitudeGeo);
-  mprintf("\t\t\t\"Timestamp\": %lu,\n", (unsigned long) UAS_Data->System.Timestamp);
+  mprintf("\t\t\t\"Timestamp\": %lu,\n",
+          (unsigned long) UAS_Data->System.Timestamp);
   mprintf("\t\t}\n");
 
   mprintf("\t\t\"OperatorID\": {\n");
