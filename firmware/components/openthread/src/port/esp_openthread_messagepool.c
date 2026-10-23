@@ -12,7 +12,7 @@
 #include "openthread/instance.h"
 #include "openthread/platform/messagepool.h"
 
-int s_buffer_pool_head = -1;
+static int s_buffer_pool_head = -1;
 otMessageBuffer** s_buffer_pool_pointer = NULL;
 
 void otPlatMessagePoolInit(otInstance* aInstance,

@@ -4,13 +4,8 @@
 #ifndef HID_SCREENS_H
   #define HID_SCREENS_H
 
-enum {
-  HID_CONFIG_NAME,
-  HID_CONFIG_MAC,
-  HID_CONFIG_START,
-  HID_MENU_COUNT
-} hid_menu_item = HID_CONFIG_NAME;
-char* hid_menu_items[HID_MENU_COUNT] = {"Device name", "Device MAC", "Start"};
+enum { HID_CONFIG_NAME, HID_CONFIG_MAC, HID_CONFIG_START, HID_MENU_COUNT };
+extern char* hid_menu_items[];
 
 enum {
   HID_DEVICE_VOL_UP,
@@ -22,10 +17,8 @@ enum {
   HID_DEVICE_NEXT_TRACK,
   HID_DEVICE_PREV_TRACK,
   HID_DEVICE_COUNT
-} hid_device_item = HID_DEVICE_VOL_UP;
-char* hid_device_items[HID_DEVICE_COUNT] = {
-    "Volume Up", "Volume Down", "Play",       "Pause",
-    "Stop",      "Mute",        "Next Track", "Previous Track"};
+};
+extern char* hid_device_items[];
 
 void hid_module_register_menu(menu_tree_t menu);
 void hid_clear_screen();

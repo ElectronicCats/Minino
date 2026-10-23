@@ -21,6 +21,7 @@ BSSEATTLE_BUILD_DIR="build-bsseattle"
 FINAL_BUILD_DIR="minino-release-$PROJECT_VERSION"
 
 make builds
+make flash_fit
 make mergebins
 
 if [ -d "$FINAL_BUILD_DIR" ]; then

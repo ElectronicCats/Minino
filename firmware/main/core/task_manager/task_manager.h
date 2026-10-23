@@ -73,6 +73,11 @@ typedef struct {
 esp_err_t task_manager_init(void);
 
 /**
+ * @brief Desinicializa el Task Manager y libera recursos
+ */
+void task_manager_deinit(void);
+
+/**
  * @brief Crea una nueva tarea y la registra en el manager
  *
  * Wrapper sobre xTaskCreate() que estandariza prioridades y stack sizes

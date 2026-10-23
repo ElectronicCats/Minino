@@ -13,6 +13,7 @@
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "sd_card.h"
+#include "sd_card_settings_module.h"
 #include "task_manager.h"
 #include "wardriving_common.h"
 #include "wardriving_module.h"
@@ -40,21 +41,21 @@ typedef struct {
 } mac_entry_t;
 
 static const char* TAG = "wardriving_module";
-wardriving_module_state_t wardriving_module_state =
+static wardriving_module_state_t wardriving_module_state =
     WARDRIVING_MODULE_STATE_STOPPED;
-TaskHandle_t wardriving_module_scan_task_handle = NULL;
-TaskHandle_t scanning_wifi_animation_task_handle = NULL;
-bool running_wifi_scanner_animation = false;
+static TaskHandle_t wardriving_module_scan_task_handle = NULL;
+static TaskHandle_t scanning_wifi_animation_task_handle = NULL;
+static bool running_wifi_scanner_animation = false;
 
-uint16_t csv_lines = 0;
-uint16_t wifi_scanned_packets = 0;
-char* csv_file_name = NULL;
-char* csv_file_buffer = NULL;
-bool csv_file_initialized = false;
+static uint16_t csv_lines = 0;
+static uint16_t wifi_scanned_packets = 0;
+static char* csv_file_name = NULL;
+static char* csv_file_buffer = NULL;
+static bool csv_file_initialized = false;
 
-mac_entry_t mac_table[MAX_MAC_TABLE_SIZE];
-uint16_t mac_table_count = 0;
-uint16_t mac_table_head = 0;
+static mac_entry_t mac_table[MAX_MAC_TABLE_SIZE];
+static uint16_t mac_table_count = 0;
+static uint16_t mac_table_head = 0;
 
 const char* csv_header = FORMAT_VERSION
     ",appRelease=" APP_VERSION ",model=" MODEL ",release=" RELEASE
@@ -293,7 +294,11 @@ void wardriving_gps_event_handler_cb(gps_t* gps) {
   counter++;
 
   if (gps->sats_in_use == 0) {
-    vTaskSuspend(scanning_wifi_animation_task_handle);
+    /* Guards against vTaskSuspend(NULL), which would suspend this NMEA task
+       (priority 20) and stop GPS parsing for the rest of the session. */
+    if (scanning_wifi_animation_task_handle != NULL) {
+      vTaskSuspend(scanning_wifi_animation_task_handle);
+    }
     running_wifi_scanner_animation = false;
     wardriving_screens_module_no_gps_signal();
     return;
@@ -301,8 +306,10 @@ void wardriving_gps_event_handler_cb(gps_t* gps) {
 
   if (!running_wifi_scanner_animation) {
     oled_screen_clear();
-    vTaskResume(scanning_wifi_animation_task_handle);
-    running_wifi_scanner_animation = true;
+    if (scanning_wifi_animation_task_handle != NULL) {
+      vTaskResume(scanning_wifi_animation_task_handle);
+      running_wifi_scanner_animation = true;
+    }
   }
 
   if (counter % DISPLAY_REFRESH_RATE_SEC == 0 || counter == 1) {
@@ -403,14 +410,23 @@ void wardriving_module_start_scan() {
     return;
   }
 
-  task_manager_create(
+  /* The return value matters: task_manager_create() leaves the handle NULL when
+     xTaskCreate fails or the registry is full, and vTaskSuspend(NULL) suspends
+     the *calling* task - which here is the esp_timer task that runs the button
+     callbacks, so a failure would freeze the whole UI. */
+  err = task_manager_create(
       wardriving_screens_wifi_animation_task, "wardriving_anim",
       TASK_STACK_SMALL,  // Animaciones solo necesitan stack pequeño
       NULL,
       TASK_PRIORITY_LOW,  // UI baja prioridad
       &scanning_wifi_animation_task_handle);
 
-  vTaskSuspend(scanning_wifi_animation_task_handle);
+  if (err == ESP_OK) {
+    vTaskSuspend(scanning_wifi_animation_task_handle);
+  } else {
+    ESP_LOGE(TAG, "Failed to create the wardriving animation task");
+    scanning_wifi_animation_task_handle = NULL;
+  }
   running_wifi_scanner_animation = false;
 
   gps_module_register_cb(wardriving_gps_event_handler_cb);

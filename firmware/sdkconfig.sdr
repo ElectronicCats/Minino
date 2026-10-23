@@ -1,0 +1,28 @@
+# The SDR build variant.
+#
+# The ESP-SDR browser viewer (https://espargos.net/espsdr/app/) and the
+# native capture app need the whole of SRAM block 2 (0x40840000) as the
+# capture bank, so the application image has to fit below it. With the Zigbee
+# and the Thread stacks in, the image is 45 KB over the limit and the link
+# fails with:
+#
+#   SDR: the DRAM image overlaps the capture bank
+#
+# The MININO_ZIGBEE_STACK and MININO_OPENTHREAD_STACK options exist for
+# exactly this: they take the components of those stacks out of the build
+# (see the filters in main/CMakeLists.txt) and free the 40 KB they need.
+# The menus follow the same gate, so the apps of the stacks that are not
+# compiled in disappear from the menu as well.
+#
+# Build it with:
+#   idf.py @profiles/sdr/profile build
+#
+# or, from the Makefile:
+#   make build-sdr
+
+# The capture bank is reserved and the image is capped below it.
+CONFIG_SDR_ENABLE=y
+
+# The Zigbee and the Thread stacks do not fit under the cap.
+# CONFIG_MININO_ZIGBEE_STACK is not set
+# CONFIG_MININO_OPENTHREAD_STACK is not set

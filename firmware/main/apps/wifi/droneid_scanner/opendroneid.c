@@ -15,11 +15,11 @@ gabriel.c.cox@intel.com
 #include <stdio.h>
 #define ENABLE_DEBUG 1
 
-const float SPEED_DIV[2] = {0.25f, 0.75f};
-const float VSPEED_DIV = 0.5f;
-const int32_t LATLON_MULT = 10000000;
-const float ALT_DIV = 0.5f;
-const int ALT_ADDER = 1000;
+static const float SPEED_DIV[2] = {0.25f, 0.75f};
+static const float VSPEED_DIV = 0.5f;
+static const int32_t LATLON_MULT = 10000000;
+static const float ALT_DIV = 0.5f;
+static const int ALT_ADDER = 1000;
 
 static char* safe_dec_copyfill(char* dstStr, const char* srcStr, int dstSize);
 static int intRangeMax(int64_t inValue, int startRange, int endRange);

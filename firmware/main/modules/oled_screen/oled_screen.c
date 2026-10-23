@@ -8,14 +8,14 @@
 #include "oled_screen.h"
 
 static const char* TAG = "OLED_DRIVER";
-oled_driver_t dev;
-SemaphoreHandle_t oled_mutex;
+static oled_driver_t dev;
+static SemaphoreHandle_t oled_mutex;
 
 uint8_t* last_buffer = NULL;
 
 void oled_screen_begin() {
 #if !defined(CONFIG_OLED_MODULE_DEBUG)
-  esp_log_level_set(TAG, ESP_LOG_NONE);
+  esp_log_level_set(TAG, ESP_LOG_WARN);
 #endif
 
   oled_mutex = xSemaphoreCreateMutex();
@@ -78,6 +78,33 @@ void oled_screen_set_last_buffer() {
     last_buffer = NULL;
   }
   xSemaphoreGive(oled_mutex);
+}
+
+/*
+ * How much ink is in the frame buffer that was last pushed to the panel,
+ * counted as non-zero bytes.
+ *
+ * Lets a caller (a console command, a test, the field) tell "the panel is dead"
+ * apart from "the panel has nothing drawn on it", which look identical from
+ * the outside. Every OLED issue found on this firmware - a dead animation
+ * overwriting the menu, a screensaver drawing a black rectangle over the whole
+ * screen - showed up as this count dropping to zero.
+ */
+size_t oled_screen_ink(void) {
+  if (oled_mutex == NULL || dev._pages == 0 || dev._width == 0) {
+    return 0;
+  }
+  xSemaphoreTake(oled_mutex, portMAX_DELAY);
+  size_t non_zero = 0;
+  for (int page = 0; page < dev._pages; page++) {
+    for (int x = 0; x < dev._width; x++) {
+      if (dev._page[page]._segs[x] != 0) {
+        non_zero++;
+      }
+    }
+  }
+  xSemaphoreGive(oled_mutex);
+  return non_zero;
 }
 
 void oled_screen_clear() {

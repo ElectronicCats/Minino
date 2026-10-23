@@ -1,5 +1,12 @@
 #pragma once
 
+/* ESP-IDF puts sdkconfig.h on the include path but does not force-include
+   it, so the CONFIG_RESOLUTION_* tests below are only meaningful when it
+   has already been pulled in. Include it explicitly: otherwise a
+   translation unit that reaches this header first silently compiles the
+   128x32 branch. */
+#include "sdkconfig.h"
+
 #include "menus.h"
 
 #include "keyboard_module.h"
@@ -26,12 +33,10 @@ menu_idx_t menus_module_get_current_menu();
 void menus_module_set_app_state_last();
 void menus_module_set_default_input();
 bool menus_module_get_app_state();
-void menus_module_restart();
 void menus_module_exit_app();
-void menus_module_screen_saver_run();
 void menus_module_set_reset_screen(menu_idx_t menu);
 void menus_module_set_menu(menu_idx_t menu_idx);
-void menus_module_set_menu_over_cmd(char* entry_cmd);
+void menus_module_set_menu_over_cmd(const char* entry_cmd);
 void menus_module_hide_menu(menu_idx_t menu_idx);
 void menus_module_reveal_menu(menu_idx_t menu_idx);
 void menus_module_refresh();

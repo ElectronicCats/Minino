@@ -1,6 +1,7 @@
 #include "detector_scenes.h"
 #include "detector.h"
 
+#include "app_manager.h"
 #include "general_radio_selection.h"
 #include "general_scrolling_text.h"
 #include "general_submenu.h"
@@ -70,7 +71,7 @@ static void main_menu_handler(uint8_t selection) {
 }
 
 static void main_menu_exit() {
-  menus_module_exit_app();
+  app_manager_exit();
 }
 
 void detector_scenes_main_menu() {

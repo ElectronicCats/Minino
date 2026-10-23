@@ -3,11 +3,11 @@ name: Host tests
 
 on:
   push:
-    branches: [main, 'feat/**']
+    branches: [main, 'feat/**', 'refactor/**']
   pull_request:
 
 jobs:
-  surveillance-detect:
+  host-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,9 +15,11 @@ jobs:
         run: |
           git clone --depth 1 -b release/v5.5 --filter=blob:none --sparse \
               https://github.com/espressif/esp-idf.git "$RUNNER_TEMP/esp-idf"
-          git -C "$RUNNER_TEMP/esp-idf" sparse-checkout set components/unity
+          git -C "$RUNNER_TEMP/esp-idf" sparse-checkout set components/unity components/console
           git -C "$RUNNER_TEMP/esp-idf" submodule update --init --depth 1 components/unity/unity
-      - name: Run surveillance_detect host tests
-        run: make -C firmware/components/surveillance_detect/test run-tests
+      # One runner discovers every */test/Makefile. Adding a suite no longer
+      # requires editing this file and the top-level Makefile in lockstep.
+      - name: Run all host test suites
+        run: ./firmware/tools/run_host_tests.sh
         env:
           IDF_PATH: ${{ runner.temp }}/esp-idf

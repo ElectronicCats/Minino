@@ -4,8 +4,10 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "modbus_engine.h"
+
 typedef struct {
-  uint8_t request[260];
+  uint8_t request[MODBUS_TCP_MAX_REQUEST_LEN];
   size_t request_len;
   char* ip;
   int port;

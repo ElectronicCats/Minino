@@ -64,16 +64,16 @@ const char* switch_state_names[] = {
     "SWITCH_LIGHT_FOUND",    "SWITCH_NO_DEVICES",     "SWITCH_EXIT",
 };
 
-volatile switch_state_t switch_state = SWITCH_CREATE_NETWORK;
-switch_state_t switch_state_prev = SWITCH_EXIT;
-uint16_t open_network_duration = 0;
+static volatile switch_state_t switch_state = SWITCH_CREATE_NETWORK;
+static switch_state_t switch_state_prev = SWITCH_EXIT;
+static uint16_t open_network_duration = 0;
 
-TaskHandle_t network_failed_task_handle = NULL;
-TaskHandle_t wait_for_devices_task_handle = NULL;
-TaskHandle_t switch_state_machine_task_handle = NULL;
-TaskHandle_t network_open_task_handle = NULL;
+static TaskHandle_t network_failed_task_handle = NULL;
+static TaskHandle_t wait_for_devices_task_handle = NULL;
+static TaskHandle_t switch_state_machine_task_handle = NULL;
+static TaskHandle_t network_open_task_handle = NULL;
 
-display_status_cb_t zigbee_switch_display_status_cb = NULL;
+static display_status_cb_t zigbee_switch_display_status_cb = NULL;
 static zb_signal_handler_t g_custom_signal_handler = NULL;
 
 static const char* TAG = "ESP_ZB_ON_OFF_SWITCH";

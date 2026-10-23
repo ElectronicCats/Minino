@@ -27,8 +27,15 @@ void flash_storage_show_list(char* main_tree);
 */
 void flash_storage_delete_list_item(char* main_tree, char* subitem);
 
-void flash_storage_get_list(char* main_tree,
-                            storage_contex_t* list_storage,
-                            uint8_t* list_count);
+/* Capacity the callers allocate for flash_storage_get_list(). The number of
+   saved items is only bounded by NVS, so the function used to write past the
+   caller's array once more than this many entries existed. */
+#define FLASH_STORAGE_MAX_LIST_ITEMS 99
+
+/* Returns the number of items written, and refuses to write more than
+   capacity items into list_storage. */
+uint8_t flash_storage_get_list(char* main_tree,
+                               storage_contex_t* list_storage,
+                               uint8_t capacity);
 
 storage_contex_t* flash_storage_get_item(char* main_tree, char* subitem);

@@ -9,6 +9,7 @@
 #include "driver/sdmmc_host.h"
 #include "driver/sdspi_host.h"
 #include "driver/spi_common.h"
+#include "esp_console.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_vfs_fat.h"
@@ -48,8 +49,8 @@ const char* f_result_to_name[] = {"FR_OK",
 
 static const char* TAG = "sd_card";
 sdmmc_card_t* card = NULL;
-bool _format_if_mount_failed = false;
-sd_card_info_t _sd_card_info;
+static bool _format_if_mount_failed = false;
+static sd_card_info_t _sd_card_info;
 static bool s_sd_card_mounted = false;
 static SemaphoreHandle_t s_sd_mutex = NULL;
 
@@ -89,6 +90,32 @@ void print_files_in_sd() {
   }
 }
 
+/** 'sdtest' command: mount the card and report what happened. */
+static int sdtest(int argc, char** argv) {
+  (void) argc;
+  (void) argv;
+  if (sd_card_is_mounted()) {
+    printf("sd_card: already mounted at %s\n", MOUNT_POINT);
+    return 0;
+  }
+  esp_err_t err = sd_card_mount();
+  if (err == ESP_OK) {
+    printf("sd_card: mounted at %s\n", MOUNT_POINT);
+    return 0;
+  }
+  printf("sd_card: mount failed: %s\n", esp_err_to_name(err));
+  return 1;
+}
+
+static void sdtest_register(void) {
+  esp_console_cmd_t cmd = {
+      .command = "sdtest",
+      .help = "Mount the microSD and report the result",
+      .func = &sdtest,
+  };
+  esp_console_cmd_register(&cmd);
+}
+
 /** 'mount' command */
 int mount() {
   esp_err_t ret;
@@ -97,8 +124,8 @@ int mount() {
            _format_if_mount_failed ? "true" : "false");
   esp_vfs_fat_sdmmc_mount_config_t mount_config = {
       .format_if_mount_failed = _format_if_mount_failed,
-      .max_files = 4,
-      .allocation_unit_size = 16 * 1024};
+      .max_files = 2,
+      .allocation_unit_size = 4 * 1024};
 
   // initialize SD card and mount FAT filesystem.
   ESP_LOGI(TAG, "Using SPI peripheral");
@@ -113,8 +140,11 @@ int mount() {
   };
   ret = spi_bus_initialize(host.slot, &bus_cfg, SPI_DMA_CH_AUTO);
   if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+    /* Report the real error: the caller (and the log) used to see
+       ESP_ERR_NO_MEM, which sent the hunt for a memory problem that was
+       not there. */
     ESP_LOGE(TAG, "Failed to initialize bus: %s", esp_err_to_name(ret));
-    return ESP_ERR_NO_MEM;
+    return ret;
   }
 
   // This initializes the slot without card detect (CD) and write protect (WP)
@@ -128,6 +158,10 @@ int mount() {
                                 &card);
 
   if (ret != ESP_OK) {
+    /* Give the file system slot back: a mount that fails half way leaves the
+       context registered, and the next attempt then reports a bogus
+       ESP_ERR_NO_MEM ("no free context") instead of the real error. */
+    esp_vfs_fat_unregister_path(MOUNT_POINT);
     if (ret == ESP_FAIL) {
       ESP_LOGE(TAG,
                "Failed to mount filesystem. "
@@ -168,6 +202,7 @@ esp_err_t unmount() {
 }
 
 void sd_card_begin() {
+  sdtest_register();
   if (s_sd_mutex == NULL) {
     s_sd_mutex = xSemaphoreCreateMutex();
   }
@@ -180,12 +215,15 @@ esp_err_t sd_card_mount() {
 #ifndef CONFIG_SD_ENABLED
   return ESP_ERR_NOT_SUPPORTED;
 #endif
+  /* Mounting twice leaves a second FATFS context and a second set of buffers
+     behind: the modules that save to the card (the trackers, the thread
+     sniffer, the analyzer) called this without asking, and the heap ran out
+     after a few of them. The card is already there: use it. */
+  if (sd_card_is_mounted()) {
+    return ESP_OK;
+  }
   ESP_LOGI(TAG, "Mounting SD Card...");
   esp_err_t err = ESP_OK;
-  if (sd_card_is_mounted()) {
-    ESP_LOGW(TAG, "SD card already mounted");
-    return err;
-  }
 
   err = mount();
   if (err != ESP_OK) {

@@ -109,9 +109,6 @@ void hid_module_display_device_connection(bool status) {
     // general_register_menu(&hid_menu);
     genera_screen_display_notify_information("Notify", "Disconnected");
   }
-  vTaskDelay(1000 / portTICK_PERIOD_MS);
-  // hid_current_item = 0;
-  // general_screen_display_menu(hid_current_item);
 }
 
 void hid_module_display_device_name() {

@@ -106,6 +106,83 @@ Minino can operate in 7 different technologies:
 - [x] **File Manager Local**: On-device microSD file browser using OLED screen and buttons.
 - [x] **File Manager Web**: Embedded HTTP web server for WiFi-based file downloads and uploads.
 
+#### SDR (`Applications > SDR`)
+- [x] **ESP-SDR Launcher**: Boots the [ESPARGOS esp-sdr](https://github.com/ESPARGOS/esp-sdr)
+  software defined radio firmware, flashed into the secondary OTA slot.
+
+Design notes, root cause analysis and verification log:
+[`docs/esp-sdr-integration.md`](docs/esp-sdr-integration.md).
+
+Test results and a getting-started guide (build variant, flashing, the
+three ways of using it, the measurements on two boards):
+[`docs/sdr-guia.md`](docs/sdr-guia.md).
+
+The full test report (both boards, both applications, the spectrum
+profiles and the limits of the measurement):
+[`docs/sdr-resultados.md`](docs/sdr-resultados.md).
+
+The wire format of the two packets (the burst and the on-chip spectrum),
+with the real bytes captured from the board, and where each one is
+displayed:
+[`docs/sdr-protocolo.md`](docs/sdr-protocolo.md).
+
+The results of the two applications (SDR and Spectrum) on the two
+boards:
+[`docs/spectrum-SDR-results.md`](docs/spectrum-SDR-results.md).
+
+Only available on 8MB boards built with OTA (`CONFIG_SDR_ENABLE`, default on for
+`BOARD_MININO`). Install the radio firmware with:
+
+```bash
+firmware/tools/flash_dual_app.sh /dev/ttyACM0
+```
+
+The script builds Minino OS, builds esp-sdr for `esp32c6` with ESP-IDF, and
+writes both images (`ota_0` / `ota_1`) in a single pass. `Right` on the
+confirmation screen switches the boot slot, `Left` goes back.
+
+Once esp-sdr runs it owns the USB port as its serial console (it reconfigures
+GPIO16/17, the USB-Serial-JTAG pins, as a UART), so the Minino monitor goes
+quiet.
+
+##### Coming back from the SDR
+
+Minino normally navigates with `Right` to enter and `Left` to exit, so `Right`
+is what launches the SDR. Upstream esp-sdr has no way to undo that, which
+would leave the board unbootable from the menu, so `tools/flash_dual_app.sh`
+runs `tools/patches/apply_esp_sdr_minino.py`, which injects a `MININO` command
+into the burst protocol that selects `ota_0` and reboots:
+
+```bash
+stty -F /dev/ttyACM0 115200 raw; printf 'MININO\n' > /dev/ttyACM0
+```
+
+The board comes back up as Minino with `ota_0` selected. The injection is
+idempotent and anchored on `handle_command()`, so it survives upstream edits
+elsewhere in the file, needs no CMake change (the `otadata` layout is declared
+locally with a size assertion), and fails loudly if that function is ever
+renamed. When it cannot be applied the flasher says so and the SDR still
+works, but returning means reflashing Minino over USB.
+
+The version shown on the Minino confirmation screen carries a `-dirty` suffix
+when the injection is in, which tells you at a glance whether `MININO` exists.
+
+##### Why not a Zephyr build
+
+The secondary slot has to hold an image the ESP-IDF bootloader can start. On
+the ESP32-C6 (`SOC_MMU_PAGE_SIZE_CONFIGURABLE`) the bootloader aborts with
+`Failed to fetch app description header!` unless the image carries an
+`esp_app_desc_t` at partition offset `0x20`, which Zephyr images do not
+produce. ESP-IDF images do, and ESP-IDF links IROM/DROM partition-relative, so
+an esp-sdr build can be relocated to `ota_1` (`0x440000`) as-is.
+
+Both the flasher and the menu entry verify this before switching the boot
+partition, so an unbootable payload is reported instead of bricking the board:
+
+```bash
+make -C firmware sdr_check      # host-side check of the ota_1 payload
+```
+
 ---
 
 ### Menu: Settings (`Settings`)

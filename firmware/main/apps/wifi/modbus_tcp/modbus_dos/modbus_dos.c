@@ -11,6 +11,7 @@
 #include "nvs_flash.h"
 
 #include "modbus_dos_prefs.h"
+#include "wifi_service.h"
 
 static const char* TAG = "MODBUS_TCP";
 
@@ -72,15 +73,20 @@ static void wifi_init(char* ssid, char* pass) {
   ESP_ERROR_CHECK(esp_netif_init());
   esp_event_loop_create_default();
 
-  wifi_netif = esp_netif_create_default_wifi_sta();
+  wifi_netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+  if (wifi_netif == NULL) {
+    wifi_netif = esp_netif_create_default_wifi_sta();
+  }
 
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+  if (!wifi_service_is_up_get() && !wifi_service_init(WIFI_MODE_STA)) {
+    ESP_LOGE(TAG, "WiFi stack init failed");
+    return;
+  }
 
-  ESP_ERROR_CHECK(esp_event_handler_instance_register(
-      WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL, NULL));
-  ESP_ERROR_CHECK(esp_event_handler_instance_register(
-      IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL, NULL));
+  esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler,
+                             NULL);
+  esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler,
+                             NULL);
 
   wifi_config_t wifi_config = {
       .sta =
@@ -95,7 +101,7 @@ static void wifi_init(char* ssid, char* pass) {
   strncpy((char*) wifi_config.sta.password, modubs_dos_prefs_get_prefs()->pass,
           sizeof(wifi_config.sta.password) - 1);
 
-  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+  ESP_ERROR_CHECK(wifi_service_set_mode(WIFI_MODE_STA));
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
   ESP_ERROR_CHECK(esp_wifi_start());
 
@@ -106,20 +112,13 @@ void modbus_dos_stop() {
   is_running = false;
   vTaskDelay(pdMS_TO_TICKS(100));
 
-  ESP_ERROR_CHECK(esp_wifi_stop());
+  esp_wifi_disconnect();
+  esp_wifi_stop();
 
-  ESP_ERROR_CHECK(esp_event_handler_instance_unregister(
-      WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler));
-  ESP_ERROR_CHECK(esp_event_handler_instance_unregister(
-      IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler));
-
-  ESP_ERROR_CHECK(esp_wifi_deinit());
-
-  esp_netif_destroy_default_wifi(wifi_netif);
-
-  ESP_ERROR_CHECK(esp_event_loop_delete_default());
-
-  ESP_ERROR_CHECK(nvs_flash_deinit());
+  esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID,
+                               &wifi_event_handler);
+  esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP,
+                               &wifi_event_handler);
 }
 
 int modbus_tcp_connect(uint16_t port, char* ip) {

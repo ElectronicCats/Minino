@@ -26,9 +26,22 @@ static void load_prefs() {
     modbus_tcp_prefs_begin();
   }
 
-  mb_tcp_prefs->request_len = preferences_get_uint(MODBUS_TCP_LEN_MEM, 0);
-  preferences_get_bytes(MODBUS_TCP_REQ_MEM, mb_tcp_prefs->request,
-                        mb_tcp_prefs->request_len);
+  /* request_len comes from NVS and can exceed the buffer if an earlier build
+     (or a corrupted entry) wrote a larger value; clamp before it is used as a
+     copy length. */
+  size_t stored_len = preferences_get_uint(MODBUS_TCP_LEN_MEM, 0);
+  if (stored_len > sizeof(mb_tcp_prefs->request)) {
+    ESP_LOGW(TAG,
+             "stored Modbus request of %u bytes exceeds the %u byte "
+             "buffer, clamping",
+             (unsigned) stored_len, (unsigned) sizeof(mb_tcp_prefs->request));
+    stored_len = sizeof(mb_tcp_prefs->request);
+  }
+  mb_tcp_prefs->request_len = stored_len;
+  if (stored_len > 0) {
+    preferences_get_bytes(MODBUS_TCP_REQ_MEM, mb_tcp_prefs->request,
+                          stored_len);
+  }
 
   mb_tcp_prefs->port =
       preferences_get_int(MODBUS_TCP_SERVER_PORT_MEM, MODBUS_TCP_PORT_DEF);
@@ -60,6 +73,11 @@ modbus_tcp_prefs_t* modubs_tcp_prefs_get_prefs() {
 void modbus_tcp_prefs_set_req(uint8_t* request, size_t request_len) {
   if (!mb_tcp_prefs) {
     modbus_tcp_prefs_begin();
+  }
+  if (request == NULL || request_len > sizeof(mb_tcp_prefs->request)) {
+    ESP_LOGE(TAG, "refusing a Modbus request of %u bytes (max %u)",
+             (unsigned) request_len, (unsigned) sizeof(mb_tcp_prefs->request));
+    return;
   }
 
   memcpy(mb_tcp_prefs->request, request, request_len);

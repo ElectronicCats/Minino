@@ -24,6 +24,7 @@
 #include "nvs_flash.h"
 #include "oled_screen.h"
 #include "preferences.h"
+#include "sdkconfig.h"
 #include "soc/soc_caps.h"
 
 #include "cmd_wifi_list.h"
@@ -51,7 +52,7 @@ void unregister_ctrl_c_handler() {
   ctrl_c_callback = NULL;
 }
 
-static void initialize_nvs(void) {
+__attribute__((unused)) static void initialize_nvs(void) {
   esp_err_t err = nvs_flash_init();
   if (err == ESP_ERR_NVS_NO_FREE_PAGES ||
       err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -176,13 +177,21 @@ static void register_commands() {
   register_wifi();
   cmd_spamssid_register_commands();
   cmd_control_register_launch_cmd();
+  cmd_control_register_press_cmd();
+  cmd_control_register_display_cmd();
+  cmd_control_register_sdr_cmd();
+  cmd_control_register_threshold_cmd();
   cmd_control_register_uart_bridge_commands();
   cmd_control_register_system_commands();
+#if defined(CONFIG_BT_ENABLED)
   drone_id_cmd_register_location_cmd();
+#endif
   modbus_dos_cmd_register_cmds();
   modbus_client_cmd_register_cmds();
   modbus_engine_cmd_register_cmds();
+#if defined(CONFIG_BT_ENABLED)
   gattccmd_register_cmd();
+#endif
   cmd_wifi_list_register_commands();
   captivecmd_register_cmd();
   // Uncomment to use the demo app commands

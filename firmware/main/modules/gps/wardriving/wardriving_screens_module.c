@@ -16,7 +16,7 @@ char* wardriving_help_2[] = {
     "Before starting", "the scan, make", "sure your date",
     "and time are",    "correct.",
 };
-const general_menu_t wardriving_help_menu = {
+static const general_menu_t wardriving_help_menu = {
     .menu_count = 14,
     .menu_items = wardriving_help_2,
     .menu_level = GENERAL_TREE_APP_MENU};

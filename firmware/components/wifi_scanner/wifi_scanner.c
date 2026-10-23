@@ -2,6 +2,7 @@
 #include <string.h>
 #include "esp_log.h"
 #include "esp_wifi.h"
+#include "wifi_service.h"
 
 /**
  * @brief Stores last scanned AP records into linked list.
@@ -19,14 +20,11 @@ void wifi_scanner_module_scan() {
              esp_err_to_name(err));
   }
   ap_records.count = CONFIG_SCAN_MAX_AP;
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  err = esp_wifi_init(&cfg);
-  if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
-    ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to init wifi: %s",
-             esp_err_to_name(err));
+  if (!wifi_service_is_up_get() && !wifi_service_init(WIFI_MODE_STA)) {
+    ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to init wifi");
     return;
   }
-  err = esp_wifi_set_mode(WIFI_MODE_STA);
+  err = wifi_service_set_mode(WIFI_MODE_STA);
   if (err != ESP_OK) {
     ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to set wifi mode: %s",
              esp_err_to_name(err));

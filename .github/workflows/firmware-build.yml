@@ -1,0 +1,42 @@
+name: Firmware build
+
+on:
+  pull_request:
+    paths:
+      - 'firmware/**'
+      - '.github/workflows/firmware-build.yml'
+  push:
+    branches: [main, 'refactor/**', 'feat/**']
+    paths:
+      - 'firmware/**'
+      - '.github/workflows/firmware-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.profile }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - profile: minino
+            partition: partitions.csv
+          - profile: sdr
+            partition: partitions.csv
+          - profile: bsides
+            partition: partitions_4MB.csv
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+      - name: Build ${{ matrix.profile }} and check flash fit
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v5.5.1
+          target: esp32c6
+          path: './firmware'
+          command: ./tools/ci_build_profile.sh ${{ matrix.profile }} ${{ matrix.partition }}

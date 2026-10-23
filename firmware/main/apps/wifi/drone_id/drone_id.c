@@ -1,6 +1,8 @@
 #include "drone_id.h"
+#include "app_manager.h"
 #include "drone_id_anim.h"
 #include "drone_id_preferences.h"
+#include "drone_id_scenes/drone_id_scenes.h"
 #include "drone_id_screens.h"
 #include "gps_module.h"
 #include "odrone_id.h"
@@ -72,3 +74,35 @@ void drone_id_set_ble_drone(uint8_t ble_drone) {
 
   odrone_id_set_ble_drone(ble_drone);
 }
+
+// ---------------------------------------------------------------------------
+// app_manager callbacks
+// ---------------------------------------------------------------------------
+static void drone_id_on_enter(void) {
+  drone_id_scenes_main();
+}
+
+static void drone_id_on_input(uint8_t button_name, uint8_t button_event) {
+  // Scenes install their own input handlers
+  (void) button_name;
+  (void) button_event;
+}
+
+static void drone_id_on_exit(void) {
+  // Stop drone ID if running
+  drone_id_stop();
+}
+
+// Wrapper for menu entry
+void app_manager_enter_wrapper_drone_id(void) {
+  extern const minino_app_t drone_id_app;
+  app_manager_enter(&drone_id_app);
+}
+
+// App definition for app_manager
+const minino_app_t drone_id_app = {
+    .name = "drone_id",
+    .on_enter = drone_id_on_enter,
+    .on_input = drone_id_on_input,
+    .on_exit = drone_id_on_exit,
+};

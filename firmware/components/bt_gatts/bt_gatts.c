@@ -14,11 +14,11 @@ static esp_ble_adv_params_t ble_server_adv_params;
 static bt_server_props_t bt_server_props;
 static bt_server_event_cb_t bt_server_event_cb;
 
-struct gatts_profile_inst ble_server_gatt_profile_tab[DEVICE_PROFILES] = {
-    [DEVICE_PROFILE] = {
-        .gatts_cb = ble_server_gatt_profiles_event_handler,
-        .gatts_if = ESP_GATT_IF_NONE,
-    }};
+static struct gatts_profile_inst ble_server_gatt_profile_tab[DEVICE_PROFILES] =
+    {[DEVICE_PROFILE] = {
+         .gatts_cb = ble_server_gatt_profiles_event_handler,
+         .gatts_if = ESP_GATT_IF_NONE,
+     }};
 
 esp_attr_value_t bt_gatts_set_default_char_val() {
   esp_attr_value_t ble_server_gatt_char_val = {

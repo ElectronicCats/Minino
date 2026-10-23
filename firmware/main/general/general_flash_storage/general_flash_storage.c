@@ -10,7 +10,7 @@
 #define FS_TREE_SUBITEM_COUNT "fssc"
 #define FS_TREE_MAIN_PREFIX   "fsm"
 #define FS_TREE_SUBITEM_SUFIX "si"
-#define MAX_LEN_STRING        1024
+#define MAX_LEN_STRING        512
 #define MAX_NVS_CHARS         15
 
 static const char* TAG = "flash_storage";
@@ -322,9 +322,9 @@ void flash_storage_delete_list_item(char* main_tree, char* subitem) {
   free(list);
 }
 
-void flash_storage_get_list(char* main_tree,
-                            storage_contex_t* list_storage,
-                            uint8_t* list_count) {
+uint8_t flash_storage_get_list(char* main_tree,
+                               storage_contex_t* list_storage,
+                               uint8_t capacity) {
   esp_err_t err;
   uint16_t main_count = preferences_get_ushort(FS_TREE_MAIN_COUNT, 0);
 
@@ -345,6 +345,15 @@ void flash_storage_get_list(char* main_tree,
   uint8_t counter_items = 0;
 
   for (int j = 0; j < subitem_count; j++) {
+    /* subitem_count comes from NVS and nothing caps how many entries can be
+       saved; counter_items is a uint8_t and list_storage is the caller's array
+       (99 entries, ~2.4 KB on the stack), so stop before walking past it. */
+    if (counter_items >= capacity) {
+      ESP_LOGW(TAG,
+               "storage list for '%s' holds %u items, showing the first %u",
+               main_tree, (unsigned) subitem_count, (unsigned) capacity);
+      break;
+    }
     snprintf(idx_subitem, sizeof(idx_subitem), "%d%.10s", j, idx_main_item);
     err = preferences_get_string(idx_subitem, tree_subitem, MAX_LEN_STRING);
     if (err != ESP_OK) {
@@ -373,7 +382,7 @@ void flash_storage_get_list(char* main_tree,
     counter_items++;
   }
 
-  *list_count = counter_items;
+  return counter_items;
 }
 
 storage_contex_t* flash_storage_get_item(char* main_tree, char* subitem) {

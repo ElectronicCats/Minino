@@ -1,6 +1,14 @@
 #pragma once
 
+/* ESP-IDF puts sdkconfig.h on the include path but does not force-include
+   it, so the CONFIG_RESOLUTION_* tests below are only meaningful when it
+   has already been pulled in. Include it explicitly: otherwise a
+   translation unit that reaches this header first silently compiles the
+   128x32 branch. */
+#include "sdkconfig.h"
+
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "oled_driver.h"
@@ -141,6 +149,9 @@ void oled_screen_display_loading_bar(uint8_t value, uint8_t page);
 void oled_screen_display_card_border();
 void oled_screen_clear_buffer();
 void oled_screen_display_show();
+/* Non-zero bytes in the current frame buffer; 0 means "nothing drawn". */
+size_t oled_screen_ink(void);
+
 void oled_screen_get_last_buffer();
 void oled_screen_set_last_buffer();
 

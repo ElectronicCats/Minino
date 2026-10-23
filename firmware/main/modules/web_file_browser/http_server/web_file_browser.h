@@ -12,7 +12,7 @@ typedef enum {
 } web_file_browser_events_t;
 
 typedef void (*web_file_browser_show_event_cb_t)(uint8_t, void*);
-web_file_browser_show_event_cb_t wfb_show_event_cb = NULL;
+extern web_file_browser_show_event_cb_t wfb_show_event_cb;
 
 void web_file_browser_begin();
 void web_file_browser_stop();

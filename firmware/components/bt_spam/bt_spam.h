@@ -22,6 +22,20 @@ typedef enum {
 typedef void (*bt_spam_cb_display)(const char* name);
 
 /**
+ * @brief Callback fired when a peer actually connects to one of the spammed
+ *        identities.
+ *
+ * @param name    Model that was being advertised when the peer connected
+ * @param success True when the peer stayed connected past pairing
+ */
+typedef void (*bt_spam_cb_connect)(const char* name, bool success);
+
+/**
+ * @brief Register the callback that reports peer connections
+ */
+void bt_spam_register_connect_cb(bt_spam_cb_connect callback);
+
+/**
  * @brief Initialize the bluetooth spam module with specified mode
  *
  * @param mode Target platform mode

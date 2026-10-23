@@ -1,8 +1,11 @@
 #include "animations_task.h"
 
+#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "preferences.h"
+
+static const char* TAG = "animations_task";
 
 void (*animations_task_cb)(void*) = NULL;
 
@@ -52,9 +55,19 @@ void animations_task_stop() {
   while (animations_task_handle != NULL && retries-- > 0) {
     vTaskDelay(pdMS_TO_TICKS(10));
   }
-  // Safety net: if the task is still alive after 500 ms, force-delete.
+  // Safety net: the task did not exit in time. Deleting it here is still unsafe
+  // (it may sit inside an OLED primitive holding oled_mutex), and that would
+  // wedge the display for the rest of the session - including menus_module.c's
+  // input path, so the user could not navigate out. Wait longer instead and
+  // only then leave the task alone; the reboot it will ask for on the next
+  // reset clears the mutex.
   if (animations_task_handle != NULL) {
-    vTaskDelete(animations_task_handle);
-    animations_task_handle = NULL;
+    ESP_LOGW(TAG,
+             "animation task still busy after 500 ms, waiting longer "
+             "instead of force-deleting it");
+    uint16_t extra = 150;  // up to 1.5 s more
+    while (animations_task_handle != NULL && extra-- > 0) {
+      vTaskDelay(pdMS_TO_TICKS(10));
+    }
   }
 }

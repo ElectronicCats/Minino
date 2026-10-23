@@ -8,7 +8,7 @@
 #include "surv_engine.h"
 #include <string.h>
 
-#define SURV_MAX_DEVICES 200
+#define SURV_MAX_DEVICES 80
 #define SURV_DECAY_MS    60000u
 #define SURV_RESCORE_MS  120000u
 #define SURV_DEDUPE_MS   5000u
@@ -32,7 +32,7 @@ static surv_engine_emit_cb_t s_emit_cb;
 
 // Rastreador de persistencia (de eye-spy, Apache-2.0): declarado aqui arriba
 // para que surv_engine_reset() pueda limpiarlo junto con todo lo demas.
-#define SURV_TRACK_MAX      50
+#define SURV_TRACK_MAX      20
 #define SURV_TRACK_MIN_SEEN 3
 #define SURV_TRACK_MIN_SPAN 300000u   // 5 min
 #define SURV_TRACK_PURGE_MS 1800000u  // 30 min

@@ -14,7 +14,7 @@
 
 #define THREAD_SNIFFER_FS_CHAN_KEY "ot_schan"
 
-uint8_t channel = 15;
+static uint8_t channel = 15;
 static uint16_t ot_sniffer_packet_count = 0;
 
 static void thread_broadcast_input(uint8_t button_name, uint8_t button_event);
@@ -69,7 +69,7 @@ void open_thread_module_broadcast_enter() {
 void open_thread_module_sniffer_enter() {
   radio_selector_set_thread();
   ot_sniffer_packet_count = 0;
-  thread_sniffer_set_show_event_cb(ot_sniffer_event_handler);
+  thread_sniffer_subscribe_show_event(ot_sniffer_event_handler);
   thread_sniffer_init();
 }
 
