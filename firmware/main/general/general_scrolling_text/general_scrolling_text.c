@@ -1,80 +1,18 @@
 #include "general_scrolling_text.h"
 
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "bitmaps_general.h"
+#include "general_scroll_split.h"
+#include "esp_log.h"
 #include "keyboard_module.h"
 #include "menus_module.h"
 #include "oled_screen.h"
 
 general_scrolling_text_ctx* scroll_text_ctx;
 
-#define MAX_LINE_LENGTH 14
-
-static char** split_text(const char* text, uint16_t* num_lines) {
-  int len = strlen(text);
-  int lines_count = 1;
-  int line_len = 0;
-
-  for (int i = 0; i < len; ++i) {
-    if (text[i] == '\n') {
-      lines_count++;
-      line_len = 0;
-    } else {
-      line_len++;
-      if (line_len > MAX_LINE_LENGTH) {
-        lines_count++;
-        line_len = 1;
-      }
-    }
-  }
-
-  char** lines = (char**) malloc(lines_count * sizeof(char*));
-  if (!lines) {
-    return NULL;
-  }
-
-  int current_line = 0;
-  int start = 0;
-  line_len = 0;
-
-  for (int i = 0; i <= len; ++i) {
-    if (!line_len && text[i] == ' ') {
-      start++;
-      continue;
-    }
-    if (text[i] == '\n' || text[i] == '\0') {
-      lines[current_line] = (char*) malloc((line_len + 1) * sizeof(char));
-      if (!lines[current_line]) {
-        return NULL;
-      }
-
-      strncpy(lines[current_line], &text[start], line_len);
-      lines[current_line][line_len] = '\0';
-
-      current_line++;
-      start = i + 1;
-      line_len = 0;
-    } else {
-      line_len++;
-    }
-
-    if (line_len >= MAX_LINE_LENGTH) {
-      lines[current_line] = (char*) malloc((line_len + 1) * sizeof(char));
-      if (!lines[current_line]) {
-        return NULL;
-      }
-
-      strncpy(lines[current_line], &text[start], line_len);
-      lines[current_line][line_len] = '\0';
-
-      current_line++;
-      start = i + 1;
-      line_len = 0;
-    }
-  }
-
-  *num_lines = lines_count;
-  return lines;
-}
 
 static void scroll_text_draw_window() {
   if (scroll_text_ctx == NULL) {
@@ -205,14 +143,24 @@ static void scrolling_text_input_cb(uint8_t button_name, uint8_t button_event) {
 void general_scrolling_text(general_scrolling_text_ctx ctx) {
   scroll_text_ctx_free();
   scroll_text_ctx = calloc(1, sizeof(general_scrolling_text_ctx));
+  if (scroll_text_ctx == NULL) {
+    return;
+  }
   scroll_text_ctx->banner = ctx.banner;
   scroll_text_ctx->text = ctx.text;
   scroll_text_ctx->window_type = ctx.window_type;
   scroll_text_ctx->scroll_type = ctx.scroll_type;
   scroll_text_ctx->exit_cb = ctx.exit_cb;
   scroll_text_ctx->finish_cb = ctx.finish_cb;
-  scroll_text_ctx->text_arr = (const char**) split_text(
+  scroll_text_ctx->text_arr = (const char**) general_scroll_text_split(
       scroll_text_ctx->text, &scroll_text_ctx->text_len);
+  if (scroll_text_ctx->text_arr == NULL) {
+    /* Leave the UI in the menu rather than installing an input callback over a
+       context with no lines: drawing would index text_arr[0] on NULL. */
+    ESP_LOGE("scroll_text", "could not lay out the text");
+    scroll_text_ctx_free();
+    return;
+  }
 
   menus_module_set_app_state(true, scrolling_text_input_cb);
   scroll_text_draw();
@@ -221,6 +169,9 @@ void general_scrolling_text(general_scrolling_text_ctx ctx) {
 void general_scrolling_text_array(general_scrolling_text_ctx ctx) {
   scroll_text_ctx_free();
   scroll_text_ctx = calloc(1, sizeof(general_scrolling_text_ctx));
+  if (scroll_text_ctx == NULL) {
+    return;
+  }
   scroll_text_ctx->banner = ctx.banner;
   scroll_text_ctx->window_type = ctx.window_type;
   scroll_text_ctx->scroll_type = ctx.scroll_type;

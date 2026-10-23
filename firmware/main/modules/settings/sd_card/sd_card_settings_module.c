@@ -25,7 +25,7 @@ const char* sd_card_state_to_name[] = {
     "Formatting", "Format done", "Failed format", "No SD card",
 };
 
-sd_card_settings_state_t state = SD_CARD_SETTINGS_VERIFYING;
+static sd_card_settings_state_t state = SD_CARD_SETTINGS_VERIFYING;
 
 void sd_card_settings_verify_sd_card() {
   menus_module_set_app_state(true, sd_card_settings_keyboard_cb);

@@ -82,7 +82,8 @@ esp_err_t task_manager_create(TaskFunction_t task_func,
 
   // Registrar en el manager
   task_info_t* info = &task_registry[task_count];
-  info->name = strndup(name, TASK_NAME_MAX_LEN - 1);
+  const char* safe_name = name ? name : "unnamed";
+  info->name = strndup(safe_name, TASK_NAME_MAX_LEN - 1);
   info->handle = task_handle;
   info->priority = priority;
   info->stack_size = stack_size;
@@ -97,7 +98,7 @@ esp_err_t task_manager_create(TaskFunction_t task_func,
     *handle = task_handle;
   }
 
-  ESP_LOGI(TAG, "Tarea creada: '%s' (stack=%d, priority=%d, #%lu)", name,
+  ESP_LOGI(TAG, "Tarea creada: '%s' (stack=%d, priority=%d, #%lu)", safe_name,
            stack_size, priority, task_count);
 
   xSemaphoreGive(task_manager_mutex);
@@ -133,9 +134,12 @@ esp_err_t task_manager_delete(TaskHandle_t handle) {
       memset(&task_registry[task_count - 1], 0, sizeof(task_info_t));
       task_count--;
 
+      // Liberar el nombre antes de vTaskDelete para evitar fuga de memoria si la tarea se auto-elimina
+      if (deleted_name) {
+        free(deleted_name);
+      }
       xSemaphoreGive(task_manager_mutex);
       vTaskDelete(handle);
-      free(deleted_name);
       return ESP_OK;
     }
   }
@@ -285,4 +289,23 @@ bool task_manager_check_stack_overflow_risk(void) {
   }
 
   return risk;
+}
+
+void task_manager_deinit(void) {
+  if (task_manager_mutex &&
+      xSemaphoreTake(task_manager_mutex, portMAX_DELAY) == pdTRUE) {
+    for (uint32_t i = 0; i < task_count; i++) {
+      if (task_registry[i].name) {
+        free((char*) task_registry[i].name);
+        task_registry[i].name = NULL;
+      }
+    }
+    memset(task_registry, 0, sizeof(task_registry));
+    task_count = 0;
+    manager_initialized = false;
+    SemaphoreHandle_t mutex_to_delete = task_manager_mutex;
+    task_manager_mutex = NULL;
+    xSemaphoreGive(mutex_to_delete);
+    vSemaphoreDelete(mutex_to_delete);
+  }
 }

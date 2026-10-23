@@ -10,12 +10,13 @@
 #include "preferences.h"
 
 /* Accessors over the menu manager context. */
-#define ITEM_NAME(ctx, i) (menus[*(ctx)->submenus_idx[(i)]].display_name)
+#define ITEM_NAME(ctx, i) (menus_get()[*(ctx)->submenus_idx[(i)]].display_name)
 
 static const char* current_title(menus_manager_t* ctx) {
   if (ctx->current_menu == MENU_MAIN) {
     return "MININO";
   }
+  menu_t* menus = menus_get();
   for (uint8_t i = 0; i < ctx->menus_count; i++) {
     if (menus[i].menu_idx == ctx->current_menu) {
       return menus[i].display_name;
@@ -54,8 +55,8 @@ static void render_icon_list(menus_manager_t* ctx) {
     if (i == sel) {
       menu_gfx_frame(0, y - 1, 120, rh - 1);
     }
-    menu_icon_for(ITEM_NAME(ctx, i))(2, y);
-    menu_gfx_text_clip(18, y + 2, ITEM_NAME(ctx, i), 100, true);
+    menu_icon_for(ITEM_NAME(ctx, i))(3, y);
+    menu_gfx_text_clip(18, y + 1, ITEM_NAME(ctx, i), 100, true);
   }
   menu_gfx_scrollbar(n, rows, top);
   oled_screen_display_show();

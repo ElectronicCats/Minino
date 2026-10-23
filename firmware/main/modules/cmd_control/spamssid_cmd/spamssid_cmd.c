@@ -1,3 +1,6 @@
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
 #include "argtable3/argtable3.h"
 #include "cat_console.h"
 #include "cmd_control.h"
@@ -24,14 +27,15 @@ static int delete_ssid_cmd(int argc, char** argv);
 static int show_ssid_cmd(int argc, char** argv);
 static void show_ssid();
 
-static char spam_ssids_list[99][32] = {};
+static char spam_ssids_list[24][32] = {};
 static uint8_t list_count = 0;
 
 static void get_ssid() {
-  storage_contex_t list[99];
+  storage_contex_t list[FLASH_STORAGE_MAX_LIST_ITEMS];
 
-  flash_storage_get_list(GENFLASH_STORAGE_SPAM, list, &list_count);
-  for (int i = 0; i < list_count && i < 99; i++) {
+  list_count = flash_storage_get_list(GENFLASH_STORAGE_SPAM, list,
+                                     FLASH_STORAGE_MAX_LIST_ITEMS);
+  for (int i = 0; i < list_count && i < FLASH_STORAGE_MAX_LIST_ITEMS; i++) {
     if (list[i].item_storage_name != NULL) {
       strncpy(spam_ssids_list[i], list[i].item_storage_name,
               sizeof(spam_ssids_list[i]) - 1);
@@ -49,6 +53,8 @@ static void show_ssid() {
 }
 
 static int show_ssid_cmd(int argc, char** argv) {
+  (void) argc;
+  (void) argv;
   show_ssid();
   return 0;
 }
@@ -56,13 +62,25 @@ static int show_ssid_cmd(int argc, char** argv) {
 static int delete_ssid_cmd(int argc, char** argv) {
   int nerrors = arg_parse(argc, argv, (void**) &ssdi_delete_args);
   if (nerrors != 0) {
-    arg_print_errors(stderr, ssdi_delete_args.end, argv[0]);
+    arg_print_errors(stderr, ssdi_delete_args.end,
+                     argv ? argv[0] : "spam_delete");
     return 1;
   }
-  if (ssdi_delete_args.idx->count == 0) {
+  if (ssdi_delete_args.idx->count != 1 ||
+      ssdi_delete_args.idx->sval[0] == NULL) {
     return 1;
   }
-  int spam_idx = atoi(ssdi_delete_args.idx->sval[0]);
+  const char* idx_str = ssdi_delete_args.idx->sval[0];
+  if (idx_str[0] == '\0') {
+    return 1;
+  }
+  for (size_t i = 0; i < strlen(idx_str); i++) {
+    if (!isdigit((unsigned char) idx_str[i])) {
+      ESP_LOGW(__func__, "Index must be a non-negative integer");
+      return 1;
+    }
+  }
+  int spam_idx = atoi(idx_str);
   get_ssid();
   if (spam_idx < 0 || spam_idx >= (int) list_count) {
     ESP_LOGW(__func__, "Index out of range");
@@ -77,15 +95,18 @@ static int delete_ssid_cmd(int argc, char** argv) {
 static int save_ssid_cmd(int argc, char** argv) {
   int nerrors = arg_parse(argc, argv, (void**) &ssdi_save_args);
   if (nerrors != 0) {
-    arg_print_errors(stderr, ssdi_save_args.end, argv[0]);
+    arg_print_errors(stderr, ssdi_save_args.end, argv ? argv[0] : "spam_save");
     return 1;
   }
-  if (ssdi_save_args.name->count == 0 || ssdi_save_args.value->count == 0) {
+  if (ssdi_save_args.name->count != 1 || ssdi_save_args.name->sval[0] == NULL ||
+      ssdi_save_args.value->count != 1 ||
+      ssdi_save_args.value->sval[0] == NULL) {
     return 1;
   }
-  if (strlen(ssdi_save_args.name->sval[0]) > 17) {
-    ESP_LOGE(__func__, "SSID name character limit exceeded.");
-    printf("[ERROR] SSID name characters limit exceeded\n");
+  size_t name_len = strlen(ssdi_save_args.name->sval[0]);
+  if (name_len == 0 || name_len > 17) {
+    ESP_LOGE(__func__, "SSID name character limit exceeded (max 17).");
+    printf("[ERROR] SSID name characters limit exceeded (max 17)\n");
     return 1;
   }
   storage_contex_t new_ssid;
@@ -100,6 +121,7 @@ static int save_ssid_cmd(int argc, char** argv) {
           GENFLASH_STORAGE_MAX_LEN_STR - 1);
   new_ssid.items_storage_value[GENFLASH_STORAGE_MAX_LEN_STR - 1] = '\0';
   flash_storage_save_list_items(&new_ssid);
+  free(new_ssid.items_storage_value);
   return 0;
 }
 
