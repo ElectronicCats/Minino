@@ -5,6 +5,7 @@
 #include "buzzer.h"
 #include "esp_log.h"
 #include "led_events.h"
+#include "menu_views.h"
 #include "menus_screens.h"
 #include "modals_module.h"
 #include "oled_screen.h"
@@ -23,32 +24,47 @@
 static const char* TAG = "menus_module";
 
 static menus_manager_t* menus_ctx;
+static menu_t* catalogue;  /* cached menus_get(), valid for the whole program */
 static void menus_input_cb(uint8_t button_name, uint8_t button_event);
 static app_state2_t app_state = {.in_app = false,
                                  .input_callback = NULL,
                                  .input_last_callback = NULL};
-static volatile bool screen_saver_running = false;
 
-static uint8_t get_menu_idx(menu_idx_t menu_idx) {
-  for (uint8_t i = 0; i < menus_ctx->menus_count; i++) {
-    if (menus[i].menu_idx == menu_idx) {
-      return i;
-    }
-  }
-  return 0;
+static menu_t* menu_at(menu_idx_t id) {
+  menu_t* menu = menus_find(id);
+  return menu ? menu : &catalogue[0];  /* MENU_MAIN is always compiled in */
 }
 
-static uint8_t get_menu_idx_over_cmd(char* entry_cmd) {
+/*
+ * Same lookup, but returns NULL instead of silently retargeting to MENU_MAIN.
+ * Callers that *write* through the returned pointer (hide/reveal) must use
+ * this: falling back to catalogue[0] would toggle the visibility of the root
+ * sentinel, and callers that compute a parent from it would set
+ * current_menu to -1, which the menu tree can never navigate back out of.
+ */
+static menu_t* menu_at_checked(menu_idx_t id) {
+  menu_t* menu = menus_find(id);
+  if (!menu) {
+    ESP_LOGE(TAG, "Menu %d is not compiled in", id);
+    return NULL;
+  }
+  return menu;
+}
+
+static int get_menu_idx_over_cmd(const char* entry_cmd) {
   for (uint8_t i = 0; i < menus_ctx->menus_count; i++) {
-    if (!menus[i].entry_cmd) {
+    if (!catalogue[i].entry_cmd) {
       continue;
     }
-    if (!memcmp(menus[i].entry_cmd, entry_cmd, strlen(menus[i].entry_cmd))) {
+    /* Exact match: the old code compared only strlen(entry_cmd) bytes, so
+       "deauth_scan" matched the "deauth" entry first and launched the wrong
+       app. */
+    if (!strcmp(catalogue[i].entry_cmd, entry_cmd)) {
       return i;
     }
   }
   ESP_LOGE(TAG, "Menu not found for command: %s", entry_cmd);
-  return 0;
+  return -1;
 }
 
 static uint8_t s_submenu_indices[MENU_COUNT];
@@ -59,7 +75,7 @@ static void update_menus() {
   for (uint8_t i = 0;
        i < menus_ctx->menus_count && menus_ctx->submenus_count < MENU_COUNT;
        i++) {
-    if (menus[i].is_visible && menus[i].parent_idx == menus_ctx->current_menu) {
+    if (catalogue[i].is_visible && catalogue[i].parent_idx == menus_ctx->current_menu) {
       s_submenu_indices[menus_ctx->submenus_count] = i;
       s_submenu_ptrs[menus_ctx->submenus_count] =
           &s_submenu_indices[menus_ctx->submenus_count];
@@ -70,13 +86,31 @@ static void update_menus() {
 }
 
 static void display_menus() {
-  menus_screens_display_menus_f(menus_ctx);
+  /* Safety: ensure submenus are populated (e.g., after wake from screensaver
+     at boot where refresh_menus() wasn't called yet). */
+  if (menus_ctx != NULL && menus_ctx->submenus_count == 0) {
+    update_menus();
+    if (menus_ctx->selected_submenu >= menus_ctx->submenus_count) {
+      menus_ctx->selected_submenu =
+          menus_ctx->submenus_count > 0 ? menus_ctx->submenus_count - 1 : 0;
+    }
+  }
+  menu_views_render(menus_ctx);
+  oled_screen_display_show();
 }
 
 static void refresh_menus() {
   update_menus();
   menus_ctx->selected_submenu =
-      menus[get_menu_idx(menus_ctx->current_menu)].last_selected_submenu;
+      menu_at(menus_ctx->current_menu)->last_selected_submenu;
+  /* last_selected_submenu comes from the catalogue and can outlive a config
+     that had more children (board/profile switch without erase-flash). Clamp
+     it so the renderers always have a valid selection to highlight. */
+  if (menus_ctx->submenus_count == 0) {
+    menus_ctx->selected_submenu = 0;
+  } else if (menus_ctx->selected_submenu >= menus_ctx->submenus_count) {
+    menus_ctx->selected_submenu = menus_ctx->submenus_count - 1;
+  }
   display_menus();
 }
 static void navigation_up() {
@@ -97,14 +131,14 @@ static void navigation_enter() {
   if (!menus_ctx->submenus_count) {
     return;
   }
-  menus[get_menu_idx(menus_ctx->current_menu)].last_selected_submenu =
+  menu_at(menus_ctx->current_menu)->last_selected_submenu =
       menus_ctx->selected_submenu;
   menus_ctx->current_menu =
-      menus[*menus_ctx->submenus_idx[menus_ctx->selected_submenu]].menu_idx;
+      catalogue[*menus_ctx->submenus_idx[menus_ctx->selected_submenu]].menu_idx;
   menus_ctx->parent_menu_idx =
-      menus[get_menu_idx(menus_ctx->current_menu)].parent_idx;
+      menu_at(menus_ctx->current_menu)->parent_idx;
   refresh_menus();
-  void (*cb)() = menus[get_menu_idx(menus_ctx->current_menu)].on_enter_cb;
+  menu_cb_t cb = menu_at(menus_ctx->current_menu)->on_enter_cb;
   if (cb) {
     cb();
   }
@@ -115,20 +149,21 @@ static void navigation_exit() {
     screen_saver_run();
     return;
   }
-  menus[get_menu_idx(menus_ctx->current_menu)].last_selected_submenu = 0;
-  void (*cb)() = menus[get_menu_idx(menus_ctx->current_menu)].on_exit_cb;
+  menu_at(menus_ctx->current_menu)->last_selected_submenu = 0;
+  menu_cb_t cb = menu_at(menus_ctx->current_menu)->on_exit_cb;
   if (cb) {
     cb();
   }
-  menus_ctx->current_menu =
-      menus[get_menu_idx(menus_ctx->current_menu)].parent_idx;
-  menus_ctx->parent_menu_idx =
-      menus[get_menu_idx(menus_ctx->current_menu)].parent_idx;
+  menus_ctx->current_menu = menu_at(menus_ctx->current_menu)->parent_idx;
+  menus_ctx->parent_menu_idx = menu_at(menus_ctx->current_menu)->parent_idx;
   refresh_menus();
 }
 
 static void menus_input_cb(uint8_t button_name, uint8_t button_event) {
-  if (menus_ctx->input_lock) {
+  /* menus_ctx is NULL between keyboard_module_begin() and menus_module_begin();
+     input_callback is only installed at the end of menus_module_begin(), so
+     this cannot be reached in that window, but guard anyway. */
+  if (menus_ctx == NULL || menus_ctx->input_lock) {
     return;
   }
 
@@ -146,6 +181,11 @@ static void menus_input_cb(uint8_t button_name, uint8_t button_event) {
   }
   sleep_mode_reset_timer();
   if (screen_saver_get_idle_state()) {
+    update_menus();
+    if (menus_ctx->selected_submenu >= menus_ctx->submenus_count) {
+      menus_ctx->selected_submenu =
+          menus_ctx->submenus_count > 0 ? menus_ctx->submenus_count - 1 : 0;
+    }
     display_menus();
     return;
   }
@@ -181,17 +221,35 @@ void menus_module_set_reset_screen(menu_idx_t menu) {
 }
 
 static void get_reset_menu() {
-  menus_ctx->current_menu = preferences_get_int("MENUNUMBER", MENU_MAIN);
-  if ((int) menus_ctx->current_menu == MENU_MAIN) {
-    show_logo();
-  } else {
-    preferences_put_int("MENUNUMBER", MENU_MAIN);
-    menus_ctx->parent_menu_idx =
-        menus[get_menu_idx(menus_ctx->current_menu)].parent_idx;
-    sleep_mode_reset_timer();
-    screen_saver_get_idle_state();
-    refresh_menus();
+  int stored = preferences_get_int("MENUNUMBER", MENU_MAIN);
+
+  /* The id comes from NVS, which survives `idf.py flash` and board-profile
+     switches, so it can name a menu that this build does not compile in.
+     Resolving through menu_at() would then yield catalogue[0], whose
+     parent_idx is -1: current_menu would end up as -1, update_menus() would
+     find nothing, and navigation_exit() could never get back to MENU_MAIN.
+     Reject anything that does not resolve and start from the root. */
+  if (menus_find((menu_idx_t) stored) == NULL) {
+    if (stored != MENU_MAIN) {
+      ESP_LOGW(TAG, "MENUNUMBER %d is not compiled in, starting at the main menu",
+               stored);
+    }
+    stored = MENU_MAIN;
   }
+
+  menus_ctx->current_menu = (menu_idx_t) stored;
+  menus_ctx->parent_menu_idx = menu_at(menus_ctx->current_menu)->parent_idx;
+  update_menus();
+
+  if (stored == MENU_MAIN) {
+    show_logo();
+    return;
+  }
+  /* Resuming into an app after a restart: only the main menu is persistent. */
+  preferences_put_int("MENUNUMBER", MENU_MAIN);
+  sleep_mode_reset_timer();
+  screen_saver_get_idle_state();
+  refresh_menus();
 }
 
 void menus_module_enable_input() {
@@ -218,16 +276,11 @@ void menus_module_set_default_input() {
   app_state.input_callback = menus_input_cb;
 }
 
-void menus_module_restart() {
-  menus_module_set_reset_screen(menus_ctx->parent_menu_idx);
-  esp_restart();
-}
-
 void menus_module_return() {
   menus_module_set_default_input();
   menus_ctx->current_menu = menus_ctx->parent_menu_idx;
   menus_ctx->parent_menu_idx =
-      menus[get_menu_idx(menus_ctx->current_menu)].parent_idx;
+      menu_at(menus_ctx->current_menu)->parent_idx;
   refresh_menus();
 }
 
@@ -252,42 +305,57 @@ bool menus_module_get_app_state() {
 }
 
 void menus_module_set_menu(menu_idx_t menu_idx) {
-  if (!menus_ctx->submenus_count) {
-    ESP_LOGE(TAG, "No submenus available");
+  menu_t* target = menus_find(menu_idx);
+  if (!target) {
+    ESP_LOGE(TAG, "Menu %d is not compiled in", menu_idx);
     return;
   }
   screen_saver_stop();
   keyboard_module_set_input_callback(menus_input_cb);
-  menus[get_menu_idx(menus_ctx->current_menu)].last_selected_submenu =
+  menu_at(menus_ctx->current_menu)->last_selected_submenu =
       menus_ctx->selected_submenu;
-  menus_ctx->current_menu = menus[menu_idx].menu_idx;
-  menus_ctx->parent_menu_idx =
-      menus[get_menu_idx(menus_ctx->current_menu)].parent_idx;
+  menus_ctx->current_menu = target->menu_idx;
+  menus_ctx->parent_menu_idx = menu_at(menus_ctx->current_menu)->parent_idx;
   refresh_menus();
-  void (*cb)() = menus[get_menu_idx(menus_ctx->current_menu)].on_enter_cb;
+  menu_cb_t cb = menu_at(menus_ctx->current_menu)->on_enter_cb;
   if (cb) {
     cb();
   }
 }
 
-void menus_module_set_menu_over_cmd(char* entry_cmd) {
-  menus_module_set_menu(get_menu_idx_over_cmd(entry_cmd));
+void menus_module_set_menu_over_cmd(const char* entry_cmd) {
+  int idx = get_menu_idx_over_cmd(entry_cmd);
+  if (idx < 0) {
+    return;  /* get_menu_idx_over_cmd() already logged the reason */
+  }
+  menus_module_set_menu(catalogue[idx].menu_idx);
 }
 
 void menus_module_hide_menu(menu_idx_t menu_idx) {
-  menus[get_menu_idx(menu_idx)].is_visible = false;
+  menu_t* menu = menu_at_checked(menu_idx);
+  if (menu) {
+    menu->is_visible = false;
+  }
 }
 
 void menus_module_reveal_menu(menu_idx_t menu_idx) {
-  menus[get_menu_idx(menu_idx)].is_visible = true;
+  menu_t* menu = menu_at_checked(menu_idx);
+  if (menu) {
+    menu->is_visible = true;
+  }
 }
 void menus_module_refresh() {
   refresh_menus();
 }
 
 void menus_module_begin() {
+  catalogue = menus_get();
   menus_ctx = calloc(1, sizeof(menus_manager_t));
-  menus_ctx->menus_count = sizeof(menus) / sizeof(menu_t);
+  if (menus_ctx == NULL) {
+    ESP_LOGE(TAG, "Out of memory allocating the menu context");
+    return;
+  }
+  menus_ctx->menus_count = menus_count();
   screen_saver_begin();
   // sleep_mode_begin();
   keyboard_module_set_input_callback(menus_input_cb);

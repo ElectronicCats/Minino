@@ -8,6 +8,7 @@
 #define MAX_MENUS_ON_SCREEN 8
 
 void menus_screens_display_menus(menus_manager_t* ctx) {
+  menu_t* menus = menus_get();
   static uint8_t items_offset = 0;
   items_offset =
       MAX(ctx->selected_submenu - (MAX_MENUS_ON_SCREEN - 1), items_offset);
@@ -24,8 +25,10 @@ void menus_screens_display_menus(menus_manager_t* ctx) {
   }
 }
 void menus_screens_display_menus_f(menus_manager_t* ctx) {
+  menu_t* menus = menus_get();
   oled_screen_clear_buffer();
   if (!ctx->submenus_count) {
+    oled_screen_display_show();
     return;
   }
 #ifdef CONFIG_RESOLUTION_128X64

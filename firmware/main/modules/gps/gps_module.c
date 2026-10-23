@@ -18,8 +18,8 @@
 
 static const char* TAG = "gps_module";
 
-nmea_parser_handle_t nmea_hdl = NULL;
-gps_event_callback_t gps_event_callback = NULL;
+static nmea_parser_handle_t nmea_hdl = NULL;
+static gps_event_callback_t gps_event_callback = NULL;
 static bool is_uart_installed = false;
 
 void gps_module_check_state();
@@ -35,7 +35,7 @@ const char* GPS_SIGNAL_STRENGTH[] = {"None", "Weak", "Moderate", "Strong"};
  * @note Source: List of UTC offsets
  * https://en.wikipedia.org/wiki/List_of_UTC_offsets
  */
-const float TIME_ZONES[] = {-12.0, -11.0, -10.0, -9.5,  -9.0, -8.0, -7.0, -6.0,
+static const float TIME_ZONES[] = {-12.0, -11.0, -10.0, -9.5,  -9.0, -8.0, -7.0, -6.0,
                             -5.0,  -4.0,  -3.5,  -3.0,  -2.0, -1.0, 0.0,  1.0,
                             2.0,   3.0,   3.5,   4.0,   4.5,  5.0,  5.5,  5.75,
                             6.0,   6.5,   7.0,   8.0,   8.75, 9.0,  9.5,  10.0,

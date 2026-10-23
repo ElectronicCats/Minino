@@ -1,3 +1,5 @@
+#include <stdlib.h>
+#include <string.h>
 #include "argtable3/argtable3.h"
 #include "cat_console.h"
 #include "cmd_control.h"
@@ -72,13 +74,17 @@ void ctrl_c_callback() {
   run_uart_bridge_task = false;
 }
 
+#define UART_BRIDGE_MAX_BUFFER_SIZE 4096
+
 static int uart_bridge_print(int argc, char** argv) {
   int nerrors = arg_parse(argc, argv, (void**) &print_args);
   if (nerrors != 0) {
-    arg_print_errors(stderr, print_args.end, argv[0]);
+    arg_print_errors(stderr, print_args.end, argv ? argv[0] : "print");
     return 1;
   }
-  assert(print_args.message->count == 1);
+  if (print_args.message->count != 1 || print_args.message->sval[0] == NULL) {
+    return 1;
+  }
   const char* message = print_args.message->sval[0];
 
   uart_bridge_write(message, strlen(message));
@@ -86,13 +92,15 @@ static int uart_bridge_print(int argc, char** argv) {
 }
 
 static int uart_bridge_println(int argc, char** argv) {
-  int nerrors = arg_parse(argc, argv, (void**) &print_args);
+  int nerrors = arg_parse(argc, argv, (void**) &println_args);
   if (nerrors != 0) {
-    arg_print_errors(stderr, print_args.end, argv[0]);
+    arg_print_errors(stderr, println_args.end, argv ? argv[0] : "println");
     return 1;
   }
-  assert(print_args.message->count == 1);
-  const char* message = print_args.message->sval[0];
+  if (println_args.message->count != 1 || println_args.message->sval[0] == NULL) {
+    return 1;
+  }
+  const char* message = println_args.message->sval[0];
 
   uart_bridge_write(message, strlen(message));
   uart_bridge_write("\n", 1);
@@ -100,56 +108,87 @@ static int uart_bridge_println(int argc, char** argv) {
 }
 
 static void uart_bridge_task(void* args) {
+  if (args == NULL) {
+    ESP_LOGE(TAG, "uart_bridge_task received NULL params");
+    vTaskDelete(NULL);
+    return;
+  }
   if (run_uart_bridge_task) {
     ESP_LOGI(TAG, "uart_bridge_task already running");
+    free(args);
     return;
   }
 
   run_uart_bridge_task = true;
   uart_bridge_params_t* params = (uart_bridge_params_t*) args;
-  const int buffer_size = params->buffer_size;
+  int buffer_size = params->buffer_size;
   const int timeout_ms = params->timeout_ms;
+
+  if (buffer_size <= 0 || buffer_size > UART_BRIDGE_MAX_BUFFER_SIZE) {
+    buffer_size = 1024;
+  }
 
   ESP_LOGI(TAG, "Buffer size: %d", buffer_size);
   ESP_LOGI(TAG, "Timeout: %d", timeout_ms);
 
-  char buffer[buffer_size];
-  while (true) {
-    esp_err_t err = uart_bridge_read(buffer, sizeof(buffer), timeout_ms);
-    if (err == ESP_OK) {
-      printf("Received: %s\n", buffer);
+  char* buffer = (char*) malloc(buffer_size + 1);
+  if (buffer == NULL) {
+    ESP_LOGE(TAG, "Failed to allocate memory for uart buffer");
+    free(params);
+    run_uart_bridge_task = false;
+    vTaskDelete(NULL);
+    return;
+  }
 
-      // Clear buffer
-      memset(buffer, 0, sizeof(buffer));
+  while (true) {
+    memset(buffer, 0, buffer_size + 1);
+    esp_err_t err = uart_bridge_read(buffer, buffer_size, timeout_ms);
+    if (err == ESP_OK) {
+      buffer[buffer_size] = '\0';
+      printf("Received: %s\n", buffer);
     }
 
     if (!run_uart_bridge_task) {
       break;
     }
   }
+  free(buffer);
   free(params);
   ESP_LOGI(TAG, "uart_bridge_task ended :)");
   vTaskDelete(NULL);
 }
 
 static int uart_bridge(int argc, char** argv) {
+  (void) argc;
+  (void) argv;
   // TODO: Add a command to change these values
   const int buffer_size = 1024;
   const int timeout_ms = 100;
 
   uart_bridge_params_t* params = malloc(sizeof(uart_bridge_params_t));
+  if (params == NULL) {
+    ESP_LOGE(TAG, "Failed to allocate params for uart_bridge");
+    return 1;
+  }
   params->buffer_size = buffer_size;
   params->timeout_ms = timeout_ms;
 
   cat_console_register_ctrl_c_handler(&ctrl_c_callback);
   ESP_LOGI(TAG, "Starting uart_bridge_task");
-  xTaskCreate(uart_bridge_task, "uart_bridge_task", 4096, (void*) params, 15,
-              NULL);
+  BaseType_t ret = xTaskCreate(uart_bridge_task, "uart_bridge_task", 4096,
+                               (void*) params, 15, NULL);
+  if (ret != pdPASS) {
+    ESP_LOGE(TAG, "Failed to create uart_bridge_task");
+    free(params);
+    return 1;
+  }
   ESP_LOGI(TAG, "uart_bridge_task started");
   return 0;
 }
 
 int print_uart_bridge_config(int argc, char** argv) {
+  (void) argc;
+  (void) argv;
   uart_bridge_config_t config = uart_bridge_get_config();
   printf("UART bridge configuration:\n");
   printf("\tBuffer size: %d\n", config.buffer_size);
@@ -226,16 +265,20 @@ int print_uart_bridge_config(int argc, char** argv) {
 int uart_bridge_set_config(int argc, char** argv) {
   int nerrors = arg_parse(argc, argv, (void**) &uart_bridge_config_args);
   if (nerrors != 0) {
-    arg_print_errors(stderr, uart_bridge_config_args.end, argv[0]);
+    arg_print_errors(stderr, uart_bridge_config_args.end,
+                     argv ? argv[0] : "uart_bridge_set_config");
     return 1;
   }
 
-  assert(uart_bridge_config_args.buffer_size->count == 1);
-  assert(uart_bridge_config_args.baud_rate->count == 1);
-  assert(uart_bridge_config_args.data_bits->count == 1);
-  assert(uart_bridge_config_args.parity->count == 1);
-  assert(uart_bridge_config_args.stop_bits->count == 1);
-  assert(uart_bridge_config_args.flow_ctrl->count == 1);
+  if (uart_bridge_config_args.buffer_size->count != 1 ||
+      uart_bridge_config_args.baud_rate->count != 1 ||
+      uart_bridge_config_args.data_bits->count != 1 ||
+      uart_bridge_config_args.parity->count != 1 ||
+      uart_bridge_config_args.stop_bits->count != 1 ||
+      uart_bridge_config_args.flow_ctrl->count != 1) {
+    printf("Error: Missing required configuration parameters\n");
+    return 1;
+  }
 
   const int buffer_size = *uart_bridge_config_args.buffer_size->ival;
   const int baud_rate = *uart_bridge_config_args.baud_rate->ival;
@@ -243,6 +286,32 @@ int uart_bridge_set_config(int argc, char** argv) {
   const int parity = *uart_bridge_config_args.parity->ival;
   const int stop_bits = *uart_bridge_config_args.stop_bits->ival;
   const int flow_ctrl = *uart_bridge_config_args.flow_ctrl->ival;
+
+  if (buffer_size <= 0 || buffer_size > UART_BRIDGE_MAX_BUFFER_SIZE) {
+    printf("Error: buffer_size must be between 1 and %d\n",
+           UART_BRIDGE_MAX_BUFFER_SIZE);
+    return 1;
+  }
+  if (baud_rate <= 0 || baud_rate > 5000000) {
+    printf("Error: baud_rate must be positive (e.g. 115200)\n");
+    return 1;
+  }
+  if (data_bits < 0 || data_bits > 3) {
+    printf("Error: data_bits must be between 0 (5 bits) and 3 (8 bits)\n");
+    return 1;
+  }
+  if (parity < 0 || parity > 3) {
+    printf("Error: parity must be 0 (disable), 2 (odd), or 3 (even)\n");
+    return 1;
+  }
+  if (stop_bits < 1 || stop_bits > 3) {
+    printf("Error: stop_bits must be 1 (1 bit), 2 (1.5 bits), or 3 (2 bits)\n");
+    return 1;
+  }
+  if (flow_ctrl < 0 || flow_ctrl > 3) {
+    printf("Error: flow_ctrl must be between 0 and 3\n");
+    return 1;
+  }
 
   uart_config_t uart_config = {
       .baud_rate = baud_rate,
@@ -266,14 +335,24 @@ static int uart_bridge_set_buffer_size(int argc, char** argv) {
   int nerrors =
       arg_parse(argc, argv, (void**) &uart_bridge_config_buffer_size_args);
   if (nerrors != 0) {
-    arg_print_errors(stderr, uart_bridge_config_buffer_size_args.end, argv[0]);
+    arg_print_errors(stderr, uart_bridge_config_buffer_size_args.end,
+                     argv ? argv[0] : "uart_bridge_set_buffer_size");
     return 1;
   }
 
-  assert(uart_bridge_config_buffer_size_args.buffer_size->count == 1);
+  if (uart_bridge_config_buffer_size_args.buffer_size->count != 1 ||
+      uart_bridge_config_buffer_size_args.buffer_size->ival == NULL) {
+    return 1;
+  }
 
   const int buffer_size =
       *uart_bridge_config_buffer_size_args.buffer_size->ival;
+
+  if (buffer_size <= 0 || buffer_size > UART_BRIDGE_MAX_BUFFER_SIZE) {
+    printf("Error: buffer_size must be between 1 and %d\n",
+           UART_BRIDGE_MAX_BUFFER_SIZE);
+    return 1;
+  }
 
   uart_bridge_config_t config = uart_bridge_get_config();
   config.buffer_size = buffer_size;
@@ -292,13 +371,21 @@ static int uart_bridge_set_baud_rate(int argc, char** argv) {
   int nerrors =
       arg_parse(argc, argv, (void**) &uart_bridge_config_baud_rate_args);
   if (nerrors != 0) {
-    arg_print_errors(stderr, uart_bridge_config_baud_rate_args.end, argv[0]);
+    arg_print_errors(stderr, uart_bridge_config_baud_rate_args.end,
+                     argv ? argv[0] : "uart_bridge_set_baud_rate");
     return 1;
   }
 
-  assert(uart_bridge_config_baud_rate_args.baud_rate->count == 1);
+  if (uart_bridge_config_baud_rate_args.baud_rate->count != 1 ||
+      uart_bridge_config_baud_rate_args.baud_rate->ival == NULL) {
+    return 1;
+  }
 
   const int baud_rate = *uart_bridge_config_baud_rate_args.baud_rate->ival;
+  if (baud_rate <= 0 || baud_rate > 5000000) {
+    printf("Error: Invalid baud rate\n");
+    return 1;
+  }
 
   uart_bridge_config_t config = uart_bridge_get_config();
   config.uart_config.baud_rate = baud_rate;
@@ -316,13 +403,21 @@ static int uart_bridge_set_data_bits(int argc, char** argv) {
   int nerrors =
       arg_parse(argc, argv, (void**) &uart_bridge_config_data_bits_args);
   if (nerrors != 0) {
-    arg_print_errors(stderr, uart_bridge_config_data_bits_args.end, argv[0]);
+    arg_print_errors(stderr, uart_bridge_config_data_bits_args.end,
+                     argv ? argv[0] : "uart_bridge_set_data_bits");
     return 1;
   }
 
-  assert(uart_bridge_config_data_bits_args.data_bits->count == 1);
+  if (uart_bridge_config_data_bits_args.data_bits->count != 1 ||
+      uart_bridge_config_data_bits_args.data_bits->ival == NULL) {
+    return 1;
+  }
 
   const int data_bits = *uart_bridge_config_data_bits_args.data_bits->ival;
+  if (data_bits < 0 || data_bits > 3) {
+    printf("Error: Invalid data bits (must be 0-3)\n");
+    return 1;
+  }
 
   uart_bridge_config_t config = uart_bridge_get_config();
   config.uart_config.data_bits = data_bits;
@@ -339,13 +434,21 @@ static int uart_bridge_set_data_bits(int argc, char** argv) {
 static int uart_bridge_set_parity(int argc, char** argv) {
   int nerrors = arg_parse(argc, argv, (void**) &uart_bridge_config_parity_args);
   if (nerrors != 0) {
-    arg_print_errors(stderr, uart_bridge_config_parity_args.end, argv[0]);
+    arg_print_errors(stderr, uart_bridge_config_parity_args.end,
+                     argv ? argv[0] : "uart_bridge_set_parity");
     return 1;
   }
 
-  assert(uart_bridge_config_parity_args.parity->count == 1);
+  if (uart_bridge_config_parity_args.parity->count != 1 ||
+      uart_bridge_config_parity_args.parity->ival == NULL) {
+    return 1;
+  }
 
   const int parity = *uart_bridge_config_parity_args.parity->ival;
+  if (parity < 0 || parity > 3) {
+    printf("Error: Invalid parity\n");
+    return 1;
+  }
 
   uart_bridge_config_t config = uart_bridge_get_config();
   config.uart_config.parity = parity;
@@ -363,13 +466,21 @@ static int uart_bridge_set_stop_bits(int argc, char** argv) {
   int nerrors =
       arg_parse(argc, argv, (void**) &uart_bridge_config_stop_bits_args);
   if (nerrors != 0) {
-    arg_print_errors(stderr, uart_bridge_config_stop_bits_args.end, argv[0]);
+    arg_print_errors(stderr, uart_bridge_config_stop_bits_args.end,
+                     argv ? argv[0] : "uart_bridge_set_stop_bits");
     return 1;
   }
 
-  assert(uart_bridge_config_stop_bits_args.stop_bits->count == 1);
+  if (uart_bridge_config_stop_bits_args.stop_bits->count != 1 ||
+      uart_bridge_config_stop_bits_args.stop_bits->ival == NULL) {
+    return 1;
+  }
 
   const int stop_bits = *uart_bridge_config_stop_bits_args.stop_bits->ival;
+  if (stop_bits < 1 || stop_bits > 3) {
+    printf("Error: Invalid stop bits\n");
+    return 1;
+  }
 
   uart_bridge_config_t config = uart_bridge_get_config();
   config.uart_config.stop_bits = stop_bits;
@@ -387,13 +498,21 @@ static int uart_bridge_set_flow_ctrl(int argc, char** argv) {
   int nerrors =
       arg_parse(argc, argv, (void**) &uart_bridge_config_flow_ctrl_args);
   if (nerrors != 0) {
-    arg_print_errors(stderr, uart_bridge_config_flow_ctrl_args.end, argv[0]);
+    arg_print_errors(stderr, uart_bridge_config_flow_ctrl_args.end,
+                     argv ? argv[0] : "uart_bridge_set_flow_ctrl");
     return 1;
   }
 
-  assert(uart_bridge_config_flow_ctrl_args.flow_ctrl->count == 1);
+  if (uart_bridge_config_flow_ctrl_args.flow_ctrl->count != 1 ||
+      uart_bridge_config_flow_ctrl_args.flow_ctrl->ival == NULL) {
+    return 1;
+  }
 
   const int flow_ctrl = *uart_bridge_config_flow_ctrl_args.flow_ctrl->ival;
+  if (flow_ctrl < 0 || flow_ctrl > 3) {
+    printf("Error: Invalid flow control\n");
+    return 1;
+  }
 
   uart_bridge_config_t config = uart_bridge_get_config();
   config.uart_config.flow_ctrl = flow_ctrl;

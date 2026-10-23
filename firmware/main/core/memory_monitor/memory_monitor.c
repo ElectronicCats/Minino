@@ -27,8 +27,9 @@ static heap_alert_level_t last_alert_level = HEAP_ALERT_NONE;
  * @brief Calcula el porcentaje de fragmentación del heap
  */
 static float calculate_fragmentation(size_t total_free, size_t largest_block) {
-  if (total_free == 0)
-    return 100.0f;
+  if (total_free == 0 || largest_block >= total_free) {
+    return (total_free == 0) ? 100.0f : 0.0f;
+  }
   return ((float) (total_free - largest_block) / (float) total_free) * 100.0f;
 }
 
@@ -134,7 +135,14 @@ esp_err_t heap_monitor_start(uint32_t interval_ms) {
     return ESP_ERR_INVALID_STATE;
   }
 
+  if (monitor_mutex && xSemaphoreTake(monitor_mutex, portMAX_DELAY) != pdTRUE) {
+    return ESP_ERR_TIMEOUT;
+  }
+
   if (monitor_running) {
+    if (monitor_mutex) {
+      xSemaphoreGive(monitor_mutex);
+    }
     ESP_LOGW(TAG, "Monitor ya está corriendo");
     return ESP_OK;
   }
@@ -145,6 +153,9 @@ esp_err_t heap_monitor_start(uint32_t interval_ms) {
 
   esp_err_t err = esp_timer_create(&timer_args, &monitor_timer);
   if (err != ESP_OK) {
+    if (monitor_mutex) {
+      xSemaphoreGive(monitor_mutex);
+    }
     ESP_LOGE(TAG, "Error creando timer: %s", esp_err_to_name(err));
     return err;
   }
@@ -155,17 +166,30 @@ esp_err_t heap_monitor_start(uint32_t interval_ms) {
     ESP_LOGE(TAG, "Error iniciando timer: %s", esp_err_to_name(err));
     esp_timer_delete(monitor_timer);
     monitor_timer = NULL;
+    if (monitor_mutex) {
+      xSemaphoreGive(monitor_mutex);
+    }
     return err;
   }
 
   monitor_running = true;
   ESP_LOGI(TAG, "Monitor iniciado (intervalo: %lu ms)", interval_ms);
 
+  if (monitor_mutex) {
+    xSemaphoreGive(monitor_mutex);
+  }
   return ESP_OK;
 }
 
 void heap_monitor_stop(void) {
+  if (monitor_mutex && xSemaphoreTake(monitor_mutex, portMAX_DELAY) != pdTRUE) {
+    return;
+  }
+
   if (!monitor_running) {
+    if (monitor_mutex) {
+      xSemaphoreGive(monitor_mutex);
+    }
     return;
   }
 
@@ -177,6 +201,10 @@ void heap_monitor_stop(void) {
 
   monitor_running = false;
   ESP_LOGI(TAG, "Monitor detenido");
+
+  if (monitor_mutex) {
+    xSemaphoreGive(monitor_mutex);
+  }
 }
 
 heap_stats_t heap_monitor_get_stats(void) {

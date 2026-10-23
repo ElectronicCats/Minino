@@ -1,5 +1,9 @@
 #include "general_submenu.h"
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
 #include "bitmaps_general.h"
 #include "menus_module.h"
 #include "oled_screen.h"
@@ -15,6 +19,9 @@ static general_submenu_menu_t* submenu_ctx;
 
 static void list_submenu_options_modal() {
   general_submenu_menu_t* ctx = submenu_ctx;
+  if (!ctx || !ctx->options || ctx->options_count == 0) {
+    return;
+  }
   static uint8_t items_offset = 0;
   items_offset = MAX(ctx->selected_option - MAX_OPTIONS_NUM + 2, items_offset);
   items_offset =
@@ -26,10 +33,22 @@ static void list_submenu_options_modal() {
   if (ctx->modal_title != NULL) {
     oled_screen_display_text_center(ctx->modal_title, 1, OLED_DISPLAY_NORMAL);
   }
-  char* str = malloc(20);
+  /* Same treatment as list_submenu_options(): the modal variant used a bare
+     malloc(20) with an unbounded sprintf() and no index bound, so a long
+     option overflowed the allocation and `i + items_offset` could index past
+     options[]. */
+  char* str = (char*) malloc(MAX_OPTION_LEN + 1);
+  if (!str) {
+    oled_screen_display_show();
+    return;
+  }
   for (uint8_t i = 0; i < (MIN(ctx->options_count, MAX_OPTIONS_NUM - 1)); i++) {
-    bool is_selected = i + items_offset == ctx->selected_option;
-    sprintf(str, "%s", ctx->options[i + items_offset]);
+    uint8_t idx = i + items_offset;
+    if (idx >= ctx->options_count || !ctx->options[idx]) {
+      continue;
+    }
+    bool is_selected = idx == ctx->selected_option;
+    snprintf(str, MAX_OPTION_LEN + 1, "%s", ctx->options[idx]);
 
     if (is_selected) {
       oled_screen_display_bmp_text(minino_face, str, (i + modal_offset), 8, 8,
@@ -127,12 +146,26 @@ static void input_cb(uint8_t button_name, uint8_t button_event) {
 }
 
 void general_submenu(general_submenu_menu_t submenu) {
+  /* select_cb handlers call this again to swap in another menu without going
+     through the LEFT path, so release the previous context instead of leaking
+     it on every selection change. */
+  free(submenu_ctx);
   submenu_ctx = calloc(1, sizeof(general_submenu_menu_t));
+  if (submenu_ctx == NULL) {
+    return;
+  }
   submenu_ctx->options = submenu.options;
   submenu_ctx->options_count = submenu.options_count;
   submenu_ctx->select_cb = submenu.select_cb;
   submenu_ctx->exit_cb = submenu.exit_cb;
-  submenu_ctx->selected_option = submenu.selected_option;
+  /* selected_option can come from a stale saved value that no longer fits the
+     menu; the renderers index options[] with it. */
+  if (submenu.options_count > 0 &&
+      submenu.selected_option >= submenu.options_count) {
+    submenu_ctx->selected_option = 0;
+  } else {
+    submenu_ctx->selected_option = submenu.selected_option;
+  }
   submenu_ctx->modal = submenu.modal;
   if (submenu.modal_title != NULL) {
     submenu_ctx->modal_title = submenu.modal_title;

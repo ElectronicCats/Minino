@@ -20,7 +20,7 @@ static char s_sd_card_info_str[6][32];
 char* sd_card_info_2[6] = {s_sd_card_info_str[0], s_sd_card_info_str[1],
                            s_sd_card_info_str[2], s_sd_card_info_str[3],
                            s_sd_card_info_str[4], s_sd_card_info_str[5]};
-general_menu_t SD_inf = {.menu_count = 6,
+static general_menu_t SD_inf = {.menu_count = 6,
                          .menu_items = sd_card_info_2,
                          .menu_level = GENERAL_MENU_MAIN};
 

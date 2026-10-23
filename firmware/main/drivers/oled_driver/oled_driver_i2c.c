@@ -21,6 +21,16 @@
 
 static const char* TAG = "oled_driver_i2c";
 
+static bool i2c_probe_address(uint8_t addr) {
+  i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+  i2c_master_start(cmd);
+  i2c_master_write_byte(cmd, (addr << 1) | I2C_MASTER_WRITE, true);
+  i2c_master_stop(cmd);
+  esp_err_t ret = i2c_master_cmd_begin(I2C_NUM, cmd, 50 / portTICK_PERIOD_MS);
+  i2c_cmd_link_delete(cmd);
+  return (ret == ESP_OK);
+}
+
 void i2c_master_init(oled_driver_t* dev,
                      int16_t sda,
                      int16_t scl,
@@ -42,7 +52,19 @@ void i2c_master_init(oled_driver_t* dev,
     vTaskDelay(50 / portTICK_PERIOD_MS);
     gpio_set_level(reset, 1);
   }
-  dev->_address = I2CAddress;
+
+  // Probe OLED address (default 0x3C, alternative 0x3D)
+  if (i2c_probe_address(0x3C)) {
+    dev->_address = 0x3C;
+    ESP_LOGI(TAG, "OLED detected at I2C address 0x3C");
+  } else if (i2c_probe_address(0x3D)) {
+    dev->_address = 0x3D;
+    ESP_LOGI(TAG, "OLED detected at alternative I2C address 0x3D");
+  } else {
+    dev->_address = I2CAddress;
+    ESP_LOGW(TAG, "OLED not responding at 0x3C or 0x3D! Check VCC/GND wiring and pullups.");
+  }
+
   dev->_flip = false;
 }
 
@@ -58,6 +80,48 @@ void i2c_init(oled_driver_t* dev, int width, int height) {
   i2c_master_start(cmd);
   i2c_master_write_byte(cmd, (dev->_address << 1) | I2C_MASTER_WRITE, true);
   i2c_master_write_byte(cmd, OLED_CONTROL_BYTE_CMD_STREAM, true);
+
+#if CONFIG_SH1106
+  i2c_master_write_byte(cmd, OLED_CMD_DISPLAY_OFF, true);          // 0xAE
+  i2c_master_write_byte(cmd, OLED_CMD_SET_DISPLAY_CLK_DIV, true);  // 0xD5
+  i2c_master_write_byte(cmd, 0x80, true);
+  i2c_master_write_byte(cmd, OLED_CMD_SET_MUX_RATIO, true);        // 0xA8
+  if (dev->_height == 64)
+    i2c_master_write_byte(cmd, 0x3F, true);
+  if (dev->_height == 32)
+    i2c_master_write_byte(cmd, 0x1F, true);
+  i2c_master_write_byte(cmd, OLED_CMD_SET_DISPLAY_OFFSET, true);    // 0xD3
+  i2c_master_write_byte(cmd, 0x00, true);
+  i2c_master_write_byte(cmd, OLED_CMD_SET_DISPLAY_START_LINE, true);// 0x40
+
+  // Turn ON Built-in DC-DC charge pump for SH1106
+  i2c_master_write_byte(cmd, SH1106_CMD_SET_CHARGE_PUMP, true);     // 0xAD
+  i2c_master_write_byte(cmd, SH1106_CMD_CHARGE_PUMP_ON, true);      // 0x8B
+  i2c_master_write_byte(cmd, SH1106_CMD_SET_PUMP_VOLTAGE_8V, true); // 0x32
+
+  if (dev->_flip) {
+    i2c_master_write_byte(cmd, OLED_CMD_SET_SEGMENT_REMAP_0, true);  // 0xA0
+    i2c_master_write_byte(cmd, 0xC0, true);                          // 0xC0 COM scan normal
+  } else {
+    i2c_master_write_byte(cmd, OLED_CMD_SET_SEGMENT_REMAP_1, true);  // 0xA1
+    i2c_master_write_byte(cmd, OLED_CMD_SET_COM_SCAN_MODE, true);    // 0xC8 COM scan remapped
+  }
+  i2c_master_write_byte(cmd, OLED_CMD_SET_COM_PIN_MAP, true);  // 0xDA
+  if (dev->_height == 64)
+    i2c_master_write_byte(cmd, 0x12, true);
+  if (dev->_height == 32)
+    i2c_master_write_byte(cmd, 0x02, true);
+  i2c_master_write_byte(cmd, OLED_CMD_SET_CONTRAST, true);     // 0x81
+  i2c_master_write_byte(cmd, 0x80, true);
+  i2c_master_write_byte(cmd, OLED_CMD_SET_PRECHARGE, true);    // 0xD9
+  i2c_master_write_byte(cmd, 0x1F, true);
+  i2c_master_write_byte(cmd, OLED_CMD_SET_VCOMH_DESELCT, true);// 0xDB
+  i2c_master_write_byte(cmd, 0x40, true);
+  i2c_master_write_byte(cmd, OLED_CMD_DISPLAY_RAM, true);      // 0xA4
+  i2c_master_write_byte(cmd, OLED_CMD_DISPLAY_NORMAL, true);   // 0xA6
+  i2c_master_write_byte(cmd, OLED_CMD_DISPLAY_ON, true);       // 0xAF
+
+#elif CONFIG_SSD1306
   i2c_master_write_byte(cmd, OLED_CMD_DISPLAY_OFF, true);    // AE
   i2c_master_write_byte(cmd, OLED_CMD_SET_MUX_RATIO, true);  // A8
   if (dev->_height == 64)
@@ -100,14 +164,16 @@ void i2c_init(oled_driver_t* dev, int width, int height) {
   i2c_master_write_byte(cmd, OLED_CMD_DEACTIVE_SCROLL, true);  // 2E
   i2c_master_write_byte(cmd, OLED_CMD_DISPLAY_NORMAL, true);   // A6
   i2c_master_write_byte(cmd, OLED_CMD_DISPLAY_ON, true);       // AF
+#endif
 
   i2c_master_stop(cmd);
 
   esp_err_t espRc = i2c_master_cmd_begin(I2C_NUM, cmd, 10 / portTICK_PERIOD_MS);
   if (espRc == ESP_OK) {
-    ESP_LOGI(TAG, "OLED configured successfully");
+    ESP_LOGI(TAG, "OLED configured successfully at address 0x%02X", dev->_address);
   } else {
-    ESP_LOGE(TAG, "OLED configuration failed. code: 0x%.2X", espRc);
+    ESP_LOGE(TAG, "OLED configuration failed at address 0x%02X. Error: %s (0x%X)",
+             dev->_address, esp_err_to_name(espRc), espRc);
   }
   i2c_cmd_link_delete(cmd);
 }

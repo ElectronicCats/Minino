@@ -199,9 +199,9 @@ The build files will be in the `build_files.zip` file. Now you can create a rele
 |---------------|----------------------|
 | 0x0           | bootloader.bin       |
 | 0x8000        | partition-table.bin  |
-| 0x20000       | minino.bin           |
+| 0x440000      | minino.bin           |
 ```bash
- python -m esptool --chip esp32c6 -b 460800 --before default_reset --after hard_reset write_flash --flash_mode dio --flash_size 8MB --flash_freq 80m 0x0 bootloader.bin 0x8000 partition-table.bin 0x20000 minino.bin
+ python -m esptool --chip esp32c6 -b 460800 --before default_reset --after hard_reset write_flash --flash_mode dio --flash_size 8MB --flash_freq 80m 0x0 bootloader.bin 0x8000 partition-table.bin 0x440000 minino.bin
 ```
 
 ## Development process

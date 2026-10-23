@@ -68,7 +68,7 @@ char* gps_help[] = {
     "correct, go to", "`Settings/",   "System/Time",
     "zone` and",      "select the",   "correct one.",
 };
-const general_menu_t gps_help_menu = {.menu_count = 9,
+static const general_menu_t gps_help_menu = {.menu_count = 9,
                                       .menu_items = gps_help,
                                       .menu_level = GENERAL_TREE_APP_MENU};
 

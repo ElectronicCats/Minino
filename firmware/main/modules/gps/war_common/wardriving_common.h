@@ -22,7 +22,7 @@
 // Thread
 #define WARTH_DIR_NAME "thread"
 // CSV file properties
-#define CSV_LINE_SIZE    150  // Got it from real time tests
+#define CSV_LINE_SIZE    256  // Safely accommodates long SSIDs and full float coordinates
 #define CSV_HEADER_LINES 2    // Check `csv_header` variable
 #define MAX_CSV_LINES    (20 + CSV_HEADER_LINES)
 #define CSV_FILE_SIZE    ((CSV_LINE_SIZE) * (MAX_CSV_LINES))

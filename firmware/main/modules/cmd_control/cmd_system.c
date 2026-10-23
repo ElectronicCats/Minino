@@ -1,3 +1,4 @@
+#include <inttypes.h>
 #include "cmd_control.h"
 #include "esp_chip_info.h"
 #include "esp_console.h"
@@ -7,11 +8,15 @@
 static char* category = "Minino";
 
 static int restart_wrapper(int argc, char** argv) {
+  (void) argc;
+  (void) argv;
   esp_restart();
   return 0;  // This line will never be reached
 }
 
 int print_free_heap(int argc, char** argv) {
+  (void) argc;
+  (void) argv;
   printf("Free heap size: %d bytes or %d KB\n",
          heap_caps_get_free_size(MALLOC_CAP_8BIT),
          heap_caps_get_free_size(MALLOC_CAP_8BIT) / 1024);
@@ -19,6 +24,8 @@ int print_free_heap(int argc, char** argv) {
 }
 
 int print_min_free_heap(int argc, char** argv) {
+  (void) argc;
+  (void) argv;
   printf("Minimum free heap size: %d bytes or %d KB\n",
          heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT),
          heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT) / 1024);
@@ -26,6 +33,8 @@ int print_min_free_heap(int argc, char** argv) {
 }
 
 int print_chip_info(int argc, char** argv) {
+  (void) argc;
+  (void) argv;
   esp_chip_info_t chip_info;
   uint32_t flash_size;
   esp_chip_info(&chip_info);
@@ -62,7 +71,9 @@ int print_chip_info(int argc, char** argv) {
 }
 
 int print_reset_reason(int argc, char** argv) {
-  const char* reset_reason = NULL;
+  (void) argc;
+  (void) argv;
+  const char* reset_reason = "Unknown reset reason";
   switch (esp_reset_reason()) {
     case ESP_RST_UNKNOWN:
       reset_reason = "Unknown reset";
@@ -111,6 +122,9 @@ int print_reset_reason(int argc, char** argv) {
       break;
     case ESP_RST_CPU_LOCKUP:
       reset_reason = "CPU lockup reset";
+      break;
+    default:
+      reset_reason = "Unknown reset reason";
       break;
   }
   printf("Reset reason: %s\n", reset_reason);

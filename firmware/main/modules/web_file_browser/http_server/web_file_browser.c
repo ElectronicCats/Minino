@@ -15,6 +15,8 @@
 
 static const char TAG[] = "web_file_browser";
 
+web_file_browser_show_event_cb_t wfb_show_event_cb = NULL;
+
 extern const uint8_t html_header_start[] asm("_binary_header_html_start");
 extern const uint8_t html_header_end[] asm("_binary_header_html_end");
 extern const uint8_t favicon_ico_start[] asm("_binary_favicon_ico_start");
@@ -32,8 +34,8 @@ static esp_err_t delete_get_handler(httpd_req_t* req);
 static esp_err_t style_css_handler(httpd_req_t* req);
 static bool is_valid_safe_path(const char* path);
 
-char mount_path[WFB_MOUNT_PATH_LEN] = {0};
-bool show_hidden_files = false;
+static char mount_path[WFB_MOUNT_PATH_LEN] = {0};
+static bool show_hidden_files = false;
 
 static void html_escape_and_send(httpd_req_t* req, const char* str) {
   const char* p = str;

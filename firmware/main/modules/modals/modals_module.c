@@ -1,6 +1,9 @@
 #include "modals_module.h"
 
 #include <string.h>
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "menus_module.h"
 #include "modals_screens.h"
 
