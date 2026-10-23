@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "hid_dev.h"
 #include "hidd_le_prf_int.h"
 
@@ -47,12 +49,15 @@ esp_err_t esp_hidd_register_callbacks(esp_hidd_event_cb_t callbacks) {
 
 esp_err_t esp_hidd_profile_init(void) {
   if (hidd_le_env.enabled) {
-    ESP_LOGE(HID_LE_PRF_TAG, "HID device profile already initialized");
-    return ESP_FAIL;
+    ESP_LOGW(HID_LE_PRF_TAG,
+             "HID device profile already initialized, resetting first");
+    esp_hidd_profile_deinit();
   }
   // Reset the hid device target environment
   memset(&hidd_le_env, 0, sizeof(hidd_le_env_t));
+  hidd_le_env.gatt_if = ESP_GATT_IF_NONE;
   hidd_le_env.enabled = true;
+  hidd_le_env.unreg_signaled = false;
   return ESP_OK;
 }
 
@@ -63,6 +68,7 @@ esp_err_t esp_hidd_profile_deinit(void) {
     return ESP_OK;
   }
 
+  hidd_le_env.unreg_signaled = false;
   if (hidd_svc_hdl != 0) {
     esp_ble_gatts_stop_service(hidd_svc_hdl);
     esp_ble_gatts_delete_service(hidd_svc_hdl);
@@ -74,9 +80,32 @@ esp_err_t esp_hidd_profile_deinit(void) {
   }
 
   hidd_le_env.enabled = false;
-  memset(&hidd_le_env, 0, sizeof(hidd_le_env_t));
+  /* NOTE: hidd_le_env is NOT memset here: hidd_cb and att_tbl must survive
+   * until the queued stop/delete/unregister work has actually executed on
+   * the BTC task, otherwise GATTS_WRITE/CONF events landing in between crash
+   * on stale handles and the completion check (unreg_signaled) has nothing
+   * to compare against. ble_hid_end() waits for the unregister completion
+   * and then lets the whole environment be zeroed. */
+  esp_hidd_reset_state();
 
   return ESP_OK;
+}
+
+void esp_hidd_wait_for_unreg(uint32_t timeout_ms) {
+  int timeout = (int) (timeout_ms / 10);
+  while (!hidd_le_env.unreg_signaled && timeout-- > 0) {
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
+  if (!hidd_le_env.unreg_signaled) {
+    ESP_LOGW(HID_LE_PRF_TAG, "app_unregister completion not observed");
+  }
+  /* The registration is gone (or timed out): nothing will call hidd_cb
+     through this profile any more, so the environment can be wiped. */
+  memset(&hidd_le_env, 0, sizeof(hidd_le_env_t));
+}
+
+void esp_hidd_reset_state(void) {
+  hidd_le_env.enabled = false;
 }
 
 uint16_t esp_hidd_get_version(void) {

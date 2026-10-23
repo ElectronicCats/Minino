@@ -37,7 +37,11 @@ void trackers_scanner_start() {
   bt_client_event_cb_t event_cb = {.handler_gattc_cb = NULL,
                                    .handler_gapc_cb = handle_bt_gapc_events};
   bt_gattc_set_cb(event_cb);
-  bt_gattc_task_begin();
+  if (bt_gattc_task_begin() != ESP_OK) {
+    ESP_LOGE(TAG_BLE_CLIENT_MODULE, "trackers scan bring-up failed");
+    trackers_scanner_active = false;
+    return;
+  }
   trackers_scanner_active = true;
   xTaskCreate(task_tracker_timer, "Trackers_task", 4096, NULL, 5,
               &trackers_scan_timer_task);
@@ -94,7 +98,14 @@ static void task_tracker_timer() {
     trackers_scan_duration++;
     vTaskDelay(pdMS_TO_TICKS(1000));
   }
+  /* Detach from stop() before vanishing: stop() copies this handle and
+   * deletes the task; a self-delete while stop() still holds the copied
+   * handle would turn that delete into a delete of an already-freed TCB,
+   * so the handle is cleared (and stop() re-validated against it) under the
+   * stop guard before vTaskDelete(NULL). */
+  portENTER_CRITICAL(&trackers_stop_mux);
   trackers_scan_timer_task = NULL;
+  portEXIT_CRITICAL(&trackers_stop_mux);
   vTaskDelete(NULL);
 }
 
@@ -111,9 +122,18 @@ void trackers_scanner_stop() {
   trackers_scan_duration = 0;
   bt_gattc_task_stop();
   ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
+  /* Only delete the timer task while the handle it published still matches:
+   * a mismatch means the task already cleared it under the guard and is (or
+   * has just been) deleting itself. */
+  portENTER_CRITICAL(&trackers_stop_mux);
   TaskHandle_t task_to_delete = trackers_scan_timer_task;
-  trackers_scan_timer_task = NULL;
   if (task_to_delete != NULL && task_to_delete != xTaskGetCurrentTaskHandle()) {
+    trackers_scan_timer_task = NULL;
+  } else {
+    task_to_delete = NULL;
+  }
+  portEXIT_CRITICAL(&trackers_stop_mux);
+  if (task_to_delete != NULL) {
     vTaskDelete(task_to_delete);
   }
 

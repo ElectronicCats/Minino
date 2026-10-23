@@ -1,4 +1,5 @@
 #include "ble_scann.h"
+#include "radio_lease.h"
 #include "bt_gattc.h"
 #include "esp_bt.h"
 #include "esp_log.h"
@@ -37,7 +38,13 @@ void ble_scanner_begin() {
   bt_client_event_cb_t event_cb = {.handler_gattc_cb = NULL,
                                    .handler_gapc_cb = handle_bt_gapc_events};
   bt_gattc_set_cb(event_cb);
-  bt_gattc_task_begin();
+  /* Only report the scanner as active when the bring-up really succeeded:
+   * claiming "scanning" with the stack still down meant a dead screen with a
+   * running spinner and no diagnostics. */
+  if (bt_gattc_task_begin() != ESP_OK) {
+    ble_scanner_active = false;
+    return;
+  }
   ble_scanner_active = true;
 }
 
@@ -58,6 +65,12 @@ static void handle_bt_gapc_events(esp_gap_ble_cb_event_t event_type,
           ESP_LOGI(TAG_BLE_CLIENT_MODULE, "New ADV found");
           break;
         case ESP_GAP_SEARCH_INQ_CMPL_EVT:
+          /* A scan was interrupted by an advertising-exclusive owner (BLE
+           * spam/HID holds the gate): re-arming behind its back would take
+           * the radio from it and end in a rejection loop. */
+          if (ble_scanner_active && radio_lease_ble_scan_allowed()) {
+            esp_ble_gap_start_scanning(600);
+          }
           break;
         default:
           break;
@@ -73,6 +86,9 @@ void ble_scanner_register_cb(bluetooth_adv_scanner_cb_t callback) {
 }
 
 void ble_scanner_stop() {
+  if (!ble_scanner_active) {
+    return;
+  }
   ble_scanner_active = false;
   bt_gattc_task_stop();
 }

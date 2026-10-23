@@ -8,6 +8,7 @@
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
+#include "esp_image_format.h"
 #include "esp_timer.h"
 #include "sys/param.h"
 
@@ -39,7 +40,7 @@ static const esp_timer_create_args_t fw_update_reset_args = {
     .arg = NULL,
     .dispatch_method = ESP_TIMER_TASK,
     .name = "fw_update_reset"};
-esp_timer_handle_t fw_update_reset;
+static esp_timer_handle_t fw_update_reset;
 
 // Embedded Files: JQuery, index.html, app.css, app.js, and favicon.ico files
 extern const uint8_t jquery_3_3_1_min_js_start[] asm(
@@ -545,8 +546,22 @@ static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
    * associated with it is freed (regardless of the results).
    */
   if (esp_ota_end(ota_handle) == ESP_OK) {
-    // let's update the partition i.e. configure OTA data for new boot partition
-    if (esp_ota_set_boot_partition(update_partition) == ESP_OK) {
+    // Verify the firmware signature before setting boot partition
+    esp_image_metadata_t metadata;
+    esp_partition_pos_t part_pos = {
+      .offset = update_partition->address,
+      .size = update_partition->size,
+    };
+    if (esp_image_verify(ESP_IMAGE_VERIFY, &part_pos, &metadata) == ESP_OK) {
+      ESP_LOGI(TAG, "Firmware image verified successfully");
+    } else {
+      ESP_LOGE(TAG, "Firmware image verification failed!");
+      flash_successful = false;
+    }
+
+    if (flash_successful) {
+      // let's update the partition i.e. configure OTA data for new boot partition
+      if (esp_ota_set_boot_partition(update_partition) == ESP_OK) {
       const esp_partition_t* boot_partition = esp_ota_get_boot_partition();
       ESP_LOGI(TAG,
                "http_server_ota_update_handler: Next boot partition subtype %d "
@@ -555,6 +570,7 @@ static esp_err_t http_server_ota_update_handler(httpd_req_t* req) {
       flash_successful = true;
     } else {
       ESP_LOGI(TAG, "http_server_ota_update_handler: Flash Error");
+    }
     }
   } else {
     ESP_LOGI(TAG, "http_server_ota_update_handler: esp_ota_end Error");

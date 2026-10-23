@@ -16,8 +16,12 @@
  */
 #pragma once
 
+#include "sdkconfig.h"
+
+#if CONFIG_BT_ENABLED
 #include "esp_err.h"
 #include "esp_gap_ble_api.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,6 +59,15 @@ esp_err_t gap_dispatcher_register(esp_gap_ble_cb_t cb);
  *         ESP_ERR_NOT_FOUND if the callback was not registered.
  */
 esp_err_t gap_dispatcher_unregister(esp_gap_ble_cb_t cb);
+
+/**
+ * @brief Reset internal status tracking of Bluedroid.
+ *
+ * Called when the BLE stack is torn down or disabled (e.g. by radio_lease)
+ * so that the dispatcher knows to re-register with Bluedroid when it is next
+ * enabled.
+ */
+esp_err_t gap_dispatcher_reset(void);
 
 #ifdef __cplusplus
 }

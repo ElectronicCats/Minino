@@ -11,6 +11,7 @@
 
 #include "esp_err.h"
 #include "esp_log.h"
+#include "wifi_service.h"
 #include "esp_wifi.h"
 #include "lwip/netdb.h"
 #include "nvs_flash.h"
@@ -154,6 +155,7 @@ static void wifi_app_event_handler_init(void) {
 
 /*
  * Initializes the TCP stack and default WiFi Configuration
+ * Usa wifi_service_init() (llorado en app_main) en lugar de esp_wifi_init() directo.
  */
 static void wifi_app_default_wifi_init(void) {
   // Initialize the TCP Stack i.e. the ESP Network Interface
@@ -162,12 +164,16 @@ static void wifi_app_default_wifi_init(void) {
     ESP_LOGE(TAG, "esp_netif_init failed: %s", esp_err_to_name(err));
   }
 
-  // Setup WiFi Station with the Default WiFi Configuration
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  err = esp_wifi_init(&cfg);
-  if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
-    ESP_LOGE(TAG, "esp_wifi_init failed: %s", esp_err_to_name(err));
+  /* WiFi stack ya inicializada por wifi_service_init() en app_main().
+   * Verificamos el estado y postamos evento si cambió. */
+  if (!wifi_service_is_up_get()) {
+    ESP_LOGW(TAG, "WiFi stack no inicializada por servicio; inicializando...");
+    wifi_service_init(WIFI_MODE_AP);
+  } else {
+    ESP_LOGI(TAG, "WiFi stack ya inicializada por servicio");
   }
+
+  /* Ya no llamamos esp_wifi_init(&cfg) aquí; el servicio lo hizo en app_main(). */
   ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
   esp_netif_sta = esp_netif_create_default_wifi_sta();
@@ -206,7 +212,7 @@ static void wifi_app_soft_ap_config(void) {
   // Start the AP DHCP Server (for connecting stations i.e. our mobile devices)
   ESP_ERROR_CHECK(esp_netif_dhcps_start(esp_netif_ap));
   // Set the mode as Access Point and Station Mode
-  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
+  ESP_ERROR_CHECK(wifi_service_set_mode(WIFI_MODE_APSTA));
   // Set our configuration
   ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &ap_config));
   // our Default bandwidth is 20MHz

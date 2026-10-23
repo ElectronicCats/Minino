@@ -106,6 +106,14 @@ static void ieee802154_receive_done(uint8_t* data,
         ot_esp_ieee802154_receive_done(data, frame_info);
         break;
       default:
+        // RADIO_SELECT_SURVEILLANCE and the unset value reach this branch with
+        // nobody to hand the frame to. process was already set to true above, so
+        // esp_ieee802154_receive_handle_done() never runs and set_next_rx_buffer()
+        // never reclaims the slot: after CONFIG_IEEE802154_RX_BUFFER_SIZE such
+        // frames the driver is permanently deaf and the ISR floods the log.
+        // Hand it back so the buffer is released, exactly as a consumer would.
+        frame_info->process = false;
+        esp_ieee802154_receive_handle_done(data);
         break;
     }
   }

@@ -147,6 +147,25 @@ esp_err_t esp_hidd_profile_init(void);
 esp_err_t esp_hidd_profile_deinit(void);
 
 /**
+ * @brief Wait until the app_unregister queued by deinit completes, then wipe
+ *        the profile environment.
+ *
+ * GATTS work queued by esp_hidd_profile_deinit() executes asynchronously on
+ * the BTC task; tearing Bluedroid down right after queuing it leaves the
+ * profile half-registered and a second enable dead (no REG event, no
+ * advertising). Call this after deinit and before the stack goes away.
+ *
+ * @param timeout_ms How long to wait for the unregister completion event.
+ */
+void esp_hidd_wait_for_unreg(uint32_t timeout_ms);
+
+/**
+ * @brief Mark the profile as disabled without wiping the environment.
+ *        Internal use (deinit sequencing).
+ */
+void esp_hidd_reset_state(void);
+
+/**
  *
  * @brief           Get hidd profile version
  *

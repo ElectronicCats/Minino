@@ -6,14 +6,17 @@
 typedef void (*hid_event_callback_f)(bool connection);
 
 void ble_hid_begin();
-void ble_hid_volume_down(bool press);
-void ble_hid_volume_up(bool press);
-void ble_hid_play(bool press);
-void ble_hid_pause(bool press);
-void ble_hid_stop(bool press);
-void ble_hid_mute(bool press);
-void ble_hid_next_track(bool press);
-void ble_hid_prev_track(bool press);
+/* Each action returns true only when the report actually reached the host, so
+   callers can confirm the action instead of assuming it. */
+bool ble_hid_volume_down(bool press);
+bool ble_hid_volume_up(bool press);
+bool ble_hid_play(bool press);
+bool ble_hid_pause(bool press);
+bool ble_hid_stop(bool press);
+bool ble_hid_mute(bool press);
+bool ble_hid_next_track(bool press);
+bool ble_hid_prev_track(bool press);
 void ble_hid_get_device_name(char* device_name);
 void ble_hid_get_device_mac(uint8_t* mac);
 void ble_hid_register_callback(hid_event_callback_f callback);
+void ble_hid_end(void);

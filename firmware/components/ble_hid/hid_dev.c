@@ -42,11 +42,17 @@ void hid_dev_send_report(esp_gatt_if_t gatts_if,
 
   // get att handle for report
   if ((p_rpt = hid_dev_rpt_by_id(id, type)) != NULL) {
-    // if notifications are enabled
-    ESP_LOGD(HID_LE_PRF_TAG, "%s(), send the report, handle = %d", __func__,
-             p_rpt->handle);
-    esp_ble_gatts_send_indicate(gatts_if, conn_id, p_rpt->handle, length, data,
-                                false);
+    esp_err_t err = esp_ble_gatts_send_indicate(gatts_if, conn_id, p_rpt->handle,
+                                                 length, data, false);
+    if (err != ESP_OK) {
+      ESP_LOGE(HID_LE_PRF_TAG, "esp_ble_gatts_send_indicate failed: %s (id=%d, handle=%d)",
+               esp_err_to_name(err), id, p_rpt->handle);
+    } else {
+      ESP_LOGI(HID_LE_PRF_TAG, "Report sent ok: id=%d, handle=%d, len=%d",
+               id, p_rpt->handle, length);
+    }
+  } else {
+    ESP_LOGE(HID_LE_PRF_TAG, "Report not found in map: id=%d, type=%d", id, type);
   }
 
   return;

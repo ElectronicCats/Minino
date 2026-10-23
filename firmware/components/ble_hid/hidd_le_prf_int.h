@@ -86,7 +86,7 @@
 #define HID_EXT_REPORT_REF_LEN 2  // External Report Reference Descriptor
 
 // HID feature flags
-#define HID_KBD_FLAGS HID_FLAGS_REMOTE_WAKE
+#define HID_KBD_FLAGS (HID_FLAGS_REMOTE_WAKE | HID_FLAGS_NORMALLY_CONNECTABLE)
 
 /* HID Report type */
 #define HID_REPORT_TYPE_INPUT   1
@@ -306,6 +306,12 @@ typedef struct {
   hidd_inst_t hidd_inst;
   esp_hidd_event_cb_t hidd_cb;
   uint8_t inst_id;
+  /* Set by the GATTS handler when the app_unregister queued by
+     esp_hidd_profile_deinit() has actually completed. Deinit ordering in
+     Bluedroid is asynchronous: profile_deinit() only queues work on the BTC
+     task, and the caller (ble_hid_end) needs to know the registration is
+     really gone before letting the stack be torn down. */
+  volatile bool unreg_signaled;
 } hidd_le_env_t;
 
 extern hidd_le_env_t hidd_le_env;

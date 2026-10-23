@@ -3,6 +3,7 @@
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_wifi.h"
+#include "wifi_service.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "preferences.h"
@@ -10,7 +11,7 @@
 static const char* TAG = "ap_manager";
 static EventGroupHandle_t wifi_event_group = NULL;
 static app_callback callback_connection;
-const int CONNECTED_BIT = BIT0;
+static const int CONNECTED_BIT = BIT0;
 static int reconnections = 0;
 static bool initialized = false;
 
@@ -77,14 +78,17 @@ static void initialise_wifi(void) {
   assert(ap_netif);
   esp_netif_t* sta_netif = esp_netif_create_default_wifi_sta();
   assert(sta_netif);
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+  if (!wifi_service_is_up_get() && !wifi_service_init(WIFI_MODE_AP)) {
+    ESP_LOGE(TAG, "WiFi stack init failed");
+    return;
+  }
+
   ESP_ERROR_CHECK(esp_event_handler_register(
       WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &event_handler, NULL));
   ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP,
                                              &event_handler, NULL));
   ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
+  ESP_ERROR_CHECK(wifi_service_set_mode(WIFI_MODE_NULL));
   ESP_ERROR_CHECK(esp_wifi_start());
   initialized = true;
 
@@ -116,7 +120,7 @@ static bool wifi_ap_manager_join(const char* ssid,
             sizeof(wifi_config.sta.password));
   }
 
-  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+  ESP_ERROR_CHECK(wifi_service_set_mode(WIFI_MODE_STA));
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
   esp_err_t err = esp_wifi_connect();
   if (err != ESP_OK) {
