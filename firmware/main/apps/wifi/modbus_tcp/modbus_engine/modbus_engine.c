@@ -45,6 +45,11 @@ static void __attribute__((unused)) modbus_engine_keep_alive(
 }
 
 void modbus_engine_set_request(uint8_t* request, size_t request_len) {
+  if (request == NULL || request_len > sizeof(modbus_engine->request)) {
+    ESP_LOGE(TAG, "refusing a Modbus request of %u bytes (max %u)",
+             (unsigned) request_len, (unsigned) sizeof(modbus_engine->request));
+    return;
+  }
   memcpy(modbus_engine->request, request, request_len);
   modbus_engine->request_len = request_len;
 
@@ -89,7 +94,7 @@ int modbus_engine_connect() {
   }
   modbus_engine->wifi_connected = true;
 
-  if (modbus_engine->sock) {
+  if (modbus_engine->sock > 0) {
     modbus_engine_disconnect();
   }
 
@@ -128,9 +133,13 @@ void modbus_engine_disconnect() {
              "First uset the command mb_engine_set_req for setup the request.");
     return;
   }
-  close(modbus_engine->sock);
-  modbus_engine->sock = 0;
-  ESP_LOGI(TAG, "Succesfully Disconnected");
+  if (modbus_engine->sock > 0) {
+    close(modbus_engine->sock);
+    modbus_engine->sock = -1;
+    ESP_LOGI(TAG, "Succesfully Disconnected");
+  } else {
+    modbus_engine->sock = -1;
+  }
 }
 
 void modbus_engine_send_request() {
@@ -140,7 +149,7 @@ void modbus_engine_send_request() {
     return;
   }
 
-  if (!modbus_engine->sock) {
+  if (modbus_engine->sock <= 0) {
     if (modbus_engine_connect() < 0) {
       ESP_LOGW(TAG, "Error connecting with the socket");
       return;
@@ -190,6 +199,10 @@ void modbus_engine_send_request() {
 
 static void free_modbus_engine() {
   if (modbus_engine) {
+    if (modbus_engine->sock > 0) {
+      close(modbus_engine->sock);
+      modbus_engine->sock = -1;
+    }
     free(modbus_engine);
     modbus_engine = NULL;
   }
@@ -200,6 +213,7 @@ void modbus_engine_begin() {
 
   free_modbus_engine();
   modbus_engine = calloc(1, sizeof(modbus_engine_t));
+  modbus_engine->sock = -1;
   modbus_engine->ip = modubs_tcp_prefs_get_prefs()->ip;
   modbus_engine->port = modubs_tcp_prefs_get_prefs()->port;
   modbus_engine->request_len = modubs_tcp_prefs_get_prefs()->request_len;

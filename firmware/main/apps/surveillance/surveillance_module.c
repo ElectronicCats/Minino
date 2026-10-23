@@ -17,6 +17,7 @@
 #include "surveillance_detect.h"
 #include "surveillance_log.h"
 #include "surveillance_screens.h"
+#include "app_manager.h"
 
 #define TAG "surv_app"
 
@@ -282,10 +283,42 @@ void surveillance_module_stop(void) {
   // 4. Restaurar el estado de menus y pantalla
   menus_module_set_default_input();
   oled_screen_clear();
-  menus_module_restart();
+  // app_manager_exit() will be called by on_exit
 }
 
 void surveillance_module_boot_resume(void) {
   // Desactivado: el escaneo corre en la misma sesion sin reinicios de chip
   preferences_put_uchar(SURV_MUX_KEY, 0);
 }
+
+
+// ---------------------------------------------------------------------------
+// app_manager callbacks
+// ---------------------------------------------------------------------------
+static void surveillance_on_enter(void) {
+  surveillance_module_begin();
+}
+
+static void surveillance_on_input(uint8_t button_name, uint8_t button_event) {
+  // Reuse the existing input handler
+  surveillance_input_cb(button_name, button_event);
+}
+
+static void surveillance_on_exit(void) {
+  surveillance_module_stop();
+}
+
+// Wrapper for menu entry
+void app_manager_enter_wrapper_surveillance(void) {
+  extern const minino_app_t surveillance_app;
+  app_manager_enter(&surveillance_app);
+}
+
+// App definition for app_manager
+const minino_app_t surveillance_app = {
+  .name = "surveillance",
+  .on_enter = surveillance_on_enter,
+  .on_input = surveillance_on_input,
+  .on_exit = surveillance_on_exit,
+};
+

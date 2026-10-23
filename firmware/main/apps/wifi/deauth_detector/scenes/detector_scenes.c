@@ -5,6 +5,7 @@
 #include "general_scrolling_text.h"
 #include "general_submenu.h"
 #include "menus_module.h"
+#include "app_manager.h"
 #include "oled_screen.h"
 #include "preferences.h"
 
@@ -70,7 +71,7 @@ static void main_menu_handler(uint8_t selection) {
 }
 
 static void main_menu_exit() {
-  menus_module_exit_app();
+  app_manager_exit();
 }
 
 void detector_scenes_main_menu() {

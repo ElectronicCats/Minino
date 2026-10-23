@@ -1,5 +1,7 @@
 #include "captive_screens.h"
 
+#include "captive_module.h"
+
 void captive_module_show_help() {
   general_scrolling_text_ctx help = {0};
   help.banner = "Help";

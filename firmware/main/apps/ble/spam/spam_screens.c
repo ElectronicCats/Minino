@@ -197,7 +197,7 @@ static const unsigned char* const ble_bitmap_scan_attack_allArray[4] = {
 
 static char current_screen_title[24] = "BLE SPAM";
 static char current_model_name[32] = "Starting...";
-static SemaphoreHandle_t text_mutex = NULL;
+SemaphoreHandle_t text_mutex = NULL;
 
 static void ble_screens_display_scanning_animation(void) {
   static uint8_t frame = 0;
@@ -259,3 +259,21 @@ void ble_screens_display_scanning_text(const char* name) {
     }
   }
 }
+
+/* Fired by bt_spam when a peer answers one of the spammed identities. This is
+   the payoff of the whole app: without it the operator only ever saw a model
+   name scrolling by and had no way to know a popup had been accepted. */
+void ble_screens_display_peer_connected(const char* name, bool success) {
+  if (name != NULL && text_mutex != NULL) {
+    if (xSemaphoreTake(text_mutex, pdMS_TO_TICKS(10)) == pdTRUE) {
+      strncpy(current_model_name, name, sizeof(current_model_name) - 1);
+      current_model_name[sizeof(current_model_name) - 1] = '\0';
+      xSemaphoreGive(text_mutex);
+    }
+  }
+}
+
+void* ble_screens_get_text_mutex(void) {
+  return text_mutex;
+}
+

@@ -4,8 +4,15 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+/* Capacity of every Modbus/TCP request buffer in this app (engine, prefs and
+   the two generators). It has to be named because the value is used both to
+   size the arrays and to bound the copies: a generator once wrote 269 bytes
+   into a 260-byte stack buffer, and the oversized length was then persisted to
+   NVS and re-read on every boot. */
+#define MODBUS_TCP_MAX_REQUEST_LEN 260
+
 typedef struct {
-  uint8_t request[260];
+  uint8_t request[MODBUS_TCP_MAX_REQUEST_LEN];
   size_t request_len;
   char* ip;
   int port;

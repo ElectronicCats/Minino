@@ -6,6 +6,7 @@
 #include "general_scrolling_text.h"
 #include "general_submenu.h"
 #include "menus_module.h"
+#include "app_manager.h"
 #include "oled_screen.h"
 
 #include "modbus_attacks.h"
@@ -76,8 +77,7 @@ static void modbus_tcp_show_exit_attacks() {
 }
 
 static void main_exit_cb() {
-  wifi_ap_manager_unregister_callback();
-  menus_module_restart();
+  app_manager_exit();
 }
 
 void modbus_tcp_display_connecting() {
@@ -100,7 +100,12 @@ void modbus_tcp_display_connecting() {
 static void modbus_tcp_scenes_show_target() {
   modbus_engine_t* mbus_ctx = modbus_engine_get_ctx();
   if (mbus_ctx == NULL) {
+    /* modbus_engine_get_ctx() is NULL until modbus_engine_begin() has run, and
+       this screen is reachable without it: the NULL check used to fall through
+       and dereference mbus_ctx on the very next line, taking a LoadProhibited
+       fault on a fresh boot. */
     modbus_show_no_connection_notify();
+    return;
   }
   if (!mbus_ctx->ip_set) {
     modbus_show_no_target_notify();
@@ -389,3 +394,48 @@ void modbus_tcp_scenes_help() {
 
   general_scrolling_text_array(help);
 }
+
+
+// ---------------------------------------------------------------------------
+// app_manager callbacks
+// ---------------------------------------------------------------------------
+static void modbus_tcp_on_enter(void) {
+  modbus_tcp_scenes_main();
+}
+
+static void modbus_tcp_on_input(uint8_t button_name, uint8_t button_event) {
+  // Scenes install their own input handlers
+  (void)button_name;
+  (void)button_event;
+}
+
+static void modbus_tcp_on_exit(void) {
+  // Stop attacks if running
+  modbus_attacks_stop();
+  // Unregister AP manager callback
+  wifi_ap_manager_unregister_callback();
+  // Free AP list
+  for (int i = 0; i < 20; i++) {
+    if (list_ap[i] != NULL) {
+      free(list_ap[i]);
+      list_ap[i] = NULL;
+    }
+  }
+  last_main_selection = 0;
+  last_settings_selection = 0;
+}
+
+// Wrapper for menu entry
+void app_manager_enter_wrapper_modbus_tcp(void) {
+  extern const minino_app_t modbus_tcp_app;
+  app_manager_enter(&modbus_tcp_app);
+}
+
+// App definition for app_manager
+const minino_app_t modbus_tcp_app = {
+  .name = "modbus_tcp",
+  .on_enter = modbus_tcp_on_enter,
+  .on_input = modbus_tcp_on_input,
+  .on_exit = modbus_tcp_on_exit,
+};
+

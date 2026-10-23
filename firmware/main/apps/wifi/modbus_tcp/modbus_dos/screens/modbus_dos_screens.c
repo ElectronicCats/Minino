@@ -1,6 +1,7 @@
 #include "modbus_dos_screens.h"
 
 #include "menus_module.h"
+#include "app_manager.h"
 #include "oled_screen.h"
 
 #include "modbus_dos_prefs.h"
@@ -12,7 +13,7 @@ static void main_screen_input_cb(uint8_t button, uint8_t event) {
   }
   // modbus_dos_stop();
   // modbus_dos_scenes_main();
-  menus_module_restart();
+  app_manager_exit();
 }
 
 static void modbus_dos_screens_main_draw_cb() {

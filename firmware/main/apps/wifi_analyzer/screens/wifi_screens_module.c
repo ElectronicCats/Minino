@@ -7,12 +7,12 @@
 #include "oled_screen.h"
 #include "wifi_bitmaps.h"
 
-TaskHandle_t wifi_sniffer_animation_task_handle = NULL;
+static TaskHandle_t wifi_sniffer_animation_task_handle = NULL;
 
 #ifdef CONFIG_RESOLUTION_128X64
-uint8_t pkts_offset = 3;
+static uint8_t pkts_offset = 3;
 #else
-uint8_t pkts_offset = 2;
+static uint8_t pkts_offset = 2;
 #endif
 
 void wifi_screens_module_display_sniffer_cb(sniffer_runtime_t* sniffer) {

@@ -16,10 +16,10 @@
 
 static TaskHandle_t uart_bridge_app_task_handle = NULL;
 
-uint8_t uart_baudrate_option = 1;
-uint8_t uart_data_bits_option = 3;
-uint8_t uart_parity_option = 0;
-uint8_t uart_stop_bits_option = 0;
+static uint8_t uart_baudrate_option = 1;
+static uint8_t uart_data_bits_option = 3;
+static uint8_t uart_parity_option = 0;
+static uint8_t uart_stop_bits_option = 0;
 
 static const char* uart_bridge_app_options[] = {
     "Start", "Baudrate", "Data Bits", "Parity", "Stop Bits",

@@ -47,8 +47,8 @@ typedef struct {
   uint32_t microseconds;
 } sniffer_packet_info_t;
 
-thread_pcap_handler_t thread_pcap = {0};
-thread_sniffer_show_event_cb_t thread_sniffer_show_event_cb = NULL;
+static thread_pcap_handler_t thread_pcap = {0};
+static thread_sniffer_show_event_cb_t thread_sniffer_show_event_cbs[4] = {NULL};
 static QueueHandle_t packet_rx_queue = NULL;
 static TaskHandle_t handler_task_handle = NULL;
 static uint32_t packets_count = 0;
@@ -290,13 +290,42 @@ void thread_sniffer_set_channel(uint8_t channel) {
   ESP_LOGI(TAG, "Channel set to %d", channel);
 }
 
-void thread_sniffer_set_show_event_cb(thread_sniffer_show_event_cb_t cb) {
-  thread_sniffer_show_event_cb = cb;
+
+void thread_sniffer_subscribe_show_event(thread_sniffer_show_event_cb_t cb) {
+  if (cb == NULL) return;
+  for (int i = 0; i < 4; i++) {
+    if (thread_sniffer_show_event_cbs[i] == cb) {
+      return;
+    }
+  }
+  for (int i = 0; i < 4; i++) {
+    if (thread_sniffer_show_event_cbs[i] == NULL) {
+      thread_sniffer_show_event_cbs[i] = cb;
+      break;
+    }
+  }
+}
+
+void thread_sniffer_unsubscribe_show_event(thread_sniffer_show_event_cb_t cb) {
+  if (cb == NULL) return;
+  for (int i = 0; i < 4; i++) {
+    if (thread_sniffer_show_event_cbs[i] == cb) {
+      thread_sniffer_show_event_cbs[i] = NULL;
+      break;
+    }
+  }
 }
 
 static void thread_sniffer_show_event(thread_sniffer_events_t event,
                                       void* context) {
-  if (thread_sniffer_show_event_cb != NULL) {
-    thread_sniffer_show_event_cb(event, context);
+  for (int i = 0; i < 4; i++) {
+    if (thread_sniffer_show_event_cbs[i] != NULL) {
+      thread_sniffer_show_event_cbs[i](event, context);
+    }
   }
+}
+
+void thread_sniffer_subscribe_screen_events(void) {
+  /* Suscribe el handler de pantalla por defecto a los eventos de thread_sniffer. */
+  thread_sniffer_subscribe_show_event(thread_sniffer_show_event_handler);
 }

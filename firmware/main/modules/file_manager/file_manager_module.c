@@ -2,8 +2,11 @@
 
 #include <errno.h>
 #include <string.h>
+#include <sys/param.h> /* MIN */
 #include "dirent.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 #include "coroutine.h"
 #include "file_manager_screens.h"
@@ -12,6 +15,7 @@
 #include "menus_module.h"
 #include "modals_module.h"
 #include "sd_card.h"
+#include "app_manager.h"
 
 #define INTERNAL_ROOT "/internal"
 #define SD_CARD_ROOT  "/sdcard"
@@ -173,7 +177,7 @@ static void file_manager_module_exit() {
     free(fm_ctx);
     fm_ctx = NULL;
   }
-  menus_module_restart();
+  app_manager_exit();
 }
 
 static void navigation_up() {
@@ -244,12 +248,12 @@ static void file_options_handler(int8_t selection) {
                      filename, extension);
       char* new_name = keyboard_modal_write(filename, "     RENAME    ");
       if (new_name != NULL) {
-        char* new_path =
-            (char*) malloc(strlen(new_name) + strlen(fm_ctx->current_path) +
-                           strlen(extension) + 3);
+        size_t path_len = strlen(new_name) + strlen(fm_ctx->current_path) +
+                          strlen(extension) + 3;
+        char* new_path = (char*) malloc(path_len);
         if (new_path != NULL) {
-          sprintf(new_path, "%s/%s.%s", fm_ctx->current_path, new_name,
-                  extension);
+          snprintf(new_path, path_len, "%s/%s.%s", fm_ctx->current_path, new_name,
+                   extension);
           if (rename(fm_ctx->file_items_arr[fm_ctx->selected_item]->path,
                      new_path) == 0) {
             modals_module_show_info("Success", "File was renamed successfully ",
@@ -259,6 +263,7 @@ static void file_options_handler(int8_t selection) {
           }
           free(new_path);
         }
+        free(new_name);
       }
       menus_module_set_app_state(true, file_manager_input_cb);
       break;
@@ -392,3 +397,41 @@ void file_manager_module_init() {
   fm_ctx = file_manager_context_alloc();
   start_coroutine(open_root_options, NULL);
 }
+
+
+// ---------------------------------------------------------------------------
+// app_manager callbacks
+// ---------------------------------------------------------------------------
+static void file_manager_on_enter(void) {
+  file_manager_module_init();
+}
+
+static void file_manager_on_input(uint8_t button_name, uint8_t button_event) {
+  // Input is handled by file_manager_input_cb which is set via coroutines
+  // The app state is set in open_root_options/open_root_directory
+  (void)button_name;
+  (void)button_event;
+}
+
+static void file_manager_on_exit(void) {
+  clear_items();
+  if (fm_ctx != NULL) {
+    free(fm_ctx);
+    fm_ctx = NULL;
+  }
+}
+
+// Wrapper for menu entry
+void app_manager_enter_wrapper_file_manager(void) {
+  extern const minino_app_t file_manager_app;
+  app_manager_enter(&file_manager_app);
+}
+
+// App definition for app_manager
+const minino_app_t file_manager_app = {
+  .name = "file_manager",
+  .on_enter = file_manager_on_enter,
+  .on_input = file_manager_on_input,
+  .on_exit = file_manager_on_exit,
+};
+
