@@ -17,8 +17,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "esp_err.h"
 #include "esdr_transport.h"
+#include "esp_err.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,7 +37,15 @@ extern "C" {
  */
 esp_err_t esdr_host_run(void);
 
+/**
+ * @brief Request the running esdr_host session to stop gracefully.
+ */
+void esdr_host_request_stop(void);
 
+/**
+ * @brief Check if esdr_host session is currently active.
+ */
+bool esdr_host_is_active(void);
 
 #ifdef __cplusplus
 }

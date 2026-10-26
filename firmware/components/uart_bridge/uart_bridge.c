@@ -1,7 +1,7 @@
 #include "uart_bridge.h"
 #include <string.h>
-#include "esp_log.h"
 #include "driver/uart.h"
+#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -106,9 +106,9 @@ int custom_log(const char* format, va_list args) {
      * stops draining, this sink blocks every task that logs - including the
      * esp_timer task, which runs keyboard_module's button callback. ESP-IDF 5.5
      * exposes no "tx free space" query, so the budget is enforced with
-     * uart_wait_tx_done(): when the TX pipeline is already backed up the line is
-     * dropped instead of wedging the system. Dropping diagnostics is the right
-     * trade for a log sink; a stalled host must not freeze the buttons.
+     * uart_wait_tx_done(): when the TX pipeline is already backed up the line
+     * is dropped instead of wedging the system. Dropping diagnostics is the
+     * right trade for a log sink; a stalled host must not freeze the buttons.
      *
      * Residual: a burst from another task between the check and the write can
      * still block, but it cannot persist - the next timeout drops the line and

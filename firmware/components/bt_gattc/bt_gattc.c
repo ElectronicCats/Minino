@@ -1,10 +1,10 @@
 #include "bt_gattc.h"
-#include "radio_lease.h"
 #include "esp_bt.h"
 #include "esp_log.h"
-#include "gatt_dispatcher.h"
 #include "gap_dispatcher.h"
+#include "gatt_dispatcher.h"
 #include "inttypes.h"
+#include "radio_lease.h"
 
 // GATT Client
 static char remote_device_name[MAX_REMOTE_DEVICE_NAME];
@@ -25,11 +25,11 @@ static bool s_passive_scan = false;
  * scanner restart loop) owns by then. */
 static volatile bool s_scan_started = false;
 
-static struct gattc_profile_inst ble_client_gattc_profile_tab[DEVICE_PROFILES] = {
-    [DEVICE_PROFILE] = {
-        .gattc_cb = ble_client_gattc_event_handler,
-        .gattc_if = ESP_GATT_IF_NONE,
-    }};
+static struct gattc_profile_inst ble_client_gattc_profile_tab[DEVICE_PROFILES] =
+    {[DEVICE_PROFILE] = {
+         .gattc_cb = ble_client_gattc_event_handler,
+         .gattc_if = ESP_GATT_IF_NONE,
+     }};
 
 esp_bt_uuid_t bt_gattc_set_default_ble_filter_service_uuid() {
   esp_bt_uuid_t remote_filter_service_uuid = {
@@ -524,10 +524,10 @@ esp_err_t bt_gattc_task_begin(void) {
 
   esp_err_t ret = ESP_OK;
 
-  /* Brings up the controller and Bluedroid, and holds a BLE claim for as long as
-     this client is running: the surveillance detector used to disable Bluedroid
-     whenever one of its windows ended, silently killing the trackers scanner and
-     the gatt console commands. */
+  /* Brings up the controller and Bluedroid, and holds a BLE claim for as long
+     as this client is running: the surveillance detector used to disable
+     Bluedroid whenever one of its windows ended, silently killing the trackers
+     scanner and the gatt console commands. */
   ret = radio_lease_ble_acquire();
   if (ret != ESP_OK) {
     ESP_LOGE(TAG_BT_GATTC, "could not acquire the BLE stack: %x", ret);

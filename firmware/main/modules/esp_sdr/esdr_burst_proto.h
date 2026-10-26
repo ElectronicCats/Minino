@@ -3,11 +3,12 @@
  * The burst protocol that the ESP-SDR firmware speaks, and that the
  * ESP-WebSDR browser viewer drives (https://espargos.net/espsdr/app/).
  *
- * Ported from ESPARGOS/esp-sdr (GPL-3.0-or-later): main/common/burst_commands.h,
- * main/common/burst_capture.h, main/common/burst_limits.h and docs/protocol.md.
- * The wire format is fixed by the viewer, so this is a port and not a
- * reimplementation: the acceptance rules of the parser and the exact bytes of
- * the replies have to match what the browser expects.
+ * Ported from ESPARGOS/esp-sdr (GPL-3.0-or-later):
+ * main/common/burst_commands.h, main/common/burst_capture.h,
+ * main/common/burst_limits.h and docs/protocol.md. The wire format is fixed by
+ * the viewer, so this is a port and not a reimplementation: the acceptance
+ * rules of the parser and the exact bytes of the replies have to match what the
+ * browser expects.
  *
  * The module is plain C with no ESP-IDF dependency, so the host tests in
  * test/ can exercise it without hardware.
@@ -27,7 +28,7 @@ extern "C" {
 /* Longest command line the firmware accepts, and the longest reply it
    produces. The viewer reads a reply with a 256 byte budget and the browser
    refuses anything longer, so every reply has to stay well below that. */
-#define ESDR_LINE_MAX 128
+#define ESDR_LINE_MAX  128
 #define ESDR_REPLY_MAX 256
 
 /* A burst is at most this long: the dump engine writes 16380 words and the
@@ -44,7 +45,7 @@ extern "C" {
 /* The identity the viewer expects. The regex it applies is
    /^(ESP32|C2|C3|C5|C6|C61|H2|S2|S3|S31)SDR 6 burst (\d+)$/ and the burst
    count has to be between 4096 and 16384. */
-#define ESDR_FAMILY_ID "C6SDR"
+#define ESDR_FAMILY_ID        "C6SDR"
 #define ESDR_PROTOCOL_VERSION 6
 
 /* The lowest and highest frequency Minino can actually tune: the dump engine
@@ -93,6 +94,7 @@ typedef struct {
   uint32_t format;     /* RXRUN: 16 or 20 */
   uint32_t gain_index; /* GAIN MANUAL */
   bool gain_manual;    /* GAIN */
+  bool gain_query;     /* GAIN? */
 } esdr_request_t;
 
 /**
@@ -154,7 +156,11 @@ size_t esdr_reply_range(char* out, size_t len);
 size_t esdr_reply_transport(char* out, size_t len);
 size_t esdr_reply_sync(char* out, size_t len, uint64_t nonce);
 size_t esdr_reply_gain(char* out, size_t len, bool manual, uint32_t index);
-size_t esdr_reply_data(char* out, size_t len, uint32_t samples, uint32_t crc, uint32_t capture_us);
+size_t esdr_reply_data(char* out,
+                       size_t len,
+                       uint32_t samples,
+                       uint32_t crc,
+                       uint32_t capture_us);
 
 #ifdef __cplusplus
 }

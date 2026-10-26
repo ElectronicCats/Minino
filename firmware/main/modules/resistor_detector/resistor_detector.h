@@ -5,9 +5,9 @@
 #include <stdio.h>
 
 #ifdef ESP_PLATFORM
-#include "driver/gpio.h"
-#include "esp_log.h"
-#include "esp_system.h"
+  #include "driver/gpio.h"
+  #include "esp_log.h"
+  #include "esp_system.h"
 
 bool resistor_detector(gpio_num_t gpio_num);
 #endif
@@ -24,20 +24,20 @@ typedef enum {
 } resistor_calc_status_t;
 
 resistor_calc_status_t resistor_calculate_pullup_adc(uint32_t adc_raw,
-                                                    uint32_t adc_max,
-                                                    float r_known,
-                                                    float* r_out);
+                                                     uint32_t adc_max,
+                                                     float r_known,
+                                                     float* r_out);
 
 resistor_calc_status_t resistor_calculate_pulldown_adc(uint32_t adc_raw,
-                                                      uint32_t adc_max,
-                                                      float r_known,
-                                                      float* r_out);
+                                                       uint32_t adc_max,
+                                                       float r_known,
+                                                       float* r_out);
 
 resistor_calc_status_t resistor_calculate_voltage_divider(float v_measured,
-                                                         float v_cc,
-                                                         float r_known,
-                                                         bool is_pullup,
-                                                         float* r_out);
+                                                          float v_cc,
+                                                          float r_known,
+                                                          bool is_pullup,
+                                                          float* r_out);
 
 bool resistor_detector_evaluate_samples(int high_count,
                                         int sample_count,

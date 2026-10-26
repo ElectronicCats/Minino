@@ -43,6 +43,6 @@ esp_err_t esp_ble_gap_register_callback(esp_gap_ble_cb_t cb) {
     return ESP_FAIL;
   }
   s_register_calls++;
-  s_installed = cb;  /* Bluedroid keeps a single handler: last one wins. */
+  s_installed = cb; /* Bluedroid keeps a single handler: last one wins. */
   return ESP_OK;
 }

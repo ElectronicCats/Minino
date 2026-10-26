@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 #include <string.h>
 #include <cmath>
-#include "utm.h"
 #include "drone_id_test.h"
+#include "utm.h"
 
 TEST_CASE("calc_m_per_deg handles NULL pointers safely", "[utm]") {
   UTM_Utilities utils;
@@ -17,11 +17,14 @@ TEST_CASE("calc_m_per_deg handles NULL pointers safely", "[utm]") {
   TEST_ASSERT_EQUAL_DOUBLE(0.0, m_lon);
 }
 
-TEST_CASE("calc_m_per_deg computes reasonable meters per degree at equator and poles", "[utm]") {
+TEST_CASE(
+    "calc_m_per_deg computes reasonable meters per degree at equator and poles",
+    "[utm]") {
   UTM_Utilities utils;
   double m_lat = 0, m_lon = 0;
 
-  // At Equator (lat 0): 1 deg lon is approx 111.3 km, 1 deg lat is approx 110.5 km
+  // At Equator (lat 0): 1 deg lon is approx 111.3 km, 1 deg lat is approx 110.5
+  // km
   utils.calc_m_per_deg(0.0, &m_lat, &m_lon);
   TEST_ASSERT_DOUBLE_WITHIN(1000.0, 110574.0, m_lat);
   TEST_ASSERT_DOUBLE_WITHIN(1000.0, 111319.0, m_lon);
@@ -62,14 +65,16 @@ TEST_CASE("luhn36_check calculation and NULL safety", "[utm]") {
 
   // Compute check char for known test string
   char check = utils.luhn36_check("1234567890ab");
-  TEST_ASSERT_TRUE((check >= '0' && check <= '9') || (check >= 'a' && check <= 'z'));
+  TEST_ASSERT_TRUE((check >= '0' && check <= '9') ||
+                   (check >= 'a' && check <= 'z'));
 }
 
 TEST_CASE("check_EU_op_id verifies valid EU Operator ID", "[utm]") {
   UTM_Utilities utils;
 
-  // Construct valid ID: 3-letter country code (e.g. "FIN") + 12 alphanumeric + 1 check character
-  // Let's compute the check character for payload "123456789012" + secret "xyz":
+  // Construct valid ID: 3-letter country code (e.g. "FIN") + 12 alphanumeric +
+  // 1 check character Let's compute the check character for payload
+  // "123456789012" + secret "xyz":
   char test_s[16];
   strcpy(test_s, "123456789012xyz");
   char expected_check = utils.luhn36_check(test_s);
@@ -87,7 +92,10 @@ TEST_CASE("check_EU_op_id verifies valid EU Operator ID", "[utm]") {
   TEST_ASSERT_EQUAL_INT(0, utils.check_EU_op_id(valid_id, "xyz"));
 }
 
-TEST_CASE("check_EU_op_id rejects NULL and invalid length inputs without buffer overflow", "[utm]") {
+TEST_CASE(
+    "check_EU_op_id rejects NULL and invalid length inputs without buffer "
+    "overflow",
+    "[utm]") {
   UTM_Utilities utils;
 
   // NULL pointers
@@ -95,13 +103,15 @@ TEST_CASE("check_EU_op_id rejects NULL and invalid length inputs without buffer 
   TEST_ASSERT_EQUAL_INT(0, utils.check_EU_op_id("FIN123456789012a", NULL));
   TEST_ASSERT_EQUAL_INT(0, utils.check_EU_op_id(NULL, NULL));
 
-  // Short ID with valid secret (Verifies bug fix for De Morgan operator bug where short ID was accepted!)
+  // Short ID with valid secret (Verifies bug fix for De Morgan operator bug
+  // where short ID was accepted!)
   TEST_ASSERT_EQUAL_INT(0, utils.check_EU_op_id("FIN", "xyz"));
   TEST_ASSERT_EQUAL_INT(0, utils.check_EU_op_id("", "xyz"));
   TEST_ASSERT_EQUAL_INT(0, utils.check_EU_op_id("12345", "xyz"));
 
   // Long ID
-  TEST_ASSERT_EQUAL_INT(0, utils.check_EU_op_id("FIN1234567890123456789", "xyz"));
+  TEST_ASSERT_EQUAL_INT(0,
+                        utils.check_EU_op_id("FIN1234567890123456789", "xyz"));
 
   // Wrong length secret
   TEST_ASSERT_EQUAL_INT(0, utils.check_EU_op_id("FIN123456789012a", "xy"));

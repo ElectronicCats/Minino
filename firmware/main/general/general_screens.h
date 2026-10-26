@@ -3,12 +3,12 @@
 #ifndef GENERAL_SCREENS_H
   #define GENERAL_SCREENS_H
 
-/* ESP-IDF puts sdkconfig.h on the include path but does not force-include
-   it, so the CONFIG_RESOLUTION_* tests below are only meaningful when it
-   has already been pulled in. Include it explicitly: otherwise a
-   translation unit that reaches this header first silently compiles the
-   128x32 branch. */
-#include "sdkconfig.h"
+  /* ESP-IDF puts sdkconfig.h on the include path but does not force-include
+     it, so the CONFIG_RESOLUTION_* tests below are only meaningful when it
+     has already been pulled in. Include it explicitly: otherwise a
+     translation unit that reaches this header first silently compiles the
+     128x32 branch. */
+  #include "sdkconfig.h"
 
   #if CONFIG_RESOLUTION_128X64
     #define ITEMS_PER_SCREEN 5

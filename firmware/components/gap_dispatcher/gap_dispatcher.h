@@ -19,8 +19,8 @@
 #include "sdkconfig.h"
 
 #if CONFIG_BT_ENABLED
-#include "esp_err.h"
-#include "esp_gap_ble_api.h"
+  #include "esp_err.h"
+  #include "esp_gap_ble_api.h"
 #endif
 
 #ifdef __cplusplus

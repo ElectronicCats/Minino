@@ -22,28 +22,32 @@ extern "C" {
 #define RF_ZIGBEE_MIN_CHANNEL 11
 #define RF_ZIGBEE_MAX_CHANNEL 26
 #define RF_MAX_CHANNELS       RF_ZIGBEE_MAX_CHANNEL
-#define RF_NOISE_FLOOR  -95
-#define RF_MAX_SIGNAL   -25
+#define RF_NOISE_FLOOR        -95
+#define RF_MAX_SIGNAL         -25
 
 typedef enum {
-  SPECTRUM_VIEW_BARS = 0,         /* 14 Wi-Fi channels bar chart (2.4 GHz overview) */
-  SPECTRUM_VIEW_SCOPE = 1,        /* Single channel live power scope / curve */
-  SPECTRUM_VIEW_WATERFALL = 2,    /* Rolling 2D waterfall */
-  SPECTRUM_VIEW_FOXHUNT = 3,      /* Fox Hunting / Direction Finding high-gain meter */
-  SPECTRUM_VIEW_PEAK_TRACKER = 4  /* Peak Tracker: Strongest signal dBm, Channel & Frequency */
+  SPECTRUM_VIEW_BARS = 0,  /* 14 Wi-Fi channels bar chart (2.4 GHz overview) */
+  SPECTRUM_VIEW_SCOPE = 1, /* Single channel live power scope / curve */
+  SPECTRUM_VIEW_WATERFALL = 2, /* Rolling 2D waterfall */
+  SPECTRUM_VIEW_FOXHUNT =
+      3, /* Fox Hunting / Direction Finding high-gain meter */
+  SPECTRUM_VIEW_PEAK_TRACKER =
+      4 /* Peak Tracker: Strongest signal dBm, Channel & Frequency */
 } spectrum_view_mode_t;
 
 #define SPECTRUM_VIEW_MAX 5
 
 typedef enum {
-  RF_EDIT_CHANNEL = 0,        /* UP/DOWN buttons tune channel */
-  RF_EDIT_THRESHOLD = 1,      /* UP/DOWN buttons tune dBm threshold filter */
-  RF_EDIT_FILTER = 2          /* UP/DOWN buttons toggle filter mode (ALL vs TRI 1,6,11) */
+  RF_EDIT_CHANNEL = 0,   /* UP/DOWN buttons tune channel */
+  RF_EDIT_THRESHOLD = 1, /* UP/DOWN buttons tune dBm threshold filter */
+  RF_EDIT_FILTER =
+      2 /* UP/DOWN buttons toggle filter mode (ALL vs TRI 1,6,11) */
 } rf_edit_mode_t;
 
 typedef enum {
-  RF_PROTOCOL_WIFI = 0,    /* Wi-Fi 2.4 GHz channels 1..13 (2412 - 2472 MHz) */
-  RF_PROTOCOL_ZIGBEE = 1   /* IEEE 802.15.4 / Zigbee channels 11..26 (2405 - 2480 MHz) */
+  RF_PROTOCOL_WIFI = 0, /* Wi-Fi 2.4 GHz channels 1..13 (2412 - 2472 MHz) */
+  RF_PROTOCOL_ZIGBEE =
+      1 /* IEEE 802.15.4 / Zigbee channels 11..26 (2405 - 2480 MHz) */
 } rf_protocol_t;
 
 /**
@@ -69,7 +73,7 @@ uint8_t rf_channel_clamp(rf_protocol_t proto, uint8_t channel);
  * @brief True when the channel is inside the storage range (1..RF_MAX_CHANNELS)
  */
 bool rf_channel_is_indexable(uint8_t channel);
- 
+
 /**
  * @brief Calculate the center frequency in MHz for a given channel and protocol
  */
@@ -79,7 +83,9 @@ uint16_t rf_channel_to_frequency_mhz(rf_protocol_t proto, uint8_t channel);
  * @brief Next channel in sequence for auto-sweep.
  * If tri_channel_only is true and proto is Wi-Fi, cycles 1 -> 6 -> 11 -> 1.
  */
-uint8_t rf_channel_next_sweep(rf_protocol_t proto, uint8_t current_channel, bool tri_channel_only);
+uint8_t rf_channel_next_sweep(rf_protocol_t proto,
+                              uint8_t current_channel,
+                              bool tri_channel_only);
 
 /**
  * @brief Exponential Moving Average (EMA) filter for RSSI smoothing.
@@ -87,15 +93,20 @@ uint8_t rf_channel_next_sweep(rf_protocol_t proto, uint8_t current_channel, bool
  * @param new_rssi New instantaneous RSSI sample
  * @param alpha_pct Alpha weight percentage (1..100, e.g. 30 = 30%)
  */
-int8_t rf_filter_ema_rssi(int8_t current_ema, int8_t new_rssi, uint8_t alpha_pct);
+int8_t rf_filter_ema_rssi(int8_t current_ema,
+                          int8_t new_rssi,
+                          uint8_t alpha_pct);
 
 /**
  * @brief Evaluator for true RF / 802.11 jamming conditions.
  * Discriminates between legitimate AP traffic, adjacent channel spillover,
  * Deauth/Disassociation Layer-2 flooding, and Layer-1 RF jamming/noise.
  */
-bool rf_jammer_evaluate(int8_t rssi, uint16_t beacons, uint16_t deauths,
-                        uint16_t fcs_errors, uint16_t valid_frames,
+bool rf_jammer_evaluate(int8_t rssi,
+                        uint16_t beacons,
+                        uint16_t deauths,
+                        uint16_t fcs_errors,
+                        uint16_t valid_frames,
                         bool adjacent_ap);
 
 /**
@@ -109,7 +120,8 @@ void rf_spectrum_app_begin(void);
 void rf_spectrum_app_stop(void);
 
 /**
- * @brief Set the RSSI threshold filter in dBm (-95 to -20 dBm, -95 = OFF / unfiltered)
+ * @brief Set the RSSI threshold filter in dBm (-95 to -20 dBm, -95 = OFF /
+ * unfiltered)
  */
 void rf_spectrum_set_threshold(int8_t threshold_dbm);
 
@@ -149,7 +161,8 @@ void rf_spectrum_set_protocol(rf_protocol_t proto);
 rf_protocol_t rf_spectrum_get_protocol(void);
 
 /**
- * @brief Get total deauth/disassoc frames detected on channel (0 = all channels)
+ * @brief Get total deauth/disassoc frames detected on channel (0 = all
+ * channels)
  */
 uint16_t rf_spectrum_get_deauth_count(uint8_t channel);
 

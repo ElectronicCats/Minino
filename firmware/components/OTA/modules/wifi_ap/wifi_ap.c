@@ -11,10 +11,10 @@
 
 #include "esp_err.h"
 #include "esp_log.h"
-#include "wifi_service.h"
 #include "esp_wifi.h"
 #include "lwip/netdb.h"
 #include "nvs_flash.h"
+#include "wifi_service.h"
 
 // #include "led_mng.h"
 // #include "tasks_common.h"
@@ -155,7 +155,8 @@ static void wifi_app_event_handler_init(void) {
 
 /*
  * Initializes the TCP stack and default WiFi Configuration
- * Usa wifi_service_init() (llorado en app_main) en lugar de esp_wifi_init() directo.
+ * Usa wifi_service_init() (llorado en app_main) en lugar de esp_wifi_init()
+ * directo.
  */
 static void wifi_app_default_wifi_init(void) {
   // Initialize the TCP Stack i.e. the ESP Network Interface
@@ -173,7 +174,8 @@ static void wifi_app_default_wifi_init(void) {
     ESP_LOGI(TAG, "WiFi stack ya inicializada por servicio");
   }
 
-  /* Ya no llamamos esp_wifi_init(&cfg) aquí; el servicio lo hizo en app_main(). */
+  /* Ya no llamamos esp_wifi_init(&cfg) aquí; el servicio lo hizo en app_main().
+   */
   ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
   esp_netif_sta = esp_netif_create_default_wifi_sta();

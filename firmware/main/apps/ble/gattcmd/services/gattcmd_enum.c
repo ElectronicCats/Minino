@@ -463,8 +463,7 @@ void gattcmd_enum_stop() {
     esp_ble_gap_disconnect(target_bda);
   }
 
-  if (enum_gl_profile_tab[GATTCMD_PROFILE_IDX].gattc_if !=
-      ESP_GATT_IF_NONE) {
+  if (enum_gl_profile_tab[GATTCMD_PROFILE_IDX].gattc_if != ESP_GATT_IF_NONE) {
     esp_ble_gattc_app_unregister(
         enum_gl_profile_tab[GATTCMD_PROFILE_IDX].gattc_if);
   }

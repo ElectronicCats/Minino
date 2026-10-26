@@ -1,17 +1,17 @@
-#include "wifi_controller.h"
 #include "detector.h"
-#include "radio_lease.h"
 #include <string.h>
 #include "detector_scenes.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
-#include "wifi_service.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "preferences.h"
+#include "radio_lease.h"
+#include "wifi_controller.h"
+#include "wifi_service.h"
 
-#include "menus_module.h"
 #include "app_manager.h"
+#include "menus_module.h"
 #include "oled_screen.h"
 
 #define WIFI_CHANNEL_SWITCH_INTERVAL 1000
@@ -108,8 +108,8 @@ void deauth_detector_begin() {
   }
   /* Claim the shared promiscuous slot instead of taking it: the callback and
      the on/off switch are global to the driver, and the surveillance detector
-     used to overwrite this handler and switch promiscuous mode off at the end of
-     its window, which froze the deauth counter. */
+     used to overwrite this handler and switch promiscuous mode off at the end
+     of its window, which froze the deauth counter. */
   if (radio_lease_prom_acquire(RADIO_PROM_DEAUTH_DETECTOR, packet_handler) !=
       ESP_OK) {
     ESP_LOGE(TAG, "could not claim promiscuous mode");
@@ -142,14 +142,13 @@ void deauth_detector_stop() {
   /* Order matters: esp_wifi_stop() leaves the driver initialised but stopped,
      and the analyzer's sniffer then calls esp_wifi_set_promiscuous() /
      esp_wifi_set_channel() against a stopped driver - both fail silently and
-     the packet counter stays at zero. Clear promiscuous mode while the driver is
-     still running, then leave Wi-Fi running but idle. */
+     the packet counter stays at zero. Clear promiscuous mode while the driver
+     is still running, then leave Wi-Fi running but idle. */
   radio_lease_prom_release(RADIO_PROM_DEAUTH_DETECTOR);
   esp_wifi_stop();
   oled_screen_clear();
   detector_scenes_main_menu();
 }
-
 
 // ---------------------------------------------------------------------------
 // app_manager callbacks
@@ -158,10 +157,11 @@ static void deauth_detector_on_enter(void) {
   detector_scenes_main_menu();
 }
 
-static void deauth_detector_on_input(uint8_t button_name, uint8_t button_event) {
+static void deauth_detector_on_input(uint8_t button_name,
+                                     uint8_t button_event) {
   // Scenes install their own input handlers.
-  (void)button_name;
-  (void)button_event;
+  (void) button_name;
+  (void) button_event;
 }
 
 static void deauth_detector_on_exit(void) {
@@ -191,9 +191,8 @@ void app_manager_enter_wrapper_deauth_detector(void) {
 
 // App definition for app_manager
 const minino_app_t deauth_detector_app = {
-  .name = "deauth_detector",
-  .on_enter = deauth_detector_on_enter,
-  .on_input = deauth_detector_on_input,
-  .on_exit = deauth_detector_on_exit,
+    .name = "deauth_detector",
+    .on_enter = deauth_detector_on_enter,
+    .on_input = deauth_detector_on_input,
+    .on_exit = deauth_detector_on_exit,
 };
-

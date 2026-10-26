@@ -7,8 +7,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "unity.h"
 #include "resistor_detector.h"
+#include "unity.h"
 
 void setUp(void) {}
 void tearDown(void) {}
@@ -48,7 +48,8 @@ void test_pullup_adc_max_reading_short_circuit(void) {
   const uint32_t adc_max = 4095;
   const float r_known = 10000.0f;
 
-  /* When ADC reading is adc_max, V_adc = Vcc -> R_x is shorted to Vcc (0 Ohm). */
+  /* When ADC reading is adc_max, V_adc = Vcc -> R_x is shorted to Vcc (0 Ohm).
+   */
   resistor_calc_status_t status =
       resistor_calculate_pullup_adc(adc_max, adc_max, r_known, &r_out);
   TEST_ASSERT_EQUAL_INT(RESISTOR_CALC_SHORT_CIRCUIT, status);
@@ -59,21 +60,20 @@ void test_pullup_adc_invalid_arguments(void) {
   float r_out = 0.0f;
 
   /* Null pointer */
-  TEST_ASSERT_EQUAL_INT(RESISTOR_CALC_ERROR_INVALID_ARG,
-                        resistor_calculate_pullup_adc(100, 4095, 10000.0f, NULL));
-
-  /* Non-positive reference resistor */
   TEST_ASSERT_EQUAL_INT(
       RESISTOR_CALC_ERROR_INVALID_ARG,
-      resistor_calculate_pullup_adc(100, 4095, 0.0f, &r_out));
+      resistor_calculate_pullup_adc(100, 4095, 10000.0f, NULL));
+
+  /* Non-positive reference resistor */
+  TEST_ASSERT_EQUAL_INT(RESISTOR_CALC_ERROR_INVALID_ARG,
+                        resistor_calculate_pullup_adc(100, 4095, 0.0f, &r_out));
   TEST_ASSERT_EQUAL_INT(
       RESISTOR_CALC_ERROR_INVALID_ARG,
       resistor_calculate_pullup_adc(100, 4095, -100.0f, &r_out));
 
   /* ADC max is 0 (division by zero guard) */
-  TEST_ASSERT_EQUAL_INT(
-      RESISTOR_CALC_ERROR_DIV_ZERO,
-      resistor_calculate_pullup_adc(0, 0, 10000.0f, &r_out));
+  TEST_ASSERT_EQUAL_INT(RESISTOR_CALC_ERROR_DIV_ZERO,
+                        resistor_calculate_pullup_adc(0, 0, 10000.0f, &r_out));
 
   /* ADC raw > ADC max */
   TEST_ASSERT_EQUAL_INT(
@@ -156,25 +156,30 @@ void test_voltage_divider_calculations(void) {
   TEST_ASSERT_FLOAT_WITHIN(1.0f, 10000.0f, r_out);
 
   /* Pullup with 0V -> open circuit, no div by zero */
-  status = resistor_calculate_voltage_divider(0.0f, v_cc, r_known, true, &r_out);
+  status =
+      resistor_calculate_voltage_divider(0.0f, v_cc, r_known, true, &r_out);
   TEST_ASSERT_EQUAL_INT(RESISTOR_CALC_OPEN_CIRCUIT, status);
 
   /* Pullup with Vcc -> short circuit to Vcc */
-  status = resistor_calculate_voltage_divider(v_cc, v_cc, r_known, true, &r_out);
+  status =
+      resistor_calculate_voltage_divider(v_cc, v_cc, r_known, true, &r_out);
   TEST_ASSERT_EQUAL_INT(RESISTOR_CALC_SHORT_CIRCUIT, status);
   TEST_ASSERT_EQUAL_FLOAT(0.0f, r_out);
 
   /* Pulldown with Vcc -> open circuit, no div by zero */
-  status = resistor_calculate_voltage_divider(v_cc, v_cc, r_known, false, &r_out);
+  status =
+      resistor_calculate_voltage_divider(v_cc, v_cc, r_known, false, &r_out);
   TEST_ASSERT_EQUAL_INT(RESISTOR_CALC_OPEN_CIRCUIT, status);
 
   /* Pulldown with 0V -> short circuit to GND */
-  status = resistor_calculate_voltage_divider(0.0f, v_cc, r_known, false, &r_out);
+  status =
+      resistor_calculate_voltage_divider(0.0f, v_cc, r_known, false, &r_out);
   TEST_ASSERT_EQUAL_INT(RESISTOR_CALC_SHORT_CIRCUIT, status);
   TEST_ASSERT_EQUAL_FLOAT(0.0f, r_out);
 
   /* Voltage exceeding Vcc */
-  status = resistor_calculate_voltage_divider(3.5f, v_cc, r_known, true, &r_out);
+  status =
+      resistor_calculate_voltage_divider(3.5f, v_cc, r_known, true, &r_out);
   TEST_ASSERT_EQUAL_INT(RESISTOR_CALC_ERROR_OUT_OF_RANGE, status);
 }
 
@@ -219,14 +224,18 @@ void test_sample_evaluation_out_of_range(void) {
   bool detected = false;
 
   /* high_count > sample_count */
-  TEST_ASSERT_FALSE(resistor_detector_evaluate_samples(51, 50, 0.8f, &detected));
+  TEST_ASSERT_FALSE(
+      resistor_detector_evaluate_samples(51, 50, 0.8f, &detected));
 
   /* negative high_count */
-  TEST_ASSERT_FALSE(resistor_detector_evaluate_samples(-1, 50, 0.8f, &detected));
+  TEST_ASSERT_FALSE(
+      resistor_detector_evaluate_samples(-1, 50, 0.8f, &detected));
 
   /* threshold out of range */
-  TEST_ASSERT_FALSE(resistor_detector_evaluate_samples(25, 50, 1.5f, &detected));
-  TEST_ASSERT_FALSE(resistor_detector_evaluate_samples(25, 50, -0.1f, &detected));
+  TEST_ASSERT_FALSE(
+      resistor_detector_evaluate_samples(25, 50, 1.5f, &detected));
+  TEST_ASSERT_FALSE(
+      resistor_detector_evaluate_samples(25, 50, -0.1f, &detected));
 
   /* NULL detected pointer */
   TEST_ASSERT_FALSE(resistor_detector_evaluate_samples(25, 50, 0.8f, NULL));

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "surveillance_module.h"
 #include <string.h>
+#include "app_manager.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
@@ -17,7 +18,6 @@
 #include "surveillance_detect.h"
 #include "surveillance_log.h"
 #include "surveillance_screens.h"
-#include "app_manager.h"
 
 #define TAG "surv_app"
 
@@ -291,7 +291,6 @@ void surveillance_module_boot_resume(void) {
   preferences_put_uchar(SURV_MUX_KEY, 0);
 }
 
-
 // ---------------------------------------------------------------------------
 // app_manager callbacks
 // ---------------------------------------------------------------------------
@@ -316,9 +315,8 @@ void app_manager_enter_wrapper_surveillance(void) {
 
 // App definition for app_manager
 const minino_app_t surveillance_app = {
-  .name = "surveillance",
-  .on_enter = surveillance_on_enter,
-  .on_input = surveillance_on_input,
-  .on_exit = surveillance_on_exit,
+    .name = "surveillance",
+    .on_enter = surveillance_on_enter,
+    .on_input = surveillance_on_input,
+    .on_exit = surveillance_on_exit,
 };
-

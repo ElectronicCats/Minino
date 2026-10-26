@@ -31,8 +31,9 @@ static void load_prefs() {
      copy length. */
   size_t stored_len = preferences_get_uint(MODBUS_TCP_LEN_MEM, 0);
   if (stored_len > sizeof(mb_tcp_prefs->request)) {
-    ESP_LOGW(TAG, "stored Modbus request of %u bytes exceeds the %u byte "
-                  "buffer, clamping",
+    ESP_LOGW(TAG,
+             "stored Modbus request of %u bytes exceeds the %u byte "
+             "buffer, clamping",
              (unsigned) stored_len, (unsigned) sizeof(mb_tcp_prefs->request));
     stored_len = sizeof(mb_tcp_prefs->request);
   }
@@ -74,8 +75,7 @@ void modbus_tcp_prefs_set_req(uint8_t* request, size_t request_len) {
     modbus_tcp_prefs_begin();
   }
   if (request == NULL || request_len > sizeof(mb_tcp_prefs->request)) {
-    ESP_LOGE(TAG,
-             "refusing a Modbus request of %u bytes (max %u)",
+    ESP_LOGE(TAG, "refusing a Modbus request of %u bytes (max %u)",
              (unsigned) request_len, (unsigned) sizeof(mb_tcp_prefs->request));
     return;
   }

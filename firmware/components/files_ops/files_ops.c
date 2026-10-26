@@ -178,8 +178,8 @@ bool files_ops_join_path(const char* dir_path,
 
   int ret = 0;
   if (need_separator) {
-    ret = snprintf(out_buf, out_len, "%.*s/%s%s", (int) dir_len, dir_path,
-                   name, ext);
+    ret = snprintf(out_buf, out_len, "%.*s/%s%s", (int) dir_len, dir_path, name,
+                   ext);
   } else {
     ret = snprintf(out_buf, out_len, "%.*s%s%s", (int) dir_len, dir_path, name,
                    ext);
@@ -291,7 +291,8 @@ bool files_ops_incremental_name_buf(const char* dir_path,
                                     const char* extension,
                                     char* out_buf,
                                     size_t out_len) {
-  if (dir_path == NULL || base_name == NULL || out_buf == NULL || out_len == 0) {
+  if (dir_path == NULL || base_name == NULL || out_buf == NULL ||
+      out_len == 0) {
     if (out_buf && out_len > 0) {
       out_buf[0] = '\0';
     }
@@ -317,8 +318,8 @@ bool files_ops_incremental_name_buf(const char* dir_path,
   char indexed_name[128];
 
   while (!idx_found && idx < 10000) {
-    int ret = snprintf(indexed_name, sizeof(indexed_name), "%s%02d", base_name,
-                       idx);
+    int ret =
+        snprintf(indexed_name, sizeof(indexed_name), "%s%02d", base_name, idx);
     if (ret < 0 || (size_t) ret >= sizeof(indexed_name)) {
       out_buf[0] = '\0';
       return false;

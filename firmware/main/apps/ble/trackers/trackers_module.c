@@ -329,11 +329,11 @@ void trackers_module_stop(void) {
 }
 
 /* Menu on_exit hook: covers leaving the app by any path (timeout, global exit)
-   so the scanner and its BLE claim are never leaked. No-op if already stopped. */
+   so the scanner and its BLE claim are never leaked. No-op if already stopped.
+ */
 void trackers_module_on_exit(void) {
   if (!s_app_running) {
     return;
   }
   trackers_cleanup();
 }
-

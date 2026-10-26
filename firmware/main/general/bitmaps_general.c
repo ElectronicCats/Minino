@@ -1,5 +1,5 @@
-/* Definitions split out of main/general/bitmaps_general.h by hand: this data was defined in
-   the header, so every translation unit that included it emitted
+/* Definitions split out of main/general/bitmaps_general.h by hand: this data
+   was defined in the header, so every translation unit that included it emitted
    its own copy and the linker only accepted it thanks to
    -Wl,-zmuldefs. Keep the data here and the declarations in the
    header. */
@@ -219,26 +219,25 @@ const unsigned char* punch_animation[] = {
 };
 
 const epd_bitmap_t* screen_savers[] = {
-  #if CONFIG_SCREEN_SAVER_LETTERS
+#if CONFIG_SCREEN_SAVER_LETTERS
     &minino_letters_bitmap,
-  #endif
-  #if CONFIG_SCREEN_SAVER_FACE
+#endif
+#if CONFIG_SCREEN_SAVER_FACE
     &minino_face_logo,
-  #endif
-  #if CONFIG_SCREEN_SAVER_PWNLABS
+#endif
+#if CONFIG_SCREEN_SAVER_PWNLABS
     &minino_pwnlabs_logo,
-  #endif
-  #if CONFIG_SCREEN_SAVER_EC
+#endif
+#if CONFIG_SCREEN_SAVER_EC
     &minino_electroniccats_logo,
-  #endif
-  #if CONFIG_SCREEN_SAVER_MINI_FACE
+#endif
+#if CONFIG_SCREEN_SAVER_MINI_FACE
     &minino_face_bitmap,
-  #endif
-  #if CONFIG_SCREEN_SAVER_BABY_DRAGON
+#endif
+#if CONFIG_SCREEN_SAVER_BABY_DRAGON
     &minino_baby_dragon_bitmap,
-  #endif
+#endif
 };
 
 char* epd_bitmaps_list[] = {"Letters",   "Face",        "PwnLabs", "EC",
                             "Mini face", "Baby Dragon", NULL};
-

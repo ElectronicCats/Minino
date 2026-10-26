@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "surv_sim_module.h"
 #include <string.h>
+#include "app_manager.h"
 #include "esp_err.h"
 #include "esp_gap_ble_api.h"
 #include "esp_log.h"
@@ -14,7 +15,6 @@
 #include "radio_lease.h"
 #include "surv_sim_screens.h"
 #include "wifi_controller.h"
-#include "app_manager.h"
 
 #define TAG "surv_sim"
 
@@ -165,9 +165,9 @@ static void send_ble_adv(const uint8_t* payload,
 static void sim_worker_task(void* arg) {
   (void) arg;
   uint8_t cycle = 0;
-  bool wifi_window = (s_sim_mode != SURV_SIM_AIRTAG &&
-                      s_sim_mode != SURV_SIM_AXON &&
-                      s_sim_mode != SURV_SIM_SKIMMER);
+  bool wifi_window =
+      (s_sim_mode != SURV_SIM_AIRTAG && s_sim_mode != SURV_SIM_AXON &&
+       s_sim_mode != SURV_SIM_SKIMMER);
   TickType_t window_start = xTaskGetTickCount();
 
   while (s_sim_running) {
@@ -257,7 +257,8 @@ static void sim_worker_task(void* arg) {
             send_ble_adv(s_axon_payload, sizeof(s_axon_payload), axon_oui, 500);
           } else {
             tgt_name = "Skimmer HC-05";
-            send_ble_adv(s_skimmer_payload, sizeof(s_skimmer_payload), NULL, 500);
+            send_ble_adv(s_skimmer_payload, sizeof(s_skimmer_payload), NULL,
+                         500);
           }
           cycle = (cycle + 1) % 3;
         }
@@ -332,7 +333,6 @@ void surv_sim_stop(void) {
   // app_manager_exit() will be called by on_exit
 }
 
-
 // ---------------------------------------------------------------------------
 // app_manager callbacks
 // ---------------------------------------------------------------------------
@@ -363,9 +363,8 @@ void app_manager_enter_wrapper_surv_sim_flock(void) {
 
 // App definition for app_manager
 const minino_app_t surv_sim_app = {
-  .name = "surv_sim",
-  .on_enter = surv_sim_on_enter,
-  .on_input = surv_sim_on_input,
-  .on_exit = surv_sim_on_exit,
+    .name = "surv_sim",
+    .on_enter = surv_sim_on_enter,
+    .on_input = surv_sim_on_input,
+    .on_exit = surv_sim_on_exit,
 };
-

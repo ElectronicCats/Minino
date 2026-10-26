@@ -34,8 +34,8 @@ static bool lock_input = false;
  * The queue keeps the ordering (single consumer, FIFO) while moving the work
  * off the timer task, so the rest of the timers keep ticking.
  */
-#define INPUT_QUEUE_LEN 16
-#define INPUT_TASK_STACK 4096
+#define INPUT_QUEUE_LEN     16
+#define INPUT_TASK_STACK    4096
 #define INPUT_TASK_PRIORITY 4
 
 typedef struct {

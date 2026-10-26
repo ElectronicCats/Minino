@@ -40,7 +40,8 @@ static void fake_init(fake_sem_t* f) {
 }
 
 /* The GAP callback: record the completion and post a token. */
-static void fake_gap_event(fake_sem_t* f, esp_gap_ble_cb_event_t event,
+static void fake_gap_event(fake_sem_t* f,
+                           esp_gap_ble_cb_event_t event,
                            esp_bt_status_t status) {
   bt_spam_gap_sync_complete(&f->sync, event, status);
   f->tokens++;
@@ -68,7 +69,8 @@ typedef struct {
   unsigned count;
 } deferred_t;
 
-static void fake_defer(deferred_t* d, esp_gap_ble_cb_event_t event,
+static void fake_defer(deferred_t* d,
+                       esp_gap_ble_cb_event_t event,
                        esp_bt_status_t status) {
   d->event[d->count] = event;
   d->status[d->count] = status;
@@ -81,7 +83,8 @@ static uint32_t fake_begin_wait(const fake_sem_t* f) {
 }
 
 /* Deliver the deferred events plus the awaited one, then resolve. */
-static bool fake_pump(fake_sem_t* f, const deferred_t* d,
+static bool fake_pump(fake_sem_t* f,
+                      const deferred_t* d,
                       esp_gap_ble_cb_event_t wanted) {
   uint32_t mark = fake_begin_wait(f);
   for (unsigned i = 0; i < d->count; i++) {
@@ -107,7 +110,7 @@ static bool fake_pump(fake_sem_t* f, const deferred_t* d,
 
 /* Nothing arrives at all: the wait times out. */
 static bool fake_pump_silent(fake_sem_t* f, esp_gap_ble_cb_event_t wanted) {
-  (void)wanted;
+  (void) wanted;
   uint32_t mark = fake_begin_wait(f);
   return bt_spam_gap_sync_has_new(&f->sync, mark);
 }
@@ -130,9 +133,8 @@ static void test_reset_clears_state(void) {
 
 static void test_null_pointers_are_survivable(void) {
   bt_spam_gap_sync_reset(NULL);
-  TEST_ASSERT_FALSE(bt_spam_gap_sync_complete(NULL,
-                                             ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT,
-                                             ESP_BT_STATUS_SUCCESS));
+  TEST_ASSERT_FALSE(bt_spam_gap_sync_complete(
+      NULL, ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT, ESP_BT_STATUS_SUCCESS));
   TEST_ASSERT_EQUAL_UINT32(0, bt_spam_gap_sync_mark(NULL));
   TEST_ASSERT_FALSE(bt_spam_gap_sync_has_new(NULL, 0));
   TEST_ASSERT_FALSE(
@@ -155,8 +157,9 @@ static void test_stale_token_does_not_answer_the_next_request(void) {
   fake_drain(&f); /* ... and again after it, before the loop starts */
 
   uint32_t mark = bt_spam_gap_sync_mark(&f.sync);
-  TEST_ASSERT_FALSE_MESSAGE(bt_spam_gap_sync_has_new(&f.sync, mark),
-                            "a stale completion must not look new after a drain");
+  TEST_ASSERT_FALSE_MESSAGE(
+      bt_spam_gap_sync_has_new(&f.sync, mark),
+      "a stale completion must not look new after a drain");
   TEST_ASSERT_FALSE_MESSAGE(
       bt_spam_gap_sync_matches(&f.sync, ESP_GAP_BLE_SET_STATIC_RAND_ADDR_EVT),
       "a stale ADV_STOP must never match a SET_STATIC_RAND_ADDR request");
@@ -193,7 +196,8 @@ static void test_wrong_event_does_not_satisfy_a_wait(void) {
   TEST_ASSERT_TRUE(bt_spam_gap_sync_has_new(&f.sync, mark));
   TEST_ASSERT_TRUE(
       bt_spam_gap_sync_matches(&f.sync, ESP_GAP_BLE_SET_STATIC_RAND_ADDR_EVT));
-  TEST_ASSERT_FALSE(bt_spam_gap_sync_matches(&f.sync, ESP_GAP_BLE_ADV_START_COMPLETE_EVT));
+  TEST_ASSERT_FALSE(
+      bt_spam_gap_sync_matches(&f.sync, ESP_GAP_BLE_ADV_START_COMPLETE_EVT));
 }
 
 /* --- full cycle -------------------------------------------------------- */
@@ -226,8 +230,9 @@ static void test_full_cycle_never_accepts_the_previous_cycle_event(void) {
         "payload config must be confirmed by ADV_DATA_RAW_SET");
 
     fake_drain(&f);
-    TEST_ASSERT_TRUE_MESSAGE(fake_pump(&f, &none, ESP_GAP_BLE_ADV_START_COMPLETE_EVT),
-                              "start request must be confirmed by ADV_START");
+    TEST_ASSERT_TRUE_MESSAGE(
+        fake_pump(&f, &none, ESP_GAP_BLE_ADV_START_COMPLETE_EVT),
+        "start request must be confirmed by ADV_START");
   }
 }
 
@@ -242,9 +247,10 @@ static void test_out_of_order_completions_still_resolve_correctly(void) {
   deferred_t late = {0};
   fake_defer(&late, ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT, ESP_BT_STATUS_SUCCESS);
   fake_defer(&late, ESP_GAP_BLE_SET_STATIC_RAND_ADDR_EVT, ESP_BT_STATUS_FAIL);
-  TEST_ASSERT_TRUE_MESSAGE(fake_pump(&f, &late, ESP_GAP_BLE_ADV_START_COMPLETE_EVT),
-                            "start must resolve on ADV_START, not on the two "
-                            "completions that arrived before it");
+  TEST_ASSERT_TRUE_MESSAGE(
+      fake_pump(&f, &late, ESP_GAP_BLE_ADV_START_COMPLETE_EVT),
+      "start must resolve on ADV_START, not on the two "
+      "completions that arrived before it");
 }
 
 static void test_every_out_of_order_permutation_resolves(void) {
@@ -274,8 +280,8 @@ static void test_every_out_of_order_permutation_resolves(void) {
         }
       }
       TEST_ASSERT_TRUE_MESSAGE(fake_pump(&f, &d, targets[t]),
-                                "a preceding completion must never decide the "
-                                "outcome of an unrelated request");
+                               "a preceding completion must never decide the "
+                               "outcome of an unrelated request");
     }
   }
 }
@@ -288,10 +294,10 @@ static void test_off_by_one_would_be_caught(void) {
   fake_init(&f);
   fake_drain(&f);
   fake_gap_event(&f, ESP_GAP_BLE_ADV_START_COMPLETE_EVT, ESP_BT_STATUS_SUCCESS);
-  TEST_ASSERT_FALSE(bt_spam_gap_sync_matches(&f.sync,
-                                             ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT));
   TEST_ASSERT_FALSE(
-      bt_spam_gap_sync_matches(&f.sync, ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT));
+      bt_spam_gap_sync_matches(&f.sync, ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT));
+  TEST_ASSERT_FALSE(bt_spam_gap_sync_matches(
+      &f.sync, ESP_GAP_BLE_ADV_DATA_RAW_SET_COMPLETE_EVT));
   TEST_ASSERT_FALSE(
       bt_spam_gap_sync_matches(&f.sync, ESP_GAP_BLE_SET_STATIC_RAND_ADDR_EVT));
 }
@@ -315,7 +321,9 @@ static void test_failure_status_is_reported(void) {
 
 static void test_every_status_value_is_propagated(void) {
   const esp_bt_status_t failures[] = {
-      ESP_BT_STATUS_FAIL, ESP_BT_STATUS_PENDING, ESP_BT_STATUS_BUSY,
+      ESP_BT_STATUS_FAIL,
+      ESP_BT_STATUS_PENDING,
+      ESP_BT_STATUS_BUSY,
       ESP_BT_STATUS_INVALID_STATE,
   };
   for (unsigned i = 0; i < sizeof(failures) / sizeof(failures[0]); i++) {

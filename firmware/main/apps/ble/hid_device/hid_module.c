@@ -1,17 +1,17 @@
 #include "hid_module.h"
 #include <stddef.h>
 #include <stdio.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include "app_manager.h"
 #include "ble_hidd_main.h"
 #include "esp_log.h"
 #include "esp_mac.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "general_submenu.h"
 #include "hid_screens.h"
 #include "menus_module.h"
 #include "oled_screen.h"
 #include "spam_module.h"
-#include "app_manager.h"
 
 static uint16_t current_item = 0;
 static volatile bool s_hid_connected = false;
@@ -145,7 +145,8 @@ static void hid_module_display_action_menu() {
  * event in the system for the whole second, so the "connected" screen is
  * rendered from a short-lived task instead.
  */
-static void hid_module_show_connected_screen(void* arg __attribute__((unused))) {
+static void hid_module_show_connected_screen(void* arg
+                                             __attribute__((unused))) {
   vTaskDelay(pdMS_TO_TICKS(1000));
   s_connected_task_handle = NULL;
   if (s_hid_connected) {
@@ -159,8 +160,8 @@ static void hid_module_cb_connection_handler(bool connection) {
   if (connection) {
     hid_module_display_device_connection(true);
     if (s_connected_task_handle == NULL) {
-      if (xTaskCreate(hid_module_show_connected_screen, "hid_connected",
-                      3072, NULL, 4, &s_connected_task_handle) != pdPASS) {
+      if (xTaskCreate(hid_module_show_connected_screen, "hid_connected", 3072,
+                      NULL, 4, &s_connected_task_handle) != pdPASS) {
         s_connected_task_handle = NULL;
         ESP_LOGW("hid_module",
                  "could not spawn the connected-screen task, showing it now");
@@ -197,8 +198,8 @@ static void hid_module_cb_event(uint8_t button_name, uint8_t button_event) {
         char hid_name[32];
         ble_hid_get_device_name(hid_name);
         general_screen_display_card_information_handler("Device Name", hid_name,
-                                                         hid_module_reset_menu,
-                                                         hid_module_cb_event);
+                                                        hid_module_reset_menu,
+                                                        hid_module_cb_event);
       } else if (current_item == HID_CONFIG_MAC) {
         current_item = 0;
         uint8_t hid_mac[8] = {0};
@@ -259,7 +260,6 @@ void hid_module_stop(void) {
   oled_screen_clear();
 }
 
-
 // ---------------------------------------------------------------------------
 // app_manager callbacks
 // ---------------------------------------------------------------------------
@@ -292,9 +292,8 @@ void app_manager_enter_wrapper_hid(void) {
 
 // App definition for app_manager
 const minino_app_t hid_app = {
-  .name = "hid",
-  .on_enter = hid_on_enter,
-  .on_input = hid_on_input,
-  .on_exit = hid_on_exit,
+    .name = "hid",
+    .on_enter = hid_on_enter,
+    .on_input = hid_on_input,
+    .on_exit = hid_on_exit,
 };
-

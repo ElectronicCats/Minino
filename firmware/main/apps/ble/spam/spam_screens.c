@@ -276,4 +276,3 @@ void ble_screens_display_peer_connected(const char* name, bool success) {
 void* ble_screens_get_text_mutex(void) {
   return text_mutex;
 }
-

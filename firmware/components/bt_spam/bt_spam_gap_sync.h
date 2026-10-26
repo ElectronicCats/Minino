@@ -4,10 +4,10 @@
  *
  * Bluedroid reports four different completion events through one binary
  * semaphore (ADV_STOP, SET_STATIC_RAND_ADDR, ADV_DATA_RAW_SET, ADV_START).
- * Returning "done" for whichever token happens to wake the waiter desynchronises
- * the cycle: a single stale token shifts every later wait by one step, so
- * is_advertising_active no longer reflects the controller and the loop issues
- * stop/configure/start without confirmation.
+ * Returning "done" for whichever token happens to wake the waiter
+ * desynchronises the cycle: a single stale token shifts every later wait by one
+ * step, so is_advertising_active no longer reflects the controller and the loop
+ * issues stop/configure/start without confirmation.
  *
  * This module owns the "did this wake-up answer the question I asked?" decision
  * so it can be unit tested on the host. bt_spam.c wraps it in the FreeRTOS

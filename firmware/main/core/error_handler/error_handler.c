@@ -81,12 +81,14 @@ void error_handler_report(const error_info_t* error) {
 
   // Determinar emoji y nivel de log con bounds check
   const char* severity_emoji[] = {"ℹ️ ", "⚠️ ", "❌", "🚨"};
-  const char* emoji =
-      (error->severity >= 0 && error->severity < 4) ? severity_emoji[error->severity] : "❓";
+  const char* emoji = (error->severity >= 0 && error->severity < 4)
+                          ? severity_emoji[error->severity]
+                          : "❓";
 
   // Log estructurado con bounds check
   const char* component_name =
-      (error->component >= 0 && (size_t) error->component < COMPONENT_NAMES_COUNT)
+      (error->component >= 0 &&
+       (size_t) error->component < COMPONENT_NAMES_COUNT)
           ? component_names[error->component]
           : "Unknown";
   const char* error_name = esp_err_to_name(error->error_code);

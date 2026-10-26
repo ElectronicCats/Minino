@@ -78,7 +78,8 @@ uint32_t keyboard_module_dropped_events(void);
  * hardware - the screensaver wake-up and the menu render are only reachable
  * through a button press, and this is the part most likely to regress.
  *
- * @param button  BUTTON_BOOT / BUTTON_LEFT / BUTTON_RIGHT / BUTTON_UP / BUTTON_DOWN
+ * @param button  BUTTON_BOOT / BUTTON_LEFT / BUTTON_RIGHT / BUTTON_UP /
+ * BUTTON_DOWN
  * @param event   a button_event_t value; defaults to BUTTON_PRESS_DOWN if 0
  * @return true if the event was queued
  */

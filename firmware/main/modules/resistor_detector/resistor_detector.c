@@ -1,14 +1,14 @@
 #include "resistor_detector.h"
 
 #ifdef ESP_PLATFORM
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "keyboard_module.h"
+  #include "freertos/FreeRTOS.h"
+  #include "freertos/task.h"
+  #include "keyboard_module.h"
 
-#define SAMPLE_COUNT    50
-#define SAMPLE_DELAY_MS 5
-#define C_DISCHARGE_MS  5
-#define TRUE_THRESHOLD  0.8
+  #define SAMPLE_COUNT    50
+  #define SAMPLE_DELAY_MS 5
+  #define C_DISCHARGE_MS  5
+  #define TRUE_THRESHOLD  0.8
 
 static const char* TAG = "Resistor_check";
 #endif
@@ -16,9 +16,9 @@ static const char* TAG = "Resistor_check";
 static bool res_detected = false;
 
 resistor_calc_status_t resistor_calculate_pullup_adc(uint32_t adc_raw,
-                                                    uint32_t adc_max,
-                                                    float r_known,
-                                                    float* r_out) {
+                                                     uint32_t adc_max,
+                                                     float r_known,
+                                                     float* r_out) {
   if (r_out == NULL || r_known <= 0.0f) {
     return RESISTOR_CALC_ERROR_INVALID_ARG;
   }
@@ -29,13 +29,15 @@ resistor_calc_status_t resistor_calculate_pullup_adc(uint32_t adc_raw,
     return RESISTOR_CALC_ERROR_OUT_OF_RANGE;
   }
   if (adc_raw == 0) {
-    /* 0V across known resistor in pull-up divider: Rx is infinite (open circuit).
-     * Prevents division by zero: Rx = R_known * (adc_max - adc_raw) / adc_raw */
+    /* 0V across known resistor in pull-up divider: Rx is infinite (open
+     * circuit). Prevents division by zero: Rx = R_known * (adc_max - adc_raw) /
+     * adc_raw */
     *r_out = -1.0f;
     return RESISTOR_CALC_OPEN_CIRCUIT;
   }
   if (adc_raw == adc_max) {
-    /* Full ADC reading: pin pulled hard to Vcc, Rx = 0 (short circuit to Vcc). */
+    /* Full ADC reading: pin pulled hard to Vcc, Rx = 0 (short circuit to Vcc).
+     */
     *r_out = 0.0f;
     return RESISTOR_CALC_SHORT_CIRCUIT;
   }
@@ -45,9 +47,9 @@ resistor_calc_status_t resistor_calculate_pullup_adc(uint32_t adc_raw,
 }
 
 resistor_calc_status_t resistor_calculate_pulldown_adc(uint32_t adc_raw,
-                                                      uint32_t adc_max,
-                                                      float r_known,
-                                                      float* r_out) {
+                                                       uint32_t adc_max,
+                                                       float r_known,
+                                                       float* r_out) {
   if (r_out == NULL || r_known <= 0.0f) {
     return RESISTOR_CALC_ERROR_INVALID_ARG;
   }
@@ -58,8 +60,9 @@ resistor_calc_status_t resistor_calculate_pulldown_adc(uint32_t adc_raw,
     return RESISTOR_CALC_ERROR_OUT_OF_RANGE;
   }
   if (adc_raw == adc_max) {
-    /* Full ADC reading in pull-down divider: Rx is open circuit or short to Vcc.
-     * Prevents division by zero: Rx = R_known * adc_raw / (adc_max - adc_raw) */
+    /* Full ADC reading in pull-down divider: Rx is open circuit or short to
+     * Vcc. Prevents division by zero: Rx = R_known * adc_raw / (adc_max -
+     * adc_raw) */
     *r_out = -1.0f;
     return RESISTOR_CALC_OPEN_CIRCUIT;
   }
@@ -74,10 +77,10 @@ resistor_calc_status_t resistor_calculate_pulldown_adc(uint32_t adc_raw,
 }
 
 resistor_calc_status_t resistor_calculate_voltage_divider(float v_measured,
-                                                         float v_cc,
-                                                         float r_known,
-                                                         bool is_pullup,
-                                                         float* r_out) {
+                                                          float v_cc,
+                                                          float r_known,
+                                                          bool is_pullup,
+                                                          float* r_out) {
   if (r_out == NULL || v_cc <= 0.0f || r_known <= 0.0f || v_measured < 0.0f) {
     return RESISTOR_CALC_ERROR_INVALID_ARG;
   }

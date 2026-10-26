@@ -2,13 +2,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>  // Para malloc y realloc
+#include "app_manager.h"
 #include "driver/i2c.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "general_submenu.h"
 #include "keyboard_module.h"
 #include "menus_module.h"
-#include "app_manager.h"
 
 #define I2C_MASTER_NUM I2C_NUM_0
 
@@ -56,7 +56,7 @@ static void show_scan_result(size_t num_nodes) {
   general_submenu_menu_t result = {0};
   result.options = (const char**) nodes_arr;
   result.options_count = num_nodes;
-  result.exit_cb = (void(*)(void))app_manager_exit;
+  result.exit_cb = (void (*)(void)) app_manager_exit;
   general_submenu(result);
 }
 
@@ -83,7 +83,6 @@ void i2c_scanner_begin() {
   free(found_addresses);
   show_scan_result(num_addresses);
 }
-
 
 // ---------------------------------------------------------------------------
 // app_manager callbacks
@@ -120,9 +119,8 @@ void app_manager_enter_wrapper_i2c_scanner(void) {
 
 // App definition for app_manager
 const minino_app_t i2c_scanner_app = {
-  .name = "i2c_scanner",
-  .on_enter = i2c_scanner_on_enter,
-  .on_input = i2c_scanner_on_input,
-  .on_exit = i2c_scanner_on_exit,
+    .name = "i2c_scanner",
+    .on_enter = i2c_scanner_on_enter,
+    .on_input = i2c_scanner_on_input,
+    .on_exit = i2c_scanner_on_exit,
 };
-

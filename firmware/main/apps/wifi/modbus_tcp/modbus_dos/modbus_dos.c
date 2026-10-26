@@ -83,8 +83,10 @@ static void wifi_init(char* ssid, char* pass) {
     return;
   }
 
-  esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL);
-  esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL);
+  esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler,
+                             NULL);
+  esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler,
+                             NULL);
 
   wifi_config_t wifi_config = {
       .sta =
@@ -113,8 +115,10 @@ void modbus_dos_stop() {
   esp_wifi_disconnect();
   esp_wifi_stop();
 
-  esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler);
-  esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler);
+  esp_event_handler_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID,
+                               &wifi_event_handler);
+  esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP,
+                               &wifi_event_handler);
 }
 
 int modbus_tcp_connect(uint16_t port, char* ip) {

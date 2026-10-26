@@ -7,17 +7,17 @@
 static const char* TAG = "ssid_spam";
 #include "esp_system.h"
 #include "esp_wifi.h"
-#include "wifi_service.h"
 #include "freertos/FreeRTOS.h"
 #include "nvs_flash.h"
 #include "string.h"
+#include "wifi_service.h"
 
 #include "animations_task.h"
+#include "app_manager.h"
 #include "general_screens.h"
 #include "keyboard_module.h"
 #include "menus_module.h"
 #include "ssid_spam_screens.h"
-#include "app_manager.h"
 
 #include "general_flash_storage.h"
 #include "general_submenu.h"
@@ -64,20 +64,20 @@ static void ssid_spam_load_stored_list(void);
  * parser reads. The SSID region and the trailing IEs are separate now.
  */
 #define BEACON_SSID_LEN_OFFSET (BEACON_SSID_OFFSET - 1)
-#define BEACON_MAX_SSID_LEN 32 /* 802.11 caps the SSID at 32 octets */
+#define BEACON_MAX_SSID_LEN    32 /* 802.11 caps the SSID at 32 octets */
 
 /* Header through the SSID length byte. */
 static const uint8_t beacon_raw[] = {
-    0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xba, 0xde,
-    0xaf, 0xfe, 0x00, 0x06, 0xba, 0xde, 0xaf, 0xfe, 0x00, 0x06, 0x00, 0x00,
-    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x64, 0x00, 0x31, 0x04,
-    0x00, 0x00,
+    0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xba, 0xde, 0xaf, 0xfe, 0x00, 0x06, 0xba, 0xde, 0xaf, 0xfe,
+    0x00, 0x06, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
+    0x06, 0x07, 0x64, 0x00, 0x31, 0x04, 0x00, 0x00,
 };
 
 /* Supported Rates, DS Param and TIM, emitted after the SSID text. */
 static const uint8_t beacon_tail[] = {
-    0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x03, 0x01,
-    0x01, 0x05, 0x04, 0x01, 0x02, 0x00, 0x00,
+    0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24,
+    0x03, 0x01, 0x01, 0x05, 0x04, 0x01, 0x02, 0x00, 0x00,
 };
 
 _Static_assert(BEACON_SSID_OFFSET == sizeof(beacon_raw),
@@ -169,9 +169,8 @@ void spam_display_list_ssid() {
   storage_contex_t list[FLASH_STORAGE_MAX_LIST_ITEMS];
   /* ssids_list is also FLASH_STORAGE_MAX_LIST_ITEMS long; the count comes from
      NVS, so clamp before it indexes either array. */
-  uint8_t list_count =
-      flash_storage_get_list(GENFLASH_STORAGE_SPAM, list,
-                             FLASH_STORAGE_MAX_LIST_ITEMS);
+  uint8_t list_count = flash_storage_get_list(GENFLASH_STORAGE_SPAM, list,
+                                              FLASH_STORAGE_MAX_LIST_ITEMS);
   for (uint8_t i = 0; i < list_count; i++) {
     ssids_list[i] = list[i].item_storage_name;
   }
@@ -188,8 +187,8 @@ static volatile bool spam_running = false;
 
 static void spam_task(void* pvParameters) {
   uint16_t line = 0;
-  uint8_t beacon[sizeof(beacon_raw) + BEACON_MAX_SSID_LEN +
-                 sizeof(beacon_tail)];
+  uint8_t
+      beacon[sizeof(beacon_raw) + BEACON_MAX_SSID_LEN + sizeof(beacon_tail)];
   /* Was a VLA sized from total_lines, a runtime global loaded from NVS: the
      stack frame grew with whatever the saved SSID list happened to contain. */
   uint16_t seqnum[MAX_STRINGS];
@@ -197,8 +196,7 @@ static void spam_task(void* pvParameters) {
 
   while (spam_running) {
     vTaskDelay(pdMS_TO_TICKS(100));
-    if (total_lines == 0 || line >= MAX_STRINGS ||
-        ssids_attack[line] == NULL) {
+    if (total_lines == 0 || line >= MAX_STRINGS || ssids_attack[line] == NULL) {
       continue;
     }
     size_t ssid_len = strlen(ssids_attack[line]);
@@ -222,8 +220,7 @@ static void spam_task(void* pvParameters) {
       seqnum[line] = 0;
 
     size_t frame_len = BEACON_SSID_OFFSET + ssid_len + sizeof(beacon_tail);
-    esp_err_t err =
-        esp_wifi_80211_tx(WIFI_IF_AP, beacon, frame_len, false);
+    esp_err_t err = esp_wifi_80211_tx(WIFI_IF_AP, beacon, frame_len, false);
     if (err != ESP_OK) {
       /* The return value used to be discarded, so a spam that transmitted
          nothing looked exactly like one that worked. */
@@ -249,9 +246,8 @@ static void ssid_spam_load_stored_list(void) {
     return;
   }
   storage_contex_t list[FLASH_STORAGE_MAX_LIST_ITEMS];
-  uint8_t list_count =
-      flash_storage_get_list(GENFLASH_STORAGE_SPAM, list,
-                             FLASH_STORAGE_MAX_LIST_ITEMS);
+  uint8_t list_count = flash_storage_get_list(GENFLASH_STORAGE_SPAM, list,
+                                              FLASH_STORAGE_MAX_LIST_ITEMS);
   for (uint8_t i = 0; i < list_count && i < FLASH_STORAGE_MAX_LIST_ITEMS; i++) {
     if (list[i].item_storage_name == NULL) {
       continue;
@@ -261,14 +257,16 @@ static void ssid_spam_load_stored_list(void) {
     if (item == NULL || item->items_storage_value == NULL) {
       continue;
     }
-    split_text_into_array(item->items_storage_value, ssids_attack, &total_lines);
+    split_text_into_array(item->items_storage_value, ssids_attack,
+                          &total_lines);
     if (total_lines > 0) {
       ESP_LOGI(TAG, "SSID list loaded from the flash storage: %u entries (%s)",
                (unsigned) total_lines, list[i].item_storage_name);
       return;
     }
   }
-  ESP_LOGW(TAG, "no SSID list in the flash storage: nothing will be transmitted");
+  ESP_LOGW(TAG,
+           "no SSID list in the flash storage: nothing will be transmitted");
 }
 
 static void ssid_spam_init(void) {
@@ -401,7 +399,6 @@ void ssid_spam_begin() {
   spam_main_menu();
 }
 
-
 // ---------------------------------------------------------------------------
 // app_manager callbacks
 // ---------------------------------------------------------------------------
@@ -414,8 +411,8 @@ static void ssid_spam_on_input(uint8_t button_name, uint8_t button_event) {
   // Input is handled by the menu callbacks (spam_main_cb, spam_input_cb)
   // which are installed via menus_module_set_app_state
   // This callback is a fallback for when no menu is active
-  (void)button_name;
-  (void)button_event;
+  (void) button_name;
+  (void) button_event;
 }
 
 static void ssid_spam_on_exit(void) {
@@ -454,9 +451,8 @@ void app_manager_enter_wrapper_ssid_spam(void) {
 
 // App definition for app_manager
 const minino_app_t ssid_spam_app = {
-  .name = "ssid_spam",
-  .on_enter = ssid_spam_on_enter,
-  .on_input = ssid_spam_on_input,
-  .on_exit = ssid_spam_on_exit,
+    .name = "ssid_spam",
+    .on_enter = ssid_spam_on_enter,
+    .on_input = ssid_spam_on_input,
+    .on_exit = ssid_spam_on_exit,
 };
-

@@ -5,10 +5,9 @@
  */
 
 #include "rf_spectrum.h"
-#include "app_manager.h"
-#include "radio_lease.h"
 #include <stdio.h>
 #include <string.h>
+#include "app_manager.h"
 #include "buzzer.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -18,9 +17,10 @@
 #include "keyboard_module.h"
 #include "menus_module.h"
 #include "preferences.h"
-#include "rf_spectrum_screens.h"
+#include "radio_lease.h"
 #include "rf_spectrum_drone.h"
 #include "rf_spectrum_pcap.h"
+#include "rf_spectrum_screens.h"
 #include "rf_spectrum_web.h"
 #include "sd_card.h"
 #include "wifi_controller.h"
@@ -64,17 +64,18 @@ static void save_preferences(void) {
   preferences_put_char("SPEC_TH", s_data.threshold_dbm);
   preferences_put_uchar("SPEC_CH", s_data.current_channel);
   preferences_put_uchar("SPEC_AUD", s_data.audio_enabled ? 1 : 0);
-  preferences_put_uchar("SPEC_VM", (uint8_t)s_data.view_mode);
+  preferences_put_uchar("SPEC_VM", (uint8_t) s_data.view_mode);
   preferences_put_uchar("SPEC_TRI", s_data.tri_channel_sweep ? 1 : 0);
 }
 
-static void spectrum_promiscuous_rx_cb(void* buf, wifi_promiscuous_pkt_type_t type) {
-  (void)type;
+static void spectrum_promiscuous_rx_cb(void* buf,
+                                       wifi_promiscuous_pkt_type_t type) {
+  (void) type;
   if (!s_running || buf == NULL) {
     return;
   }
 
-  const wifi_promiscuous_pkt_t* pkt = (const wifi_promiscuous_pkt_t*)buf;
+  const wifi_promiscuous_pkt_t* pkt = (const wifi_promiscuous_pkt_t*) buf;
   int8_t rssi = pkt->rx_ctrl.rssi;
   uint8_t ch = pkt->rx_ctrl.channel;
 
@@ -87,7 +88,8 @@ static void spectrum_promiscuous_rx_cb(void* buf, wifi_promiscuous_pkt_type_t ty
   if (s_data.audio_enabled && (ch == s_data.current_channel || rssi >= -50)) {
     int64_t now_us = esp_timer_get_time();
     int64_t min_interval_us = ((-rssi) - 20) * 800LL;
-    if (min_interval_us < 18000) min_interval_us = 18000;
+    if (min_interval_us < 18000)
+      min_interval_us = 18000;
     if (now_us - s_last_click_us >= min_interval_us) {
       s_last_click_us = now_us;
       buzzer_play_for(6);
@@ -98,7 +100,8 @@ static void spectrum_promiscuous_rx_cb(void* buf, wifi_promiscuous_pkt_type_t ty
     if (rssi > s_data.channel_rssi[ch]) {
       s_data.channel_rssi[ch] = rssi;
     }
-    s_data.channel_rssi_ema[ch] = rf_filter_ema_rssi(s_data.channel_rssi_ema[ch], rssi, 30);
+    s_data.channel_rssi_ema[ch] =
+        rf_filter_ema_rssi(s_data.channel_rssi_ema[ch], rssi, 30);
     if (rssi > s_data.channel_peak[ch]) {
       s_data.channel_peak[ch] = rssi;
     }
@@ -119,12 +122,15 @@ static void spectrum_promiscuous_rx_cb(void* buf, wifi_promiscuous_pkt_type_t ty
 
     /* OpenDroneID passive detection */
     drone_detection_t drone_info;
-    if (rf_spectrum_drone_detect(pkt->payload, pkt->rx_ctrl.sig_len, &drone_info)) {
+    if (rf_spectrum_drone_detect(pkt->payload, pkt->rx_ctrl.sig_len,
+                                 &drone_info)) {
       s_data.drone_count[ch]++;
       s_data.last_drone_ch = ch;
       s_data.last_drone_rssi = rssi;
-      strncpy(s_data.last_drone_id, drone_info.uas_id, sizeof(s_data.last_drone_id) - 1);
-      snprintf(s_data.alert_msg, sizeof(s_data.alert_msg), "! DRONE CH %d !", ch);
+      strncpy(s_data.last_drone_id, drone_info.uas_id,
+              sizeof(s_data.last_drone_id) - 1);
+      snprintf(s_data.alert_msg, sizeof(s_data.alert_msg), "! DRONE CH %d !",
+               ch);
       s_data.alert_timer = 35; /* ~700ms display */
       if (s_data.audio_enabled) {
         buzzer_play_for(30);
@@ -143,7 +149,8 @@ static void spectrum_promiscuous_rx_cb(void* buf, wifi_promiscuous_pkt_type_t ty
       if (fc == 0xC0 || fc == 0xA0) {
         s_channel_deauth_win[ch]++;
         s_data.deauth_count[ch]++;
-        snprintf(s_data.alert_msg, sizeof(s_data.alert_msg), "! DEAUTH CH %d !", ch);
+        snprintf(s_data.alert_msg, sizeof(s_data.alert_msg), "! DEAUTH CH %d !",
+                 ch);
         s_data.alert_timer = 25; /* ~500ms display */
         if (s_data.audio_enabled) {
           buzzer_play_for(20);
@@ -154,10 +161,14 @@ static void spectrum_promiscuous_rx_cb(void* buf, wifi_promiscuous_pkt_type_t ty
 }
 
 static uint8_t rssi_to_intensity(int8_t rssi) {
-  if (rssi <= -85) return 0;
-  if (rssi <= -75) return 1;
-  if (rssi <= -65) return 2;
-  if (rssi <= -50) return 3;
+  if (rssi <= -85)
+    return 0;
+  if (rssi <= -75)
+    return 1;
+  if (rssi <= -65)
+    return 2;
+  if (rssi <= -50)
+    return 3;
   return 4;
 }
 
@@ -169,7 +180,9 @@ static void log_to_sd_card(void) {
   const char* log_path = "/sdcard/spectrum_log.csv";
 
   if (!s_sd_header_written) {
-    char header[] = "Timestamp_ms,Protocol,Channel,RSSI_dBm,Peak_dBm,Packets,Threshold_dBm\n";
+    char header[] =
+        "Timestamp_ms,Protocol,Channel,RSSI_dBm,Peak_dBm,Packets,Threshold_"
+        "dBm\n";
     sd_card_append_to_file(log_path, header);
     s_sd_header_written = true;
   }
@@ -177,19 +190,15 @@ static void log_to_sd_card(void) {
   char line[128];
   int64_t ms = esp_timer_get_time() / 1000;
   uint8_t c = rf_channel_clamp(s_data.protocol, s_data.current_channel);
-  snprintf(line, sizeof(line), "%lld,%s,%d,%d,%d,%u,%d\n",
-           (long long)ms,
-           (s_data.protocol == RF_PROTOCOL_ZIGBEE) ? "Zigbee" : "WiFi",
-           c,
-           s_data.channel_rssi[c],
-           s_data.channel_peak[c],
-           s_data.channel_packets[c],
-           s_data.threshold_dbm);
+  snprintf(line, sizeof(line), "%lld,%s,%d,%d,%d,%u,%d\n", (long long) ms,
+           (s_data.protocol == RF_PROTOCOL_ZIGBEE) ? "Zigbee" : "WiFi", c,
+           s_data.channel_rssi[c], s_data.channel_peak[c],
+           s_data.channel_packets[c], s_data.threshold_dbm);
   sd_card_append_to_file(log_path, line);
 }
 
 static void rf_spectrum_task(void* arg) {
-  (void)arg;
+  (void) arg;
   uint8_t sweep_ch = 1;
   uint32_t tick = 0;
 
@@ -199,16 +208,20 @@ static void rf_spectrum_task(void* arg) {
     tick++;
 
     /* 1. Frequency tuning / Channel management */
-    if (s_data.view_mode == SPECTRUM_VIEW_SCOPE || s_data.view_mode == SPECTRUM_VIEW_FOXHUNT) {
+    if (s_data.view_mode == SPECTRUM_VIEW_SCOPE ||
+        s_data.view_mode == SPECTRUM_VIEW_FOXHUNT) {
       wifi_driver_set_channel(s_data.current_channel);
       vTaskDelay(pdMS_TO_TICKS(20));
     } else {
-      sweep_ch = rf_channel_next_sweep(s_data.protocol, sweep_ch, s_data.tri_channel_sweep);
+      sweep_ch = rf_channel_next_sweep(s_data.protocol, sweep_ch,
+                                       s_data.tri_channel_sweep);
       wifi_driver_set_channel(sweep_ch);
-      vTaskDelay(pdMS_TO_TICKS(s_data.view_mode == SPECTRUM_VIEW_PEAK_TRACKER ? 12 : 20));
+      vTaskDelay(pdMS_TO_TICKS(
+          s_data.view_mode == SPECTRUM_VIEW_PEAK_TRACKER ? 12 : 20));
     }
 
-    /* Peak tracker evaluation: identify strongest active signal across the band */
+    /* Peak tracker evaluation: identify strongest active signal across the band
+     */
     uint8_t best_ch = 0;
     int8_t best_rssi = RF_NOISE_FLOOR;
     for (int c = 1; c <= RF_WIFI_MAX_CHANNELS; c++) {
@@ -219,14 +232,17 @@ static void rf_spectrum_task(void* arg) {
     }
 
     if (best_ch > 0 && best_rssi > RF_NOISE_FLOOR &&
-        (s_data.threshold_dbm <= RF_NOISE_FLOOR || best_rssi >= s_data.threshold_dbm)) {
+        (s_data.threshold_dbm <= RF_NOISE_FLOOR ||
+         best_rssi >= s_data.threshold_dbm)) {
       s_data.peak_channel = best_ch;
       s_data.peak_rssi = best_rssi;
-      s_data.peak_freq_mhz = rf_channel_to_frequency_mhz(s_data.protocol, best_ch);
+      s_data.peak_freq_mhz =
+          rf_channel_to_frequency_mhz(s_data.protocol, best_ch);
       if (best_rssi > s_data.peak_hold_dbm) {
         s_data.peak_hold_dbm = best_rssi;
       }
-      s_data.peak_latch_timer = 25; /* ~300ms latch to hold transient pulse on display */
+      s_data.peak_latch_timer =
+          25; /* ~300ms latch to hold transient pulse on display */
     } else if (s_data.peak_latch_timer > 0) {
       s_data.peak_latch_timer--;
       if (s_data.peak_latch_timer == 0) {
@@ -239,23 +255,25 @@ static void rf_spectrum_task(void* arg) {
     /* Check jamming condition with multi-factor heuristic */
     for (int c = 1; c <= RF_MAX_CHANNELS; c++) {
       bool adjacent_ap = false;
-      if (c > 1 && s_ap_presence_decay[c - 1] > 0) adjacent_ap = true;
-      if (c < RF_WIFI_MAX_CHANNELS && s_ap_presence_decay[c + 1] > 0) adjacent_ap = true;
+      if (c > 1 && s_ap_presence_decay[c - 1] > 0)
+        adjacent_ap = true;
+      if (c < RF_WIFI_MAX_CHANNELS && s_ap_presence_decay[c + 1] > 0)
+        adjacent_ap = true;
 
-      bool jam_detected = rf_jammer_evaluate(s_data.channel_rssi[c],
-                                             s_channel_beacons[c],
-                                             s_channel_deauth_win[c],
-                                             s_channel_fcs_errors[c],
-                                             s_channel_valid_frames[c],
-                                             adjacent_ap);
+      bool jam_detected = rf_jammer_evaluate(
+          s_data.channel_rssi[c], s_channel_beacons[c], s_channel_deauth_win[c],
+          s_channel_fcs_errors[c], s_channel_valid_frames[c], adjacent_ap);
 
       if (jam_detected) {
-        if (s_jammer_streak[c] < 50) s_jammer_streak[c]++;
+        if (s_jammer_streak[c] < 50)
+          s_jammer_streak[c]++;
         if (s_jammer_streak[c] >= 20) {
           s_data.jammer_alert[c] = true;
-          s_data.jammer_confidence[c] = (uint8_t)((s_jammer_streak[c] * 100) / 50);
+          s_data.jammer_confidence[c] =
+              (uint8_t) ((s_jammer_streak[c] * 100) / 50);
           if (s_data.alert_timer == 0) {
-            snprintf(s_data.alert_msg, sizeof(s_data.alert_msg), "! JAMMER CH %d !", c);
+            snprintf(s_data.alert_msg, sizeof(s_data.alert_msg),
+                     "! JAMMER CH %d !", c);
             s_data.alert_timer = 20;
           }
           if (s_data.audio_enabled && (tick % 15 == 0)) {
@@ -263,7 +281,8 @@ static void rf_spectrum_task(void* arg) {
           }
         }
       } else {
-        if (s_jammer_streak[c] > 0) s_jammer_streak[c]--;
+        if (s_jammer_streak[c] > 0)
+          s_jammer_streak[c]--;
         if (s_jammer_streak[c] == 0) {
           s_data.jammer_alert[c] = false;
           s_data.jammer_confidence[c] = 0;
@@ -299,7 +318,8 @@ static void rf_spectrum_task(void* arg) {
     if ((tick % 3) == 0) {
       for (int c = 1; c <= RF_MAX_CHANNELS; c++) {
         int8_t rssi = s_data.channel_rssi[c];
-        if (s_data.threshold_dbm > RF_NOISE_FLOOR && rssi < s_data.threshold_dbm) {
+        if (s_data.threshold_dbm > RF_NOISE_FLOOR &&
+            rssi < s_data.threshold_dbm) {
           s_data.waterfall[s_data.wf_head][c] = 0;
         } else {
           s_data.waterfall[s_data.wf_head][c] = rssi_to_intensity(rssi);
@@ -341,7 +361,7 @@ static void rf_spectrum_input_cb(uint8_t button_name, uint8_t button_event) {
   if (button_event == BUTTON_PRESS_DOWN) {
     switch (button_name) {
       case BUTTON_BOOT:
-        s_data.edit_mode = (rf_edit_mode_t)((s_data.edit_mode + 1) % 3);
+        s_data.edit_mode = (rf_edit_mode_t) ((s_data.edit_mode + 1) % 3);
         ESP_LOGI(TAG, "Edit mode: %d", s_data.edit_mode);
         break;
 
@@ -349,7 +369,9 @@ static void rf_spectrum_input_cb(uint8_t button_name, uint8_t button_event) {
         if (s_data.edit_mode == RF_EDIT_CHANNEL) {
           uint8_t max_ch = rf_channel_max(s_data.protocol);
           uint8_t min_ch = rf_channel_min(s_data.protocol);
-          s_data.current_channel = (s_data.current_channel >= max_ch) ? min_ch : s_data.current_channel + 1;
+          s_data.current_channel = (s_data.current_channel >= max_ch)
+                                       ? min_ch
+                                       : s_data.current_channel + 1;
           ESP_LOGI(TAG, "Selected channel: %d", s_data.current_channel);
           save_preferences();
         } else if (s_data.edit_mode == RF_EDIT_THRESHOLD) {
@@ -360,7 +382,8 @@ static void rf_spectrum_input_cb(uint8_t button_name, uint8_t button_event) {
           save_preferences();
         } else {
           s_data.tri_channel_sweep = !s_data.tri_channel_sweep;
-          ESP_LOGI(TAG, "Sweep filter: %s", s_data.tri_channel_sweep ? "TRI (1,6,11)" : "ALL");
+          ESP_LOGI(TAG, "Sweep filter: %s",
+                   s_data.tri_channel_sweep ? "TRI (1,6,11)" : "ALL");
           save_preferences();
         }
         break;
@@ -369,7 +392,9 @@ static void rf_spectrum_input_cb(uint8_t button_name, uint8_t button_event) {
         if (s_data.edit_mode == RF_EDIT_CHANNEL) {
           uint8_t max_ch = rf_channel_max(s_data.protocol);
           uint8_t min_ch = rf_channel_min(s_data.protocol);
-          s_data.current_channel = (s_data.current_channel <= min_ch) ? max_ch : s_data.current_channel - 1;
+          s_data.current_channel = (s_data.current_channel <= min_ch)
+                                       ? max_ch
+                                       : s_data.current_channel - 1;
           ESP_LOGI(TAG, "Selected channel: %d", s_data.current_channel);
           save_preferences();
         } else if (s_data.edit_mode == RF_EDIT_THRESHOLD) {
@@ -380,13 +405,15 @@ static void rf_spectrum_input_cb(uint8_t button_name, uint8_t button_event) {
           save_preferences();
         } else {
           s_data.tri_channel_sweep = !s_data.tri_channel_sweep;
-          ESP_LOGI(TAG, "Sweep filter: %s", s_data.tri_channel_sweep ? "TRI (1,6,11)" : "ALL");
+          ESP_LOGI(TAG, "Sweep filter: %s",
+                   s_data.tri_channel_sweep ? "TRI (1,6,11)" : "ALL");
           save_preferences();
         }
         break;
 
       case BUTTON_RIGHT:
-        s_data.view_mode = (spectrum_view_mode_t)((s_data.view_mode + 1) % SPECTRUM_VIEW_MAX);
+        s_data.view_mode =
+            (spectrum_view_mode_t) ((s_data.view_mode + 1) % SPECTRUM_VIEW_MAX);
         ESP_LOGI(TAG, "Switched view mode to: %d", s_data.view_mode);
         save_preferences();
         break;
@@ -407,7 +434,9 @@ static void rf_spectrum_input_cb(uint8_t button_name, uint8_t button_event) {
     } else if (button_name == BUTTON_DOWN) {
       rf_spectrum_toggle_pcap();
     } else if (button_name == BUTTON_UP) {
-      rf_spectrum_set_protocol((s_data.protocol == RF_PROTOCOL_WIFI) ? RF_PROTOCOL_ZIGBEE : RF_PROTOCOL_WIFI);
+      rf_spectrum_set_protocol((s_data.protocol == RF_PROTOCOL_WIFI)
+                                   ? RF_PROTOCOL_ZIGBEE
+                                   : RF_PROTOCOL_WIFI);
     }
   }
 }
@@ -426,7 +455,8 @@ static void rf_spectrum_start(void) {
   }
   bool loaded_aud = (preferences_get_uchar("SPEC_AUD", 1) != 0);
   bool loaded_tri = (preferences_get_uchar("SPEC_TRI", 0) != 0);
-  spectrum_view_mode_t loaded_vm = (spectrum_view_mode_t)preferences_get_uchar("SPEC_VM", SPECTRUM_VIEW_BARS);
+  spectrum_view_mode_t loaded_vm = (spectrum_view_mode_t) preferences_get_uchar(
+      "SPEC_VM", SPECTRUM_VIEW_BARS);
   if (loaded_vm >= SPECTRUM_VIEW_MAX) {
     loaded_vm = SPECTRUM_VIEW_BARS;
   }
@@ -481,8 +511,8 @@ static void rf_spectrum_start(void) {
   s_running = true;
 
   /* Start background measurement & rendering task */
-  BaseType_t ret = xTaskCreate(rf_spectrum_task, "rf_spectrum_task", 4096, NULL, 5,
-                               &s_spectrum_task_handle);
+  BaseType_t ret = xTaskCreate(rf_spectrum_task, "rf_spectrum_task", 4096, NULL,
+                               5, &s_spectrum_task_handle);
   if (ret != pdPASS) {
     ESP_LOGE(TAG, "Failed to create spectrum task");
     app_manager_exit();
@@ -541,8 +571,8 @@ int8_t rf_spectrum_get_threshold(void) {
 
 void rf_spectrum_set_channel(uint8_t channel) {
   if (!rf_channel_is_indexable(channel)) {
-    ESP_LOGW(TAG, "Channel %u is outside the 1..%d range, ignoring",
-             channel, RF_MAX_CHANNELS);
+    ESP_LOGW(TAG, "Channel %u is outside the 1..%d range, ignoring", channel,
+             RF_MAX_CHANNELS);
     return;
   }
   s_data.current_channel = channel;
@@ -589,7 +619,8 @@ void rf_spectrum_set_protocol(rf_protocol_t proto) {
      outside the band we are switching to. */
   s_data.current_channel =
       rf_channel_clamp(proto, (proto == RF_PROTOCOL_ZIGBEE) ? 15 : 1);
-  ESP_LOGI(TAG, "Protocol switched to: %s", (proto == RF_PROTOCOL_ZIGBEE) ? "Zigbee/802.15.4" : "Wi-Fi 2.4GHz");
+  ESP_LOGI(TAG, "Protocol switched to: %s",
+           (proto == RF_PROTOCOL_ZIGBEE) ? "Zigbee/802.15.4" : "Wi-Fi 2.4GHz");
 }
 
 rf_protocol_t rf_spectrum_get_protocol(void) {
@@ -613,7 +644,8 @@ uint16_t rf_spectrum_get_deauth_count(uint8_t channel) {
 bool rf_spectrum_has_jammer_alert(uint8_t channel) {
   if (channel == 0) {
     for (int c = 1; c <= RF_MAX_CHANNELS; c++) {
-      if (s_data.jammer_alert[c]) return true;
+      if (s_data.jammer_alert[c])
+        return true;
     }
     return false;
   }
@@ -637,23 +669,25 @@ void rf_spectrum_toggle_tri_channel(void) {
 }
 
 void rf_spectrum_clear_alerts(void) {
-  memset((void*)s_data.deauth_count, 0, sizeof(s_data.deauth_count));
-  memset((void*)s_data.drone_count, 0, sizeof(s_data.drone_count));
-  memset((void*)s_data.jammer_alert, 0, sizeof(s_data.jammer_alert));
+  memset((void*) s_data.deauth_count, 0, sizeof(s_data.deauth_count));
+  memset((void*) s_data.drone_count, 0, sizeof(s_data.drone_count));
+  memset((void*) s_data.jammer_alert, 0, sizeof(s_data.jammer_alert));
   s_data.last_drone_id[0] = '\0';
   s_data.alert_timer = 0;
   s_data.alert_msg[0] = '\0';
 }
 
 void rf_spectrum_set_pcap_enabled(bool enabled) {
-  if (enabled == s_data.pcap_logging) return;
+  if (enabled == s_data.pcap_logging)
+    return;
   if (enabled) {
     if (rf_spectrum_pcap_start()) {
       s_data.pcap_logging = true;
       s_data.pcap_packets = 0;
       ESP_LOGI(TAG, "PCAP logging enabled");
     } else {
-      ESP_LOGW(TAG, "Cannot start PCAP logging: MicroSD not mounted or file error");
+      ESP_LOGW(TAG,
+               "Cannot start PCAP logging: MicroSD not mounted or file error");
     }
   } else {
     rf_spectrum_pcap_stop();
@@ -689,7 +723,8 @@ const char* rf_spectrum_get_last_drone_id(void) {
 }
 
 size_t rf_spectrum_get_status_json(char* buf, size_t max_len) {
-  if (!buf || max_len == 0) return 0;
+  if (!buf || max_len == 0)
+    return 0;
   uint16_t total_deauth = rf_spectrum_get_deauth_count(0);
   uint16_t total_drones = rf_spectrum_get_drone_count(0);
   bool has_jam = rf_spectrum_has_jammer_alert(0);
@@ -700,27 +735,31 @@ size_t rf_spectrum_get_status_json(char* buf, size_t max_len) {
      trusting the return value. */
   size_t space = max_len - 1;
 
-#define JSON_APPEND(...)                              \
-  do {                                                \
-    int _n = snprintf(buf + written, space - written,  \
-                      __VA_ARGS__);                   \
-    if (_n < 0) return written;                       \
-    written += (size_t) _n;                           \
-    if (written > space) { written = space; goto out; } \
+#define JSON_APPEND(...)                                            \
+  do {                                                              \
+    int _n = snprintf(buf + written, space - written, __VA_ARGS__); \
+    if (_n < 0)                                                     \
+      return written;                                               \
+    written += (size_t) _n;                                         \
+    if (written > space) {                                          \
+      written = space;                                              \
+      goto out;                                                     \
+    }                                                               \
   } while (0)
 
   JSON_APPEND(
-    "{\"ch\":%d,\"rssi\":%d,\"peak\":%d,\"th\":%d,\"audio\":%s,\"sd\":%s,"
-    "\"pcap\":%s,\"pcap_pkts\":%u,\"proto\":\"%s\",\"view\":%d,\"deauth\":%u,"
-    "\"drones\":%u,\"last_drone\":\"%s\",\"jammer\":%s,\"alert\":\"%s\","
-    "\"channels\":[",
-    (int) cur, s_data.channel_rssi[cur], s_data.channel_peak[cur],
-    s_data.threshold_dbm, s_data.audio_enabled ? "true" : "false",
-    s_data.sd_logging ? "true" : "false",
-    s_data.pcap_logging ? "true" : "false", (unsigned int)s_data.pcap_packets,
-    (s_data.protocol == RF_PROTOCOL_ZIGBEE) ? "Zigbee" : "Wi-Fi",
-    s_data.view_mode, total_deauth, total_drones, s_data.last_drone_id,
-    has_jam ? "true" : "false", s_data.alert_msg);
+      "{\"ch\":%d,\"rssi\":%d,\"peak\":%d,\"th\":%d,\"audio\":%s,\"sd\":%s,"
+      "\"pcap\":%s,\"pcap_pkts\":%u,\"proto\":\"%s\",\"view\":%d,\"deauth\":%u,"
+      "\"drones\":%u,\"last_drone\":\"%s\",\"jammer\":%s,\"alert\":\"%s\","
+      "\"channels\":[",
+      (int) cur, s_data.channel_rssi[cur], s_data.channel_peak[cur],
+      s_data.threshold_dbm, s_data.audio_enabled ? "true" : "false",
+      s_data.sd_logging ? "true" : "false",
+      s_data.pcap_logging ? "true" : "false",
+      (unsigned int) s_data.pcap_packets,
+      (s_data.protocol == RF_PROTOCOL_ZIGBEE) ? "Zigbee" : "Wi-Fi",
+      s_data.view_mode, total_deauth, total_drones, s_data.last_drone_id,
+      has_jam ? "true" : "false", s_data.alert_msg);
 
   for (int c = 1; c <= RF_MAX_CHANNELS; c++) {
     JSON_APPEND("%s%d", (c == 1) ? "" : ",", s_data.channel_rssi[c]);
@@ -732,4 +771,3 @@ out:
   buf[written] = '\0';
   return written;
 }
-

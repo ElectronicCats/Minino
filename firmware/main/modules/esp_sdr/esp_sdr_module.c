@@ -5,19 +5,20 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <math.h>
+#include "c6_sdr_rx.h"
+#include "cat_console.h"
+#include "esdr_host.h"
 #include "esp_log.h"
+#include "esp_rom_sys.h"
 #include "esp_timer.h"
+#include "esp_wifi.h"
+#include "files_ops.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "c6_sdr_rx.h"
-#include "files_ops.h"
 #include "keyboard_module.h"
 #include "menus_module.h"
 #include "oled_screen.h"
-#include "flash_fs.h"
-#include <math.h>
-#include "esp_wifi.h"
-#include "esp_rom_sys.h"
 #include "sd_card.h"
 #include "sdr_screen.h"
 
@@ -33,20 +34,20 @@ static const minino_app_t s_app = {
     .on_exit = esp_sdr_module_stop,
 };
 
-#define SDR_BURST_SAMPLES  8192
-#define SDR_FREQ_MIN_MHZ   2412u
-#define SDR_FREQ_MAX_MHZ   2484u
+#define SDR_BURST_SAMPLES 8192
+#define SDR_FREQ_MIN_MHZ  2412u
+#define SDR_FREQ_MAX_MHZ  2484u
 
 typedef struct {
-  bool                 running;
-  uint32_t             freq_mhz;
-  uint32_t             burst_count;
-  uint32_t             last_us;
-  uint32_t             last_samples;
-  int8_t               last_rssi;
+  bool running;
+  uint32_t freq_mhz;
+  uint32_t burst_count;
+  uint32_t last_us;
+  uint32_t last_samples;
+  int8_t last_rssi;
   sdr_operating_mode_t mode;
-  bool                 tx_active;
-  uint32_t             tx_count;
+  bool tx_active;
+  uint32_t tx_count;
 } sdr_native_state_t;
 
 static sdr_native_state_t s_sdr = {
@@ -63,7 +64,9 @@ static void sdr_render_screen(const char* status_line, const char* footer_line);
 
 static void carrier_timeout_cb(void* arg) {
   if (s_sdr.running && s_sdr.tx_active && s_sdr.mode == SDR_MODE_TX_CW) {
-    ESP_LOGW(TAG, "Carrier emission safety timeout reached (30s). Stopping TX CW...");
+    ESP_LOGW(
+        TAG,
+        "Carrier emission safety timeout reached (30s). Stopping TX CW...");
     c6_sdr_tx_carrier_stop();
     s_sdr.tx_active = false;
     sdr_render_screen("CW: TIMEOUT (OFF)", NULL);
@@ -97,23 +100,26 @@ static int8_t compute_iq_rssi(const uint32_t* words, uint32_t num_samples) {
   uint64_t sum_pwr = 0;
   for (uint32_t i = 0; i < num_samples; i++) {
     uint32_t w = words[i];
-    int32_t re = ((int32_t)(w << 22)) >> 22;
-    int32_t im = ((int32_t)((w >> 10) << 22)) >> 22;
-    sum_pwr += (uint64_t)(re * re + im * im);
+    int32_t re = ((int32_t) (w << 22)) >> 22;
+    int32_t im = ((int32_t) ((w >> 10) << 22)) >> 22;
+    sum_pwr += (uint64_t) (re * re + im * im);
   }
-  double avg_pwr = (double)sum_pwr / (double)num_samples;
+  double avg_pwr = (double) sum_pwr / (double) num_samples;
   if (avg_pwr < 1.0) {
     return -100;
   }
   /* Full scale is 524288 (512^2 + 512^2) */
   double dbfs = 10.0 * log10(avg_pwr / 524288.0);
-  int8_t est_rssi = (int8_t)(dbfs - 25.0);
-  if (est_rssi > -20) est_rssi = -20;
-  if (est_rssi < -100) est_rssi = -100;
+  int8_t est_rssi = (int8_t) (dbfs - 25.0);
+  if (est_rssi > -20)
+    est_rssi = -20;
+  if (est_rssi < -100)
+    est_rssi = -100;
   return est_rssi;
 }
 
-static void sdr_render_screen(const char* status_line, const char* footer_line) {
+static void sdr_render_screen(const char* status_line,
+                              const char* footer_line) {
   sdr_screen_data_t view = {
       .freq_mhz = s_sdr.freq_mhz,
       .sample_rate_hz = 80000000u,
@@ -142,7 +148,7 @@ static void sdr_render_screen(const char* status_line, const char* footer_line) 
 static void sdr_tx_packet_run(void) {
   uint8_t ch = 1;
   if (s_sdr.freq_mhz >= 2412 && s_sdr.freq_mhz <= 2472) {
-    ch = (uint8_t)(((s_sdr.freq_mhz - 2407u) + 2u) / 5u);
+    ch = (uint8_t) (((s_sdr.freq_mhz - 2407u) + 2u) / 5u);
   } else if (s_sdr.freq_mhz == 2484) {
     ch = 14;
   }
@@ -163,19 +169,19 @@ static void sdr_tx_packet_run(void) {
   frame[len++] = 0x02;
   frame[len++] = 0xec;
   frame[len++] = 0xc6;
-  frame[len++] = (uint8_t)(s_sdr.tx_count >> 16);
-  frame[len++] = (uint8_t)(s_sdr.tx_count >> 8);
-  frame[len++] = (uint8_t)(s_sdr.tx_count);
+  frame[len++] = (uint8_t) (s_sdr.tx_count >> 16);
+  frame[len++] = (uint8_t) (s_sdr.tx_count >> 8);
+  frame[len++] = (uint8_t) (s_sdr.tx_count);
   /* BSSID: Broadcast */
   memset(&frame[len], 0xff, 6);
   len += 6;
   /* Sequence Control */
-  frame[len++] = (uint8_t)((s_sdr.tx_count & 0x0f) << 4);
-  frame[len++] = (uint8_t)((s_sdr.tx_count >> 4) & 0xff);
+  frame[len++] = (uint8_t) ((s_sdr.tx_count & 0x0f) << 4);
+  frame[len++] = (uint8_t) ((s_sdr.tx_count >> 4) & 0xff);
 
   /* SSID Tag */
   const char* ssid = "MININO-SDR-TX";
-  uint8_t ssid_len = (uint8_t)strlen(ssid);
+  uint8_t ssid_len = (uint8_t) strlen(ssid);
   frame[len++] = 0x00;
   frame[len++] = ssid_len;
   memcpy(&frame[len], ssid, ssid_len);
@@ -200,33 +206,28 @@ static void sdr_tx_packet_run(void) {
 
   s_sdr.tx_active = true;
   for (int i = 0; i < 5; i++) {
-    (void)esp_wifi_80211_tx(WIFI_IF_STA, frame, len, false);
+    (void) esp_wifi_80211_tx(WIFI_IF_STA, frame, len, false);
     s_sdr.tx_count++;
     esp_rom_delay_us(1000);
   }
   s_sdr.tx_active = false;
 
   char status[24];
-  snprintf(status, sizeof(status), "SENT %lu pkts (C%d)", (unsigned long)s_sdr.tx_count, (int)ch);
+  snprintf(status, sizeof(status), "SENT %lu pkts (C%d)",
+           (unsigned long) s_sdr.tx_count, (int) ch);
   sdr_render_screen(status, NULL);
 }
 
 static const char* sdr_burst_save(void) {
-  const char* base_dir = NULL;
-  const char* dest_name = NULL;
-
-  if (sd_card_is_mounted()) {
-    base_dir = SD_CARD_PATH;
-    dest_name = "SD";
-  } else if (flash_fs_is_mounted() || flash_fs_mount() == ESP_OK) {
-    base_dir = "/internal";
-    dest_name = "Flash";
-  } else {
+  if (!sd_card_is_mounted()) {
     return NULL;
   }
+  const char* base_dir = SD_CARD_PATH;
+  const char* dest_name = "SD";
 
   char filename[64];
-  if (!files_ops_incremental_name_buf(base_dir, "sdrcap", ".iq", filename, sizeof(filename))) {
+  if (!files_ops_incremental_name_buf(base_dir, "sdrcap", ".iq", filename,
+                                      sizeof(filename))) {
     return NULL;
   }
 
@@ -279,14 +280,82 @@ static void sdr_burst_run(void) {
 
   ESP_LOGI(TAG, "burst %lu: %lu words in %lu us (est RSSI %d dBm)%s%s",
            (unsigned long) s_sdr.burst_count,
-           (unsigned long) s_sdr.last_samples,
-           (unsigned long) s_sdr.last_us,
-           (int) s_sdr.last_rssi,
-           dest ? " saved to " : " (not saved)",
+           (unsigned long) s_sdr.last_samples, (unsigned long) s_sdr.last_us,
+           (int) s_sdr.last_rssi, dest ? " saved to " : " (not saved)",
            dest ? dest : "");
 }
 
+static TaskHandle_t s_host_task = NULL;
+
+static void sdr_web_host_task(void* arg) {
+  (void) arg;
+  ESP_LOGI(TAG, "Starting SDR Web Host session for ESPARGOS...");
+  cat_console_pause();
+  s_sdr.tx_active = true;
+  sdr_render_screen("WEB HOST: LISTENING", "espargos.net/espsdr");
+
+  (void) esdr_host_run();
+
+  s_sdr.tx_active = false;
+  cat_console_resume();
+  sdr_render_screen("WEB HOST: RELEASED", NULL);
+  s_host_task = NULL;
+  vTaskDelete(NULL);
+}
+
+static void sdr_web_host_start(void) {
+  if (s_host_task != NULL) {
+    return;
+  }
+  xTaskCreate(sdr_web_host_task, "sdr_web_host", 6144, NULL, 5, &s_host_task);
+}
+
+static void sdr_web_host_stop(void) {
+  if (s_host_task != NULL) {
+    esdr_host_request_stop();
+    for (int i = 0; i < 20 && s_host_task != NULL; i++) {
+      vTaskDelay(pdMS_TO_TICKS(50));
+    }
+    if (s_host_task != NULL) {
+      vTaskDelete(s_host_task);
+      s_host_task = NULL;
+      cat_console_resume();
+    }
+  }
+  s_sdr.tx_active = false;
+}
+
+static void sdr_cycle_mode(void) {
+  if (s_host_task != NULL) {
+    sdr_web_host_stop();
+  }
+  if (s_sdr.mode == SDR_MODE_TX_CW && s_sdr.tx_active) {
+    c6_sdr_tx_carrier_stop();
+    s_sdr.tx_active = false;
+    if (s_carrier_timer != NULL) {
+      esp_timer_stop(s_carrier_timer);
+    }
+  }
+  s_sdr.mode = (sdr_operating_mode_t) ((s_sdr.mode + 1) % 4);
+  const char* mode_desc = "MODE: RX CAPTURE";
+  if (s_sdr.mode == SDR_MODE_TX_PKT) {
+    mode_desc = "MODE: TX 802.11 RAW";
+  } else if (s_sdr.mode == SDR_MODE_TX_CW) {
+    mode_desc = "MODE: TX CW TONE";
+  } else if (s_sdr.mode == SDR_MODE_WEB_HOST) {
+    mode_desc = "MODE: WEB SDR HOST";
+  }
+  sdr_render_screen(mode_desc, NULL);
+}
+
 static void sdr_input_handler(uint8_t button_name, uint8_t button_event) {
+  if (button_event == BUTTON_LONG_PRESS_START) {
+    if (button_name == BUTTON_RIGHT) {
+      sdr_cycle_mode();
+      return;
+    }
+  }
+
   if (button_event != BUTTON_PRESS_DOWN) {
     return;
   }
@@ -294,6 +363,9 @@ static void sdr_input_handler(uint8_t button_name, uint8_t button_event) {
   switch (button_name) {
     case BUTTON_LEFT:
       ESP_LOGI(TAG, "Exiting native SDR app");
+      if (s_host_task != NULL) {
+        sdr_web_host_stop();
+      }
       if (s_sdr.tx_active && s_sdr.mode == SDR_MODE_TX_CW) {
         c6_sdr_tx_carrier_stop();
         s_sdr.tx_active = false;
@@ -304,15 +376,7 @@ static void sdr_input_handler(uint8_t button_name, uint8_t button_event) {
       app_manager_exit();
       break;
     case BUTTON_BOOT:
-      if (s_sdr.mode == SDR_MODE_TX_CW && s_sdr.tx_active) {
-        c6_sdr_tx_carrier_stop();
-        s_sdr.tx_active = false;
-        if (s_carrier_timer != NULL) {
-          esp_timer_stop(s_carrier_timer);
-        }
-      }
-      s_sdr.mode = (sdr_operating_mode_t)((s_sdr.mode + 1) % 3);
-      sdr_render_screen(NULL, NULL);
+      sdr_cycle_mode();
       break;
     case BUTTON_RIGHT:
       if (s_sdr.mode == SDR_MODE_RX_CAP) {
@@ -336,16 +400,24 @@ static void sdr_input_handler(uint8_t button_name, uint8_t button_event) {
                   .callback = carrier_timeout_cb,
                   .name = "sdr_cw_timeout",
               };
-              (void)esp_timer_create(&timer_args, &s_carrier_timer);
+              (void) esp_timer_create(&timer_args, &s_carrier_timer);
             }
             if (s_carrier_timer != NULL) {
               esp_timer_stop(s_carrier_timer);
-              esp_timer_start_once(s_carrier_timer, 30000000); /* 30 seconds limit */
+              esp_timer_start_once(s_carrier_timer,
+                                   30000000); /* 30 seconds limit */
             }
             sdr_render_screen("CW: ON (30s limit)", NULL);
           } else {
             sdr_render_screen("CW: ERR START", NULL);
           }
+        }
+      } else if (s_sdr.mode == SDR_MODE_WEB_HOST) {
+        if (s_host_task != NULL) {
+          sdr_web_host_stop();
+          sdr_render_screen("WEB HOST: STOPPED", NULL);
+        } else {
+          sdr_web_host_start();
         }
       }
       break;
@@ -378,15 +450,6 @@ static void esp_sdr_start(void) {
   s_sdr.tx_active = false;
   s_sdr.mode = SDR_MODE_RX_CAP;
 
-  /* Mount Flash FS for saving captures to internal storage. */
-  if (!flash_fs_is_mounted()) {
-    esp_err_t err = flash_fs_mount();
-    if (err != ESP_OK) {
-      ESP_LOGW(TAG, "Internal flash not available (%s): captures not saved",
-               esp_err_to_name(err));
-    }
-  }
-
   /* Initialize the radio: this sets up the WiFi PHY and SPI bus
      for the dump engine. */
   esp_err_t err = c6_sdr_rx_init();
@@ -406,6 +469,9 @@ void esp_sdr_module_begin(void) {
 }
 
 void esp_sdr_module_stop(void) {
+  if (s_host_task != NULL) {
+    sdr_web_host_stop();
+  }
   if (s_carrier_timer != NULL) {
     esp_timer_stop(s_carrier_timer);
     esp_timer_delete(s_carrier_timer);
@@ -419,7 +485,6 @@ void esp_sdr_module_stop(void) {
     s_sdr.running = false;
     c6_sdr_rx_stop();
   }
-  // Flash FS is managed globally, do not unmount here
 }
 
 bool esp_sdr_module_is_running(void) {
@@ -430,4 +495,3 @@ void app_manager_enter_wrapper_esp_sdr(void) {
   extern const minino_app_t s_app;
   app_manager_enter(&s_app);
 }
-

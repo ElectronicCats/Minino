@@ -10,10 +10,10 @@
 #include "wifi_controller.h"
 
 #if CONFIG_BT_ENABLED
-#include "esp_bt.h"
-#include "esp_bt_main.h"
-#include "gatt_dispatcher.h"
-#include "gap_dispatcher.h"
+  #include "esp_bt.h"
+  #include "esp_bt_main.h"
+  #include "gap_dispatcher.h"
+  #include "gatt_dispatcher.h"
 #endif
 
 static const char* TAG = "radio_lease";
@@ -72,8 +72,7 @@ esp_err_t radio_lease_prom_acquire(radio_prom_user_t user,
   }
 
   portENTER_CRITICAL(&s_radio_mux);
-  if (!radio_lease_stack_allowed(s_wifi_refs, s_ble_refs,
-                                 RADIO_STACK_WIFI)) {
+  if (!radio_lease_stack_allowed(s_wifi_refs, s_ble_refs, RADIO_STACK_WIFI)) {
     portEXIT_CRITICAL(&s_radio_mux);
     ESP_LOGW(TAG, "promiscuous requested while BLE is active");
     return ESP_ERR_NOT_SUPPORTED;
@@ -116,15 +115,14 @@ esp_err_t radio_lease_prom_hold(radio_prom_user_t user) {
   }
 
   portENTER_CRITICAL(&s_radio_mux);
-  if (!radio_lease_stack_allowed(s_wifi_refs, s_ble_refs,
-                                 RADIO_STACK_WIFI)) {
+  if (!radio_lease_stack_allowed(s_wifi_refs, s_ble_refs, RADIO_STACK_WIFI)) {
     portEXIT_CRITICAL(&s_radio_mux);
     ESP_LOGW(TAG, "promiscuous requested while BLE is active");
     return ESP_ERR_NOT_SUPPORTED;
   }
   uint8_t before = radio_lease_registry_count(&s_prom);
-  esp_err_t err = radio_lease_registry_acquire(&s_prom, (uint8_t) user,
-                                               prom_ignore, NULL);
+  esp_err_t err =
+      radio_lease_registry_acquire(&s_prom, (uint8_t) user, prom_ignore, NULL);
   portEXIT_CRITICAL(&s_radio_mux);
   if (err != ESP_OK) {
     return err;
@@ -382,21 +380,24 @@ void radio_lease_ble_release(void) {
   if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_ENABLED) {
     esp_bluedroid_disable();
     int timeout = 50; /* 50 x 10ms = 500ms max */
-    while (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_ENABLED && timeout-- > 0) {
+    while (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_ENABLED &&
+           timeout-- > 0) {
       vTaskDelay(pdMS_TO_TICKS(10));
     }
   }
   if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_INITIALIZED) {
     esp_bluedroid_deinit();
     int timeout = 50;
-    while (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_INITIALIZED && timeout-- > 0) {
+    while (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_INITIALIZED &&
+           timeout-- > 0) {
       vTaskDelay(pdMS_TO_TICKS(10));
     }
   }
   if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_ENABLED) {
     esp_bt_controller_disable();
     int timeout = 50;
-    while (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_ENABLED && timeout-- > 0) {
+    while (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_ENABLED &&
+           timeout-- > 0) {
       vTaskDelay(pdMS_TO_TICKS(10));
     }
   }
@@ -438,8 +439,8 @@ bool radio_lease_ble_scan_allowed(void) {
 
 #endif
 
-
-esp_err_t radio_lease_wifi_acquire_timeout(radio_wifi_init_mode_t mode, TickType_t timeout_ticks) {
+esp_err_t radio_lease_wifi_acquire_timeout(radio_wifi_init_mode_t mode,
+                                           TickType_t timeout_ticks) {
   TickType_t start = xTaskGetTickCount();
   while (1) {
     esp_err_t err = radio_lease_wifi_acquire(mode);
@@ -478,4 +479,3 @@ esp_err_t radio_lease_ble_acquire_timeout(TickType_t timeout_ticks) {
     vTaskDelay(pdMS_TO_TICKS(10));
   }
 }
-

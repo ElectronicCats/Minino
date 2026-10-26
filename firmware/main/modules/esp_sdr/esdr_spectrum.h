@@ -35,8 +35,10 @@ extern "C" {
  * @param elapsed_us micros que tardo la captura
  * @return true si la captura salio bien
  */
-typedef bool (*esdr_spectrum_acquire_fn)(uint32_t n, uint32_t rate, const uint32_t** words,
-                                          uint32_t* elapsed_us);
+typedef bool (*esdr_spectrum_acquire_fn)(uint32_t n,
+                                         uint32_t rate,
+                                         const uint32_t** words,
+                                         uint32_t* elapsed_us);
 
 /**
  * @brief Atiende los comandos de espectro.
@@ -46,7 +48,9 @@ typedef bool (*esdr_spectrum_acquire_fn)(uint32_t n, uint32_t rate, const uint32
  * @param acquire     como se saca una rafaga
  * @return true si la linea era un comando de espectro (contestado o no)
  */
-bool esdr_spectrum_command(const char* line, uint32_t freq_mhz, esdr_spectrum_acquire_fn acquire);
+bool esdr_spectrum_command(const char* line,
+                           uint32_t freq_mhz,
+                           esdr_spectrum_acquire_fn acquire);
 
 #ifdef __cplusplus
 }

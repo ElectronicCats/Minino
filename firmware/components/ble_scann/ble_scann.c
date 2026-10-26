@@ -1,9 +1,9 @@
 #include "ble_scann.h"
-#include "radio_lease.h"
 #include "bt_gattc.h"
 #include "esp_bt.h"
 #include "esp_log.h"
 #include "inttypes.h"
+#include "radio_lease.h"
 #include "uart_sender.h"
 
 static bluetooth_adv_scanner_cb_t display_records_cb = NULL;

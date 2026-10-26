@@ -1,7 +1,7 @@
 #include "general_submenu.h"
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "bitmaps_general.h"

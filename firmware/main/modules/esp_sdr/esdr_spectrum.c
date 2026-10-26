@@ -24,10 +24,11 @@
  * -------------------------------------------------------------------------- */
 
 #define SPEC_HEADER_BYTES 28u
-#define SPEC_MAGIC "SPC1"
+#define SPEC_MAGIC        "SPC1"
 
 /* Las tasas que el C6 sabe hacer, con su codigo en el protocolo. */
-static const uint32_t s_rates[] = {80000000u, 40000000u, 0u, 0u, 0u, 0u, 16000000u};
+static const uint32_t s_rates[] = {80000000u, 40000000u, 0u,       0u,
+                                   0u,        0u,        16000000u};
 #define SPEC_RATE_COUNT (sizeof(s_rates) / sizeof(s_rates[0]))
 
 /* El modo de correccion de la continua: 0 la quita en cada FFT, 1 la sigue
@@ -43,24 +44,26 @@ static unsigned s_dc_mode = 1;
  * -------------------------------------------------------------------------- */
 
 static inline uint32_t complex_power(int16_t re, int16_t im) {
-  return (uint32_t)((int32_t)re * re) + (uint32_t)((int32_t)im * im);
+  return (uint32_t) ((int32_t) re * re) + (uint32_t) ((int32_t) im * im);
 }
 
 static inline uint8_t log_power_code(unsigned exponent, uint32_t norm) {
-  static const uint16_t log2_q12[17] = {0,    358,  696,  1016, 1319, 1607, 1882, 2144, 2396,
-                                        2637, 2869, 3092, 3307, 3515, 3715, 3908, 4096};
+  static const uint16_t log2_q12[17] = {0,    358,  696,  1016, 1319, 1607,
+                                        1882, 2144, 2396, 2637, 2869, 3092,
+                                        3307, 3515, 3715, 3908, 4096};
   unsigned slot = (norm - 256u) >> 4, frac = norm & 15u;
-  uint32_t logarithm =
-      (exponent << 12) + log2_q12[slot] + ((log2_q12[slot + 1] - log2_q12[slot]) * frac + 8) / 16;
-  unsigned code = (logarithm * 1541u + (1u << 19)) >> 20; /* 20 log10(potencia) */
-  return code > 255 ? 255 : (uint8_t)code;
+  uint32_t logarithm = (exponent << 12) + log2_q12[slot] +
+                       ((log2_q12[slot + 1] - log2_q12[slot]) * frac + 8) / 16;
+  unsigned code =
+      (logarithm * 1541u + (1u << 19)) >> 20; /* 20 log10(potencia) */
+  return code > 255 ? 255 : (uint8_t) code;
 }
 
 static inline uint8_t power_code(uint32_t power) {
   if (!power) {
     return 0;
   }
-  unsigned exponent = 31u - (unsigned)__builtin_clz(power);
+  unsigned exponent = 31u - (unsigned) __builtin_clz(power);
   return log_power_code(exponent, (power << (31u - exponent)) >> 23);
 }
 
@@ -106,23 +109,23 @@ static void twiddles_free(fft_twiddles_t* tw) {
 }
 
 static bool twiddles_build(fft_twiddles_t* tw, unsigned n) {
-  tw->re = (int16_t*)malloc(sizeof(int16_t) * (n / 2u));
-  tw->im = (int16_t*)malloc(sizeof(int16_t) * (n / 2u));
+  tw->re = (int16_t*) malloc(sizeof(int16_t) * (n / 2u));
+  tw->im = (int16_t*) malloc(sizeof(int16_t) * (n / 2u));
   if (tw->re == NULL || tw->im == NULL) {
     twiddles_free(tw);
     return false;
   }
   for (unsigned k = 0; k < n / 2u; k++) {
-    double angle = -2.0 * M_PI * (double)k / (double)n;
-    tw->re[k] = (int16_t)lrint(32767.0 * cos(angle));
-    tw->im[k] = (int16_t)lrint(32767.0 * sin(angle));
+    double angle = -2.0 * M_PI * (double) k / (double) n;
+    tw->re[k] = (int16_t) lrint(32767.0 * cos(angle));
+    tw->im[k] = (int16_t) lrint(32767.0 * sin(angle));
   }
   tw->n = n;
   return true;
 }
 
 static inline int16_t sat16(int32_t v) {
-  return v > 32767 ? 32767 : v < -32768 ? -32768 : (int16_t)v;
+  return v > 32767 ? 32767 : v < -32768 ? -32768 : (int16_t) v;
 }
 
 /* FFT in situ sobre pares intercalados re/im. */
@@ -161,14 +164,14 @@ static void fft_inplace(int16_t* x, unsigned n, const fft_twiddles_t* tw) {
         unsigned b = a + half;
         int32_t ar = x[2 * a], ai = x[2 * a + 1];
         int32_t br = x[2 * b], bi = x[2 * b + 1];
-        uint32_t tr = (uint32_t)(wr * br) + (uint32_t)(wi * bi);
-        uint32_t ti = (uint32_t)(wr * bi) - (uint32_t)(wi * br);
-        uint32_t rr = (uint32_t)(ar * 32767) + 32767u;
-        uint32_t ri = (uint32_t)(ai * 32767) + 32767u;
-        x[2 * a] = (int16_t)((rr + tr) >> 16);
-        x[2 * a + 1] = (int16_t)((ri + ti) >> 16);
-        x[2 * b] = (int16_t)((rr - tr) >> 16);
-        x[2 * b + 1] = (int16_t)((ri - ti) >> 16);
+        uint32_t tr = (uint32_t) (wr * br) + (uint32_t) (wi * bi);
+        uint32_t ti = (uint32_t) (wr * bi) - (uint32_t) (wi * br);
+        uint32_t rr = (uint32_t) (ar * 32767) + 32767u;
+        uint32_t ri = (uint32_t) (ai * 32767) + 32767u;
+        x[2 * a] = (int16_t) ((rr + tr) >> 16);
+        x[2 * a + 1] = (int16_t) ((ri + ti) >> 16);
+        x[2 * b] = (int16_t) ((rr - tr) >> 16);
+        x[2 * b + 1] = (int16_t) ((ri - ti) >> 16);
       }
     }
   }
@@ -201,16 +204,18 @@ static void workspace_free(spectrum_workspace_t* ws) {
 
 static bool workspace_alloc(spectrum_workspace_t* ws, unsigned n) {
   memset(ws, 0, sizeof(*ws));
-  ws->fft = (int16_t*)malloc(sizeof(int16_t) * 2u * n);
-  ws->window = (int16_t*)malloc(sizeof(int16_t) * n);
-  ws->powers = (float*)malloc(sizeof(float) * n);
-  ws->frame = (uint8_t*)malloc(SPEC_HEADER_BYTES + n + 4u);
-  if (ws->fft == NULL || ws->window == NULL || ws->powers == NULL || ws->frame == NULL) {
+  ws->fft = (int16_t*) malloc(sizeof(int16_t) * 2u * n);
+  ws->window = (int16_t*) malloc(sizeof(int16_t) * n);
+  ws->powers = (float*) malloc(sizeof(float) * n);
+  ws->frame = (uint8_t*) malloc(SPEC_HEADER_BYTES + n + 4u);
+  if (ws->fft == NULL || ws->window == NULL || ws->powers == NULL ||
+      ws->frame == NULL) {
     workspace_free(ws);
     return false;
   }
   for (unsigned j = 0; j < n; j++) {
-    ws->window[j] = (int16_t)lrint(16383.5 * (1.0 - cos(2.0 * M_PI * (double)j / (double)n)));
+    ws->window[j] = (int16_t) lrint(
+        16383.5 * (1.0 - cos(2.0 * M_PI * (double) j / (double) n)));
   }
   if (!twiddles_build(&ws->tw, n)) {
     workspace_free(ws);
@@ -263,18 +268,18 @@ static void dc_apply(dc_tracker_t* dc, int16_t* x, unsigned n) {
  * -------------------------------------------------------------------------- */
 
 static inline void put16(uint8_t* at, uint16_t v) {
-  at[0] = (uint8_t)v;
-  at[1] = (uint8_t)(v >> 8);
+  at[0] = (uint8_t) v;
+  at[1] = (uint8_t) (v >> 8);
 }
 
 static inline void put32(uint8_t* at, uint32_t v) {
-  put16(at, (uint16_t)v);
-  put16(at + 2, (uint16_t)(v >> 16));
+  put16(at, (uint16_t) v);
+  put16(at + 2, (uint16_t) (v >> 16));
 }
 
 static inline void put64(uint8_t* at, uint64_t v) {
-  put32(at, (uint32_t)v);
-  put32(at + 4, (uint32_t)(v >> 32));
+  put32(at, (uint32_t) v);
+  put32(at + 4, (uint32_t) (v >> 32));
 }
 
 /**
@@ -282,27 +287,35 @@ static inline void put64(uint8_t* at, uint64_t v) {
  *
  * @return los bytes del marco.
  */
-static size_t pack_spectrum(spectrum_workspace_t* ws, unsigned n, unsigned log2n, unsigned detector,
-                            unsigned merged, uint32_t frames, uint64_t index, uint8_t gain) {
+static size_t pack_spectrum(spectrum_workspace_t* ws,
+                            unsigned n,
+                            unsigned log2n,
+                            unsigned detector,
+                            unsigned merged,
+                            uint32_t frames,
+                            uint64_t index,
+                            uint8_t gain) {
   uint8_t* frame = ws->frame;
 
   memcpy(frame, SPEC_MAGIC, 4);
   put32(frame + 4, frames);
   put64(frame + 8, index);
   put32(frame + 16, n * merged);
-  put16(frame + 20, (uint16_t)merged);
+  put16(frame + 20, (uint16_t) merged);
   frame[22] = 8 | (detector ? 1 : 0); /* bit 3: hay huecos entre capturas */
   frame[23] = gain;
   put16(frame + 24, 0);
-  frame[26] = (uint8_t)log2n;
+  frame[26] = (uint8_t) log2n;
   frame[27] = 2; /* multiplicador del codigo en dB */
 
-  float mean_scale = 1.0f / (float)merged;
+  float mean_scale = 1.0f / (float) merged;
   for (unsigned j = 0; j < n; j++) {
     frame[SPEC_HEADER_BYTES + j] =
-        detector ? power_code((uint32_t)ws->powers[j]) : mean_power_code(ws->powers[j] * mean_scale);
+        detector ? power_code((uint32_t) ws->powers[j])
+                 : mean_power_code(ws->powers[j] * mean_scale);
   }
-  put32(frame + SPEC_HEADER_BYTES + n, esdr_crc32(frame, SPEC_HEADER_BYTES + n));
+  put32(frame + SPEC_HEADER_BYTES + n,
+        esdr_crc32(frame, SPEC_HEADER_BYTES + n));
   memset(ws->powers, 0, n * sizeof(float));
   return SPEC_HEADER_BYTES + n + 4u;
 }
@@ -314,11 +327,13 @@ static size_t pack_spectrum(spectrum_workspace_t* ws, unsigned n, unsigned log2n
 /* Lo que el visor necesita para saber que perfiles hay. */
 static void send_capabilities(void) {
   char text[192];
-  int written = snprintf(text, sizeof(text), "SPECINFO {\"continuous\":false,\"transports\":[\"USB\"],\"profiles\":[");
+  int written = snprintf(
+      text, sizeof(text),
+      "SPECINFO {\"continuous\":false,\"transports\":[\"USB\"],\"profiles\":[");
   if (written < 0) {
     return;
   }
-  esdr_host_write(text, (size_t)written);
+  esdr_host_write(text, (size_t) written);
 
   bool first = true;
   for (unsigned r = 0; r < SPEC_RATE_COUNT; r++) {
@@ -326,19 +341,22 @@ static void send_capabilities(void) {
       continue;
     }
     for (unsigned n = 256; n <= ESDR_SPEC_MAX_FFT; n *= 2) {
-      written = snprintf(text, sizeof(text), "%s[%" PRIu32 ",%u,%" PRIu32 ",1,1,0]", first ? "" : ",",
-                         s_rates[r], r, (uint32_t)n);
+      written =
+          snprintf(text, sizeof(text), "%s[%" PRIu32 ",%u,%" PRIu32 ",1,1,0]",
+                   first ? "" : ",", s_rates[r], r, (uint32_t) n);
       if (written < 0) {
         return;
       }
-      esdr_host_write(text, (size_t)written);
+      esdr_host_write(text, (size_t) written);
       first = false;
     }
   }
   esdr_host_write("]}\n", 3);
 }
 
-bool esdr_spectrum_command(const char* line, uint32_t freq_mhz, esdr_spectrum_acquire_fn acquire) {
+bool esdr_spectrum_command(const char* line,
+                           uint32_t freq_mhz,
+                           esdr_spectrum_acquire_fn acquire) {
   unsigned dc_mode;
   char dc_extra;
 
@@ -361,12 +379,14 @@ bool esdr_spectrum_command(const char* line, uint32_t freq_mhz, esdr_spectrum_ac
     return false;
   }
 
-  unsigned ms = 0, stride = 0, units = 0, detector = 0, rate = 0, n = 0, stats = 0;
+  unsigned ms = 0, stride = 0, units = 0, detector = 0, rate = 0, n = 0,
+           stats = 0;
   char extra = 0;
-  int fields = sscanf(line, "SPEC %u %u %u %u %u %u %u %c", &ms, &stride, &units, &detector, &rate, &n,
-                       &stats, &extra);
-  if ((fields != 6 && fields != 7) || stats > 1 || ms > 86400000u || stride != 1 || !units ||
-      units > 8 || detector > 1 || rate >= SPEC_RATE_COUNT || !s_rates[rate] || n < 256 ||
+  int fields = sscanf(line, "SPEC %u %u %u %u %u %u %u %c", &ms, &stride,
+                      &units, &detector, &rate, &n, &stats, &extra);
+  if ((fields != 6 && fields != 7) || stats > 1 || ms > 86400000u ||
+      stride != 1 || !units || units > 8 || detector > 1 ||
+      rate >= SPEC_RATE_COUNT || !s_rates[rate] || n < 256 ||
       n > ESDR_SPEC_MAX_FFT || (n & (n - 1))) {
     esdr_host_write("ERR spec_args\n", 14);
     return true;
@@ -385,9 +405,10 @@ bool esdr_spectrum_command(const char* line, uint32_t freq_mhz, esdr_spectrum_ac
 
   char text[192];
   int written =
-      snprintf(text, sizeof(text), "SPEC %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 "\n",
-               (uint32_t)n, s_rates[rate], (uint32_t)n, (uint32_t)freq_mhz);
-  esdr_host_write(text, (size_t)written);
+      snprintf(text, sizeof(text),
+               "SPEC %" PRIu32 " %" PRIu32 " %" PRIu32 " %" PRIu32 "\n",
+               (uint32_t) n, s_rates[rate], (uint32_t) n, (uint32_t) freq_mhz);
+  esdr_host_write(text, (size_t) written);
 
   uint32_t frames = 0, ffts = 0, status = 0;
   int64_t yield_at = esdr_host_elapsed_ms();
@@ -408,7 +429,7 @@ bool esdr_spectrum_command(const char* line, uint32_t freq_mhz, esdr_spectrum_ac
     }
 
     if (!merged) {
-      index = (uint64_t)esdr_host_elapsed_ms() * s_rates[rate] / 1000u;
+      index = (uint64_t) esdr_host_elapsed_ms() * s_rates[rate] / 1000u;
     }
 
     const uint32_t* words = NULL;
@@ -418,12 +439,12 @@ bool esdr_spectrum_command(const char* line, uint32_t freq_mhz, esdr_spectrum_ac
       break;
     }
     if (!merged) {
-      gain = (uint8_t)(words[0] >> 20);
+      gain = (uint8_t) (words[0] >> 20);
     }
 
     for (unsigned j = 0; j < n; j++) {
-      int32_t i = ((int32_t)(words[j] << 22) >> 22);
-      int32_t q = ((int32_t)(words[j] << 12) >> 22);
+      int32_t i = ((int32_t) (words[j] << 22) >> 22);
+      int32_t q = ((int32_t) (words[j] << 12) >> 22);
       ws.fft[2 * j] = sat16((i * ws.window[j]) >> 9);
       ws.fft[2 * j + 1] = sat16((q * ws.window[j]) >> 9);
     }
@@ -433,11 +454,11 @@ bool esdr_spectrum_command(const char* line, uint32_t freq_mhz, esdr_spectrum_ac
     for (unsigned j = 0; j < n; j++) {
       uint32_t p = complex_power(ws.fft[2 * j], ws.fft[2 * j + 1]);
       if (detector) {
-        if (p > (uint32_t)ws.powers[j]) {
-          ws.powers[j] = (float)p;
+        if (p > (uint32_t) ws.powers[j]) {
+          ws.powers[j] = (float) p;
         }
       } else {
-        ws.powers[j] += (float)p;
+        ws.powers[j] += (float) p;
       }
     }
     ffts++;
@@ -445,7 +466,8 @@ bool esdr_spectrum_command(const char* line, uint32_t freq_mhz, esdr_spectrum_ac
     merged++;
 
     if (merged >= units) {
-      size_t size = pack_spectrum(&ws, n, log2n, detector, merged, frames, index, gain);
+      size_t size =
+          pack_spectrum(&ws, n, log2n, detector, merged, frames, index, gain);
       esdr_host_write(ws.frame, size);
       frames++;
       merged = 0;
@@ -463,16 +485,18 @@ bool esdr_spectrum_command(const char* line, uint32_t freq_mhz, esdr_spectrum_ac
   /* Lo que quedo sin empaquetar se manda igual, para que el ultimo cuadro
      no se pierda. */
   if (!status && merged) {
-    size_t size = pack_spectrum(&ws, n, log2n, detector, merged, frames, index, gain);
+    size_t size =
+        pack_spectrum(&ws, n, log2n, detector, merged, frames, index, gain);
     esdr_host_write(ws.frame, size);
     frames++;
   }
 
-  written = snprintf(text, sizeof(text),
-                     "SPECEND %u 0 %u %" PRIu64 " %" PRIu64 " 0 0 %u 0 0 %u %u\n", (unsigned)status,
-                     (unsigned)ffts, pairs, esdr_host_elapsed_ms(), (unsigned)frames, (unsigned)ffts,
-                     (unsigned)stopped);
-  esdr_host_write(text, (size_t)written);
+  written = snprintf(
+      text, sizeof(text),
+      "SPECEND %u 0 %u %" PRIu64 " %" PRIu64 " 0 0 %u 0 0 %u %u\n",
+      (unsigned) status, (unsigned) ffts, pairs, esdr_host_elapsed_ms(),
+      (unsigned) frames, (unsigned) ffts, (unsigned) stopped);
+  esdr_host_write(text, (size_t) written);
 
   workspace_free(&ws);
   return true;

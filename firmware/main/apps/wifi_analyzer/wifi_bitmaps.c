@@ -1,8 +1,7 @@
-/* Definitions split out of main/apps/wifi_analyzer/wifi_bitmaps.h by hand: this data was defined in
-   the header, so every translation unit that included it emitted
-   its own copy and the linker only accepted it thanks to
-   -Wl,-zmuldefs. Keep the data here and the declarations in the
-   header. */
+/* Definitions split out of main/apps/wifi_analyzer/wifi_bitmaps.h by hand: this
+   data was defined in the header, so every translation unit that included it
+   emitted its own copy and the linker only accepted it thanks to -Wl,-zmuldefs.
+   Keep the data here and the declarations in the header. */
 
 #include "wifi_bitmaps.h"
 
@@ -281,7 +280,7 @@ const unsigned char epd_bitmap_wifi_loading_4[] = {
     0x00, 0x00, 0x3c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00};
 
-#endif  /* CONFIG_RESOLUTION_128X64 */
+#endif /* CONFIG_RESOLUTION_128X64 */
 
 #ifdef CONFIG_RESOLUTION_128X32
 // 'wifi-loading-1-128x32', 32x32px
@@ -339,7 +338,7 @@ const unsigned char epd_bitmap_wifi_loading_4[] = {
     0x06, 0x01, 0x80, 0x60, 0x03, 0x00, 0x00, 0xc0, 0x01, 0x80, 0x01, 0x80,
     0x00, 0xe1, 0x87, 0x00, 0x00, 0x39, 0x9c, 0x00, 0x00, 0x0f, 0xf0, 0x00,
     0x00, 0x01, 0x80, 0x00, 0x00, 0x01, 0x80, 0x00};
-#endif  /* CONFIG_RESOLUTION_128X32 */
+#endif /* CONFIG_RESOLUTION_128X32 */
 
 const unsigned char* epd_bitmap_wifi_loading[4] = {
     epd_bitmap_wifi_loading_1,

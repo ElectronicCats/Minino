@@ -1,4 +1,5 @@
 #include "drone_id_scenes.h"
+#include "app_manager.h"
 #include "drone_id.h"
 #include "drone_id_preferences.h"
 #include "general_knob.h"
@@ -6,7 +7,6 @@
 #include "general_scrolling_text.h"
 #include "general_submenu.h"
 #include "menus_module.h"
-#include "app_manager.h"
 
 void drone_id_scenes_main();
 
@@ -68,7 +68,7 @@ void drone_id_scenes_main() {
   main.options_count = sizeof(main_menu_options) / sizeof(char*);
   main.select_cb = main_handler;
   main.selected_option = last_main_selection;
-  main.exit_cb = (void(*)(void))app_manager_exit;
+  main.exit_cb = (void (*)(void)) app_manager_exit;
 
   general_submenu(main);
   current_menu = DRONE_SCENES_MAIN;

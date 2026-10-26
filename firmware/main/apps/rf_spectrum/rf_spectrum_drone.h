@@ -38,7 +38,9 @@ typedef struct {
  * @param[out] out_info Optional output structure to store extracted drone info
  * @return true if OpenDroneID signature was found, false otherwise
  */
-bool rf_spectrum_drone_detect(const uint8_t* payload, uint16_t len, drone_detection_t* out_info);
+bool rf_spectrum_drone_detect(const uint8_t* payload,
+                              uint16_t len,
+                              drone_detection_t* out_info);
 
 #ifdef __cplusplus
 }

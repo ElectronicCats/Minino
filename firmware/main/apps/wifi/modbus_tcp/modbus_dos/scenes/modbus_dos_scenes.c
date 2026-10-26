@@ -1,10 +1,10 @@
 #include "modbus_dos_scenes.h"
 
+#include "app_manager.h"
 #include "general_notification.h"
 #include "general_scrolling_text.h"
 #include "general_submenu.h"
 #include "menus_module.h"
-#include "app_manager.h"
 
 #include "modbus_dos.h"
 #include "modbus_dos_prefs.h"

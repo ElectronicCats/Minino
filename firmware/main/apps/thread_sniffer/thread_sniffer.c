@@ -290,9 +290,9 @@ void thread_sniffer_set_channel(uint8_t channel) {
   ESP_LOGI(TAG, "Channel set to %d", channel);
 }
 
-
 void thread_sniffer_subscribe_show_event(thread_sniffer_show_event_cb_t cb) {
-  if (cb == NULL) return;
+  if (cb == NULL)
+    return;
   for (int i = 0; i < 4; i++) {
     if (thread_sniffer_show_event_cbs[i] == cb) {
       return;
@@ -307,7 +307,8 @@ void thread_sniffer_subscribe_show_event(thread_sniffer_show_event_cb_t cb) {
 }
 
 void thread_sniffer_unsubscribe_show_event(thread_sniffer_show_event_cb_t cb) {
-  if (cb == NULL) return;
+  if (cb == NULL)
+    return;
   for (int i = 0; i < 4; i++) {
     if (thread_sniffer_show_event_cbs[i] == cb) {
       thread_sniffer_show_event_cbs[i] = NULL;
@@ -326,6 +327,7 @@ static void thread_sniffer_show_event(thread_sniffer_events_t event,
 }
 
 void thread_sniffer_subscribe_screen_events(void) {
-  /* Suscribe el handler de pantalla por defecto a los eventos de thread_sniffer. */
+  /* Suscribe el handler de pantalla por defecto a los eventos de
+   * thread_sniffer. */
   thread_sniffer_subscribe_show_event(thread_sniffer_show_event_handler);
 }

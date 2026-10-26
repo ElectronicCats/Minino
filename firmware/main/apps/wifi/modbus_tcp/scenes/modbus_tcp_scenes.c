@@ -1,12 +1,12 @@
 #include "modbus_tcp_scenes.h"
 
 #include "animations_task.h"
+#include "app_manager.h"
 #include "bitmaps_general.h"
 #include "general_notification.h"
 #include "general_scrolling_text.h"
 #include "general_submenu.h"
 #include "menus_module.h"
-#include "app_manager.h"
 #include "oled_screen.h"
 
 #include "modbus_attacks.h"
@@ -395,7 +395,6 @@ void modbus_tcp_scenes_help() {
   general_scrolling_text_array(help);
 }
 
-
 // ---------------------------------------------------------------------------
 // app_manager callbacks
 // ---------------------------------------------------------------------------
@@ -405,8 +404,8 @@ static void modbus_tcp_on_enter(void) {
 
 static void modbus_tcp_on_input(uint8_t button_name, uint8_t button_event) {
   // Scenes install their own input handlers
-  (void)button_name;
-  (void)button_event;
+  (void) button_name;
+  (void) button_event;
 }
 
 static void modbus_tcp_on_exit(void) {
@@ -433,9 +432,8 @@ void app_manager_enter_wrapper_modbus_tcp(void) {
 
 // App definition for app_manager
 const minino_app_t modbus_tcp_app = {
-  .name = "modbus_tcp",
-  .on_enter = modbus_tcp_on_enter,
-  .on_input = modbus_tcp_on_input,
-  .on_exit = modbus_tcp_on_exit,
+    .name = "modbus_tcp",
+    .on_enter = modbus_tcp_on_enter,
+    .on_input = modbus_tcp_on_input,
+    .on_exit = modbus_tcp_on_exit,
 };
-

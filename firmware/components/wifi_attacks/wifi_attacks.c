@@ -37,11 +37,12 @@ static const uint8_t deauth_frame_default[] = {
  * @attention Not meant to be called directly.
  * @see https://github.com/GANESH-ICMC/esp32-deauther
  */
-int __wrap_ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2,
+int __wrap_ieee80211_raw_frame_sanity_check(int32_t arg,
+                                            int32_t arg2,
                                             int32_t arg3) {
-  (void)arg;
-  (void)arg2;
-  (void)arg3;
+  (void) arg;
+  (void) arg2;
+  (void) arg3;
   return 0;
 }
 
@@ -73,12 +74,12 @@ static esp_err_t attack_brodcast_send_raw_frame(const uint8_t* frame_buffer,
 }
 
 /*
- * esp_wifi_80211_tx() is documented to return ESP_ERR_WIFI_IF when the interface
- * does not exist. The broadcast and combine attacks start this task without ever
- * putting the driver into AP mode, so if the previous app left it in
- * WIFI_MODE_STA (the scanner does exactly that) every transmission failed, the
- * task cleared its running flag and deleted itself after ~100 ms - while the UI
- * kept showing "ATTACKING AP" and incrementing a counter.
+ * esp_wifi_80211_tx() is documented to return ESP_ERR_WIFI_IF when the
+ * interface does not exist. The broadcast and combine attacks start this task
+ * without ever putting the driver into AP mode, so if the previous app left it
+ * in WIFI_MODE_STA (the scanner does exactly that) every transmission failed,
+ * the task cleared its running flag and deleted itself after ~100 ms - while
+ * the UI kept showing "ATTACKING AP" and incrementing a counter.
  */
 static void attack_brodcast_ensure_ap_interface(void) {
   wifi_mode_t mode = WIFI_MODE_NULL;

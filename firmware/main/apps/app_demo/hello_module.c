@@ -4,8 +4,8 @@
 #include "general_scrolling_text.h"
 #include "general_submenu.h"
 // For custom implementation of keyboard events
-#include "menus_module.h"
 #include "app_manager.h"
+#include "menus_module.h"
 #include "oled_screen.h"
 // Save preferences in flash
 #include "preferences.h"
@@ -269,6 +269,6 @@ void hello_main() {
   main.selected_option = last_main_selection;  // Restore last selected item
   // Function to call when exiting the menu. menus_module_restart is our default
   // function from menus_module.h file
-  main.exit_cb = (void(*)(void))app_manager_exit;
+  main.exit_cb = (void (*)(void)) app_manager_exit;
   general_submenu(main);  // Show the menu on screen
 }

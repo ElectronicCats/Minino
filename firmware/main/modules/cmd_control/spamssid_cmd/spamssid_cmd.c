@@ -34,7 +34,7 @@ static void get_ssid() {
   storage_contex_t list[FLASH_STORAGE_MAX_LIST_ITEMS];
 
   list_count = flash_storage_get_list(GENFLASH_STORAGE_SPAM, list,
-                                     FLASH_STORAGE_MAX_LIST_ITEMS);
+                                      FLASH_STORAGE_MAX_LIST_ITEMS);
   for (int i = 0; i < list_count && i < FLASH_STORAGE_MAX_LIST_ITEMS; i++) {
     if (list[i].item_storage_name != NULL) {
       strncpy(spam_ssids_list[i], list[i].item_storage_name,
@@ -134,7 +134,7 @@ void cmd_spamssid_register_commands() {
   ssdi_save_args.end = arg_end(2);
 
   ssdi_delete_args.idx = arg_str1(NULL, NULL, "<idx>", "Index of the SSID");
-  ssdi_delete_args.end = arg_end(1);
+  ssdi_delete_args.end = arg_end(2);
 
   esp_console_cmd_t spamssid_save_cmd = {
       .command = "spam_save",

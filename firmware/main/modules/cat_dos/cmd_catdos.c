@@ -71,10 +71,12 @@ static int cmd_catdos_web_set_config(int argc, char** argv) {
   const char* port = cmd_catdos_web_args.port->sval[0];
   const char* endpoint = cmd_catdos_web_args.endpoint->sval[0];
 
-  /* Prevent string buffer overflow: target buffers in catdos_module are 32 bytes */
+  /* Prevent string buffer overflow: target buffers in catdos_module are 32
+   * bytes */
   if (strlen(host) >= 32 || strlen(port) >= 32 || strlen(endpoint) >= 32) {
     ESP_LOGE(TAG, "Arguments exceed maximum length of 31 characters");
-    printf("[ERROR] host, port, and endpoint must be less than 32 characters\n");
+    printf(
+        "[ERROR] host, port, and endpoint must be less than 32 characters\n");
     return 1;
   }
 
@@ -89,7 +91,7 @@ static void cmd_catdos_register_catdos_web(void) {
       arg_str1(NULL, NULL, "<port>", "Port of the target.");
   cmd_catdos_web_args.endpoint =
       arg_str1(NULL, NULL, "<endpoint>", "Endpoint of the target.");
-  cmd_catdos_web_args.end = arg_end(3);
+  cmd_catdos_web_args.end = arg_end(4);
 
   const esp_console_cmd_t cmd = {.command = "web_config",
                                  .help = "Configure the web target",

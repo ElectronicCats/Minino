@@ -4,9 +4,10 @@
  *
  * Central fan-out dispatcher for Bluedroid BLE GATT-client events.
  *
- * Bluedroid keeps a single GATTC callback slot (esp_ble_gattc_register_callback)
- * and a global app_id table (esp_ble_gattc_app_register). Two modules that
- * both call esp_ble_gattc_register_callback() pick the same slot, so the last
+ * Bluedroid keeps a single GATTC callback slot
+ * (esp_ble_gattc_register_callback) and a global app_id table
+ * (esp_ble_gattc_app_register). Two modules that both call
+ * esp_ble_gattc_register_callback() pick the same slot, so the last
  * registration silently steals every event from the previous one, and the
  * unregistered module stops receiving GATTC events at all.
  *
@@ -21,8 +22,8 @@
 #include "sdkconfig.h"
 
 #if CONFIG_BT_ENABLED
-#include "esp_err.h"
-#include "esp_gattc_api.h"
+  #include "esp_err.h"
+  #include "esp_gattc_api.h"
 #endif
 
 #ifdef __cplusplus
@@ -38,7 +39,8 @@ extern "C" {
  * does; gatt_dispatcher_reset() marks the slot as gone so the next
  * registration reinstalls it.
  *
- * @return ESP_OK on success or the error from esp_ble_gattc_register_callback().
+ * @return ESP_OK on success or the error from
+ * esp_ble_gattc_register_callback().
  */
 esp_err_t gatt_dispatcher_init(void);
 

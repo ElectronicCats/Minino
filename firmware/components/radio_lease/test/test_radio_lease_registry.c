@@ -159,7 +159,7 @@ static void test_invalid_arguments_are_rejected(void) {
 
   TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG,
                     radio_lease_registry_acquire(&reg, RADIO_LEASE_MAX_USERS,
-                                                receiver, NULL));
+                                                 receiver, NULL));
   TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG,
                     radio_lease_registry_acquire(&reg, 0, NULL, NULL));
   TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG,
@@ -179,12 +179,12 @@ static void test_every_slot_can_be_held_simultaneously(void) {
   /* Slot 7 is deliberately left free so the re-acquire below has a receiver
      index of its own to observe. */
   for (uint8_t i = 0; i + 1 < RADIO_LEASE_MAX_USERS; i++) {
-    TEST_ASSERT_EQUAL(ESP_OK,
-                      radio_lease_registry_acquire(&reg, i, receiver,
-                                                   (void*) (intptr_t) i));
+    TEST_ASSERT_EQUAL(ESP_OK, radio_lease_registry_acquire(
+                                  &reg, i, receiver, (void*) (intptr_t) i));
     TEST_ASSERT_TRUE(radio_lease_registry_holds(&reg, i));
   }
-  TEST_ASSERT_FALSE(radio_lease_registry_holds(&reg, RADIO_LEASE_MAX_USERS - 1));
+  TEST_ASSERT_FALSE(
+      radio_lease_registry_holds(&reg, RADIO_LEASE_MAX_USERS - 1));
 
   /* Re-acquiring a held slot must not add a holder or drop anybody. */
   TEST_ASSERT_EQUAL(ESP_OK, radio_lease_registry_acquire(&reg, 2, receiver,

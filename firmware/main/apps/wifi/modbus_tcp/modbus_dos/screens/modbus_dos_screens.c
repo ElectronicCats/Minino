@@ -1,7 +1,7 @@
 #include "modbus_dos_screens.h"
 
-#include "menus_module.h"
 #include "app_manager.h"
+#include "menus_module.h"
 #include "oled_screen.h"
 
 #include "modbus_dos_prefs.h"

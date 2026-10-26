@@ -130,9 +130,8 @@ void screen_saver_run() {
   TaskHandle_t handle = NULL;
   /* Use priority 4 (same as input_task) to avoid priority inversion where
      the higher-priority screensaver preempts the menu render after wake-up. */
-  BaseType_t ok =
-      xTaskCreate(show_splash_screen, "show_splash_screen", 2048, NULL, 4,
-                  &handle);
+  BaseType_t ok = xTaskCreate(show_splash_screen, "show_splash_screen", 2048,
+                              NULL, 4, &handle);
   if (ok != pdPASS) {
     ESP_LOGE(TAG, "could not create the screensaver task");
     screen_saver_running = false;
@@ -155,14 +154,15 @@ void screen_saver_stop() {
      22) into a dedicated one (priority 4): the animation at priority 5
      preempted the menu render.
      Waiting on the semaphore makes the contract "stopped when this returns"
-     true whatever the caller's priority is. Bounded, because screen_saver_stop()
-     must never hang the UI. */
+     true whatever the caller's priority is. Bounded, because
+     screen_saver_stop() must never hang the UI. */
   screen_saver_running = false;
 
   if (screen_saver_task_handle != NULL) {
     /* Wait for the task to signal exit via semaphore (max 1 s) */
     if (screen_saver_exit_sem != NULL) {
-      if (xSemaphoreTake(screen_saver_exit_sem, pdMS_TO_TICKS(1000)) != pdTRUE) {
+      if (xSemaphoreTake(screen_saver_exit_sem, pdMS_TO_TICKS(1000)) !=
+          pdTRUE) {
         ESP_LOGW(TAG, "screensaver task did not exit in time, forcing delete");
         vTaskDelete(screen_saver_task_handle);
       }

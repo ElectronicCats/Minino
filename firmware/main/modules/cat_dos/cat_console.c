@@ -8,7 +8,6 @@
 */
 
 #include "cat_console.h"
-#include "sdkconfig.h"
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -25,6 +24,7 @@
 #include "nvs_flash.h"
 #include "oled_screen.h"
 #include "preferences.h"
+#include "sdkconfig.h"
 #include "soc/soc_caps.h"
 
 #include "cmd_wifi_list.h"

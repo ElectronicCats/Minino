@@ -10,7 +10,6 @@ static bool run_once = false;
 static uint8_t default_ap_mac[6];
 static esp_err_t err;
 
-
 wifi_config_t wifi_driver_access_point_begin() {
   // #if !defined(CONFIG_WIFI_CONTROLLER_DEBUG)
   //   esp_log_level_set(TAG_WIFI_DRIVER, ESP_LOG_NONE);
@@ -84,7 +83,6 @@ bool wifi_driver_init_apsta(void) {
 
     netif_default_created = true;
   }
-
 
   if (!wifi_service_is_up_get() && !wifi_service_init(WIFI_MODE_APSTA)) {
     ESP_LOGE(TAG_WIFI_DRIVER, "WiFi stack init failed");

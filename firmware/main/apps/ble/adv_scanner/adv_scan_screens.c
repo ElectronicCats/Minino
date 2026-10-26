@@ -40,7 +40,8 @@ void adv_scanner_display_record(esp_ble_gap_cb_param_t* record) {
   for (int i = 0; i < s_records_filled; i++) {
     uint8_t t = adv_list[i].scan_rst.ble_evt_type;
     const char* type_str = (t < 5) ? evt_adv_type[t] : "EXT_ADV";
-    snprintf(row, sizeof(row), "%-10s| %d", type_str, adv_list[i].scan_rst.rssi);
+    snprintf(row, sizeof(row), "%-10s| %d", type_str,
+             adv_list[i].scan_rst.rssi);
     oled_screen_display_text(row, 0, i + 2, OLED_DISPLAY_NORMAL);
   }
   oled_screen_display_show();

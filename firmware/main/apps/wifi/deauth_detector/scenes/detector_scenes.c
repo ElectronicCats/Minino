@@ -1,11 +1,11 @@
 #include "detector_scenes.h"
 #include "detector.h"
 
+#include "app_manager.h"
 #include "general_radio_selection.h"
 #include "general_scrolling_text.h"
 #include "general_submenu.h"
 #include "menus_module.h"
-#include "app_manager.h"
 #include "oled_screen.h"
 #include "preferences.h"
 

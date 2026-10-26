@@ -498,10 +498,11 @@ static void wifi_analyzer_on_enter(void) {
 }
 
 static void wifi_analyzer_on_input(uint8_t button_name, uint8_t button_event) {
-  // Scenes install their own input handlers via general_submenu/general_radio_selection.
-  // This callback is only active when no scene is showing (should not happen).
-  (void)button_name;
-  (void)button_event;
+  // Scenes install their own input handlers via
+  // general_submenu/general_radio_selection. This callback is only active when
+  // no scene is showing (should not happen).
+  (void) button_name;
+  (void) button_event;
 }
 
 static void wifi_analyzer_on_exit(void) {
@@ -542,9 +543,8 @@ void app_manager_enter_wrapper_analyzer(void) {
   app_manager_enter(&wifi_analyzer_app);
 }
 const minino_app_t wifi_analyzer_app = {
-  .name = "wifi_analyzer",
-  .on_enter = wifi_analyzer_on_enter,
-  .on_input = wifi_analyzer_on_input,
-  .on_exit = wifi_analyzer_on_exit,
+    .name = "wifi_analyzer",
+    .on_enter = wifi_analyzer_on_enter,
+    .on_input = wifi_analyzer_on_input,
+    .on_exit = wifi_analyzer_on_exit,
 };
-

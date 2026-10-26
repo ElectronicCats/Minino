@@ -2,9 +2,9 @@
  *
  * Line splitting for the scrolling-text screens.
  *
- * Kept free of ESP-IDF dependencies so the host test suite can exercise it: this
- * is the function that used to overflow a heap array on every Help / Credits /
- * Legal screen.
+ * Kept free of ESP-IDF dependencies so the host test suite can exercise it:
+ * this is the function that used to overflow a heap array on every Help /
+ * Credits / Legal screen.
  */
 #pragma once
 
@@ -14,7 +14,8 @@
 extern "C" {
 #endif
 
-/* Maximum characters per rendered row (the display is 128 px / 8 px per char). */
+/* Maximum characters per rendered row (the display is 128 px / 8 px per char).
+ */
 #define GENERAL_SCROLL_MAX_LINE_LEN 14
 
 /**

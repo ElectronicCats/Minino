@@ -67,3 +67,6 @@ minino-all-pos.csv
 # Python Cache
 __pycache__/
 *.pyc
+
+# Host test binaries
+/firmware/components/files_ops/test/test_files_ops

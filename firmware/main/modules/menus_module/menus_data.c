@@ -1,16 +1,16 @@
-#include "menus.h"
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
+#include "menus.h"
 
 #include "about_module.h"
-    #if CONFIG_BT_ENABLED
-#include "hid_module.h"
-#include "spam_module.h"
-#include "trackers_module.h"
-#include "adv_scan_module.h"
-#include "surv_sim_module.h"
-    #endif
+#if CONFIG_BT_ENABLED
+  #include "adv_scan_module.h"
+  #include "hid_module.h"
+  #include "spam_module.h"
+  #include "surv_sim_module.h"
+  #include "trackers_module.h"
+#endif
 #include "analyzer_scenes.h"
 #include "captive_module.h"
 #include "catdos_module.h"
@@ -19,10 +19,12 @@
 #include "display_settings.h"
 #include "drone_id_scenes.h"
 #include "droneid_scanner.h"
+#include "esp_sdr_module.h"
 #include "file_manager_module.h"
 #include "gps_module.h"
 #include "gps_screens.h"
 #include "gps_settings.h"
+#include "hello_module.h"
 #include "i2c_scanner.h"
 #include "logs_output.h"
 #include "menu_style.h"
@@ -30,6 +32,7 @@
 #include "modbus_tcp_scenes.h"
 #include "open_thread_module.h"  // Deprecated since v1.1.14.0
 #include "ota_module.h"
+#include "rf_spectrum.h"
 #include "sd_card_settings_module.h"
 #include "settings_module.h"
 #include "sleep_mode_scenes.h"
@@ -42,9 +45,6 @@
 #include "web_file_browser_module.h"
 #include "wifi_analyzer.h"
 #include "wifi_settings_scenes.h"
-#include "hello_module.h"
-#include "rf_spectrum.h"
-#include "esp_sdr_module.h"
 
 /* Most of the catalogue below is gated on CONFIG_* symbols. In the IDF build
    they arrive through the toolchain, but relying on <stdio.h> to drag
@@ -120,7 +120,7 @@ static menu_t menus[] = {
 //  .on_enter_cb           = hello_main,
 //  .on_exit_cb            = NULL,
 //  .is_visible            = true},
-    #ifdef CONFIG_WIFI_APPS_ENABLE
+#ifdef CONFIG_WIFI_APPS_ENABLE
     {.display_name = "WiFi",
      .menu_idx = MENU_WIFI_APPS,
      .parent_idx = MENU_APPLICATIONS,
@@ -176,7 +176,7 @@ static menu_t menus[] = {
      .on_enter_cb = ssid_spam_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
-#if defined(CONFIG_BT_ENABLED)
+  #if defined(CONFIG_BT_ENABLED)
     {.display_name = "Drone ID",
      .menu_idx = MENU_WIFI_ODRONE_ID,
      .parent_idx = MENU_WIFI_APPS,
@@ -185,8 +185,8 @@ static menu_t menus[] = {
      .on_enter_cb = drone_id_scenes_main,
      .on_exit_cb = NULL,
      .is_visible = true},
-#endif
-    #if defined(CONFIG_BT_ENABLED)
+  #endif
+  #if defined(CONFIG_BT_ENABLED)
     {.display_name = "DroneID Scan",
      .menu_idx = MENU_WIFI_ODRONE_SCANNER,
      .parent_idx = MENU_WIFI_APPS,
@@ -195,7 +195,7 @@ static menu_t menus[] = {
      .on_enter_cb = droneid_scanner_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
-    #endif
+  #endif
     {.display_name = "Modbus TCP",
      .menu_idx = MENU_WIFI_MBDOS_ID,
      .parent_idx = MENU_WIFI_APPS,
@@ -220,8 +220,8 @@ static menu_t menus[] = {
      .on_enter_cb = surv_sim_begin_flock,
      .on_exit_cb = surv_sim_stop,
      .is_visible = true},
-    #endif
-    #ifdef CONFIG_BLUETOOTH_APPS_ENABLE
+#endif
+#ifdef CONFIG_BLUETOOTH_APPS_ENABLE
     {.display_name = "Bluetooth",
      .menu_idx = MENU_BLUETOOTH_APPS,
      .parent_idx = MENU_APPLICATIONS,
@@ -269,15 +269,15 @@ static menu_t menus[] = {
      .on_enter_cb = ble_spam_samsung_begin,
      .on_exit_cb = ble_spam_stop,
      .is_visible = true},
-{.display_name = "All",
-      .menu_idx = MENU_BLUETOOTH_SPAM_ALL,
-      .parent_idx = MENU_BLUETOOTH_SPAM,
-      .entry_cmd = "spam_all",
-      .last_selected_submenu = 0,
-      .on_enter_cb = ble_spam_all_begin,
-      .on_exit_cb = ble_spam_stop,
-      .is_visible = true},
-     {.display_name = "HID",
+    {.display_name = "All",
+     .menu_idx = MENU_BLUETOOTH_SPAM_ALL,
+     .parent_idx = MENU_BLUETOOTH_SPAM,
+     .entry_cmd = "spam_all",
+     .last_selected_submenu = 0,
+     .on_enter_cb = ble_spam_all_begin,
+     .on_exit_cb = ble_spam_stop,
+     .is_visible = true},
+    {.display_name = "HID",
      .menu_idx = MENU_BLUETOOTH_HID,
      .parent_idx = MENU_BLUETOOTH_APPS,
      .entry_cmd = "hid",
@@ -300,9 +300,10 @@ static menu_t menus[] = {
      .on_enter_cb = trackers_module_begin,
      .on_exit_cb = trackers_module_on_exit,
      .is_visible = true},
-    #endif
-    
-    #if defined(CONFIG_THREAD_APPS_ENABLE) && defined(CONFIG_MININO_OPENTHREAD_STACK)
+#endif
+
+#if defined(CONFIG_THREAD_APPS_ENABLE) && \
+    defined(CONFIG_MININO_OPENTHREAD_STACK)
     {.display_name = "Thread",
      .menu_idx = MENU_THREAD_APPS,
      .parent_idx = MENU_APPLICATIONS,
@@ -333,8 +334,8 @@ static menu_t menus[] = {
      .on_enter_cb = open_thread_module_sniffer_run,
      .on_exit_cb = NULL,
      .is_visible = true},
-    #endif
-    #if CONFIG_GPS_APPS_ENABLE && CONFIG_GPS_ENABLED && CONFIG_SD_ENABLED
+#endif
+#if CONFIG_GPS_APPS_ENABLE && CONFIG_GPS_ENABLED && CONFIG_SD_ENABLED
     {.display_name = "GPS",
      .menu_idx = MENU_GPS,
      .parent_idx = MENU_APPLICATIONS,
@@ -342,7 +343,7 @@ static menu_t menus[] = {
      .on_enter_cb = gps_module_check_state,
      .on_exit_cb = gps_module_reset_state,
      .is_visible = true},
-    #if CONFIG_WIFI_APPS_ENABLE || CONFIG_ZIGBEE_APPS_ENABLE || \
+  #if CONFIG_WIFI_APPS_ENABLE || CONFIG_ZIGBEE_APPS_ENABLE || \
       CONFIG_THREAD_APPS_ENABLE
     {.display_name = "Wardriving",
      .menu_idx = MENU_GPS_WARDRIVING,
@@ -365,7 +366,8 @@ static menu_t menus[] = {
        variant leaves out when the Zigbee or the Thread stack is off (see
        the filters in main/CMakeLists.txt). The entries have to follow the
        same gate or the link fails on the missing symbols. */
-    #if defined(CONFIG_ZIGBEE_APPS_ENABLE) && defined(CONFIG_MININO_ZIGBEE_STACK)
+    #if defined(CONFIG_ZIGBEE_APPS_ENABLE) && \
+        defined(CONFIG_MININO_ZIGBEE_STACK)
     {.display_name = "Zigbee Start",
      .menu_idx = MENU_GPS_WARDRIVING_BEE_START,
      .parent_idx = MENU_GPS_WARDRIVING,
@@ -374,7 +376,8 @@ static menu_t menus[] = {
      .on_exit_cb = warbee_module_exit,
      .is_visible = true},
     #endif
-    #if defined(CONFIG_THREAD_APPS_ENABLE) && defined(CONFIG_MININO_OPENTHREAD_STACK)
+    #if defined(CONFIG_THREAD_APPS_ENABLE) && \
+        defined(CONFIG_MININO_OPENTHREAD_STACK)
     {.display_name = "Thread Start",
      .menu_idx = MENU_GPS_WARDRIVING_THREAD_START,
      .parent_idx = MENU_GPS_WARDRIVING,
@@ -390,7 +393,7 @@ static menu_t menus[] = {
      .on_enter_cb = wardriving_screens_show_help,
      .on_exit_cb = NULL,
      .is_visible = true},
-    #endif
+  #endif
     {.display_name = "Date & Time",
      .menu_idx = MENU_GPS_DATE_TIME,
      .parent_idx = MENU_GPS,
@@ -440,8 +443,8 @@ static menu_t menus[] = {
      .on_enter_cb = gps_screens_show_help,
      .on_exit_cb = NULL,
      .is_visible = true},
-    #endif
-    #ifdef CONFIG_GPIO_APPS_ENABLE
+#endif
+#ifdef CONFIG_GPIO_APPS_ENABLE
     {.display_name = "GPIO",
      .menu_idx = MENU_GPIO_APPS,
      .parent_idx = MENU_APPLICATIONS,
@@ -465,8 +468,8 @@ static menu_t menus[] = {
      .on_enter_cb = uart_bridge_app_enter,
      .on_exit_cb = NULL,
      .is_visible = true},
-    #endif
-    #ifdef CONFIG_FILE_MANAGER_ENABLE
+#endif
+#ifdef CONFIG_FILE_MANAGER_ENABLE
     {.display_name = "File Manager",
      .menu_idx = MENU_FILE_MANAGER,
      .parent_idx = MENU_APPLICATIONS,
@@ -475,7 +478,7 @@ static menu_t menus[] = {
      .on_enter_cb = NULL,
      .on_exit_cb = NULL,
      .is_visible = true},
-    #ifdef CONFIG_FILE_MANAGER_LOCAL
+  #ifdef CONFIG_FILE_MANAGER_LOCAL
     {.display_name = "Local",
      .menu_idx = MENU_FILE_MANAGER_LOCAL,
      .parent_idx = MENU_FILE_MANAGER,
@@ -483,8 +486,8 @@ static menu_t menus[] = {
      .on_enter_cb = file_manager_module_init,
      .on_exit_cb = NULL,
      .is_visible = true},
-    #endif
-    #ifdef CONFIG_FILE_MANAGER_WEB
+  #endif
+  #ifdef CONFIG_FILE_MANAGER_WEB
     {.display_name = "Web",
      .menu_idx = MENU_FILE_MANAGER_WEB,
      .parent_idx = MENU_FILE_MANAGER,
@@ -492,9 +495,9 @@ static menu_t menus[] = {
      .on_enter_cb = web_file_browser_module_begin,
      .on_exit_cb = NULL,
      .is_visible = true},
-    #endif
-    #endif
-    #ifdef CONFIG_OTA_ENABLE
+  #endif
+#endif
+#ifdef CONFIG_OTA_ENABLE
     {.display_name = "Update",
      .menu_idx = MENU_ABOUT_UPDATE,
      .parent_idx = MENU_ABOUT,
@@ -503,7 +506,7 @@ static menu_t menus[] = {
      .on_enter_cb = ota_module_init,
      .on_exit_cb = NULL,
      .is_visible = true},
-    #endif
+#endif
     {.display_name = "Display",
      .menu_idx = MENU_SETTINGS_DISPLAY,
      .parent_idx = MENU_SETTINGS,
@@ -525,7 +528,7 @@ static menu_t menus[] = {
      .on_enter_cb = logs_output,
      .on_exit_cb = NULL,
      .is_visible = true},
-    #if CONFIG_GPS_APPS_ENABLE && CONFIG_GPS_ENABLED
+#if CONFIG_GPS_APPS_ENABLE && CONFIG_GPS_ENABLED
     {.display_name = "GPS",
      .menu_idx = MENU_SETTINGS_GPS,
      .parent_idx = MENU_SETTINGS_SYSTEM,
@@ -533,8 +536,8 @@ static menu_t menus[] = {
      .on_enter_cb = gps_settings_main_menu,
      .on_exit_cb = NULL,
      .is_visible = true},
-    #endif
-    #if CONFIG_SD_ENABLED
+#endif
+#if CONFIG_SD_ENABLED
     {.display_name = "SD card",
      .menu_idx = MENU_SETTINGS_SD_CARD,
      .parent_idx = MENU_SETTINGS_SYSTEM,
@@ -566,7 +569,7 @@ static menu_t menus[] = {
      .on_enter_cb = sd_card_settings_verify_sd_card,
      .on_exit_cb = NULL,
      .is_visible = true},
-    #endif
+#endif
     {.display_name = "WiFi",
      .menu_idx = MENU_SETTINGS_WIFI,
      .parent_idx = MENU_SETTINGS_SYSTEM,
@@ -595,14 +598,14 @@ static menu_t menus[] = {
      .on_enter_cb = sleep_mode_scenes_main,
      .on_exit_cb = NULL,
      .is_visible = true},
-    // {.display_name = "ZB CLI",
-    //  .menu_idx = MENU_ZB_CLI,
-    //  .parent_idx = MENU_SETTINGS,
-    //  .last_selected_submenu = 0,
-    //  .on_enter_cb = zbcli_settings_main,
-    //  .on_exit_cb = NULL,
-    //  .is_visible = true},
-    #if defined(CONFIG_SDR_ENABLE)
+// {.display_name = "ZB CLI",
+//  .menu_idx = MENU_ZB_CLI,
+//  .parent_idx = MENU_SETTINGS,
+//  .last_selected_submenu = 0,
+//  .on_enter_cb = zbcli_settings_main,
+//  .on_exit_cb = NULL,
+//  .is_visible = true},
+#if defined(CONFIG_SDR_ENABLE)
     {.display_name = "SDR",
      .menu_idx = MENU_ESP_SDR,
      .parent_idx = MENU_APPLICATIONS,
@@ -611,7 +614,7 @@ static menu_t menus[] = {
      .on_enter_cb = esp_sdr_module_begin,
      .on_exit_cb = esp_sdr_module_stop,
      .is_visible = true},
-    #endif
+#endif
     {.display_name = "Spectrum",
      .menu_idx = MENU_SPECTRUM,
      .parent_idx = MENU_APPLICATIONS,
@@ -619,8 +622,7 @@ static menu_t menus[] = {
      .last_selected_submenu = 0,
      .on_enter_cb = rf_spectrum_app_begin,
      .on_exit_cb = rf_spectrum_app_stop,
-     .is_visible = true}
-};
+     .is_visible = true}};
 
 menu_t* menus_get(void) {
   return menus;
@@ -650,6 +652,7 @@ int menus_find_index(menu_idx_t idx) {
 
 menu_t* menus_find(menu_idx_t idx) {
   int pos = menus_find_index(idx);
-  if (pos < 0) return NULL;
+  if (pos < 0)
+    return NULL;
   return &menus[pos];
 }

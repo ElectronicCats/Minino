@@ -1,11 +1,11 @@
 #include "analyzer_scenes.h"
 
+#include "app_manager.h"
 #include "general_radio_selection.h"
 #include "general_screens.h"
 #include "general_submenu.h"
 #include "menus_module.h"
 #include "wifi_analyzer.h"
-#include "app_manager.h"
 #include "wifi_sniffer.h"
 
 static analyzer_scenes_e current_scene;

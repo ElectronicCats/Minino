@@ -52,8 +52,7 @@ void setUp(void) {
   s_clock_ms = 0;
 }
 
-void tearDown(void) {
-}
+void tearDown(void) {}
 
 /* El modulo usa malloc/free y printf; los tests comprueban las funciones
  * puras a traves de la interfaz publica. */
@@ -84,31 +83,35 @@ static void fft_reference(int16_t* x, unsigned n) {
     unsigned step = n / len;
     for (unsigned block = 0; block < n; block += len) {
       for (unsigned j = 0; j < half; j++) {
-        double angle = -2.0 * M_PI * (double)(j * step) / (double)n;
-        int32_t wr = (int32_t)lrint(32767.0 * cos(angle));
-        int32_t wi = (int32_t)lrint(32767.0 * sin(angle));
+        double angle = -2.0 * M_PI * (double) (j * step) / (double) n;
+        int32_t wr = (int32_t) lrint(32767.0 * cos(angle));
+        int32_t wi = (int32_t) lrint(32767.0 * sin(angle));
         unsigned a = block + j;
         unsigned b = a + half;
         int32_t ar = x[2 * a], ai = x[2 * a + 1];
         int32_t br = x[2 * b], bi = x[2 * b + 1];
-        uint32_t tr = (uint32_t)(wr * br) + (uint32_t)(wi * bi);
-        uint32_t ti = (uint32_t)(wr * bi) - (uint32_t)(wi * br);
-        uint32_t rr = (uint32_t)(ar * 32767) + 32767u;
-        uint32_t ri = (uint32_t)(ai * 32767) + 32767u;
-        x[2 * a] = (int16_t)((rr + tr) >> 16);
-        x[2 * a + 1] = (int16_t)((ri + ti) >> 16);
-        x[2 * b] = (int16_t)((rr - tr) >> 16);
-        x[2 * b + 1] = (int16_t)((ri - ti) >> 16);
+        uint32_t tr = (uint32_t) (wr * br) + (uint32_t) (wi * bi);
+        uint32_t ti = (uint32_t) (wr * bi) - (uint32_t) (wi * br);
+        uint32_t rr = (uint32_t) (ar * 32767) + 32767u;
+        uint32_t ri = (uint32_t) (ai * 32767) + 32767u;
+        x[2 * a] = (int16_t) ((rr + tr) >> 16);
+        x[2 * a + 1] = (int16_t) ((ri + ti) >> 16);
+        x[2 * b] = (int16_t) ((rr - tr) >> 16);
+        x[2 * b + 1] = (int16_t) ((ri - ti) >> 16);
       }
     }
   }
 }
 
-static void dft_naive(const double* re, const double* im, unsigned n, double* out_re, double* out_im) {
+static void dft_naive(const double* re,
+                      const double* im,
+                      unsigned n,
+                      double* out_re,
+                      double* out_im) {
   for (unsigned k = 0; k < n; k++) {
     double sr = 0, si = 0;
     for (unsigned j = 0; j < n; j++) {
-      double angle = -2.0 * M_PI * (double)j * (double)k / (double)n;
+      double angle = -2.0 * M_PI * (double) j * (double) k / (double) n;
       sr += re[j] * cos(angle) - im[j] * sin(angle);
       si += re[j] * sin(angle) + im[j] * cos(angle);
     }
@@ -124,10 +127,10 @@ static void test_the_fft_matches_a_direct_transform(void) {
 
   /* Una senal con dos tonos: el espectro tiene que tenerlos ahi. */
   for (unsigned j = 0; j < n; j++) {
-    re[j] = 1000.0 * cos(2.0 * M_PI * 3.0 * (double)j / (double)n) +
-            500.0 * cos(2.0 * M_PI * 11.0 * (double)j / (double)n);
+    re[j] = 1000.0 * cos(2.0 * M_PI * 3.0 * (double) j / (double) n) +
+            500.0 * cos(2.0 * M_PI * 11.0 * (double) j / (double) n);
     im[j] = 0.0;
-    x[2 * j] = (int16_t)re[j];
+    x[2 * j] = (int16_t) re[j];
     x[2 * j + 1] = 0;
   }
 
@@ -138,7 +141,7 @@ static void test_the_fft_matches_a_direct_transform(void) {
   /* La salida de la FFT va en orden natural: el bin k es la frecuencia k.
      La FFT es Q15 y la entrada esta en unidades crudas, asi que el
      resultado lleva el factor 32767/1000. */
-  const double scale = 1.0 / (double)n;  /* cada mariposa divide entre dos */
+  const double scale = 1.0 / (double) n; /* cada mariposa divide entre dos */
   for (unsigned k = 0; k < n; k++) {
     double got_re = x[2 * k];
     double got_im = x[2 * k + 1];
@@ -158,7 +161,8 @@ static void test_the_fft_finds_the_tones(void) {
   int16_t x[2 * n];
 
   for (unsigned j = 0; j < n; j++) {
-    x[2 * j] = (int16_t)(8000.0 * cos(2.0 * M_PI * 5.0 * (double)j / (double)n));
+    x[2 * j] =
+        (int16_t) (8000.0 * cos(2.0 * M_PI * 5.0 * (double) j / (double) n));
     x[2 * j + 1] = 0;
   }
   fft_reference(x, n);
@@ -167,7 +171,8 @@ static void test_the_fft_finds_the_tones(void) {
   unsigned peak = 0;
   double best = 0;
   for (unsigned k = 0; k < n; k++) {
-    double p = (double)x[2 * k] * x[2 * k] + (double)x[2 * k + 1] * x[2 * k + 1];
+    double p =
+        (double) x[2 * k] * x[2 * k] + (double) x[2 * k + 1] * x[2 * k + 1];
     if (p > best) {
       best = p;
       peak = k;
@@ -182,27 +187,27 @@ static void test_the_raw_word_layout_is_i_low_and_q_high(void) {
      y Q en los 19-10. */
   uint32_t i = 100, q = 200;
   uint32_t word = (i & 0x3FFu) | ((q & 0x3FFu) << 10);
-  TEST_ASSERT_EQUAL_INT((int)i, (int)((int32_t)(word << 22) >> 22));
-  TEST_ASSERT_EQUAL_INT((int)q, (int)((int32_t)(word << 12) >> 22));
+  TEST_ASSERT_EQUAL_INT((int) i, (int) ((int32_t) (word << 22) >> 22));
+  TEST_ASSERT_EQUAL_INT((int) q, (int) ((int32_t) (word << 12) >> 22));
 
   /* Y con signo, como los diez bits con signo que son. */
   int32_t neg = -63;
-  uint32_t word_neg = ((uint32_t)(neg & 0x3FF)) | ((uint32_t)(0x3C2) << 10);
-  TEST_ASSERT_EQUAL_INT(-63, (int)((int32_t)(word_neg << 22) >> 22));
-  TEST_ASSERT_EQUAL_INT(-62, (int)((int32_t)(word_neg << 12) >> 22));
+  uint32_t word_neg = ((uint32_t) (neg & 0x3FF)) | ((uint32_t) (0x3C2) << 10);
+  TEST_ASSERT_EQUAL_INT(-63, (int) ((int32_t) (word_neg << 22) >> 22));
+  TEST_ASSERT_EQUAL_INT(-62, (int) ((int32_t) (word_neg << 12) >> 22));
 }
 
 static void test_the_crc_of_a_frame_is_the_one_the_viewer_checks(void) {
   /* El visor comprueba el CRC32 de la cabecera y de las bins. */
   uint8_t frame[32 + 4];
   for (unsigned j = 0; j < 32; j++) {
-    frame[j] = (uint8_t)j;
+    frame[j] = (uint8_t) j;
   }
   uint32_t crc = esdr_crc32(frame, 32);
-  frame[32] = (uint8_t)crc;
-  frame[33] = (uint8_t)(crc >> 8);
-  frame[34] = (uint8_t)(crc >> 16);
-  frame[35] = (uint8_t)(crc >> 24);
+  frame[32] = (uint8_t) crc;
+  frame[33] = (uint8_t) (crc >> 8);
+  frame[34] = (uint8_t) (crc >> 16);
+  frame[35] = (uint8_t) (crc >> 24);
   /* El CRC del marco completo no es el del cuerpo: el visor lo calcula
      sobre la cabecera y las bins, y lo compara con los ultimos cuatro
      bytes. */
@@ -223,7 +228,8 @@ static void test_the_profiles_are_the_ones_the_viewer_understands(void) {
   TEST_ASSERT_TRUE(esdr_spectrum_command("SPECINFO?", 2412, NULL));
 
   /* El visor parsea el JSON de SPECINFO y exige esta forma:
-     {"continuous":bool,"transports":[...],"profiles":[[rate,code,bins,stride,units,cont],...]} */
+     {"continuous":bool,"transports":[...],"profiles":[[rate,code,bins,stride,units,cont],...]}
+   */
   TEST_ASSERT_NOT_NULL(strstr(s_written, "SPECINFO {"));
   TEST_ASSERT_NOT_NULL(strstr(s_written, "\"continuous\":false"));
   TEST_ASSERT_NOT_NULL(strstr(s_written, "\"transports\":[\"USB\"]"));

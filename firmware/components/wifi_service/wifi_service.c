@@ -14,22 +14,22 @@
 
 #include "wifi_service.h"
 
-#include "freertos/FreeRTOS.h"
-#include "esp_wifi.h"
 #include "esp_log.h"
+#include "esp_wifi.h"
+#include "freertos/FreeRTOS.h"
 
-static const char *TAG = "wifi_svc";
+static const char* TAG = "wifi_svc";
 
 /* Spinlock propio: protege s_state. */
 static portMUX_TYPE s_wifi_mux = portMUX_INITIALIZER_UNLOCKED;
 
 /* Estado volatile, visible solo desde los accessors (bajo s_wifi_mux). */
 static wifi_service_state_t s_state = {
-  .mode           = WIFI_MODE_NULL,
-  .iface          = WIFI_IF_STA,   /* default: estación */
-  .is_up          = false,
-  .is_sta         = false,
-  .is_ap          = false,
+    .mode = WIFI_MODE_NULL,
+    .iface = WIFI_IF_STA, /* default: estación */
+    .is_up = false,
+    .is_sta = false,
+    .is_ap = false,
 };
 
 static wifi_service_init_guard_t s_init_guard = NULL;
@@ -55,13 +55,16 @@ bool wifi_service_init(wifi_mode_t mode) {
 
   /* Modo por defecto: estación. Las apps que necesitan AP lo piden con
      wifi_service_set_mode(); no hay símbolos CONFIG_STA_ENABLE/AP_ENABLE. */
-  if (mode == WIFI_MODE_AP || mode == WIFI_MODE_STA || mode == WIFI_MODE_APSTA || mode == WIFI_MODE_NULL) {
+  if (mode == WIFI_MODE_AP || mode == WIFI_MODE_STA ||
+      mode == WIFI_MODE_APSTA || mode == WIFI_MODE_NULL) {
     s_state.mode = mode;
   } else {
     s_state.mode = WIFI_MODE_STA;
   }
-  s_state.is_sta = (s_state.mode == WIFI_MODE_STA || s_state.mode == WIFI_MODE_APSTA);
-  s_state.is_ap = (s_state.mode == WIFI_MODE_AP || s_state.mode == WIFI_MODE_APSTA);
+  s_state.is_sta =
+      (s_state.mode == WIFI_MODE_STA || s_state.mode == WIFI_MODE_APSTA);
+  s_state.is_ap =
+      (s_state.mode == WIFI_MODE_AP || s_state.mode == WIFI_MODE_APSTA);
   portEXIT_CRITICAL(&s_wifi_mux);
 
   /* Inicializar el stack de WiFi fuera de la sección crítica */
@@ -89,7 +92,8 @@ bool wifi_service_init(wifi_mode_t mode) {
   s_state.is_up = true;
   portEXIT_CRITICAL(&s_wifi_mux);
 
-  ESP_LOGI(TAG, "inicializado en modo %s", s_state.mode == WIFI_MODE_STA ? "STA" : "AP");
+  ESP_LOGI(TAG, "inicializado en modo %s",
+           s_state.mode == WIFI_MODE_STA ? "STA" : "AP");
   return true;
 }
 
@@ -97,9 +101,9 @@ bool wifi_service_deinit(void) {
   portENTER_CRITICAL(&s_wifi_mux);
   if (!s_state.is_up) {
     portEXIT_CRITICAL(&s_wifi_mux);
-    return true;   /* ya desactivado */
+    return true; /* ya desactivado */
   }
-  s_state = (wifi_service_state_t){0};
+  s_state = (wifi_service_state_t) {0};
   s_state.is_up = false;
   portEXIT_CRITICAL(&s_wifi_mux);
 

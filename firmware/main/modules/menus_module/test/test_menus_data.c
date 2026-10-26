@@ -91,8 +91,8 @@ static void test_every_parent_refers_to_a_compiled_in_entry(void) {
     if ((int) menus[i].parent_idx < 0) {
       continue; /* MENU_MAIN declares -1 */
     }
-    TEST_ASSERT_NOT_NULL_MESSAGE(
-        menus_find((menu_idx_t) menus[i].parent_idx), menus[i].display_name);
+    TEST_ASSERT_NOT_NULL_MESSAGE(menus_find((menu_idx_t) menus[i].parent_idx),
+                                 menus[i].display_name);
   }
 }
 
@@ -138,9 +138,8 @@ static void test_entry_cmds_are_unique(void) {
       if (!menus[j].entry_cmd) {
         continue;
       }
-      TEST_ASSERT_FALSE_MESSAGE(
-          !strcmp(menus[i].entry_cmd, menus[j].entry_cmd),
-          menus[i].entry_cmd);
+      TEST_ASSERT_FALSE_MESSAGE(!strcmp(menus[i].entry_cmd, menus[j].entry_cmd),
+                                menus[i].entry_cmd);
     }
   }
 }
@@ -171,8 +170,8 @@ static void test_entry_cmd_lookup_is_exact_not_prefix(void) {
     }
   }
   /* Test that exact lookup works when prefix pairs exist in the catalogue.
- * If no entry_cmd pair has a prefix relationship, the test is vacuous
- * and the assertions inside the loop simply never execute. */
+   * If no entry_cmd pair has a prefix relationship, the test is vacuous
+   * and the assertions inside the loop simply never execute. */
   (void) prefixes;
 }
 
@@ -221,8 +220,7 @@ static void test_every_leaf_has_an_enter_callback(void) {
     if (menus[i].entry_cmd == NULL) {
       continue;
     }
-    TEST_ASSERT_NOT_NULL_MESSAGE(menus[i].on_enter_cb,
-                                 menus[i].display_name);
+    TEST_ASSERT_NOT_NULL_MESSAGE(menus[i].on_enter_cb, menus[i].display_name);
   }
 }
 

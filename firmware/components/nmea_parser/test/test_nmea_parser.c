@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
-#include <math.h>
 #include "nmea_parser.h"
 #include "nmea_test.h"
 
@@ -24,7 +24,8 @@ static void test_gps_event_handler(void* event_handler_arg,
   } else if (event_id == GPS_UNKNOWN) {
     s_unknown_called = true;
     if (event_data) {
-      strncpy(s_last_unknown, (const char*) event_data, sizeof(s_last_unknown) - 1);
+      strncpy(s_last_unknown, (const char*) event_data,
+              sizeof(s_last_unknown) - 1);
       s_last_unknown[sizeof(s_last_unknown) - 1] = '\0';
     }
   }
@@ -55,9 +56,13 @@ TEST_CASE("add_handler and remove_handler reject NULL arguments", "[nmea]") {
   nmea_parser_handle_t hdl = create_test_parser();
   TEST_ASSERT_NOT_NULL(hdl);
 
-  TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, nmea_parser_add_handler(NULL, test_gps_event_handler, NULL));
-  TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, nmea_parser_add_handler(hdl, NULL, NULL));
-  TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, nmea_parser_remove_handler(NULL, test_gps_event_handler));
+  TEST_ASSERT_EQUAL(
+      ESP_ERR_INVALID_ARG,
+      nmea_parser_add_handler(NULL, test_gps_event_handler, NULL));
+  TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG,
+                    nmea_parser_add_handler(hdl, NULL, NULL));
+  TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG,
+                    nmea_parser_remove_handler(NULL, test_gps_event_handler));
 
   nmea_parser_deinit(hdl);
 }
@@ -66,14 +71,17 @@ TEST_CASE("decode rejects NULL or zero length arguments", "[nmea]") {
   nmea_parser_handle_t hdl = create_test_parser();
   TEST_ASSERT_NOT_NULL(hdl);
 
-  TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, nmea_parser_decode(NULL, "$GPGGA\r\n", 8));
+  TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG,
+                    nmea_parser_decode(NULL, "$GPGGA\r\n", 8));
   TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, nmea_parser_decode(hdl, NULL, 8));
-  TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG, nmea_parser_decode(hdl, "$GPGGA\r\n", 0));
+  TEST_ASSERT_EQUAL(ESP_ERR_INVALID_ARG,
+                    nmea_parser_decode(hdl, "$GPGGA\r\n", 0));
 
   nmea_parser_deinit(hdl);
 }
 
-TEST_CASE("get_gps_data returns valid pointer or NULL on invalid handle", "[nmea]") {
+TEST_CASE("get_gps_data returns valid pointer or NULL on invalid handle",
+          "[nmea]") {
   TEST_ASSERT_NULL(nmea_parser_get_gps_data(NULL));
   nmea_parser_handle_t hdl = create_test_parser();
   TEST_ASSERT_NOT_NULL(hdl);
@@ -87,7 +95,9 @@ TEST_CASE("parse GGA statement correctly", "[nmea]") {
   TEST_ASSERT_NOT_NULL(hdl);
 
   // $GPGGA,123519.50,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*42
-  const char* gga = "$GPGGA,123519.50,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*42\r\n";
+  const char* gga =
+      "$GPGGA,123519.50,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*"
+      "42\r\n";
   esp_err_t err = nmea_parser_decode(hdl, gga, strlen(gga));
   TEST_ASSERT_EQUAL(ESP_OK, err);
 
@@ -119,7 +129,8 @@ TEST_CASE("parse South and West coordinates correctly in GGA", "[nmea]") {
 
   // South latitude and West longitude:
   // $GPGGA,000000,3351.000,S,15112.000,W,1,04,1.5,10.0,M,0.0,M,,*52
-  const char* gga_sw = "$GPGGA,000000,3351.000,S,15112.000,W,1,04,1.5,10.0,M,0.0,M,,*52\r\n";
+  const char* gga_sw =
+      "$GPGGA,000000,3351.000,S,15112.000,W,1,04,1.5,10.0,M,0.0,M,,*52\r\n";
   esp_err_t err = nmea_parser_decode(hdl, gga_sw, strlen(gga_sw));
   TEST_ASSERT_EQUAL(ESP_OK, err);
 
@@ -139,7 +150,9 @@ TEST_CASE("parse RMC statement with date, speed, cog, and validity", "[nmea]") {
   TEST_ASSERT_NOT_NULL(hdl);
 
   // $GPRMC,083559,A,4717.11437,N,00833.91522,E,0.004,77.52,091204,003.1,W*43
-  const char* rmc = "$GPRMC,083559,A,4717.11437,N,00833.91522,E,0.004,77.52,091204,003.1,W*43\r\n";
+  const char* rmc =
+      "$GPRMC,083559,A,4717.11437,N,00833.91522,E,0.004,77.52,091204,003.1,W*"
+      "43\r\n";
   esp_err_t err = nmea_parser_decode(hdl, rmc, strlen(rmc));
   TEST_ASSERT_EQUAL(ESP_OK, err);
 
@@ -179,7 +192,8 @@ TEST_CASE("parse RMC with truncated date string without crash", "[nmea]") {
   nmea_parser_deinit(hdl);
 }
 
-TEST_CASE("parse GSA statement for fix mode, dop, and satellite IDs", "[nmea]") {
+TEST_CASE("parse GSA statement for fix mode, dop, and satellite IDs",
+          "[nmea]") {
   nmea_parser_handle_t hdl = create_test_parser();
   TEST_ASSERT_NOT_NULL(hdl);
 
@@ -209,7 +223,9 @@ TEST_CASE("parse GSV statement with multiple satellites in view", "[nmea]") {
   TEST_ASSERT_NOT_NULL(hdl);
 
   // $GPGSV,2,1,08,01,40,083,46,02,17,308,41,12,07,344,39,14,66,039,40*7E
-  const char* gsv1 = "$GPGSV,2,1,08,01,40,083,46,02,17,308,41,12,07,344,39,14,66,039,40*7E\r\n";
+  const char* gsv1 =
+      "$GPGSV,2,1,08,01,40,083,46,02,17,308,41,12,07,344,39,14,66,039,40*"
+      "7E\r\n";
   esp_err_t err = nmea_parser_decode(hdl, gsv1, strlen(gsv1));
   TEST_ASSERT_EQUAL(ESP_OK, err);
 
@@ -283,7 +299,8 @@ TEST_CASE("parse VTG statement correctly", "[nmea]") {
   nmea_parser_deinit(hdl);
 }
 
-TEST_CASE("parse ZDA statement parses day, month, 4-digit year separately", "[nmea]") {
+TEST_CASE("parse ZDA statement parses day, month, 4-digit year separately",
+          "[nmea]") {
   nmea_parser_handle_t hdl = create_test_parser();
   TEST_ASSERT_NOT_NULL(hdl);
 
@@ -302,7 +319,8 @@ TEST_CASE("parse ZDA statement parses day, month, 4-digit year separately", "[nm
   TEST_ASSERT_EQUAL_UINT8(25, gps->tim.second);
   TEST_ASSERT_EQUAL_UINT16(0, gps->tim.thousand);
 
-  // Verify that day, month, and year are parsed separately and accurately (Bug fix verified)
+  // Verify that day, month, and year are parsed separately and accurately (Bug
+  // fix verified)
   TEST_ASSERT_EQUAL_UINT8(15, gps->date.day);
   TEST_ASSERT_EQUAL_UINT8(8, gps->date.month);
   TEST_ASSERT_EQUAL_UINT16(2024, gps->date.year);
@@ -336,7 +354,8 @@ TEST_CASE("reject statement without asterisk or truncated", "[nmea]") {
   nmea_parser_deinit(hdl);
 }
 
-TEST_CASE("unknown statement with valid CRC triggers GPS_UNKNOWN event", "[nmea]") {
+TEST_CASE("unknown statement with valid CRC triggers GPS_UNKNOWN event",
+          "[nmea]") {
   nmea_parser_handle_t hdl = create_test_parser();
   TEST_ASSERT_NOT_NULL(hdl);
 
@@ -349,7 +368,8 @@ TEST_CASE("unknown statement with valid CRC triggers GPS_UNKNOWN event", "[nmea]
   nmea_parser_deinit(hdl);
 }
 
-TEST_CASE("unknown statement with bad CRC does not trigger GPS_UNKNOWN event", "[nmea]") {
+TEST_CASE("unknown statement with bad CRC does not trigger GPS_UNKNOWN event",
+          "[nmea]") {
   nmea_parser_handle_t hdl = create_test_parser();
   TEST_ASSERT_NOT_NULL(hdl);
 
@@ -361,13 +381,15 @@ TEST_CASE("unknown statement with bad CRC does not trigger GPS_UNKNOWN event", "
   nmea_parser_deinit(hdl);
 }
 
-TEST_CASE("item longer than 16 characters is safely truncated without overflow", "[nmea]") {
+TEST_CASE("item longer than 16 characters is safely truncated without overflow",
+          "[nmea]") {
   nmea_parser_handle_t hdl = create_test_parser();
   TEST_ASSERT_NOT_NULL(hdl);
 
   // Huge string of digits in altitude field (item 9):
   // "012345678901234567890123456789"
-  const char* long_item = "$GPGGA,000000,,,,,0,00,,12345678901234567890,M,,M,,*52\r\n";
+  const char* long_item =
+      "$GPGGA,000000,,,,,0,00,,12345678901234567890,M,,M,,*52\r\n";
   esp_err_t err = nmea_parser_decode(hdl, long_item, strlen(long_item));
   TEST_ASSERT_EQUAL(ESP_OK, err);
 
@@ -380,7 +402,8 @@ TEST_CASE("parse multiple statements in a single stream", "[nmea]") {
 
   const char* multi =
       "$GPGGA,123519.00,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47\r\n"
-      "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A\r\n";
+      "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*"
+      "6A\r\n";
 
   esp_err_t err = nmea_parser_decode(hdl, multi, strlen(multi));
   TEST_ASSERT_EQUAL(ESP_OK, err);
@@ -401,7 +424,8 @@ TEST_CASE("handle noise and garbage before statement", "[nmea]") {
 
   const char* noisy =
       "garbage\xFF\xFE\xAA\x55~!!\r\n"
-      "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A\r\n";
+      "$GPRMC,123519,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*"
+      "6A\r\n";
 
   esp_err_t err = nmea_parser_decode(hdl, noisy, strlen(noisy));
   TEST_ASSERT_EQUAL(ESP_OK, err);

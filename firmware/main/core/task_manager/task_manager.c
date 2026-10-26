@@ -134,7 +134,8 @@ esp_err_t task_manager_delete(TaskHandle_t handle) {
       memset(&task_registry[task_count - 1], 0, sizeof(task_info_t));
       task_count--;
 
-      // Liberar el nombre antes de vTaskDelete para evitar fuga de memoria si la tarea se auto-elimina
+      // Liberar el nombre antes de vTaskDelete para evitar fuga de memoria si
+      // la tarea se auto-elimina
       if (deleted_name) {
         free(deleted_name);
       }

@@ -17,8 +17,8 @@
  * c6_sdr_rx.c. The engine stops at the programmed word count, so only
  * the first 64 KiB of the block is taken off the heap: the BLE
  * controller needs one large contiguous block and the rest of the bank
- * is what the heap is missing. Nothing else needs linker script support: the section
- * reserve flows through the same mechanism as every other reserved
+ * is what the heap is missing. Nothing else needs linker script support: the
+ * section reserve flows through the same mechanism as every other reserved
  * range.
  *
  * Only compiled in the SDR build variant (CONFIG_SDR_ENABLE), where
@@ -36,15 +36,15 @@
 #include "sdkconfig.h"
 
 #if defined(CONFIG_SDR_ENABLE)
-#include "heap_memory_layout.h"
+  #include "heap_memory_layout.h"
 #endif
 #include "esp_sdr_memory.h"
 
 #if defined(CONFIG_SDR_ENABLE)
 /* Capture bank: the front of SRAM block 2, the part the engine writes. */
-SOC_RESERVE_MEMORY_REGION((intptr_t)SDR_CAPTURE_BANK_BASE,
-                          (intptr_t)(SDR_CAPTURE_BANK_BASE +
-                                     SDR_CAPTURE_BANK_SIZE),
+SOC_RESERVE_MEMORY_REGION((intptr_t) SDR_CAPTURE_BANK_BASE,
+                          (intptr_t) (SDR_CAPTURE_BANK_BASE +
+                                      SDR_CAPTURE_BANK_SIZE),
                           sdr_capture_bank);
 #endif
 

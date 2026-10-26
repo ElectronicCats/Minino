@@ -5,12 +5,7 @@
 #ifndef ADV_SCAN_SCREENS_H
   #define ADV_SCAN_SCREENS_H
 
-enum {
-  SCAN_TYPE,
-  SCAN_FILTER,
-  SCAN_START,
-  SCAN_MENU_COUNT
-};
+enum { SCAN_TYPE, SCAN_FILTER, SCAN_START, SCAN_MENU_COUNT };
 extern char* scan_menu_items[];
 
 extern char* scan_type_items[];

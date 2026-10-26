@@ -1,10 +1,10 @@
 #include "general_radio_selection.h"
 
+#include <stdlib.h>
+#include <string.h>
 #include "bitmaps_general.h"
 #include "buzzer.h"
 #include "esp_log.h"
-#include <stdlib.h>
-#include <string.h>
 #include "menus_module.h"
 #include "oled_screen.h"
 
@@ -27,7 +27,6 @@ static void list_radio_options_new_style();
 static void* list_radio_options_styles[] = {list_radio_options_old_style,
                                             list_radio_options_new_style};
 static void (*list_radio_options)() = NULL;
-
 
 /* Room for the row prefix ("[x] "), the option text and the "[curr]" suffix.
    The previous code used a fixed malloc(20) with an unbounded sprintf(), so any
@@ -138,8 +137,7 @@ static void list_radio_options_new_style() {
     bool is_selected = idx == ctx->selected_option;
     bool is_current = idx == ctx->current_option;
     const char* label = ctx->options[idx] ? ctx->options[idx] : "";
-    snprintf(str, strlen(label) + 7, "%s%s", label,
-             is_current ? "[curr]" : "");
+    snprintf(str, strlen(label) + 7, "%s%s", label, is_current ? "[curr]" : "");
     oled_screen_display_text(str, is_selected ? 16 : 0, i + 2, is_selected);
   }
   oled_screen_display_show();
@@ -147,7 +145,8 @@ static void list_radio_options_new_style() {
 }
 
 static void input_cb(uint8_t button_name, uint8_t button_event) {
-  if (button_event != BUTTON_PRESS_DOWN || general_radio_selection_ctx == NULL) {
+  if (button_event != BUTTON_PRESS_DOWN ||
+      general_radio_selection_ctx == NULL) {
     return;
   }
   switch (button_name) {
@@ -222,8 +221,8 @@ void general_radio_selection(
   general_radio_selection_ctx->select_cb = radio_selection_menu.select_cb;
   general_radio_selection_ctx->exit_cb = radio_selection_menu.exit_cb;
   menus_module_set_app_state(true, input_cb);
-  size_t styles = sizeof(list_radio_options_styles) /
-                  sizeof(list_radio_options_styles[0]);
+  size_t styles =
+      sizeof(list_radio_options_styles) / sizeof(list_radio_options_styles[0]);
   size_t style = radio_selection_menu.style;
   if (style >= styles) {
     style = 0;

@@ -43,7 +43,8 @@ static void test_indexable_range_is_exactly_one_to_max(void) {
 
 static void test_wifi_bounds(void) {
   TEST_ASSERT_EQUAL_UINT8(1, rf_channel_min(RF_PROTOCOL_WIFI));
-  TEST_ASSERT_EQUAL_UINT8(RF_WIFI_MAX_CHANNELS, rf_channel_max(RF_PROTOCOL_WIFI));
+  TEST_ASSERT_EQUAL_UINT8(RF_WIFI_MAX_CHANNELS,
+                          rf_channel_max(RF_PROTOCOL_WIFI));
 }
 
 static void test_zigbee_bounds(void) {
@@ -54,9 +55,9 @@ static void test_zigbee_bounds(void) {
 }
 
 static void test_unknown_protocol_falls_back_to_the_wifi_plan(void) {
-  TEST_ASSERT_EQUAL_UINT8(1, rf_channel_min((rf_protocol_t)99));
+  TEST_ASSERT_EQUAL_UINT8(1, rf_channel_min((rf_protocol_t) 99));
   TEST_ASSERT_EQUAL_UINT8(RF_WIFI_MAX_CHANNELS,
-                          rf_channel_max((rf_protocol_t)99));
+                          rf_channel_max((rf_protocol_t) 99));
 }
 
 /* --- clamping ---------------------------------------------------------- */
@@ -94,7 +95,7 @@ static void test_clamp_output_is_always_indexable(void) {
   const rf_protocol_t protocols[] = {RF_PROTOCOL_WIFI, RF_PROTOCOL_ZIGBEE};
   for (unsigned p = 0; p < 2; p++) {
     for (int ch = 0; ch <= 255; ch++) {
-      uint8_t clamped = rf_channel_clamp(protocols[p], (uint8_t)ch);
+      uint8_t clamped = rf_channel_clamp(protocols[p], (uint8_t) ch);
       TEST_ASSERT_TRUE_MESSAGE(rf_channel_is_indexable(clamped),
                                "every clamp result must be safe to index");
     }
@@ -103,7 +104,8 @@ static void test_clamp_output_is_always_indexable(void) {
 
 /* --- the regression ---------------------------------------------------- */
 
-static void test_switching_to_zigbee_does_not_select_an_unindexable_channel(void) {
+static void test_switching_to_zigbee_does_not_select_an_unindexable_channel(
+    void) {
   /* rf_spectrum_set_protocol(RF_PROTOCOL_ZIGBEE) used to hard-code 15, which
      sat one past the end of the Wi-Fi-sized arrays. */
   uint8_t ch = rf_channel_clamp(RF_PROTOCOL_ZIGBEE, 15);
@@ -123,13 +125,13 @@ static void test_tuner_cannot_walk_out_of_the_band(void) {
 
     for (int press = 0; press < 200; press++) {
       /* UP, as rf_spectrum_input_cb() does it. */
-      ch = (ch >= max_ch) ? min_ch : (uint8_t)(ch + 1);
+      ch = (ch >= max_ch) ? min_ch : (uint8_t) (ch + 1);
       TEST_ASSERT_TRUE(rf_channel_is_indexable(ch));
       TEST_ASSERT_GREATER_OR_EQUAL(min_ch, ch);
       TEST_ASSERT_LESS_OR_EQUAL(max_ch, ch);
 
       /* DOWN. */
-      ch = (ch <= min_ch) ? max_ch : (uint8_t)(ch - 1);
+      ch = (ch <= min_ch) ? max_ch : (uint8_t) (ch - 1);
       TEST_ASSERT_TRUE(rf_channel_is_indexable(ch));
       TEST_ASSERT_GREATER_OR_EQUAL(min_ch, ch);
       TEST_ASSERT_LESS_OR_EQUAL(max_ch, ch);
@@ -153,18 +155,27 @@ static void test_switching_protocols_reclaims_the_channel(void) {
 }
 
 static void test_wifi_frequency_calculation(void) {
-  TEST_ASSERT_EQUAL_UINT16(2412, rf_channel_to_frequency_mhz(RF_PROTOCOL_WIFI, 1));
-  TEST_ASSERT_EQUAL_UINT16(2437, rf_channel_to_frequency_mhz(RF_PROTOCOL_WIFI, 6));
-  TEST_ASSERT_EQUAL_UINT16(2462, rf_channel_to_frequency_mhz(RF_PROTOCOL_WIFI, 11));
-  TEST_ASSERT_EQUAL_UINT16(2472, rf_channel_to_frequency_mhz(RF_PROTOCOL_WIFI, 13));
-  TEST_ASSERT_EQUAL_UINT16(2484, rf_channel_to_frequency_mhz(RF_PROTOCOL_WIFI, 14));
+  TEST_ASSERT_EQUAL_UINT16(2412,
+                           rf_channel_to_frequency_mhz(RF_PROTOCOL_WIFI, 1));
+  TEST_ASSERT_EQUAL_UINT16(2437,
+                           rf_channel_to_frequency_mhz(RF_PROTOCOL_WIFI, 6));
+  TEST_ASSERT_EQUAL_UINT16(2462,
+                           rf_channel_to_frequency_mhz(RF_PROTOCOL_WIFI, 11));
+  TEST_ASSERT_EQUAL_UINT16(2472,
+                           rf_channel_to_frequency_mhz(RF_PROTOCOL_WIFI, 13));
+  TEST_ASSERT_EQUAL_UINT16(2484,
+                           rf_channel_to_frequency_mhz(RF_PROTOCOL_WIFI, 14));
 }
 
 static void test_zigbee_frequency_calculation(void) {
-  TEST_ASSERT_EQUAL_UINT16(2405, rf_channel_to_frequency_mhz(RF_PROTOCOL_ZIGBEE, 11));
-  TEST_ASSERT_EQUAL_UINT16(2425, rf_channel_to_frequency_mhz(RF_PROTOCOL_ZIGBEE, 15));
-  TEST_ASSERT_EQUAL_UINT16(2450, rf_channel_to_frequency_mhz(RF_PROTOCOL_ZIGBEE, 20));
-  TEST_ASSERT_EQUAL_UINT16(2480, rf_channel_to_frequency_mhz(RF_PROTOCOL_ZIGBEE, 26));
+  TEST_ASSERT_EQUAL_UINT16(2405,
+                           rf_channel_to_frequency_mhz(RF_PROTOCOL_ZIGBEE, 11));
+  TEST_ASSERT_EQUAL_UINT16(2425,
+                           rf_channel_to_frequency_mhz(RF_PROTOCOL_ZIGBEE, 15));
+  TEST_ASSERT_EQUAL_UINT16(2450,
+                           rf_channel_to_frequency_mhz(RF_PROTOCOL_ZIGBEE, 20));
+  TEST_ASSERT_EQUAL_UINT16(2480,
+                           rf_channel_to_frequency_mhz(RF_PROTOCOL_ZIGBEE, 26));
 }
 
 /* --- Filter & Jammer Tests --------------------------------------------- */
@@ -172,8 +183,10 @@ static void test_zigbee_frequency_calculation(void) {
 static void test_next_sweep_linear_and_tri_channel(void) {
   /* Wi-Fi standard linear sweep */
   TEST_ASSERT_EQUAL_UINT8(2, rf_channel_next_sweep(RF_PROTOCOL_WIFI, 1, false));
-  TEST_ASSERT_EQUAL_UINT8(13, rf_channel_next_sweep(RF_PROTOCOL_WIFI, 12, false));
-  TEST_ASSERT_EQUAL_UINT8(1, rf_channel_next_sweep(RF_PROTOCOL_WIFI, 13, false));
+  TEST_ASSERT_EQUAL_UINT8(13,
+                          rf_channel_next_sweep(RF_PROTOCOL_WIFI, 12, false));
+  TEST_ASSERT_EQUAL_UINT8(1,
+                          rf_channel_next_sweep(RF_PROTOCOL_WIFI, 13, false));
 
   /* Wi-Fi tri-channel mode (1, 6, 11) */
   TEST_ASSERT_EQUAL_UINT8(6, rf_channel_next_sweep(RF_PROTOCOL_WIFI, 1, true));
@@ -182,9 +195,12 @@ static void test_next_sweep_linear_and_tri_channel(void) {
   TEST_ASSERT_EQUAL_UINT8(1, rf_channel_next_sweep(RF_PROTOCOL_WIFI, 4, true));
 
   /* Zigbee sweep */
-  TEST_ASSERT_EQUAL_UINT8(12, rf_channel_next_sweep(RF_PROTOCOL_ZIGBEE, 11, false));
-  TEST_ASSERT_EQUAL_UINT8(26, rf_channel_next_sweep(RF_PROTOCOL_ZIGBEE, 25, false));
-  TEST_ASSERT_EQUAL_UINT8(11, rf_channel_next_sweep(RF_PROTOCOL_ZIGBEE, 26, false));
+  TEST_ASSERT_EQUAL_UINT8(12,
+                          rf_channel_next_sweep(RF_PROTOCOL_ZIGBEE, 11, false));
+  TEST_ASSERT_EQUAL_UINT8(26,
+                          rf_channel_next_sweep(RF_PROTOCOL_ZIGBEE, 25, false));
+  TEST_ASSERT_EQUAL_UINT8(11,
+                          rf_channel_next_sweep(RF_PROTOCOL_ZIGBEE, 26, false));
 }
 
 static void test_filter_ema_rssi(void) {

@@ -6,5 +6,5 @@ if(_minino_opt_on)
                     INCLUDE_DIRS "include"
                     PRIV_REQUIRES open_thread)
 else()
-    idf_component_register()
+    idf_component_register(INCLUDE_DIRS "include")
 endif()
