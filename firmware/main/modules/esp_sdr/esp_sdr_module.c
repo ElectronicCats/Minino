@@ -285,20 +285,22 @@ static void sdr_burst_run(void) {
            dest ? dest : "");
 }
 
-static TaskHandle_t s_host_task = NULL;
+static volatile TaskHandle_t s_host_task = NULL;
+static volatile bool s_host_stopping = false;
 
 static void sdr_web_host_task(void* arg) {
   (void) arg;
   ESP_LOGI(TAG, "Starting SDR Web Host session for ESPARGOS...");
   cat_console_pause();
-  s_sdr.tx_active = true;
-  sdr_render_screen("WEB HOST: LISTENING", "espargos.net/espsdr");
 
   (void) esdr_host_run();
 
   s_sdr.tx_active = false;
+  s_sdr.freq_mhz = c6_sdr_rx_get_freq();
   cat_console_resume();
-  sdr_render_screen("WEB HOST: RELEASED", NULL);
+  if (!s_host_stopping && s_sdr.running) {
+    sdr_render_screen("WEB HOST: RELEASED", NULL);
+  }
   s_host_task = NULL;
   vTaskDelete(NULL);
 }
@@ -307,13 +309,18 @@ static void sdr_web_host_start(void) {
   if (s_host_task != NULL) {
     return;
   }
-  xTaskCreate(sdr_web_host_task, "sdr_web_host", 6144, NULL, 5, &s_host_task);
+  s_host_stopping = false;
+  s_sdr.tx_active = true;
+  sdr_render_screen("WEB HOST: LISTENING", "espargos.net/espsdr");
+  xTaskCreate(sdr_web_host_task, "sdr_web_host", 6144, NULL, 5,
+              (TaskHandle_t*) &s_host_task);
 }
 
 static void sdr_web_host_stop(void) {
   if (s_host_task != NULL) {
+    s_host_stopping = true;
     esdr_host_request_stop();
-    for (int i = 0; i < 20 && s_host_task != NULL; i++) {
+    for (int i = 0; i < 40 && s_host_task != NULL; i++) {
       vTaskDelay(pdMS_TO_TICKS(50));
     }
     if (s_host_task != NULL) {
@@ -321,7 +328,9 @@ static void sdr_web_host_stop(void) {
       s_host_task = NULL;
       cat_console_resume();
     }
+    s_host_stopping = false;
   }
+  s_sdr.freq_mhz = c6_sdr_rx_get_freq();
   s_sdr.tx_active = false;
 }
 
@@ -422,6 +431,11 @@ static void sdr_input_handler(uint8_t button_name, uint8_t button_event) {
       }
       break;
     case BUTTON_UP:
+      if (s_host_task != NULL) {
+        s_sdr.freq_mhz = c6_sdr_rx_get_freq();
+        sdr_render_screen("HOST CONTROLS FREQ", "espargos.net/espsdr");
+        break;
+      }
       if (s_sdr.freq_mhz < SDR_FREQ_MAX_MHZ) {
         s_sdr.freq_mhz = sdr_freq_next_up(s_sdr.freq_mhz);
         (void) c6_sdr_rx_tune(s_sdr.freq_mhz);
@@ -429,6 +443,11 @@ static void sdr_input_handler(uint8_t button_name, uint8_t button_event) {
       }
       break;
     case BUTTON_DOWN:
+      if (s_host_task != NULL) {
+        s_sdr.freq_mhz = c6_sdr_rx_get_freq();
+        sdr_render_screen("HOST CONTROLS FREQ", "espargos.net/espsdr");
+        break;
+      }
       if (s_sdr.freq_mhz > SDR_FREQ_MIN_MHZ) {
         s_sdr.freq_mhz = sdr_freq_next_down(s_sdr.freq_mhz);
         (void) c6_sdr_rx_tune(s_sdr.freq_mhz);

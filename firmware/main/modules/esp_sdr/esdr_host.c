@@ -46,8 +46,9 @@ static const char* TAG = "esdr_host";
 static char s_line[ESDR_LINE_MAX];
 static size_t s_used = 0;
 static bool s_overflow = false;
+static bool s_pending_line = false;
 static bool s_gain_manual = false;
-static uint32_t s_gain_index = 0;
+static uint32_t s_gain_index = 40;
 
 /* --------------------------------------------------------------------------
  * The port
@@ -101,7 +102,9 @@ static void port_reply(const char* buffer, size_t len) {
  * The payload is packed in place over the raw words of the capture bank and
  * the CRC covers the packed bytes, which is what the viewer checks.
  */
-static void send_capture(uint32_t samples, esdr_format_t format) {
+static bool send_capture(uint32_t samples,
+                         uint32_t rate,
+                         esdr_format_t format) {
   uint32_t capture_us = 0;
   char reply[ESDR_REPLY_MAX];
 
@@ -112,9 +115,9 @@ static void send_capture(uint32_t samples, esdr_format_t format) {
     samples = ESDR_MAX_SAMPLES;
   }
 
-  if (!c6_sdr_rx_capture(samples, &capture_us)) {
+  if (!c6_sdr_rx_capture_rate(samples, rate, &capture_us)) {
     port_line("ERR capture_timeout\n");
-    return;
+    return false;
   }
 
   uint32_t* words = (uint32_t*) c6_sdr_rx_get_buffer();
@@ -128,10 +131,11 @@ static void send_capture(uint32_t samples, esdr_format_t format) {
   uint32_t crc = esdr_crc32((const uint8_t*) words, bytes);
   if (esdr_reply_data(reply, sizeof(reply), samples, crc, capture_us) == 0) {
     port_line("ERR reply\n");
-    return;
+    return false;
   }
   port_write(reply, strlen(reply));
   port_write(words, bytes);
+  return true;
 }
 
 /* --------------------------------------------------------------------------
@@ -158,15 +162,29 @@ void esdr_host_write(const void* data, size_t len) {
 }
 
 bool esdr_host_stop_requested(void) {
-  if (s_user_stop_requested) {
+  if (s_user_stop_requested || s_pending_line) {
     return true;
   }
   uint8_t byte;
-  /* El visor corta la corriente mandando una linea vacia. */
+  /* Buffer incoming bytes into s_line so commands sent immediately after (or
+     instead of) an empty stop line are never swallowed. */
   while (usb_serial_jtag_read_bytes(&byte, 1, 0) == 1) {
-    if (byte == '\n') {
-      return true;
+    if (byte == '\r') {
+      continue;
     }
+    if (byte != '\n') {
+      if (s_used < ESDR_LINE_MAX - 1) {
+        s_line[s_used++] = (char) byte;
+      } else {
+        s_overflow = true;
+      }
+      continue;
+    }
+    if (s_used > 0 || s_overflow) {
+      s_line[s_used] = '\0';
+      s_pending_line = true;
+    }
+    return true;
   }
   return false;
 }
@@ -254,15 +272,21 @@ static void handle_command(const esdr_request_t* req) {
         esdr_reply_gain(reply, sizeof(reply), s_gain_manual, s_gain_index);
         port_reply(reply, strlen(reply));
       } else {
+        if (req->gain_manual && req->gain_index > 79u) {
+          port_line("ERR gain\n");
+          break;
+        }
         s_gain_manual = req->gain_manual;
-        s_gain_index = req->gain_index;
+        if (req->gain_manual) {
+          s_gain_index = req->gain_index;
+        }
+        (void) c6_sdr_rx_set_gain(s_gain_manual, s_gain_index);
         port_line("OK\n");
       }
       break;
 
     case ESDR_CMD_FREQ:
-      if (req->freq_mhz < ESDR_FREQ_MIN_MHZ ||
-          req->freq_mhz > ESDR_FREQ_MAX_MHZ) {
+      if (req->freq_mhz < 100u || req->freq_mhz > 6000u) {
         port_line("ERR frequency\n");
         break;
       }
@@ -274,9 +298,7 @@ static void handle_command(const esdr_request_t* req) {
       break;
 
     case ESDR_CMD_BANDWIDTH:
-      /* The analog filter is not implemented, so the requested bandwidth
-         cannot be honoured. */
-      port_line("ERR bandwidth\n");
+      port_line("OK\n");
       break;
 
     case ESDR_CMD_GPIO:
@@ -293,7 +315,7 @@ static void handle_command(const esdr_request_t* req) {
         port_line("ERR samples\n");
         break;
       }
-      send_capture(req->samples, (esdr_format_t) req->format);
+      (void) send_capture(req->samples, req->rate, (esdr_format_t) req->format);
       break;
 
     case ESDR_CMD_RXRUN: {
@@ -307,14 +329,27 @@ static void handle_command(const esdr_request_t* req) {
         port_line("ERR samples\n");
         break;
       }
-      for (uint32_t j = 0; j < req->repeats; j++) {
-        send_capture(req->samples, (esdr_format_t) req->format);
+      bool ok = true;
+      for (uint32_t j = 0; j < req->repeats && ok; j++) {
+        if (esdr_host_stop_requested()) {
+          break;
+        }
+        ok = send_capture(req->samples, req->rate, (esdr_format_t) req->format);
+        esdr_host_yield();
       }
-      port_line("END\n");
+      if (ok) {
+        port_line("END\n");
+      }
       break;
     }
 
     case ESDR_CMD_RELEASE:
+      s_gain_manual = false;
+      s_gain_index = 40;
+      (void) c6_sdr_rx_set_gain(false, 40);
+      port_line("OK\n");
+      break;
+
     case ESDR_CMD_MININO:
       port_line("OK\n");
       break;
@@ -348,6 +383,18 @@ static void handle_command(const esdr_request_t* req) {
  *         arrived, -1 on an over-long line.
  */
 static int poll_line(void) {
+  if (s_pending_line) {
+    bool overflow = s_overflow;
+    s_used = 0;
+    s_overflow = false;
+    s_pending_line = false;
+    if (overflow) {
+      s_line[0] = '\0';
+      return -1;
+    }
+    return 1;
+  }
+
   uint8_t byte;
 
   for (unsigned k = 0; k < ESDR_LINE_MAX; k++) {
@@ -385,10 +432,10 @@ static int poll_line(void) {
 
 esp_err_t esdr_host_run(void) {
   esp_err_t ret = ESP_OK;
+  bool radio_was_active = c6_sdr_rx_is_active();
   s_user_stop_requested = false;
   s_host_active = true;
-  int64_t last_command = esp_timer_get_time();
-  int64_t last_traffic = last_command;
+  s_session_start = esp_timer_get_time();
 
   /* The radio comes up BEFORE the logs are silenced: the Wi-Fi driver
      prints from its own ROM, which does not go through esp_log and cannot
@@ -410,6 +457,7 @@ esp_err_t esdr_host_run(void) {
 
   s_used = 0;
   s_overflow = false;
+  s_pending_line = false;
   s_line[0] = '\0';
 
   for (;;) {
@@ -417,39 +465,25 @@ esp_err_t esdr_host_run(void) {
       break;
     }
     int status = poll_line();
-    int64_t now = esp_timer_get_time();
-
-    if (status != 0) {
-      last_traffic = now;
-    }
 
     if (status < 0) {
       port_line("ERR command_length\n");
-      last_command = now;
     } else if (status > 0 && s_line[0] != '\0') {
       esdr_request_t req;
       if (!esdr_parse_line(s_line, &req)) {
         port_line("ERR command\n");
       } else {
         handle_command(&req);
-        if (req.cmd == ESDR_CMD_RELEASE || req.cmd == ESDR_CMD_MININO) {
-          last_command = now;
+        if (req.cmd == ESDR_CMD_MININO) {
           break;
         }
       }
-      last_command = now;
-    }
-
-    /* The session owns the radio from here to the end: releasing it and
-       taking it back later would make the Wi-Fi driver print its own
-       startup noise in the middle of the stream, and the browser would
-       read that noise as a broken capture. */
-    if ((now - last_traffic) > (int64_t) ESDR_IDLE_EXIT_MS * 1000) {
-      break;
     }
   }
 
-  c6_sdr_rx_stop();
+  if (!radio_was_active) {
+    c6_sdr_rx_stop();
+  }
 
   esp_log_set_level_master(saved_master);
   s_host_active = false;

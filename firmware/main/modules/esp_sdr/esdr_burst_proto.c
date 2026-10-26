@@ -338,13 +338,9 @@ size_t esdr_reply_limits(char* out, size_t len) {
   /* The viewer validates the shape of this JSON: gain is [min, max, step]
      with the step dividing the range, bandwidth is null or
      [min, max, step, default] in MHz, rates is a list of sample rates it
-     knows and bits a list of 8 and 10.
-
-     Minino does not implement the manual gain, so the gain range is a single
-     point, and it does not implement the analog filter, so the bandwidth is
-     null. */
+     knows and bits a list of 8 and 10. */
   return emit(out, len,
-              "LIMITS {\"gain\":[0,0,1],\"bandwidth\":null,"
+              "LIMITS {\"gain\":[0,79,1],\"bandwidth\":null,"
               "\"rates\":[80000000,40000000,16000000],\"bits\":[8,10]}\n");
 }
 
@@ -369,8 +365,8 @@ size_t esdr_reply_sync(char* out, size_t len, uint64_t nonce) {
 
 size_t esdr_reply_gain(char* out, size_t len, bool manual, uint32_t index) {
   char text[64];
-  snprintf(text, sizeof(text), "GAIN %s %" PRIu32 " 0 0 0\n",
-           manual ? "MANUAL" : "HARDWARE", (uint32_t) index);
+  snprintf(text, sizeof(text), "GAIN %s %d 0 79 0\n",
+           manual ? "MANUAL" : "HARDWARE", manual ? (int) index : -1);
   return emit(out, len, text);
 }
 

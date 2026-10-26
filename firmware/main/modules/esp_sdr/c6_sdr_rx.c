@@ -35,6 +35,7 @@ extern void rom_pbus_xpd_rx_off(void);
 extern void ram_pbus_xpd_rx_on(unsigned);
 extern void ram_pbus_xpd_tx_on(unsigned);
 extern void set_rxclk_en(unsigned);
+extern void phy_force_rx_gain(unsigned, unsigned);
 /* El tono del cert-test y el programador de canal del PHY. Los dos hacen
    falta para que la entrada del conversor sea una señal y no un valor
    fijo: ver c6_sdr_rx_tune(). */
@@ -48,6 +49,8 @@ static bool s_we_started_wifi = false;
 static bool s_carrier_tx_active = false;
 static uint32_t s_current_freq = 2412;
 static uint32_t s_saved_sram_owner = 0;
+static bool s_gain_manual = false;
+static uint32_t s_gain_index = 40;
 
 esp_err_t c6_sdr_rx_init(void) {
   if (s_rx_active) {
@@ -139,8 +142,10 @@ static void rx_front_end(uint32_t freq_mhz) {
   } else {
     ch = 13;
   }
+  bool ch_changed = false;
   if (wifi_driver_get_channel() != ch) {
     wifi_driver_set_channel(ch);
+    ch_changed = true;
   }
 
   /* Setup RX signal chain registers */
@@ -148,10 +153,24 @@ static void rx_front_end(uint32_t freq_mhz) {
   rom_pbus_xpd_tx_off();
   ram_pbus_xpd_rx_on(1);
   set_rxclk_en(1);
+  phy_force_rx_gain(s_gain_manual ? 1u : 0u, (unsigned) s_gain_index);
 
-  /* El margen de asentamiento del upstream: sin el, la cadena no está
-     lista cuando el motor empieza a escribir. */
-  esp_rom_delay_us(3000);
+  /* El margen de asentamiento del upstream cuando cambia el canal. */
+  if (ch_changed) {
+    esp_rom_delay_us(3000);
+  }
+}
+
+esp_err_t c6_sdr_rx_set_gain(bool manual, uint32_t gain_index) {
+  if (gain_index > 79u) {
+    gain_index = 79u;
+  }
+  s_gain_manual = manual;
+  s_gain_index = gain_index;
+  if (s_rx_active && !s_carrier_tx_active) {
+    phy_force_rx_gain(s_gain_manual ? 1u : 0u, (unsigned) s_gain_index);
+  }
+  return ESP_OK;
 }
 
 esp_err_t c6_sdr_rx_tune(uint32_t freq_mhz) {
@@ -188,6 +207,7 @@ esp_err_t c6_sdr_rx_tune(uint32_t freq_mhz) {
     ram_stop_tx_tone(0);
   } else {
     rx_front_end(freq_mhz);
+    esp_rom_delay_us(3000);
   }
 
   ESP_LOGI(TAG, "Tuned to %lu MHz (CH %d)%s", (unsigned long) freq_mhz, ch,
@@ -203,19 +223,20 @@ bool c6_sdr_rx_capture(uint32_t num_samples, uint32_t* capture_us) {
   return c6_sdr_rx_capture_rate(num_samples, C6_SDR_RATE_80MSPS, capture_us);
 }
 
-/* The dump engine takes a clock divider in bits 15-16 of the control
-   register: 0 is the full 80 MS/s, 1 halves it and 3 divides it by five.
-   Those are the rates the ESP-SDR burst protocol offers on the C6. */
-static bool clock_divider_for_rate(uint32_t rate, uint32_t* divider) {
+/* On ESP32-C6, the hardware dump engine (0x600a9004) only captures at the
+   native 80 MS/s rate; bits 0..16 of DUMP_CTRL_REG are the sample count
+   (setting bits 15-16 overflows the 64 KB SRAM capture bank). Lower rates
+   (40 MS/s and 16 MS/s) are decimated in software from the 80 MS/s capture. */
+static bool decimation_step_for_rate(uint32_t rate, uint32_t* step) {
   switch (rate) {
     case C6_SDR_RATE_80MSPS:
-      *divider = 0;
+      *step = 1u;
       return true;
     case C6_SDR_RATE_40MSPS:
-      *divider = 1;
+      *step = 2u;
       return true;
     case C6_SDR_RATE_16MSPS:
-      *divider = 3;
+      *step = 5u;
       return true;
     default:
       return false;
@@ -225,7 +246,7 @@ static bool clock_divider_for_rate(uint32_t rate, uint32_t* divider) {
 bool c6_sdr_rx_capture_rate(uint32_t num_samples,
                             uint32_t rate,
                             uint32_t* capture_us) {
-  uint32_t divider = 0;
+  uint32_t step = 1u;
 
   if (!s_rx_active) {
     if (c6_sdr_rx_init() != ESP_OK) {
@@ -233,7 +254,7 @@ bool c6_sdr_rx_capture_rate(uint32_t num_samples,
     }
   }
 
-  if (!clock_divider_for_rate(rate, &divider)) {
+  if (!decimation_step_for_rate(rate, &step)) {
     ESP_LOGW(TAG, "Unsupported sample rate code %lu", (unsigned long) rate);
     return false;
   }
@@ -243,12 +264,17 @@ bool c6_sdr_rx_capture_rate(uint32_t num_samples,
   if (num_samples > C6_SDR_MAX_SAMPLES)
     num_samples = C6_SDR_MAX_SAMPLES;
 
+  uint32_t hw_samples = num_samples * step;
+  if (hw_samples > C6_SDR_MAX_SAMPLES) {
+    hw_samples = C6_SDR_MAX_SAMPLES;
+  }
+
   /* Write canary test values to detect capture overrun and timeouts */
-  for (uint32_t j = 0; j < num_samples; j++) {
+  for (uint32_t j = 0; j < hw_samples; j++) {
     s_iq_buf[j] = 0xa5a0055au;
   }
   for (uint32_t j = 0; j < 4; j++) {
-    s_iq_buf[num_samples + j] = 0x5a5aa5a5u ^ j;
+    s_iq_buf[hw_samples + j] = 0x5a5aa5a5u ^ j;
   }
 
   /* La cadena de RX se rehace antes de cada captura: el driver de Wi-Fi
@@ -274,8 +300,8 @@ bool c6_sdr_rx_capture_rate(uint32_t num_samples,
   __asm__ volatile("fence rw,rw" ::: "memory");
   (void) REG_READ(SRAM_OWNER_REG);
 
-  /* Trigger capture. The clock divider rides in bits 15-16 of the count. */
-  const uint32_t count = num_samples | (divider << 15);
+  /* Trigger capture at native 80 MS/s. Never set bits 15-16 on ESP32-C6. */
+  const uint32_t count = hw_samples;
   REG_WRITE(DUMP_CTRL_REG, count | (1u << 18));
   REG_WRITE(DUMP_CTRL_REG, count | (1u << 31));
   REG_WRITE(DUMP_CTRL_REG, count | (1u << 31) | (1u << 19));
@@ -312,9 +338,16 @@ bool c6_sdr_rx_capture_rate(uint32_t num_samples,
   /* The four guard words sit right after the samples: if the engine wrote
      past the count it clobbered them, and the capture is short. */
   for (uint32_t j = 0; j < 4; j++) {
-    if (s_iq_buf[num_samples + j] != (0x5a5aa5a5u ^ j)) {
+    if (s_iq_buf[hw_samples + j] != (0x5a5aa5a5u ^ j)) {
       ESP_LOGW(TAG, "Capture overrun (the engine wrote past the count)");
       return false;
+    }
+  }
+
+  if (step > 1u) {
+    for (uint32_t j = 0; j < num_samples; j++) {
+      uint32_t src_idx = (j * step) % hw_samples;
+      s_iq_buf[j] = s_iq_buf[src_idx];
     }
   }
 

@@ -41,6 +41,11 @@ esp_err_t c6_sdr_rx_init(void);
 esp_err_t c6_sdr_rx_tune(uint32_t freq_mhz);
 
 /**
+ * @brief Configure RX AGC mode (hardware automatic or manual gain index 0..79).
+ */
+esp_err_t c6_sdr_rx_set_gain(bool manual, uint32_t gain_index);
+
+/**
  * @brief Get current receiver center frequency in MHz.
  */
 uint32_t c6_sdr_rx_get_freq(void);

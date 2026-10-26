@@ -198,10 +198,16 @@ static void test_the_limits_are_the_ones_the_viewer_validates(void) {
      the range, bandwidth is null or [min, max, step, default], rates is a
      list of rates it knows and bits is a list of 8 and 10. */
   TEST_ASSERT_EQUAL_STRING(
-      "LIMITS {\"gain\":[0,0,1],\"bandwidth\":null,"
+      "LIMITS {\"gain\":[0,79,1],\"bandwidth\":null,"
       "\"rates\":[80000000,40000000,16000000],\"bits\":[8,10]}\n",
       reply);
   TEST_ASSERT_TRUE(strlen(reply) <= 256);
+
+  TEST_ASSERT_TRUE(esdr_reply_gain(reply, sizeof(reply), false, 40) > 0);
+  TEST_ASSERT_EQUAL_STRING("GAIN HARDWARE -1 0 79 0\n", reply);
+
+  TEST_ASSERT_TRUE(esdr_reply_gain(reply, sizeof(reply), true, 40) > 0);
+  TEST_ASSERT_EQUAL_STRING("GAIN MANUAL 40 0 79 0\n", reply);
 }
 
 static void test_the_version_reply_is_the_json_the_viewer_parses(void) {

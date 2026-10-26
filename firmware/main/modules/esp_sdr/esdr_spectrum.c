@@ -411,7 +411,8 @@ bool esdr_spectrum_command(const char* line,
   esdr_host_write(text, (size_t) written);
 
   uint32_t frames = 0, ffts = 0, status = 0;
-  int64_t yield_at = esdr_host_elapsed_ms();
+  uint64_t start_ms = esdr_host_elapsed_ms();
+  uint64_t yield_at = start_ms;
   uint64_t pairs = 0;
   uint64_t index = 0;
   unsigned merged = 0;
@@ -424,12 +425,14 @@ bool esdr_spectrum_command(const char* line,
       stopped = true;
       break;
     }
-    if (ms && esdr_host_elapsed_ms() > ms) {
+    uint64_t now_ms = esdr_host_elapsed_ms();
+    uint64_t elapsed_ms = now_ms - start_ms;
+    if (ms && elapsed_ms >= ms) {
       break;
     }
 
     if (!merged) {
-      index = (uint64_t) esdr_host_elapsed_ms() * s_rates[rate] / 1000u;
+      index = elapsed_ms * s_rates[rate] / 1000u;
     }
 
     const uint32_t* words = NULL;
@@ -476,7 +479,8 @@ bool esdr_spectrum_command(const char* line,
     /* El bucle no puede quedarse con la CPU: la tarea idle es la que
        alimenta el watchdog, asi que hay que cederle el paso de vez en
        cuando (el firmware del ESPARGOS hace lo mismo). */
-    if (esdr_host_elapsed_ms() - yield_at >= 20) {
+    now_ms = esdr_host_elapsed_ms();
+    if (now_ms - yield_at >= 20) {
       esdr_host_yield();
       yield_at = esdr_host_elapsed_ms();
     }
@@ -491,11 +495,12 @@ bool esdr_spectrum_command(const char* line,
     frames++;
   }
 
-  written = snprintf(
-      text, sizeof(text),
-      "SPECEND %u 0 %u %" PRIu64 " %" PRIu64 " 0 0 %u 0 0 %u %u\n",
-      (unsigned) status, (unsigned) ffts, pairs, esdr_host_elapsed_ms(),
-      (unsigned) frames, (unsigned) ffts, (unsigned) stopped);
+  uint64_t total_us = (esdr_host_elapsed_ms() - start_ms) * 1000u;
+  written =
+      snprintf(text, sizeof(text),
+               "SPECEND %u 0 %u %" PRIu64 " %" PRIu64 " 0 0 %u 0 0 %u %u\n",
+               (unsigned) status, (unsigned) ffts, pairs, total_us,
+               (unsigned) frames, (unsigned) ffts, (unsigned) stopped);
   esdr_host_write(text, (size_t) written);
 
   workspace_free(&ws);
