@@ -18,6 +18,8 @@
 #include "sd_card.h"
 
 #include "captive_module.h"
+#include "wifi_service.h"
+#include "app_manager.h"
 
 #define MININO_CAPTIVE_DEFAULT_SSID CONFIG_WIFI_AP_NAME
 #define MININO_CAPTIVE_DEFAULT_PASS ""
@@ -173,8 +175,7 @@ static void captive_module_free_portals_list(void) {
 }
 
 static void wifi_init_softap(void) {
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+  /* WiFi ya está inicializada por wifi_service_init() en app_main(). */
   wifi_config_t wifi_config = {
       .ap = {.ssid = MININO_CAPTIVE_DEFAULT_SSID,
              .ssid_len = strlen(MININO_CAPTIVE_DEFAULT_SSID),
@@ -230,7 +231,11 @@ static void wifi_init_softap(void) {
     wifi_config.ap.authmode = WIFI_AUTH_OPEN;
   }
 
-  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+  /* Modo ya configurado por la política del servicio; usamos la accessor para consistencia. */
+  if (!wifi_service_is_ap_get()) {
+    ESP_LOGW(TAG, "WiFi no en modo AP; forzando modo AP");
+    ESP_ERROR_CHECK(wifi_service_set_mode(WIFI_MODE_AP));
+  }
   ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
   ESP_ERROR_CHECK(esp_wifi_start());
 
@@ -332,7 +337,12 @@ static void captive_module_show_user_creds(char* user_str) {
 
 static esp_err_t captive_portal_validate_input(httpd_req_t* req) {
   char* buf;
-  char str_dump[512];
+  /* Must be initialised: a GET /validate with no query string skips the whole
+     block below, and the uninitialised 512 bytes were then handed to
+     sd_card_append_to_file() -> fputs/strlen, reading past the end of the
+     stack frame and dumping adjacent memory into the harvested-credentials
+     file. Any bot probing /validate with no parameters hit it. */
+  char str_dump[512] = {0};
 
   captive_module_free_user_context();
 
@@ -506,8 +516,8 @@ static void captive_module_disable_wifi() {
     server = NULL;
     ESP_LOGW("CAPTIVE", "HTTP server stopped");
   }
-  esp_wifi_stop();
-  esp_wifi_deinit();
+  /* Desinicializar WiFi por medio del servicio. */
+  wifi_service_deinit();
   esp_netif_t* netif = esp_netif_get_handle_from_ifkey(CAPTIVE_PORTAL_NET_NAME);
   if (netif) {
     esp_netif_destroy(netif);
@@ -528,9 +538,6 @@ static void captive_module_wifi_begin() {
     ESP_LOGW(TAG_WIFI_SCANNER_MODULE, "Event loop create: %s",
              esp_err_to_name(errr));
   }
-  ESP_ERROR_CHECK(nvs_flash_init());
-
-  esp_netif_create_default_wifi_ap();
   wifi_init_softap();
   server = start_webserver();
 
@@ -585,6 +592,10 @@ static uint16_t captive_module_get_sd_redirect() {
     if (!ext || strcmp(ext, ".html") != 0) {
       continue;
     }
+    if (redirect_list.count >= CAPTIVE_PORTAL_LIMIT_PORTALS) {
+      ESP_LOGW("CAPTIVE", "Maximum redirect portals reached (%d)", CAPTIVE_PORTAL_LIMIT_PORTALS);
+      break;
+    }
     redirect_list.ent[redirect_list.count] =
         (char*) malloc(strlen(ent->d_name) + 1);
     if (!redirect_list.ent[redirect_list.count]) {
@@ -632,6 +643,10 @@ static uint16_t captive_module_get_sd_portals() {
     const char* ext = strrchr(ent->d_name, '.');
     if (!ext || strcmp(ext, ".html") != 0) {
       continue;
+    }
+    if (portals_list.count >= CAPTIVE_PORTAL_LIMIT_PORTALS) {
+      ESP_LOGW("CAPTIVE", "Maximum portals reached (%d)", CAPTIVE_PORTAL_LIMIT_PORTALS);
+      break;
     }
     portals_list.ent[portals_list.count] =
         (char*) malloc(strlen(ent->d_name) + 1);
@@ -692,6 +707,7 @@ static void captive_module_show_running() {
   notification.head = wifi_ap_name;
   notification.body = body;
   notification.on_exit = captive_module_disable_wifi;
+
   general_notification_handler(notification);
 }
 
@@ -916,10 +932,7 @@ static void captive_module_main_menu_handler(uint8_t option) {
 }
 
 static void exit_main() {
-  if (!sd_card_is_not_mounted()) {
-    sd_card_unmount();
-  }
-  menus_module_restart();
+  app_manager_exit();
 }
 
 void captive_module_change_ap_name(char* name) {
@@ -941,3 +954,70 @@ void captive_module_main(void) {
   main.exit_cb = exit_main;
   general_submenu(main);
 }
+
+
+// ---------------------------------------------------------------------------
+// app_manager callbacks
+// ---------------------------------------------------------------------------
+static void captive_on_enter(void) {
+  captive_module_main();
+}
+
+static void captive_on_input(uint8_t button_name, uint8_t button_event) {
+  // Screens install their own input handlers via general_submenu/general_radio_selection/general_notification
+  (void)button_name;
+  (void)button_event;
+}
+
+static void captive_on_exit(void) {
+  // Cleanup is done in captive_module_disable_wifi which is called from notification on_exit
+  // But we need to ensure it's called if app exits without going through notification
+  if (server) {
+    httpd_stop(server);
+    server = NULL;
+  }
+  if (dns_server) {
+    stop_dns_server(dns_server);
+    dns_server = NULL;
+  }
+  wifi_service_deinit();
+  esp_netif_t* netif = esp_netif_get_handle_from_ifkey(CAPTIVE_PORTAL_NET_NAME);
+  if (netif) {
+    esp_netif_destroy(netif);
+  }
+  if (!sd_card_is_not_mounted()) {
+    sd_card_unmount();
+  }
+  // Free lists
+  captive_module_free_portals_list();
+  captive_module_free_redirect_list();
+  captive_module_free_user_context();
+  captive_module_scan_clean();
+  for (int i = 0; i < 22; i++) {
+    if (wifi_list[i]) {
+      free(wifi_list[i]);
+      wifi_list[i] = NULL;
+    }
+  }
+  if (scanning_task_handle != NULL) {
+    vTaskDelete(scanning_task_handle);
+    scanning_task_handle = NULL;
+  }
+  retries = 0;
+  last_index_selected = 0;
+}
+
+// Wrapper for menu entry
+void app_manager_enter_wrapper_captive(void) {
+  extern const minino_app_t captive_app;
+  app_manager_enter(&captive_app);
+}
+
+// App definition for app_manager
+const minino_app_t captive_app = {
+  .name = "captive_portal",
+  .on_enter = captive_on_enter,
+  .on_input = captive_on_input,
+  .on_exit = captive_on_exit,
+};
+

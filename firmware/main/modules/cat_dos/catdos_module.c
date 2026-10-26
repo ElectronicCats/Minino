@@ -12,6 +12,7 @@
 #include "animations_task.h"
 #include "bitmaps_general.h"
 #include "cat_console.h"
+#include "catdos_module.h"
 #include "cmd_wifi.h"
 #include "deauth_screens.h"
 #include "esp_log.h"
@@ -33,6 +34,7 @@
 #include "sdkconfig.h"
 #include "task_manager.h"
 #include "wifi_ap_manager.h"
+#include "app_manager.h"
 #include "wifi_bitmaps.h"
 
 static uint8_t last_main_selection = 0;
@@ -164,9 +166,16 @@ static void* http_get_task(void* pvParameters) {
   struct addrinfo* res;
   int s;
 
-  char request[128];
-  snprintf(request, sizeof(request), "GET %s HTTP/1.0\r\nHost: %s:%s\r\n\r\n",
-           endpoint, host, port);
+  char request[256];
+  int req_len = snprintf(request, sizeof(request),
+                         "GET %s HTTP/1.0\r\nHost: %s:%s\r\n\r\n",
+                         endpoint, host, port);
+  if (req_len < 0 || req_len >= (int) sizeof(request)) {
+    ESP_LOGE(CATDOS_TAG, "Request string too long");
+    task_atack = NULL;
+    vTaskDelete(NULL);
+    return NULL;
+  }
   running_attack = true;
 
   while (running_attack) {
@@ -247,6 +256,8 @@ static void catdos_module_send_attack_task(void* pvParameters) {
 }
 
 int catdos_module_send_attack(int argc, char** argv) {
+  (void) argc;
+  (void) argv;
   task_manager_create(&catdos_module_send_attack_task, "catdos_send",
                       TASK_STACK_MEDIUM, NULL, TASK_PRIORITY_NORMAL, NULL);
   return 0;
@@ -265,8 +276,7 @@ static bool catdos_module_display_if_nconnect() {
 }
 
 static void catdos_module_exit_app() {
-  wifi_ap_manager_unregister_callback();
-  menus_module_restart();
+  app_manager_exit();
 }
 
 static void catdos_module_show_menu() {
@@ -308,17 +318,17 @@ static void catdos_module_show_target() {
   int err = catdos_module_get_target();
 
   if (err == 0) {
-    target_details[1] = strdup(host);
+    target_details[1] = host;
   } else {
     target_details[1] = "Not set";
   }
   if (err == 0) {
-    target_details[3] = strdup(port);
+    target_details[3] = port;
   } else {
     target_details[3] = "Not set";
   }
   if (err == 0) {
-    target_details[5] = strdup(endpoint);
+    target_details[5] = endpoint;
   } else {
     target_details[5] = "Not set";
   }
@@ -389,8 +399,11 @@ static void catdos_module_connect_selected(uint8_t option) {
 }
 
 static void catdos_module_exit_aps() {
-  for (int i = 0; i < aps_count; i++) {
-    free(wifi_list[i]);
+  for (int i = 0; i < 20; i++) {
+    if (wifi_list[i] != NULL) {
+      free(wifi_list[i]);
+      wifi_list[i] = NULL;
+    }
   }
   aps_count = 0;
   catdos_module_show_menu();
@@ -399,19 +412,38 @@ static void catdos_module_exit_aps() {
 static void catdos_module_show_aps() {
   aps_count = preferences_get_int("count_ap", 0);
 
-  if (aps_count == 0) {
+  if (aps_count <= 0) {
+    aps_count = 0;
     catdos_module_show_no_aps();
     return;
   }
+  if (aps_count > 20) {
+    aps_count = 20;
+  }
+  for (int i = 0; i < 20; i++) {
+    if (wifi_list[i] != NULL) {
+      free(wifi_list[i]);
+      wifi_list[i] = NULL;
+    }
+  }
+  int loaded = 0;
   for (int i = 0; i < aps_count; i++) {
-    char wifi_ap[100];
+    char wifi_ap[32];
     char wifi_ssid[100];
-    sprintf(wifi_ap, "wifi%d", i);
-    esp_err_t err = preferences_get_string(wifi_ap, wifi_ssid, 100);
+    snprintf(wifi_ap, sizeof(wifi_ap), "wifi%d", i);
+    esp_err_t err = preferences_get_string(wifi_ap, wifi_ssid, sizeof(wifi_ssid));
     if (err != ESP_OK) {
       continue;
     }
-    wifi_list[i] = strdup(wifi_ssid);
+    wifi_list[loaded] = strdup(wifi_ssid);
+    if (wifi_list[loaded] != NULL) {
+      loaded++;
+    }
+  }
+  aps_count = loaded;
+  if (aps_count == 0) {
+    catdos_module_show_no_aps();
+    return;
   }
   general_submenu_menu_t menu_aps = {0};
   menu_aps.options = (const char**) wifi_list;
@@ -466,3 +498,59 @@ void catdos_module_begin() {
 
   catdos_module_show_menu();
 }
+
+
+// ---------------------------------------------------------------------------
+// app_manager callbacks
+// ---------------------------------------------------------------------------
+static void catdos_on_enter(void) {
+  oled_screen_clear(OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("THIS APP STILL", 0, OLED_DISPLAY_INVERT);
+  oled_screen_display_text_center("IN BETA", 1, OLED_DISPLAY_INVERT);
+  vTaskDelay(2000 / portTICK_PERIOD_MS);
+  oled_screen_clear(OLED_DISPLAY_NORMAL);
+  oled_screen_display_text_center("CATDOS", 0, OLED_DISPLAY_NORMAL);
+  show_dos_commands();
+  catdos_module_show_menu();
+}
+
+static void catdos_on_input(uint8_t button_name, uint8_t button_event) {
+  // Input is handled by the menu callbacks installed via menus_module_set_app_state
+  (void)button_name;
+  (void)button_event;
+}
+
+static void catdos_on_exit(void) {
+  // Stop attack if running
+  running_attack = false;
+  if (task_atack != NULL) {
+    vTaskDelete(task_atack);
+    task_atack = NULL;
+  }
+  // Unregister AP manager callback
+  wifi_ap_manager_unregister_callback();
+  // Free wifi list
+  for (int i = 0; i < 20; i++) {
+    if (wifi_list[i] != NULL) {
+      free(wifi_list[i]);
+      wifi_list[i] = NULL;
+    }
+  }
+  aps_count = 0;
+  last_main_selection = 0;
+}
+
+// Wrapper for menu entry
+void app_manager_enter_wrapper_catdos(void) {
+  extern const minino_app_t catdos_app;
+  app_manager_enter(&catdos_app);
+}
+
+// App definition for app_manager
+const minino_app_t catdos_app = {
+  .name = "catdos",
+  .on_enter = catdos_on_enter,
+  .on_input = catdos_on_input,
+  .on_exit = catdos_on_exit,
+};
+

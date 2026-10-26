@@ -5,6 +5,7 @@
 #include "general_submenu.h"
 #include "menus_module.h"
 #include "wifi_analyzer.h"
+#include "app_manager.h"
 #include "wifi_sniffer.h"
 
 static analyzer_scenes_e current_scene;
@@ -44,7 +45,7 @@ static void main_menu_selection_handler(uint8_t selection) {
 }
 
 static void __attribute__((unused)) main_menu_exit_handler() {
-  menus_module_reset();
+  app_manager_exit();
 }
 
 void analyzer_scenes_main_menu() {
@@ -53,7 +54,7 @@ void analyzer_scenes_main_menu() {
   main_menu.options = analizer_main_options;
   main_menu.options_count = sizeof(analizer_main_options) / sizeof(char*);
   main_menu.select_cb = main_menu_selection_handler;
-  main_menu.exit_cb = menus_module_restart;
+  main_menu.exit_cb = main_menu_exit_handler;
   general_submenu(main_menu);
   wifi_analyzer_begin();
 }

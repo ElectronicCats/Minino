@@ -1,4 +1,5 @@
 #include "wifi_analyzer.h"
+#include "app_manager.h"
 
 #include "catdos_module.h"
 #include "esp_check.h"
@@ -173,7 +174,8 @@ void wifi_module_analyzer_summary_exit() {
 }
 
 void wifi_analyzer_exit() {
-  menus_module_restart();
+  // Legacy entry point — no longer used; app_manager handles exit.
+  app_manager_exit();
 }
 
 void wifi_module_analyzer_destination_exit() {
@@ -487,3 +489,62 @@ static void wifi_module_input_cb(uint8_t button_name, uint8_t button_event) {
       break;
   }
 }
+
+// ---------------------------------------------------------------------------
+// app_manager callbacks
+// ---------------------------------------------------------------------------
+static void wifi_analyzer_on_enter(void) {
+  analyzer_scenes_main_menu();
+}
+
+static void wifi_analyzer_on_input(uint8_t button_name, uint8_t button_event) {
+  // Scenes install their own input handlers via general_submenu/general_radio_selection.
+  // This callback is only active when no scene is showing (should not happen).
+  (void)button_name;
+  (void)button_event;
+}
+
+static void wifi_analyzer_on_exit(void) {
+  // Stop sniffer if running
+  if (analizer_running || analizer_initialized) {
+    wifi_sniffer_stop();
+    led_control_stop();
+    wifi_sniffer_close_file();
+  }
+  // Free summary buffer
+  xSemaphoreTake(summary_mutex, portMAX_DELAY);
+  wifi_analizer_free_summary();
+  xSemaphoreGive(summary_mutex);
+  // Reset all state
+  xSemaphoreTake(state_mutex, portMAX_DELAY);
+  analizer_running = false;
+  analizer_initialized = false;
+  analizer_initializing = false;
+  no_mem = false;
+  analyzer_exiting = false;
+  xSemaphoreGive(state_mutex);
+  // Delete mutexes (optional, but clean)
+  if (summary_mutex != NULL) {
+    vSemaphoreDelete(summary_mutex);
+    summary_mutex = NULL;
+  }
+  if (state_mutex != NULL) {
+    vSemaphoreDelete(state_mutex);
+    state_mutex = NULL;
+  }
+}
+
+// App definition for app_manager
+
+extern const minino_app_t wifi_analyzer_app;
+
+void app_manager_enter_wrapper_analyzer(void) {
+  app_manager_enter(&wifi_analyzer_app);
+}
+const minino_app_t wifi_analyzer_app = {
+  .name = "wifi_analyzer",
+  .on_enter = wifi_analyzer_on_enter,
+  .on_input = wifi_analyzer_on_input,
+  .on_exit = wifi_analyzer_on_exit,
+};
+

@@ -13,6 +13,8 @@
 #include "esp_gattc_api.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
+#include "gap_dispatcher.h"
+#include "radio_lease.h"
 #include "gattcmd_module.h"
 #include "services/gattcmd_service.h"
 
@@ -21,21 +23,20 @@
 static esp_bd_addr_t target;
 static volatile bool initialized = false;
 
-void gattcmd_begin(void) {
+/* Returns true when the BLE stack claim was really taken. Returning only a
+ * log used to let every command run its esp_ble_* calls against a stack that
+ * was never brought up, and to release a claim that was never held on exit. */
+static bool gattcmd_shared_begin(void) {
   esp_err_t ret;
 
-  if (esp_bt_controller_get_status() == ESP_BT_CONTROLLER_STATUS_IDLE) {
-    esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-    ret = esp_bt_controller_init(&bt_cfg);
-    if (ret == ESP_OK) {
-      esp_bt_controller_enable(ESP_BT_MODE_BLE);
-    }
+  /* Bring up the controller and Bluedroid through the central lease,
+     so we don't steal the stack from bt_spam, ble_hid, bt_gattc, etc. */
+  ret = radio_lease_ble_acquire();
+  if (ret != ESP_OK) {
+    ESP_LOGE(GATTC_TAG, "could not acquire the BLE stack: %s", esp_err_to_name(ret));
+    return false;
   }
-
-  if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_UNINITIALIZED) {
-    esp_bluedroid_init();
-    esp_bluedroid_enable();
-  }
+  return true;
 }
 
 static bool parse_address_colon(const char* str, uint8_t addr[6]) {
@@ -53,15 +54,21 @@ uint16_t hex_string_to_uint16(const char* hex_str) {
   return (uint16_t) strtol(hex_str, NULL, 16);
 }
 
-void gattcmd_module_gatt_write(char* saddress, char* gatt, char* value) {
+static bool gattcmd_ensure_ble_up(void) {
   if (initialized) {
-    gattcmd_scan_stop();
-    gattcmd_enum_stop();
-    gattcmd_write_stop();
-    gattcmd_recon_stop();
-  } else {
-    initialized = true;
-    gattcmd_begin();
+    return true;
+  }
+  if (!gattcmd_shared_begin()) {
+    return false;
+  }
+  initialized = true;
+  return true;
+}
+
+void gattcmd_module_gatt_write(char* saddress, char* gatt, char* value) {
+  if (!gattcmd_ensure_ble_up()) {
+    printf("GATT write skipped: the BLE stack is not available\n");
+    return;
   }
   printf("Writting GATT: %s - %s - value: %s\n", saddress, gatt, value);
   uint16_t uuid = hex_string_to_uint16(gatt);
@@ -73,41 +80,26 @@ void gattcmd_module_set_remote_address(char* saddress) {
 }
 
 void gattcmd_module_enum_client(char* saddress) {
-  if (initialized) {
-    gattcmd_scan_stop();
-    gattcmd_enum_stop();
-    gattcmd_write_stop();
-    gattcmd_recon_stop();
-  } else {
-    initialized = true;
-    gattcmd_begin();
+  if (!gattcmd_ensure_ble_up()) {
+    printf("gattcmd enum skipped: the BLE stack is not available\n");
+    return;
   }
   printf("gattcmd_enum_begin\n");
   gattcmd_enum_begin(saddress);
 }
 
 void gattcmd_module_scan_client() {
-  if (initialized) {
-    gattcmd_scan_stop();
-    gattcmd_enum_stop();
-    gattcmd_write_stop();
-    gattcmd_recon_stop();
-  } else {
-    initialized = true;
-    gattcmd_begin();
+  if (!gattcmd_ensure_ble_up()) {
+    printf("gattcmd scan skipped: the BLE stack is not available\n");
+    return;
   }
   gattcmd_scan_begin();
 }
 
 void gattcmd_module_recon(const char* bt_addr) {
-  if (initialized) {
-    gattcmd_scan_stop();
-    gattcmd_enum_stop();
-    gattcmd_write_stop();
-    gattcmd_recon_stop();
-  } else {
-    initialized = true;
-    gattcmd_begin();
+  if (!gattcmd_ensure_ble_up()) {
+    printf("gattcmd recon skipped: the BLE stack is not available\n");
+    return;
   }
   bool match_all = (bt_addr == NULL);
   esp_bd_addr_t target_addr;
@@ -130,4 +122,8 @@ void gattcmd_module_stop_workers() {
   gattcmd_recon_stop();
   gattcmd_write_stop();
   gattcmd_enum_stop();
+  if (initialized) {
+    initialized = false;
+    radio_lease_ble_release();
+  }
 }

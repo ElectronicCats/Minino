@@ -1,13 +1,17 @@
+#include "wifi_controller.h"
 #include "detector.h"
+#include "radio_lease.h"
 #include <string.h>
 #include "detector_scenes.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
+#include "wifi_service.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "preferences.h"
 
 #include "menus_module.h"
+#include "app_manager.h"
 #include "oled_screen.h"
 
 #define WIFI_CHANNEL_SWITCH_INTERVAL 1000
@@ -59,7 +63,7 @@ static void packet_handler(void* buf, wifi_promiscuous_pkt_type_t type) {
 
 static void channel_hopper(void* pvParameters) {
   while (running) {
-    esp_wifi_set_channel(current_channel, WIFI_SECOND_CHAN_NONE);
+    wifi_driver_set_channel(current_channel);
     vTaskDelay(WIFI_CHANNEL_SWITCH_INTERVAL / portTICK_PERIOD_MS);
     current_channel = (current_channel % 14) + 1;
     ESP_LOGI(TAG, "Switching to channel: %d", current_channel);
@@ -84,10 +88,12 @@ void deauth_detector_begin() {
   menus_module_set_app_state(true, deauth_detector_input_cb);
   memset(deauth_packets_count_list, 0, sizeof(deauth_packets_count_list));
   esp_err_t err = esp_netif_init();
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  err = esp_wifi_init(&cfg);
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Error initializing wifi: %s", esp_err_to_name(err));
+  if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
+    ESP_LOGE(TAG, "esp_netif_init: %s", esp_err_to_name(err));
+    return;
+  }
+  if (!wifi_service_is_up_get() && !wifi_service_init(WIFI_MODE_STA)) {
+    ESP_LOGE(TAG, "WiFi stack init failed");
     return;
   }
   err = esp_wifi_set_storage(WIFI_STORAGE_RAM);
@@ -95,13 +101,20 @@ void deauth_detector_begin() {
     ESP_LOGE(TAG, "Error setting storage: %s", esp_err_to_name(err));
     return;
   }
-  err = esp_wifi_set_mode(WIFI_MODE_STA);
+  err = wifi_service_set_mode(WIFI_MODE_STA);
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Error setting mode: %s", esp_err_to_name(err));
     return;
   }
-  esp_wifi_set_promiscuous(true);
-  esp_wifi_set_promiscuous_rx_cb(packet_handler);
+  /* Claim the shared promiscuous slot instead of taking it: the callback and
+     the on/off switch are global to the driver, and the surveillance detector
+     used to overwrite this handler and switch promiscuous mode off at the end of
+     its window, which froze the deauth counter. */
+  if (radio_lease_prom_acquire(RADIO_PROM_DEAUTH_DETECTOR, packet_handler) !=
+      ESP_OK) {
+    ESP_LOGE(TAG, "could not claim promiscuous mode");
+    return;
+  }
 
   err = esp_wifi_start();
   if (err != ESP_OK) {
@@ -112,7 +125,7 @@ void deauth_detector_begin() {
       preferences_get_int("det_channel", current_channel);
   channel_hopping = get_saved_channel == 99;
   current_channel = channel_hopping ? 1 : get_saved_channel + 1;
-  esp_wifi_set_channel(current_channel, WIFI_SECOND_CHAN_NONE);
+  wifi_driver_set_channel(current_channel);
   running = true;
   if (channel_hopping) {
     xTaskCreate(channel_hopper, "channel_hopper", 2048, NULL, 10,
@@ -126,8 +139,61 @@ void deauth_detector_stop() {
     vTaskDelete(channel_hopper_handle);
     channel_hopper_handle = NULL;
   }
+  /* Order matters: esp_wifi_stop() leaves the driver initialised but stopped,
+     and the analyzer's sniffer then calls esp_wifi_set_promiscuous() /
+     esp_wifi_set_channel() against a stopped driver - both fail silently and
+     the packet counter stays at zero. Clear promiscuous mode while the driver is
+     still running, then leave Wi-Fi running but idle. */
+  radio_lease_prom_release(RADIO_PROM_DEAUTH_DETECTOR);
   esp_wifi_stop();
-  esp_wifi_set_promiscuous(false);
   oled_screen_clear();
   detector_scenes_main_menu();
 }
+
+
+// ---------------------------------------------------------------------------
+// app_manager callbacks
+// ---------------------------------------------------------------------------
+static void deauth_detector_on_enter(void) {
+  detector_scenes_main_menu();
+}
+
+static void deauth_detector_on_input(uint8_t button_name, uint8_t button_event) {
+  // Scenes install their own input handlers.
+  (void)button_name;
+  (void)button_event;
+}
+
+static void deauth_detector_on_exit(void) {
+  // Stop detector if running
+  if (running) {
+    deauth_detector_stop();
+  }
+  // Ensure promiscuous lease is released
+  radio_lease_prom_release(RADIO_PROM_DEAUTH_DETECTOR);
+  // Reset state
+  running = false;
+  channel_hopping = false;
+  current_channel = 99;
+  total_deauth_packets_count = 0;
+  memset(deauth_packets_count_list, 0, sizeof(deauth_packets_count_list));
+  if (channel_hopper_handle != NULL) {
+    vTaskDelete(channel_hopper_handle);
+    channel_hopper_handle = NULL;
+  }
+}
+
+// Wrapper for menu entry
+void app_manager_enter_wrapper_deauth_detector(void) {
+  extern const minino_app_t deauth_detector_app;
+  app_manager_enter(&deauth_detector_app);
+}
+
+// App definition for app_manager
+const minino_app_t deauth_detector_app = {
+  .name = "deauth_detector",
+  .on_enter = deauth_detector_on_enter,
+  .on_input = deauth_detector_on_input,
+  .on_exit = deauth_detector_on_exit,
+};
+

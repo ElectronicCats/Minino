@@ -4,6 +4,7 @@
 #include "general_scrolling_text.h"
 #include "general_submenu.h"
 #include "menus_module.h"
+#include "app_manager.h"
 
 #include "modbus_dos.h"
 #include "modbus_dos_prefs.h"
@@ -52,7 +53,7 @@ static void main_handler(uint8_t option) {
 }
 
 static void main_exit_cb() {
-  menus_module_restart();
+  app_manager_exit();
 }
 
 void modbus_dos_scenes_main() {
