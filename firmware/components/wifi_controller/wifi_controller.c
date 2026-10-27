@@ -121,7 +121,7 @@ bool wifi_driver_init_sta(void) {
   } else if (err != ESP_OK) {
     ESP_LOGE(TAG_WIFI_DRIVER, "Error initializing netif: %s",
              esp_err_to_name(err));
-    // No reiniciar - seguir intentando
+    // Do not reboot - keep trying
   }
   err = esp_event_loop_create_default();
   if (err == ESP_ERR_INVALID_STATE) {
@@ -182,9 +182,9 @@ void wifi_driver_deinit() {
   wifi_driver_initialized = false;
 }
 
-// Libera el radio 2.4GHz para otros stacks (p.ej. BLE puro) sin asumir que
-// Wi-Fi estuviera iniciado: deinit() directo haria abort() si nunca se
-// inicializo, porque ESP_ERROR_CHECK no perdona ESP_ERR_WIFI_NOT_INIT.
+// Releases the 2.4 GHz radio for other stacks (e.g. pure BLE) without assuming
+// Wi-Fi was started: calling deinit() directly would abort() if it was never
+// initialized, because ESP_ERROR_CHECK does not forgive ESP_ERR_WIFI_NOT_INIT.
 void wifi_driver_deinit_if_started(void) {
   esp_wifi_stop();
   wifi_service_deinit();

@@ -1,23 +1,23 @@
-/* WiFi Service singleton: encapsula esp_wifi_init() y provee un API común.
+/* WiFi Service singleton: encapsulates esp_wifi_init() and provides a common API.
  *
- * Antes: 13 módulos llamaban a esp_wifi_init() directamente, cada uno con
- * su propio sdkconfig (#ifdef CONFIG_WIFI_*_ENABLE). Resultado: recompilación
- * condicional, duplicación de lógica y inicializaciones redundantes.
+ * Before: 13 modules called esp_wifi_init() directly, each with its own
+ * sdkconfig (#ifdef CONFIG_WIFI_*_ENABLE). Result: conditional recompilation,
+ * duplicated logic, and redundant initializations.
  *
- * Después: un único punto de entrada que inicializa el stack y expone un
- * manejador estable para el resto del firmware. Los cambios de estado se
- * notifican con callbacks directos en cada app; no hay bus de eventos.
+ * After: a single entry point that initializes the stack and exposes a stable
+ * handle for the rest of the firmware. State changes are notified via direct
+ * callbacks in each app; there is no event bus.
  *
- * Thread-safety: la inicialización y el estado se protegen con un spinlock
- * propio. Los getters de modo consultan al driver, así que no quedan
- * obsoletos cuando una app llama a esp_wifi_set_mode().
+ * Thread-safety: initialization and state are protected with a dedicated
+ * spinlock. Mode getters query the driver directly, so they do not become
+ * stale when an app calls esp_wifi_set_mode().
  */
 
 #pragma once
 
 #include "esp_wifi.h"
 
-/* Estado interno, protegido por s_wifi_mux. */
+/* Internal state, protected by s_wifi_mux. */
 typedef struct {
   wifi_mode_t mode;
   wifi_interface_t iface;
@@ -34,15 +34,15 @@ typedef struct {
 typedef bool (*wifi_service_init_guard_t)(void);
 void wifi_service_set_init_guard(wifi_service_init_guard_t guard);
 
-/* API pública. */
+/* Public API. */
 bool wifi_service_init(wifi_mode_t mode);
 bool wifi_service_deinit(void);
 
-/* Cambia el modo y actualiza el estado del servicio.
- * No inicializa el driver: wifi_service_init() debe haber corrido antes. */
+/* Changes the mode and updates the service state.
+ * Does not initialize the driver: wifi_service_init() must have run first. */
 esp_err_t wifi_service_set_mode(wifi_mode_t mode);
 
-/* Estado consultable. El modo y los flags STA/AP se leen del driver. */
+/* Queryable state. Mode and STA/AP flags are read from the driver. */
 wifi_mode_t wifi_service_mode_get(void);
 wifi_interface_t wifi_service_iface_get(void);
 bool wifi_service_is_up_get(void);
@@ -51,7 +51,7 @@ bool wifi_service_is_ap_get(void);
 wifi_second_chan_t wifi_service_primary_chan_get(void);
 wifi_second_chan_t wifi_service_secondary_chan_get(void);
 
-/* --- Helpers de conveniencia (opcionales) --- */
+/* --- Convenience helpers (optional) --- */
 
 #define wifi_service_is_any_active() \
   (wifi_service_is_sta_get() || wifi_service_is_ap_get())

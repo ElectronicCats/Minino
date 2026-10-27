@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Tipos compartidos del detector de vigilancia.
+// Shared types for the surveillance detector.
 //
-// Procedencia: la taxonomia de surv_class_t deriva de los motores de deteccion
-// de eye-spy (simeononsecurity, Apache-2.0), en concreto de los DECL_DETECTOR
-// de src/es_confidence.h. Los niveles de tier SURV_TIER_* derivan de flock-you
+// Provenance: the surv_class_t taxonomy derives from the detection engines of
+// eye-spy (simeononsecurity, Apache-2.0), specifically the DECL_DETECTOR macros
+// in src/es_confidence.h. The SURV_TIER_* tier levels derive from flock-you
 // (colonelpanichacks, MIT).
 #pragma once
 #include <stdbool.h>
@@ -12,13 +12,13 @@
 
 typedef enum {
   SURV_CLASS_NONE = 0,
-  SURV_CLASS_FLOCK,      // cámara Flock Safety
-  SURV_CLASS_FLOCK_MFR,  // OUI de fabricante contratista, baja confianza
-  SURV_CLASS_ALPR,       // lector de placas genérico
+  SURV_CLASS_FLOCK,      // Flock Safety camera
+  SURV_CLASS_FLOCK_MFR,  // contract manufacturer OUI, low confidence
+  SURV_CLASS_ALPR,       // generic license plate reader
   SURV_CLASS_SOUNDTHINKING,
   SURV_CLASS_AXON,     // body cam
   SURV_CLASS_GLASSES,  // Ray-Ban Meta
-  SURV_CLASS_CAM,      // cámara IP de consumo
+  SURV_CLASS_CAM,      // consumer IP camera
   SURV_CLASS_AIRTAG,
   SURV_CLASS_SMARTTAG,
   SURV_CLASS_TILE,
@@ -28,15 +28,15 @@ typedef enum {
   SURV_CLASS_SKIMMER,
   SURV_CLASS_MESHCORE,
   SURV_CLASS_RAVEN,
-  SURV_CLASS_PERSIST,  // MAC desconocida vista repetidamente
+  SURV_CLASS_PERSIST,  // unknown MAC seen repeatedly
   SURV_CLASS_MAX
 } surv_class_t;
 
 typedef enum { SURV_PROTO_BLE = 0, SURV_PROTO_WIFI } surv_proto_t;
 
-// Fase de radio del mux de "Scan All": cada ventana corre en un boot en frio
-// propio (BLE o WiFi), porque en el ESP32-C6 la re-init BLE tras un ciclo
-// WiFi falla (0x1) dentro de la misma sesion.
+// Radio phase for the "Scan All" mux: each window runs on its own cold boot
+// (BLE or WiFi), because on the ESP32-C6 BLE re-init after a WiFi cycle
+// fails (0x1) within the same session.
 typedef enum {
   SURV_PHASE_BLE,
   SURV_PHASE_WIFI,
@@ -55,13 +55,12 @@ typedef struct {
   surv_class_t klass;
   uint8_t tier;
   int8_t rssi;
-  uint8_t channel;  // 0 si es BLE
+  uint8_t channel;  // 0 if BLE
   surv_proto_t proto;
 } surv_event_t;
 
-// Techo de confianza: el tier del evento nunca puede superar el tier de la
-// firma. Usado tanto en la ruta WiFi (surveillance_detect.c) como en BLE
-// (surv_radio.c).
+// Confidence ceiling: the event tier can never exceed the signature's tier.
+// Used in both the WiFi path (surveillance_detect.c) and BLE (surv_radio.c).
 static inline uint8_t surv_clamp_tier(uint8_t computed, uint8_t ceiling) {
   return computed > ceiling ? ceiling : computed;
 }

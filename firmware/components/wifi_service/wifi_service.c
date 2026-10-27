@@ -1,15 +1,15 @@
 /* WiFi Service implementation.
  *
- * Patrones clave:
- *   - Inicialización única al arranque (main → wifi_service_init).
- *   - Estado protegido por spinlock propio.
- *   - Sin bus de eventos: cada app usa callbacks directos o consulta el estado.
+ * Key patterns:
+ *   - Single initialization at boot (main -> wifi_service_init).
+ *   - State protected by its own spinlock.
+ *   - No event bus: each app uses direct callbacks or queries the state.
  *
- * Por qué un singleton:
- *   - Elimina 13 llamadas esp_wifi_init() en todo el árbol.
- *   - Un solo lugar con la configuración de buffers del driver.
- *   - Los getters de modo consultan al driver, para que las apps que aún
- *     llaman esp_wifi_set_mode() no dejen el estado del servicio obsoleto.
+ * Why a singleton:
+ *   - Eliminates 13 esp_wifi_init() calls across the tree.
+ *   - Single place for driver buffer configuration.
+ *   - Mode getters query the driver directly, so apps that still call
+ *     esp_wifi_set_mode() do not leave the service state stale.
  */
 
 #include "wifi_service.h"
@@ -20,13 +20,13 @@
 
 static const char* TAG = "wifi_svc";
 
-/* Spinlock propio: protege s_state. */
+/* Dedicated spinlock: protects s_state. */
 static portMUX_TYPE s_wifi_mux = portMUX_INITIALIZER_UNLOCKED;
 
-/* Estado volatile, visible solo desde los accessors (bajo s_wifi_mux). */
+/* Volatile state, visible only through accessors (under s_wifi_mux). */
 static wifi_service_state_t s_state = {
     .mode = WIFI_MODE_NULL,
-    .iface = WIFI_IF_STA, /* default: estación */
+    .iface = WIFI_IF_STA, /* default: station */
     .is_up = false,
     .is_sta = false,
     .is_ap = false,
@@ -38,7 +38,7 @@ void wifi_service_set_init_guard(wifi_service_init_guard_t guard) {
   s_init_guard = guard;
 }
 
-/* ----------------------------------------------------------- API pública */
+/* ----------------------------------------------------------- Public API */
 
 bool wifi_service_init(wifi_mode_t mode) {
   if (s_init_guard != NULL && !s_init_guard()) {
@@ -49,12 +49,12 @@ bool wifi_service_init(wifi_mode_t mode) {
   portENTER_CRITICAL(&s_wifi_mux);
   if (s_state.is_up) {
     portEXIT_CRITICAL(&s_wifi_mux);
-    ESP_LOGW(TAG, "ya inicializado");
+    ESP_LOGW(TAG, "already initialized");
     return true;
   }
 
-  /* Modo por defecto: estación. Las apps que necesitan AP lo piden con
-     wifi_service_set_mode(); no hay símbolos CONFIG_STA_ENABLE/AP_ENABLE. */
+  /* Default mode: station. Apps that need AP request it via
+     wifi_service_set_mode(); there are no CONFIG_STA_ENABLE/AP_ENABLE symbols. */
   if (mode == WIFI_MODE_AP || mode == WIFI_MODE_STA ||
       mode == WIFI_MODE_APSTA || mode == WIFI_MODE_NULL) {
     s_state.mode = mode;
@@ -67,7 +67,7 @@ bool wifi_service_init(wifi_mode_t mode) {
       (s_state.mode == WIFI_MODE_AP || s_state.mode == WIFI_MODE_APSTA);
   portEXIT_CRITICAL(&s_wifi_mux);
 
-  /* Inicializar el stack de WiFi fuera de la sección crítica */
+  /* Initialize the WiFi stack outside the critical section */
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   /* The capture bank takes 128 KB of SRAM, so the Wi-Fi driver gets a
      smaller share of it: every buffer here is heap the rest of the system
@@ -84,7 +84,7 @@ bool wifi_service_init(wifi_mode_t mode) {
   cfg.nvs_enable = false;
   esp_err_t err = esp_wifi_init(&cfg);
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "esp_wifi_init fallo: %s", esp_err_to_name(err));
+    ESP_LOGE(TAG, "esp_wifi_init failed: %s", esp_err_to_name(err));
     return false;
   }
 
@@ -92,7 +92,7 @@ bool wifi_service_init(wifi_mode_t mode) {
   s_state.is_up = true;
   portEXIT_CRITICAL(&s_wifi_mux);
 
-  ESP_LOGI(TAG, "inicializado en modo %s",
+  ESP_LOGI(TAG, "initialized in %s mode",
            s_state.mode == WIFI_MODE_STA ? "STA" : "AP");
   return true;
 }
@@ -101,7 +101,7 @@ bool wifi_service_deinit(void) {
   portENTER_CRITICAL(&s_wifi_mux);
   if (!s_state.is_up) {
     portEXIT_CRITICAL(&s_wifi_mux);
-    return true; /* ya desactivado */
+    return true; /* already deactivated */
   }
   s_state = (wifi_service_state_t) {0};
   s_state.is_up = false;
@@ -112,7 +112,7 @@ bool wifi_service_deinit(void) {
   if (err != ESP_OK && err != ESP_ERR_WIFI_NOT_INIT) {
     ESP_LOGW(TAG, "esp_wifi_deinit: %s", esp_err_to_name(err));
   }
-  ESP_LOGI(TAG, "desinicializado");
+  ESP_LOGI(TAG, "deinitialized");
   return true;
 }
 

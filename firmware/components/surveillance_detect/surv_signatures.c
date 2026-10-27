@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Procedencia de las tablas de esta unidad: eye-spy
+// Provenance of the tables in this unit: eye-spy
 // (github.com/simeononsecurity/eye-spy, Apache-2.0), src/es_detect.h.
-// Los OUIs de Flock Safety fueron recopilados por @NitekryDPaul
-// (nite-oui-collection) y por DeFlockJoplin, y llegaron a eye-spy vía
-// flock-you (MIT); se transcriben aqui con la misma clase y peso que
-// tienen en la tabla de origen.
+// The Flock Safety OUIs were collected by @NitekryDPaul
+// (nite-oui-collection) and by DeFlockJoplin, and reached eye-spy via
+// flock-you (MIT); they are transcribed here with the same class and weight
+// as in the source table.
 #include "surv_signatures.h"
 #include <string.h>
 
 static const surv_oui_entry_t OUIS[] = {
-    // --- Flock Safety (@NitekryDPaul, dataset en modo promiscuo, 25 entradas)
-    // --- clase FLOCK, +5, techo tier 4 ---
+    // --- Flock Safety (@NitekryDPaul, promiscuous mode dataset, 25 entries)
+    // --- class FLOCK, +5, tier ceiling 4 ---
     {{0x70, 0xc9, 0x4e}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
     {{0x3c, 0x91, 0x80}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
     {{0xd8, 0xf3, 0xbc}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
@@ -37,25 +37,24 @@ static const surv_oui_entry_t OUIS[] = {
     {{0x48, 0x27, 0xea}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
     {{0xa4, 0xcf, 0x12}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
     {{0xe0, 0x4f, 0x43}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
-    // --- DeFlockJoplin: 12ª cámara, wildcard-probe field test. Bit LAA
-    //     puesto (0x82 & 0x02) pero confirmado Flock. NO filtrar. ---
+    // --- DeFlockJoplin: 12th camera, wildcard-probe field test. LAA bit set
+    //     (0x82 & 0x02) but confirmed Flock. Do NOT filter out. ---
     {{0x82, 0x6b, 0xf2}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
-    // --- Asignación IEEE directa de Flock Safety (dougborg/PR#39) ---
+    // --- Direct IEEE assignment to Flock Safety (dougborg/PR#39) ---
     {{0xb4, 0x1e, 0x52}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
-    // --- FS Ext Battery, serie de dispositivos (dougborg/PR#39, 6 entradas)
-    // ---
+    // --- FS Ext Battery, device series (dougborg/PR#39, 6 entries) ---
     {{0x04, 0x0d, 0x84}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
     {{0xf0, 0x82, 0xc0}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
     {{0x1c, 0x34, 0xf1}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
     {{0x38, 0x5b, 0x44}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
     {{0x94, 0x34, 0x69}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
     {{0xb4, 0xe3, 0xf9}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
-    // --- Entradas legacy de eye-spy (registradas ante IEEE, se mantienen) ---
+    // --- Legacy eye-spy entries (IEEE-registered, retained) ---
     {{0xd4, 0xbb, 0xe6}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
     {{0x3c, 0x61, 0x05}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
 
-    // --- Fabricante contratista (Liteon/USI, 6) --- clase FLOCK_MFR, +2,
-    // techo tier 1: hardware compartido con productos no-Flock ---
+    // --- Contract manufacturer (Liteon/USI, 6) --- class FLOCK_MFR, +2,
+    // tier ceiling 1: hardware shared with non-Flock products ---
     {{0xf4, 0x6a, 0xdd},
      SURV_CLASS_FLOCK_MFR,
      2,
@@ -75,15 +74,15 @@ static const surv_oui_entry_t OUIS[] = {
      2,
      SURV_TIER_ADDR13},  // USI (dougborg/PR#39)
 
-    // --- SoundThinking / ShotSpotter, sensores acústicos co-desplegados
-    //     con ALPR de Flock (1) --- clase SOUNDTHINKING, +4 ---
+    // --- SoundThinking / ShotSpotter, acoustic sensors co-deployed with
+    //     Flock ALPR (1) --- class SOUNDTHINKING, +4 ---
     {{0xd4, 0x11, 0xd6}, SURV_CLASS_SOUNDTHINKING, 4, SURV_TIER_ADDR2},
 
-    // --- ALPR: Motorola Solutions / Vigilant Solutions (1) --- clase ALPR, +5
+    // --- ALPR: Motorola Solutions / Vigilant Solutions (1) --- class ALPR, +5
     // ---
     {{0x00, 0x0e, 0x58}, SURV_CLASS_ALPR, 5, SURV_TIER_ADDR2},
 
-    // --- Cámaras IP de consumo (31) --- clase CAM, +3 ---
+    // --- Consumer IP cameras (31) --- class CAM, +3 ---
     {{0x00, 0x40, 0x8c}, SURV_CLASS_CAM, 3, SURV_TIER_ADDR2},  // Axis
     {{0xac, 0xcc, 0x8e}, SURV_CLASS_CAM, 3, SURV_TIER_ADDR2},  // Axis
     {{0xb8, 0xa4, 0x4f}, SURV_CLASS_CAM, 3, SURV_TIER_ADDR2},  // Axis
@@ -116,23 +115,23 @@ static const surv_oui_entry_t OUIS[] = {
     {{0xfc, 0xec, 0xda}, SURV_CLASS_CAM, 3, SURV_TIER_ADDR2},  // Ubiquiti
     {{0x24, 0xa4, 0x3c}, SURV_CLASS_CAM, 3, SURV_TIER_ADDR2},  // Ubiquiti
 
-    // --- Axon: OUI de MAC BLE (body cams, tasers, equipo policial) ---
-    // En eye-spy vive fuera de las tablas de OUI y se compara contra la BDA
-    // del advertisement. Aqui va en la misma tabla: la consultan los dos
-    // caminos (WiFi por OUI de AP y BLE por OUI de la BDA).
+    // --- Axon: BLE MAC OUI (body cams, tasers, police gear) ---
+    // In eye-spy this lives outside the OUI tables and is compared against the
+    // advertisement BDA. Here it sits in the same table, queried by both paths
+    // (WiFi via AP OUI and BLE via BDA OUI).
     {{0x00, 0x25, 0xdf}, SURV_CLASS_AXON, 5, SURV_TIER_ADDR2},
 };
 
-// Tabla efectiva = base + anadidos del overlay - quitados del overlay. Vive
-// en RAM porque el overlay se recarga en runtime (Task 8). Sin overlay
-// cargado (s_effective_built == false) los accessors devuelven OUIS tal
-// cual, asi que las Tasks 1 y 2 no se rompen.
+// Effective table = base + overlay additions - overlay removals. Lives in RAM
+// because the overlay is reloaded at runtime (Task 8). With no overlay loaded
+// (s_effective_built == false) the accessors return OUIS as-is, keeping Tasks
+// 1 and 2 working without extra setup.
 //
-// El tamano se deriva de sizeof(OUIS) en vez de un literal para no quedar
-// desincronizado si la tabla base crece: un literal stale aqui desbordaria
-// s_effective por un elemento en cuanto el overlay llegue a su tope.
-// SURV_OVERLAY_MAX_OUIS vive en surv_signatures.h: es la misma constante que
-// limita cuantos OUIs acepta el overlay en surv_overlay.c.
+// Size is derived from sizeof(OUIS) rather than a literal so it cannot go out
+// of sync if the base table grows: a stale literal here would overflow
+// s_effective by one element as soon as the overlay hits its cap.
+// SURV_OVERLAY_MAX_OUIS lives in surv_signatures.h: it is the same constant
+// that caps how many OUIs the overlay accepts in surv_overlay.c.
 static surv_oui_entry_t
     s_effective[(sizeof(OUIS) / sizeof(OUIS[0])) + SURV_OVERLAY_MAX_OUIS];
 static uint16_t s_effective_count;
@@ -178,13 +177,13 @@ static const surv_kw_entry_t KWS[] = {
     {"penguin", SURV_CLASS_FLOCK, 5},
     {"fs ext", SURV_CLASS_FLOCK, 5},
     {"raven", SURV_CLASS_RAVEN, 5},
-    // "motorola" y "lpr" estan DELIBERADAMENTE fuera, pese a venir en el
-    // ALPR_SSID_KW de eye-spy: rompen el criterio de aceptacion de cero falsos
-    // positivos de clase ALPR. "motorola" matchea el SSID por defecto de
-    // cualquier modem de consumo Motorola/Arris, que en Mexico reparten Izzi y
-    // Totalplay por millones; "lpr" matchea dentro de "HelpRouter" y de las
-    // impresoras "HP_LPR_*". Quien las quiera puede reponerlas por overlay de
-    // microSD.
+    // "motorola" and "lpr" are DELIBERATELY excluded despite appearing in
+    // eye-spy's ALPR_SSID_KW: they violate the zero-false-positive acceptance
+    // criterion for the ALPR class. "motorola" matches the default SSID of
+    // consumer Motorola/Arris modems deployed by the millions by ISPs like
+    // Izzi and Totalplay in Mexico; "lpr" matches inside "HelpRouter" and
+    // "HP_LPR_*" printers. Users who want them can re-add them via the microSD
+    // overlay.
     {"licenseplat", SURV_CLASS_ALPR, 4},
     {"plateread", SURV_CLASS_ALPR, 4},
     {"vigilant", SURV_CLASS_ALPR, 4},
@@ -217,8 +216,8 @@ static const surv_kw_entry_t KWS[] = {
     {"cam", SURV_CLASS_CAM, 2},
 };
 
-// Gemela de s_effective/build_effective, para keywords de SSID/BLE-name.
-// SURV_OVERLAY_MAX_KWS vive en surv_signatures.h.
+// Counterpart to s_effective/build_effective for SSID/BLE-name keywords.
+// SURV_OVERLAY_MAX_KWS lives in surv_signatures.h.
 static surv_kw_entry_t
     s_effective_kws[(sizeof(KWS) / sizeof(KWS[0])) + SURV_OVERLAY_MAX_KWS];
 static uint16_t s_effective_kw_count;
@@ -246,7 +245,7 @@ const surv_kw_entry_t* surv_signatures_kws(void) {
   return s_effective_kws_built ? s_effective_kws : KWS;
 }
 
-// UUIDs de 16 bits, de eye-spy (Apache-2.0) y especificaciones oficiales
+// 16-bit UUIDs, from eye-spy (Apache-2.0) and official specifications
 static const surv_uuid_entry_t UUIDS[] = {
     {0xFD5F, SURV_CLASS_GLASSES, 5, "RayBan Meta"},
     {0xFE07, SURV_CLASS_GLASSES, 4, "Snap Spectacles"},
@@ -260,8 +259,8 @@ static const surv_uuid_entry_t UUIDS[] = {
     {0x1802, SURV_CLASS_AIRTAG, 3, "FindMe Beacon"},
 };
 
-// Gemela de s_effective/build_effective, para UUIDs de servicio BLE.
-// SURV_OVERLAY_MAX_UUIDS vive en surv_signatures.h.
+// Counterpart to s_effective/build_effective for BLE service UUIDs.
+// SURV_OVERLAY_MAX_UUIDS lives in surv_signatures.h.
 static surv_uuid_entry_t s_effective_uuids[(sizeof(UUIDS) / sizeof(UUIDS[0])) +
                                            SURV_OVERLAY_MAX_UUIDS];
 static uint16_t s_effective_uuid_count;
@@ -290,7 +289,7 @@ const surv_uuid_entry_t* surv_signatures_uuids(void) {
   return s_effective_uuids_built ? s_effective_uuids : UUIDS;
 }
 
-// Substrings de nombre BLE, case-insensitive para detección real
+// BLE name substrings, case-insensitive for real-world detection
 static const surv_name_entry_t BLE_NAMES[] = {
     {"fs ext battery", SURV_CLASS_FLOCK, 5, "Flock Battery"},
     {"pigvision", SURV_CLASS_FLOCK, 5, "Flock"},
@@ -325,7 +324,7 @@ const surv_name_entry_t* surv_signatures_ble_names(void) {
   return BLE_NAMES;
 }
 
-// Nombres exactos de modulos comunes de skimmers y sniffers BLE/SPP
+// Exact names of common BLE/SPP skimmer and sniffer modules
 static const char* const SKIMMER_NAMES[] = {
     "HC-03",  "HC-05",  "HC-06",  "HC-08",   "HC-11",    "HC-12",
     "JDY-08", "JDY-10", "JDY-16", "JDY-18",  "JDY-23",   "JDY-30",

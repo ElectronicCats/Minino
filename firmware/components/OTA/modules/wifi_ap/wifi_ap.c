@@ -154,9 +154,9 @@ static void wifi_app_event_handler_init(void) {
 }
 
 /*
- * Initializes the TCP stack and default WiFi Configuration
- * Usa wifi_service_init() (llorado en app_main) en lugar de esp_wifi_init()
- * directo.
+ * Initializes the TCP stack and default WiFi Configuration.
+ * Uses wifi_service_init() (called in app_main) instead of direct
+ * esp_wifi_init().
  */
 static void wifi_app_default_wifi_init(void) {
   // Initialize the TCP Stack i.e. the ESP Network Interface
@@ -165,17 +165,17 @@ static void wifi_app_default_wifi_init(void) {
     ESP_LOGE(TAG, "esp_netif_init failed: %s", esp_err_to_name(err));
   }
 
-  /* WiFi stack ya inicializada por wifi_service_init() en app_main().
-   * Verificamos el estado y postamos evento si cambió. */
+  /* WiFi stack already initialized by wifi_service_init() in app_main().
+   * Verify state and initialize if needed. */
   if (!wifi_service_is_up_get()) {
-    ESP_LOGW(TAG, "WiFi stack no inicializada por servicio; inicializando...");
+    ESP_LOGW(TAG, "WiFi stack not initialized by service; initializing...");
     wifi_service_init(WIFI_MODE_AP);
   } else {
-    ESP_LOGI(TAG, "WiFi stack ya inicializada por servicio");
+    ESP_LOGI(TAG, "WiFi stack already initialized by service");
   }
 
-  /* Ya no llamamos esp_wifi_init(&cfg) aquí; el servicio lo hizo en app_main().
-   */
+  /* We no longer call esp_wifi_init(&cfg) here; the service did it in
+   * app_main(). */
   ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
   esp_netif_sta = esp_netif_create_default_wifi_sta();

@@ -82,11 +82,12 @@ typedef struct {
 } spam_model_t;
 
 /*
- * SAMSUNG EASY SETUP (Company ID 0x0075) - formatos verificados contra
- * simondankelmann/Bluetooth-LE-Spam (generadores EasySetupWatch/EasySetupBuds,
- * IDs originales de Flipper-XFW easysetup.c). El magic es fijo: solo cambia el
- * id de modelo/color al final del prefijo. La variacion anti-dedup la aporta
- * la rotacion de MAC aleatoria que ya hace el ciclo de advertising.
+ * SAMSUNG EASY SETUP (Company ID 0x0075) - formats verified against
+ * simondankelmann/Bluetooth-LE-Spam (EasySetupWatch/EasySetupBuds generators,
+ * original IDs from Flipper-XFW easysetup.c). The magic is fixed: only the
+ * model/color ID at the end of the prefix changes. Anti-dedup variation is
+ * provided by the random MAC rotation already performed by the advertising
+ * cycle.
  *
  *   Watch: [0e ff 75 00] 01 00 02 00 01 01 ff 00 00 43 <watch_id>
  *   Buds:  [1b ff 75 00] 42 09 81 02 14 15 03 21 01 09 <a> <b> 01 <c>
@@ -421,9 +422,9 @@ static const spam_model_t spam_models[] = {
 
     /* =========================================================================
      * 5. SAMSUNG EASY SETUP - Company ID 0x0075
-     * Watch = baliza Galaxy Watch (popup "Como conectar tu reloj");
-     * Buds  = EasySetup de auriculares (popup de emparejamiento Buds).
-     * IDs genuinos de Flipper-XFW easysetup.c / simondankelmann.
+     * Watch = Galaxy Watch beacon ("How to connect your watch" popup);
+     * Buds  = Earbuds EasySetup (Buds pairing popup).
+     * Genuine IDs from Flipper-XFW easysetup.c / simondankelmann.
      * =========================================================================
      */
     SPAM_SAMSUNG_WATCH(0x1a, "Fallback Watch"),
@@ -579,9 +580,9 @@ static uint8_t prepare_payload(int index, uint8_t* out_buffer) {
       break;
 
     case SPAM_TYPE_SAMSUNG_SETUP:
-      /* Magic EasySetup fijo: en Watch los bytes 8-13 son parte de la firma
-       * (01 ff 00 00 43). No randomizar nada aqui; la variacion anti-dedup
-       * proviene del id de modelo y de la MAC aleatoria por ciclo. */
+      /* Fixed EasySetup magic: on Watch, bytes 8-13 are part of the signature
+       * (01 ff 00 00 43). Do not randomize anything here; anti-dedup variation
+       * comes from the model ID and per-cycle random MAC. */
       break;
 
     case SPAM_TYPE_APPLE_PROXIMITY:

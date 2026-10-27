@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Test diferencial del fingerprint de IE.
+// Differential test for IE fingerprinting.
 //
-// Ejecuta nuestro comparador binario (surv_ie.c) y el constructor de string
-// original de flock-you (test/reference/) sobre las mismas entradas, y exige
-// que coincidan en TODAS. Es la unica garantia real de que la reimplementacion
-// binaria conserva la semantica del algoritmo validado en campo: los tests
-// normales comparten con el codigo cualquier malentendido que tengamos, este
-// no.
+// Runs our binary comparator (surv_ie.c) and the original flock-you string
+// builder (test/reference/) over the exact same inputs, and requires them to
+// agree on ALL of them. This is the only real guarantee that the binary
+// reimplementation preserves the semantics of the field-validated algorithm:
+// regular unit tests share any misunderstanding we might have with the code
+// itself, whereas this test does not.
 //
-// Historia: la primera version del comparador omitia los tres parches de
-// tramas malformadas del original y fallaba 3020 de 25000 casos, siempre en la
-// direccion de NO detectar camaras que la referencia si detecta. Ningun test
-// convencional lo habria visto.
+// History: the first version of the comparator omitted the original's three
+// malformed-frame patches and failed 3,020 out of 25,000 cases, always in the
+// direction of NOT detecting cameras that the reference does detect. No
+// conventional unit test would have caught that.
 #include <string.h>
 #include "surv_ie.h"
 #include "surv_test.h"
@@ -33,7 +33,7 @@ static const uint8_t VEND_A[7] = {0x50, 0x6f, 0x9a, 0x16, 0x03, 0x01, 0x03};
 static const uint8_t VEND_B[7] = {0x00, 0x50, 0xf2, 0x08, 0x00, 0x00, 0x00};
 
 static unsigned long s_rng;
-static uint32_t rnd(void) {  // xorshift: deterministico, mismo resultado en CI
+static uint32_t rnd(void) {  // xorshift: deterministic, identical result in CI
   s_rng ^= s_rng << 13;
   s_rng ^= s_rng >> 17;
   s_rng ^= s_rng << 5;
@@ -50,7 +50,7 @@ static void check(const uint8_t* b, int n) {
   bool ours = surv_ie_matches_flock(b, n);
   if (ref != ours) {
     if (s_disagree == 0) {
-      int p = snprintf(s_first, sizeof(s_first), "len=%d ref=%d nuestro=%d ", n,
+      int p = snprintf(s_first, sizeof(s_first), "len=%d ref=%d ours=%d ", n,
                        (int) ref, (int) ours);
       for (int i = 0; i < n && p < (int) sizeof(s_first) - 3; i++) {
         p += snprintf(s_first + p, sizeof(s_first) - (size_t) p, "%02x", b[i]);
@@ -75,12 +75,12 @@ static void run_corpus(void) {
 
   check(FLOCK_IES, (int) sizeof(FLOCK_IES));
 
-  // firma con cola de FCS
+  // signature with trailing FCS
   memcpy(s_buf, FLOCK_IES, sizeof(FLOCK_IES));
   memset(s_buf + sizeof(FLOCK_IES), 0xAB, 4);
   check(s_buf, (int) sizeof(FLOCK_IES) + 4);
 
-  // mutaciones de un bit
+  // single-bit mutations
   for (size_t i = 0; i < sizeof(FLOCK_IES); i++) {
     for (int bit = 0; bit < 8; bit++) {
       memcpy(s_buf, FLOCK_IES, sizeof(FLOCK_IES));
@@ -89,7 +89,7 @@ static void run_corpus(void) {
     }
   }
 
-  // mutaciones de dos bytes
+  // two-byte mutations
   for (int t = 0; t < 60000; t++) {
     memcpy(s_buf, FLOCK_IES, sizeof(FLOCK_IES));
     s_buf[rnd() % sizeof(FLOCK_IES)] ^= (uint8_t) (1u << (rnd() % 8));
@@ -97,7 +97,7 @@ static void run_corpus(void) {
     check(s_buf, (int) sizeof(FLOCK_IES));
   }
 
-  // buffers aleatorios
+  // random buffers
   for (int t = 0; t < 20000; t++) {
     int len = (int) (rnd() % 80) + 1;
     for (int i = 0; i < len; i++) {
@@ -106,7 +106,7 @@ static void run_corpus(void) {
     check(s_buf, len);
   }
 
-  // prefijos aleatorios delante de la firma
+  // random prefixes ahead of the signature
   for (int t = 0; t < 5000; t++) {
     int pre = (int) (rnd() % 12);
     for (int i = 0; i < pre; i++) {
@@ -116,8 +116,7 @@ static void run_corpus(void) {
     check(s_buf, pre + (int) sizeof(FLOCK_IES));
   }
 
-  // cadenas TLV validas y aleatorias: tocan muchos mas caminos que bytes
-  // sueltos
+  // valid random TLV chains: exercise far more paths than raw random bytes
   for (int t = 0; t < 120000; t++) {
     int n = 0;
     int nie = (int) (rnd() % 9) + 1;
@@ -180,7 +179,7 @@ static void run_corpus(void) {
       check(s_buf, n);
   }
 
-  // patrones de phantom overflow delante de la firma
+  // phantom overflow patterns ahead of the signature
   for (int t = 0; t < 3000; t++) {
     int n = 0;
     int nph = (int) (rnd() % 4);
@@ -193,9 +192,9 @@ static void run_corpus(void) {
     check(s_buf, n);
   }
 
-  // cola canonica: ancla LiteON + 45 + 191 + vendor WFA. Es lo que la
-  // referencia deja como "2,12,127," + esta cola tras canonizar, y por tanto
-  // la unica parte que debe casar para detectar.
+  // canonical tail: LiteON anchor + 45 + 191 + WFA vendor. This is what the
+  // reference leaves as "2,12,127," + this tail after canonicalizing, and
+  // therefore the only part that must match to detect.
   static const uint8_t CANON_TAIL[] = {
       0xdd, 0x07, 0x50, 0x6f, 0x9a, 0x16, 0x03, 0x01, 0x03,
       0x2d, 0x02, 0x00, 0x00,                                // tag 45
@@ -203,21 +202,20 @@ static void run_corpus(void) {
       0xdd, 0x07, 0x00, 0x50, 0xf2, 0x08, 0x00, 0x00, 0x00,  // vendor WFA
   };
 
-  // cadenas de mas de 16 tokens con basura delante del ancla. Historia: el
-  // primer cap de SURV_IE_MAX_TOKS (=16) hacia que build_tokens devolviera -1
-  // al llenarse, y una trama con >=17 IEs y el ancla de LiteON atras NO se
-  // detectaba, mientras la referencia (buffer de string de 128 caracteres)
-  // canoniciza y SI la detecta. Estos casos son exactamente lo que el tope de
-  // recorrido y el espejo del presupuesto deben cubrir; si se degradan, esto
-  // falla.
+  // chains of more than 16 tokens with junk ahead of the anchor. History: the
+  // initial cap of SURV_IE_MAX_TOKS (=16) caused build_tokens to return -1
+  // when full, so a frame with >=17 IEs and the LiteON anchor at the end was
+  // NOT detected, whereas the reference (128-character string buffer)
+  // canonicalizes and DOES detect it. These cases are exactly what the walk
+  // cap and budget mirror must cover; if they regress, this fails.
   for (int t = 0; t < 20000; t++) {
     int n = 0;
-    // 13..22 tokens de basura de 4 chars en string ("240," = 4): con la cola
-    // de 36 chars queda bajo los 128 de la referencia.
+    // 13..22 junk tokens of 4 chars in string form ("240," = 4): with the
+    // 36-char tail it stays under the reference's 128-char cap.
     int njunk = (int) (rnd() % 10) + 13;
     for (int k = 0; k < njunk && n < 200; k++) {
       uint8_t tag =
-          (uint8_t) (240 + (rnd() % 8));  // 240..247, jamas tags de sig
+          (uint8_t) (240 + (rnd() % 8));  // 240..247, never signature tags
       int el = (int) ((rnd() >> 16) % 3);
       if (n + 2 + el > 200)
         break;
@@ -235,14 +233,14 @@ static void run_corpus(void) {
     check(s_buf, n);
   }
 
-  // la misma zona con tokens de 2-4 chars: la referencia alcanza runs de
-  // tokens mas largos dentro de sus 128 caracteres, y el lado equivalente del
-  // espejo de presupuesto (que ambos fallen o matcheen igual) se ejerce aqui.
+  // same zone with 2-4 char tokens: the reference reaches longer token runs
+  // within its 128 characters, exercising the equivalent side of the budget
+  // mirror (ensuring both fail or match alike).
   for (int t = 0; t < 20000; t++) {
     int n = 0;
     int njunk = (int) (rnd() % 24) + 24;
     for (int k = 0; k < njunk && n < 200; k++) {
-      uint8_t tag = (uint8_t) ((rnd() % 247) + 1);  // 1..247, sin 0
+      uint8_t tag = (uint8_t) ((rnd() % 247) + 1);  // 1..247, excluding 0
       int el = (int) ((rnd() >> 16) % 2);
       if (n + 2 + el > 200)
         break;
@@ -260,7 +258,7 @@ static void run_corpus(void) {
     check(s_buf, n);
   }
 
-  // firma con IEs aleatorios detras
+  // signature with random trailing IEs
   for (int t = 0; t < 20000; t++) {
     memcpy(s_buf, FLOCK_IES, sizeof(FLOCK_IES));
     int n = (int) sizeof(FLOCK_IES);
@@ -278,13 +276,13 @@ static void run_corpus(void) {
   }
 }
 
-TEST_CASE("el comparador binario coincide con la referencia de flock-you",
+TEST_CASE("binary comparator agrees with flock-you reference",
           "[surv][ie][diff]") {
   surv_ie_reset_signatures();
   run_corpus();
   TEST_ASSERT_EQUAL_INT_MESSAGE(0, s_disagree, s_first);
-  // Si el corpus dejara de producir coincidencias positivas, el test pasaria
-  // sin comprobar nada util.
+  // If the corpus stopped producing positive matches, the test would pass
+  // without checking anything useful.
   TEST_ASSERT_GREATER_THAN_INT(1000, s_agree_true);
   TEST_ASSERT_GREATER_THAN_INT(1000, s_agree_false);
 }

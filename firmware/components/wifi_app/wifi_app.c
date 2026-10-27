@@ -1,10 +1,10 @@
-/* WiFi App component: configuraciones AP.
+/* WiFi App component: AP configurations.
  *
- * Antes: llamaba a esp_wifi_init/start/stop/deinit directamente.
- * Después: usa wifi_service (inicializado en app_main). Sin bus de eventos:
- * las apps registran callbacks directos.
+ * Before: called esp_wifi_init/start/stop/deinit directly.
+ * After: uses wifi_service (initialized in app_main). No event bus:
+ * apps register direct callbacks.
  *
- * Referencia: wifi_service.h.
+ * Reference: wifi_service.h.
  */
 
 #include "freertos/FreeRTOS.h"
@@ -39,18 +39,18 @@ void wifi_ap_init(void) {
     return;
   }
 
-  /* WiFi stack ya inicializada por wifi_service_init() en app_main(). */
+  /* WiFi stack already initialized by wifi_service_init() in app_main(). */
   if (!wifi_service_is_up_get()) {
-    ESP_LOGW(__func__, "WiFi stack no inicializada por servicio; iniciando...");
+    ESP_LOGW(__func__, "WiFi stack not initialized by service; starting...");
     if (!wifi_service_init(WIFI_MODE_AP)) {
       ESP_LOGE(__func__, "WiFi stack init failed");
       return;
     }
   } else {
-    ESP_LOGI(__func__, "WiFi stack ya inicializada por servicio");
+    ESP_LOGI(__func__, "WiFi stack already initialized by service");
   }
 
-  /* Ya no llamamos esp_wifi_init aquí; el servicio lo hizo en app_main(). */
+  /* We no longer call esp_wifi_init here; the service did it in app_main(). */
   ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
   esp_netif_ap = esp_netif_create_default_wifi_ap();
@@ -72,10 +72,10 @@ void wifi_ap_init(void) {
 }
 
 void wifi_ap_deinit(void) {
-  /* Desactivar modo AP. */
+  /* Disable AP mode. */
   wifi_service_set_mode(WIFI_MODE_NULL);
 
-  /* Desconectar DHCP y apagar el netif. */
+  /* Stop DHCP and destroy netif. */
   esp_netif_dhcps_stop(esp_netif_ap);
   esp_netif_destroy(esp_netif_ap);
   esp_netif_ap = NULL;

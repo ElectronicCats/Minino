@@ -4,7 +4,7 @@
 #include "surv_overlay.h"
 #include "surv_test.h"
 
-TEST_CASE("un OUI anadido pasa a matchear", "[surv][overlay]") {
+TEST_CASE("added OUI starts matching", "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("+oui,aa:bb:cc,flock,5,2\n");
   TEST_ASSERT_EQUAL_UINT16(1, st.added);
@@ -15,7 +15,7 @@ TEST_CASE("un OUI anadido pasa a matchear", "[surv][overlay]") {
   TEST_ASSERT_EQUAL_INT(SURV_CLASS_FLOCK, e->klass);
 }
 
-TEST_CASE("un OUI quitado deja de matchear", "[surv][overlay]") {
+TEST_CASE("removed OUI stops matching", "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("-oui,70:c9:4e\n");
   TEST_ASSERT_EQUAL_UINT16(1, st.removed);
@@ -24,26 +24,26 @@ TEST_CASE("un OUI quitado deja de matchear", "[surv][overlay]") {
   TEST_ASSERT_NULL(surv_match_oui(mac));
 }
 
-TEST_CASE("los comentarios y las lineas vacias se ignoran", "[surv][overlay]") {
+TEST_CASE("comments and empty lines are ignored", "[surv][overlay]") {
   surv_overlay_reset();
-  surv_overlay_stats_t st = surv_overlay_parse("# comentario\n\n   \n");
+  surv_overlay_stats_t st = surv_overlay_parse("# comment\n\n   \n");
   TEST_ASSERT_EQUAL_UINT16(0, st.added);
   TEST_ASSERT_EQUAL_UINT16(0, st.removed);
   TEST_ASSERT_EQUAL_UINT16(0, st.skipped);
 }
 
-TEST_CASE("una linea malformada se cuenta como saltada", "[surv][overlay]") {
+TEST_CASE("malformed line is counted as skipped", "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse(
-      "+oui,noesunamac,flock,5,2\n"
+      "+oui,notamac,flock,5,2\n"
       "+oui,aa:bb\n"
-      "basura\n"
+      "garbage\n"
       "+oui,dd:ee:ff,flock,5,2\n");
   TEST_ASSERT_EQUAL_UINT16(1, st.added);
   TEST_ASSERT_EQUAL_UINT16(3, st.skipped);
 }
 
-TEST_CASE("un texto nulo o vacio no rompe", "[surv][overlay]") {
+TEST_CASE("null or empty text does not fail", "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse(NULL);
   TEST_ASSERT_EQUAL_UINT16(0, st.added);
@@ -51,7 +51,7 @@ TEST_CASE("un texto nulo o vacio no rompe", "[surv][overlay]") {
   TEST_ASSERT_EQUAL_UINT16(0, st.added);
 }
 
-TEST_CASE("una keyword de SSID anadida pasa a matchear", "[surv][overlay]") {
+TEST_CASE("added SSID keyword starts matching", "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("+ssid,mikamara,cam,3\n");
   TEST_ASSERT_EQUAL_UINT16(1, st.added);
@@ -60,7 +60,7 @@ TEST_CASE("una keyword de SSID anadida pasa a matchear", "[surv][overlay]") {
   TEST_ASSERT_EQUAL_INT(SURV_CLASS_CAM, e->klass);
 }
 
-TEST_CASE("un UUID anadido pasa a matchear", "[surv][overlay]") {
+TEST_CASE("added UUID starts matching", "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("+uuid,fd6f,cam,3\n");
   TEST_ASSERT_EQUAL_UINT16(1, st.added);
@@ -70,7 +70,7 @@ TEST_CASE("un UUID anadido pasa a matchear", "[surv][overlay]") {
   TEST_ASSERT_EQUAL_INT(SURV_CLASS_CAM, hits[0].klass);
 }
 
-TEST_CASE("una firma IE del overlay se suma a la compilada",
+TEST_CASE("overlay IE signature is added to the compiled-in one",
           "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("+iesig,45,191\n");
@@ -82,37 +82,37 @@ TEST_CASE("una firma IE del overlay se suma a la compilada",
   TEST_ASSERT_FALSE(surv_ie_matches_flock(ies, sizeof(ies)));
 }
 
-TEST_CASE("una firma IE malformada se salta", "[surv][overlay]") {
+TEST_CASE("malformed IE signature is skipped", "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("+iesig,221:abc\n");
   TEST_ASSERT_EQUAL_UINT16(0, st.added);
   TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
 }
 
-// vlen es vestigial: el matcher decide comparar bytes de vendor mirando solo
-// tag==221 (SURV_IE_VENDOR_TAG), nunca vlen. Un token "221" pelado, sin los
-// 14 hex del payload, se "parsearia" bien y despues jamas haria match con
-// nada en silencio si no se rechaza aqui.
-TEST_CASE("un token 221 sin payload de vendor se salta", "[surv][overlay]") {
+// vlen is vestigial: the matcher decides to compare vendor bytes by checking
+// tag==221 (SURV_IE_VENDOR_TAG) alone, never vlen. A bare "221" token without
+// the 14-hex payload would "parse" fine and then silently never match anything
+// if not rejected here.
+TEST_CASE("token 221 without vendor payload is skipped", "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("+iesig,221\n");
   TEST_ASSERT_EQUAL_UINT16(0, st.added);
   TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
 }
 
-// atoi("xyz") devuelve 0 en silencio, y un token con tag 0 es indistinguible
-// del elemento SSID: tokens_match_sig lo salta ANTES de compararlo contra la
-// firma, asi que la firma nunca se completa y queda muerta -ocupando ademas
-// uno de los 8 huecos de overlay-. Mismo modo de fallo que el 221 sin
+// atoi("xyz") silently returns 0, and a token with tag 0 is indistinguishable
+// from the SSID element: tokens_match_sig skips it BEFORE comparing against
+// the signature, so the signature never completes and remains dead while also
+// occupying one of the 8 overlay slots. Same failure mode as bare 221 without
 // payload.
-TEST_CASE("un token de tag 0 se salta", "[surv][overlay]") {
+TEST_CASE("tag 0 token is skipped", "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("+iesig,0,45\n");
   TEST_ASSERT_EQUAL_UINT16(0, st.added);
   TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
 }
 
-TEST_CASE("un token no numerico se salta en vez de leerse como tag 0",
+TEST_CASE("non-numeric token is skipped instead of being read as tag 0",
           "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("+iesig,xyz,45\n");
@@ -120,10 +120,10 @@ TEST_CASE("un token no numerico se salta en vez de leerse como tag 0",
   TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
 }
 
-// Una firma con mas tokens de los que caben en SURV_IE_MAX_TOKS se salta
-// entera: aplicarla truncada dejaria cargada una firma que el usuario no
-// escribio, y ese error tambien seria silencioso.
-TEST_CASE("una firma iesig con mas tokens de los permitidos se salta entera",
+// A signature with more tokens than fit in SURV_IE_MAX_TOKS is skipped in its
+// entirety: applying a truncated signature would load something the user did
+// not write, which would also be a silent error.
+TEST_CASE("iesig signature with more tokens than allowed is skipped entirely",
           "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st =
@@ -132,10 +132,10 @@ TEST_CASE("una firma iesig con mas tokens de los permitidos se salta entera",
   TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
 }
 
-// parse_oui debe exigir exactamente "xx:xx:xx": aceptar una MAC completa
-// donde se esperaba un OUI hace que el usuario crea que apunto a un solo
-// equipo cuando en realidad apunto a todo un prefijo de fabricante.
-TEST_CASE("un OUI con una MAC completa se rechaza en vez de truncarse",
+// parse_oui must require exactly "xx:xx:xx": accepting a full MAC where an OUI
+// was expected makes the user believe they targeted a single device when they
+// actually targeted an entire vendor prefix.
+TEST_CASE("OUI with a full MAC is rejected instead of truncated",
           "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st =
@@ -147,7 +147,7 @@ TEST_CASE("un OUI con una MAC completa se rechaza en vez de truncarse",
   TEST_ASSERT_NULL(surv_match_oui(mac));
 }
 
-TEST_CASE("un OUI con basura al final del tercer octeto se rechaza",
+TEST_CASE("OUI with trailing garbage on third octet is rejected",
           "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("+oui,aa:bb:ccdd,flock,5,2\n");
@@ -155,12 +155,12 @@ TEST_CASE("un OUI con basura al final del tercer octeto se rechaza",
   TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
 }
 
-// atoi("xyz") devuelve 0 en silencio: un campo de puntos no numerico cargaria
-// una entrada de 0 puntos, invisible e inerte, en vez de contar como saltada
-// (que el usuario si ve en pantalla). parse_ie_token ya resuelve esto con
-// strtol mas chequeo de puntero final; estas tres pruebas cubren los otros
-// tres lugares donde el mismo bug existia: +oui, +ssid y +uuid.
-TEST_CASE("un +oui con puntos no numericos se salta en vez de cargar 0",
+// atoi("xyz") silently returns 0: a non-numeric points field would load a
+// 0-point entry, invisible and inert, instead of counting as skipped (which
+// the user can see on screen). parse_ie_token already solves this with strtol
+// plus end-pointer checking; these four tests cover the other places where the
+// same bug existed: +oui, +ssid, and +uuid.
+TEST_CASE("+oui with non-numeric points is skipped instead of loading 0",
           "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("+oui,aa:bb:cc,flock,xyz,2\n");
@@ -168,7 +168,7 @@ TEST_CASE("un +oui con puntos no numericos se salta en vez de cargar 0",
   TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
 }
 
-TEST_CASE("un +oui con tier no numerico se salta en vez de cargar 0",
+TEST_CASE("+oui with non-numeric tier is skipped instead of loading 0",
           "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("+oui,aa:bb:cc,flock,5,xyz\n");
@@ -176,7 +176,7 @@ TEST_CASE("un +oui con tier no numerico se salta en vez de cargar 0",
   TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
 }
 
-TEST_CASE("un +ssid con puntos no numericos se salta en vez de cargar 0",
+TEST_CASE("+ssid with non-numeric points is skipped instead of loading 0",
           "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("+ssid,mikamara,cam,xyz\n");
@@ -184,7 +184,7 @@ TEST_CASE("un +ssid con puntos no numericos se salta en vez de cargar 0",
   TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
 }
 
-TEST_CASE("un +uuid con puntos no numericos se salta en vez de cargar 0",
+TEST_CASE("+uuid with non-numeric points is skipped instead of loading 0",
           "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("+uuid,fd6f,cam,xyz\n");
@@ -192,13 +192,13 @@ TEST_CASE("un +uuid con puntos no numericos se salta en vez de cargar 0",
   TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
 }
 
-// La longitud total (8) por si sola no basta: si el ultimo octeto trae
-// basura pegada a un solo digito hex valido, "aa:bb:c!" tambien mide 8
-// caracteres. Solo el %n de sscanf (cuantos caracteres consumio realmente el
-// ultimo campo) detecta que el tercer octeto no se completo. Sin ese chequeo
-// esta forma se colaria con el mismo bug que la MAC completa o el
-// "aa:bb:ccdd", solo que mas angosto.
-TEST_CASE("un OUI de 8 caracteres con basura en el ultimo octeto se rechaza",
+// Total length (8) alone is not enough: if the last octet has garbage attached
+// to a single valid hex digit, "aa:bb:c!" is also 8 characters long. Only
+// sscanf's %n (how many characters the last matched field actually consumed)
+// detects that the third octet was incomplete. Without that check, this form
+// would slip through with the same bug as the full MAC or "aa:bb:ccdd", just
+// narrower.
+TEST_CASE("8-character OUI with garbage in the last octet is rejected",
           "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("+oui,aa:bb:c!,flock,5,2\n");
@@ -206,7 +206,7 @@ TEST_CASE("un OUI de 8 caracteres con basura en el ultimo octeto se rechaza",
   TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
 }
 
-TEST_CASE("se respeta el tope de 256 OUIs", "[surv][overlay]") {
+TEST_CASE("cap of 256 OUIs is respected", "[surv][overlay]") {
   surv_overlay_reset();
   char buf[64];
   surv_overlay_stats_t st = {0};

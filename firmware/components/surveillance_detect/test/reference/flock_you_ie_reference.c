@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MIT
 //
-// ALGORITMO DE REFERENCIA — NO SE COMPILA EN EL FIRMWARE.
+// REFERENCE ALGORITHM -- NOT COMPILED INTO FIRMWARE.
 //
-// Extracto literal del constructor de firma de Information Elements de
-// colonelpanichacks/flock-you (MIT), tomado de su main.cpp. Se vendoriza aqui
-// con el unico proposito de correr un test diferencial: nuestro comparador
-// binario (surv_ie.c) debe coincidir con este en TODA entrada.
+// Literal excerpt of the Information Elements signature builder from
+// colonelpanichacks/flock-you (MIT), taken from its main.cpp. Vendored here
+// for the sole purpose of running a differential test: our binary comparator
+// (surv_ie.c) must agree with this on EVERY input.
 //
-// Por que existe este archivo: nuestra version reimplementa el algoritmo en
-// tokens binarios para no formatear strings en el callback promiscuo. Esa
-// reimplementacion se hizo leyendo el codigo de abajo, y una lectura
-// equivocada produciria un detector que pasa todos sus tests y no reconoce una
-// camara real jamas. La primera version, en efecto, omitia los tres parches de
-// tramas malformadas y perdia 3020 de 25000 casos. Solo se detecto ejecutando
-// los dos algoritmos en paralelo.
+// Why this file exists: our version reimplements the algorithm using binary
+// tokens to avoid formatting strings inside the promiscuous callback. That
+// reimplementation was written by reading the code below, and a misreading
+// would produce a detector that passes all its unit tests yet never recognizes
+// a real camera. Indeed, the first version omitted the three malformed-frame
+// patches and missed 3,020 out of 25,000 cases. It was only caught by running
+// both algorithms in parallel.
 //
-// No editar para "mejorarlo": su valor es ser el original.
+// Do not edit to "improve" it: its value is being the original.
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -48,7 +48,7 @@ static bool IRAM_ATTR fyLiteonVendorAt(const uint8_t* ies, int len, int pos) {
   return pos + 9 <= len && ies[pos] == FY_IE_VENDOR && ies[pos + 1] == 7 &&
          ies[pos + 2] == 0x50 && ies[pos + 3] == 0x6f && ies[pos + 4] == 0x9a;
 }
-// Scan up to 32 bytes past a bogus TLV header for a real LiteON vendor IE —
+// Scan up to 32 bytes past a bogus TLV header for a real LiteON vendor IE --
 // signals a phantom overflow (driver length/FCS skew) rather than end of frame.
 static bool IRAM_ATTR fyPhantomLiteonAhead(const uint8_t* ies,
                                            int len,
@@ -284,7 +284,7 @@ static bool IRAM_ATTR fyProbeBodyFlockIeSigPrimary(const uint8_t* body,
   return false;
 }
 
-// Envoltorio no-static para el test diferencial.
+// Non-static wrapper for the differential test.
 bool surv_ref_is_primary(const uint8_t* body, int bodyLen) {
   return fyProbeBodyFlockIeSigPrimary(body, bodyLen);
 }

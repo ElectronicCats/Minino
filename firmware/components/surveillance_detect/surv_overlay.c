@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Parser del overlay de firmas de microSD. Formato de linea, uno por
-// entrada:
-//   +oui,aa:bb:cc,<clase>,<puntos>,<tier>
+// Parser for the microSD signature overlay. Line format, one per entry:
+//   +oui,aa:bb:cc,<class>,<points>,<tier>
 //   -oui,aa:bb:cc
-//   +ssid,<substring>,<clase>,<puntos>
-//   +blename,<substring>,<clase>,<puntos>
-//   +uuid,<hex16>,<clase>,<puntos>
-//   +iesig,<tok>[,<tok>...]      tok = "<tag>" o "<tag>:<14 hex>" (vendor)
-//   # comentario / linea vacia -> se ignoran, no cuentan como saltadas
+//   +ssid,<substring>,<class>,<points>
+//   +blename,<substring>,<class>,<points>
+//   +uuid,<hex16>,<class>,<points>
+//   +iesig,<tok>[,<tok>...]      tok = "<tag>" or "<tag>:<14 hex>" (vendor)
+//   # comment / empty line -> ignored, not counted as skipped
 //
-// Recibe texto ya en memoria (no una ruta): leer el archivo es
-// responsabilidad de la app (Task 17), lo que deja este parser 100%
-// testeable en host. Parsea linea a linea con strtok_r sobre una copia
-// acotada, sin malloc.
+// Receives text already in memory (not a path): reading the file is the
+// app's responsibility (Task 17), keeping this parser 100% host-testable.
+// Parses line by line with strtok_r over a bounded copy, without malloc.
 #include "surv_overlay.h"
 #include <stdbool.h>
 #include <stdio.h>
@@ -23,10 +21,10 @@
 #include "surv_match.h"
 #include "surv_signatures.h"
 
-// MAX_ADD/_KW/_UUID se derivan de las constantes de surv_signatures.h: son
-// las mismas que dimensionan los arreglos efectivos alli. Definirlas por
-// separado en cada archivo dejaria la sincronizacion librada a la
-// convencion en vez de al compilador.
+// MAX_ADD/_KW/_UUID are derived from constants in surv_signatures.h: they are
+// the same constants that size the effective arrays there. Defining them
+// separately in each file would leave synchronization up to convention rather
+// than the compiler.
 #define MAX_ADD      SURV_OVERLAY_MAX_OUIS
 #define MAX_REMOVE   64
 #define MAX_ADD_KW   SURV_OVERLAY_MAX_KWS
@@ -55,16 +53,15 @@ void surv_overlay_reset(void) {
   surv_ie_reset_signatures();
 }
 
-// Exige exactamente "xx:xx:xx" (8 caracteres) y nada mas. sscanf con "%2x"
-// por si solo acepta gustoso "aa:bb:ccdd" o una MAC completa
-// "aa:bb:cc:dd:ee:ff" como si fueran el OUI "aa:bb:cc": el resto de la
-// cadena se ignora en silencio. Esto se edita a mano en el overlay, asi que
-// aceptar una MAC completa donde se penso escribir un OUI hace creer al
-// usuario que apunto a un solo equipo cuando en realidad apunto a todo un
-// prefijo de fabricante. %n mide cuantos caracteres consumio el ultimo
-// campo que matcheo: si el tercer octeto trae basura pegada (p.ej. "c!"),
-// %2x solo consume el digito hex valido y %n lo delata aunque la cadena
-// completa mida 8 caracteres.
+// Requires exactly "xx:xx:xx" (8 characters) and nothing else. sscanf with
+// "%2x" alone happily accepts "aa:bb:ccdd" or a full MAC "aa:bb:cc:dd:ee:ff"
+// as if they were the OUI "aa:bb:cc", silently ignoring the rest of the
+// string. Since the overlay is edited by hand, accepting a full MAC where an
+// OUI was expected makes the user believe they targeted a single device when
+// they actually targeted an entire vendor prefix. %n measures how many
+// characters the last matched field consumed: if the third octet has trailing
+// garbage (e.g., "c!"), %2x only consumes the valid hex digit and %n catches
+// it even when the full string is 8 characters long.
 static bool parse_oui(const char* s, uint8_t out[3]) {
   if (strlen(s) != 8) {
     return false;
@@ -88,12 +85,12 @@ static bool parse_ie_token(const char* s, surv_ie_tok_t* out) {
   }
   char* end = NULL;
   long tag = strtol(s, &end, 10);
-  // strtol y no atoi, y se rechaza el tag 0. atoi("xyz") devuelve 0 en
-  // silencio, y un token con tag 0 es indistinguible del elemento SSID:
-  // tokens_match_sig lo salta ANTES de compararlo contra la firma, asi que la
-  // firma nunca se completa y queda muerta -ocupando ademas uno de los 8
-  // huecos de overlay-. Mismo modo de fallo que el token 221 sin payload, y
-  // ninguno de los dos avisa de nada.
+  // Use strtol instead of atoi, and reject tag 0. atoi("xyz") silently returns
+  // 0, and a token with tag 0 is indistinguishable from the SSID element:
+  // tokens_match_sig skips it BEFORE comparing against the signature, so the
+  // signature never completes and remains dead while also occupying one of the
+  // 8 overlay slots. Same failure mode as tag 221 without payload, neither of
+  // which gives any warning.
   if (end == s || (*end != '\0' && *end != ':') || tag < 1 || tag > 255) {
     return false;
   }
@@ -101,17 +98,17 @@ static bool parse_ie_token(const char* s, surv_ie_tok_t* out) {
   out->tag = (uint8_t) tag;
   if (colon == NULL) {
     if (out->tag == SURV_IE_VENDOR_TAG) {
-      // El matcher decide comparar bytes de vendor mirando solo tag==221,
-      // nunca vlen (vlen es vestigial). Un 221 pelado se "parsearia" bien y
-      // despues jamas haria match con nada, en silencio. Se rechaza aqui
-      // para que cuente como saltado en vez de ser una firma muerta.
+      // The matcher decides to compare vendor bytes by checking tag==221
+      // alone, never vlen (vlen is vestigial). A bare 221 would "parse" fine
+      // and then silently never match anything. Reject it here so it counts
+      // as skipped instead of becoming a dead signature.
       return false;
     }
     return true;
   }
   const char* hex = colon + 1;
   size_t hl = strlen(hex);
-  if (hl != 14) {  // exactamente 7 bytes de vendor
+  if (hl != 14) {  // exactly 7 vendor bytes
     return false;
   }
   for (int i = 0; i < 7; i++) {
@@ -125,11 +122,11 @@ static bool parse_ie_token(const char* s, surv_ie_tok_t* out) {
   return true;
 }
 
-// strtol y no atoi, mismo motivo que en parse_ie_token: atoi("xyz") devuelve
-// 0 en silencio, y un campo de puntos/tier que se lee como 0 no se distingue
-// de uno legitimamente escrito como "0". La linea entera deberia contar como
-// saltada (st->skipped, visible en pantalla) en vez de cargar una entrada
-// inerte que el usuario cree activa.
+// Use strtol instead of atoi, for the same reason as parse_ie_token:
+// atoi("xyz") silently returns 0, and a points/tier field read as 0 is
+// indistinguishable from one legitimately written as "0". The entire line
+// should count as skipped (st->skipped, visible on screen) rather than loading
+// an inert entry that the user believes is active.
 static bool parse_u8_field(const char* s, uint8_t* out) {
   if (s == NULL || *s == '\0') {
     return false;
@@ -185,7 +182,7 @@ static bool handle_line(char* line, surv_overlay_stats_t* st) {
   while (*line == ' ' || *line == '\t')
     line++;
   if (*line == '\0' || *line == '#' || *line == '\r') {
-    return true;  // ignorada, no cuenta como saltada
+    return true;  // ignored, not counted as skipped
   }
   char sign = *line++;
   char* save = NULL;
@@ -206,8 +203,8 @@ static bool handle_line(char* line, surv_overlay_stats_t* st) {
       st->skipped++;
       return true;
     }
-    // La copia al pool es necesaria: `value` apunta al buffer de linea, que se
-    // reutiliza en la siguiente iteracion.
+    // Copying into the pool is required: `value` points into the line buffer,
+    // which is reused on the next iteration.
     strcpy(s_kw_pool[s_add_kw_count], value);
     s_add_kw[s_add_kw_count].kw = s_kw_pool[s_add_kw_count];
     s_add_kw[s_add_kw_count].klass = k;
@@ -241,15 +238,15 @@ static bool handle_line(char* line, surv_overlay_stats_t* st) {
     return true;
   }
   if (strcmp(kind, "iesig") == 0) {
-    // El resto de la linea son los tokens: "2", "12", "221:506f9a16030103"...
-    // `value` es el primero; los demas salen de strtok_r.
+    // The rest of the line holds the tokens: "2", "12", "221:506f9a16030103"...
+    // `value` is the first one; the rest come from strtok_r.
     surv_ie_tok_t toks[SURV_IE_MAX_TOKS];
     uint8_t n = 0;
     const char* tok = value;
     while (tok != NULL) {
       if (n >= SURV_IE_MAX_TOKS) {
-        // Mas tokens de los que caben: se salta la linea entera. Aplicarla
-        // truncada dejaria cargada una firma que el usuario no escribio.
+        // More tokens than fit: skip the entire line. Applying a truncated
+        // signature would load something the user did not write.
         st->skipped++;
         return true;
       }
@@ -338,8 +335,8 @@ surv_overlay_stats_t surv_overlay_parse(const char* text) {
   surv_signatures_build_effective(s_add, s_add_count, s_remove, s_remove_count);
   surv_signatures_build_effective_kws(s_add_kw, s_add_kw_count);
   surv_signatures_build_effective_uuids(s_add_uuid, s_add_uuid_count);
-  // Reconstruir el bitmap del prefiltro OUI para que las entradas anadidas
-  // por overlay sean visibles en surv_match_oui() (hot path del sniffer).
+  // Rebuild the OUI prefilter bitmap so entries added by the overlay are
+  // visible in surv_match_oui() (sniffer hot path).
   surv_match_rebuild_bitmap();
   return st;
 }

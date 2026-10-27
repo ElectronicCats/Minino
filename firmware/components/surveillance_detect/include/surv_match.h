@@ -4,34 +4,34 @@
 #include "surv_signatures.h"
 #include "surv_types.h"
 
-// Construye el prefiltro. Llamar una vez antes de cualquier match.
+// Builds the prefilter. Call once before any match.
 void surv_match_init(void);
 
-// Reconstruye el bitmap del prefiltro tras un cambio en la tabla efectiva de
-// OUIs (overlay). Debe llamarse despues de surv_signatures_build_effective().
+// Rebuilds the prefilter bitmap after a change to the effective OUI table
+// (overlay). Must be called after surv_signatures_build_effective().
 void surv_match_rebuild_bitmap(void);
 
-// Devuelve la entrada de la tabla o NULL. Apto para llamarse desde el callback
-// promiscuo: sin asignación de memoria, sin I/O.
+// Returns the table entry or NULL. Safe to call from the promiscuous callback:
+// no memory allocation, no I/O.
 const surv_oui_entry_t* surv_match_oui(const uint8_t mac[6]);
 
-// Búsqueda case-insensitive de substring. Maneja NULL y empty needle.
+// Case-insensitive substring search. Handles NULL and empty needle.
 bool surv_match_contains_ci(const char* hay, const char* needle);
 
-// Busca SSID en la tabla de keywords. Devuelve la primera coincidencia o NULL.
+// Looks up SSID in the keyword table. Returns the first match or NULL.
 const surv_kw_entry_t* surv_match_ssid(const char* ssid);
 
 #define SURV_BLE_MAX_HITS 4
 typedef struct {
   surv_class_t klass;
   uint8_t points;
-  const char* label;  // "AirTag", "Axon", ... string estático
+  const char* label;  // "AirTag", "Axon", ... static string
 } surv_ble_hit_t;
 
-// Recorre los TLV de un advertisement BLE y acumula hasta SURV_BLE_MAX_HITS
-// clases distintas (un mismo advertisement puede ser iBeacon y otra cosa a la
-// vez). adv puede venir directo del aire: adv_len es la longitud real del
-// buffer, no confiable por sí sola. Devuelve el número de hits en out.
+// Walks the TLVs of a BLE advertisement and accumulates up to SURV_BLE_MAX_HITS
+// distinct classes (a single advertisement can be an iBeacon and something else
+// at the same time). adv may come straight from over the air: adv_len is the
+// actual buffer length, untrusted on its own. Returns the number of hits in out.
 uint8_t surv_match_ble_adv(const uint8_t* adv,
                            uint8_t adv_len,
                            surv_ble_hit_t out[SURV_BLE_MAX_HITS]);

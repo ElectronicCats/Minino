@@ -64,13 +64,13 @@ void uart_sender_send_packet(uart_sender_packet_type type,
 }
 
 uint32_t calculate_ble_crc24(const uint8_t* data, size_t len) {
-  uint32_t crc = 0x555555;  // Inicialización del CRC con 0x555555
-  uint32_t poly = 0x65B;    // Polinomio 0x65B
+  uint32_t crc = 0x555555;  // Initialize CRC with 0x555555
+  uint32_t poly = 0x65B;    // Polynomial 0x65B
 
   for (size_t i = 0; i < len; i++) {
-    crc ^= ((uint32_t) data[i] << 16);  // XOR el byte actual al CRC
+    crc ^= ((uint32_t) data[i] << 16);  // XOR current byte into CRC
 
-    for (int j = 0; j < 8; j++) {  // Procesar bit a bit
+    for (int j = 0; j < 8; j++) {  // Process bit by bit
       if (crc & 0x800000) {
         crc = (crc << 1) ^ poly;
       } else {
@@ -79,7 +79,7 @@ uint32_t calculate_ble_crc24(const uint8_t* data, size_t len) {
     }
   }
 
-  return (crc & 0xFFFFFF);  // Retornar solo los 24 bits inferiores
+  return (crc & 0xFFFFFF);  // Return only the lower 24 bits
 }
 
 bool is_adv_structure_valid(const uint8_t* data, uint8_t len) {
@@ -150,7 +150,7 @@ void uart_sender_send_packet_ble(uart_sender_packet_type type,
 
   uint8_t total_payload_len = 6 + valid_len;  // 6 bytes addr + ADV data
 
-  uint8_t temp_packet[64];  // Tamaño suficiente
+  uint8_t temp_packet[64];  // Sufficient size
   index = 0;
 
   memcpy(&temp_packet[index], access_address, BLE_ADDRESS_SIZE);
