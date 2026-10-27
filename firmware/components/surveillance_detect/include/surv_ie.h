@@ -39,7 +39,8 @@ typedef struct {
   uint8_t vendor[SURV_IE_VENDOR_MAX];
 } surv_ie_tok_t;
 
-// 1 = SSID IE present with length 0; 0 = present with non-zero length; -1 = absent.
+// 1 = SSID IE present with length 0; 0 = present with non-zero length; -1 =
+// absent.
 int surv_ie_is_wildcard_probe(const uint8_t* ies, int len);
 
 // true if the IEs match the Flock signature (compiled-in or from the overlay).

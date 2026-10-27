@@ -19,8 +19,7 @@ TEST_CASE("unknown MAC does not match", "[surv][match]") {
   TEST_ASSERT_NULL(surv_match_oui(mac));
 }
 
-TEST_CASE("locally administered MAC 82:6b:f2 DOES match",
-          "[surv][match]") {
+TEST_CASE("locally administered MAC 82:6b:f2 DOES match", "[surv][match]") {
   surv_match_init();
   const uint8_t mac[6] = {0x82, 0x6b, 0xf2, 0x14, 0x07, 0x3a};
   const surv_oui_entry_t* e = surv_match_oui(mac);
@@ -28,8 +27,7 @@ TEST_CASE("locally administered MAC 82:6b:f2 DOES match",
   TEST_ASSERT_EQUAL_INT(SURV_CLASS_FLOCK, e->klass);
 }
 
-TEST_CASE("contract manufacturer OUI has tier ceiling 1",
-          "[surv][match]") {
+TEST_CASE("contract manufacturer OUI has tier ceiling 1", "[surv][match]") {
   surv_match_init();
   const uint8_t mac[6] = {0xf4, 0x6a, 0xdd, 0x01, 0x02, 0x03};
   const surv_oui_entry_t* e = surv_match_oui(mac);

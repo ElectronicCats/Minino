@@ -1,4 +1,5 @@
-/* WiFi Service singleton: encapsulates esp_wifi_init() and provides a common API.
+/* WiFi Service singleton: encapsulates esp_wifi_init() and provides a common
+ * API.
  *
  * Before: 13 modules called esp_wifi_init() directly, each with its own
  * sdkconfig (#ifdef CONFIG_WIFI_*_ENABLE). Result: conditional recompilation,

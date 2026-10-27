@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // Confidence engine. Combines two models:
-//   - per-MAC tier, from flock-you (MIT): how confident we are about this device.
+//   - per-MAC tier, from flock-you (MIT): how confident we are about this
+//   device.
 //   - global score with decay, from eye-spy (Apache-2.0): how surveilled this
 //     location is.
 // These are independent axes: a "flock" SSID is tier 0 and 5 points at once.

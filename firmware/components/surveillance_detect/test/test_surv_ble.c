@@ -113,8 +113,7 @@ TEST_CASE("two UUIDs of the same class produce a single hit", "[surv][ble]") {
 // AD type 0x03 is a LIST of 16-bit UUIDs: it may pack several into the same
 // structure, unlike 0x16 (service data), where only the first two bytes are a
 // UUID and the rest is payload.
-TEST_CASE("a UUID list with two entries produces two hits",
-          "[surv][ble]") {
+TEST_CASE("a UUID list with two entries produces two hits", "[surv][ble]") {
   // Single AD structure, type 0x03, with Tile (0xFEED) and Ray-Ban Meta
   // (0xFD5F) packed back-to-back.
   const uint8_t adv[] = {0x05, 0x03, 0xed, 0xfe, 0x5f, 0xfd};
@@ -139,8 +138,7 @@ TEST_CASE("service data 0x16 does not read payload as a UUID list",
   TEST_ASSERT_EQUAL_INT(SURV_CLASS_TILE, hits[0].klass);
 }
 
-TEST_CASE("five classes are capped at SURV_BLE_MAX_HITS",
-          "[surv][ble]") {
+TEST_CASE("five classes are capped at SURV_BLE_MAX_HITS", "[surv][ble]") {
   // GLASSES, ODID, SMARTTAG, TILE, and SKIMMER: five distinct classes.
   const uint8_t adv[] = {0x03, 0x03, 0x5f, 0xfd, 0x03, 0x03, 0xfa, 0xff,
                          0x03, 0x03, 0x5a, 0xfd, 0x03, 0x03, 0xed, 0xfe,

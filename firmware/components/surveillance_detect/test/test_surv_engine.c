@@ -68,8 +68,7 @@ TEST_CASE("high tier is not downgraded by a lower one", "[surv][engine]") {
   TEST_ASSERT_EQUAL_UINT8(SURV_TIER_IE_SIG, surv_engine_best_tier(hi.mac));
 }
 
-TEST_CASE("5 s dedupe suppresses repeats of the same tier",
-          "[surv][engine]") {
+TEST_CASE("5 s dedupe suppresses repeats of the same tier", "[surv][engine]") {
   surv_engine_reset();
   surv_engine_register_emit_cb(on_emit);
   s_emits = 0;
@@ -145,9 +144,8 @@ TEST_CASE("lower tier after a higher one does not force re-emission",
   TEST_ASSERT_EQUAL_INT(1, s_emits);
 }
 
-TEST_CASE(
-    "decay anchor established by tick survives the first detection",
-    "[surv][engine]") {
+TEST_CASE("decay anchor established by tick survives the first detection",
+          "[surv][engine]") {
   surv_engine_reset();
   // Ticks prior to any detection, with score at 0: simulate the ~100 ms loop
   // of the engine task before the first signal appears. Each tick must advance
@@ -167,7 +165,8 @@ TEST_CASE(
   TEST_ASSERT_EQUAL_UINT8(4, surv_engine_score());
 }
 
-TEST_CASE("device table saturates at 200 MACs without overflowing", "[surv][engine]") {
+TEST_CASE("device table saturates at 200 MACs without overflowing",
+          "[surv][engine]") {
   surv_engine_reset();
   for (int i = 0; i < 300; i++) {
     surv_event_t ev = mk((uint8_t) (i & 0xff), SURV_CLASS_CAM, SURV_TIER_ADDR2);

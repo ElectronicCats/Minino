@@ -50,7 +50,8 @@ static portMUX_TYPE s_ble_mux = portMUX_INITIALIZER_UNLOCKED;
 static volatile uint8_t s_ble_start_retries = 0;
 
 // State of the reboot-based "Scan All" mux (surv_radio_start_once): single
-// BLE or WiFi window per boot; the next phase is persisted and the chip reboots.
+// BLE or WiFi window per boot; the next phase is persisted and the chip
+// reboots.
 static surv_radio_phase_t s_mux_phase = SURV_PHASE_BLE;
 static void (*s_on_phase_done)(void) = NULL;
 static volatile bool s_one_shot = false;
@@ -323,7 +324,8 @@ static void ble_window_ms(uint32_t ms) {
   s_current_channel = 0;
   // Mark scan desired and let GAP events synchronize the actual state.
   // In TRACKERS scanning runs continuously (auto-restart on INQ_CMPL_EVT);
-  // in SURVEIL only during this window, without stealing airtime from the sniffer.
+  // in SURVEIL only during this window, without stealing airtime from the
+  // sniffer.
   s_ble_scan_desired = true;
   ble_try_start_scan((ms + 999) / 1000);
   uint32_t elapsed = 0;
@@ -468,7 +470,8 @@ static void radio_task(void* arg) {
   while (s_running) {
     switch (s_profile) {
       case SURV_PROFILE_FLOCK:
-        // Wi-Fi was started in surv_radio_start and stays on: the loop does not shut it down.
+        // Wi-Fi was started in surv_radio_start and stays on: the loop does not
+        // shut it down.
         wifi_window_ms(20000);
         break;
       case SURV_PROFILE_SURVEIL:
@@ -555,7 +558,8 @@ void surv_radio_stop(void) {
   radio_lease_wifi_release();
   esp_ble_gap_stop_scanning();
   // Wait for radio_task to finish and self-delete. Without this, returning
-  // early causes race conditions on radio resources (WiFi promiscuous, BLE GAP).
+  // early causes race conditions on radio resources (WiFi promiscuous, BLE
+  // GAP).
   gap_dispatcher_unregister(ble_gap_cb);
   while (s_radio_task != NULL) {
     vTaskDelay(pdMS_TO_TICKS(10));
@@ -591,14 +595,16 @@ static void mux_radio_task(void* arg) {
     }
     break;
   }
-  const bool fire = s_running;  // false if surv_radio_stop() cancelled the phase
+  const bool fire =
+      s_running;  // false if surv_radio_stop() cancelled the phase
   s_running = false;
   s_one_shot = false;
   s_radio_task = NULL;
   void (*cb)(void) = s_on_phase_done;
   s_on_phase_done = NULL;
   if (fire && cb != NULL) {
-    cb();  // flips the persisted phase and calls esp_restart() from the app layer
+    cb();  // flips the persisted phase and calls esp_restart() from the app
+           // layer
   }
   vTaskDelete(NULL);
 }

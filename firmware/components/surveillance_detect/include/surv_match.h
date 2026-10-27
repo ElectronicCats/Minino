@@ -31,7 +31,8 @@ typedef struct {
 // Walks the TLVs of a BLE advertisement and accumulates up to SURV_BLE_MAX_HITS
 // distinct classes (a single advertisement can be an iBeacon and something else
 // at the same time). adv may come straight from over the air: adv_len is the
-// actual buffer length, untrusted on its own. Returns the number of hits in out.
+// actual buffer length, untrusted on its own. Returns the number of hits in
+// out.
 uint8_t surv_match_ble_adv(const uint8_t* adv,
                            uint8_t adv_len,
                            surv_ble_hit_t out[SURV_BLE_MAX_HITS]);

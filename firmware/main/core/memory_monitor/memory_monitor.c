@@ -130,8 +130,7 @@ esp_err_t heap_monitor_init(void) {
 
 esp_err_t heap_monitor_start(uint32_t interval_ms) {
   if (!monitor_initialized) {
-    ESP_LOGE(TAG,
-             "Monitor not initialized. Call heap_monitor_init() first");
+    ESP_LOGE(TAG, "Monitor not initialized. Call heap_monitor_init() first");
     return ESP_ERR_INVALID_STATE;
   }
 
@@ -244,10 +243,9 @@ void heap_monitor_set_thresholds(size_t warning_kb,
     xSemaphoreGive(monitor_mutex);
   }
 
-  ESP_LOGI(
-      TAG,
-      "Thresholds updated: Warning=%zuKB, Critical=%zuKB, Emergency=%zuKB",
-      warning_kb, critical_kb, emergency_kb);
+  ESP_LOGI(TAG,
+           "Thresholds updated: Warning=%zuKB, Critical=%zuKB, Emergency=%zuKB",
+           warning_kb, critical_kb, emergency_kb);
 }
 
 void heap_monitor_print_stats(void) {

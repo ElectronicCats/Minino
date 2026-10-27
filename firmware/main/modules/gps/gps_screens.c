@@ -342,8 +342,7 @@ static void gps_screens_save_location(gps_t* gps) {
       xSemaphoreGive(route_mutex);
       return;
     }
-    gps_route_file_buffer[0] =
-        '\0';  // Clear buffer after writing the header
+    gps_route_file_buffer[0] = '\0';  // Clear buffer after writing the header
   }
 
   char str[32];

@@ -54,7 +54,8 @@ bool wifi_service_init(wifi_mode_t mode) {
   }
 
   /* Default mode: station. Apps that need AP request it via
-     wifi_service_set_mode(); there are no CONFIG_STA_ENABLE/AP_ENABLE symbols. */
+     wifi_service_set_mode(); there are no CONFIG_STA_ENABLE/AP_ENABLE symbols.
+   */
   if (mode == WIFI_MODE_AP || mode == WIFI_MODE_STA ||
       mode == WIFI_MODE_APSTA || mode == WIFI_MODE_NULL) {
     s_state.mode = mode;

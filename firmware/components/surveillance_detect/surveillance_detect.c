@@ -127,7 +127,8 @@ void IRAM_ATTR wifi_sniffer_cb(void* buf, wifi_promiscuous_pkt_type_t type) {
   }
 
   // Drone Remote ID over WiFi: management frame addressed to the fixed ASTM
-  // F3411 NaN MAC. Does not depend on any OUI. Engine from eye-spy (Apache-2.0).
+  // F3411 NaN MAC. Does not depend on any OUI. Engine from eye-spy
+  // (Apache-2.0).
   static const uint8_t ODID_NAN[6] = {0x51, 0x6f, 0x9a, 0x01, 0x00, 0x00};
   if (is_mgmt && memcmp(addr1, ODID_NAN, 6) == 0) {
     memcpy(ev.mac, addr2, 6);

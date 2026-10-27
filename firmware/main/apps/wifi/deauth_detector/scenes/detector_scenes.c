@@ -42,9 +42,8 @@ void detector_scenes_show_table(uint16_t* deauth_packets_count_list) {
     } else {  // Special case if it is the last channel with no pair
       sprintf(str, "%d: %d", i + 1, deauth_packets_count_list[i]);
     }
-    oled_screen_display_text(
-        str, 0, (i / 2) + 1,
-        OLED_DISPLAY_NORMAL);  // Adjust vertical position
+    oled_screen_display_text(str, 0, (i / 2) + 1,
+                             OLED_DISPLAY_NORMAL);  // Adjust vertical position
     free(str);
   }
   oled_screen_display_show();

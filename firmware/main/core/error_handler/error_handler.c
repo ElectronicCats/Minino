@@ -180,7 +180,7 @@ void error_handler_report(const error_info_t* error) {
 
 void error_handler_set_callback(error_callback_t callback) {
   if (error_handler_mutex &&
-       xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
+      xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
     error_callback = callback;
     xSemaphoreGive(error_handler_mutex);
   }

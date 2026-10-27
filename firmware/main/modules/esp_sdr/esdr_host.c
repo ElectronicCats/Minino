@@ -172,8 +172,8 @@ bool esdr_host_stop_requested(void) {
   /* Any incoming byte stops an active RXRUN/SPEC stream immediately, matching
      upstream burst_serial_stop_requested(). Any non-empty command line is
      buffered in s_line so it is not swallowed. */
-  for (unsigned j = 0;
-       j < 128 && usb_serial_jtag_read_bytes(&byte, 1, 0) == 1; j++) {
+  for (unsigned j = 0; j < 128 && usb_serial_jtag_read_bytes(&byte, 1, 0) == 1;
+       j++) {
     stopped = true;
     if (byte == '\r') {
       continue;

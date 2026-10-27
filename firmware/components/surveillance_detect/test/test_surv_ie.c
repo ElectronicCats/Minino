@@ -51,7 +51,8 @@ TEST_CASE("signature matches with 4 trailing FCS bytes", "[surv][ie]") {
   TEST_ASSERT_TRUE(surv_ie_matches_flock(ies, sizeof(ies)));
 }
 
-TEST_CASE("TLV with impossible length does not hang or overflow", "[surv][ie]") {
+TEST_CASE("TLV with impossible length does not hang or overflow",
+          "[surv][ie]") {
   const uint8_t ies[] = {0x00, 0x00, 0x2d, 0xff, 0x01, 0x02};
   (void) surv_ie_matches_flock(ies, sizeof(ies));  // must not crash
   TEST_PASS();
@@ -62,7 +63,8 @@ TEST_CASE("len 0 and null pointer are handled", "[surv][ie]") {
   TEST_ASSERT_FALSE(surv_ie_matches_flock(NULL, 0));
 }
 
-TEST_CASE("added signature matches without losing the compiled-in one", "[surv][ie]") {
+TEST_CASE("added signature matches without losing the compiled-in one",
+          "[surv][ie]") {
   surv_ie_reset_signatures();
   const uint8_t otra_trama[] = {0x00, 0x00, 0x2d, 0x02, 0x00,
                                 0x00, 0xbf, 0x02, 0x00, 0x00};
@@ -87,8 +89,7 @@ TEST_CASE("overlay cap of 8 signatures is respected", "[surv][ie]") {
   surv_ie_reset_signatures();
 }
 
-TEST_CASE("signature with more tokens than allowed is rejected",
-          "[surv][ie]") {
+TEST_CASE("signature with more tokens than allowed is rejected", "[surv][ie]") {
   surv_ie_reset_signatures();
   surv_ie_tok_t demasiados[SURV_IE_MAX_TOKS + 1];
   memset(demasiados, 0, sizeof(demasiados));

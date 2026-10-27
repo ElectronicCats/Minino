@@ -109,8 +109,7 @@ TEST_CASE("frequency calculation by primary WiFi channel", "[wardriving]") {
   TEST_ASSERT_EQUAL_UINT16(2484, test_get_frequency(14));
 }
 
-TEST_CASE("MAC deduplication and expiration in scan table",
-          "[wardriving]") {
+TEST_CASE("MAC deduplication and expiration in scan table", "[wardriving]") {
   s_mac_table_count = 0;
   s_mac_table_head = 0;
 
@@ -142,8 +141,7 @@ TEST_CASE("circular overflow handling in MAC table", "[wardriving]") {
   TEST_ASSERT_EQUAL_UINT16(20 % MAX_MAC_TABLE_SIZE, s_mac_table_head);
 }
 
-TEST_CASE("SD path resolution and path traversal prevention",
-          "[wardriving]") {
+TEST_CASE("SD path resolution and path traversal prevention", "[wardriving]") {
   char path_out[128];
 
   // Relative path -> /sdcard/warfi
@@ -165,8 +163,7 @@ TEST_CASE("SD path resolution and path traversal prevention",
   TEST_ASSERT_EQUAL_STRING("", path_out);
 }
 
-TEST_CASE("Wigle CSV line formatting without buffer overflow",
-          "[wardriving]") {
+TEST_CASE("Wigle CSV line formatting without buffer overflow", "[wardriving]") {
   char csv_line[150];
   const char* mac = "aa:bb:cc:dd:ee:ff";
   const char* ssid = "TestingNetwork_1234567890";

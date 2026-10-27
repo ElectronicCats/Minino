@@ -54,8 +54,7 @@ static inline uint8_t log_power_code(unsigned exponent, uint32_t norm) {
   unsigned slot = (norm - 256u) >> 4, frac = norm & 15u;
   uint32_t logarithm = (exponent << 12) + log2_q12[slot] +
                        ((log2_q12[slot + 1] - log2_q12[slot]) * frac + 8) / 16;
-  unsigned code =
-      (logarithm * 1541u + (1u << 19)) >> 20; /* 20 log10(power) */
+  unsigned code = (logarithm * 1541u + (1u << 19)) >> 20; /* 20 log10(power) */
   return code > 255 ? 255 : (uint8_t) code;
 }
 

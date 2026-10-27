@@ -3,7 +3,8 @@
 // Signature tables. Provenance:
 //   - Flock OUIs: @NitekryDPaul (nite-oui-collection) via flock-you (MIT)
 //     and DeFlockJoplin (82:6b:f2).
-//   - Camera, ALPR, SoundThinking OUIs and BLE signatures: eye-spy (Apache-2.0).
+//   - Camera, ALPR, SoundThinking OUIs and BLE signatures: eye-spy
+//   (Apache-2.0).
 #pragma once
 #include <stdint.h>
 #include "surv_types.h"

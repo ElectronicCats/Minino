@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// IE fingerprinting. Provenance and rationale for the binary design: see surv_ie.h.
+// IE fingerprinting. Provenance and rationale for the binary design: see
+// surv_ie.h.
 #include "surv_ie.h"
 #include <stdlib.h>
 #include <string.h>
@@ -178,7 +179,8 @@ static int build_tokens(const uint8_t* ies,
     }
 
     if (n >= cap) {
-      return -1;  // reference fails the same way when overflowing its string buffer
+      return -1;  // reference fails the same way when overflowing its string
+                  // buffer
     }
     // Separator and token, in the same order and with the same limits as the
     // reference's fySigAppend (comma first if not the first token, and >= cap
