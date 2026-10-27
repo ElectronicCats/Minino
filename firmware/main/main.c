@@ -42,13 +42,13 @@
 static const char* TAG = "main";
 
 void app_main() {
-  // Inicializar sistemas core PRIMERO
+  // Initialize core systems FIRST
   error_handler_init();
   task_manager_init();
   heap_monitor_init();
-  heap_monitor_start(5000);  // Monitorear cada 5 segundos
+  heap_monitor_start(5000);  // Monitor every 5 seconds
 
-  ESP_LOGI(TAG, "✅ Core components inicializados");
+  ESP_LOGI(TAG, "✅ Core components initialized");
 
   preferences_begin();
   gps_hw_init();

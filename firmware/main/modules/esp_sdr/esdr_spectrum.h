@@ -1,16 +1,15 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later
  *
- * Espectros calculados en el chip: el modo "On-Chip Spectrum" del visor de
- * ESPARGOS.
+ * On-chip computed spectra: the "On-Chip Spectrum" mode of the ESPARGOS
+ * viewer.
  *
- * En vez de mandar las muestras en crudo y que el navegador calcule la FFT,
- * la placa calcula el espectro y manda una lista de códigos de potencia. Es
- * lo que hace que el visor pueda refrescar a decenas de cuadros por segundo
- * en vez de a diez.
+ * Instead of sending raw samples for the browser to compute the FFT, the
+ * board computes the spectrum and sends a list of power codes. This allows
+ * the viewer to refresh at dozens of frames per second instead of ten.
  *
- * Portado del firmware del ESPARGOS (GPL-3.0-or-later): main/common/
- * spectrum.c, spectrum_dc.h, spectrum_math.h y spectrum_fft.h, con el
- * formato descrito en su docs/spectrum.md.
+ * Ported from ESPARGOS firmware (GPL-3.0-or-later): main/common/spectrum.c,
+ * spectrum_dc.h, spectrum_math.h and spectrum_fft.h, using the format
+ * described in its docs/spectrum.md.
  */
 
 #ifndef ESDR_SPECTRUM_H_
@@ -23,17 +22,17 @@
 extern "C" {
 #endif
 
-/* El mayor numero de bins que el firmware admite. */
+/* Maximum number of FFT bins supported by the firmware. */
 #define ESDR_SPEC_MAX_FFT 2048u
 
 /**
- * @brief Adquiere una rafaga y devuelve las palabras crudas.
+ * @brief Acquire a burst and return the raw words.
  *
- * @param n       numero de muestras
- * @param rate    codigo de tasa (0 = 80 MS/s, 1 = 40 MS/s, 6 = 16 MS/s)
- * @param words   palabras crudas (I en los bits 9-0, Q en los 19-10)
- * @param elapsed_us micros que tardo la captura
- * @return true si la captura salio bien
+ * @param n          number of samples
+ * @param rate       rate code (0 = 80 MS/s, 1 = 40 MS/s, 6 = 16 MS/s)
+ * @param words      raw words (I in bits 9-0, Q in bits 19-10)
+ * @param elapsed_us microseconds taken by the capture
+ * @return true if the capture succeeded
  */
 typedef bool (*esdr_spectrum_acquire_fn)(uint32_t n,
                                          uint32_t rate,
@@ -41,12 +40,12 @@ typedef bool (*esdr_spectrum_acquire_fn)(uint32_t n,
                                          uint32_t* elapsed_us);
 
 /**
- * @brief Atiende los comandos de espectro.
+ * @brief Handle spectrum commands.
  *
- * @param line        la linea recibida
- * @param freq_mhz    la frecuencia que el cliente ha pedido
- * @param acquire     como se saca una rafaga
- * @return true si la linea era un comando de espectro (contestado o no)
+ * @param line        received command line
+ * @param freq_mhz    frequency requested by the client
+ * @param acquire     callback to acquire a burst
+ * @return true if the line was a spectrum command (replied or not)
  */
 bool esdr_spectrum_command(const char* line,
                            uint32_t freq_mhz,

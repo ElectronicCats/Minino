@@ -1,9 +1,9 @@
 #include <string.h>
-#include "esp_event.h"  // Añadido para manejar el bucle de eventos
+#include "esp_event.h"  // Added for event loop handling
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_timer.h"
-#include "esp_wifi.h"  // Añadido para funciones de desinicialización de WiFi
+#include "esp_wifi.h"  // Added for WiFi deinitialization functions
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -362,7 +362,7 @@ void wardriving_module_begin() {
 void wardriving_module_end() {
   ESP_LOGI(TAG, "Wardriving module end");
 
-  // Desmontar la tarjeta SD
+  // Unmount the SD card
   esp_err_t err = sd_card_unmount();
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Failed to unmount SD card: %s", esp_err_to_name(err));
@@ -399,10 +399,10 @@ void wardriving_module_start_scan() {
   ESP_LOGI(TAG, "Start scan");
   wardriving_module_state = WARDRIVING_MODULE_STATE_SCANNING;
 
-  // Usar Task Manager para tareas críticas
+  // Use Task Manager for critical tasks
   esp_err_t err = task_manager_create(
       wardriving_module_scan_task, "wardriving_scan", TASK_STACK_MEDIUM, NULL,
-      TASK_PRIORITY_HIGH,  // GPS es alta prioridad
+      TASK_PRIORITY_HIGH,  // GPS is high priority
       &wardriving_module_scan_task_handle);
 
   if (err != ESP_OK) {
@@ -416,9 +416,9 @@ void wardriving_module_start_scan() {
      callbacks, so a failure would freeze the whole UI. */
   err = task_manager_create(
       wardriving_screens_wifi_animation_task, "wardriving_anim",
-      TASK_STACK_SMALL,  // Animaciones solo necesitan stack pequeño
+      TASK_STACK_SMALL,  // Animations only need a small stack
       NULL,
-      TASK_PRIORITY_LOW,  // UI baja prioridad
+      TASK_PRIORITY_LOW,  // UI low priority
       &scanning_wifi_animation_task_handle);
 
   if (err == ESP_OK) {
@@ -444,10 +444,10 @@ void wardriving_module_stop_scan() {
   gps_module_stop_read();
   gps_module_unregister_cb();
 
-  // Desinicializar el controlador WiFi
+  // Deinitialize the WiFi controller
   wifi_driver_deinit();
 
-  // Usar Task Manager para eliminar tareas
+  // Use Task Manager to delete tasks
   if (wardriving_module_scan_task_handle != NULL) {
     task_manager_delete(wardriving_module_scan_task_handle);
     wardriving_module_scan_task_handle = NULL;

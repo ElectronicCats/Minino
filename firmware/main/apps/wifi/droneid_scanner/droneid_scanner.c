@@ -125,7 +125,7 @@ static void droneid_scanner_process_task(void* pvParameters) {
 
     memset(currentUAV, 0, sizeof(uav_data));
 
-    // Validar longitud minima antes de leer del payload
+    // Validate minimum length before reading from payload
     if (packet_len < 16) {
       free(currentUAV);
       continue;

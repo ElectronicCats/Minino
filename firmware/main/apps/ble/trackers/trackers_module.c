@@ -71,7 +71,7 @@ static void log_tracker_to_sd(const tracker_profile_t* record,
   if (!s_sd_logging || record == NULL) {
     return;
   }
-  // Guardar datos únicamente cuando el GPS haya triangulado una posición válida
+  // Save data only when GPS has triangulated a valid position
   if (gps == NULL || !gps->valid ||
       (gps->latitude == 0.0f && gps->longitude == 0.0f)) {
     return;

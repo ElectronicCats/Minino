@@ -215,7 +215,7 @@ void surveillance_log_detection(const surv_event_t* ev,
     return;
   }
 
-  // Guardar datos únicamente cuando el GPS haya triangulado una posición válida
+  // Save data only when GPS has triangulated a valid position
   if (gps == NULL || !gps->valid ||
       (gps->latitude == 0.0f && gps->longitude == 0.0f)) {
     return;

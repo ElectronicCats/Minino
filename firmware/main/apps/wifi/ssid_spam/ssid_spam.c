@@ -236,11 +236,11 @@ static void spam_task(void* pvParameters) {
   vTaskDelete(NULL);
 }
 
-/* La lista de SSID se carga cuando el usuario elige un elemento del menu.
-   Arrancando la app desde la consola (launch ssid_spam) no hay ningun
-   elemento elegido, y el spammer se quedaba con la lista vacia: la tarea
-   de spam no transmittera nada y la app parecia funcionando. Si no hay
-   ninguna lista cargada, se toma el primer elemento guardado. */
+/* The SSID list is loaded when the user selects a menu item.
+   When launching the app from the console (launch ssid_spam), no item is
+   selected, leaving the spammer with an empty list: the spam task transmitted
+   nothing while the app appeared to be running. If no list is loaded, pick
+   the first stored entry. */
 static void ssid_spam_load_stored_list(void) {
   if (total_lines > 0) {
     return;
@@ -286,9 +286,9 @@ static void ssid_spam_init(void) {
   if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
     ESP_LOGE("ssid_spam", "event_loop_create error: %s", esp_err_to_name(ret));
   }
-  /* esp_netif_create_default_wifi_ap() hace un assert() si el netif del
-     AP ya existe: al reentrar en la app (o al arrancarla dos veces sin
-     salir) la placa se reiniciaba con un "duplicate key". */
+  /* esp_netif_create_default_wifi_ap() triggers an assert() if the AP netif
+     already exists: re-entering the app (or starting it twice without
+     exiting) caused the board to reboot with a "duplicate key" error. */
   if (esp_netif_get_handle_from_ifkey("WIFI_AP_DEF") == NULL) {
     esp_netif_create_default_wifi_ap();
   }
@@ -392,9 +392,9 @@ static void ssid_spam_main_cb(uint8_t button_name, uint8_t button_event) {
 }
 
 void ssid_spam_begin() {
-  /* La lista se carga al abrir la app: el menu la carga al elegir un
-     elemento, pero desde la consola (launch ssid_spam) no hay ninguna
-     elegida y el Start se negaba a arrancar. */
+  /* Load the list when opening the app: the menu loads it when selecting an
+     item, but from the console (launch ssid_spam) nothing is selected and
+     Start refused to run. */
   ssid_spam_load_stored_list();
   spam_main_menu();
 }

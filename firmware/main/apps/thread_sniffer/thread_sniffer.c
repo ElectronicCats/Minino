@@ -327,7 +327,6 @@ static void thread_sniffer_show_event(thread_sniffer_events_t event,
 }
 
 void thread_sniffer_subscribe_screen_events(void) {
-  /* Suscribe el handler de pantalla por defecto a los eventos de
-   * thread_sniffer. */
+  /* Subscribe the default screen handler to thread_sniffer events. */
   thread_sniffer_subscribe_show_event(thread_sniffer_show_event_handler);
 }

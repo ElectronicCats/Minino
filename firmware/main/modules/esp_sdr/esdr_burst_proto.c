@@ -77,18 +77,18 @@ bool esdr_parse_line(const char* line, esdr_request_t* out) {
   }
 
   if (!strcmp(line, "BAUD?") || !strncmp(line, "BAUD ", 5)) {
-    /* El visor ofrece cambiar la velocidad del puerto. Esta sesion va por
-       USB, donde la velocidad no existe: se responde como el firmware del
-       ESPARGOS cuando el transporte no es el UART. */
+    /* The viewer offers to change the port baud rate. This session runs over
+       USB, where baud rate does not apply: reply the same way the ESPARGOS
+       firmware does when the transport is not UART. */
     out->cmd = ESDR_CMD_BAUD;
     return true;
   }
 
   if (!strncmp(line, "SPEC", 4) || !strcmp(line, "DC?") ||
       !strncmp(line, "DC ", 3)) {
-    /* El modo de espectros lleva demasiados argumentos para analizarlos
-       aqui: se pasa la linea entera al modulo que lo implementa. Tambien
-       entran aqui el SPECINFO? y el DC?. */
+    /* Spectrum mode takes too many arguments to parse here: pass the full
+       line to the module that implements it. SPECINFO? and DC? also go
+       through this path. */
     out->cmd = ESDR_CMD_SPEC;
     snprintf(out->args, sizeof(out->args), "%s", line);
     return true;

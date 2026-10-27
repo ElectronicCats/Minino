@@ -18,8 +18,8 @@
 #include "esdr_transport.h"
 #include "unity.h"
 
-/* El transporte en el test: se recoge lo que el modulo escribe y no hay
-   ni puerto ni reloj. */
+/* Test transport: captures everything written by the module, with no real
+   port or clock. */
 static char s_written[4096];
 static size_t s_written_len = 0;
 static bool s_stop = false;
@@ -54,16 +54,16 @@ void setUp(void) {
 
 void tearDown(void) {}
 
-/* El modulo usa malloc/free y printf; los tests comprueban las funciones
- * puras a traves de la interfaz publica. */
+/* The module uses malloc/free and printf; tests verify pure functions
+ * through the public interface. */
 
 /*
- * La FFT del modulo es estatica, asi que el test la reproduce aqui con el
- * mismo algoritmo y compara el resultado con un DFT directo. Si el algoritmo
- * del modulo cambia, este test hay que actualizarlo con el.
+ * The module's FFT is static, so the test reproduces it here using the
+ * same algorithm and compares the result against a direct DFT. If the
+ * module's algorithm changes, update this test accordingly.
  */
 static void fft_reference(int16_t* x, unsigned n) {
-  /* permutacion de inversion de bits */
+  /* bit-reversal permutation */
   for (unsigned i = 1, j = 0; i < n; i++) {
     unsigned bit = n >> 1;
     for (; j & bit; bit >>= 1) {
@@ -125,7 +125,7 @@ static void test_the_fft_matches_a_direct_transform(void) {
   double re[n], im[n];
   int16_t x[2 * n];
 
-  /* Una senal con dos tonos: el espectro tiene que tenerlos ahi. */
+  /* A two-tone signal: the spectrum must show both tones. */
   for (unsigned j = 0; j < n; j++) {
     re[j] = 1000.0 * cos(2.0 * M_PI * 3.0 * (double) j / (double) n) +
             500.0 * cos(2.0 * M_PI * 11.0 * (double) j / (double) n);
@@ -138,17 +138,17 @@ static void test_the_fft_matches_a_direct_transform(void) {
   dft_naive(re, im, n, dre, dim);
   fft_reference(x, n);
 
-  /* La salida de la FFT va en orden natural: el bin k es la frecuencia k.
-     La FFT es Q15 y la entrada esta en unidades crudas, asi que el
-     resultado lleva el factor 32767/1000. */
-  const double scale = 1.0 / (double) n; /* cada mariposa divide entre dos */
+  /* The FFT output is in natural order: bin k corresponds to frequency k.
+     The FFT is Q15 and the input is in raw units, so the result carries
+     the factor 32767/1000. */
+  const double scale = 1.0 / (double) n; /* each butterfly divides by two */
   for (unsigned k = 0; k < n; k++) {
     double got_re = x[2 * k];
     double got_im = x[2 * k + 1];
     double got = sqrt(got_re * got_re + got_im * got_im);
     double want = sqrt(dre[k] * dre[k] + dim[k] * dim[k]) * scale;
     if (want < 1.0) {
-      /* Un bin casi vacio puede quedar con residuo del redondeo. */
+      /* A nearly empty bin may retain rounding residue. */
       TEST_ASSERT_TRUE(got < 20.0);
     } else {
       TEST_ASSERT_FLOAT_WITHIN(want * 0.05 + 1.0, want, got);
@@ -167,7 +167,7 @@ static void test_the_fft_finds_the_tones(void) {
   }
   fft_reference(x, n);
 
-  /* El tono esta en el bin 5 y en el 59 (la parte negativa del espectro). */
+  /* The tone sits at bin 5 and bin 59 (the negative side of the spectrum). */
   unsigned peak = 0;
   double best = 0;
   for (unsigned k = 0; k < n; k++) {
@@ -182,15 +182,15 @@ static void test_the_fft_finds_the_tones(void) {
 }
 
 static void test_the_raw_word_layout_is_i_low_and_q_high(void) {
-  /* El visor descodifica el grupo de 20 bits con I en los bits 0-9 y Q en
-     los 10-19, y el banco de captura trae I en los bits 9-0 de la palabra
-     y Q en los 19-10. */
+  /* The viewer decodes the 20-bit group with I in bits 0-9 and Q in
+     bits 10-19, and the capture bank stores I in bits 9-0 of the word
+     and Q in bits 19-10. */
   uint32_t i = 100, q = 200;
   uint32_t word = (i & 0x3FFu) | ((q & 0x3FFu) << 10);
   TEST_ASSERT_EQUAL_INT((int) i, (int) ((int32_t) (word << 22) >> 22));
   TEST_ASSERT_EQUAL_INT((int) q, (int) ((int32_t) (word << 12) >> 22));
 
-  /* Y con signo, como los diez bits con signo que son. */
+  /* And signed, as signed 10-bit values. */
   int32_t neg = -63;
   uint32_t word_neg = ((uint32_t) (neg & 0x3FF)) | ((uint32_t) (0x3C2) << 10);
   TEST_ASSERT_EQUAL_INT(-63, (int) ((int32_t) (word_neg << 22) >> 22));
@@ -198,7 +198,7 @@ static void test_the_raw_word_layout_is_i_low_and_q_high(void) {
 }
 
 static void test_the_crc_of_a_frame_is_the_one_the_viewer_checks(void) {
-  /* El visor comprueba el CRC32 de la cabecera y de las bins. */
+  /* The viewer checks the CRC32 of the header and bins. */
   uint8_t frame[32 + 4];
   for (unsigned j = 0; j < 32; j++) {
     frame[j] = (uint8_t) j;
@@ -208,15 +208,15 @@ static void test_the_crc_of_a_frame_is_the_one_the_viewer_checks(void) {
   frame[33] = (uint8_t) (crc >> 8);
   frame[34] = (uint8_t) (crc >> 16);
   frame[35] = (uint8_t) (crc >> 24);
-  /* El CRC del marco completo no es el del cuerpo: el visor lo calcula
-     sobre la cabecera y las bins, y lo compara con los ultimos cuatro
-     bytes. */
+  /* The CRC of the full frame is not the CRC of the body: the viewer
+     computes it over the header and bins, and compares it against the
+     last four bytes. */
   TEST_ASSERT_EQUAL_HEX32(crc, esdr_crc32(frame, 32));
 }
 
 static void test_the_spectrum_command_recognises_its_own(void) {
-  /* El comando llega con una funcion de adquisicion que no se usa en estos
-     casos, asi que basta con que la linea se reconozca. */
+  /* The command takes an acquisition callback that is unused in these
+     cases, so simply recognizing the line is enough. */
   TEST_ASSERT_TRUE(esdr_spectrum_command("SPECINFO?", 2412, NULL));
   TEST_ASSERT_TRUE(esdr_spectrum_command("DC?", 2412, NULL));
   TEST_ASSERT_TRUE(esdr_spectrum_command("DC 1", 2412, NULL));
@@ -227,7 +227,7 @@ static void test_the_spectrum_command_recognises_its_own(void) {
 static void test_the_profiles_are_the_ones_the_viewer_understands(void) {
   TEST_ASSERT_TRUE(esdr_spectrum_command("SPECINFO?", 2412, NULL));
 
-  /* El visor parsea el JSON de SPECINFO y exige esta forma:
+  /* The viewer parses the SPECINFO JSON and requires this exact layout:
      {"continuous":bool,"transports":[...],"profiles":[[rate,code,bins,stride,units,cont],...]}
    */
   TEST_ASSERT_NOT_NULL(strstr(s_written, "SPECINFO {"));
@@ -235,9 +235,9 @@ static void test_the_profiles_are_the_ones_the_viewer_understands(void) {
   TEST_ASSERT_NOT_NULL(strstr(s_written, "\"transports\":[\"USB\"]"));
   TEST_ASSERT_NOT_NULL(strstr(s_written, "\"profiles\":["));
 
-  /* Los perfiles: la tasa, su codigo, las bins, el paso, las unidades por
-     marco y si la captura es continua. El visor busca el perfil cuyo
-     numero de bins es el que ha pedido. */
+  /* The profiles: sample rate, rate code, bins, stride, units per frame,
+     and whether capture is continuous. The viewer looks up the profile
+     matching the requested bin count. */
   TEST_ASSERT_NOT_NULL(strstr(s_written, "[80000000,0,512,1,1,0]"));
   TEST_ASSERT_NOT_NULL(strstr(s_written, "[80000000,0,1024,1,1,0]"));
   TEST_ASSERT_NOT_NULL(strstr(s_written, "[80000000,0,2048,1,1,0]"));
@@ -260,7 +260,7 @@ static void test_the_dc_command_answers(void) {
   TEST_ASSERT_TRUE(esdr_spectrum_command("DC?", 2412, NULL));
   TEST_ASSERT_EQUAL_STRING("DC 0\n", s_written);
 
-  /* Se vuelve al modo por defecto para no affectar a las demas pruebas. */
+  /* Restore default mode so other tests are unaffected. */
   esdr_spectrum_command("DC 1", 2412, NULL);
 }
 

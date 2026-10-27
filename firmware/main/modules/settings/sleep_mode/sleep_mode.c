@@ -54,7 +54,7 @@ static void sleep_mode_light_sleep() {
     gpio_wakeup_disable(DOWN_BUTTON_PIN);
     oled_screen_set_last_buffer();
   } else {
-    printf("Error al habilitar el despertar por GPIO\n");
+    printf("Error enabling GPIO wakeup\n");
   }
 }
 

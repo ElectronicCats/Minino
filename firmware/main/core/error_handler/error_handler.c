@@ -7,17 +7,17 @@
 
 static const char* TAG = "error_handler";
 
-// Estado del handler
+// Handler state
 static bool handler_initialized = false;
 static bool auto_restart_enabled = true;
 static error_callback_t error_callback = NULL;
 static void (*restart_callback)(void) = NULL;
 static SemaphoreHandle_t error_handler_mutex = NULL;
 
-// Estadísticas
+// Statistics
 static error_stats_t stats = {0};
 
-// Nombres de componentes para logging
+// Component names for logging
 static const char* component_names[] = {"WiFi",   "BLE",     "GPS",   "Zigbee",
                                         "Thread", "SD Card", "Flash", "UI",
                                         "System", "Other"};
@@ -26,22 +26,22 @@ static const char* component_names[] = {"WiFi",   "BLE",     "GPS",   "Zigbee",
 
 esp_err_t error_handler_init(void) {
   if (handler_initialized) {
-    ESP_LOGW(TAG, "Error Handler ya inicializado");
+    ESP_LOGW(TAG, "Error Handler already initialized");
     return ESP_OK;
   }
 
   if (error_handler_mutex == NULL) {
     error_handler_mutex = xSemaphoreCreateMutex();
     if (error_handler_mutex == NULL) {
-      ESP_LOGE(TAG, "Error creando mutex para Error Handler");
+      ESP_LOGE(TAG, "Error creating mutex for Error Handler");
       return ESP_ERR_NO_MEM;
     }
   }
 
-  // Resetear estadísticas
+  // Reset statistics
   stats = (error_stats_t) {0};
 
-  ESP_LOGI(TAG, "Error Handler inicializado");
+  ESP_LOGI(TAG, "Error Handler initialized");
   handler_initialized = true;
 
   return ESP_OK;
@@ -49,18 +49,18 @@ esp_err_t error_handler_init(void) {
 
 void error_handler_report(const error_info_t* error) {
   if (!handler_initialized) {
-    ESP_LOGE(TAG, "Error Handler no inicializado!");
+    ESP_LOGE(TAG, "Error Handler not initialized!");
     return;
   }
 
   if (error == NULL) {
-    ESP_LOGE(TAG, "Error info es NULL");
+    ESP_LOGE(TAG, "Error info is NULL");
     return;
   }
 
   if (error_handler_mutex &&
       xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
-    // Actualizar estadísticas
+    // Update statistics
     stats.total_errors++;
     switch (error->severity) {
       case ERROR_SEVERITY_INFO:
@@ -79,13 +79,13 @@ void error_handler_report(const error_info_t* error) {
     xSemaphoreGive(error_handler_mutex);
   }
 
-  // Determinar emoji y nivel de log con bounds check
+  // Determine emoji and log level with bounds check
   const char* severity_emoji[] = {"ℹ️ ", "⚠️ ", "❌", "🚨"};
   const char* emoji = (error->severity >= 0 && error->severity < 4)
                           ? severity_emoji[error->severity]
                           : "❓";
 
-  // Log estructurado con bounds check
+  // Structured log with bounds check
   const char* component_name =
       (error->component >= 0 &&
        (size_t) error->component < COMPONENT_NAMES_COUNT)
@@ -97,7 +97,7 @@ void error_handler_report(const error_info_t* error) {
   }
   const char* message = error->message ? error->message : "No message";
 
-  // Log según severidad
+  // Log according to severity
   switch (error->severity) {
     case ERROR_SEVERITY_INFO:
       ESP_LOGI(TAG, "%s [%s] %s (%s) - %s", emoji, component_name, message,
@@ -117,9 +117,9 @@ void error_handler_report(const error_info_t* error) {
       break;
   }
 
-  // Intentar recuperación si existe función
+  // Attempt recovery if a recovery function exists
   if (error->recovery_func != NULL) {
-    ESP_LOGI(TAG, "Intentando recuperacion automatica...");
+    ESP_LOGI(TAG, "Attempting automatic recovery...");
     if (error_handler_mutex &&
         xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
       stats.recoveries_attempted++;
@@ -133,10 +133,10 @@ void error_handler_report(const error_info_t* error) {
       stats.recoveries_successful++;
       xSemaphoreGive(error_handler_mutex);
     }
-    ESP_LOGI(TAG, "Recuperacion exitosa");
+    ESP_LOGI(TAG, "Recovery successful");
   }
 
-  // Capturar callbacks bajo mutex para evitar race condition
+  // Capture callbacks under mutex to avoid race condition
   error_callback_t saved_error_callback = NULL;
   void (*saved_restart_callback)(void) = NULL;
   bool saved_auto_restart = false;
@@ -149,17 +149,17 @@ void error_handler_report(const error_info_t* error) {
     xSemaphoreGive(error_handler_mutex);
   }
 
-  // Llamar callback personalizado si existe
+  // Call custom callback if registered
   if (saved_error_callback != NULL) {
     saved_error_callback(error);
   }
 
-  // Manejar restart si es critico
+  // Handle restart if critical
   if (error->severity == ERROR_SEVERITY_CRITICAL && error->requires_restart) {
-    ESP_LOGE(TAG, "Error critico requiere reinicio del sistema");
+    ESP_LOGE(TAG, "Critical error requires system restart");
 
     if (saved_restart_callback != NULL) {
-      ESP_LOGI(TAG, "Ejecutando callback pre-restart...");
+      ESP_LOGI(TAG, "Executing pre-restart callback...");
       saved_restart_callback();
     }
 
@@ -169,18 +169,18 @@ void error_handler_report(const error_info_t* error) {
         stats.restarts_triggered++;
         xSemaphoreGive(error_handler_mutex);
       }
-      ESP_LOGE(TAG, "Reiniciando en 3 segundos...");
+      ESP_LOGE(TAG, "Restarting in 3 seconds...");
       vTaskDelay(pdMS_TO_TICKS(3000));
       esp_restart();
     } else {
-      ESP_LOGW(TAG, "Auto-restart deshabilitado, requiere intervencion manual");
+      ESP_LOGW(TAG, "Auto-restart disabled, manual intervention required");
     }
   }
 }
 
 void error_handler_set_callback(error_callback_t callback) {
   if (error_handler_mutex &&
-      xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
+       xSemaphoreTake(error_handler_mutex, portMAX_DELAY) == pdTRUE) {
     error_callback = callback;
     xSemaphoreGive(error_handler_mutex);
   }
@@ -209,17 +209,17 @@ error_stats_t error_handler_get_stats(void) {
 void error_handler_print_stats(void) {
   error_stats_t s = error_handler_get_stats();
   ESP_LOGI(TAG, "════════════════════════════════════════");
-  ESP_LOGI(TAG, "  ERROR HANDLER - Estadísticas");
+  ESP_LOGI(TAG, "  ERROR HANDLER - Statistics");
   ESP_LOGI(TAG, "════════════════════════════════════════");
-  ESP_LOGI(TAG, "  Total errores:        %lu", s.total_errors);
+  ESP_LOGI(TAG, "  Total errors:         %lu", s.total_errors);
   ESP_LOGI(TAG, "  ├─ Info:              %lu", s.info_count);
   ESP_LOGI(TAG, "  ├─ Warnings:          %lu", s.warning_count);
   ESP_LOGI(TAG, "  ├─ Errors:            %lu", s.error_count);
   ESP_LOGI(TAG, "  └─ Critical:          %lu", s.critical_count);
   ESP_LOGI(TAG, "");
-  ESP_LOGI(TAG, "  Recuperaciones:       %lu / %lu intentadas",
+  ESP_LOGI(TAG, "  Recoveries:           %lu / %lu attempted",
            s.recoveries_successful, s.recoveries_attempted);
-  ESP_LOGI(TAG, "  Reinicios provocados: %lu", s.restarts_triggered);
+  ESP_LOGI(TAG, "  Triggered restarts:   %lu", s.restarts_triggered);
   ESP_LOGI(TAG, "════════════════════════════════════════");
 }
 
@@ -231,7 +231,7 @@ void error_handler_reset_stats(void) {
   } else {
     stats = (error_stats_t) {0};
   }
-  ESP_LOGI(TAG, "Estadísticas reseteadas");
+  ESP_LOGI(TAG, "Statistics reset");
 }
 
 void error_handler_set_auto_restart(bool enabled) {
@@ -240,5 +240,5 @@ void error_handler_set_auto_restart(bool enabled) {
     auto_restart_enabled = enabled;
     xSemaphoreGive(error_handler_mutex);
   }
-  ESP_LOGI(TAG, "Auto-restart %s", enabled ? "habilitado" : "deshabilitado");
+  ESP_LOGI(TAG, "Auto-restart %s", enabled ? "enabled" : "disabled");
 }

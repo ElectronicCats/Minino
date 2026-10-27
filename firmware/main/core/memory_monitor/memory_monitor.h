@@ -6,95 +6,95 @@
 
 /**
  * @file memory_monitor.h
- * @brief Sistema de monitoreo de memoria heap en tiempo real
+ * @brief Real-time heap memory monitoring system
  *
- * Proporciona monitoreo pasivo y alertas automáticas cuando la memoria
- * disponible baja de niveles críticos.
+ * Provides passive monitoring and automatic alerts when available memory
+ * drops below critical levels.
  */
 
 /**
- * @brief Estadísticas de heap
+ * @brief Heap statistics
  */
 typedef struct {
-  size_t total_free;            ///< Memoria libre actual (bytes)
-  size_t min_free_ever;         ///< Mínimo histórico de memoria libre
-  size_t largest_free_block;    ///< Bloque contiguo más grande disponible
-  size_t total_allocated;       ///< Total de memoria alocada
-  float fragmentation_percent;  ///< Porcentaje de fragmentación (0-100)
+  size_t total_free;            ///< Current free memory (bytes)
+  size_t min_free_ever;         ///< Historical minimum free memory
+  size_t largest_free_block;    ///< Largest available contiguous block
+  size_t total_allocated;       ///< Total allocated memory
+  float fragmentation_percent;  ///< Fragmentation percentage (0-100)
 } heap_stats_t;
 
 /**
- * @brief Niveles de alerta de memoria
+ * @brief Memory alert levels
  */
 typedef enum {
-  HEAP_ALERT_NONE = 0,  ///< Memoria normal (>50KB)
-  HEAP_ALERT_WARNING,   ///< Advertencia (30-50KB)
-  HEAP_ALERT_CRITICAL,  ///< Crítico (20-30KB)
-  HEAP_ALERT_EMERGENCY  ///< Emergencia (<20KB)
+  HEAP_ALERT_NONE = 0,  ///< Normal memory (>50KB)
+  HEAP_ALERT_WARNING,   ///< Warning (30-50KB)
+  HEAP_ALERT_CRITICAL,  ///< Critical (20-30KB)
+  HEAP_ALERT_EMERGENCY  ///< Emergency (<20KB)
 } heap_alert_level_t;
 
 /**
- * @brief Callback para alertas de memoria
+ * @brief Callback for memory alerts
  *
- * @param level Nivel de alerta
- * @param stats Estadísticas actuales del heap
+ * @param level Alert level
+ * @param stats Current heap statistics
  */
 typedef void (*heap_alert_callback_t)(heap_alert_level_t level,
                                       const heap_stats_t* stats);
 
 /**
- * @brief Inicializa el sistema de monitoreo de memoria
+ * @brief Initialize the memory monitoring system
  *
- * @return ESP_OK en caso de éxito
+ * @return ESP_OK on success
  */
 esp_err_t heap_monitor_init(void);
 
 /**
- * @brief Inicia el monitoreo periódico de memoria
+ * @brief Start periodic memory monitoring
  *
- * @param interval_ms Intervalo de muestreo en milisegundos (recomendado: 5000)
- * @return ESP_OK en caso de éxito
+ * @param interval_ms Sampling interval in milliseconds (recommended: 5000)
+ * @return ESP_OK on success
  */
 esp_err_t heap_monitor_start(uint32_t interval_ms);
 
 /**
- * @brief Detiene el monitoreo periódico
+ * @brief Stop periodic monitoring
  */
 void heap_monitor_stop(void);
 
 /**
- * @brief Obtiene las estadísticas actuales del heap
+ * @brief Get current heap statistics
  *
- * @return Estructura con estadísticas actuales
+ * @return Structure with current statistics
  */
 heap_stats_t heap_monitor_get_stats(void);
 
 /**
- * @brief Registra un callback para alertas de memoria baja
+ * @brief Register a callback for low memory alerts
  *
- * @param callback Función a llamar cuando hay alerta
+ * @param callback Function to call when an alert occurs
  */
 void heap_monitor_set_alert_callback(heap_alert_callback_t callback);
 
 /**
- * @brief Configura los umbrales de alerta personalizados
+ * @brief Configure custom alert thresholds
  *
- * @param warning_kb Umbral de warning en KB (default: 50)
- * @param critical_kb Umbral crítico en KB (default: 30)
- * @param emergency_kb Umbral de emergencia en KB (default: 20)
+ * @param warning_kb Warning threshold in KB (default: 50)
+ * @param critical_kb Critical threshold in KB (default: 30)
+ * @param emergency_kb Emergency threshold in KB (default: 20)
  */
 void heap_monitor_set_thresholds(size_t warning_kb,
                                  size_t critical_kb,
                                  size_t emergency_kb);
 
 /**
- * @brief Imprime estadísticas de memoria en consola
+ * @brief Print memory statistics to console
  */
 void heap_monitor_print_stats(void);
 
 /**
- * @brief Obtiene el nivel de alerta actual
+ * @brief Get the current alert level
  *
- * @return Nivel de alerta basado en memoria libre
+ * @return Alert level based on free memory
  */
 heap_alert_level_t heap_monitor_get_alert_level(void);

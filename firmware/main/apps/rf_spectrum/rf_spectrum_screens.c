@@ -339,7 +339,7 @@ static void render_peak_tracker_view(const rf_spectrum_data_t* data) {
   char ch_prefix = (data->protocol == RF_PROTOCOL_ZIGBEE) ? 'Z' : 'C';
   bool active = (rssi > RF_NOISE_FLOOR || data->peak_latch_timer > 0);
 
-  /* 1. CANAL (Escala grande 2x, 16px de alto) */
+  /* 1. CHANNEL (2x large scale, 16px tall) */
   if (active) {
     snprintf(buf, sizeof(buf), "%c%02u", ch_prefix, pk_ch);
   } else {
@@ -348,10 +348,10 @@ static void render_peak_tracker_view(const rf_spectrum_data_t* data) {
   int ch_w = menu_gfx_text_width(buf, 2);
   menu_gfx_text((128 - ch_w) / 2, 2, buf, 2, true);
 
-  /* Identificador de modo en esquina */
+  /* Corner mode identifier */
   menu_gfx_text(104, 2, "PEK", 1, true);
 
-  /* 2. FRECUENCIA (Limpia y centrada con líneas de acento) */
+  /* 2. FREQUENCY (Clean and centered with accent lines) */
   if (active) {
     snprintf(buf, sizeof(buf), "%u MHz", freq);
   } else {
@@ -366,7 +366,7 @@ static void render_peak_tracker_view(const rf_spectrum_data_t* data) {
                            OLED_DISPLAY_NORMAL);
   }
 
-  /* 3. POTENCIA / DBM (Escala grande 2x, 16px de alto) */
+  /* 3. POWER / DBM (2x large scale, 16px tall) */
   if (active) {
     int8_t show_rssi = (rssi > RF_NOISE_FLOOR) ? rssi : RF_NOISE_FLOOR;
     snprintf(buf, sizeof(buf), "%ddBm", show_rssi);
@@ -376,7 +376,7 @@ static void render_peak_tracker_view(const rf_spectrum_data_t* data) {
   int dbm_w = menu_gfx_text_width(buf, 2);
   menu_gfx_text((128 - dbm_w) / 2, 30, buf, 2, true);
 
-  /* 4. BARRA DE TRACK COMPACTA (Estilizada en la parte inferior) */
+  /* 4. COMPACT TRACK BAR (Styled at the bottom) */
   const int bar_x = 14;
   const int bar_y = 48;
   const int bar_w = 100;
@@ -402,7 +402,7 @@ static void render_peak_tracker_view(const rf_spectrum_data_t* data) {
     }
   }
 
-  /* Marca de retención de pico */
+  /* Peak hold marker */
   if (peak > RF_NOISE_FLOOR) {
     int peak_prox =
         (int) (peak - RF_NOISE_FLOOR) * 100 / (RF_MAX_SIGNAL - RF_NOISE_FLOOR);
@@ -414,7 +414,7 @@ static void render_peak_tracker_view(const rf_spectrum_data_t* data) {
     }
   }
 
-  /* 5. PIE DE VENTANA LIMPIO (Estado contextual o pico histórico) */
+  /* 5. CLEAN WINDOW FOOTER (Contextual state or historical peak) */
   if (rf_channel_is_indexable(pk_ch) && data->jammer_alert[pk_ch]) {
     snprintf(buf, sizeof(buf), "! JAMMER %d%% !",
              data->jammer_confidence[pk_ch]);

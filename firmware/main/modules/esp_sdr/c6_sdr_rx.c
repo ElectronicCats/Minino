@@ -36,9 +36,9 @@ extern void ram_pbus_xpd_rx_on(unsigned);
 extern void ram_pbus_xpd_tx_on(unsigned);
 extern void set_rxclk_en(unsigned);
 extern void phy_force_rx_gain(unsigned, unsigned);
-/* El tono del cert-test y el programador de canal del PHY. Los dos hacen
-   falta para que la entrada del conversor sea una señal y no un valor
-   fijo: ver c6_sdr_rx_tune(). */
+/* The cert-test tone and the PHY channel programmer. Both are needed so
+   that the converter input is an actual signal rather than a fixed value:
+   see c6_sdr_rx_tune(). */
 extern void ram_stop_tx_tone(unsigned stop);
 
 /* The dump engine writes at the front of the block it owns: the capture bank
@@ -85,16 +85,15 @@ esp_err_t c6_sdr_rx_init(void) {
     return err;
   }
 
-  /* El radio tiene que quedarse encendido y sin gestión de energía. El
-     firmware del ESPARGOS arranca el Wi-Fi sin power save y en promiscuo
-     (receiver.c:292-298): con el driver en STA el radio gestiona su propia
-     vida (se duerme, escanea, se asocia) y la captura sale con un valor
-     constante en vez de señal.
+  /* The radio must remain powered on with power management disabled. The
+     ESPARGOS firmware starts Wi-Fi with power save disabled and in promiscuous
+     mode (receiver.c:292-298): with the driver in STA mode the radio manages
+     its own lifecycle (sleeps, scans, associates) and the capture returns a
+     constant value instead of a signal.
 
-     El modo promiscuo se pide con la lease, como el resto de los que
-     consumen el radio: así el driver sólo se toca al pasar de 0 a 1
-     tenedores y las otras apps que lo comparten no se lo quitan de
-     debajo. */
+     Promiscuous mode is requested via the lease, just like other radio
+     consumers: this way the driver is only touched when transitioning from
+     0 to 1 holders and other sharing apps do not pull it out from under us. */
   esp_wifi_set_ps(WIFI_PS_NONE);
   err = radio_lease_prom_hold(RADIO_PROM_SDR_RX);
   if (err != ESP_OK) {
@@ -112,21 +111,21 @@ esp_err_t c6_sdr_rx_init(void) {
   return ESP_OK;
 }
 
-/* La cadena de RX del PHY, tal y como la monta el firmware del ESPARGOS:
-   el tono del cert-test apagado, el canal puesto en el PHY y la cadena de
-   RX encendida. El firmware del ESPARGOS la rehace antes de cada captura
-   (prepare_rx()), y hace falta: el driver de Wi-Fi puede mover el canal
-   por su cuenta y la captura salía de un canal que no era el pedido. */
+/* The PHY RX chain, set up the same way the ESPARGOS firmware does:
+   cert-test tone off, channel programmed in the PHY, and RX chain enabled.
+   The ESPARGOS firmware rebuilds it before every capture (prepare_rx()),
+   which is required: the Wi-Fi driver may change the channel on its own
+   and the capture would come from a channel other than the requested one. */
 static void rx_front_end(uint32_t freq_mhz) {
-  /* El tono del cert-test tiene que estar apagado: con el tono encendido
-     la entrada del conversor es una portadora constante y la captura sale
-     con un valor fijo en vez de señal. */
+  /* The cert-test tone must be off: with the tone enabled the converter
+     input is a constant carrier and the capture yields a fixed value
+     instead of a signal. */
   ram_stop_tx_tone(1);
 
-  /* El canal lo deja el driver de Wi-Fi, y tiene que ser ANTES de montar
-     la cadena de RX: cambiar el canal reinicia la radio del driver y deja
-     el PHY fuera del modo de trabajo, con lo que la captura sale con un
-     valor constante en vez de señal. */
+  /* The channel is set by the Wi-Fi driver, and this must happen BEFORE
+     setting up the RX chain: changing the channel resets the driver radio
+     and leaves the PHY out of workmode, causing the capture to return a
+     constant value instead of a signal. */
   uint8_t ch = 1;
   if (freq_mhz >= 2412 && freq_mhz <= 2472) {
     uint32_t offset = freq_mhz - 2407u;
@@ -155,7 +154,7 @@ static void rx_front_end(uint32_t freq_mhz) {
   set_rxclk_en(1);
   phy_force_rx_gain(s_gain_manual ? 1u : 0u, (unsigned) s_gain_index);
 
-  /* El margen de asentamiento del upstream cuando cambia el canal. */
+  /* Upstream settling margin when the channel changes. */
   if (ch_changed) {
     esp_rom_delay_us(3000);
   }
@@ -277,8 +276,8 @@ bool c6_sdr_rx_capture_rate(uint32_t num_samples,
     s_iq_buf[hw_samples + j] = 0x5a5aa5a5u ^ j;
   }
 
-  /* La cadena de RX se rehace antes de cada captura: el driver de Wi-Fi
-     puede haber movido el canal desde la última sintonización. */
+  /* The RX chain is rebuilt before each capture: the Wi-Fi driver may have
+     changed the channel since the last tune. */
   rx_front_end(s_current_freq);
 
   int64_t start_time = esp_timer_get_time();

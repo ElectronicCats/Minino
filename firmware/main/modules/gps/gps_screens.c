@@ -46,7 +46,7 @@ static uint16_t last_config_selection = 0;
 #define GPS_ROUTE_DIR_NAME          "/GPS_Route"
 #define GPS_ROUTE_FILE_SIZE         8192
 #define GPS_ROUTE_CSV_HEADER_LINES  1
-#define GPS_ROUTE_MAX_CSV_LINES     20  // Reducir para escribir más frecuentemente
+#define GPS_ROUTE_MAX_CSV_LINES     20  // Reduce to write more frequently
 #define GPS_ROUTE_SAVE_INTERVAL_SEC 5
 const char* gps_route_gpx_header =
     "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
@@ -343,7 +343,7 @@ static void gps_screens_save_location(gps_t* gps) {
       return;
     }
     gps_route_file_buffer[0] =
-        '\0';  // Limpiar buffer después de escribir el encabezado
+        '\0';  // Clear buffer after writing the header
   }
 
   char str[32];
@@ -396,7 +396,7 @@ static void gps_screens_save_location(gps_t* gps) {
       if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to append to SD: %s", esp_err_to_name(err));
       }
-      gps_route_file_buffer[0] = '\0';  // Limpiar buffer
+      gps_route_file_buffer[0] = '\0';  // Clear buffer
       gps_route_lines = GPS_ROUTE_CSV_HEADER_LINES;
     }
     free(gpx_line_buffer);
@@ -413,7 +413,7 @@ void gps_screens_stop_route_recording() {
     return;
   }
   if (gps_route_recording) {
-    // Escribir cualquier punto pendiente en el buffer
+    // Write any pending points in the buffer
     if (gps_route_file_buffer != NULL && gps_route_file_buffer[0] != '\0') {
       esp_err_t err =
           sd_card_append_to_file(gps_route_file_name, gps_route_file_buffer);
@@ -422,7 +422,7 @@ void gps_screens_stop_route_recording() {
                  esp_err_to_name(err));
       }
     }
-    // Escribir el pie de página GPX
+    // Write the GPX footer
     if (gps_route_file_name != NULL) {
       esp_err_t err = sd_card_append_to_file(gps_route_file_name,
                                              (char*) gps_route_gpx_footer);

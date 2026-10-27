@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later
  *
- * Espectros calculados en el chip: el modo "On-Chip Spectrum" del visor de
- * ESPARGOS. Ver esdr_spectrum.h.
+ * On-chip computed spectra: the "On-Chip Spectrum" mode of the ESPARGOS
+ * viewer. See esdr_spectrum.h.
  */
 
 #include "esdr_spectrum.h"
@@ -16,31 +16,31 @@
 #include "esdr_transport.h"
 
 /* --------------------------------------------------------------------------
- * El protocolo
+ * The protocol
  *
- * Todo lo que se manda al host son lineas de texto y thenas de bytes con un
- * CRC32 al final. El formato es el del firmware del ESPARGOS y el visor lo
- * comprueba con expresiones regulares, asi que no hay margen.
+ * Everything sent to the host consists of text lines and byte frames with a
+ * trailing CRC32. The format matches the ESPARGOS firmware and the viewer
+ * checks it with regular expressions, so there is no room for deviation.
  * -------------------------------------------------------------------------- */
 
 #define SPEC_HEADER_BYTES 28u
 #define SPEC_MAGIC        "SPC1"
 
-/* Las tasas que el C6 sabe hacer, con su codigo en el protocolo. */
+/* Sample rates supported by the C6, indexed by their protocol rate code. */
 static const uint32_t s_rates[] = {80000000u, 40000000u, 0u,       0u,
                                    0u,        0u,        16000000u};
 #define SPEC_RATE_COUNT (sizeof(s_rates) / sizeof(s_rates[0]))
 
-/* El modo de correccion de la continua: 0 la quita en cada FFT, 1 la sigue
-   despacio. El 0 es el que no toca nada de forma observable. */
+/* DC offset correction mode: 0 removes it on every FFT, 1 tracks it slowly.
+   Mode 0 leaves the signal untouched in any observable way. */
 static unsigned s_dc_mode = 1;
 
 /* --------------------------------------------------------------------------
- * El codificador de potencia
+ * The power encoder
  *
- * Un codigo representa 20*log10(potencia) en el dominio Q15 normalizado,
- * acotado a 0..255. El visor lo convierte a dBFS con la normalizacion de la
- * ventana de Hann.
+ * A code represents 20*log10(power) in the normalized Q15 domain, clamped
+ * to 0..255. The viewer converts it to dBFS using the Hann window
+ * normalization.
  * -------------------------------------------------------------------------- */
 
 static inline uint32_t complex_power(int16_t re, int16_t im) {
@@ -55,7 +55,7 @@ static inline uint8_t log_power_code(unsigned exponent, uint32_t norm) {
   uint32_t logarithm = (exponent << 12) + log2_q12[slot] +
                        ((log2_q12[slot + 1] - log2_q12[slot]) * frac + 8) / 16;
   unsigned code =
-      (logarithm * 1541u + (1u << 19)) >> 20; /* 20 log10(potencia) */
+      (logarithm * 1541u + (1u << 19)) >> 20; /* 20 log10(power) */
   return code > 255 ? 255 : (uint8_t) code;
 }
 
@@ -67,8 +67,8 @@ static inline uint8_t power_code(uint32_t power) {
   return log_power_code(exponent, (power << (31u - exponent)) >> 23);
 }
 
-/* Las potencias promediadas conservan decimales: truncarlas a entero
-   hundiria las bins quietas varios pasos de cable. */
+/* Averaged powers preserve fractional bits: truncating them to integers
+   would drop quiet bins by several wire steps. */
 static inline uint8_t mean_power_code(float power) {
   union {
     float f;
@@ -85,15 +85,14 @@ static inline uint8_t mean_power_code(float power) {
 }
 
 /* --------------------------------------------------------------------------
- * La FFT
+ * The FFT
  *
- * Radix-2 en tiempo decreciente, entrada en orden natural y salida en orden
- * natural. Los datos crudos traen I en los bits 9-0 y Q en los 19-10, con
- * signo de diez bits.
+ * Radix-2 decimation in time, natural order input and natural order output.
+ * Raw words carry signed 10-bit I in bits 9-0 and Q in bits 19-10.
  * -------------------------------------------------------------------------- */
 
-/* La tabla de raices: exp(-2*pi*i*k/n) en Q15, con n el tamano de la FFT.
-   En la etapa de tamano 2*half se usa el indice k = group * (n / (2*half)). */
+/* Twiddle factor table: exp(-2*pi*i*k/n) in Q15, where n is the FFT size.
+   Stage of size 2*half uses index k = group * (n / (2*half)). */
 typedef struct {
   int16_t* re;
   int16_t* im;
@@ -128,9 +127,9 @@ static inline int16_t sat16(int32_t v) {
   return v > 32767 ? 32767 : v < -32768 ? -32768 : (int16_t) v;
 }
 
-/* FFT in situ sobre pares intercalados re/im. */
+/* In-place FFT over interleaved re/im pairs. */
 static void fft_inplace(int16_t* x, unsigned n, const fft_twiddles_t* tw) {
-  /* La permutacion de inversion de bits. */
+  /* Bit-reversal permutation. */
   for (unsigned i = 1, j = 0; i < n; i++) {
     unsigned bit = n >> 1;
     for (; j & bit; bit >>= 1) {
@@ -146,13 +145,12 @@ static void fft_inplace(int16_t* x, unsigned n, const fft_twiddles_t* tw) {
     }
   }
 
-  /* Las mariposas: en la etapa de tamano len hay len/2 mariposas por bloque
-     de len muestras, y la j usa la raiz W_len^j. La tabla guarda
-     exp(-2*pi*i*k/n), asi que el indice es j * (n/len).
+  /* Butterflies: in the stage of size len there are len/2 butterflies per
+     block of len samples, and butterfly j uses root W_len^j. The table
+     stores exp(-2*pi*i*k/n), so the index is j * (n/len).
 
-     Cada mariposa divide entre dos, de modo que la ganancia total de la
-     transformada es 1/n: sin eso, un tono fuerte saturaria el Q15 a la
-     primera etapa. */
+     Each butterfly divides by two, so the overall transform gain is 1/n:
+     without that, a strong tone would saturate Q15 in the first stage. */
   for (unsigned len = 2; len <= n; len <<= 1) {
     unsigned half = len >> 1;
     unsigned step = n / len;
@@ -178,17 +176,17 @@ static void fft_inplace(int16_t* x, unsigned n, const fft_twiddles_t* tw) {
 }
 
 /* --------------------------------------------------------------------------
- * El espacio de trabajo
+ * The workspace
  *
- * Va del heap: la imagen DRAM esta al limite del banco de captura y no cabe
- * ni un bin mas en ella.
+ * Allocated from the heap: the DRAM image is right at the limit of the
+ * capture bank and cannot fit a single extra bin.
  * -------------------------------------------------------------------------- */
 
 typedef struct {
-  int16_t* fft;    /* 2*n: re e im intercalados */
-  int16_t* window; /* n: ventana de Hann en Q15 */
-  float* powers;   /* n: potencias acumuladas */
-  uint8_t* frame;  /* cabecera + bins + CRC */
+  int16_t* fft;    /* 2*n: interleaved re and im */
+  int16_t* window; /* n: Hann window in Q15 */
+  float* powers;   /* n: accumulated powers */
+  uint8_t* frame;  /* header + bins + CRC */
   fft_twiddles_t tw;
   unsigned n;
 } spectrum_workspace_t;
@@ -226,11 +224,10 @@ static bool workspace_alloc(spectrum_workspace_t* ws, unsigned n) {
 }
 
 /* --------------------------------------------------------------------------
- * La correccion de la continua
+ * DC offset correction
  *
- * La ventana de Hann tiene el bin de continua y sus dos vecinos mas altos
- * que el resto, y la continua del conversor se colaria en los tres. Se
- * estima y se resta.
+ * The Hann window leaks the converter DC component into the DC bin and its
+ * two immediate neighbors. Estimate and subtract it.
  * -------------------------------------------------------------------------- */
 
 typedef struct {
@@ -257,14 +254,14 @@ static void dc_apply(dc_tracker_t* dc, int16_t* x, unsigned n) {
   x[0] = sat16(x[0] - dr);
   x[1] = sat16(x[1] - di);
   for (unsigned k = 0; k < 2; k++) {
-    unsigned j = k ? n - 1 : 1; /* los dos vecinos de la continua */
+    unsigned j = k ? n - 1 : 1; /* the two neighbors of the DC bin */
     x[2 * j] = sat16(x[2 * j] + dr / 2);
     x[2 * j + 1] = sat16(x[2 * j + 1] + di / 2);
   }
 }
 
 /* --------------------------------------------------------------------------
- * El marco
+ * The frame
  * -------------------------------------------------------------------------- */
 
 static inline void put16(uint8_t* at, uint16_t v) {
@@ -283,9 +280,9 @@ static inline void put64(uint8_t* at, uint64_t v) {
 }
 
 /**
- * @brief Empaqueta el lote acumulado en un marco y lo deja listo para enviar.
+ * @brief Pack the accumulated batch into a frame ready to send.
  *
- * @return los bytes del marco.
+ * @return frame size in bytes.
  */
 static size_t pack_spectrum(spectrum_workspace_t* ws,
                             unsigned n,
@@ -302,11 +299,11 @@ static size_t pack_spectrum(spectrum_workspace_t* ws,
   put64(frame + 8, index);
   put32(frame + 16, n * merged);
   put16(frame + 20, (uint16_t) merged);
-  frame[22] = 8 | (detector ? 1 : 0); /* bit 3: hay huecos entre capturas */
+  frame[22] = 8 | (detector ? 1 : 0); /* bit 3: gaps exist between captures */
   frame[23] = gain;
   put16(frame + 24, 0);
   frame[26] = (uint8_t) log2n;
-  frame[27] = 2; /* multiplicador del codigo en dB */
+  frame[27] = 2; /* code multiplier in dB */
 
   float mean_scale = 1.0f / (float) merged;
   for (unsigned j = 0; j < n; j++) {
@@ -321,10 +318,10 @@ static size_t pack_spectrum(spectrum_workspace_t* ws,
 }
 
 /* --------------------------------------------------------------------------
- * El comando
+ * The command
  * -------------------------------------------------------------------------- */
 
-/* Lo que el visor necesita para saber que perfiles hay. */
+/* What the viewer needs to know which profiles are available. */
 static void send_capabilities(void) {
   char text[192];
   int written = snprintf(
@@ -483,9 +480,8 @@ bool esdr_spectrum_command(const char* line,
       merged = 0;
     }
 
-    /* El bucle no puede quedarse con la CPU: la tarea idle es la que
-       alimenta el watchdog, asi que hay que cederle el paso de vez en
-       cuando (el firmware del ESPARGOS hace lo mismo). */
+    /* The loop must not hog the CPU: the idle task feeds the watchdog, so
+       we must yield periodically (the ESPARGOS firmware does the same). */
     now_ms = esdr_host_elapsed_ms();
     if (now_ms - yield_at >= 20) {
       esdr_host_yield();
@@ -493,8 +489,8 @@ bool esdr_spectrum_command(const char* line,
     }
   }
 
-  /* Lo que quedo sin empaquetar se manda igual, para que el ultimo cuadro
-     no se pierda. */
+  /* Any remaining unpacked samples are still sent so the final frame is
+     not lost. */
   if (!status && merged) {
     size_t size =
         pack_spectrum(&ws, n, log2n, detector, merged, frames, index, gain);

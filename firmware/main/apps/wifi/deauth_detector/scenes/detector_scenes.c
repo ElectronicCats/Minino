@@ -36,15 +36,15 @@ void detector_scenes_show_table(uint16_t* deauth_packets_count_list) {
   oled_screen_display_text("Channel| Count", 0, 0, OLED_DISPLAY_INVERT);
   for (int i = 0; i < 14; i += 2) {
     char* str = malloc(40);
-    if (i + 1 < 14) {  // Verifica que no se salga del rango
+    if (i + 1 < 14) {  // Ensure index stays within range
       sprintf(str, "%02d: %d  | %02d: %d", i + 1, deauth_packets_count_list[i],
               i + 2, deauth_packets_count_list[i + 1]);
-    } else {  // Caso especial si es el último canal y no hay un par
+    } else {  // Special case if it is the last channel with no pair
       sprintf(str, "%d: %d", i + 1, deauth_packets_count_list[i]);
     }
     oled_screen_display_text(
         str, 0, (i / 2) + 1,
-        OLED_DISPLAY_NORMAL);  // Ajusta la posición vertical
+        OLED_DISPLAY_NORMAL);  // Adjust vertical position
     free(str);
   }
   oled_screen_display_show();

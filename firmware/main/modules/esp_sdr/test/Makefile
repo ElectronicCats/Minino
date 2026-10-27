@@ -31,7 +31,7 @@ build/run-esdr-burst: $(SRCDIR)/esdr_burst_proto.c test_esdr_burst_proto.c
 	@mkdir -p build
 	$(CC) $(CFLAGS) $^ $(UNITY)/unity.c -o $@
 
-# El modo de espectros: la FFT se comprueba contra un DFT directo.
+# Spectrum mode: the on-chip FFT is verified against a direct DFT.
 build/run-esdr-spectrum: $(SRCDIR)/esdr_spectrum.c $(SRCDIR)/esdr_burst_proto.c \
                          test_esdr_spectrum.c
 	@mkdir -p build

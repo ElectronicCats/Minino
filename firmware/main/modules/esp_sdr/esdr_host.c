@@ -55,10 +55,11 @@ static uint32_t s_gain_index = 40;
  * The port
  * -------------------------------------------------------------------------- */
 
-/* El driver del USB Serial/JTAG mete la carga en un anillo de 256 bytes con
-   xRingbufferSend(), y esa llamada no acepta un bloque mayor que el anillo:
-   se queda esperando un hueco que no va a llegar y devuelve 0 sin escribir
-   nada. Por eso la carga va a trozos del tamaño del FIFO del hardware. */
+/* The USB Serial/JTAG driver places the payload into a 256-byte ring buffer
+   via xRingbufferSend(), and that call rejects any block larger than the ring:
+   it waits for space that will never become available and returns 0 without
+   writing anything. That is why the payload is sent in hardware FIFO-sized
+   chunks. */
 #define ESDR_TX_CHUNK 64
 
 static void port_write(const void* data, size_t len) {
@@ -140,10 +141,10 @@ static bool send_capture(uint32_t samples,
 }
 
 /* --------------------------------------------------------------------------
- * El transporte
+ * The transport
  *
- * Lo usan tambien los modulos que hablan el mismo protocolo (el de los
- * espectros), asi que vive aqui y no en el modulo de espectro.
+ * Also used by modules speaking the same protocol (spectrum mode), so it
+ * lives here rather than in the spectrum module.
  * -------------------------------------------------------------------------- */
 
 static int64_t s_session_start = 0;
@@ -195,8 +196,8 @@ bool esdr_host_stop_requested(void) {
 }
 
 void esdr_host_yield(void) {
-  /* Cederle el paso a la tarea idle es lo que alimenta el watchdog: sin
-     esto, un bucle largo de capturas lo dispara. */
+  /* Yielding to the idle task feeds the watchdog: without this, a long
+     capture loop triggers it. */
   vTaskDelay(1);
 }
 
@@ -216,8 +217,8 @@ static bool rate_is_supported(uint32_t rate) {
          rate == ESDR_RATE_16MSPS;
 }
 
-/* La captura que pide el modo de espectros: el mismo motor de captura, con
-   las palabras crudas en el banco. */
+/* The capture requested by spectrum mode: the same capture engine, with
+   the raw words in the bank. */
 static bool spectrum_acquire(uint32_t n,
                              uint32_t rate,
                              const uint32_t** words,
@@ -364,9 +365,8 @@ static void handle_command(const esdr_request_t* req) {
       break;
 
     case ESDR_CMD_SPEC:
-      /* El modo de espectros: la placa calcula la FFT y manda los codigos
-         de potencia. El comando se queda aqui hasta que el cliente lo
-         corta. */
+      /* Spectrum mode: the board computes the FFT and sends the power codes.
+         The command stays here until the client stops it. */
       esdr_spectrum_command(req->args, c6_sdr_rx_get_freq(), spectrum_acquire);
       break;
 

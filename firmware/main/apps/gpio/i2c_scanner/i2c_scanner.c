@@ -1,7 +1,7 @@
 #include "i2c_scanner.h"
 
 #include <stdio.h>
-#include <stdlib.h>  // Para malloc y realloc
+#include <stdlib.h>  // For malloc and realloc
 #include "app_manager.h"
 #include "driver/i2c.h"
 #include "esp_log.h"

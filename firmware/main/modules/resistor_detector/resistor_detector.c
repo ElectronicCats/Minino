@@ -140,7 +140,7 @@ bool resistor_detector(gpio_num_t gpio_num) {
                                .intr_type = 0};
   esp_err_t ret = gpio_config(&temp_config);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Error configurando GPIO %d como salida", gpio_num);
+    ESP_LOGE(TAG, "Error configuring GPIO %d as output", gpio_num);
     res_detected = false;
     return false;
   }
@@ -155,7 +155,7 @@ bool resistor_detector(gpio_num_t gpio_num) {
                               .intr_type = 0};
   ret = gpio_config(&new_config);
   if (ret != ESP_OK) {
-    ESP_LOGE(TAG, "Error configurando GPIO %d como entrada", gpio_num);
+    ESP_LOGE(TAG, "Error configuring GPIO %d as input", gpio_num);
     res_detected = false;
     return false;
   }

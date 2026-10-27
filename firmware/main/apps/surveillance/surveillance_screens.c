@@ -66,16 +66,16 @@ void surveillance_screens_show_status(uint8_t score,
   }
 
   if (pages >= 8) {
-    // --- Layout 128x64 (8 paginas) ---
-    // Pagina 0: Encabezado elegante en video inverso
+    // --- Layout 128x64 (8 pages) ---
+    // Page 0: Header in inverse video
     snprintf(buf, sizeof(buf), "SURV [%-4s]   %c", prof, spin);
     oled_screen_display_text(buf, 0, 0, true);
 
-    // Pagina 1: Nivel de amenaza y score
+    // Page 1: Threat level and score
     snprintf(buf, sizeof(buf), "[%-7s]  %2dpts", lvl_badge, score);
     oled_screen_display_text(buf, 0, 1, alert_invert);
 
-    // Pagina 2: Dispositivo objetivo
+    // Page 2: Target device
     if (last_label != NULL && last_label[0] != '\0') {
       snprintf(buf, sizeof(buf), "Tgt:%-12s", last_label);
     } else {
@@ -83,7 +83,7 @@ void surveillance_screens_show_status(uint8_t score,
     }
     oled_screen_display_text(buf, 0, 2, false);
 
-    // Pagina 3: Nivel de certeza / Tier
+    // Page 3: Certainty level / Tier
     if (last_label != NULL && last_label[0] != '\0') {
       snprintf(buf, sizeof(buf), "Trs:%-12s", tier_to_detail(last_tier));
     } else {
@@ -91,7 +91,7 @@ void surveillance_screens_show_status(uint8_t score,
     }
     oled_screen_display_text(buf, 0, 3, false);
 
-    // Pagina 4: Intensidad de senal con barra grafica
+    // Page 4: Signal strength with bar graph
     if (last_label != NULL && last_label[0] != '\0') {
       snprintf(buf, sizeof(buf), "%4ddBm %s", rssi, rssi_to_bars(rssi));
     } else {
@@ -99,7 +99,7 @@ void surveillance_screens_show_status(uint8_t score,
     }
     oled_screen_display_text(buf, 0, 4, false);
 
-    // Pagina 5: Radio y canal
+    // Page 5: Radio and channel
     if (channel > 0) {
       snprintf(buf, sizeof(buf), "Rad: WiFi Ch%-2d", channel);
     } else {
@@ -107,16 +107,16 @@ void surveillance_screens_show_status(uint8_t score,
     }
     oled_screen_display_text(buf, 0, 5, false);
 
-    // Pagina 6: Metricas / Buffer
+    // Page 6: Metrics / Buffer
     if (overflows > 0) {
       snprintf(buf, sizeof(buf), "Queue ovf: %lu", (unsigned long) overflows);
       oled_screen_display_text(buf, 0, 6, false);
     }
 
-    // Pagina 7: Barra inferior con guia de botones
+    // Page 7: Bottom bar with button guide
     oled_screen_display_text("^Hlp vMod <Exit", 0, 7, true);
   } else {
-    // --- Layout 128x32 (4 paginas) ---
+    // --- Layout 128x32 (4 pages) ---
     snprintf(buf, sizeof(buf), "SURV [%-4s] %2dpt", prof, score);
     oled_screen_display_text(buf, 0, 0, true);
 

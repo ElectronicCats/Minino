@@ -84,7 +84,7 @@ typedef enum {
 
 typedef struct {
   esdr_cmd_t cmd;
-  /* La linea entera, para los comandos que se pasan tal cual (SPEC). */
+  /* The full line, for commands passed through verbatim (SPEC). */
   char args[ESDR_LINE_MAX];
   uint64_t nonce;      /* SYNC */
   uint32_t freq_mhz;   /* FREQ */

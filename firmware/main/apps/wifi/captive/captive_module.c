@@ -175,7 +175,7 @@ static void captive_module_free_portals_list(void) {
 }
 
 static void wifi_init_softap(void) {
-  /* WiFi ya está inicializada por wifi_service_init() en app_main(). */
+  /* WiFi is already initialized by wifi_service_init() in app_main(). */
   wifi_config_t wifi_config = {
       .ap = {.ssid = MININO_CAPTIVE_DEFAULT_SSID,
              .ssid_len = strlen(MININO_CAPTIVE_DEFAULT_SSID),
@@ -231,10 +231,10 @@ static void wifi_init_softap(void) {
     wifi_config.ap.authmode = WIFI_AUTH_OPEN;
   }
 
-  /* Modo ya configurado por la política del servicio; usamos la accessor para
-   * consistencia. */
+  /* Mode already configured by the service policy; use the accessor for
+   * consistency. */
   if (!wifi_service_is_ap_get()) {
-    ESP_LOGW(TAG, "WiFi no en modo AP; forzando modo AP");
+    ESP_LOGW(TAG, "WiFi not in AP mode; forcing AP mode");
     ESP_ERROR_CHECK(wifi_service_set_mode(WIFI_MODE_AP));
   }
   ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
@@ -517,7 +517,7 @@ static void captive_module_disable_wifi() {
     server = NULL;
     ESP_LOGW("CAPTIVE", "HTTP server stopped");
   }
-  /* Desinicializar WiFi por medio del servicio. */
+  /* Deinitialize WiFi through the service. */
   wifi_service_deinit();
   esp_netif_t* netif = esp_netif_get_handle_from_ifkey(CAPTIVE_PORTAL_NET_NAME);
   if (netif) {
