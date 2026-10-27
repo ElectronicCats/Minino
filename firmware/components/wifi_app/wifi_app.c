@@ -1,10 +1,20 @@
+/* WiFi App component: AP configurations.
+ *
+ * Before: called esp_wifi_init/start/stop/deinit directly.
+ * After: uses wifi_service (initialized in app_main). No event bus:
+ * apps register direct callbacks.
+ *
+ * Reference: wifi_service.h.
+ */
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "freertos/task.h"
 
 #include "esp_err.h"
 #include "esp_log.h"
-#include "esp_wifi.h"
+#include "wifi_service.h"
+
 #include "lwip/netdb.h"
 #include "nvs_flash.h"
 
@@ -29,9 +39,18 @@ void wifi_ap_init(void) {
     return;
   }
 
-  ESP_ERROR_CHECK(esp_netif_init());
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+  /* WiFi stack already initialized by wifi_service_init() in app_main(). */
+  if (!wifi_service_is_up_get()) {
+    ESP_LOGW(__func__, "WiFi stack not initialized by service; starting...");
+    if (!wifi_service_init(WIFI_MODE_AP)) {
+      ESP_LOGE(__func__, "WiFi stack init failed");
+      return;
+    }
+  } else {
+    ESP_LOGI(__func__, "WiFi stack already initialized by service");
+  }
+
+  /* We no longer call esp_wifi_init here; the service did it in app_main(). */
   ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
   esp_netif_ap = esp_netif_create_default_wifi_ap();
@@ -46,10 +65,18 @@ void wifi_ap_init(void) {
   inet_pton(AF_INET, WIFI_AP_NETMASK, &ap_ip_info.netmask);
   ESP_ERROR_CHECK(esp_netif_set_ip_info(esp_netif_ap, &ap_ip_info));
   ESP_ERROR_CHECK(esp_netif_dhcps_start(esp_netif_ap));
-  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+  ESP_ERROR_CHECK(wifi_service_set_mode(WIFI_MODE_AP));
   ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &ap_config));
   ESP_ERROR_CHECK(esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_AP_BANDWIDTH));
   ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_STA_POWER_SAVE));
+}
 
-  ESP_ERROR_CHECK(esp_wifi_start());
+void wifi_ap_deinit(void) {
+  /* Disable AP mode. */
+  wifi_service_set_mode(WIFI_MODE_NULL);
+
+  /* Stop DHCP and destroy netif. */
+  esp_netif_dhcps_stop(esp_netif_ap);
+  esp_netif_destroy(esp_netif_ap);
+  esp_netif_ap = NULL;
 }

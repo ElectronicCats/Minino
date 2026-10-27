@@ -2,8 +2,8 @@
 #include "surv_match.h"
 #include <string.h>
 
-// Prefiltro: un bit por primer octeto posible. Descarta el 99% de las tramas
-// en una operación, que es lo que permite correr esto en el callback de WiFi.
+// Prefilter: one bit per possible first octet. Discards 99% of frames in a
+// single operation, making it fast enough to run inside the WiFi callback.
 static uint8_t s_first_octet_bitmap[32];
 static bool s_inited;
 
@@ -92,7 +92,7 @@ static void push_hit(surv_ble_hit_t* out,
   }
   for (uint8_t i = 0; i < *n; i++) {
     if (out[i].klass == k) {
-      return;  // ya registrada
+      return;  // already recorded
     }
   }
   out[*n].klass = k;
@@ -101,10 +101,10 @@ static void push_hit(surv_ble_hit_t* out,
   (*n)++;
 }
 
-// Busca uuid en la tabla de firmas UUID y lo empuja via push_hit si matchea.
-// Factorizado porque 0x02/0x03 (lista) llaman esto una vez por cada UUID de
-// 16 bits en la estructura AD, mientras que 0x16 (service data) lo llama una
-// sola vez con los primeros dos bytes.
+// Looks up uuid in the UUID signature table and pushes it via push_hit on a
+// match. Factored out because 0x02/0x03 (list) call this once per 16-bit UUID
+// in the AD structure, whereas 0x16 (service data) calls it once with the
+// first two bytes.
 static void push_uuid_hit(uint16_t uuid, surv_ble_hit_t* out, uint8_t* n) {
   for (uint16_t i = 0; i < surv_signatures_uuid_count(); i++) {
     if (surv_signatures_uuids()[i].uuid == uuid) {
@@ -126,7 +126,7 @@ uint8_t surv_match_ble_adv(const uint8_t* adv,
   while (off + 1 < adv_len) {
     uint8_t len = adv[off];
     if (len == 0 || (uint16_t) (off + len + 1) > adv_len) {
-      break;  // longitud imposible: advertisement truncado
+      break;  // impossible length: truncated advertisement
     }
     uint8_t ad_type = adv[off + 1];
     const uint8_t* d = &adv[off + 2];
@@ -147,24 +147,24 @@ uint8_t surv_match_ble_adv(const uint8_t* adv,
         push_hit(out, &n, SURV_CLASS_SMARTTAG, 3, "SmartTag");
       } else if (company == 0x00C7) {  // Tile Inc.
         push_hit(out, &n, SURV_CLASS_TILE, 3, "Tile");
-      } else if (company == 0x09C8) {  // XUNTONG, confirmado Flock (eye-spy)
+      } else if (company == 0x09C8) {  // XUNTONG, confirmed Flock (eye-spy)
         push_hit(out, &n, SURV_CLASS_FLOCK, 5, "Flock BLE");
       }
     }
 
     if (ad_type == 0x02 || ad_type == 0x03) {
-      // Listas (incompleta/completa) de UUIDs de 16 bits: pueden traer mas
-      // de uno empaquetado en la misma estructura AD.
+      // Incomplete/complete 16-bit UUID lists: may pack more than one UUID
+      // into the same AD structure.
       for (uint8_t u = 0; (uint16_t) (u + 2) <= dlen; u = (uint8_t) (u + 2)) {
         push_uuid_hit((uint16_t) (d[u] | (d[u + 1] << 8)), out, &n);
       }
     } else if (ad_type == 0x16 && dlen >= 2) {
-      // Service data: solo los primeros dos bytes son el UUID, el resto es
-      // el payload del servicio (no otro UUID).
+      // Service data: only the first two bytes are the UUID; the rest is the
+      // service payload (not another UUID).
       push_uuid_hit((uint16_t) (d[0] | (d[1] << 8)), out, &n);
     }
 
-    if (ad_type == 0x08 || ad_type == 0x09) {  // nombre corto / completo
+    if (ad_type == 0x08 || ad_type == 0x09) {  // shortened / complete name
       char name[32];
       uint8_t cp =
           dlen < sizeof(name) - 1 ? dlen : (uint8_t) (sizeof(name) - 1);

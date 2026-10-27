@@ -9,10 +9,10 @@
 #include "drone_id_bmps.h"
 
 ////////////////////// DRONE ANIM //////////////////////
-const uint16_t drone_anim_order[] = {0, 1, 2, 1};
-const uint32_t drone_anim_durations_ms[] = {50, 50, 50, 50};
+static const uint16_t drone_anim_order[] = {0, 1, 2, 1};
+static const uint32_t drone_anim_durations_ms[] = {50, 50, 50, 50};
 
-const animation_t drone_animation = {
+static const animation_t drone_animation = {
     .bitmaps = drone_id_bitmaps,
     .bitmaps_len = sizeof(drone_id_bitmaps) / sizeof(bitmap_t),
     .order = drone_anim_order,

@@ -42,6 +42,7 @@
 
 #pragma GCC diagnostic warning "-Wunused-variable"
 
+#include <stdlib.h>
 #include <sys/time.h>
 #include <time.h>
 #include "esp_timer.h"
@@ -158,8 +159,11 @@ ID_OpenDrone::ID_OpenDrone() {
 
   operatorID_data->OperatorIdType = ODID_OPERATOR_ID;
 
-  //
-  printf("ID_OpenDrone\n");
+  /* Only fills in the static advertisement tables. It must not touch the
+     Bluetooth stack: this constructor runs before app_main(), so there is no
+     stack yet, and it runs once per Spoofer - 17 times at boot. The name and
+     the advertising start live in init_ble(), which runs when the Drone ID app
+     is actually opened. */
   construct2();
 
   return;
@@ -298,6 +302,9 @@ void ID_OpenDrone::init(UTM_parameters* parameters, bool ble_drone) {
  */
 
 void ID_OpenDrone::set_self_id(char* self_id) {
+  if (!self_id || !selfID_data) {
+    return;
+  }
   memset(selfID_data->Desc, 0, ODID_STR_SIZE + 1);
   strncpy(selfID_data->Desc, self_id, ODID_STR_SIZE);
 
@@ -312,6 +319,9 @@ void ID_OpenDrone::set_self_id(char* self_id) {
  */
 
 void ID_OpenDrone::set_auth(char* auth) {
+  if (!auth) {
+    return;
+  }
   set_auth((uint8_t*) auth, strlen(auth), 0x0a);
 
   return;
@@ -322,11 +332,14 @@ void ID_OpenDrone::set_auth(char* auth) {
 void ID_OpenDrone::set_auth(uint8_t* auth, short int len, uint8_t type) {
   int i, j;
 
+  if (!auth || len <= 0) {
+    return;
+  }
+
   auth_page_count = 1;
 
   if (len > MAX_AUTH_LENGTH) {
     len = MAX_AUTH_LENGTH;
-    auth[len] = 0;
   }
 
   auth_data[0]->AuthType = (ODID_authtype_t) type;
@@ -494,7 +507,7 @@ int ID_OpenDrone::transmit(struct UTM_data* utm_data) {
       case 30:
       case 38:  // Every 600 ms.
 
-        if (secs > ID_OD_AUTH_DATUM) {
+        if (secs > (time_t) ID_OD_AUTH_DATUM) {
           system_data->Timestamp = (uint32_t) (secs - ID_OD_AUTH_DATUM);
           encodeSystemMessage(&system_enc, system_data);
         }
@@ -629,6 +642,8 @@ int ID_OpenDrone::transmit(struct UTM_data* utm_data) {
  */
 
 int ID_OpenDrone::transmit_wifi(struct UTM_data* utm_data, int prepacked) {
+  (void) utm_data;
+  (void) prepacked;
 #if ID_OD_WIFI
 
   int length = 0, wifi_status = 0;
@@ -790,7 +805,7 @@ int ID_OpenDrone::transmit_ble(uint8_t* odid_msg, int length) {
   ble_message[j++] = ++msg_counter[odid_msg[0] >> 4];
 #endif
 
-  for (i = 0; (i < length) && (j < sizeof(ble_message)); ++i, ++j) {
+  for (i = 0; (i < length) && ((size_t) j < sizeof(ble_message)); ++i, ++j) {
     ble_message[j] = odid_msg[i];
   }
 

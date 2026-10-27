@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+#include "sdkconfig.h"
+
 #include "buzzer.h"
 #include "cat_console.h"
 #include "esp_log.h"
@@ -10,34 +12,43 @@
 #include "gps_hw.h"
 #include "keyboard_module.h"
 #include "leds.h"
+#include "logs_output.h"
 #include "menus_module.h"
 #include "preferences.h"
 #include "resistor_detector.h"
 #include "sd_card.h"
+#if defined(CONFIG_MININO_OPENTHREAD_STACK)
+  #include "thread_sniffer.h"
+#endif
+#include "radio_lease.h"
 #include "sleep_mode.h"
 #include "surveillance_module.h"
 #include "uart_bridge.h"
+#include "wifi_service.h"
 
 // Core components
 #include "error_handler.h"
 #include "memory_monitor.h"
 #include "task_manager.h"
 
-#include "zb_cli.h"
+#if defined(CONFIG_MININO_ZIGBEE_STACK)
+  #include "zb_cli.h"
+#endif
 
 #define BAUD_RATE        921600
 #define UART_BUFFER_SIZE 1024
 #define BUZZER_PIN       CONFIG_BUZZER_PIN
 
 static const char* TAG = "main";
+
 void app_main() {
-  // Inicializar sistemas core PRIMERO
+  // Initialize core systems FIRST
   error_handler_init();
   task_manager_init();
   heap_monitor_init();
-  heap_monitor_start(5000);  // Monitorear cada 5 segundos
+  heap_monitor_start(5000);  // Monitor every 5 seconds
 
-  ESP_LOGI(TAG, "✅ Core components inicializados");
+  ESP_LOGI(TAG, "✅ Core components initialized");
 
   preferences_begin();
   gps_hw_init();
@@ -72,6 +83,11 @@ void app_main() {
   flash_fs_begin(flash_fs_screens_handler);
   keyboard_module_begin();
   menus_module_begin();
+  wifi_service_set_init_guard(radio_lease_wifi_allowed);
+  wifi_service_init(WIFI_MODE_STA);
+#if defined(CONFIG_MININO_OPENTHREAD_STACK)
+  thread_sniffer_subscribe_screen_events();
+#endif
   sleep_mode_begin();
   preferences_put_bool("wifi_connected", false);
   flash_storage_begin();

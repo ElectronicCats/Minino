@@ -4,11 +4,27 @@
 #include "esp_mac.h"
 #include "general_submenu.h"
 #include "menus_module.h"
+#include "oled_screen.h"
 
-uint16_t last_selection = 0;
+static uint16_t last_selection = 0;
 
+static void adv_scanner_display_main();
 static void adv_scanner_display_filter();
 static void adv_scanner_display_type();
+
+static void adv_scanner_input_cb(uint8_t button_name, uint8_t button_event) {
+  if (button_event != BUTTON_PRESS_DOWN &&
+      button_event != BUTTON_LONG_PRESS_HOLD) {
+    return;
+  }
+  if (button_name == BUTTON_LEFT) {
+    ble_scanner_stop();
+    ble_scanner_register_cb(NULL);
+    oled_screen_clear();
+    menus_module_set_default_input();
+    adv_scanner_display_main();
+  }
+}
 
 static void adv_scanner_menu_handler_selector(uint8_t option) {
   last_selection = option;
@@ -20,6 +36,12 @@ static void adv_scanner_menu_handler_selector(uint8_t option) {
       adv_scanner_display_filter();
       break;
     case SCAN_START:
+      adv_scanner_clear_records();
+      menus_module_set_app_state(true, adv_scanner_input_cb);
+      oled_screen_clear_buffer();
+      oled_screen_display_text("< Back", 0, 0, OLED_DISPLAY_NORMAL);
+      oled_screen_display_text("Scanning...", 0, 2, OLED_DISPLAY_NORMAL);
+      oled_screen_display_show();
       ble_scanner_register_cb(adv_scanner_display_record);
       ble_scanner_begin();
       break;
@@ -33,7 +55,7 @@ static void adv_scanner_display_main() {
   adv_menu_main.options = (const char**) scan_menu_items;
   adv_menu_main.options_count = SCAN_MENU_COUNT;
   adv_menu_main.select_cb = adv_scanner_menu_handler_selector;
-  adv_menu_main.exit_cb = menus_module_reset;
+  adv_menu_main.exit_cb = menus_module_exit_app;
   adv_menu_main.selected_option = last_selection;
   general_submenu(adv_menu_main);
 }
@@ -68,4 +90,9 @@ static void adv_scanner_display_type() {
 
 void adv_scanner_module_begin() {
   adv_scanner_display_main();
+}
+
+void adv_scanner_module_stop(void) {
+  ble_scanner_stop();
+  ble_scanner_register_cb(NULL);
 }

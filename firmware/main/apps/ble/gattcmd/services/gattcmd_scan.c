@@ -1,4 +1,5 @@
 #include "gap_dispatcher.h"
+#include "gatt_dispatcher.h"
 #include "services/gattcmd_service.h"
 
 #include "esp_bt.h"
@@ -9,6 +10,7 @@
 #include "esp_gattc_api.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
+#include "radio_lease.h"
 
 #define SCAN_DURATION    240
 #define GATTCMD_SCAN_TAG "GATT_SCAN"
@@ -45,7 +47,7 @@ struct gattc_profile_inst {
 };
 
 static struct gattc_profile_inst enum_gl_profile_tab[GATTCMD_ENUM_PROFILE] = {
-    [GATTCMD_ENUM_APP_ID] =
+    [GATTCMD_PROFILE_IDX] =
         {
             .gattc_cb = gattcmd_enum_gattc_profile_event_handler,
             .gattc_if = ESP_GATT_IF_NONE, /* Not get the gatt_if, so initial is
@@ -90,6 +92,11 @@ static void gattcmd_scan_gap_cb(esp_gap_ble_cb_event_t event,
   uint8_t adv_name_len = 0;
   switch (event) {
     case ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT: {
+      /* An advertising-exclusive owner (BLE spam/HID) has the radio; scanning
+       * would be rejected and re-armed in loop against it. */
+      if (!radio_lease_ble_scan_allowed()) {
+        break;
+      }
       esp_ble_gap_start_scanning(SCAN_DURATION);
       break;
     }
@@ -199,22 +206,27 @@ static void gattcmd_scan_gattc_cb(esp_gattc_cb_event_t event,
 
 void gattcmd_scan_begin(void) {
   // register the  callback function to the gap module
-  esp_err_t ret = gap_dispatcher_register(gattcmd_scan_gap_cb);
-  if (ret) {
-    ESP_LOGE(GATTCMD_SCAN_TAG, "%s gap dispatcher register failed, code = %x",
-             __func__, ret);
+  /* event_bus cannot carry GAP events: event_bus_subscribe() rejects every
+     topic >= EV_APP_START, so this used to store nothing and no
+     ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT was ever handled, which meant the
+     scan never started. The GAP handler has to go through gap_dispatcher. */
+  esp_err_t gap_ret = gap_dispatcher_register(gattcmd_scan_gap_cb);
+  if (gap_ret != ESP_OK) {
+    ESP_LOGE(GATTCMD_SCAN_TAG, "gap_dispatcher_register failed: %s",
+             esp_err_to_name(gap_ret));
     return;
   }
 
-  // register the callback function to the gattc module
-  ret = esp_ble_gattc_register_callback(gattcmd_scan_gattc_cb);
+  // register the callback function to the gattc module through the central
+  // dispatcher so the single Bluedroid callback slot is shared, not stolen.
+  esp_err_t ret = gatt_dispatcher_register(gattcmd_scan_gattc_cb);
   if (ret) {
     ESP_LOGE(GATTCMD_SCAN_TAG, "%s gattc register failed, error code = %x",
              __func__, ret);
     return;
   }
 
-  ret = esp_ble_gattc_app_register(GATTCMD_ENUM_APP_ID);
+  ret = esp_ble_gattc_app_register(GATTCMD_SCAN_APP_ID);
   if (ret) {
     ESP_LOGE(GATTCMD_SCAN_TAG, "%s gattc app register failed, error code = %x",
              __func__, ret);
@@ -231,7 +243,12 @@ void gattcmd_scan_stop() {
     return;
   is_scanning = false;
   esp_err_t err = esp_ble_gap_stop_scanning();
-  if (err == ESP_OK)
+  gap_dispatcher_unregister(gattcmd_scan_gap_cb);
+  gatt_dispatcher_unregister(gattcmd_scan_gattc_cb);
+  if (err == ESP_OK &&
+      enum_gl_profile_tab[GATTCMD_PROFILE_IDX].gattc_if != ESP_GATT_IF_NONE) {
     esp_ble_gattc_app_unregister(
-        enum_gl_profile_tab[GATTCMD_ENUM_APP_ID].gattc_if);
+        enum_gl_profile_tab[GATTCMD_PROFILE_IDX].gattc_if);
+    enum_gl_profile_tab[GATTCMD_PROFILE_IDX].gattc_if = ESP_GATT_IF_NONE;
+  }
 }

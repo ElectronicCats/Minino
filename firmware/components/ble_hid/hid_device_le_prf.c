@@ -203,7 +203,7 @@ struct gatts_profile_inst {
 hidd_le_env_t hidd_le_env;
 
 // HID report map length
-uint8_t hidReportMapLen = sizeof(hidReportMap);
+static uint8_t hidReportMapLen = sizeof(hidReportMap);
 uint8_t hidProtocolMode = HID_PROTOCOL_MODE_REPORT;
 
 // HID report mapping table
@@ -252,8 +252,8 @@ static uint8_t hidReportRefCCIn[HID_REPORT_REF_LEN] = {HID_RPT_ID_CC_IN,
 
 /// hid Service uuid
 static uint16_t hid_le_svc = ATT_SVC_HID;
-uint16_t hid_count = 0;
-esp_gatts_incl_svc_desc_t incl_svc = {0};
+static uint16_t hid_count = 0;
+static esp_gatts_incl_svc_desc_t incl_svc = {0};
 
 #define CHAR_DECLARATION_SIZE (sizeof(uint8_t))
 /// the uuid definition
@@ -518,7 +518,7 @@ static esp_gatts_attr_db_t hidd_le_gatt_db[HIDD_LE_IDX_NB] = {
                                       {ESP_UUID_LEN_16,
                                        (uint8_t*) &character_client_config_uuid,
                                        (ESP_GATT_PERM_READ |
-                                        ESP_GATT_PERM_WRITE_ENCRYPTED),
+                                        ESP_GATT_PERM_WRITE),
                                        sizeof(uint16_t), 0, NULL}},
     // Report Characteristic - Report Reference Descriptor
     [HIDD_LE_IDX_REPORT_CC_IN_REP_REF] =
@@ -627,6 +627,12 @@ void esp_hidd_prf_cb_hdl(esp_gatts_cb_event_t event,
     case ESP_GATTS_CONF_EVT: {
       break;
     }
+    case ESP_GATTS_UNREG_EVT: {
+      /* The app_unregister queued by esp_hidd_profile_deinit() completed:
+       * ble_hid_end() waits on this before tearing the stack down. */
+      hidd_le_env.unreg_signaled = true;
+      break;
+    }
     case ESP_GATTS_CREATE_EVT:
       break;
     case ESP_GATTS_CONNECT_EVT: {
@@ -654,9 +660,17 @@ void esp_hidd_prf_cb_hdl(esp_gatts_cb_event_t event,
     case ESP_GATTS_CLOSE_EVT:
       break;
     case ESP_GATTS_WRITE_EVT: {
+      ESP_LOGI(HID_LE_PRF_TAG, "GATTS WRITE handle=%d, len=%d, val[0]=0x%02x",
+               param->write.handle, param->write.len,
+               param->write.len > 0 ? param->write.value[0] : 0);
       esp_hidd_cb_param_t cb_param = {0};
-      if (param->write.handle ==
-          hidd_le_env.hidd_inst.att_tbl[HIDD_LE_IDX_REPORT_LED_OUT_VAL]) {
+      /* After a deinit the attribute table and the callback are both gone;
+       * an in-flight host write that lands while the env was memset would
+       * otherwise reach a NULL function pointer and abort on the BTC task. */
+      if (hidd_le_env.hidd_cb != NULL &&
+          hidd_le_env.hidd_inst.att_tbl[HIDD_LE_IDX_REPORT_LED_OUT_VAL] != 0 &&
+          param->write.handle ==
+              hidd_le_env.hidd_inst.att_tbl[HIDD_LE_IDX_REPORT_LED_OUT_VAL]) {
         cb_param.led_write.conn_id = param->write.conn_id;
         cb_param.led_write.report_id = HID_RPT_ID_LED_OUT;
         cb_param.led_write.length = param->write.len;
@@ -692,9 +706,8 @@ void esp_hidd_prf_cb_hdl(esp_gatts_cb_event_t event,
                  __func__, incl_svc.start_hdl);
         esp_ble_gatts_create_attr_tab(hidd_le_gatt_db, gatts_if, HIDD_LE_IDX_NB,
                                       0);
-      }
-      if (param->add_attr_tab.num_handle == HIDD_LE_IDX_NB &&
-          param->add_attr_tab.status == ESP_GATT_OK) {
+      } else if (param->add_attr_tab.num_handle == HIDD_LE_IDX_NB &&
+                 param->add_attr_tab.status == ESP_GATT_OK) {
         memcpy(hidd_le_env.hidd_inst.att_tbl, param->add_attr_tab.handles,
                HIDD_LE_IDX_NB * sizeof(uint16_t));
         ESP_LOGI(HID_LE_PRF_TAG, "hid svc handle = %x",
@@ -702,7 +715,12 @@ void esp_hidd_prf_cb_hdl(esp_gatts_cb_event_t event,
         hid_add_id_tbl();
         esp_ble_gatts_start_service(
             hidd_le_env.hidd_inst.att_tbl[HIDD_LE_IDX_SVC]);
-      } else {
+      } else if (param->add_attr_tab.status == ESP_GATT_OK &&
+                 param->add_attr_tab.num_handle > 0) {
+        /* Only reach a plain start_service() for a table that really was
+         * created: a failed HID table creation (status != OK, num_handle=0)
+         * used to fall in here and call start_service() on handle 0, which
+         * only produced a BTC error loop. */
         esp_ble_gatts_start_service(param->add_attr_tab.handles[0]);
       }
       break;
@@ -743,13 +761,14 @@ void hidd_clcb_alloc(uint16_t conn_id, esp_bd_addr_t bda) {
 }
 
 bool hidd_clcb_dealloc(uint16_t conn_id) {
-  uint8_t i_clcb = 0;
   hidd_clcb_t* p_clcb = NULL;
 
-  for (i_clcb = 0, p_clcb = hidd_le_env.hidd_clcb; i_clcb < HID_MAX_APPS;
-       i_clcb++, p_clcb++) {
-    memset(p_clcb, 0, sizeof(hidd_clcb_t));
-    return true;
+  for (p_clcb = hidd_le_env.hidd_clcb;
+       p_clcb < hidd_le_env.hidd_clcb + HID_MAX_APPS; p_clcb++) {
+    if (p_clcb->in_use && p_clcb->conn_id == conn_id) {
+      memset(p_clcb, 0, sizeof(hidd_clcb_t));
+      return true;
+    }
   }
 
   return false;

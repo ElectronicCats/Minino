@@ -5,3 +5,4 @@
 
 void trackers_module_begin(void);
 void trackers_module_stop(void);
+void trackers_module_on_exit(void);

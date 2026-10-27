@@ -60,8 +60,15 @@ Usage:
 #define OLED_CMD_SET_PRECHARGE       0xD9  // follow with 0xF1
 #define OLED_CMD_SET_VCOMH_DESELCT   0xDB  // follow with 0x30
 
-// Charge Pump (pg.62)
+// Charge Pump (pg.62 SSD1306)
 #define OLED_CMD_SET_CHARGE_PUMP 0x8D  // follow with 0x14
+
+// SH1106 DC-DC Control Mode
+#define SH1106_CMD_SET_CHARGE_PUMP 0xAD  // follow with 0x8B (ON) or 0x8A (OFF)
+#define SH1106_CMD_CHARGE_PUMP_ON  0x8B
+#define SH1106_CMD_CHARGE_PUMP_OFF 0x8A
+#define SH1106_CMD_SET_PUMP_VOLTAGE_8V \
+  0x32  // 0x30 ~ 0x33: 7.4V, 8.0V, 8.4V, 9.0V
 
 // Scrolling Command
 #define OLED_CMD_HORIZONTAL_RIGHT  0x26

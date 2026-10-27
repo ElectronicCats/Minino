@@ -50,7 +50,7 @@ static const char* TAG = "cmd_pcap";
 #define ANALIZER_PATH       ANALIZER_APPS_PATH "/analizer"
 #define ANALIZER_PCAPS_PATH ANALIZER_PATH "/pcaps"
 
-summary_cb_t summary_cb = NULL;
+static summary_cb_t summary_cb = NULL;
 
 /**
  * @brief Pcap memory buffer Type Definition

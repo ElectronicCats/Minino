@@ -5,22 +5,37 @@
 
 static wifi_scanner_ap_records_t* ap_records;
 
-static void cmd_wifi_run_scan_task() {
+static void cmd_wifi_run_scan_task(void* pvParameters) {
+  (void) pvParameters;
   uint8_t scan_count = 0;
   ap_records = wifi_scanner_get_ap_records();
-  while (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 2) && scan_count < 3) {
+  if (ap_records == NULL) {
+    vTaskDelete(NULL);
+    return;
+  }
+  while (ap_records != NULL &&
+         ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 2) && scan_count < 3) {
     wifi_scanner_module_scan();
     vTaskDelay(1000 / portTICK_PERIOD_MS);
     scan_count++;
+    ap_records = wifi_scanner_get_ap_records();
   }
 
   ap_records = wifi_scanner_get_ap_records();
-  wifi_scanner_show_records_ssid();
+  if (ap_records != NULL) {
+    wifi_scanner_show_records_ssid();
+  }
   vTaskDelete(NULL);
 }
 
-static int cmd_wifi_scan() {
-  xTaskCreate(cmd_wifi_run_scan_task, "wifi_scan", 8096, NULL, 5, NULL);
+static int cmd_wifi_scan(int argc, char** argv) {
+  (void) argc;
+  (void) argv;
+  BaseType_t ret =
+      xTaskCreate(cmd_wifi_run_scan_task, "wifi_scan", 8096, NULL, 5, NULL);
+  if (ret != pdPASS) {
+    return 1;
+  }
   return 0;
 }
 

@@ -48,20 +48,37 @@ static struct {
 } cmd_catdos_web_args;
 
 static int cmd_catdos_web_set_config(int argc, char** argv) {
+  if (argc < 4 || argv == NULL || argv[0] == NULL) {
+    printf("Usage: web_config <host> <port> <endpoint>\n");
+    return 1;
+  }
   int nerrors = arg_parse(argc, argv, (void**) &cmd_catdos_web_args);
   if (nerrors != 0) {
-    arg_print_errors(stderr, cmd_catdos_web_args.end, argv[0]);
+    arg_print_errors(stderr, cmd_catdos_web_args.end,
+                     argv ? argv[0] : "web_config");
     return 1;
   }
   if (cmd_catdos_web_args.host->count != 1 ||
+      cmd_catdos_web_args.host->sval[0] == NULL ||
       cmd_catdos_web_args.port->count != 1 ||
-      cmd_catdos_web_args.endpoint->count != 1) {
+      cmd_catdos_web_args.port->sval[0] == NULL ||
+      cmd_catdos_web_args.endpoint->count != 1 ||
+      cmd_catdos_web_args.endpoint->sval[0] == NULL) {
     ESP_LOGE(TAG, "Missing required arguments: host, port, endpoint");
     return 1;
   }
   const char* host = cmd_catdos_web_args.host->sval[0];
   const char* port = cmd_catdos_web_args.port->sval[0];
   const char* endpoint = cmd_catdos_web_args.endpoint->sval[0];
+
+  /* Prevent string buffer overflow: target buffers in catdos_module are 32
+   * bytes */
+  if (strlen(host) >= 32 || strlen(port) >= 32 || strlen(endpoint) >= 32) {
+    ESP_LOGE(TAG, "Arguments exceed maximum length of 31 characters");
+    printf(
+        "[ERROR] host, port, and endpoint must be less than 32 characters\n");
+    return 1;
+  }
 
   catdos_module_set_target((char*) host, (char*) port, (char*) endpoint);
   return 0;
@@ -74,7 +91,7 @@ static void cmd_catdos_register_catdos_web(void) {
       arg_str1(NULL, NULL, "<port>", "Port of the target.");
   cmd_catdos_web_args.endpoint =
       arg_str1(NULL, NULL, "<endpoint>", "Endpoint of the target.");
-  cmd_catdos_web_args.end = arg_end(2);
+  cmd_catdos_web_args.end = arg_end(4);
 
   const esp_console_cmd_t cmd = {.command = "web_config",
                                  .help = "Configure the web target",

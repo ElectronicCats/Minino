@@ -11,11 +11,11 @@ static TaskHandle_t trackers_scan_timer_task = NULL;
 static bluetooth_traker_scanner_cb_t display_records_cb = NULL;
 static int trackers_scan_duration = 0;
 static bool trackers_scanner_active = false;
-// Guarda de reentrada para trackers_scanner_stop(). El teardown de BT es
-// bloqueante y corre tanto desde el handler de boton como desde
-// task_tracker_timer (auto-stop por duracion); si ambos entran a la vez,
-// cada uno esperaria el semaforo de esp_bluedroid_disable()/controller que el
-// otro consume, y la UI se congela para siempre.
+// Reentrancy guard for trackers_scanner_stop(). BT teardown is blocking and
+// runs from both the button handler and task_tracker_timer (auto-stop by
+// duration); if both enter simultaneously, each would wait on the
+// esp_bluedroid_disable()/controller semaphore consumed by the other,
+// freezing the UI forever.
 static bool trackers_stop_in_progress = false;
 static portMUX_TYPE trackers_stop_mux = portMUX_INITIALIZER_UNLOCKED;
 
@@ -37,7 +37,11 @@ void trackers_scanner_start() {
   bt_client_event_cb_t event_cb = {.handler_gattc_cb = NULL,
                                    .handler_gapc_cb = handle_bt_gapc_events};
   bt_gattc_set_cb(event_cb);
-  bt_gattc_task_begin();
+  if (bt_gattc_task_begin() != ESP_OK) {
+    ESP_LOGE(TAG_BLE_CLIENT_MODULE, "trackers scan bring-up failed");
+    trackers_scanner_active = false;
+    return;
+  }
   trackers_scanner_active = true;
   xTaskCreate(task_tracker_timer, "Trackers_task", 4096, NULL, 5,
               &trackers_scan_timer_task);
@@ -94,7 +98,14 @@ static void task_tracker_timer() {
     trackers_scan_duration++;
     vTaskDelay(pdMS_TO_TICKS(1000));
   }
+  /* Detach from stop() before vanishing: stop() copies this handle and
+   * deletes the task; a self-delete while stop() still holds the copied
+   * handle would turn that delete into a delete of an already-freed TCB,
+   * so the handle is cleared (and stop() re-validated against it) under the
+   * stop guard before vTaskDelete(NULL). */
+  portENTER_CRITICAL(&trackers_stop_mux);
   trackers_scan_timer_task = NULL;
+  portEXIT_CRITICAL(&trackers_stop_mux);
   vTaskDelete(NULL);
 }
 
@@ -111,9 +122,18 @@ void trackers_scanner_stop() {
   trackers_scan_duration = 0;
   bt_gattc_task_stop();
   ESP_LOGI(TAG_BLE_CLIENT_MODULE, "Trackers task stopped");
+  /* Only delete the timer task while the handle it published still matches:
+   * a mismatch means the task already cleared it under the guard and is (or
+   * has just been) deleting itself. */
+  portENTER_CRITICAL(&trackers_stop_mux);
   TaskHandle_t task_to_delete = trackers_scan_timer_task;
-  trackers_scan_timer_task = NULL;
   if (task_to_delete != NULL && task_to_delete != xTaskGetCurrentTaskHandle()) {
+    trackers_scan_timer_task = NULL;
+  } else {
+    task_to_delete = NULL;
+  }
+  portEXIT_CRITICAL(&trackers_stop_mux);
+  if (task_to_delete != NULL) {
     vTaskDelete(task_to_delete);
   }
 
@@ -132,13 +152,13 @@ static void tracker_dissector(esp_ble_gap_cb_param_t* scan_rst,
   surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
   uint8_t n = surv_match_ble_adv(adv, adv_len, hits);
 
-  // Esta app solo muestra rastreadores personales. El resto de clases que el
-  // disector compartido reconoce (Flock, Axon, drones) las consume la app de
-  // vigilancia, no esta.
-  // El dissector compartido solo da la etiqueta de clase (p.ej. "AirTag");
-  // el fabricante no vive en ella. Se mapea por clase para que la UI muestre
-  // name="AirTag" vendor="Apple" en vez de la misma etiqueta dos veces, como
-  // hacia el disector local que esto reemplaza.
+  // This app only displays personal trackers. Other classes recognized by the
+  // shared dissector (Flock, Axon, drones) are consumed by the surveillance
+  // app, not here.
+  // The shared dissector only provides the class label (e.g. "AirTag"); the
+  // vendor is not part of it. Map by class so the UI displays name="AirTag"
+  // vendor="Apple" instead of repeating the same label twice, matching the
+  // local dissector this replaces.
   for (uint8_t i = 0; i < n; i++) {
     switch (hits[i].klass) {
       case SURV_CLASS_AIRTAG:

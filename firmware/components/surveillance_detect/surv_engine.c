@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Motor de confianza. Combina dos modelos:
-//   - tier por MAC, de flock-you (MIT): que tan seguro estoy de este equipo.
-//   - score global con decay, de eye-spy (Apache-2.0): que tan vigilado esta
-//     este lugar.
-// Son ejes independientes: un SSID "flock" es tier 0 y a la vez 5 puntos.
+// Confidence engine. Combines two models:
+//   - per-MAC tier, from flock-you (MIT): how confident we are about this
+//   device.
+//   - global score with decay, from eye-spy (Apache-2.0): how surveilled this
+//     location is.
+// These are independent axes: a "flock" SSID is tier 0 and 5 points at once.
 #include "surv_engine.h"
 #include <string.h>
 
-#define SURV_MAX_DEVICES 200
+#define SURV_MAX_DEVICES 80
 #define SURV_DECAY_MS    60000u
 #define SURV_RESCORE_MS  120000u
 #define SURV_DEDUPE_MS   5000u
@@ -17,7 +18,7 @@ typedef struct {
   uint8_t mac[6];
   uint8_t best_tier;
   uint32_t last_emit_ms;
-  bool last_emit_set;  // false = todavia no emitio nada, distinto de ms==0
+  bool last_emit_set;  // false = nothing emitted yet, distinct from ms==0
   bool used;
 } surv_dev_t;
 
@@ -27,12 +28,12 @@ static uint32_t s_class_scored_ms[SURV_CLASS_MAX];
 static bool s_class_seen[SURV_CLASS_MAX];
 static uint8_t s_score;
 static uint32_t s_last_decay_ms;
-static bool s_decay_anchor_set;  // false = ancla de decay sin fijar aun
+static bool s_decay_anchor_set;  // false = decay anchor not set yet
 static surv_engine_emit_cb_t s_emit_cb;
 
-// Rastreador de persistencia (de eye-spy, Apache-2.0): declarado aqui arriba
-// para que surv_engine_reset() pueda limpiarlo junto con todo lo demas.
-#define SURV_TRACK_MAX      50
+// Persistence tracker (from eye-spy, Apache-2.0): declared up here so
+// surv_engine_reset() can clear it along with everything else.
+#define SURV_TRACK_MAX      20
 #define SURV_TRACK_MIN_SEEN 3
 #define SURV_TRACK_MIN_SPAN 300000u   // 5 min
 #define SURV_TRACK_PURGE_MS 1800000u  // 30 min
@@ -71,7 +72,7 @@ static surv_dev_t* find_or_add(const uint8_t mac[6]) {
     }
   }
   if (s_dev_count >= SURV_MAX_DEVICES) {
-    return NULL;  // tabla llena: se sigue puntuando, no se rastrea el equipo
+    return NULL;  // table full: keep scoring, do not track the device
   }
   surv_dev_t* d = &s_devs[s_dev_count++];
   memcpy(d->mac, mac, 6);
@@ -108,7 +109,7 @@ void surv_engine_submit(const surv_event_t* ev,
     d->best_tier = ev->tier;
   }
 
-  // Score global: cooldown por clase, no por MAC.
+  // Global score: per-class cooldown, not per-MAC.
   bool first = !s_class_seen[ev->klass];
   if (first || (now_ms - s_class_scored_ms[ev->klass]) > SURV_RESCORE_MS) {
     uint16_t sum = (uint16_t) s_score + points;
@@ -121,7 +122,7 @@ void surv_engine_submit(const surv_event_t* ev,
     }
   }
 
-  // Emision: dedupe de 5 s por MAC, preemptado por un tier superior.
+  // Emission: 5 s dedupe per MAC, preempted by a higher tier.
   bool emit = true;
   if (d != NULL) {
     if (!tier_up && d->last_emit_set &&
@@ -140,12 +141,12 @@ void surv_engine_submit(const surv_event_t* ev,
 
 void surv_engine_tick(uint32_t now_ms) {
   if (s_score == 0) {
-    // El ancla se fija aqui tambien: el engine task llama a tick() en cada
-    // vuelta de loop (~100 ms) mucho antes de que exista ninguna deteccion.
-    // Si solo submit() fijara la bandera, la primera deteccion pisaria el
-    // ancla que ya habia establecido tick(), corriendo el proximo decay unos
-    // ~100 ms respecto al comportamiento original basado en el sentinela
-    // ms==0 (donde s_last_decay_ms ya era != 0 antes del primer submit).
+    // The anchor is set here too: the engine task calls tick() on every
+    // loop iteration (~100 ms) long before any detection exists. If only
+    // submit() set the flag, the first detection would overwrite the anchor
+    // already established by tick(), shifting the next decay by ~100 ms
+    // relative to the original ms==0 sentinel behavior (where s_last_decay_ms
+    // was already != 0 before the first submit).
     s_last_decay_ms = now_ms;
     s_decay_anchor_set = true;
     return;
@@ -160,9 +161,9 @@ uint8_t surv_engine_score(void) {
   return s_score;
 }
 
-// --- Rastreador de persistencia (de eye-spy, Apache-2.0) --------------------
-// Una MAC que no matchea ninguna firma pero reaparece a lo largo del tiempo es
-// la senal de un seguidor. Se purga a los 30 min de ausencia.
+// --- Persistence tracker (from eye-spy, Apache-2.0) -------------------------
+// A MAC that matches no signature but reappears over time is the signal of a
+// follower. Purged after 30 min of absence.
 
 bool surv_engine_note_unknown(const uint8_t mac[6], uint32_t now_ms) {
   surv_track_t* slot = NULL;

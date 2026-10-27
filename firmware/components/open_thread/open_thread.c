@@ -36,8 +36,8 @@
 #define THREAD_NETWORK_MASTERKEY "00112233445566778899aabbccddeeff"
 #define THREAD_NETWORK_PSKC      "104810e2315100afd6bc9215a6bfac53"
 
-otIp6Address mAddr;
-otOperationalDataset dataset;
+static otIp6Address mAddr;
+static otOperationalDataset dataset;
 
 static esp_netif_t* init_openthread_netif(
     const esp_openthread_platform_config_t* config) {

@@ -1,7 +1,8 @@
 #include "i2c_scanner.h"
 
 #include <stdio.h>
-#include <stdlib.h>  // Para malloc y realloc
+#include <stdlib.h>  // For malloc and realloc
+#include "app_manager.h"
 #include "driver/i2c.h"
 #include "esp_log.h"
 #include "esp_system.h"
@@ -55,7 +56,7 @@ static void show_scan_result(size_t num_nodes) {
   general_submenu_menu_t result = {0};
   result.options = (const char**) nodes_arr;
   result.options_count = num_nodes;
-  result.exit_cb = menus_module_restart;
+  result.exit_cb = (void (*)(void)) app_manager_exit;
   general_submenu(result);
 }
 
@@ -65,7 +66,7 @@ static void i2c_scanner_input_cb(uint8_t button_name, uint8_t button_event) {
   }
   switch (button_name) {
     case BUTTON_LEFT:
-      menus_module_restart();
+      app_manager_exit();
       break;
     default:
       break;
@@ -82,3 +83,44 @@ void i2c_scanner_begin() {
   free(found_addresses);
   show_scan_result(num_addresses);
 }
+
+// ---------------------------------------------------------------------------
+// app_manager callbacks
+// ---------------------------------------------------------------------------
+static void i2c_scanner_on_enter(void) {
+  uint8_t* found_addresses = NULL;
+  size_t num_addresses = 0;
+
+  menus_module_set_app_state(true, i2c_scanner_input_cb);
+  i2c_scanner(&found_addresses, &num_addresses);
+  imprimir_direcciones(found_addresses, num_addresses);
+  free(found_addresses);
+  show_scan_result(num_addresses);
+}
+
+static void i2c_scanner_on_input(uint8_t button_name, uint8_t button_event) {
+  i2c_scanner_input_cb(button_name, button_event);
+}
+
+static void i2c_scanner_on_exit(void) {
+  // Free nodes_arr
+  if (nodes_arr != NULL) {
+    // nodes_arr elements were freed when menu exited
+    free(nodes_arr);
+    nodes_arr = NULL;
+  }
+}
+
+// Wrapper for menu entry
+void app_manager_enter_wrapper_i2c_scanner(void) {
+  extern const minino_app_t i2c_scanner_app;
+  app_manager_enter(&i2c_scanner_app);
+}
+
+// App definition for app_manager
+const minino_app_t i2c_scanner_app = {
+    .name = "i2c_scanner",
+    .on_enter = i2c_scanner_on_enter,
+    .on_input = i2c_scanner_on_input,
+    .on_exit = i2c_scanner_on_exit,
+};

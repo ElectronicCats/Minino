@@ -331,7 +331,7 @@ dns_server_handle_t start_dns_server(dns_server_config_t* config) {
 void stop_dns_server(dns_server_handle_t handle) {
   if (handle) {
     handle->started = false;
-    // Esperar a que la tarea se detenga antes de liberar
+    // Wait for the task to stop before freeing
     if (handle->task != NULL) {
       vTaskDelay(pdMS_TO_TICKS(100));
     }

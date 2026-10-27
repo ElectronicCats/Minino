@@ -20,7 +20,7 @@ typedef union out_column_t {
 
 void oled_driver_init(oled_driver_t* dev, int width, int height) {
 #if !defined(CONFIG_OLED_DRIVER_DEBUG)
-  esp_log_level_set(TAG, ESP_LOG_NONE);
+  esp_log_level_set(TAG, ESP_LOG_WARN);
 #endif
 
   if (dev->_address == SPIAddress) {

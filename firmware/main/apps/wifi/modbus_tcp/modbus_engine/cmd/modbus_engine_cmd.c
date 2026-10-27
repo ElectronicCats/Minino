@@ -65,7 +65,18 @@ static int cmd_mb_engine_set_request(int argc, char** argv) {
     return 1;
   }
 
-  uint8_t request[260] = {0};
+  /* 13 header bytes + 2 per register / 1 per 8 coils. */
+  size_t payload_bytes = (function_code == 0x0F) ? ((size_t) num_values + 7) / 8
+                                                 : (size_t) num_values * 2;
+  if (13 + payload_bytes > MODBUS_TCP_MAX_REQUEST_LEN) {
+    ESP_LOGE(TAG,
+             "too many values: %d would need %u bytes, the buffer holds %u",
+             num_values, (unsigned) (13 + payload_bytes),
+             (unsigned) MODBUS_TCP_MAX_REQUEST_LEN);
+    return 1;
+  }
+
+  uint8_t request[MODBUS_TCP_MAX_REQUEST_LEN] = {0};
   int idx = 0;
 
   // MBAP header
@@ -103,7 +114,7 @@ static int cmd_mb_engine_set_request(int argc, char** argv) {
       request[idx++] = val & 0xFF;
     }
 
-    data_len = 6 + byte_count;
+    data_len = 7 + byte_count;
 
   } else if (function_code == 0x0F) {
     request[10] = num_values >> 8;
@@ -125,7 +136,7 @@ static int cmd_mb_engine_set_request(int argc, char** argv) {
       request[idx++] = b;
     }
 
-    data_len = 6 + byte_count;
+    data_len = 7 + byte_count;
   }
 
   request[4] = data_len >> 8;

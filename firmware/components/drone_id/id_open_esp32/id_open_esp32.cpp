@@ -95,6 +95,7 @@ static bool _read_only;
 
 #include "esp_bt.h"
 #include "esp_bt_main.h"
+#include "radio_lease.h"
 
 static esp_ble_adv_data_t advData;
 static esp_ble_adv_params_t advParams;
@@ -105,14 +106,14 @@ static esp_ble_adv_params_t advParams;
  *
  */
 
+/*
+ * Static advertisement tables only. Called from a global constructor (once per
+ * Spoofer, 17 times at boot, before app_main), so it must not call into the
+ * Bluetooth stack: it did, and every instance logged "Set device name failed"
+ * and threw away the result. The stack work is init_ble()'s job.
+ */
 void construct2() {
   // #if ID_OD_BT
-
-  printf("construct2\n");
-  esp_err_t ret = esp_ble_gap_set_device_name("ESP32_Device");
-  if (ret) {
-    ESP_LOGE("BLE", "Set device name failed");
-  }
 
   memset(&advData, 0, sizeof(advData));
   advData.set_scan_rsp = false;
@@ -130,7 +131,6 @@ void construct2() {
   advParams.channel_map = ADV_CHNL_ALL;
   advParams.adv_filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY;
 
-  esp_ble_gap_start_advertising(&advParams);
   // #endif  // ID_OD_BT
 
   return;
@@ -267,15 +267,15 @@ void init_ble() {
   }
   ESP_ERROR_CHECK(ret);
 
-  #pragma GCC diagnostic push
-  #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
-  esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-  #pragma GCC diagnostic pop
-  ESP_ERROR_CHECK(esp_bt_controller_init(&bt_cfg));
-  ESP_ERROR_CHECK(esp_bt_controller_enable(ESP_BT_MODE_BLE));
-
-  ESP_ERROR_CHECK(esp_bluedroid_init());
-  ESP_ERROR_CHECK(esp_bluedroid_enable());
+  /* Status-guarded rather than ESP_ERROR_CHECK: the stack may already be up
+     because another BLE app ran first (BLE spam, BLE HID, the trackers
+     scanner), and esp_bt_controller_init()/esp_bluedroid_init() return
+     ESP_ERR_INVALID_STATE in that case - which ESP_ERROR_CHECK turns into an
+     abort(). radio_lease brings the stack up and holds the claim. */
+  if (radio_lease_ble_acquire() != ESP_OK) {
+    ESP_LOGE("BLE", "could not acquire the BLE stack");
+    return;
+  }
 
   esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9);
   esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
@@ -283,6 +283,16 @@ void init_ble() {
   esp_power_level_t power = esp_ble_tx_power_get(ESP_BLE_PWR_TYPE_DEFAULT);
   int power_db = 3 * ((int) power - 4);
   ESP_LOGI("TAG", "Power level (dB): %d", power_db);
+
+  /* What construct2() used to do, but only now that there is a stack: name the
+     peripheral and start advertising the OpenDroneID payload. */
+  esp_err_t nret = esp_ble_gap_set_device_name("ESP32_Device");
+  if (nret != ESP_OK) {
+    ESP_LOGE("BLE", "Set device name failed: %s", esp_err_to_name(nret));
+  }
+  /* advData is the structured form, so it goes to the structured setter. */
+  esp_ble_gap_config_adv_data(&advData);
+  esp_ble_gap_start_advertising(&advParams);
 
   return;
 }

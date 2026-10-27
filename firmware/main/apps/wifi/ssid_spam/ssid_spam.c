@@ -2,13 +2,18 @@
 
 #include "esp_event.h"
 #include "esp_log.h"
+#include "esp_netif.h"
+
+static const char* TAG = "ssid_spam";
 #include "esp_system.h"
 #include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
 #include "nvs_flash.h"
 #include "string.h"
+#include "wifi_service.h"
 
 #include "animations_task.h"
+#include "app_manager.h"
 #include "general_screens.h"
 #include "keyboard_module.h"
 #include "menus_module.h"
@@ -33,14 +38,50 @@ esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx,
 static void ssid_spam_main_cb(uint8_t button_name, uint8_t button_event);
 static void ssid_spam_input_cb(uint8_t button_name, uint8_t button_event);
 static void ssid_spam_init();
+static void ssid_spam_stop_task(void);
+static void ssid_spam_load_stored_list(void);
 
-static uint8_t beacon_raw[] = {
-    0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xba, 0xde,
-    0xaf, 0xfe, 0x00, 0x06, 0xba, 0xde, 0xaf, 0xfe, 0x00, 0x06, 0x00, 0x00,
-    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x64, 0x00, 0x31, 0x04,
-    0x00, 0x00, 0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24,
+/*
+ * Beacon frame layout, byte by byte:
+ *
+ *   0..3   frame control + duration
+ *   4..9   addr1 (broadcast)
+ *   10..15 addr2
+ *   16..21 addr3 (BSSID)
+ *   22..27 sequence control + fragment number
+ *   28..33 timestamp
+ *   34..35 capability information
+ *   36     SSID information element ID (0x00)
+ *   37     SSID length          <- written per beacon
+ *   38..   SSID text            <- BEACON_SSID_OFFSET
+ *   then the remaining IEs
+ *
+ * The old beacon_raw was one flat 57-byte array holding the header AND the
+ * Supported Rates / DS Param / TIM IEs, and the SSID text was appended at
+ * sizeof(beacon_raw) == 57, i.e. after the TIM. beacon[37] then claimed N bytes
+ * that actually belonged to those IEs, so every beacon advertised a "SSID" made
+ * of raw supported-rate bytes and the intended strings were trailing garbage no
+ * parser reads. The SSID region and the trailing IEs are separate now.
+ */
+#define BEACON_SSID_LEN_OFFSET (BEACON_SSID_OFFSET - 1)
+#define BEACON_MAX_SSID_LEN    32 /* 802.11 caps the SSID at 32 octets */
+
+/* Header through the SSID length byte. */
+static const uint8_t beacon_raw[] = {
+    0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+    0xba, 0xde, 0xaf, 0xfe, 0x00, 0x06, 0xba, 0xde, 0xaf, 0xfe,
+    0x00, 0x06, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
+    0x06, 0x07, 0x64, 0x00, 0x31, 0x04, 0x00, 0x00,
+};
+
+/* Supported Rates, DS Param and TIM, emitted after the SSID text. */
+static const uint8_t beacon_tail[] = {
+    0x01, 0x08, 0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24,
     0x03, 0x01, 0x01, 0x05, 0x04, 0x01, 0x02, 0x00, 0x00,
 };
+
+_Static_assert(BEACON_SSID_OFFSET == sizeof(beacon_raw),
+               "the SSID payload must start right after the length byte");
 
 static char* ssids_main_list[2] = {"List SSID", "Start"};
 static char* ssids_list[99] = {};
@@ -125,11 +166,12 @@ static void list_ssid_cb(uint8_t selection) {
 }
 
 void spam_display_list_ssid() {
-  storage_contex_t list[99];
-  uint8_t list_count = 0;
-
-  flash_storage_get_list(GENFLASH_STORAGE_SPAM, list, &list_count);
-  for (int i = 0; i < list_count; i++) {
+  storage_contex_t list[FLASH_STORAGE_MAX_LIST_ITEMS];
+  /* ssids_list is also FLASH_STORAGE_MAX_LIST_ITEMS long; the count comes from
+     NVS, so clamp before it indexes either array. */
+  uint8_t list_count = flash_storage_get_list(GENFLASH_STORAGE_SPAM, list,
+                                              FLASH_STORAGE_MAX_LIST_ITEMS);
+  for (uint8_t i = 0; i < list_count; i++) {
     ssids_list[i] = list[i].item_storage_name;
   }
 
@@ -141,25 +183,32 @@ void spam_display_list_ssid() {
   general_submenu(spam_menu_list_ssid);
 }
 
+static volatile bool spam_running = false;
+
 static void spam_task(void* pvParameters) {
   uint16_t line = 0;
-  uint8_t beacon[128];
-  uint16_t seqnum[total_lines];
+  uint8_t
+      beacon[sizeof(beacon_raw) + BEACON_MAX_SSID_LEN + sizeof(beacon_tail)];
+  /* Was a VLA sized from total_lines, a runtime global loaded from NVS: the
+     stack frame grew with whatever the saved SSID list happened to contain. */
+  uint16_t seqnum[MAX_STRINGS];
   memset(seqnum, 0, sizeof(seqnum));
 
-  while (1) {
+  while (spam_running) {
     vTaskDelay(pdMS_TO_TICKS(100));
-    if (total_lines == 0 || ssids_attack[line] == NULL) {
+    if (total_lines == 0 || line >= MAX_STRINGS || ssids_attack[line] == NULL) {
       continue;
     }
     size_t ssid_len = strlen(ssids_attack[line]);
-    if (ssid_len > sizeof(beacon) - sizeof(beacon_raw)) {
-      ssid_len = sizeof(beacon) - sizeof(beacon_raw);
+    if (ssid_len > BEACON_MAX_SSID_LEN) {
+      ssid_len = BEACON_MAX_SSID_LEN;
     }
-    memcpy(beacon, beacon_raw, sizeof(beacon_raw));
-    memcpy(beacon + sizeof(beacon_raw), ssids_attack[line], ssid_len);
 
-    beacon[37] = ssid_len;
+    memcpy(beacon, beacon_raw, sizeof(beacon_raw));
+    memcpy(beacon + BEACON_SSID_OFFSET, ssids_attack[line], ssid_len);
+    memcpy(beacon + BEACON_SSID_OFFSET + ssid_len, beacon_tail,
+           sizeof(beacon_tail));
+    beacon[BEACON_SSID_LEN_OFFSET] = (uint8_t) ssid_len;
 
     beacon[SRCADDR_OFFSET + 5] = line;
     beacon[BSSID_OFFSET + 5] = line;
@@ -170,14 +219,58 @@ static void spam_task(void* pvParameters) {
     if (seqnum[line] > 0xfff)
       seqnum[line] = 0;
 
-    esp_wifi_80211_tx(WIFI_IF_AP, beacon, sizeof(beacon_raw) + ssid_len, false);
+    size_t frame_len = BEACON_SSID_OFFSET + ssid_len + sizeof(beacon_tail);
+    esp_err_t err = esp_wifi_80211_tx(WIFI_IF_AP, beacon, frame_len, false);
+    if (err != ESP_OK) {
+      /* The return value used to be discarded, so a spam that transmitted
+         nothing looked exactly like one that worked. */
+      ESP_LOGW(TAG, "beacon TX failed: %s", esp_err_to_name(err));
+      vTaskDelay(pdMS_TO_TICKS(500));
+    }
 
     if (++line >= total_lines)
       line = 0;
   }
+
+  spam_task_handle = NULL;
+  vTaskDelete(NULL);
 }
 
-static void ssid_spam_init() {
+/* The SSID list is loaded when the user selects a menu item.
+   When launching the app from the console (launch ssid_spam), no item is
+   selected, leaving the spammer with an empty list: the spam task transmitted
+   nothing while the app appeared to be running. If no list is loaded, pick
+   the first stored entry. */
+static void ssid_spam_load_stored_list(void) {
+  if (total_lines > 0) {
+    return;
+  }
+  storage_contex_t list[FLASH_STORAGE_MAX_LIST_ITEMS];
+  uint8_t list_count = flash_storage_get_list(GENFLASH_STORAGE_SPAM, list,
+                                              FLASH_STORAGE_MAX_LIST_ITEMS);
+  for (uint8_t i = 0; i < list_count && i < FLASH_STORAGE_MAX_LIST_ITEMS; i++) {
+    if (list[i].item_storage_name == NULL) {
+      continue;
+    }
+    storage_contex_t* item = flash_storage_get_item(GENFLASH_STORAGE_SPAM,
+                                                    list[i].item_storage_name);
+    if (item == NULL || item->items_storage_value == NULL) {
+      continue;
+    }
+    split_text_into_array(item->items_storage_value, ssids_attack,
+                          &total_lines);
+    if (total_lines > 0) {
+      ESP_LOGI(TAG, "SSID list loaded from the flash storage: %u entries (%s)",
+               (unsigned) total_lines, list[i].item_storage_name);
+      return;
+    }
+  }
+  ESP_LOGW(TAG,
+           "no SSID list in the flash storage: nothing will be transmitted");
+}
+
+static void ssid_spam_init(void) {
+  ssid_spam_load_stored_list();
   esp_err_t ret = nvs_flash_init();
   if (ret == ESP_ERR_NVS_NO_FREE_PAGES ||
       ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -193,29 +286,54 @@ static void ssid_spam_init() {
   if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
     ESP_LOGE("ssid_spam", "event_loop_create error: %s", esp_err_to_name(ret));
   }
-  esp_netif_create_default_wifi_ap();
-
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-
-  ret = esp_wifi_init(&cfg);
-  if (ret == ESP_OK) {
-    esp_wifi_set_storage(WIFI_STORAGE_RAM);
-    esp_wifi_set_mode(WIFI_MODE_AP);
-    wifi_config_t ap_config = {.ap = {.ssid = "NotSuspisiusCat",
-                                      .ssid_len = 0,
-                                      .password = "dummypassword",
-                                      .channel = 1,
-                                      .authmode = WIFI_AUTH_WPA2_PSK,
-                                      .ssid_hidden = 1,
-                                      .max_connection = 4,
-                                      .beacon_interval = 60000}};
-
-    esp_wifi_set_config(WIFI_IF_AP, &ap_config);
-    esp_wifi_start();
-    esp_wifi_set_ps(WIFI_PS_NONE);
+  /* esp_netif_create_default_wifi_ap() triggers an assert() if the AP netif
+     already exists: re-entering the app (or starting it twice without
+     exiting) caused the board to reboot with a "duplicate key" error. */
+  if (esp_netif_get_handle_from_ifkey("WIFI_AP_DEF") == NULL) {
+    esp_netif_create_default_wifi_ap();
   }
 
-  xTaskCreate(&spam_task, "spam_task", 4096, NULL, 5, &spam_task_handle);
+  if (!wifi_service_init(WIFI_MODE_AP)) {
+    ESP_LOGE(TAG, "WiFi stack init failed");
+    return;
+  }
+
+  esp_wifi_set_storage(WIFI_STORAGE_RAM);
+  wifi_config_t ap_config = {.ap = {.ssid = "NotSuspisiusCat",
+                                    .ssid_len = 0,
+                                    .password = "dummypassword",
+                                    .channel = 1,
+                                    .authmode = WIFI_AUTH_WPA2_PSK,
+                                    .ssid_hidden = 1,
+                                    .max_connection = 4,
+                                    .beacon_interval = 60000}};
+
+  esp_wifi_set_config(WIFI_IF_AP, &ap_config);
+  esp_wifi_set_ps(WIFI_PS_NONE);
+
+  /* Re-entering the app used to overwrite spam_task_handle with a second
+     task's handle while the first kept running: both then drove the shared
+     ssids_attack[]/line and the hidden AP stayed up with no way to stop it. */
+  ssid_spam_stop_task();
+
+  spam_running = true;
+  if (xTaskCreate(&spam_task, "spam_task", 4096, NULL, 5, &spam_task_handle) !=
+      pdPASS) {
+    ESP_LOGE(TAG, "could not create the spam task");
+    spam_running = false;
+    spam_task_handle = NULL;
+  }
+}
+
+static void ssid_spam_stop_task(void) {
+  spam_running = false;
+  for (int i = 0; i < 100 && spam_task_handle != NULL; i++) {
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
+  if (spam_task_handle != NULL) {
+    vTaskDelete(spam_task_handle);
+    spam_task_handle = NULL;
+  }
 }
 
 static void ssid_spam_input_cb(uint8_t button_name, uint8_t button_event) {
@@ -225,8 +343,8 @@ static void ssid_spam_input_cb(uint8_t button_name, uint8_t button_event) {
   switch (button_name) {
     case BUTTON_LEFT:
       animations_task_stop();
-      spam_main_menu();
-      menus_module_restart();
+      ssid_spam_stop_task();
+      app_manager_exit();
       break;
     case BUTTON_RIGHT:
       break;
@@ -245,7 +363,7 @@ static void ssid_spam_main_cb(uint8_t button_name, uint8_t button_event) {
   }
   switch (button_name) {
     case BUTTON_LEFT:
-      menus_module_restart();
+      app_manager_exit();
       break;
     case BUTTON_RIGHT:
       if (current_item == SPAM_LIST_SSID) {
@@ -274,5 +392,67 @@ static void ssid_spam_main_cb(uint8_t button_name, uint8_t button_event) {
 }
 
 void ssid_spam_begin() {
+  /* Load the list when opening the app: the menu loads it when selecting an
+     item, but from the console (launch ssid_spam) nothing is selected and
+     Start refused to run. */
+  ssid_spam_load_stored_list();
   spam_main_menu();
 }
+
+// ---------------------------------------------------------------------------
+// app_manager callbacks
+// ---------------------------------------------------------------------------
+static void ssid_spam_on_enter(void) {
+  ssid_spam_load_stored_list();
+  spam_main_menu();
+}
+
+static void ssid_spam_on_input(uint8_t button_name, uint8_t button_event) {
+  // Input is handled by the menu callbacks (spam_main_cb, spam_input_cb)
+  // which are installed via menus_module_set_app_state
+  // This callback is a fallback for when no menu is active
+  (void) button_name;
+  (void) button_event;
+}
+
+static void ssid_spam_on_exit(void) {
+  // Stop the spam task
+  animations_task_stop();
+  ssid_spam_stop_task();
+  // Deinitialize WiFi (started in ssid_spam_init)
+  wifi_service_deinit();
+  // Free attack strings
+  for (uint8_t i = 0; i < MAX_STRINGS; i++) {
+    if (ssids_attack[i]) {
+      free(ssids_attack[i]);
+      ssids_attack[i] = NULL;
+    }
+  }
+  total_lines = 0;
+  // Free main list
+  if (ssids_main_list[0]) {
+    free(ssids_main_list[0]);
+    ssids_main_list[0] = NULL;
+  }
+  // Free flash storage lists
+  for (uint8_t i = 0; i < FLASH_STORAGE_MAX_LIST_ITEMS; i++) {
+    if (ssids_list[i]) {
+      ssids_list[i] = NULL;  // These point to flash storage, don't free
+    }
+  }
+  current_item = 0;
+}
+
+// Wrapper for menu entry
+void app_manager_enter_wrapper_ssid_spam(void) {
+  extern const minino_app_t ssid_spam_app;
+  app_manager_enter(&ssid_spam_app);
+}
+
+// App definition for app_manager
+const minino_app_t ssid_spam_app = {
+    .name = "ssid_spam",
+    .on_enter = ssid_spam_on_enter,
+    .on_input = ssid_spam_on_input,
+    .on_exit = ssid_spam_on_exit,
+};

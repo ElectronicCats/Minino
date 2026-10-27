@@ -3,6 +3,7 @@
 #include "esp_bt.h"
 #include "esp_bt_defs.h"
 #include "esp_bt_main.h"
+#include "esp_err.h"
 #include "esp_gap_ble_api.h"
 #include "esp_gatt_common_api.h"
 #include "esp_gattc_api.h"
@@ -111,9 +112,10 @@ void ble_client_gattc_event_handler(esp_gattc_cb_event_t event,
 /**
  * @brief Initialize the GATT Client profile
  *
- * @return void
+ * @return ESP_OK on success, or the error that aborted the bring-up (stack
+ *         lease, dispatcher registration or GATTC registration).
  */
-void bt_gattc_task_begin(void);
+esp_err_t bt_gattc_task_begin(void);
 /**
  * @brief Stop the GATT Client profile
  *

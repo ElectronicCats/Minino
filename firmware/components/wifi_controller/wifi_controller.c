@@ -2,25 +2,13 @@
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "string.h"
+#include "wifi_service.h"
 
 static volatile bool wifi_driver_initialized = false;
 static volatile bool netif_default_created = false;
 static bool run_once = false;
 static uint8_t default_ap_mac[6];
 static esp_err_t err;
-
-// Config cohesionada con el presupuesto de RAM del ESP32-C6. El default de
-// ESP-IDF reserva 32 buffers dinamicos de Rx (cada uno ~1.7 KB) que, junto al
-// stack BT en coexistencia, dejan al dispositivo sin heap y hacen fallar el
-// init del controlador Bluetooth con ESP_ERR_NO_MEM. El sniffer 802.11 es de
-// por si con perdidas: 8 buffers dinamicos bastan.
-static wifi_init_config_t wifi_slim_init_config(void) {
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  cfg.static_rx_buf_num = 4;
-  cfg.dynamic_rx_buf_num = 8;
-  cfg.dynamic_tx_buf_num = 8;
-  return cfg;
-}
 
 wifi_config_t wifi_driver_access_point_begin() {
   // #if !defined(CONFIG_WIFI_CONTROLLER_DEBUG)
@@ -81,7 +69,7 @@ void wifi_driver_ap_stop(void) {
   ESP_LOGI(TAG_WIFI_DRIVER, "WiFi Access Point stopped");
 }
 
-void wifi_driver_init_apsta(void) {
+bool wifi_driver_init_apsta(void) {
   esp_err_t err = esp_netif_init();
   if (err != ESP_OK) {
     ESP_LOGE(TAG_WIFI_DRIVER, "Error initializing netif: %s",
@@ -96,21 +84,35 @@ void wifi_driver_init_apsta(void) {
     netif_default_created = true;
   }
 
-  wifi_init_config_t wifi_init_config = wifi_slim_init_config();
-
-  ESP_ERROR_CHECK(esp_wifi_init(&wifi_init_config));
-  ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-  // This mode is used to connect to a WiFi network and create an Access Point
-  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
+  if (!wifi_service_is_up_get() && !wifi_service_init(WIFI_MODE_APSTA)) {
+    ESP_LOGE(TAG_WIFI_DRIVER, "WiFi stack init failed");
+    return false;
+  }
+  if (esp_wifi_set_storage(WIFI_STORAGE_RAM) != ESP_OK ||
+      wifi_service_set_mode(WIFI_MODE_APSTA) != ESP_OK ||
+      esp_wifi_get_mac(WIFI_IF_AP, default_ap_mac) != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_DRIVER, "could not set the driver up in APSTA mode");
+    return false;
+  }
   // Save the MAC address of the default Access Point
-  ESP_ERROR_CHECK(esp_wifi_get_mac(WIFI_IF_AP, default_ap_mac));
-  ESP_ERROR_CHECK(esp_wifi_start());
+  if (esp_wifi_start() != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_DRIVER, "esp_wifi_start failed");
+    return false;
+  }
   wifi_driver_initialized = true;
+  return true;
 }
 
-void wifi_driver_init_sta(void) {
+bool wifi_driver_init_sta(void) {
   if (wifi_driver_initialized) {
-    wifi_driver_deinit();
+    /* Setting the mode the driver already has restarts its radio, and the
+       radio's buffers are 37 KB of heap: only ask when the mode really is a
+       different one. */
+    wifi_mode_t mode = WIFI_MODE_NULL;
+    if (esp_wifi_get_mode(&mode) == ESP_OK && mode == WIFI_MODE_STA) {
+      return true;
+    }
+    return wifi_service_set_mode(WIFI_MODE_STA) == ESP_OK;
   }
 
   esp_err_t err = esp_netif_init();
@@ -119,17 +121,12 @@ void wifi_driver_init_sta(void) {
   } else if (err != ESP_OK) {
     ESP_LOGE(TAG_WIFI_DRIVER, "Error initializing netif: %s",
              esp_err_to_name(err));
-    // No reiniciar - seguir intentando
+    // Do not reboot - keep trying
   }
   err = esp_event_loop_create_default();
   if (err == ESP_ERR_INVALID_STATE) {
     ESP_LOGI(TAG_WIFI_DRIVER, "Event loop already created");
-  } else if (err != ESP_OK) {
-    ESP_LOGE(TAG_WIFI_DRIVER, "Error creating event loop: %s",
-             esp_err_to_name(err));
-    esp_restart();
   }
-
   // This shouldn't be a definitive solution, but works for now
 
   if (!run_once) {
@@ -138,17 +135,26 @@ void wifi_driver_init_sta(void) {
     assert(sta_netif);
   }
 
-  wifi_init_config_t cfg = wifi_slim_init_config();
-  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-
-  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-  ESP_ERROR_CHECK(esp_wifi_start());
+  if (!wifi_service_is_up_get() && !wifi_service_init(WIFI_MODE_APSTA)) {
+    ESP_LOGE(TAG_WIFI_DRIVER, "WiFi stack init failed");
+    return false;
+  }
+  if (wifi_service_set_mode(WIFI_MODE_STA) != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_DRIVER, "wifi_service_set_mode(STA) failed");
+    return false;
+  }
+  if (esp_wifi_start() != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_DRIVER,
+             "esp_wifi_start failed: the radio is probably held by BLE");
+    return false;
+  }
   wifi_driver_initialized = true;
+  return true;
 }
 
-void wifi_driver_init_null(void) {
+bool wifi_driver_init_null(void) {
   if (wifi_driver_initialized) {
-    wifi_driver_deinit();
+    return wifi_service_set_mode(WIFI_MODE_NULL) == ESP_OK;
   }
   esp_err_t err = esp_event_loop_create_default();
   if (err == ESP_ERR_INVALID_STATE) {
@@ -158,26 +164,31 @@ void wifi_driver_init_null(void) {
              esp_err_to_name(err));
     esp_restart();
   }
-  wifi_init_config_t cfg = wifi_slim_init_config();
-  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-  // ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_NULL));
+  if (!wifi_service_is_up_get() && !wifi_service_init(WIFI_MODE_APSTA)) {
+    ESP_LOGE(TAG_WIFI_DRIVER, "WiFi stack init failed");
+    return false;
+  }
+  if (wifi_service_set_mode(WIFI_MODE_NULL) != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_DRIVER, "wifi_service_set_mode(NULL) failed");
+    return false;
+  }
   wifi_driver_initialized = true;
+  return true;
 }
 
 void wifi_driver_deinit() {
-  ESP_ERROR_CHECK(esp_wifi_stop());
-  ESP_ERROR_CHECK(esp_wifi_deinit());
+  esp_wifi_stop();
+  wifi_service_deinit();
   wifi_driver_initialized = false;
 }
 
-// Libera el radio 2.4GHz para otros stacks (p.ej. BLE puro) sin asumir que
-// Wi-Fi estuviera iniciado: deinit() directo haria abort() si nunca se
-// inicializo, porque ESP_ERROR_CHECK no perdona ESP_ERR_WIFI_NOT_INIT.
+// Releases the 2.4 GHz radio for other stacks (e.g. pure BLE) without assuming
+// Wi-Fi was started: calling deinit() directly would abort() if it was never
+// initialized, because ESP_ERROR_CHECK does not forgive ESP_ERR_WIFI_NOT_INIT.
 void wifi_driver_deinit_if_started(void) {
-  if (wifi_driver_initialized) {
-    wifi_driver_deinit();
-  }
+  esp_wifi_stop();
+  wifi_service_deinit();
+  wifi_driver_initialized = false;
 }
 
 bool wifi_driver_get_initialized(void) {
@@ -211,6 +222,13 @@ void wifi_driver_get_sta_mac(uint8_t* mac_sta) {
   esp_wifi_get_mac(WIFI_IF_STA, mac_sta);
 }
 
+/* The channel the driver is on. The driver starts on channel 1 and only
+   changes when it is told to; the state is kept here so that a caller can
+   tell whether a change is needed at all: asking the driver for the channel
+   it is already on still restarts its radio, and the radio's capture
+   buffers cost 40 KB of heap. */
+static uint8_t s_current_channel = 1;
+
 void wifi_driver_set_channel(uint8_t channel) {
   if ((channel == 0) || (channel > 13)) {
     ESP_LOGE(TAG_WIFI_DRIVER,
@@ -219,4 +237,15 @@ void wifi_driver_set_channel(uint8_t channel) {
     return;
   }
   esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
+  s_current_channel = channel;
+}
+
+uint8_t wifi_driver_get_channel(void) {
+  return s_current_channel;
+}
+
+void wifi_driver_note_channel(uint8_t channel) {
+  if ((channel >= 1) && (channel <= 13)) {
+    s_current_channel = channel;
+  }
 }

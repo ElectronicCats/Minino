@@ -86,7 +86,7 @@ static void test_sd_card_build_full_path(const char* path,
   }
 }
 
-TEST_CASE("formateo seguro de MAC en stack sin asignacion dinamica",
+TEST_CASE("safe stack MAC formatting without dynamic allocation",
           "[wardriving]") {
   uint8_t mac[6] = {0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc};
   char buf[18];
@@ -94,14 +94,14 @@ TEST_CASE("formateo seguro de MAC en stack sin asignacion dinamica",
   TEST_ASSERT_EQUAL_STRING("12:34:56:78:9a:bc", buf);
 }
 
-TEST_CASE("deteccion de MAC vacia 00:00:00:00:00:00", "[wardriving]") {
+TEST_CASE("empty MAC detection 00:00:00:00:00:00", "[wardriving]") {
   uint8_t mac[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
   char buf[18];
   test_format_mac_address(mac, buf, sizeof(buf));
   TEST_ASSERT_EQUAL_STRING(TEST_EMPTY_MAC, buf);
 }
 
-TEST_CASE("calculo de frecuencia por canal primario WiFi", "[wardriving]") {
+TEST_CASE("frequency calculation by primary WiFi channel", "[wardriving]") {
   TEST_ASSERT_EQUAL_UINT16(2412, test_get_frequency(1));
   TEST_ASSERT_EQUAL_UINT16(2437, test_get_frequency(6));
   TEST_ASSERT_EQUAL_UINT16(2462, test_get_frequency(11));
@@ -109,8 +109,7 @@ TEST_CASE("calculo de frecuencia por canal primario WiFi", "[wardriving]") {
   TEST_ASSERT_EQUAL_UINT16(2484, test_get_frequency(14));
 }
 
-TEST_CASE("deduplicacion y expiracion de MAC en tabla de escaneo",
-          "[wardriving]") {
+TEST_CASE("MAC deduplication and expiration in scan table", "[wardriving]") {
   s_mac_table_count = 0;
   s_mac_table_head = 0;
 
@@ -120,15 +119,15 @@ TEST_CASE("deduplicacion y expiracion de MAC en tabla de escaneo",
   TEST_ASSERT_FALSE(test_is_mac_in_table(mac1, 100));
   test_add_mac_to_table(mac1, 100);
 
-  // Dentro de ventana de timeout (30s) -> detecta duplicado
+  // Within timeout window (30s) -> detects duplicate
   TEST_ASSERT_TRUE(test_is_mac_in_table(mac1, 110));
   TEST_ASSERT_FALSE(test_is_mac_in_table(mac2, 110));
 
-  // Fuera de ventana de timeout (30s) -> expira y retorna false
+  // Outside timeout window (30s) -> expires and returns false
   TEST_ASSERT_FALSE(test_is_mac_in_table(mac1, 135));
 }
 
-TEST_CASE("manejo circular de desbordamiento en tabla de MAC", "[wardriving]") {
+TEST_CASE("circular overflow handling in MAC table", "[wardriving]") {
   s_mac_table_count = 0;
   s_mac_table_head = 0;
 
@@ -142,31 +141,29 @@ TEST_CASE("manejo circular de desbordamiento en tabla de MAC", "[wardriving]") {
   TEST_ASSERT_EQUAL_UINT16(20 % MAX_MAC_TABLE_SIZE, s_mac_table_head);
 }
 
-TEST_CASE("resolucion de rutas hacia SD y prevencion de path traversal",
-          "[wardriving]") {
+TEST_CASE("SD path resolution and path traversal prevention", "[wardriving]") {
   char path_out[128];
 
-  // Ruta relativa -> /sdcard/warfi
+  // Relative path -> /sdcard/warfi
   test_sd_card_build_full_path("warfi", path_out, sizeof(path_out));
   TEST_ASSERT_EQUAL_STRING("/sdcard/warfi", path_out);
 
-  // Ruta absoluta sin prefijo /sdcard -> /sdcard/warfi/Warfi.csv
+  // Absolute path without /sdcard prefix -> /sdcard/warfi/Warfi.csv
   test_sd_card_build_full_path("/warfi/Warfi.csv", path_out, sizeof(path_out));
   TEST_ASSERT_EQUAL_STRING("/sdcard/warfi/Warfi.csv", path_out);
 
-  // Ruta absoluta con prefijo /sdcard -> sin duplicar prefijo
+  // Absolute path with /sdcard prefix -> no duplicate prefix
   test_sd_card_build_full_path("/sdcard/apps/analizer/pcaps/analizer00.pcap",
                                path_out, sizeof(path_out));
   TEST_ASSERT_EQUAL_STRING("/sdcard/apps/analizer/pcaps/analizer00.pcap",
                            path_out);
 
-  // Ataque de path traversal prevenido
+  // Path traversal attack prevented
   test_sd_card_build_full_path("../../etc/passwd", path_out, sizeof(path_out));
   TEST_ASSERT_EQUAL_STRING("", path_out);
 }
 
-TEST_CASE("formateo de linea CSV de Wigle sin desbordamiento de buffer",
-          "[wardriving]") {
+TEST_CASE("Wigle CSV line formatting without buffer overflow", "[wardriving]") {
   char csv_line[150];
   const char* mac = "aa:bb:cc:dd:ee:ff";
   const char* ssid = "TestingNetwork_1234567890";

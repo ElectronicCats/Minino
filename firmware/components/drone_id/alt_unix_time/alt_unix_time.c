@@ -15,13 +15,13 @@
 #include <math.h>
 
 uint64_t alt_unix_secs(int, int, int, int, int, int);
-static double julian_day(int, int, float, int);
+double julian_day(int, int, float, int);
 
 /*
  *
  */
 
-#ifndef ARDUINO
+#ifdef STANDALONE_TEST
 
 int main(int argc, char* argv[]) {
   uint64_t alt_secs;
@@ -60,14 +60,23 @@ uint64_t alt_unix_secs(int year,
   uint64_t secs = 0;
   static uint64_t jd_1970 = 0;
 
+  if (year < 1970) {
+    return 0;
+  }
+
   if (!jd_1970) {
     jd_1970 = (uint64_t) julian_day(1970, 1, 1, 1) * (uint64_t) 86400;
   }
 
-  secs = (uint64_t) julian_day(year, month, mday, 1) * (uint64_t) 86400;
+  uint64_t jd_curr =
+      (uint64_t) julian_day(year, month, mday, 1) * (uint64_t) 86400;
+  if (jd_curr < jd_1970) {
+    return 0;
+  }
+
+  secs = jd_curr - jd_1970;
   secs += (uint64_t) (((uint32_t) hour * 3600) + ((uint32_t) minute * 60) +
                       ((uint32_t) second));
-  secs -= jd_1970;
 
   return secs;
 }

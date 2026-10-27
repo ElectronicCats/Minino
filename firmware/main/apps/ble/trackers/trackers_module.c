@@ -71,7 +71,7 @@ static void log_tracker_to_sd(const tracker_profile_t* record,
   if (!s_sd_logging || record == NULL) {
     return;
   }
-  // Guardar datos únicamente cuando el GPS haya triangulado una posición válida
+  // Save data only when GPS has triangulated a valid position
   if (gps == NULL || !gps->valid ||
       (gps->latitude == 0.0f && gps->longitude == 0.0f)) {
     return;
@@ -254,6 +254,18 @@ void trackers_module_begin(void) {
     xSemaphoreGive(s_trackers_mutex);
   }
 
+  menus_module_set_app_state(true, trackers_input_cb);
+
+  /* Bring BLE up first: Bluedroid needs a large contiguous block and the SD
+     mount fragments the small ESP32-C6 heap enough to make its init fail. */
+  if (gps_hw_get_state()) {
+    gps_module_register_cb(trackers_gps_event_cb);
+    gps_module_start_scan();
+  }
+  trackers_scanner_register_cb(on_tracker_found);
+  trackers_scanner_start();
+  s_scanning = true;
+
   // Mount SD card and prepare log file
   if (sd_card_mount() == ESP_OK) {
     if (sd_card_create_dir(TRACKERS_DIR_NAME) == ESP_OK) {
@@ -267,28 +279,19 @@ void trackers_module_begin(void) {
     }
   }
 
-  menus_module_set_app_state(true, trackers_input_cb);
-
-  if (gps_hw_get_state()) {
-    gps_module_register_cb(trackers_gps_event_cb);
-    gps_module_start_scan();
-  }
-  trackers_scanner_register_cb(on_tracker_found);
-  trackers_scanner_start();
-  s_scanning = true;
-
   if (xTaskCreate(gui_update_task, "trk_gui", 4096, NULL, 4, &s_gui_task) !=
       pdPASS) {
     ESP_LOGE(TAG, "Failed to create gui update task");
   }
 }
 
-void trackers_module_stop(void) {
+static void trackers_cleanup(void) {
   s_app_running = false;
-  ESP_LOGI(TAG, "stop: exit via back");
 
-  while (s_gui_task != NULL) {
+  int wait_ms = 0;
+  while (s_gui_task != NULL && wait_ms < 2000) {
     vTaskDelay(pdMS_TO_TICKS(10));
+    wait_ms += 10;
   }
 
   if (s_scanning) {
@@ -315,8 +318,22 @@ void trackers_module_stop(void) {
   }
 
   s_sd_logging = false;
+}
 
+void trackers_module_stop(void) {
+  ESP_LOGI(TAG, "stop: exit via back");
+  trackers_cleanup();
   menus_module_set_default_input();
   oled_screen_clear();
-  menus_module_restart();
+  menus_module_exit_app();
+}
+
+/* Menu on_exit hook: covers leaving the app by any path (timeout, global exit)
+   so the scanner and its BLE claim are never leaked. No-op if already stopped.
+ */
+void trackers_module_on_exit(void) {
+  if (!s_app_running) {
+    return;
+  }
+  trackers_cleanup();
 }

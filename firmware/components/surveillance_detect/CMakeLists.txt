@@ -6,5 +6,5 @@ idf_component_register(SRCS "surv_signatures.c"
                             "surv_engine.c"
                             "surv_radio.c"
                             "surveillance_detect.c"
-                       INCLUDE_DIRS "include"
-                       REQUIRES esp_wifi bt esp_timer radio_selector wifi_controller gap_dispatcher)
+                        INCLUDE_DIRS "include"
+                        REQUIRES esp_wifi bt esp_timer radio_selector wifi_controller gap_dispatcher radio_lease)

@@ -42,6 +42,10 @@ typedef void (*input_callback_t)(uint8_t, uint8_t);
 /**
  * @brief Initialize the keyboard button
  *
+ * Creates the dedicated input task and registers the five buttons. Button
+ * events are queued to that task, so app callbacks never run on the esp_timer
+ * task (priority 22, 3584-byte stack) where iot_button polls its pins.
+ *
  * @param uint32_t button_pin Button pin
  * @param uint8_t mask Mask
  * @param void handler function pointer for the button event callback
@@ -55,3 +59,28 @@ void keyboard_module_reset_idle_timer();
 void keyboard_module_set_lock(bool lock);
 
 void keyboard_module_set_input_callback(input_callback_t input_cb);
+
+/**
+ * @brief Number of button events dropped because the input queue was full
+ *
+ * Non-zero means an app callback blocked long enough for input to back up.
+ * Useful from the console to tell "the device is busy" from "the buttons do not
+ * work".
+ */
+uint32_t keyboard_module_dropped_events(void);
+
+/**
+ * @brief Inject a synthetic button event into the input queue
+ *
+ * Same path a real button takes, from the iot_button callback through the
+ * queue to the input task and the installed input_callback. Exists so the input
+ * pipeline can be driven from the console (`press <button> [event]`) without
+ * hardware - the screensaver wake-up and the menu render are only reachable
+ * through a button press, and this is the part most likely to regress.
+ *
+ * @param button  BUTTON_BOOT / BUTTON_LEFT / BUTTON_RIGHT / BUTTON_UP /
+ * BUTTON_DOWN
+ * @param event   a button_event_t value; defaults to BUTTON_PRESS_DOWN if 0
+ * @return true if the event was queued
+ */
+bool keyboard_module_inject_event(uint8_t button, uint8_t event);

@@ -16,3 +16,18 @@ set(PROJECT_VERSION_MINOR 1)
 set(PROJECT_VERSION_PATCH 0)
 set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}")
 project(minino)
+
+# Automatically generate unified merged .bin and .hex on every standard build
+add_custom_target(minino_merged ALL
+    COMMAND ${PYTHON} -m esptool --chip ${IDF_TARGET} merge_bin
+        -o "${CMAKE_BINARY_DIR}/minino-merged.bin"
+        @flash_args
+    COMMAND ${CMAKE_OBJCOPY} -I binary -O ihex --change-addresses 0x0
+        "${CMAKE_BINARY_DIR}/minino-merged.bin"
+        "${CMAKE_BINARY_DIR}/minino-merged.hex"
+    COMMAND ${CMAKE_COMMAND} -E echo "Generated unified binaries: minino-merged.bin and minino-merged.hex"
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+    DEPENDS app bootloader partition_table_bin
+    COMMENT "Generating unified minino-merged.bin and minino-merged.hex"
+)
+

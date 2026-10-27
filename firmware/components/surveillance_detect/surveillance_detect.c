@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Callback promiscuo de WiFi, cola sin bloqueo hacia el motor de scoring y
-// API publica del detector de vigilancia.
+// WiFi promiscuous callback, lock-free queue to the scoring engine, and
+// public surveillance detector API.
 //
-// Disciplina de diseno: el callback promiscuo corre en la tarea del driver
-// de WiFi, con restricciones de tiempo real. Compara y encola, nada mas --
-// sin printf, sin malloc, sin E/S, sin bloqueo. Todo lo caro (el motor de
-// scoring, la deduplicacion, los callbacks del usuario) pasa a la tarea
-// surv_engine, que drena la cola.
+// Design discipline: the promiscuous callback runs in the WiFi driver task
+// under real-time constraints. It matches and enqueues, nothing else --
+// no printf, no malloc, no I/O, no blocking. Everything expensive (the
+// scoring engine, deduplication, user callbacks) runs in the surv_engine
+// task, which drains the queue.
 #include "surveillance_detect.h"
 #include <string.h>
 #include "esp_timer.h"
@@ -22,8 +22,8 @@
 
 #define SURV_QUEUE_LEN 32
 
-// Puntos del motor ODID por WiFi. Mismo peso que la entrada ODID de la tabla
-// BLE (surv_signatures.c); nombrado para que la duplicacion se vea.
+// WiFi ODID engine points. Same weight as the ODID entry in the BLE table
+// (surv_signatures.c); named so the duplication is visible.
 #define SURV_PTS_ODID_WIFI 4
 
 typedef struct {
@@ -70,11 +70,11 @@ uint32_t surv_queue_overflows(void) {
   return s_overflows;
 }
 
-// El `tier` de la entrada de OUI es un TECHO, nunca el tier del evento. Se
-// escribe una sola vez: las tres rutas de deteccion aplican el mismo recorte
-// y una de ellas con el ternario al reves promocionaria un OUI de fabricante
-// contratista a tier confirmatorio.
-// surv_clamp_tier se define en surv_types.h como surv_surv_clamp_tier().
+// The OUI entry `tier` is a CEILING, never the event tier itself. Written
+// once: all three detection paths apply the same clamp, and getting the
+// ternary backwards on any one of them would promote a contract manufacturer
+// OUI to a confirmatory tier.
+// surv_clamp_tier is defined in surv_types.h.
 
 void IRAM_ATTR wifi_sniffer_cb(void* buf, wifi_promiscuous_pkt_type_t type) {
   (void) type;
@@ -82,12 +82,12 @@ void IRAM_ATTR wifi_sniffer_cb(void* buf, wifi_promiscuous_pkt_type_t type) {
   if (p->rx_ctrl.rssi < SURV_RSSI_MIN) {
     return;
   }
-  // Descartar tramas que el hardware marco con error de recepcion, como hace
-  // el sniffer de ejemplo de ESP-IDF. Una trama corrupta puede traer un addr2
-  // alterado que coincida por azar con un OUI conocido, y alimentaria las
-  // rutas tier-1/tier-2 -las de solo OUI, ya de por si las mas ruidosas- con
-  // basura. El criterio de aceptacion del proyecto es CERO falsos positivos
-  // de clase FLOCK/ALPR, asi que esto no es higiene opcional.
+  // Drop frames flagged with a reception error by hardware, just like the
+  // ESP-IDF sniffer example does. A corrupted frame can carry an altered
+  // addr2 that happens to match a known OUI and feed garbage into the
+  // tier-1/tier-2 paths (OUI-only, already the noisiest ones). The project
+  // acceptance criterion is ZERO false positives for FLOCK/ALPR classes, so
+  // this is not optional hygiene.
   if (p->rx_ctrl.rx_state != 0) {
     return;
   }
@@ -107,7 +107,7 @@ void IRAM_ATTR wifi_sniffer_cb(void* buf, wifi_promiscuous_pkt_type_t type) {
   ev.channel = p->rx_ctrl.channel;
   ev.proto = SURV_PROTO_WIFI;
 
-  // Tier 3/4: probe request con SSID wildcard desde un OUI conocido.
+  // Tier 3/4: wildcard SSID probe request from a known OUI.
   if (is_mgmt && subtype == 4 && len > 24) {
     const surv_oui_entry_t* e = surv_match_oui(addr2);
     if (e != NULL) {
@@ -126,8 +126,9 @@ void IRAM_ATTR wifi_sniffer_cb(void* buf, wifi_promiscuous_pkt_type_t type) {
     }
   }
 
-  // Drone Remote ID por WiFi: trama de gestion dirigida a la MAC NaN fija de
-  // ASTM F3411. No depende de ningun OUI. Motor de eye-spy (Apache-2.0).
+  // Drone Remote ID over WiFi: management frame addressed to the fixed ASTM
+  // F3411 NaN MAC. Does not depend on any OUI. Engine from eye-spy
+  // (Apache-2.0).
   static const uint8_t ODID_NAN[6] = {0x51, 0x6f, 0x9a, 0x01, 0x00, 0x00};
   if (is_mgmt && memcmp(addr1, ODID_NAN, 6) == 0) {
     memcpy(ev.mac, addr2, 6);
@@ -137,7 +138,7 @@ void IRAM_ATTR wifi_sniffer_cb(void* buf, wifi_promiscuous_pkt_type_t type) {
     return;
   }
 
-  // Tier 2: OUI en addr2 de cualquier trama.
+  // Tier 2: OUI in addr2 of any frame.
   const surv_oui_entry_t* e2 = surv_match_oui(addr2);
   if (e2 != NULL) {
     memcpy(ev.mac, addr2, 6);
@@ -147,7 +148,7 @@ void IRAM_ATTR wifi_sniffer_cb(void* buf, wifi_promiscuous_pkt_type_t type) {
     return;
   }
 
-  // Tier 1: OUI en addr1 o addr3. Ecos, propensos a falso positivo.
+  // Tier 1: OUI in addr1 or addr3. Echoes, prone to false positives.
   const surv_oui_entry_t* e1 = surv_match_oui(addr1);
   if (e1 == NULL && is_mgmt) {
     e1 = surv_match_oui(addr3);
@@ -190,16 +191,16 @@ static void engine_task(void* arg) {
   vTaskDelete(NULL);
 }
 
-// Pasos comunes a surv_begin() y surv_begin_phased() (mux de "Scan All"):
-// preparar el matcher y el engine, pero SIN lanzar el stack de radio, que
-// cada variante decide por su cuenta.
+// Common steps for surv_begin() and surv_begin_phased() ("Scan All" mux):
+// prepare the matcher and engine, WITHOUT starting the radio stack, which
+// each variant decides on its own.
 static esp_err_t surv_begin_common(surv_profile_t profile, bool active_scan) {
   if (s_running) {
     return ESP_ERR_INVALID_STATE;
   }
-  // surv_match_init() debe correr exactamente una vez antes de habilitar el
-  // callback promiscuo: sin ella surv_match_oui() devuelve NULL siempre y el
-  // detector no dispara jamas, en silencio (sin log posible en el hot path).
+  // surv_match_init() must run exactly once before enabling the promiscuous
+  // callback: without it surv_match_oui() always returns NULL and the
+  // detector never fires, silently (no logging possible on the hot path).
   surv_match_init();
   surv_engine_reset();
   surv_engine_register_emit_cb(engine_emit);
@@ -225,10 +226,10 @@ esp_err_t surv_begin(surv_profile_t profile, bool active_scan) {
   return err;
 }
 
-// Variante del mux de "Scan All": arranca la infraestructura comun y luego
-// una sola ventana de radio (BLE o WiFi) que flipa fase y reinicia al
-// terminar. Devuelve el error de surv_begin_common (el de start_once se
-// degrada a stop).
+// "Scan All" mux variant: starts the common infrastructure and then a single
+// radio window (BLE or WiFi) that flips phase and reboots when finished.
+// Returns the error from surv_begin_common (start_once failure degrades to
+// stop).
 esp_err_t surv_begin_phased(surv_profile_t profile,
                             bool active_scan,
                             surv_radio_phase_t phase,
@@ -249,7 +250,7 @@ esp_err_t surv_begin_phased(surv_profile_t profile,
 void surv_stop(void) {
   s_running = false;
   surv_radio_stop();
-  // Esperar a que la tarea engine_task termine y se auto-elimine.
+  // Wait for engine_task to finish and self-delete.
   while (s_engine_task != NULL) {
     vTaskDelay(pdMS_TO_TICKS(10));
   }

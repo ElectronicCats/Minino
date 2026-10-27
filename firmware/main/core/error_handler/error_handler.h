@@ -6,24 +6,24 @@
 
 /**
  * @file error_handler.h
- * @brief Sistema centralizado de manejo de errores
+ * @brief Centralized error handling system
  *
- * Proporciona un sistema unificado para reportar, loggear y recuperarse
- * de errores en todo el proyecto.
+ * Provides a unified system to report, log, and recover from errors
+ * across the entire project.
  */
 
 /**
- * @brief Severidad del error
+ * @brief Error severity
  */
 typedef enum {
-  ERROR_SEVERITY_INFO,     ///< Informativo (solo log)
-  ERROR_SEVERITY_WARNING,  ///< Advertencia (log + alerta)
-  ERROR_SEVERITY_ERROR,    ///< Error (log + detener feature)
-  ERROR_SEVERITY_CRITICAL  ///< Crítico (log + restart)
+  ERROR_SEVERITY_INFO,     ///< Informational (log only)
+  ERROR_SEVERITY_WARNING,  ///< Warning (log + alert)
+  ERROR_SEVERITY_ERROR,    ///< Error (log + stop feature)
+  ERROR_SEVERITY_CRITICAL  ///< Critical (log + restart)
 } error_severity_t;
 
 /**
- * @brief Categorías de componentes
+ * @brief Component categories
  */
 typedef enum {
   ERROR_COMPONENT_WIFI,
@@ -39,62 +39,62 @@ typedef enum {
 } error_component_t;
 
 /**
- * @brief Información completa de un error
+ * @brief Complete error information
  */
 typedef struct {
-  error_severity_t severity;    ///< Severidad del error
-  error_component_t component;  ///< Componente afectado
-  esp_err_t error_code;         ///< Código de error ESP-IDF
-  const char* message;          ///< Mensaje descriptivo
-  bool requires_restart;        ///< Si requiere reinicio
-  void (*recovery_func)(void);  ///< Función de recuperación (opcional)
-  const char* file;             ///< Archivo donde ocurrió (para debug)
-  int line;                     ///< Línea donde ocurrió (para debug)
+  error_severity_t severity;    ///< Error severity
+  error_component_t component;  ///< Affected component
+  esp_err_t error_code;         ///< ESP-IDF error code
+  const char* message;          ///< Descriptive message
+  bool requires_restart;        ///< Whether a restart is required
+  void (*recovery_func)(void);  ///< Recovery function (optional)
+  const char* file;             ///< Source file where it occurred (for debug)
+  int line;                     ///< Line number where it occurred (for debug)
 } error_info_t;
 
 /**
- * @brief Estadísticas de errores
+ * @brief Error statistics
  */
 typedef struct {
-  uint32_t total_errors;           ///< Total de errores reportados
-  uint32_t info_count;             ///< Errores informativos
-  uint32_t warning_count;          ///< Advertencias
-  uint32_t error_count;            ///< Errores
-  uint32_t critical_count;         ///< Errores críticos
-  uint32_t restarts_triggered;     ///< Reinicios provocados
-  uint32_t recoveries_attempted;   ///< Intentos de recuperación
-  uint32_t recoveries_successful;  ///< Recuperaciones exitosas
+  uint32_t total_errors;           ///< Total reported errors
+  uint32_t info_count;             ///< Informational errors
+  uint32_t warning_count;          ///< Warnings
+  uint32_t error_count;            ///< Errors
+  uint32_t critical_count;         ///< Critical errors
+  uint32_t restarts_triggered;     ///< Triggered restarts
+  uint32_t recoveries_attempted;   ///< Recovery attempts
+  uint32_t recoveries_successful;  ///< Successful recoveries
 } error_stats_t;
 
 /**
- * @brief Callback para notificaciones de errores
+ * @brief Callback for error notifications
  *
- * @param error Información del error
+ * @param error Error information
  */
 typedef void (*error_callback_t)(const error_info_t* error);
 
 /**
- * @brief Inicializa el sistema de manejo de errores
+ * @brief Initialize the error handling system
  *
- * @return ESP_OK en caso de éxito
+ * @return ESP_OK on success
  */
 esp_err_t error_handler_init(void);
 
 /**
- * @brief Reporta un error al sistema
+ * @brief Report an error to the system
  *
- * Procesa el error según su severidad:
- * - INFO: Solo log
- * - WARNING: Log + estadísticas
- * - ERROR: Log + intento de recovery
- * - CRITICAL: Log + recovery + posible restart
+ * Processes the error according to its severity:
+ * - INFO: Log only
+ * - WARNING: Log + statistics
+ * - ERROR: Log + recovery attempt
+ * - CRITICAL: Log + recovery + potential restart
  *
- * @param error Información del error
+ * @param error Error information
  */
 void error_handler_report(const error_info_t* error);
 
 /**
- * @brief Macro helper para reportar errores con info de archivo/línea
+ * @brief Helper macro to report errors with file/line info
  */
 #define ERROR_REPORT(severity, component, code, msg, restart, recovery) \
   do {                                                                  \
@@ -110,54 +110,54 @@ void error_handler_report(const error_info_t* error);
   } while (0)
 
 /**
- * @brief Macro simple para errores WiFi
+ * @brief Simple macro for WiFi errors
  */
 #define ERROR_WIFI(code, msg)                                                \
   ERROR_REPORT(ERROR_SEVERITY_ERROR, ERROR_COMPONENT_WIFI, code, msg, false, \
                NULL)
 
 /**
- * @brief Macro simple para errores críticos
+ * @brief Simple macro for critical errors
  */
 #define ERROR_CRITICAL(component, code, msg) \
   ERROR_REPORT(ERROR_SEVERITY_CRITICAL, component, code, msg, true, NULL)
 
 /**
- * @brief Registra callback para notificaciones de errores
+ * @brief Register callback for error notifications
  *
- * @param callback Función a llamar cuando hay un error
+ * @param callback Function to call when an error occurs
  */
 void error_handler_set_callback(error_callback_t callback);
 
 /**
- * @brief Registra callback para ejecutar antes de restart
+ * @brief Register callback to execute before restart
  *
- * Útil para guardar datos antes de reiniciar
+ * Useful for saving data before rebooting
  *
- * @param callback Función a llamar antes de esp_restart()
+ * @param callback Function to call before esp_restart()
  */
 void error_handler_set_restart_callback(void (*callback)(void));
 
 /**
- * @brief Obtiene estadísticas de errores
+ * @brief Get error statistics
  *
- * @return Estructura con estadísticas acumuladas
+ * @return Structure with accumulated statistics
  */
 error_stats_t error_handler_get_stats(void);
 
 /**
- * @brief Imprime estadísticas de errores en consola
+ * @brief Print error statistics to console
  */
 void error_handler_print_stats(void);
 
 /**
- * @brief Resetea las estadísticas
+ * @brief Reset error statistics
  */
 void error_handler_reset_stats(void);
 
 /**
- * @brief Habilita/deshabilita auto-restart en errores críticos
+ * @brief Enable/disable auto-restart on critical errors
  *
- * @param enabled true para habilitar auto-restart
+ * @param enabled true to enable auto-restart
  */
 void error_handler_set_auto_restart(bool enabled);

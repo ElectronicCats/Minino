@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Tablas de firmas. Procedencia:
-//   - OUIs de Flock: @NitekryDPaul (nite-oui-collection) vía flock-you (MIT)
-//     y DeFlockJoplin (82:6b:f2).
-//   - OUIs de cámaras, ALPR, SoundThinking y firmas BLE: eye-spy (Apache-2.0).
+// Signature tables. Provenance:
+//   - Flock OUIs: @NitekryDPaul (nite-oui-collection) via flock-you (MIT)
+//     and DeFlockJoplin (82:6b:f2).
+//   - Camera, ALPR, SoundThinking OUIs and BLE signatures: eye-spy
+//   (Apache-2.0).
 #pragma once
 #include <stdint.h>
 #include "surv_types.h"
@@ -11,8 +12,8 @@
 typedef struct {
   uint8_t oui[3];
   surv_class_t klass;
-  uint8_t points;  // peso en el score global
-  uint8_t tier;    // TECHO de confianza para esta firma, no el tier del evento
+  uint8_t points;  // weight in global score
+  uint8_t tier;    // confidence CEILING for this signature, not the event tier
 } surv_oui_entry_t;
 
 typedef struct {
@@ -22,7 +23,7 @@ typedef struct {
 } surv_kw_entry_t;
 
 typedef struct {
-  uint16_t uuid;  // service UUID de 16 bits
+  uint16_t uuid;  // 16-bit service UUID
   surv_class_t klass;
   uint8_t points;
   const char* label;
@@ -35,15 +36,15 @@ typedef struct {
   const char* label;
 } surv_name_entry_t;
 
-// Topes del overlay. Fuente unica de verdad: aqui dimensionan los arreglos
-// efectivos (surv_signatures.c) y en surv_overlay.c limitan cuantas entradas
-// se aceptan. Definirlos por separado en cada archivo, como se hizo al
-// principio, deja la sincronizacion librada a la convencion: si alguien sube
-// uno sin subir el otro, surv_signatures_build_effective() escribe pasado el
-// final de un arreglo estatico sin ningun diagnostico del compilador.
-#define SURV_OVERLAY_MAX_OUIS  256
-#define SURV_OVERLAY_MAX_KWS   64
-#define SURV_OVERLAY_MAX_UUIDS 16
+// Overlay caps. Single source of truth: here they size the effective arrays
+// (surv_signatures.c) and in surv_overlay.c they limit how many entries are
+// accepted. Defining them separately in each file, as originally done, leaves
+// synchronization up to convention: if someone raises one without raising the
+// other, surv_signatures_build_effective() writes past the end of a static
+// array with no compiler diagnostic.
+#define SURV_OVERLAY_MAX_OUIS  64
+#define SURV_OVERLAY_MAX_KWS   16
+#define SURV_OVERLAY_MAX_UUIDS 8
 
 uint16_t surv_signatures_oui_count(void);
 const surv_oui_entry_t* surv_signatures_ouis(void);
@@ -56,8 +57,8 @@ const surv_name_entry_t* surv_signatures_ble_names(void);
 uint16_t surv_signatures_skimmer_count(void);
 const char* const* surv_signatures_skimmers(void);
 
-// Reconstruye la tabla efectiva = base + anadidos - quitados. La llama el
-// overlay (Task 8). Con extra_count y removed_count en 0 devuelve la base.
+// Rebuilds the effective table = base + additions - removals. Called by the
+// overlay (Task 8). With extra_count and removed_count at 0, restores the base.
 void surv_signatures_build_effective(const surv_oui_entry_t* extra,
                                      uint16_t extra_count,
                                      const uint8_t (*removed)[3],

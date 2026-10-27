@@ -22,8 +22,8 @@
   "CurrentLongitude,AltitudeMeters,AccuracyMeters,RCOIs,MfgrId,Type,"   \
   "Class,Tier,Method,Score\n"
 
-#define SURV_GPX_BUF_SZ 2048
-#define MAX_RECENT_WPTS 16
+#define SURV_GPX_BUF_SZ 512
+#define MAX_RECENT_WPTS 8
 
 static char s_csv_name[64] = SURV_DIR_NAME "/detections.csv";
 static char s_gpx_name[64] = SURV_DIR_NAME "/surveillance.gpx";
@@ -215,7 +215,7 @@ void surveillance_log_detection(const surv_event_t* ev,
     return;
   }
 
-  // Guardar datos únicamente cuando el GPS haya triangulado una posición válida
+  // Save data only when GPS has triangulated a valid position
   if (gps == NULL || !gps->valid ||
       (gps->latitude == 0.0f && gps->longitude == 0.0f)) {
     return;

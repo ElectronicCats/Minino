@@ -291,7 +291,7 @@ static void screen_saver_selection_handler(uint8_t screen_saver) {
 }
 
 const char** get_screen_saver_names() {
-  uint8_t screen_savers_count = sizeof(screen_savers) / sizeof(epd_bitmap_t*);
+  uint8_t screen_savers_count = SCREEN_SAVERS_COUNT;
   const char** names = malloc(sizeof(const char*) * screen_savers_count);
   for (uint8_t i = 0; i < screen_savers_count; i++) {
     names[i] = screen_savers[i]->name;
@@ -299,7 +299,7 @@ const char** get_screen_saver_names() {
   return names;
 }
 void screen_saver_selector_menu() {
-  uint8_t screen_savers_count = sizeof(screen_savers) / sizeof(epd_bitmap_t*);
+  uint8_t screen_savers_count = SCREEN_SAVERS_COUNT;
   screen_saver_options = get_screen_saver_names();
   general_radio_selection_menu_t screen_saver_logo_menu;
   screen_saver_logo_menu.banner = "Screen Saver";

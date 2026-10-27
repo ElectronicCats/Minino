@@ -36,6 +36,7 @@ void UTM_Utilities::calc_m_per_deg(double lat_d,
                                    double long_d,
                                    double* m_deg_lat,
                                    double* m_deg_long) {
+  (void) long_d;
   calc_m_per_deg(lat_d, m_deg_lat, m_deg_long);
 
   return;
@@ -46,6 +47,9 @@ void UTM_Utilities::calc_m_per_deg(double lat_d,
 void UTM_Utilities::calc_m_per_deg(double lat_d,
                                    double* m_deg_lat,
                                    double* m_deg_long) {
+  if (!m_deg_lat || !m_deg_long) {
+    return;
+  }
   double pi, deg2rad, sin_lat, cos_lat;
 
   pi = 4.0 * atan(1.0);
@@ -92,7 +96,7 @@ int UTM_Utilities::check_EU_op_id(const char* id, const char* secret) {
   int i, j;
   char check;
 
-  if ((strlen(id) != 16) && (strlen(secret) != 3)) {
+  if (!id || !secret || (strlen(id) != 16) || (strlen(secret) != 3)) {
     return 0;
   }
 
@@ -116,6 +120,9 @@ int UTM_Utilities::check_EU_op_id(const char* id, const char* secret) {
  */
 
 char UTM_Utilities::luhn36_check(const char* s) {
+  if (!s) {
+    return '0';
+  }
   int sum = 0, factor = 2, l, i, add, rem;
   const int base = 36;
 
@@ -128,9 +135,9 @@ char UTM_Utilities::luhn36_check(const char* s) {
     factor = (factor == 2) ? 1 : 2;
   }
 
-  rem = sum % base;
+  rem = (base - (sum % base)) % base;
 
-  return luhn36_i2c(base - rem);
+  return luhn36_i2c(rem);
 }
 
 /*

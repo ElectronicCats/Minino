@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "surveillance_module.h"
 #include <string.h>
+#include "app_manager.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "freertos/FreeRTOS.h"
@@ -20,10 +21,11 @@
 
 #define TAG "surv_app"
 
-// Fase persistida del mux de "Scan All". En el ESP32-C6 no caben BLE+WiFi a
-// la vez y tras tocar WiFi el scan BLE ya no re-arranca (0x1) en la misma
-// sesion, asi que cada ventana corre en un boot en frio: la app guarda aqui
-// la fase siguiente y hace esp_restart(); al reiniciar se auto-relanza.
+// Persisted mux phase for "Scan All". On the ESP32-C6, BLE and WiFi cannot
+// fit in memory at the same time, and after touching WiFi the BLE scan fails
+// to restart (0x1) in the same session. Each window therefore runs on a cold
+// boot: the app saves the next phase here and calls esp_restart(), then
+// relaunches automatically on reboot.
 #define SURV_MUX_KEY        "surv_mux"
 #define SURV_MUX_PHASE_BLE  1
 #define SURV_MUX_PHASE_WIFI 2
@@ -173,14 +175,14 @@ static void surveillance_input_cb(uint8_t button_name, uint8_t button_event) {
       surveillance_screens_show_help(s_help_page);
       break;
     case BUTTON_DOWN:
-      // Rotar entre Flock (WiFi) y Trackers (BLE)
+      // Rotate between Flock (WiFi) and Trackers (BLE)
       s_profile = (s_profile == SURV_PROFILE_FLOCK) ? SURV_PROFILE_TRACKERS
                                                     : SURV_PROFILE_FLOCK;
       surv_stop();
       start_radio_for_profile();
       break;
     case BUTTON_RIGHT:
-      // Toggle scan activo
+      // Toggle active scan
       s_active_scan = !s_active_scan;
       surv_stop();
       start_radio_for_profile();
@@ -193,7 +195,7 @@ static void surveillance_input_cb(uint8_t button_name, uint8_t button_event) {
   }
 }
 
-// Arranca el stack de radio del perfil activo.
+// Start the radio stack for the active profile.
 static void start_radio_for_profile(void) {
   preferences_put_uchar(SURV_MUX_KEY, 0);
   surv_begin(s_profile, s_active_scan);
@@ -237,7 +239,7 @@ void surveillance_module_begin(void) {
   }
   s_active_scan = preferences_get_uchar("surv_active", 0) != 0;
 
-  // Iniciar GPS si el hardware esta habilitado
+  // Start GPS if hardware is enabled
   if (gps_hw_get_state()) {
     gps_module_register_cb(surv_gps_event_cb);
     gps_module_start_scan();
@@ -256,18 +258,17 @@ void surveillance_module_begin(void) {
 
 void surveillance_module_stop(void) {
   s_app_running = false;
-  ESP_LOGI(TAG, "stop: salida por back");
+  ESP_LOGI(TAG, "stop: exit via back");
 
-  // 1. Esperar a que la tarea de GUI termine para evitar colisiones I2C en la
-  // pantalla OLED
+  // 1. Wait for GUI task to finish to avoid I2C collisions on the OLED screen
   while (s_gui_task != NULL) {
     vTaskDelay(pdMS_TO_TICKS(10));
   }
 
-  // 2. Detener el motor y la radio de vigilancia
+  // 2. Stop the surveillance engine and radio
   surv_stop();
 
-  // 3. Limpiar cualquier estado persistido
+  // 3. Clear any persisted state
   preferences_put_uchar(SURV_MUX_KEY, 0);
   surveillance_log_flush();
 
@@ -279,13 +280,43 @@ void surveillance_module_stop(void) {
   s_have_gps = false;
   portEXIT_CRITICAL(&s_gps_mux);
 
-  // 4. Restaurar el estado de menus y pantalla
+  // 4. Restore menu and screen state
   menus_module_set_default_input();
   oled_screen_clear();
-  menus_module_restart();
+  // app_manager_exit() will be called by on_exit
 }
 
 void surveillance_module_boot_resume(void) {
-  // Desactivado: el escaneo corre en la misma sesion sin reinicios de chip
+  // Disabled: scanning runs in the same session without chip reboots
   preferences_put_uchar(SURV_MUX_KEY, 0);
 }
+
+// ---------------------------------------------------------------------------
+// app_manager callbacks
+// ---------------------------------------------------------------------------
+static void surveillance_on_enter(void) {
+  surveillance_module_begin();
+}
+
+static void surveillance_on_input(uint8_t button_name, uint8_t button_event) {
+  // Reuse the existing input handler
+  surveillance_input_cb(button_name, button_event);
+}
+
+static void surveillance_on_exit(void) {
+  surveillance_module_stop();
+}
+
+// Wrapper for menu entry
+void app_manager_enter_wrapper_surveillance(void) {
+  extern const minino_app_t surveillance_app;
+  app_manager_enter(&surveillance_app);
+}
+
+// App definition for app_manager
+const minino_app_t surveillance_app = {
+    .name = "surveillance",
+    .on_enter = surveillance_on_enter,
+    .on_input = surveillance_on_input,
+    .on_exit = surveillance_on_exit,
+};

@@ -7,8 +7,8 @@
 extern "C" {
 #endif
 
-// Declaración de la función que calcula los segundos desde 1/1/1970 (Unix
-// timestamp alternativo)
+// Declaration of the function that calculates seconds since 1/1/1970
+// (alternative Unix timestamp)
 uint64_t alt_unix_secs(int year,
                        int month,
                        int mday,
@@ -16,7 +16,7 @@ uint64_t alt_unix_secs(int year,
                        int minute,
                        int second);
 
-// Declaración de la función que calcula el día juliano para una fecha dada
+// Declaration of the function that calculates the Julian day for a given date
 double julian_day(int year, int month, float mday, int gregorian);
 
 #ifdef __cplusplus

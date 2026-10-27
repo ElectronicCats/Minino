@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Control del radio (BLE/WiFi) para el detector de vigilancia.
-// Stub en esta tarea; implementacion real: Task 10.
+// Radio control (BLE/WiFi) for the surveillance detector.
+// Stub in this task; real implementation: Task 10.
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
@@ -13,11 +13,11 @@ esp_err_t surv_radio_start(surv_profile_t p, bool active_scan);
 void surv_radio_stop(void);
 uint8_t surv_radio_current_channel(void);
 
-// Ejecuta UNA ventana de la fase pedida y, al terminar, llama
-// on_phase_done() (que flipa la fase persistida y reinicia el chip). Solo
-// para SURV_PROFILE_SURVEIL: en el ESP32-C6 cada stack de radio solo
-// funciona bien como primer usuario de cada boot, y el re-init BLE tras un
-// ciclo WiFi falla (0x1), asi que "Scan All" alterna con reinicios.
+// Runs ONE window of the requested phase and, when finished, calls
+// on_phase_done() (which flips the persisted phase and reboots the chip). Only
+// for SURV_PROFILE_SURVEIL: on the ESP32-C6 each radio stack only works
+// reliably as the first user of a fresh boot, and BLE re-init after a WiFi
+// cycle fails (0x1), so "Scan All" alternates across reboots.
 esp_err_t surv_radio_start_once(surv_profile_t p,
                                 bool active_scan,
                                 surv_radio_phase_t phase,

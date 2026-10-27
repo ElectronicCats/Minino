@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Fingerprint de IE. Procedencia y motivo del diseno binario: ver surv_ie.h.
+// IE fingerprinting. Provenance and rationale for the binary design: see
+// surv_ie.h.
 #include "surv_ie.h"
 #include <stdlib.h>
 #include <string.h>
 
 #define VEN SURV_IE_VENDOR_TAG
 
-// Firma primaria drive-testeada por DeFlockJoplin. Equivale a la cadena
-// 2,12,127,221:506f9a16030103,45,191,221:0050f208000000 del original.
+// Primary signature drive-tested by DeFlockJoplin. Equivalent to the string
+// 2,12,127,221:506f9a16030103,45,191,221:0050f208000000 in the original.
 static const surv_ie_tok_t FLOCK_SIG[] = {
     {2, 0, {0}},
     {12, 0, {0}},
@@ -20,8 +21,8 @@ static const surv_ie_tok_t FLOCK_SIG[] = {
 };
 #define FLOCK_SIG_LEN ((int) (sizeof(FLOCK_SIG) / sizeof(FLOCK_SIG[0])))
 
-// Firmas del overlay, ademas de la compilada: una flota puede correr versiones
-// de firmware mezcladas tras una OTA parcial.
+// Overlay signatures, in addition to the compiled-in one: a fleet may run
+// mixed firmware versions after a partial OTA.
 static surv_ie_tok_t s_extra[SURV_IE_MAX_SIGS][SURV_IE_MAX_TOKS];
 static uint8_t s_extra_len[SURV_IE_MAX_SIGS];
 static uint8_t s_extra_count;
@@ -60,16 +61,16 @@ int surv_ie_is_wildcard_probe(const uint8_t* ies, int len) {
   return -1;
 }
 
-// --- Parches de campo de flock-you -----------------------------------------
-// Los tres existen porque las camaras reales emiten tramas que un recorrido
-// estricto rechaza. Sin ellos el detector es MAS estricto que la referencia y
-// deja pasar camaras autenticas, en silencio.
+// --- Field patches from flock-you -------------------------------------------
+// All three exist because real cameras emit frames that a strict walk rejects.
+// Without them the detector is STRICTER than the reference and silently misses
+// genuine cameras.
 
 #define PHANTOM_SKIP_CAP 16
 #define TLV_RESYNC_MAX   64
-// Buffer de string de la referencia: alli fySigAppend falla cuando un token no
-// cabe, y ese fallo aborta el intento entero. build_tokens lo refleja para no
-// ser mas permisivos que ella en tramas largas.
+// Reference string buffer: fySigAppend fails when a token does not fit, and
+// that failure aborts the entire attempt. build_tokens mirrors this so we are
+// not more permissive than the reference on long frames.
 #define REF_SIG_CAP 128
 
 static bool liteon_vendor_at(const uint8_t* ies, int len, int pos) {
@@ -90,8 +91,8 @@ static bool phantom_liteon_ahead(const uint8_t* ies, int len, int pos) {
   return false;
 }
 
-// Longitud declarada que se sale del buffer pero huele a desalineo del driver
-// (tag 64 / len 128) con el vendor de LiteON aun por delante.
+// Declared length that overflows the buffer but looks like driver misalignment
+// (tag 64 / len 128) with the LiteON vendor IE still ahead.
 static bool is_phantom_overflow(const uint8_t* ies,
                                 int len,
                                 uint8_t id,
@@ -106,8 +107,7 @@ static bool is_phantom_overflow(const uint8_t* ies,
   return id == 64 && elen == 128 && phantom_liteon_ahead(ies, len, i);
 }
 
-// Tras un fallo de parseo, avanzar hasta encontrar una cabecera de IE
-// plausible.
+// After a parse failure, advance until finding a plausible IE header.
 static int tlv_resync(const uint8_t* ies, int len, int start) {
   int end = start + TLV_RESYNC_MAX;
   if (end > len - 1) {
@@ -122,9 +122,9 @@ static int tlv_resync(const uint8_t* ies, int len, int start) {
   return -1;
 }
 
-// Recorre los TLV produciendo tokens. Devuelve el numero de tokens, o -1 si el
-// recorrido fallo, la firma no cabe en `cap` tokens o la trama supera el
-// equivalente del buffer de string de 128 caracteres de la referencia.
+// Walks TLVs producing tokens. Returns the number of tokens, or -1 if the walk
+// failed, the signature does not fit in `cap` tokens, or the frame exceeds the
+// equivalent of the reference's 128-character string buffer.
 static int build_tokens(const uint8_t* ies,
                         int len,
                         surv_ie_tok_t* out,
@@ -135,16 +135,16 @@ static int build_tokens(const uint8_t* ies,
   int i = 0;
   int n = 0;
   uint8_t phantom_skips = 0;
-  // Espejo del buffer de string de la referencia: alli fySigAppend falla
-  // cuando un token no cabe en 128 caracteres y aborta el intento entero
-  // (lo que a su vez aborta el match; no hay "parcial se ignora"). Sin este
-  // limite seriamos mas permisivos que ella en tramas cuya firma no cabe.
-  // Ver SURV_IE_WALK_CAP en surv_ie.h: 64 tokens caben siempre que la firma
-  // quepa en el presupuesto, asi que `cap` nunca se alcanza antes que ese
-  // limite.
+  // Mirror of the reference's string buffer: fySigAppend fails when a token
+  // does not fit in 128 characters and aborts the entire attempt (which in
+  // turn aborts the match; there is no "partial is ignored"). Without this
+  // limit we would be more permissive than the reference on frames whose
+  // signature does not fit. See SURV_IE_WALK_CAP in surv_ie.h: 64 tokens
+  // always fit whenever the signature fits in the budget, so `cap` is never
+  // reached before that limit.
   int slen = 0;
-  // Coste en caracteres del token tal como la referencia lo serializa: para
-  // vendor "221:" + hex, para el resto los digitos decimales del tag.
+  // Character cost of the token as serialized by the reference: for vendor
+  // "221:" + hex, otherwise the decimal digits of the tag.
 
   while (i + 2 <= len) {
     uint8_t id = ies[i];
@@ -179,11 +179,12 @@ static int build_tokens(const uint8_t* ies,
     }
 
     if (n >= cap) {
-      return -1;  // la referencia falla igual al desbordar su buffer de string
+      return -1;  // reference fails the same way when overflowing its string
+                  // buffer
     }
-    // Separador y token, en el mismo orden y con los mismos limites que
-    // fySigAppend de la referencia (la coma primero si no es el primer token,
-    // y >= cap rechaza en ambos pasos).
+    // Separator and token, in the same order and with the same limits as the
+    // reference's fySigAppend (comma first if not the first token, and >= cap
+    // rejects at both steps).
     if (slen != 0) {
       if (slen + 1 >= REF_SIG_CAP) {
         return -1;
@@ -219,9 +220,9 @@ static bool tok_eq(const surv_ie_tok_t* a, const surv_ie_tok_t* b) {
   return a->vlen == 0 || memcmp(a->vendor, b->vendor, a->vlen) == 0;
 }
 
-// Indice del primer token vendor de la firma, o -1. Es el ancla sobre la que la
-// referencia canonicaliza: lo que venga ANTES puede haberse perdido por
-// desalineo de parseo, asi que no se exige.
+// Index of the first vendor token in the signature, or -1. This is the anchor
+// on which the reference canonicalizes: anything BEFORE it may have been lost
+// due to parse misalignment, so it is not required.
 static int sig_anchor_index(const surv_ie_tok_t* sig, int sig_len) {
   for (int k = 0; k < sig_len; k++) {
     if (sig[k].tag == VEN && sig[k].vlen > 0) {
@@ -244,27 +245,27 @@ static bool match_tokens(const surv_ie_tok_t* t,
       return true;
     }
   }
-  // Coincidencia anclada: equivale a la canonicalizacion del original, que
-  // reescribe el prefijo cuando encuentra el vendor de LiteON.
+  // Anchored match: equivalent to the original's canonicalization, which
+  // rewrites the prefix when it finds the LiteON vendor IE.
   int a = sig_anchor_index(sig, sig_len);
   if (a < 0) {
     return false;
   }
-  // La referencia solo canonicaliza si la cadena NO empieza ya por el prefijo
-  // canonico ("2,12,127,"): con ese prefijo se queda como esta y exige
-  // igualdad exacta. Eso hace que un tag sobrante DENTRO del prefijo la rompa
-  // mientras uno DELANTE no, lo cual es una inconsistencia del original -mismo
-  // caso, veredictos opuestos segun donde caiga el tag-. Se reproduce a
-  // proposito: el comportamiento validado en carretera es el suyo, no el
-  // "coherente". Quitar este bloque nos vuelve mas permisivos que la
-  // referencia; el test diferencial lo detectaria de inmediato.
+  // The reference only canonicalizes if the string does NOT already start with
+  // the canonical prefix ("2,12,127,"): with that prefix it stays as-is and
+  // requires exact equality. That means an extra tag INSIDE the prefix breaks
+  // it while one BEFORE it does not, which is an inconsistency in the original
+  // (same case, opposite verdicts depending on where the tag lands). We
+  // reproduce this on purpose: the road-validated behavior is theirs, not the
+  // "consistent" one. Removing this block makes us more permissive than the
+  // reference; the differential test would catch it immediately.
   if (n >= a) {
     int k = 0;
     while (k < a && tok_eq(&t[k], &sig[k])) {
       k++;
     }
     if (k == a) {
-      return false;  // ya se probo la igualdad exacta arriba y fallo
+      return false;  // exact equality was already tested above and failed
     }
   }
   int tail = sig_len - a;
@@ -311,9 +312,9 @@ bool surv_ie_matches_flock(const uint8_t* ies, int len) {
   if (matches_at_len(ies, len)) {
     return true;
   }
-  // Reintento sin los 4 bytes de FCS: el driver a veces los entrega, y con la
-  // regla de "la firma termina donde termina la lista" una cola de FCS anade
-  // tokens y rompe la coincidencia. La referencia hace el mismo reintento.
+  // Retry without the 4 FCS bytes: the driver sometimes includes them, and
+  // under the "signature ends where the list ends" rule a trailing FCS adds
+  // tokens and breaks the match. The reference performs the same retry.
   if (len > 4 && matches_at_len(ies, len - 4)) {
     return true;
   }
