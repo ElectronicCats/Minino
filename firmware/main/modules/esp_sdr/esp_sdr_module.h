@@ -26,6 +26,12 @@ void esp_sdr_module_stop(void);
  */
 bool esp_sdr_module_is_running(void);
 
+/**
+ * @brief Switch the native ESP-SDR application into Web Host mode and start
+ *        serving the ESPARGOS burst protocol on the USB port.
+ */
+void esp_sdr_module_enter_web_host(void);
+
 #ifdef __cplusplus
 }
 #endif

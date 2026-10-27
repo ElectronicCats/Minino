@@ -35,6 +35,7 @@
 #include "modbus_engine_cmd.h"
 
 #include "captive_cmd.h"
+#include "esp_sdr_module.h"
 #include "gattcmd_cmd.h"
 #include "hello_cmd.h"
 
@@ -43,6 +44,7 @@ static const char* TAG = "cat_console";
 
 static ctrl_c_callback_t ctrl_c_callback = NULL;
 static bool console_paused = false;
+static TaskHandle_t s_console_task_handle = NULL;
 
 void cat_console_register_ctrl_c_handler(ctrl_c_callback_t callback) {
   ctrl_c_callback = callback;
@@ -144,6 +146,19 @@ restart:
 #endif
     }
 
+    /* If the user is inside the SDR app (even in RX_CAP mode, not yet in
+       WEB_HOST) and the ESPARGOS WebSDR viewer or check_spectrum.py sends
+       SYNC or RELEASE, automatically switch into SDR Web Host mode. */
+    if (esp_sdr_module_is_running() &&
+        (!strncmp(line, "SYNC ", 5) || !strcmp(line, "RELEASE"))) {
+      linenoiseFree(line);
+      esp_sdr_module_enter_web_host();
+      while (!console_paused) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+      }
+      continue;
+    }
+
     /* Try to run the command */
     int ret;
     esp_err_t err = esp_console_run(line, &ret);
@@ -209,15 +224,18 @@ void cat_console_begin() {
 #if !defined(CONFIG_CAT_CONSOLE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
-  xTaskCreate(cat_console_task, "cat_console", 6144, NULL, 5, NULL);
+  xTaskCreate(cat_console_task, "cat_console", 6144, NULL, 5,
+              &s_console_task_handle);
 }
 
 void cat_console_pause(void) {
   if (!console_paused) {
     console_paused = true;
     ESP_LOGI(TAG, "Console paused");
-    printf("\n[Console paused - UART Bridge mode active]\n");
-    fflush(stdout);
+    if (s_console_task_handle != NULL &&
+        xTaskGetCurrentTaskHandle() != s_console_task_handle) {
+      vTaskSuspend(s_console_task_handle);
+    }
   }
 }
 
@@ -225,8 +243,10 @@ void cat_console_resume(void) {
   if (console_paused) {
     console_paused = false;
     ESP_LOGI(TAG, "Console resumed");
-    printf("\n[Console resumed]\n");
-    fflush(stdout);
+    if (s_console_task_handle != NULL &&
+        xTaskGetCurrentTaskHandle() != s_console_task_handle) {
+      vTaskResume(s_console_task_handle);
+    }
   }
 }
 

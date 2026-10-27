@@ -51,6 +51,22 @@ static void test_caps_and_the_other_exact_commands(void) {
 
   TEST_ASSERT_TRUE(esdr_parse_line("LIMITS?", &req));
   TEST_ASSERT_EQUAL_INT(ESDR_CMD_LIMITS, req.cmd);
+
+  TEST_ASSERT_TRUE(esdr_parse_line("SPECINFO?", &req));
+  TEST_ASSERT_EQUAL_INT(ESDR_CMD_SPEC, req.cmd);
+  TEST_ASSERT_EQUAL_STRING("SPECINFO?", req.args);
+
+  TEST_ASSERT_TRUE(esdr_parse_line("DC?", &req));
+  TEST_ASSERT_EQUAL_INT(ESDR_CMD_SPEC, req.cmd);
+  TEST_ASSERT_EQUAL_STRING("DC?", req.args);
+
+  TEST_ASSERT_TRUE(esdr_parse_line("DC 0", &req));
+  TEST_ASSERT_EQUAL_INT(ESDR_CMD_SPEC, req.cmd);
+  TEST_ASSERT_EQUAL_STRING("DC 0", req.args);
+
+  TEST_ASSERT_TRUE(esdr_parse_line("DC 1", &req));
+  TEST_ASSERT_EQUAL_INT(ESDR_CMD_SPEC, req.cmd);
+  TEST_ASSERT_EQUAL_STRING("DC 1", req.args);
 }
 
 static void test_sync_carries_the_nonce_back(void) {

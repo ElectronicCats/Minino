@@ -84,9 +84,10 @@ bool esdr_parse_line(const char* line, esdr_request_t* out) {
     return true;
   }
 
-  if (!strncmp(line, "SPEC", 4)) {
+  if (!strncmp(line, "SPEC", 4) || !strcmp(line, "DC?") ||
+      !strncmp(line, "DC ", 3)) {
     /* El modo de espectros lleva demasiados argumentos para analizarlos
-       aqui: se pasa la linea entera al modulo que lo implementa. Tamien
+       aqui: se pasa la linea entera al modulo que lo implementa. Tambien
        entran aqui el SPECINFO? y el DC?. */
     out->cmd = ESDR_CMD_SPEC;
     snprintf(out->args, sizeof(out->args), "%s", line);

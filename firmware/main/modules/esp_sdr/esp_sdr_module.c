@@ -21,6 +21,7 @@
 #include "oled_screen.h"
 #include "sd_card.h"
 #include "sdr_screen.h"
+#include "soc/usb_serial_jtag_struct.h"
 
 static const char* TAG = "esp_sdr_module";
 
@@ -290,7 +291,6 @@ static volatile bool s_host_stopping = false;
 
 static void sdr_web_host_task(void* arg) {
   (void) arg;
-  ESP_LOGI(TAG, "Starting SDR Web Host session for ESPARGOS...");
   cat_console_pause();
 
   (void) esdr_host_run();
@@ -311,7 +311,7 @@ static void sdr_web_host_start(void) {
   }
   s_host_stopping = false;
   s_sdr.tx_active = true;
-  sdr_render_screen("WEB HOST: LISTENING", "espargos.net/espsdr");
+  sdr_render_screen("WEB HOST: LISTENING", NULL);
   xTaskCreate(sdr_web_host_task, "sdr_web_host", 6144, NULL, 5,
               (TaskHandle_t*) &s_host_task);
 }
@@ -346,18 +346,38 @@ static void sdr_cycle_mode(void) {
     }
   }
   s_sdr.mode = (sdr_operating_mode_t) ((s_sdr.mode + 1) % 4);
+  if (s_sdr.mode == SDR_MODE_WEB_HOST) {
+    sdr_web_host_start();
+    return;
+  }
+
   const char* mode_desc = "MODE: RX CAPTURE";
   if (s_sdr.mode == SDR_MODE_TX_PKT) {
     mode_desc = "MODE: TX 802.11 RAW";
   } else if (s_sdr.mode == SDR_MODE_TX_CW) {
     mode_desc = "MODE: TX CW TONE";
-  } else if (s_sdr.mode == SDR_MODE_WEB_HOST) {
-    mode_desc = "MODE: WEB SDR HOST";
   }
   sdr_render_screen(mode_desc, NULL);
 }
 
 static void sdr_input_handler(uint8_t button_name, uint8_t button_event) {
+  /* In WEB_HOST mode, ignore all inputs except LEFT (exit) and BOOT (mode). */
+  if (s_sdr.mode == SDR_MODE_WEB_HOST) {
+    if (button_event != BUTTON_PRESS_DOWN) {
+      return;
+    }
+    if (button_name == BUTTON_LEFT) {
+      ESP_LOGI(TAG, "Exiting native SDR app");
+      if (s_host_task != NULL) {
+        sdr_web_host_stop();
+      }
+      app_manager_exit();
+    } else if (button_name == BUTTON_BOOT) {
+      sdr_cycle_mode();
+    }
+    return;
+  }
+
   if (button_event == BUTTON_LONG_PRESS_START) {
     if (button_name == BUTTON_RIGHT) {
       sdr_cycle_mode();
@@ -421,21 +441,9 @@ static void sdr_input_handler(uint8_t button_name, uint8_t button_event) {
             sdr_render_screen("CW: ERR START", NULL);
           }
         }
-      } else if (s_sdr.mode == SDR_MODE_WEB_HOST) {
-        if (s_host_task != NULL) {
-          sdr_web_host_stop();
-          sdr_render_screen("WEB HOST: STOPPED", NULL);
-        } else {
-          sdr_web_host_start();
-        }
       }
       break;
     case BUTTON_UP:
-      if (s_host_task != NULL) {
-        s_sdr.freq_mhz = c6_sdr_rx_get_freq();
-        sdr_render_screen("HOST CONTROLS FREQ", "espargos.net/espsdr");
-        break;
-      }
       if (s_sdr.freq_mhz < SDR_FREQ_MAX_MHZ) {
         s_sdr.freq_mhz = sdr_freq_next_up(s_sdr.freq_mhz);
         (void) c6_sdr_rx_tune(s_sdr.freq_mhz);
@@ -443,11 +451,6 @@ static void sdr_input_handler(uint8_t button_name, uint8_t button_event) {
       }
       break;
     case BUTTON_DOWN:
-      if (s_host_task != NULL) {
-        s_sdr.freq_mhz = c6_sdr_rx_get_freq();
-        sdr_render_screen("HOST CONTROLS FREQ", "espargos.net/espsdr");
-        break;
-      }
       if (s_sdr.freq_mhz > SDR_FREQ_MIN_MHZ) {
         s_sdr.freq_mhz = sdr_freq_next_down(s_sdr.freq_mhz);
         (void) c6_sdr_rx_tune(s_sdr.freq_mhz);
@@ -468,6 +471,11 @@ static void esp_sdr_start(void) {
   s_sdr.tx_count = 0;
   s_sdr.tx_active = false;
   s_sdr.mode = SDR_MODE_RX_CAP;
+
+  /* Prevent WebSerial / pyserial DTR/RTS transitions from resetting the chip
+     (rst:0x15 USB_UART_HPSYS) while inside the SDR app. */
+  USB_SERIAL_JTAG.chip_rst.usb_uart_chip_rst_dis = 1;
+  USB_SERIAL_JTAG.config_update.config_update = 1;
 
   /* Initialize the radio: this sets up the WiFi PHY and SPI bus
      for the dump engine. */
@@ -504,10 +512,27 @@ void esp_sdr_module_stop(void) {
     s_sdr.running = false;
     c6_sdr_rx_stop();
   }
+  USB_SERIAL_JTAG.chip_rst.usb_uart_chip_rst_dis = 0;
+  USB_SERIAL_JTAG.config_update.config_update = 1;
 }
 
 bool esp_sdr_module_is_running(void) {
   return s_sdr.running;
+}
+
+void esp_sdr_module_enter_web_host(void) {
+  if (!s_sdr.running) {
+    return;
+  }
+  if (s_sdr.mode == SDR_MODE_TX_CW && s_sdr.tx_active) {
+    c6_sdr_tx_carrier_stop();
+    s_sdr.tx_active = false;
+    if (s_carrier_timer != NULL) {
+      esp_timer_stop(s_carrier_timer);
+    }
+  }
+  s_sdr.mode = SDR_MODE_WEB_HOST;
+  sdr_web_host_start();
 }
 
 void app_manager_enter_wrapper_esp_sdr(void) {

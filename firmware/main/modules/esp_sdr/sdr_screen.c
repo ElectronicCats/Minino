@@ -115,7 +115,7 @@ void sdr_screen_render(const sdr_screen_data_t* data) {
                              OLED_DISPLAY_NORMAL);
   } else {
     if (data->mode == SDR_MODE_WEB_HOST) {
-      oled_screen_display_text(">:Run Hold>:Mod <:Exit", 0, 7,
+      oled_screen_display_text("BOOT:Mod   LEFT:Exit", 0, 7,
                                OLED_DISPLAY_NORMAL);
     } else if (data->mode == SDR_MODE_TX_PKT) {
       oled_screen_display_text("^v:Ch >:Send Hold>:Mod", 0, 7,

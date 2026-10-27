@@ -415,6 +415,8 @@ bool esdr_spectrum_command(const char* line,
   uint64_t yield_at = start_ms;
   uint64_t pairs = 0;
   uint64_t index = 0;
+  uint64_t prev_index = 0;
+  bool have_prev = false;
   unsigned merged = 0;
   uint8_t gain = 0;
   bool stopped = false;
@@ -433,6 +435,11 @@ bool esdr_spectrum_command(const char* line,
 
     if (!merged) {
       index = elapsed_ms * s_rates[rate] / 1000u;
+      if (have_prev && index <= prev_index) {
+        index = prev_index + (uint64_t) n * units;
+      }
+      prev_index = index;
+      have_prev = true;
     }
 
     const uint32_t* words = NULL;

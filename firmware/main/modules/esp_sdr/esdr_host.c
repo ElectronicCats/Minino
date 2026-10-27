@@ -32,6 +32,7 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "soc/usb_serial_jtag_struct.h"
 
 #include <string.h>
 
@@ -166,9 +167,13 @@ bool esdr_host_stop_requested(void) {
     return true;
   }
   uint8_t byte;
-  /* Buffer incoming bytes into s_line so commands sent immediately after (or
-     instead of) an empty stop line are never swallowed. */
-  while (usb_serial_jtag_read_bytes(&byte, 1, 0) == 1) {
+  bool stopped = false;
+  /* Any incoming byte stops an active RXRUN/SPEC stream immediately, matching
+     upstream burst_serial_stop_requested(). Any non-empty command line is
+     buffered in s_line so it is not swallowed. */
+  for (unsigned j = 0;
+       j < 128 && usb_serial_jtag_read_bytes(&byte, 1, 0) == 1; j++) {
+    stopped = true;
     if (byte == '\r') {
       continue;
     }
@@ -184,9 +189,9 @@ bool esdr_host_stop_requested(void) {
       s_line[s_used] = '\0';
       s_pending_line = true;
     }
-    return true;
+    break;
   }
-  return false;
+  return stopped;
 }
 
 void esdr_host_yield(void) {
@@ -437,6 +442,11 @@ esp_err_t esdr_host_run(void) {
   s_host_active = true;
   s_session_start = esp_timer_get_time();
 
+  /* Prevent WebSerial / pyserial DTR/RTS transitions from resetting the chip
+     (rst:0x15 USB_UART_HPSYS) when the browser opens or closes the port. */
+  USB_SERIAL_JTAG.chip_rst.usb_uart_chip_rst_dis = 1;
+  USB_SERIAL_JTAG.config_update.config_update = 1;
+
   /* The radio comes up BEFORE the logs are silenced: the Wi-Fi driver
      prints from its own ROM, which does not go through esp_log and cannot
      be silenced with the master level. Bringing it up here keeps that
@@ -446,8 +456,6 @@ esp_err_t esdr_host_run(void) {
     s_host_active = false;
     return ESP_ERR_NO_MEM;
   }
-
-  ESP_LOGI(TAG, "SDR host mode: serving the burst protocol on the USB port");
 
   /* Nothing may reach the port while a binary capture is in flight. The
      master level is used because the per tag levels would survive a change
