@@ -169,7 +169,7 @@ def main():
         magnitudes = [math.hypot(i, q) for i, q in pairs]
         rms = math.sqrt(sum(m * m for m in magnitudes) / len(magnitudes))
         peak = max(magnitudes)
-        print('amplitude : rms %.1f, peak %.1f (%d bit, centro +-%d)'
+        print('amplitude : rms %.1f, peak %.1f (%d bit, center +-%d)'
               % (rms, peak, IQ_BITS, IQ_CENTRE))
         if not 0.0 <= rms <= peak:
             sys.exit('Internal error: rms %.1f outside [0, %.1f], '

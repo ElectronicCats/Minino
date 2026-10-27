@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Prueba del modo de espectros (SPEC) contra la placa.
+"""Test of spectrum mode (SPEC) against the board.
 
-Reproduce lo que hace el visor de ESPARGOS cuando elige "On-Chip Spectrum":
-pregunta los perfiles, pide la corriente de espectros y decodifica los
-marcos SPC1 igual que el visor (cabecera, bins en orden natural y CRC32).
+Reproduces what the ESPARGOS viewer does when selecting "On-Chip Spectrum":
+queries profiles, requests the spectrum stream, and decodes SPC1 frames just
+like the viewer (header, natural-order bins, and CRC32).
 
-uso:  python3 test_esdr_spec.py [puerto]
+usage:  python3 test_esdr_spec.py [port]
 """
 import re
 import struct
@@ -27,10 +27,10 @@ def check(name, cond, detail=""):
     global OK, FAIL
     if cond:
         OK += 1
-        print(f"  \033[32mPASA\033[0m  {name}" + (f"   {detail}" if detail else ""))
+        print(f"  \033[32mPASS\033[0m  {name}" + (f"   {detail}" if detail else ""))
     else:
         FAIL += 1
-        print(f"  \033[31mFALLA\033[0m {name}" + (f"   {detail}" if detail else ""))
+        print(f"  \033[31mFAIL\033[0m  {name}" + (f"   {detail}" if detail else ""))
 
 
 class Client:
@@ -52,7 +52,7 @@ class Client:
         out = b""
         while len(out) < n:
             if time.perf_counter() > deadline:
-                raise TimeoutError(f"se pidieron {n} bytes y llegaron {len(out)}")
+                raise TimeoutError(f"requested {n} bytes, got {len(out)}")
             chunk = self.ser.read(min(1024, n - len(out)))
             if chunk:
                 out += chunk
@@ -66,14 +66,14 @@ class Client:
             if b == 10:
                 s = s.strip()
                 if not s.startswith(prefix):
-                    raise ValueError(f"respuesta inesperada: {s!r}")
+                    raise ValueError(f"unexpected response: {s!r}")
                 return s
             s += chr(b)
-        raise ValueError("respuesta demasiado larga")
+        raise ValueError("response too long")
 
 
 def decode_frames(data):
-    """El SpectrumDecoder del visor: busca marcos SPC1 validos."""
+    """The viewer's SpectrumDecoder: scans for valid SPC1 frames."""
     frames = []
     i = 0
     while i + 28 <= len(data):
@@ -107,11 +107,11 @@ def decode_frames(data):
     return frames
 
 
-print(f"\n=== Modo de espectros contra la placa ({PORT}) ===\n")
+print(f"\n=== Spectrum mode on board ({PORT}) ===\n")
 c = Client(PORT)
 
-# ------------------------------------------------------------------ arranque
-print("[1] arranque y entrega del puerto")
+# ------------------------------------------------------------------ startup
+print("[1] startup and port hand-over")
 boot = b""
 t0 = time.perf_counter()
 while time.perf_counter() - t0 < 6:
@@ -123,7 +123,7 @@ while time.perf_counter() - t0 < 6:
         boot += d
         if b"minino>" in boot:
             break
-check("la consola aparece", b"minino>" in boot)
+check("console appears", b"minino>" in boot)
 
 c.write(b"sdr_host\r")
 time.sleep(1.0)
@@ -143,31 +143,31 @@ while time.perf_counter() - t0 < 4:
             except Exception:
                 pass
             break
-check("el modo host arranca", b"comes back" in banner)
+check("host mode starts", b"comes back" in banner)
 
 # ----------------------------------------------------------------- SPECINFO?
-print("\n[2] los perfiles (SPECINFO?)")
+print("\n[2] profiles (SPECINFO?)")
 c.command("SPECINFO?")
 info = c.line("SPECINFO ")
 print("    " + info)
-check("el JSON tiene la forma que el visor espera",
+check("JSON matches the shape expected by the viewer",
       '"continuous":false' in info and '"transports":[' in info and '"profiles":[' in info)
-check("el transporte es USB", '"USB"' in info)
+check("transport is USB", '"USB"' in info)
 
 profiles = re.findall(r"\[(\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\]", info)
-check("hay perfiles", len(profiles) > 0, f"{len(profiles)} perfiles")
+check("profiles are present", len(profiles) > 0, f"{len(profiles)} profiles")
 rates = {int(p[0]) for p in profiles}
-check("estan las tres tasas del C6", rates == {80000000, 40000000, 16000000}, str(sorted(rates)))
+check("all three C6 sample rates are present", rates == {80000000, 40000000, 16000000}, str(sorted(rates)))
 sizes = {int(p[2]) for p in profiles}
-check("los tamanos de FFT llegan a 2048", 2048 in sizes, str(sorted(sizes)))
+check("FFT sizes reach 2048", 2048 in sizes, str(sorted(sizes)))
 
-# El visor elige el perfil cuyo numero de bins es el que ha pedido.
+# The viewer picks the profile matching its requested bin count.
 n = 1024
 chosen = [p for p in profiles if int(p[2]) == n and int(p[0]) == 80000000]
-check("hay un perfil de 1024 bins a 80 MS/s", len(chosen) == 1, str(chosen))
+check("has a 1024-bin profile at 80 MS/s", len(chosen) == 1, str(chosen))
 
 # ---------------------------------------------------------------------- SPEC
-print(f"\n[3] la corriente de espectros ({n} bins)")
+print(f"\n[3] spectrum stream ({n} bins)")
 rate_code = int(chosen[0][1])
 stride = int(chosen[0][3])
 upf = int(chosen[0][4])
@@ -175,12 +175,12 @@ c.command(f"SPEC 0 {stride} {upf} 0 {rate_code} {n}")
 
 header = c.line("SPEC ")
 parts = header.split(" ")
-check("la cabecera tiene cinco campos", len(parts) == 5, header)
-check("la cabecera lleva el numero de bins", int(parts[1]) == n, parts[1])
-check("la cabecera lleva la tasa", int(parts[2]) == 80000000, parts[2])
-check("la cabecera lleva la frecuencia", int(parts[3]) == n, parts[3])
+check("header has five fields", len(parts) == 5, header)
+check("header carries bin count", int(parts[1]) == n, parts[1])
+check("header carries sample rate", int(parts[2]) == 80000000, parts[2])
+check("header carries FFT size", int(parts[3]) == n, parts[3])
 
-# Los marcos llegan en flujo: se recogen un par y se corta.
+# Frames arrive as a stream: collect a couple and stop.
 raw = b""
 t0 = time.perf_counter()
 while time.perf_counter() - t0 < 6 and len(raw) < 4096:
@@ -192,32 +192,31 @@ while time.perf_counter() - t0 < 6 and len(raw) < 4096:
         break
 
 frames = decode_frames(raw)
-check("llegan marcos validos", len(frames) > 0, f"{len(frames)} marcos, {len(raw)} bytes")
+check("valid frames arrive", len(frames) > 0, f"{len(frames)} frames, {len(raw)} bytes")
 if frames:
     f = frames[0]
-    check("el marco tiene la firma SPC1", raw[:4] == b"SPC1")
-    check("el numero de bins del marco es el pedido", f["log2n"] == (n.bit_length() - 1))
-    check("el multiplicador de dB es 2", f["dbmul"] == 2)
-    check("el bit de huecos esta puesto (capturas sueltas)", (f["flags"] & 8) != 0,
+    check("frame has SPC1 magic", raw[:4] == b"SPC1")
+    check("frame bin count matches request", f["log2n"] == (n.bit_length() - 1))
+    check("dB multiplier is 2", f["dbmul"] == 2)
+    check("gap flag bit is set (non-continuous captures)", (f["flags"] & 8) != 0,
           f"flags {f['flags']}")
-    check("las bins son codigos de 0 a 255",
+    check("bins are codes from 0 to 255",
           all(0 <= b <= 255 for b in f["bins"]) and len(f["bins"]) == n)
-    check("hay bins con señal (no todos a cero)", max(f["bins"]) > 0,
+    check("bins have signal (not all zero)", max(f["bins"]) > 0,
           f"max {max(f['bins'])}, min {min(f['bins'])}")
-    # El bin 0 es la portadora del LO, pero no tiene por que ser el mas
-    # fuerte: alrededor hay redes de Wi-Fi. Lo que se comprueba es que el
-    # espectro tiene estructura.
+    # Bin 0 is the LO carrier, though it does not have to be the strongest
+    # when Wi-Fi networks are nearby. Check that the spectrum has structure.
     ordered = sorted(f["bins"], reverse=True)
     median = ordered[len(ordered) // 2]
-    check("el espectro tiene estructura (no es ruido plano)",
+    check("spectrum has structure (not flat noise)",
           ordered[0] > median + 10,
-          f"max {ordered[0]}, mediana {median}, min {ordered[-1]}")
-    check("la portadora del LO esta en el bin 0", f["bins"][0] > 0,
-          f"centro {f['bins'][0]}")
+          f"max {ordered[0]}, median {median}, min {ordered[-1]}")
+    check("LO carrier is present at bin 0", f["bins"][0] > 0,
+          f"center {f['bins'][0]}")
 
-# ------------------------------------------------------------------- parar
-print("\n[4] el corte")
-c.command("")  # una linea vacia: el visor corta asi
+# ------------------------------------------------------------------- stop
+print("\n[4] stopping stream")
+c.command("")  # empty line: how the viewer stops the stream
 time.sleep(1.0)
 end = b""
 t0 = time.perf_counter()
@@ -230,21 +229,21 @@ while time.perf_counter() - t0 < 5:
         end += d
     if b"SPECEND" in end:
         break
-check("el firmware responde SPECEND", b"SPECEND" in end)
+check("firmware replies with SPECEND", b"SPECEND" in end)
 if b"SPECEND" in end:
-    # El final viene detras de los marcos binarios, asi que se busca en el
-    # flujo de bytes y no linea a linea.
+    # SPECEND follows the binary frames, so search the byte stream rather than
+    # reading line by line.
     tail = end[end.index(b"SPECEND"):]
     line = tail[:tail.find(b"\n")].decode("utf-8", "replace")
     fields = line.split()
     # SPECEND status detail units pairs elapsed_us late_max work_max_cycles
     #         frames drops abandoned ffts stopped_by_host
-    check("SPECEND tiene doce campos", len(fields) == 13, line[:90])
-    check("el estado es 0 (parada normal)", fields[1] == "0", fields[1])
-    check("hubo FFTs", int(fields[3]) > 0, fields[3])
-    check("hubo pares de muestras", int(fields[4]) > 0, fields[4])
-    check("hubo marcos", int(fields[8]) > 0, fields[8])
-    check("el host corto la corriente", fields[12] == "1", fields[12])
+    check("SPECEND has twelve fields", len(fields) == 13, line[:90])
+    check("status is 0 (normal stop)", fields[1] == "0", fields[1])
+    check("FFTs were computed", int(fields[3]) > 0, fields[3])
+    check("sample pairs were processed", int(fields[4]) > 0, fields[4])
+    check("frames were emitted", int(fields[8]) > 0, fields[8])
+    check("host stopped the stream", fields[12] == "1", fields[12])
 
-print(f"\n=== {OK} pasan, {FAIL} fallan ===\n")
+print(f"\n=== {OK} passed, {FAIL} failed ===\n")
 sys.exit(1 if FAIL else 0)

@@ -1,43 +1,40 @@
 #!/usr/bin/env python3
-"""Prueba sobre el aire: una placa transmite y la otra recibe con el SDR.
+"""Over-the-air test: one board transmits and the other receives with the SDR.
 
-La placa de recepcion entra en el modo host (el mismo protocolo que habla
-el visor del navegador) y mide; la placa de transmision alterna entre una
-app que radia (el spammer de BLE o el de beacons de Wi-Fi) y la de no
-hacer nada.
+The receiving board enters host mode (the same protocol spoken by the browser
+viewer) and measures; the transmitting board alternates between an active
+radiating app (BLE spammer or Wi-Fi beacon spammer) and idle.
 
-Dos medidas, según el modo:
+Two measurements, depending on mode:
 
-  spec  La placa calcula la FFT (el modo SPEC) y se compara el espectro
-        medio con la transmision puesta contra el de las ventanas sin
-        transmision. Es lo que veria el visor del navegador.
+  spec  The board computes the FFT (SPEC mode) and compares the mean spectrum
+        with transmission active against windows without transmission. This is
+        what the browser viewer sees.
 
-  iq    Se piden rafagas de I/Q (CAP20) y se mide la potencia estrecha que
-        aparece en una ventana de 1 MHz alrededor de la frecuencia
-        buscada. Una senal estrecha (un anuncio de BLE son 1 MHz) se ve
-        como un pico; el trafico de Wi-Fi de alrededor ocupa 11 MHz y
-        reparte su energia, asi que la ventana estrecha lo distingue.
+  iq    Requests I/Q bursts (CAP20) and measures narrowband power within a
+        1 MHz window around the target frequency. A narrow signal (a BLE
+        advertisement is 1 MHz wide) appears as a peak; surrounding Wi-Fi
+        traffic spans 11 MHz and spreads its energy, allowing the narrow
+        window to distinguish them.
 
-    uso:  python3 tools/test_esdr_radio.py <puerto_rx> <puerto_tx> [opciones]
+    usage:  python3 tools/test_esdr_radio.py <rx_port> <tx_port> [options]
 
-Opciones:
-    --mode M     "spec" (por defecto) o "iq"
-    --on CMD     comando de consola que arranca la transmision (por defecto
-                 "launch spam_all"). Varios comandos separados por ';' se
-                 mandan en orden (el spammer de beacons necesita abrir el
-                 menu y pulsar Start: "launch ssid_spam;press down;press
-                 right")
-    --off CMD    comando que la para (por defecto "exit_app")
-    --rate HZ    tasa de muestreo del espectro (80000000, 40000000, 16000000)
-    --bins N     bins de la FFT (256, 512, 1024, 2048)
-    --seconds N  segundos de medida
-    --period N   segundos con cada estado
-    --freq HZ    frecuencia a la que se sintoniza la placa de recepcion
-    --freqs HZ   frecuencias (en MHz) que se miden en el modo iq, separadas
-                 por espacios (por defecto, los canales de publicidad de
-                 BLE y algunos de referencia)
+Options:
+    --mode M     "spec" (default) or "iq"
+    --on CMD     console command that starts transmission (default
+                 "launch spam_all"). Multiple commands separated by ';' are
+                 sent in order (the beacon spammer needs to open the menu and
+                 press Start: "launch ssid_spam;press down;press right")
+    --off CMD    command that stops it (default "exit_app")
+    --rate HZ    spectrum sample rate (80000000, 40000000, 16000000)
+    --bins N     FFT bins (256, 512, 1024, 2048)
+    --seconds N  measurement duration in seconds
+    --period N   seconds per state window
+    --freq HZ    tuning frequency on the receiving board
+    --freqs HZ   frequencies (in MHz) measured in iq mode, separated by spaces
+                 (default: BLE advertising channels plus reference frequencies)
 
-Necesita pyserial.
+Requires pyserial.
 """
 import math
 import re
@@ -56,7 +53,7 @@ def arg_value(flag, default):
 
 
 class Console:
-    """La consola de Minino: las lineas se cierran con CR, no con LF."""
+    """The Minino console: lines are terminated with CR, not LF."""
 
     def __init__(self, port):
         self.port = port
@@ -65,7 +62,7 @@ class Console:
         self.raw.rts = False
 
     def send(self, text):
-        """Manda una linea. Varias separadas por ';' se mandan en orden."""
+        """Sends a line. Multiple commands separated by ';' are sent in order."""
         for part in text.split(";"):
             part = part.strip()
             if not part:
@@ -88,12 +85,12 @@ class Console:
 
 
 class TxToggle(threading.Thread):
-    """Mete y saca la transmision en la otra placa.
+    """Toggles transmission on and off on the second board.
 
-    Cada cambio de estado abre una ventana nueva: las ventanas se
-    numeran, y asi cada ventana de transmision se puede comparar con las
-    ventanas sin transmision que la rodean (el entorno de RF cambia solo
-    con el tiempo, y comparar con las ventanas vecinas lo cancela).
+    Each state change opens a new window: windows are numbered so each
+    transmission window can be compared against its neighboring idle windows
+    (the RF environment drifts over time, and comparing against adjacent
+    windows cancels that drift out).
     """
 
     daemon = True
@@ -145,11 +142,11 @@ def read_line(ser, timeout=10.0):
         if b[0] == 10:
             return s.strip()
         s += chr(b[0])
-    raise TimeoutError("no llego la respuesta")
+    raise TimeoutError("no response received")
 
 
 def open_host_session(port):
-    """Entrega el puerto con el comando sdr_host de la consola."""
+    """Hands over the port using the console's sdr_host command."""
     ser = serial.Serial(port, 115200, timeout=5)
     ser.dtr = False
     ser.rts = False
@@ -165,7 +162,7 @@ def open_host_session(port):
             if b"minino>" in boot:
                 break
     if b"minino>" not in boot:
-        print("la consola no aparecio en el puerto de recepcion")
+        print("console did not appear on the RX port")
         sys.exit(1)
 
     banner = b""
@@ -187,14 +184,14 @@ def open_host_session(port):
         ser.write(b"MININO\r")
         time.sleep(1.0)
     if b"comes back" not in banner:
-        print("el modo host no arranco:", banner[-200:])
+        print("host mode did not start:", banner[-200:])
         sys.exit(1)
-    print("modo host listo")
+    print("host mode ready")
     return ser
 
 
 def decode_iq20(data, n):
-    """CAP20: 20 bits por par, I en los bits 0-9 y Q en los 10-19."""
+    """CAP20: 20 bits per pair, I in bits 0-9 and Q in bits 10-19."""
     acc = 0
     held = 0
     k = 0
@@ -216,7 +213,7 @@ def decode_iq20(data, n):
 
 
 def fft_mag(re, im):
-    """FFT de radix-2 in situ: la entrada es la parte real y la imaginaria."""
+    """In-place radix-2 FFT: inputs are real and imaginary arrays."""
     n = len(re)
     j = 0
     for i in range(1, n):
@@ -248,20 +245,20 @@ def fft_mag(re, im):
 
 
 def capture_iq(ser, samples):
-    """Una rafaga de I/Q en formato de 20 bits por par."""
+    """Captures one I/Q burst in 20-bit-per-pair format."""
     header = ""
-    for intento in range(4):
+    for attempt in range(4):
         ser.write(f"CAP20 {samples} 0\n".encode())
         header = read_line(ser, 15.0)
         if header.startswith("DATA "):
             break
-        # el puerto puede dejar basura: se busca la cabecera de verdad
-        print("    (linea inesperada:", header[:40], ")")
+        # port may have leftover bytes: keep reading until the actual header
+        print("    (unexpected line:", header[:40], ")")
     if header.startswith("ERR "):
         raise ValueError(header)
     h = re.match(r"^DATA (\d+) ([0-9a-fA-F]{1,8}) (\d+)$", header)
     if not h:
-        raise ValueError("cabecera invalida: " + header)
+        raise ValueError("invalid header: " + header)
     want = -(-(samples * 20) // 8)
     data = b""
     end = time.perf_counter() + 10
@@ -270,24 +267,24 @@ def capture_iq(ser, samples):
         if chunk:
             data += chunk
     if zlib.crc32(data) != int(h.group(2), 16):
-        # una rafaga puede llegar cortada: se repite
-        if intento + 1 < 4:
+        # a burst may arrive truncated: retry
+        if attempt + 1 < 4:
             return capture_iq(ser, samples)
-        raise ValueError("el CRC no coincide")
+        raise ValueError("CRC mismatch")
     return decode_iq20(data, samples)
 
 
 def mode_iq(ser, toggle, freqs_hz, lo_hz, samples, rate, seconds):
-    """La potencia estrecha en varias frecuencias, con y sin transmision.
+    """Measures narrowband power at several frequencies, with and without TX.
 
-    En cada rafaga se mide la potencia de una ventana estrecha alrededor de
-    cada frecuencia pedida. Una señal estrecha (un anuncio de BLE son 1 MHz)
-    solo aparece en su canal; el trafico del entorno, que es de 11 MHz de
-    ancho, reparte su energia y queda repartido por todas las ventanas.
+    On each burst, power is measured in a narrow window around each requested
+    frequency. A narrowband signal (a BLE advertisement is 1 MHz wide) only
+    shows up in its channel; ambient traffic (11 MHz wide) spreads its energy
+    across all windows.
     """
     on = []
     off = []
-    # la FFT de radix-2 quiere una potencia de dos: la rafaga se rellena
+    # radix-2 FFT requires a power of two: zero-pad the burst
     n = 1
     while n < samples:
         n <<= 1
@@ -301,8 +298,8 @@ def mode_iq(ser, toggle, freqs_hz, lo_hz, samples, rate, seconds):
         fft_mag(re, im)
 
         def window(freq):
-            # el desplazamiento puede ser negativo: la FFT va de -rate/2 a
-            # +rate/2, asi que el bin es el desplazamiento con signo
+            # offset may be negative: the FFT spans -rate/2 to +rate/2,
+            # so the bin is the signed offset modulo n
             k = int((freq - lo_hz) / bin_hz) % n
             p = 0.0
             for j in range(max(0, k - half), min(n, k + half + 1)):
@@ -313,10 +310,10 @@ def mode_iq(ser, toggle, freqs_hz, lo_hz, samples, rate, seconds):
         (on if toggle.state_now() else off).append(row)
         time.sleep(0.05)
 
-    print(f"\n  potencia en ventanas de {2 * half * bin_hz / 1e6:.2f} MHz "
-          f"(LO {lo_hz / 1e6:g} MHz), maxima sobre las rafagas:")
-    print(f"   {'frecuencia':>12} {'TX ON':>9} {'TX OFF':>9} {'dif':>8}   "
-          f"{'p90 ON':>9} {'p90 OFF':>9} {'dif':>8}")
+    print(f"\n  power in {2 * half * bin_hz / 1e6:.2f} MHz windows "
+          f"(LO {lo_hz / 1e6:g} MHz), peak across bursts:")
+    print(f"   {'frequency':>12} {'TX ON':>9} {'TX OFF':>9} {'diff':>8}   "
+          f"{'p90 ON':>9} {'p90 OFF':>9} {'diff':>8}")
     for i, f in enumerate(freqs_hz):
         a = sorted(r[i] for r in on)
         b = sorted(r[i] for r in off)
@@ -326,11 +323,11 @@ def mode_iq(ser, toggle, freqs_hz, lo_hz, samples, rate, seconds):
         p90b = b[int(len(b) * 0.9)]
         print(f"   {f / 1e6:>9.1f} MHz {a[-1]:>9.2f} {b[-1]:>9.2f} "
               f"{a[-1] - b[-1]:>+8.2f}   {p90a:>9.2f} {p90b:>9.2f} {p90a - p90b:>+8.2f}")
-    print(f"\n  rafagas: TX ON {len(on)}, TX OFF {len(off)}")
+    print(f"\n  bursts: TX ON {len(on)}, TX OFF {len(off)}")
 
 
 def mode_spec(ser, toggle, rate, bins, seconds):
-    """El espectro de la placa (modo SPEC) con y sin transmision."""
+    """On-chip spectrum (SPEC mode) with and without transmission."""
     ser.write(b"SPECINFO?\n")
     time.sleep(0.4)
     info = b""
@@ -343,10 +340,10 @@ def mode_spec(ser, toggle, rate, bins, seconds):
     profiles = re.findall(r"\[(\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\]", info.decode())
     match = [p for p in profiles if int(p[2]) == bins and int(p[0]) == rate]
     if not match:
-        print(f"no hay perfil de {bins} bins a {rate / 1e6:g} MS/s")
+        print(f"no profile for {bins} bins at {rate / 1e6:g} MS/s")
         sys.exit(1)
     rate_code, stride, upf = int(match[0][1]), int(match[0][3]), int(match[0][4])
-    print(f"perfil: {match[0]}")
+    print(f"profile: {match[0]}")
 
     ser.write(f"SPEC 0 {stride} {upf} 0 {rate_code} {bins}\n".encode())
     time.sleep(0.5)
@@ -387,10 +384,10 @@ def mode_spec(ser, toggle, rate, bins, seconds):
 
     on = [f for (w, st), frames in windows.items() if st for f in frames]
     off = [f for (w, st), frames in windows.items() if not st for f in frames]
-    print(f"\nmarcos: TX ON {len(on)} ({len([1 for k in windows if k[1]])} ventanas), "
-          f"TX OFF {len(off)} ({len([1 for k in windows if not k[1]])} ventanas)")
+    print(f"\nframes: TX ON {len(on)} ({len([1 for k in windows if k[1]])} windows), "
+          f"TX OFF {len(off)} ({len([1 for k in windows if not k[1]])} windows)")
     if not on or not off:
-        print("no hay marcos suficientes para comparar")
+        print("not enough frames to compare")
         sys.exit(1)
 
     def mean(frames):
@@ -404,10 +401,10 @@ def mode_spec(ser, toggle, rate, bins, seconds):
     m_off = mean(off)
     diff = [a - b for a, b in zip(m_on, m_off)]
 
-    # Comparacion por parejas: cada ventana con transmision se compara con
-    # las ventanas sin transmision que la rodean. El entorno de RF se mueve
-    # solo con el tiempo, y emparejarlo con las ventanas vecinas lo
-    # cancela; lo que queda es la senal del transmisor.
+    # Paired comparison: each transmission window is compared against its
+    # adjacent idle windows. The RF environment drifts over time, and pairing
+    # with neighboring windows cancels that drift out, leaving the transmitter's
+    # signal.
     paired = []
     keys = sorted(windows.keys())
     for i, (w, st) in enumerate(keys):
@@ -424,23 +421,22 @@ def mode_spec(ser, toggle, rate, bins, seconds):
         paired.append([a - b for a, b in zip(cur, base)])
     if paired:
         diff_paired = [sum(v) / len(paired) for v in zip(*paired)]
-        print(f"  comparacion por parejas: {len(paired)} ventanas con transmision "
-              f"contra sus vecinas")
+        print(f"  paired comparison: {len(paired)} TX windows against their neighbors")
     else:
         diff_paired = diff
 
     hz = rate / bins
-    print(f"  TX ON : pico {max(m_on):.0f}  mediana {sorted(m_on)[bins // 2]:.0f}  "
-          f"suma {sum(m_on):.0f}")
-    print(f"  TX OFF: pico {max(m_off):.0f}  mediana {sorted(m_off)[bins // 2]:.0f}  "
-          f"suma {sum(m_off):.0f}")
+    print(f"  TX ON : peak {max(m_on):.0f}  median {sorted(m_on)[bins // 2]:.0f}  "
+          f"sum {sum(m_on):.0f}")
+    print(f"  TX OFF: peak {max(m_off):.0f}  median {sorted(m_off)[bins // 2]:.0f}  "
+          f"sum {sum(m_off):.0f}")
 
-    print("\n  las diez bins con mas diferencia (TX ON - TX OFF, por parejas):")
+    print("\n  top ten bins by difference (TX ON - TX OFF, paired):")
     for t in sorted(range(bins), key=lambda k: -diff_paired[k])[:10]:
-        print(f"   {t * hz / 1e6:+8.3f} MHz del LO   dif {diff_paired[t]:+6.1f}")
+        print(f"   {t * hz / 1e6:+8.3f} MHz from LO   diff {diff_paired[t]:+6.1f}")
 
     span = int(rate / 2 / 1e6)
-    print("\n  diferencia por banda de 1 MHz (por parejas):")
+    print("\n  difference per 1 MHz band (paired):")
     for i in range(-span, span):
         lo, hi = i * 1e6, (i + 1) * 1e6
         b0 = int((lo / hz) % bins)
@@ -468,14 +464,14 @@ def main():
              arg_value("--freqs", "2402 2407 2412 2417 2422 2426 2432").split()]
     samples = int(arg_value("--samples", 16380))
 
-    print(f"=== Prueba sobre el aire: RX {rx_port}, TX {tx_port} ===\n")
-    print(f"  modo: {mode}")
-    print(f"  transmision: '{on_cmd}' / '{off_cmd}'")
+    print(f"=== Over-the-air test: RX {rx_port}, TX {tx_port} ===\n")
+    print(f"  mode: {mode}")
+    print(f"  transmission: '{on_cmd}' / '{off_cmd}'")
     if mode == "spec":
-        print(f"  espectro: {rate / 1e6:g} MS/s, {bins} bins, {seconds:g} s")
+        print(f"  spectrum: {rate / 1e6:g} MS/s, {bins} bins, {seconds:g} s")
     else:
-        print(f"  I/Q: {samples} muestras a {rate / 1e6:g} MS/s, "
-              f"LO {freq} MHz, frecuencias {[f // 1000000 for f in freqs]} MHz, "
+        print(f"  I/Q: {samples} samples at {rate / 1e6:g} MS/s, "
+              f"LO {freq} MHz, frequencies {[f // 1000000 for f in freqs]} MHz, "
               f"{seconds:g} s")
 
     tx = Console(tx_port)
@@ -483,7 +479,7 @@ def main():
 
     ser = open_host_session(rx_port)
     ser.write(f"FREQ {freq}\n".encode())
-    print("sintonía:", read_line(ser, 10.0))
+    print("tuning:", read_line(ser, 10.0))
 
     toggle = TxToggle(tx, period, on_cmd, off_cmd)
     toggle.start()

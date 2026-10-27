@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
-"""Las dos aplicaciones del SDR a la vez, en las dos placas.
+"""Both SDR applications running simultaneously across two boards.
 
-Solo se usan las dos aplicaciones del SDR: la app nativa (la rafaga de I/Q
-con la pantalla) y el modo de espectros (la FFT en la placa). No hay
-ninguna app de radiacion de por medio: las dos placas miden el mismo
-ambiente de RF y sus resultados tienen que coincidir.
+Only the two SDR applications are used: the native app (I/Q burst with
+on-screen UI) and spectrum mode (on-chip FFT). No radiating app is involved:
+both boards measure the same RF environment and their results must agree.
 
-Tres modos:
+Three modes:
 
-  app+spec   la app nativa en la primera placa y el modo de espectros en
-              la segunda, a la vez
-  spec+spec  el modo de espectros en las dos placas, a la vez, y la
-              comparacion de los dos perfiles (mismo ambiente, mismo
-              instante)
-  app+app    la app nativa en las dos placas, a la vez
+  app+spec   native app on the first board and spectrum mode on the second,
+              simultaneously
+  spec+spec  spectrum mode on both boards simultaneously, comparing the two
+              profiles (same environment, same instant)
+  app+app    native app on both boards simultaneously
 
-    uso: test_esdr_pair.py <modo> <puerto_1> <puerto_2>
+    usage: test_esdr_pair.py <mode> <port_1> <port_2>
 """
 import os
 import re
@@ -27,12 +25,12 @@ import time
 import tty
 import zlib
 
-# El script se usa tambien desde otro directorio.
+# Also allow running this script from another directory.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
 class Console:
-    """La consola de Minino: lineas cerradas con CR, sin tocar DTR/RTS."""
+    """The Minino console: CR-terminated lines, without touching DTR/RTS."""
 
     def __init__(self, port, baud=115200):
         self.port = port
@@ -87,18 +85,18 @@ class Console:
 
 
 # --------------------------------------------------------------------------
-# la app nativa
+# native app
 # --------------------------------------------------------------------------
 
 def run_app(port, results, key="app"):
-    """Abre la app nativa, saca rafagas, sintoniza y sale."""
+    """Opens the native app, captures bursts, tunes, and exits."""
     log = []
     try:
         con = Console(port)
         time.sleep(0.4)
         con.read(0.6)
         if not con.wait_console():
-            results[key] = {"error": "la consola no aparece"}
+            results[key] = {"error": "console did not appear"}
             con.close()
             return
         con.write("sdr_capture\r")
@@ -148,24 +146,24 @@ def run_app(port, results, key="app"):
 
 
 # --------------------------------------------------------------------------
-# el modo de espectros
+# spectrum mode
 # --------------------------------------------------------------------------
 
 def run_spec(port, results, key="spec", rate=40000000, bins=1024, seconds=12):
-    """El modo de espectros: perfiles, marcos, CRC y corte."""
+    """Spectrum mode: profiles, frames, CRC, and stop."""
     try:
         con = Console(port)
         time.sleep(0.4)
         con.read(0.6)
         if not con.wait_console():
-            results[key] = {"error": "la consola no aparece"}
+            results[key] = {"error": "console did not appear"}
             con.close()
             return
         con.write("sdr_host\r")
         time.sleep(1.2)
         banner = con.read(3.0).decode("utf-8", "replace")
         if "comes back" not in banner:
-            results[key] = {"error": "el modo host no arranca"}
+            results[key] = {"error": "host mode did not start"}
             con.close()
             return
         con.write(b"SPECINFO?\n")
@@ -174,7 +172,7 @@ def run_spec(port, results, key="spec", rate=40000000, bins=1024, seconds=12):
         profiles = re.findall(r"\[(\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\]", info)
         match = [p for p in profiles if int(p[2]) == bins and int(p[0]) == rate]
         if not match:
-            results[key] = {"error": "no hay perfil para esos bins"}
+            results[key] = {"error": "no profile for requested bins"}
             con.close()
             return
         prof = match[0]
@@ -208,12 +206,12 @@ def run_spec(port, results, key="spec", rate=40000000, bins=1024, seconds=12):
             if n == bins:
                 frames.append(list(raw[i + 28:i + 28 + n]))
             i += total
-        # el corte: una linea vacia
+        # stop stream: send an empty line
         con.write(b"\n")
         time.sleep(0.8)
         tail = con.read(2.0).decode("utf-8", "replace")
         m = re.search(r"SPECEND ([0-9 ]+)", tail)
-        # solo los marcos del perfil pedido entran en la media
+        # only frames matching the requested profile enter the average
         frames = [f for f in frames if len(f) == bins]
         acc = [0] * bins
         for f in frames:
@@ -244,11 +242,11 @@ def band_profile(profile, bins, rate, mhz_lo, mhz_hi):
 
 
 def compare_profiles(a, b, bins, rate):
-    """Los dos perfiles, banda a banda."""
+    """Compares both profiles band by band."""
     if not a or not b:
         return
-    print("\n  comparacion de los dos perfiles (el mismo ambiente, el mismo instante):")
-    print(f"   {'banda':>12} {'placa 1':>9} {'placa 2':>9} {'dif':>7}")
+    print("\n  profile comparison (same environment, same instant):")
+    print(f"   {'band':>12} {'board 1':>9} {'board 2':>9} {'diff':>7}")
     worst = 0.0
     for lo in range(-20, 20, 2):
         v1 = band_profile(a, bins, rate, lo, lo + 2)
@@ -256,7 +254,7 @@ def compare_profiles(a, b, bins, rate):
         d = v1 - v2
         worst = max(worst, abs(d))
         print(f"   {lo:+6d} MHz {v1:>9.1f} {v2:>9.1f} {d:>+7.1f}")
-    print(f"   la diferencia mayor entre las dos placas: {worst:.1f} dB")
+    print(f"   largest difference between the two boards: {worst:.1f} dB")
 
 
 def main():
@@ -267,7 +265,7 @@ def main():
     p1, p2 = sys.argv[2], sys.argv[3]
     results = {}
 
-    print(f"\n=== {mode}: {p1} y {p2} ===\n")
+    print(f"\n=== {mode}: {p1} and {p2} ===\n")
 
     if mode == "app+spec":
         t1 = threading.Thread(target=run_app, args=(p1, results))
@@ -291,17 +289,17 @@ def main():
         t1.join()
         t2.join()
     else:
-        print("modo desconocido")
+        print("unknown mode")
         sys.exit(1)
 
-    print("\n--- la app nativa ---")
-    print("  (claves:", sorted(results.keys()), ")")
+    print("\n--- native app ---")
+    print("  (keys:", sorted(results.keys()), ")")
     for key in ("app", "app1", "app2"):
         if key not in results:
             continue
         r = results[key]
         print(f"  {key}: {r}")
-    print("\n--- el modo de espectros ---")
+    print("\n--- spectrum mode ---")
     for key in ("spec", "spec1", "spec2"):
         if key not in results:
             continue
@@ -312,10 +310,10 @@ def main():
                 print(r["tb"])
             continue
         prof = r.get("profile") or []
-        print(f"  {key}: {r['frames']} marcos con CRC bueno, "
+        print(f"  {key}: {r['frames']} frames with valid CRC, "
               f"bins={r['bins']}, SPECEND [{r['specend']}]")
         if prof:
-            print(f"    pico {max(prof):.0f}  mediana {sorted(prof)[len(prof)//2]:.0f}  "
+            print(f"    peak {max(prof):.0f}  median {sorted(prof)[len(prof)//2]:.0f}  "
                   f"min {min(prof):.0f}")
     if mode == "spec+spec" and results.get("spec1") and results.get("spec2"):
         compare_profiles(results["spec1"].get("profile"),

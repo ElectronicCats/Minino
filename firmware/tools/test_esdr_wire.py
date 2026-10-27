@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""El cable, byte a byte: lo que la placa envia y lo que recibe.
+"""Wire-level inspection, byte by byte: what the board sends and receives.
 
-Solo se usan las dos aplicaciones del SDR: el modo host (que es por donde
-llega el modo de espectros) y la rafaga. El script saca el intercambio
-real del puerto y lo enseña en hexadecimal, para ver el formato de cada
-paquete.
+Only the two SDR modes are used: host mode (which also serves spectrum mode)
+and burst capture. The script dumps the actual port exchange in hexadecimal
+to inspect the format of each packet.
 
-    uso: test_esdr_wire.py <puerto>
+    usage: test_esdr_wire.py <port>
 """
 import os
 import re
@@ -19,7 +18,7 @@ import zlib
 
 
 class Wire:
-    """El puerto tal cual, sin tocar DTR/RTS (hay pilas que lo coaster)."""
+    """Raw serial port without touching DTR/RTS (some USB stacks stall on it)."""
 
     def __init__(self, port, baud=115200):
         self.fd = os.open(port, os.O_RDWR | os.O_NOCTTY | os.O_NONBLOCK)
@@ -53,8 +52,8 @@ class Wire:
         return out
 
     def read_line(self, seconds=10.0):
-        """Lee una linea. Devuelve la linea y lo que queda en el puerto: la
-        carga binaria va justo detras del LF y no se puede perder."""
+        """Reads one line. Returns the line and any remaining bytes on the port:
+        the binary payload immediately follows the LF and must not be lost."""
         out = b""
         end = time.perf_counter() + seconds
         while time.perf_counter() < end:
@@ -68,8 +67,8 @@ class Wire:
         return out.decode("utf-8", "replace"), b""
 
     def wait_console(self, tries=8):
-        """Espera al prompt. Si la placa se quedo en el modo host, una
-        linea vacia y RELEASE la sacan de ahi."""
+        """Waits for the prompt. If the board was left in host mode, an empty
+        line and RELEASE return it to the console."""
         seen = ""
         for _ in range(tries):
             seen += self.read(1.0).decode("utf-8", "replace")
@@ -97,7 +96,7 @@ def hexdump(data, offset=0, length=48):
         text = "".join(chr(b) if 32 <= b < 127 else "." for b in chunk)
         lines.append(f"   {offset + i:06x}  {hexa:<47}  {text}")
     if len(data) > length:
-        lines.append(f"   ... ({len(data)} bytes en total)")
+        lines.append(f"   ... ({len(data)} bytes total)")
     return "\n".join(lines)
 
 
@@ -107,11 +106,11 @@ def main():
     time.sleep(0.5)
     w.read(1.0)
 
-    print(f"\n=== El cable de la placa ({port}) ===\n")
+    print(f"\n=== Board wire trace ({port}) ===\n")
 
-    # ---------------------------------------------------------- la entrega
+    # ---------------------------------------------------------- hand-over
     if not w.wait_console():
-        print("la consola no aparece")
+        print("console did not appear")
         sys.exit(1)
     banner = ""
     for _ in range(3):
@@ -121,17 +120,17 @@ def main():
         if "comes back" in banner:
             break
     if "comes back" not in banner:
-        print("el modo host no arranca:", banner[-200:])
+        print("host mode did not start:", banner[-200:])
         sys.exit(1)
-    print("[1] la entrega del puerto (la consola se queda muda)")
+    print("[1] port hand-over (console goes silent)")
     for line in banner.splitlines():
         if line.strip():
             print("   " + line)
-    print("   (todo lo que viene de la placa a partir de aqui va sin logs:")
-    print("    el nivel maestro baja a ESP_LOG_NONE durante la sesion)")
+    print("   (all board output from here on has logging muted:")
+    print("    the master log level drops to ESP_LOG_NONE during the session)")
 
-    # ------------------------------------------------------- el handshake
-    print("\n[2] el handshake (texto)")
+    # ------------------------------------------------------- handshake
+    print("\n[2] handshake (text)")
     for cmd in ("SYNC 1792629170881", "INFO", "CAPS", "RANGE?", "FREQ 2412"):
         w.write(cmd + "\n")
         time.sleep(0.3)
@@ -139,8 +138,8 @@ def main():
         print(f"   -> {cmd}")
         print(f"   <- {line}")
 
-    # ------------------------------------------------------- la rafaga
-    print("\n[3] la rafaga (CAP20): la cabecera y el comienzo de la carga")
+    # ------------------------------------------------------- burst
+    print("\n[3] burst (CAP20): header and start of payload")
     w.write("CAP20 4096 0\n")
     time.sleep(0.3)
     header, rest = w.read_line(5.0)
@@ -156,15 +155,15 @@ def main():
             chunk = w.read(0.5)
             if chunk:
                 data += chunk
-        print(f"   la carga son {len(data)} bytes para {n} muestras "
-              f"(20 bits por par, I en los bits 0-9 y Q en los 10-19)")
-        print(f"   el CRC32 (zlib) de la carga: "
-              f"{zlib.crc32(data):08x}  (el que anuncia la cabecera: {m.group(2)})")
-        print("   los primeros bytes de la carga:")
+        print(f"   payload is {len(data)} bytes for {n} samples "
+              f"(20 bits per pair, I in bits 0-9 and Q in bits 10-19)")
+        print(f"   payload CRC32 (zlib): "
+              f"{zlib.crc32(data):08x}  (advertised by header: {m.group(2)})")
+        print("   first bytes of payload:")
         print(hexdump(data))
 
-    # ------------------------------------------------------- el espectro
-    print("\n[4] el modo de espectros (SPEC): la cabecera y un marco SPC1")
+    # ------------------------------------------------------- spectrum
+    print("\n[4] spectrum mode (SPEC): header and one SPC1 frame")
     w.write("SPECINFO?\n")
     time.sleep(0.3)
     info, _ = w.read_line(5.0)
@@ -175,7 +174,7 @@ def main():
     header, rest = w.read_line(5.0)
     print(f"   -> SPEC 0 1 1 0 1 1024")
     print(f"   <- {header}")
-    # un marco entero
+    # one full frame
     raw = rest
     end = time.perf_counter() + 5
     while time.perf_counter() < end and len(raw) < 2048:
@@ -187,19 +186,19 @@ def main():
         bins = 1 << raw[k + 26]
         total = 28 + bins + 4
         frame = raw[k:k + total]
-        print(f"   el marco SPC1: {total} bytes ({bins} bins)")
-        print("   la cabecera (28 bytes):")
+        print(f"   SPC1 frame: {total} bytes ({bins} bins)")
+        print("   header (28 bytes):")
         print(hexdump(frame, 0, 28))
-        print("   las primeras bins:")
+        print("   first bins:")
         print(hexdump(frame[28:], 28, 32))
-        print("   el CRC32 de la cabecera y las bins: "
+        print("   CRC32 of header and bins: "
               f"{zlib.crc32(frame[:-4]):08x}  "
-              f"(el que lleva el marco: {int.from_bytes(frame[-4:], 'little'):08x})")
+              f"(frame CRC: {int.from_bytes(frame[-4:], 'little'):08x})")
     else:
-        print("   no se ha podido separar un marco del flujo")
+        print("   could not extract a frame from the stream")
 
-    # ------------------------------------------------------- el corte
-    print("\n[5] el corte (una linea vacia)")
+    # ------------------------------------------------------- stop
+    print("\n[5] stop stream (empty line)")
     w.write("\n")
     time.sleep(0.8)
     tail = w.read(2.0)
