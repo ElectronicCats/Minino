@@ -1,21 +1,21 @@
-# El cable del SDR: qué se envía, cómo lo recibe Spectrum y dónde se ve
+# The SDR Wire Protocol: What Is Sent, How Spectrum Receives It, and Where It Appears
 
-> Los dos paquetes que viajan entre el host y la placa, con los bytes
-> reales que se han medido en las dos Minino, y dónde acaba cada cosa en
-> las pantallas.
+> The two packet types exchanged between the host and the board, including
+> the real byte sequences captured on both Minino units and where each stream
+> is rendered on screen.
 >
-> - **Fecha:** 2026-10-21
-> - **Placas:** ESP32-C6 rev v0.2 `48:f6:ee:c2:a2:14` y rev v0.1
+> - **Date:** 2026-10-21
+> - **Boards:** ESP32-C6 rev v0.2 `48:f6:ee:c2:a2:14` and rev v0.1
 >   `7c:2c:67:42:84:a0`
-> - **Aplicaciones:** solo las dos del SDR, la app nativa (la ráfaga) y el
->   modo de espectros. Ninguna app de radiación.
-> - **Documentos hermanos:** los resultados de las dos aplicaciones
->   [`spectrum-SDR-results.md`](./spectrum-SDR-results.md),
->   [`sdr-resultados.md`](./sdr-resultados.md) (el informe completo),
->   [`sdr-guia.md`](./sdr-guia.md) (uso) y
->   [`esp-sdr-integration.md`](./esp-sdr-integration.md) (el diseño)
+> - **Applications:** Only the two SDR modes: the native app (burst capture)
+>   and spectrum mode. No radiating applications active.
+> - **Related Documents:** Results for both applications in
+>   [`spectrum-SDR-results.md`](./spectrum-SDR-results.md), full test report in
+>   [`sdr-resultados.md`](./sdr-resultados.md), user guide in
+>   [`sdr-guia.md`](./sdr-guia.md), and design reference in
+>   [`esp-sdr-integration.md`](./esp-sdr-integration.md)
 
-Para sacar el intercambio real:
+To capture the live wire exchange:
 
 ```bash
 python3 tools/test_esdr_wire.py /dev/ttyACM0
@@ -23,17 +23,17 @@ python3 tools/test_esdr_wire.py /dev/ttyACM0
 
 ---
 
-## 1. El transporte
+## 1. Transport Layer
 
-El canal es el **USB Serial/JTAG** del C6, que el driver de Minino
-presenta como un puerto serie (CDC-ACM). Tres cosas hay que tener en
-cuenta:
+The transport channel is the ESP32-C6 **USB Serial/JTAG** peripheral, exposed by
+the Minino driver as a virtual serial port (CDC-ACM). Three implementation
+details govern its behavior:
 
-1. **La entrega del puerto la hace la consola.** El REPL hace eco de lo
-   que lee (linenoise) y el protocolo necesita respuestas limpias, así
-   que el comando `sdr_host` se ejecuta *dentro* de la tarea de la
-   consola: cuando empieza la sesión, la consola está entre dos lecturas
-   y el puerto tiene un solo lector.
+1. **Port handover is performed by the console task.** The REPL echoes incoming
+   characters (`linenoise`), whereas the wire protocol requires clean responses.
+   Therefore, the `sdr_host` command executes *inside* the console task: when
+   the session starts, the console is paused between two reads so the serial
+   port has a single reader.
 
    ```
    minino> sdr_host
@@ -42,27 +42,29 @@ cuenta:
    The console comes back when the viewer sends RELEASE, or type MININO.
    ```
 
-2. **Durante la sesión no sale ni un log.** El nivel maestro baja a
-   `ESP_LOG_NONE`: una línea de log en mitad de una carga binaria la
-   corrompe. El radio se sube *antes* de silenciar el log, porque el
-   driver de Wi-Fi imprime desde su propio ROM y no pasa por `esp_log`.
+2. **All logging is silenced during an active session.** The master log level is
+   set to `ESP_LOG_NONE`: a single log line emitted in the middle of a binary
+   payload would corrupt the frame. The radio is initialized *before* silencing
+   the log because the Wi-Fi driver prints directly from ROM and bypasses
+   `esp_log`.
 
-3. **La carga va a trozos de 64 bytes.** El anillo del USB Serial/JTAG
-   son 256 bytes y `xRingbufferSend()` no acepta un bloque mayor: una
-   carga de 40 950 bytes en un solo trozo se queda esperando un hueco que
-   no llega y no escribe nada. Por eso `port_write()` trocea
+3. **Payloads are transmitted in 64-byte chunks.** The USB Serial/JTAG ring
+   buffer is 256 bytes wide, and `xRingbufferSend()` rejects blocks larger than
+   the ring buffer capacity: attempting to send a 40,950-byte payload in a
+   single call waits indefinitely for space that never exists and writes
+   nothing. Consequently, `port_write()` splits transfers into chunks
    (`ESDR_TX_CHUNK 64`).
 
-La línea de protocolo termina en **LF**; la línea de **consola** (el
-`sdr_host`, el `sdr_capture`) termina en **CR**.
+Protocol lines end with **LF**; **console** commands (`sdr_host`,
+`sdr_capture`) end with **CR**.
 
 ---
 
-## 2. El paquete de la ráfaga (el modo "burst" del visor)
+## 2. Burst Capture Packet (Viewer "Burst" Mode)
 
-### 2.1 El handshake, en texto
+### 2.1 Text Handshake
 
-Todo lo de esta fase son líneas ASCII terminadas en LF:
+All commands and responses during this phase are LF-terminated ASCII lines:
 
 ```
 -> SYNC 1792629170881
@@ -77,67 +79,67 @@ Todo lo de esta fase son líneas ASCII terminadas en LF:
 <- OK
 ```
 
-| Respuesta | Qué le dice al visor |
+| Response | Meaning to the Viewer |
 |---|---|
-| `SYNC <nonce>` | el eco del nonce: la placa está viva y el puerto no tiene basura |
-| `C6SDR 6 burst 16380` | la familia del chip y el tamaño máximo de la ráfaga (el visor exige entre 4096 y 16384) |
-| `CAPS ...` | las capacidades. El visor esconde los controles que **no** aparecen aquí: `GAIN`, `ALPF` y `GPIO` no se anuncian, así que sus controles no seVEN |
-| `RANGE 2412 2472 1` | el rango de sintonía y el paso (los canales de Wi-Fi: el motor de dump toma prestado la PHY del Wi-Fi) |
-| `OK` | la sintonía ha hecho |
+| `SYNC <nonce>` | Echoes the nonce: confirms the board is responsive and the serial buffer is clean |
+| `C6SDR 6 burst 16380` | Chip family and maximum burst sample count (the viewer requires a value between 4096 and 16384) |
+| `CAPS ...` | Capability tokens. The viewer hides UI controls for capabilities **not** listed here: `GAIN`, `ALPF`, and `GPIO` are omitted, so their controls remain hidden |
+| `RANGE 2412 2472 1` | Tuning range in MHz and step size (Wi-Fi channels: the dump engine borrows the Wi-Fi PHY) |
+| `OK` | Tuning succeeded |
 
-### 2.2 La cabecera de la captura
+### 2.2 Capture Header
 
 ```
 -> CAP20 4096 0
 <- DATA 4096 31145255 65
 ```
 
-`DATA <muestras> <crc32> <micros>`:
+`DATA <samples> <crc32> <micros>`:
 
-| Campo | Valor | Qué es |
+| Field | Value | Description |
 |---|---|---|
-| muestras | 4096 | los pares I/Q de la ráfaga |
-| crc32 | `31145255` | el CRC32 (zlib) de la carga, en hexadecimal |
-| micros | 65 | lo que tardó la captura en el chip |
+| samples | 4096 | Number of I/Q sample pairs in the burst |
+| crc32 | `31145255` | Hexadecimal CRC32 (zlib) checksum of the binary payload |
+| micros | 65 | On-chip capture duration in microseconds |
 
-El visor lo comprueba con una expresión regular exacta
-(`/^DATA (\d+) ([0-9a-fA-F]{1,8}) (\d+)$/`) y luego verifica el CRC.
+The viewer validates this header against a strict regular expression
+(`/^DATA (\d+) ([0-9a-fA-F]{1,8}) (\d+)$/`) and then verifies the payload CRC.
 
-### 2.3 La carga
+### 2.3 Binary Payload
 
-| Formato | Bytes por par | Cómo va |
+| Format | Bytes per Pair | Packing Layout |
 |---|---|---|
-| `CAP16` | 2 | I en 8 bits con signo y luego Q en 8 bits con signo |
-| `CAP20` | 2,5 | 20 bits por par, el bit menos significativo primero: **I en los bits 0-9 y Q en los 10-19** |
+| `CAP16` | 2 | Signed 8-bit I followed by signed 8-bit Q |
+| `CAP20` | 2.5 | 20 bits per pair, least significant bit first: **I in bits 0-9 and Q in bits 10-19** |
 
-La palabra cruda del motor de dump lleva I en los bits 9-0 y Q en los
-19-10, así que el `CAP20` es la palabra tal cual:
+The raw 32-bit word from the hardware dump engine places I in bits 9-0 and Q in
+bits 19-10, so `CAP20` packs the lower 20 bits directly:
 
 ```
-   31        28 27        20 19        10 9         0
-  +------------+------------+------------+------------+
-  |  (usado)  | índice de |     Q      |     I      |
-  |            | ganancia  | (10 bits)  | (10 bits)  |
-  +------------+------------+------------+------------+
+    31        28 27        20 19        10 9         0
+   +------------+------------+------------+------------+
+   |  (unused)  |    gain    |     Q      |     I      |
+   |            |   index    | (10 bits)  | (10 bits)  |
+   +------------+------------+------------+------------+
 ```
 
-Los primeros bytes de una carga `CAP20` de 4096 muestras (10 240 bytes),
-tal cual los manda la placa:
+First bytes of a 4096-sample `CAP20` payload (10,240 bytes total) as sent by
+board `48:f6:ee`:
 
 ```
 000000  5a f8 3f 86 fd 70 80 7f 07 f3 72 08 4f 06 f2 52  Z.?..p....r.O..R
 000010  58 af 84 f9 55 b8 bf 06 fe 80 08 00 c9 01 8d f4  X...U...........
 000020  ef 47 fa 6b 54 ef c5 f3 5d 7c 3f 06 fe 68 40 60  .G.kT...]|?..h@`
-... (10240 bytes en total)
+... (10240 bytes total)
 ```
 
-Y el CRC32 que anuncia la cabecera es el de esa carga:
+And the CRC32 advertised in the header matches the payload checksum:
 
 ```
-el CRC32 (zlib) de la carga: 31145255   (el que anuncia la cabecera: 31145255)
+payload CRC32 (zlib): 31145255   (advertised in header: 31145255)
 ```
 
-La otra placa (`7c:2c:67`), con la misma petición:
+The second board (`7c:2c:67`), given the identical request:
 
 ```
 -> CAP20 4096 0
@@ -145,27 +147,26 @@ La otra placa (`7c:2c:67`), con la misma petición:
 000000  31 7c d1 c3 14 2d dc c0 00 05 ee 17 f0 bd 02 dd  1|...-..........
 000010  b7 70 be 15 f5 bf 01 c0 1b 09 68 01 41 10 10 dc  .p........h.A...
 000020  00 81 0e 11 08 41 c1 11 24 20 d1 43 11 57 f8 50  .....A..$ .C.W.P
-... (10240 bytes en total)
-el CRC32 (zlib) de la carga: 1a58a795  (el que anuncia la cabecera: 1a58a795)
+... (10240 bytes total)
+payload CRC32 (zlib): 1a58a795   (advertised in header: 1a58a795)
 ```
 
-Mismo formato, mismo ancho, otro contenido (el del aire que había en
-ese momento) y el CRC cuadra en las dos.
+Same format and payload length, different live RF samples, and matching CRC32
+on both boards.
 
-> El CRC32 es el de zlib (polinomio y convenciones iguales), pero
-> calculado con una **tabla de 16 entradas** (nibble a nibble): 64 bytes
-> de flash en vez de los 1024 de la tabla completa, que en una build que
-> pelea por cada byte de heap es la diferencia.
+> The CRC32 uses the standard zlib polynomial and conventions, computed via a
+> **16-entry lookup table** (nibble by nibble): 64 bytes of flash instead of a
+> 1024-byte table, saving precious memory in a tight build.
 
 ---
 
-## 3. El paquete del espectro (el modo "On-Chip Spectrum")
+## 3. Spectrum Packet ("On-Chip Spectrum" Mode)
 
-Aquí la placa no manda muestras: **calcula la FFT** y manda códigos de
-potencia. Es lo que permite al visor refrescar a decenas de cuadros por
-segundo en vez de a diez.
+In this mode, the board does not send raw time-domain samples: **it computes
+the FFT on-chip** and transmits power bin codes. This allows the web viewer to
+refresh at dozens of frames per second instead of around ten.
 
-### 3.1 La cabecera
+### 3.1 Stream Header
 
 ```
 -> SPECINFO?
@@ -174,19 +175,19 @@ segundo en vez de a diez.
 <- SPEC 1024 40000000 1024 2412
 ```
 
-`SPECINFO` da los **12 perfiles**: las tres tasas del C6 (80, 40 y
-16 MS/s) × los cuatro tamaños de FFT (256, 512, 1024 y 2048 bins), con
-el código de tasa, el paso, las unidades, el detector y el tamaño.
+`SPECINFO` advertises all **12 profiles**: the three ESP32-C6 sample rates (80,
+40, and 16 MS/s) x four FFT sizes (256, 512, 1024, and 2048 bins), along with
+rate code, step, units, detector mode, and bin count.
 
-`SPEC <ms> <paso> <uds> <det> <tasa> <bins>` arranca la corriente y la
-placa contesta con `SPEC <bins> <tasa> <bins> <mhz>`: los bins, la tasa
-en Hz, los bins otra vez y la frecuencia a la que está sintonizada.
+`SPEC <ms> <step> <units> <det> <rate> <bins>` starts the stream, and the board
+replies with `SPEC <bins> <rate_hz> <bins> <mhz>`: bin count, sample rate in
+Hz, bin count again, and the tuned center frequency in MHz.
 
-### 3.2 El marco `SPC1`
+### 3.2 The `SPC1` Frame
 
-Cada cuadro son 28 bytes de cabecera, las bins en orden natural y 4
-bytes de CRC32. Bytes reales de un marco de 1024 bins (1056 bytes en
-total):
+Each frame consists of a 28-byte header, the FFT bins in natural frequency
+order, and a 4-byte CRC32 trailer. Real bytes captured from a 1024-bin frame
+(1,056 bytes total):
 
 ```
 000000  53 50 43 31 00 00 00 00 00 6d d6 3e 00 00 00 00  SPC1.....m.>....
@@ -195,190 +196,192 @@ total):
 00002c  50 50 49 3e 48 45 47 47 3b 46 4a 4a 4e 47 37 39  PPI>HEGG;FJJNG79
 ```
 
-| Offset | Bytes | Campo |
+| Offset | Bytes | Field |
 |---|---|---|
-| 0 | 4 | la firma `SPC1` |
-| 4 | 4 | número de cuadro |
-| 8 | 8 | índice de la primera muestra |
-| 16 | 4 | muestras que abarca el cuadro (1024) |
-| 20 | 2 | FFTs que representa (1) |
-| 22 | 1 | banderas: bit 0 detector de máximo, **bit 3 hay huecos entre capturas** (`08`) |
-| 23 | 1 | metadatos de ganancia (`4e` = 78) |
-| 24 | 2 | cuadros perdidos acumulados (`0000`) |
-| 26 | 1 | log2 de las bins (`0a` = 10 → 1024) |
-| 27 | 1 | multiplicador del código en dB (`02`) |
-| 28 | N | las bins, en orden natural, un byte cada una |
-| 28+N | 4 | CRC32 de la cabecera y las bins |
+| 0 | 4 | `SPC1` magic signature |
+| 4 | 4 | Frame sequence number |
+| 8 | 8 | Index of the first sample |
+| 16 | 4 | Number of samples spanned by the frame (1024) |
+| 20 | 2 | Number of aggregated FFTs (1) |
+| 22 | 1 | Flags: bit 0 max detector, **bit 3 gaps between captures** (`08`) |
+| 23 | 1 | Gain metadata (`4e` = 78) |
+| 24 | 2 | Cumulative dropped frames (`0000`) |
+| 26 | 1 | `log2` of bin count (`0a` = 10 -> 1024) |
+| 27 | 1 | Power code dB multiplier (`02`) |
+| 28 | N | FFT bins in natural order, 1 byte per bin |
+| 28+N | 4 | CRC32 of the header plus bins |
 
-El CRC32, comprobado:
+Verified CRC32:
 
 ```
-el CRC32 de la cabecera y las bins: ce794789  (el que lleva el marco: ce794789)
+header + bins CRC32: ce794789   (frame trailer: ce794789)
 ```
 
-El mismo marco en la otra placa (`7c:2c:67`):
+The corresponding frame on the second board (`7c:2c:67`):
 
 ```
 000000  53 50 43 31 00 00 00 00 00 00 00 00 00 00 00 00  SPC1............
 000010  00 04 00 00 01 00 08 4e 00 00 0a 02 0c 48 00 00  .......N.....H..
 00001c  0c 48 00 00 00 57 4d c0 d7 4d 4d 3e ff 00 43 00  .H...WM..MM>..C.
 00002c  4d 4a 9a ff ff 00 25 45 45 40 4a 39 3f ff 40 00  MJ....%EE@J9?.@.
-el CRC32 de la cabecera y las bins: 5367f516  (el que lleva el marco: 5367f516)
+header + bins CRC32: 5367f516   (frame trailer: 5367f516)
 ```
 
-La firma, los tamaños, el log2 de las bins (`0a`), el multiplicador
-(`02`) y el bit de los huecos (`08`) son los mismos en las dos placas.
+The signature, sizes, `log2` bin count (`0a`), multiplier (`02`), and gap flag
+bit (`08`) are identical across both boards.
 
-**El código de cada bin** es `20*log10(potencia)` en el dominio Q15,
-acotado a 0..255, y el visor lo multiplica por el byte 27 (2) para
-sacarlo en dB.
+**Each bin code** represents `20*log10(power)` in the Q15 domain, clamped to
+`0..255`, and the viewer multiplies it by byte 27 (`2`) to render the value in
+dB.
 
-### 3.3 El corte
+### 3.3 Stream Termination
 
-Una línea vacía corta la corriente (es lo que hace el visor al cerrar) y
-la placa responde con el resumen:
+An empty line terminates the spectrum stream (sent by the viewer when closing
+or stopping), and the board replies with the stream summary:
 
 ```
--> (línea vacía)
+-> (empty line)
 <- SPECEND 0 0 61 62464 27109 0 0 61 0 0 61 1
 ```
 
-| Campo | Valor | Qué es |
+| Field | Value | Description |
 |---|---|---|
-| status | 0 | parada normal |
-| detail | 0 | sin error |
-| units | 61 | las unidades de captura entregadas |
-| pairs | 62 464 | los pares de muestras entregados |
-| elapsed_us | 27 109 | el tiempo de la corriente |
-| late_max | 0 | el retraso máximo |
-| work_max_cycles | 0 | el trabajo máximo por ciclo |
-| frames | 61 | los marcos enviados |
-| drops | 0 | los cuadros perdidos |
-| abandoned | 0 | las capturas abandonadas |
-| ffts | 61 | las FFTs calculadas |
-| stopped_by_host | 1 | el host paró la corriente |
+| status | 0 | Normal stop |
+| detail | 0 | No error |
+| units | 61 | Capture units delivered |
+| pairs | 62,464 | Sample pairs processed |
+| elapsed_us | 27,109 | Stream duration |
+| late_max | 0 | Maximum scheduling lateness |
+| work_max_cycles | 0 | Maximum processing cycles per frame |
+| frames | 61 | Total frames sent |
+| drops | 0 | Dropped frames |
+| abandoned | 0 | Abandoned captures |
+| ffts | 61 | Total FFTs computed |
+| stopped_by_host | 1 | Stream stopped by host request |
 
 ---
 
-## 4. Cómo los recibe Spectrum
+## 4. How the Firmware Processes Commands
 
-### 4.1 El parser
+### 4.1 Command Parser
 
-El comando llega como una línea (LF) y se parsea con las reglas del
-firmware del ESPARGOS: un comando con basura detrás se rechaza, una línea
-vacía no es un comando. Cada comando tiene su respuesta; lo que no se
-reconoce contesta `ERR command`.
+Each command arrives as an LF-terminated line and is parsed according to the
+ESPARGOS firmware rules: a command with trailing garbage is rejected, and an
+empty line is not treated as a command. Every valid command produces a
+response; unrecognized commands return `ERR command`.
 
-El `SPEC` es la excepción: se pasa la línea entera al módulo de
-espectros, que valida sus argumentos:
+`SPEC` is passed as a full line to the spectrum module, which validates its
+parameters:
 
 ```
-SPEC <ms> <paso> <uds> <det> <tasa> <bins> [stats]
+SPEC <ms> <step> <units> <det> <rate> <bins> [stats]
 ```
 
-| Regla | Por qué |
+| Rule | Reason |
 |---|---|
-| el paso tiene que ser 1 | el motor de dump no admite otro |
-| las unidades, de 1 a 8 | cuántos pares de muestras por FFT |
-| el detector, 0 o 1 | máximo o media |
-| la tasa, uno de los códigos del C6 | 0 = 80 MS/s, 1 = 40 MS/s, 6 = 16 MS/s |
-| las bins, de 256 a 2048 y potencia de dos | el máximo de la FFT del chip |
+| `step` must be 1 | The hardware dump engine does not support other step values |
+| `units` from 1 to 8 | Number of FFT windows aggregated per frame |
+| `det` is 0 or 1 | Peak/max (0) or average (1) detector |
+| `rate` must match an ESP32-C6 rate code | 0 = 80 MS/s, 1 = 40 MS/s, 6 = 16 MS/s |
+| `bins` from 256 to 2048 (power of two) | On-chip FFT size limits |
 
-Un `SPEC` con argumentos malos contesta `ERR spec_args`, y si no hay
-memoria para el banco de trabajo, `ERR spectrum_memory`.
+A `SPEC` command with invalid arguments returns `ERR spec_args`, and if heap
+allocation for the FFT workspace fails, it returns `ERR spectrum_memory`.
 
-### 4.2 La FFT de la placa
+### 4.2 On-Chip FFT Implementation
 
-- **Radix-2 en tiempo decreciente** (DIF) con la entrada permutada por
-  inversión de bits.
-- **Cada mariposa divide entre dos**: sin eso un tono fuerte saturaría
-  el Q15 a la primera etapa. La ganancia total de la transformada es 1/n.
-- La salida va en **orden natural** (no bit-reversed): un espectro con
-  las bins en orden equivocado parece plausible en pantalla y no es la
-  señal. Lo comprueba el test de host, comparando con un DFT directo.
+- **Decimation-in-Frequency (DIF) Radix-2** with bit-reversed output permutation.
+- **Every butterfly stage divides by two**: without per-stage scaling, a strong
+  tone would saturate Q15 arithmetic in the first stage. Overall transform gain
+  is $1/n$.
+- Output bins are emitted in **natural frequency order** (DC/LO at bin 0,
+  followed by positive and negative offsets as expected by the viewer): a
+  bit-reversed spectrum looks deceptively plausible on screen while representing
+  scrambled frequencies. Host unit tests verify the output against a direct
+  reference DFT.
 
-### 4.3 La cadencia
+### 4.3 Frame Cadence and Watchdog Yielding
 
-La corriente no es continua: entre captura y captura hay que rearmar el
-motor de dump, y por eso los marcos llevan el **bit 3 de las banderas**
-puesto (hay huecos entre capturas). Es lo que el visor enseña como
-*"Reception has gaps between snapshots"*.
+The stream is not gapless: between captures, the hardware dump engine must be
+re-armed, which is why frames set **bit 3 of the flags byte** (indicating gaps
+between captures). The web viewer displays this as *"Reception has gaps between
+snapshots"*.
 
-El bucle cede el paso a la tarea idle cada 20 ms: la tarea idle es la
-que alimenta el watchdog de tareas, así que sin cederle el paso un bucle
-de espectros largo lo dispara y la placa se reinicia.
+The streaming loop yields to the FreeRTOS idle task every 20 ms: the idle task
+feeds the task watchdog timer, so failing to yield during a long spectrum
+session would trigger a watchdog reset.
 
-Medido en las dos placas (40 MS/s, 1024 bins): **1 399 a 1 430 marcos en
-12 s**, con el CRC de todos ellos bueno, `drops` 0 y `abandoned` 0.
+Measured on both boards (40 MS/s, 1024 bins): **1,399 to 1,430 frames in
+12 s**, with 100% valid CRCs, `drops = 0`, and `abandoned = 0`.
 
 ---
 
-## 5. Dónde se ve cada cosa
+## 5. Where Each Stream Appears
 
-### 5.1 El visor de ESPARGOS (<https://espargos.net/espsdr/app/>)
+### 5.1 ESPARGOS Web Viewer (<https://espargos.net/espsdr/app/>)
 
-Dos modos, y cada uno consume un paquete distinto:
+The viewer provides two operating modes, each consuming one of the two packet
+formats:
 
-| Modo del visor | Qué pide | Qué ve |
+| Viewer Mode | Command Sent | What Is Displayed |
 |---|---|---|
-| **Ráfaga** (el de las cascadas) | `CAP16` / `CAP20` | el navegador calcula la FFT de las muestras y las dibuja: la cascada de spectra y la vista de la I/Q |
-| **On-Chip Spectrum** | `SPEC` | el espectro que ya viene calculado en la placa, con sus códigos de potencia: se refresca a decenas de cuadros por segundo |
+| **Burst** (waterfall mode) | `CAP16` / `CAP20` | The browser computes the FFT from raw I/Q samples and renders the spectrum waterfall and time-domain I/Q plots |
+| **On-Chip Spectrum** | `SPEC` | The pre-computed on-chip FFT spectrum using 1-byte power codes, refreshing at dozens of frames per second |
 
-El handshake es el de la §2.1 y el visor elige el perfil del `SPECINFO`
-que coincide con las bins que quiere. Cuando cierra, manda `RELEASE` y
-la consola de Minino vuelve.
+The handshake follows Section 2.1, and the viewer selects the `SPECINFO`
+profile matching the requested bin count. Upon closing, it sends `RELEASE` and
+the Minino serial console is restored.
 
-### 5.2 La app nativa de Minino (`Applications > SDR`)
+### 5.2 Minino Native App (`Applications > SDR`)
 
-La pantalla OLED (128x64) tiene esto:
+The 128x64 OLED screen displays:
 
-| Página | Qué pone |
+| Line / Region | Content |
 |---|---|
-| 0 (invertida) | `MININO SDR [IDL]` (o `[RX]` mientras corre) |
-| 2 | `FREQ: 2412 MHz` |
-| 3 | `RATE: 80 MS/s IQ` |
-| 4 | `CAPS: 31     PKTS` (las ráfagas capturadas) |
-| y=42..52 | el medidor de nivel: un marco con la barra de RSSI dentro |
-| 7 | `^v:Tune <:Exit` |
+| Page 0 (inverted) | `MININO SDR [IDL]` (or `[RX]` while capturing) |
+| Page 2 | `FREQ: 2412 MHz` |
+| Page 3 | `RATE: 80 MS/s IQ` |
+| Page 4 | `CAPS: 31     PKTS` (captured burst count) |
+| y=42..52 | Signal level meter: a rectangular frame with an internal RSSI bar |
+| Page 7 | `^v:Tune <:Exit` |
 
-Y después de cada captura, la línea 6 pone el resultado:
+After each capture, line 6 shows the capture summary:
 
 ```
 CAP 16380 smp 218 us
 ```
 
-y la 7, el destino: `iQ saved to SD` o `no SD: capture only`.
+and line 7 shows the storage result: `iQ saved to SD` or `no SD: capture only`.
 
-Los botones: **UP/DOWN** sintonían ±5 MHz (de 2412 a 2472), **RIGHT**
-captura y **LEFT** sale (y devuelve la radio a Minino).
+Button controls: **UP/DOWN** tune in ±5 MHz steps (2412 to 2472 MHz), **RIGHT**
+triggers a capture, and **LEFT** exits (releasing the radio back to Minino).
 
-### 5.3 El analizador de RF de Minino (`Applications > Spectrum`)
+### 5.3 Minino RF Analyzer (`Applications > Spectrum`)
 
-Ojo, esta **no** es la del SDR: es la app de siempre de Minino, que
-pinta la potencia **por canal** con el RSSI que da el driver de Wi-Fi
-(la pantalla lista canal, dB y umbral, con el gráfico de la escala
-−90/−70/−50/−30, la proximidad y los drones). La del SDR es la de
-§5.2: la FFT de verdad, hecha con el motor de dump.
+Note that `Applications > Spectrum` is **not** the SDR dump app: it is Minino's
+promiscuous Wi-Fi/Zigbee channel analyzer, which plots **per-channel** power
+using packet RSSI from the Wi-Fi driver (displaying channel, dBm, threshold,
+the -90/-70/-50/-30 scale, Fox Hunt proximity, and DroneID alerts). The true
+wideband I/Q FFT engine is the SDR module described in Section 5.2.
 
 ---
 
-## 6. Los resultados, solo con estas dos aplicaciones
+## 6. Results Using Exclusively These Two SDR Modes
 
-| Prueba | `48:f6:ee` | `7c:2c:67` |
+| Suite | `48:f6:ee` | `7c:2c:67` |
 |---|---|---|
-| `tools/test_esdr_web.py` (el protocolo del visor) | 56/56 | 56/56 |
-| `tools/test_esdr_spec.py` (el modo de espectros) | 28/28 | 28/28 |
-| `tools/test_esdr_app.py` (la app nativa) | 16/16 | 16/16 |
+| `tools/test_esdr_web.py` (viewer protocol) | 56/56 | 56/56 |
+| `tools/test_esdr_spec.py` (spectrum mode) | 28/28 | 28/28 |
+| `tools/test_esdr_app.py` (native app) | 16/16 | 16/16 |
 
-Y las dos aplicaciones a la vez en las dos placas
-(`tools/test_esdr_pair.py`):
+Simultaneous dual-board runs (`tools/test_esdr_pair.py`):
 
-| Asignación | Placa A | Placa B | Resultado |
+| Assignment | Board A | Board B | Result |
 |---|---|---|---|
-| 1 | app nativa | espectros | app: 3 ráfagas de 16 380 palabras (218, 217, 218 us) · espectros: 1 416 marcos con CRC bueno |
-| 2 | espectros | app nativa | espectros: 1 399 marcos · app: 3 ráfagas (217, 218, 218 us) |
-| 3 | app nativa | app nativa | 3 ráfagas cada una (una de 557 us) |
-| 4 | espectros | espectros | 1 413 y 1 402 marcos, con los dos perfiles comparados banda a banda |
+| 1 | Native app | Spectrum | App: 3 bursts of 16,380 words (218, 217, 218 us); Spectrum: 1,416 frames with valid CRC |
+| 2 | Spectrum | Native app | Spectrum: 1,399 frames; App: 3 bursts (217, 218, 218 us) |
+| 3 | Native app | Native app | 3 bursts on each board (one took 557 us) |
+| 4 | Spectrum | Spectrum | 1,413 and 1,402 frames, with both profiles compared band by band |
 
-El detalle de todo esto, con las tablas completas, está en
+Full details and complete tables are available in
 [`sdr-resultados.md`](./sdr-resultados.md).

@@ -1,12 +1,12 @@
-# Detector de vigilancia para Minino — plan de implementación
+# Surveillance Detector for Minino - Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Añadir a Minino un detector pasivo de infraestructura de vigilancia (cámaras Flock/ALPR, body cams, rastreadores, cámaras IP, drones, skimmers) que alerta localmente y registra cada detección con GPS en microSD.
+**Goal:** Add a passive surveillance infrastructure detector to Minino (Flock/ALPR cameras, body cams, trackers, IP cameras, drones, skimmers) that alerts locally and logs every detection with GPS coordinates to microSD.
 
-**Architecture:** Un componente `surveillance_detect` en C puro con los matchers y el motor de score aislados de todo hardware —para que corran como tests en host Linux— más una app de menú que solo hace UI y persistencia. El callback promiscuo de WiFi y el de GAP de BLE solo comparan y encolan en un ring buffer; una task aparte drena, puntúa y notifica.
+**Architecture:** A pure C `surveillance_detect` component with matchers and the scoring engine isolated from all hardware (so they run as host tests on Linux), plus a menu app that handles only UI and persistence. The WiFi promiscuous callback and BLE GAP callback only compare and enqueue into a ring buffer; a separate task drains, scores, and notifies.
 
-**Tech Stack:** ESP-IDF v5.5.1, target `esp32c6`, C99. Tests de host con `gcc` y la Unity vendorizada en ESP-IDF, sin el build system de IDF. Componentes existentes de Minino: `sd_card`, `nmea_parser`, `buzzer`, `leds`, `preferences`, `oled_screen`, `menus_module`, `espressif__pcap`.
+**Tech Stack:** ESP-IDF v5.5.1, target `esp32c6`, C99. Host tests with `gcc` and the Unity framework vendored in ESP-IDF, bypassing the IDF build system. Existing Minino components: `sd_card`, `nmea_parser`, `buzzer`, `leds`, `preferences`, `oled_screen`, `menus_module`, `espressif__pcap`.
 
 **Spec:** `docs/superpowers/specs/2026-08-23-surveillance-detect-design.md`
 
@@ -14,81 +14,81 @@
 
 ## Global Constraints
 
-Todos los valores son literales del spec. Aplican a todas las tareas.
+All values come directly from the spec and apply across all tasks.
 
-- **ESP-IDF v5.5.1** en `/home/sabas/esp/esp-idf-v5.5.1`, target `esp32c6`.
-  Activar con `. /home/sabas/esp/esp-idf-v5.5.1/export.sh` antes de cualquier
-  `idf.py`. Baseline verificado: el firmware compila limpio con esta versión.
-- **Tests de host: `gcc` directo contra la Unity vendorizada** en
-  `$IDF_PATH/components/unity/unity/src`. **No** se usa el target `linux` de
-  ESP-IDF: requiere `libbsd-dev`, que no está instalado y cuya instalación
-  necesita sudo. Verificado con un probe end-to-end.
-- **`surv_signatures.c`, `surv_match.c`, `surv_ie.c`, `surv_overlay.c` y
-  `surv_engine.c` no pueden incluir cabeceras de ESP-IDF.** El build de gcc
-  falla si lo hacen, y ésa es la garantía de que los tests corren sin hardware.
-- **Licencia GPL-3.0.** Cada archivo derivado de flock-you o eye-spy lleva cabecera con `SPDX-License-Identifier: GPL-3.0-or-later` y un aviso de procedencia citando el proyecto original y su licencia (MIT / Apache-2.0).
-- **Prefijo `surv_`** en todos los símbolos del componente. Nunca `sd_` (colisiona con `sd_card`).
-- **Sin `printf`, `malloc`, ni I/O de archivo en callbacks de radio.** Solo comparación y encolado.
-- **Ring buffer:** 32 entradas.
-- **Tabla de dispositivos:** 200 MAC máximo.
-- **Score:** decay −1 cada **60 s**; cooldown de re-score **120 s** por clase; CLEAR 0–2, CAUTION 3–5, ALERT 6+.
-- **Dedupe de emisión:** 5 s por MAC; un tier superior lo preempta.
-- **Canales:** 11/6/1 descendente, dwell **250 ms**; en perfil `Vigilancia` se extiende a 13/8/3 cada 4 vueltas. Siempre recortado al `nchan` de la región.
-- **Umbral de RSSI:** se descartan tramas y advertisements por debajo de **−95 dBm**. (Valor de `RSSI_MIN` de flock-you. El spec no lo fijaba; queda fijado aquí.)
-- **CSV:** línea de hasta **200 bytes**, buffer de **200 líneas**, directorio `surveil/`.
-- **pcap:** tope de **4 MB** por sesión.
-- **Overlay:** topes de **256 OUIs, 64 keywords, 8 firmas IE**, más **16 UUIDs**
-  (el spec no fijaba tope de UUIDs; queda fijado aquí).
-- **Tabla base:** 75 OUIs (35 Flock, 6 fabricante contratista, 1 SoundThinking, 1 ALPR, 31 cámaras, 1 Axon).
-  El spec dice 74 contando solo las cinco tablas WiFi de eye-spy; Axon se detecta allí
-  por OUI de MAC BLE, fuera de esas tablas. Aquí va en la misma tabla unificada, que la
-  consultan tanto el camino de WiFi como el de BLE.
-- **No filtrar MAC localmente administradas.** `82:6b:f2` tiene ese bit puesto y es una cámara Flock confirmada.
-
----
-
-## Estructura de archivos
-
-### Componente nuevo: `firmware/components/surveillance_detect/`
-
-| Archivo | Responsabilidad |
-|---|---|
-| `include/surv_types.h` | Enums (`surv_class_t`, `surv_proto_t`, `surv_tier_t`) y `surv_event_t`. Sin dependencias |
-| `include/surv_signatures.h`, `surv_signatures.c` | Tabla base de OUIs, keywords, nombres BLE, UUIDs, firma IE. Accessors |
-| `include/surv_match.h`, `surv_match.c` | Matchers puros: OUI con prefiltro bitmap, keyword de SSID, nombre BLE, disector de advertising |
-| `include/surv_ie.h`, `surv_ie.c` | Fingerprint de Information Elements. Aislado por ser la pieza más delicada |
-| `include/surv_overlay.h`, `surv_overlay.c` | Parser del overlay de microSD. Recibe texto, no toca el sistema de archivos |
-| `include/surv_engine.h`, `surv_engine.c` | Score, decay, cooldown, tabla por MAC, dedupe |
-| `surv_radio.c` | Planificador de fases y salto de canal. Depende de ESP-IDF |
-| `include/surveillance_detect.h`, `surveillance_detect.c` | API pública, callbacks de radio, ring buffer. Depende de ESP-IDF |
-| `test/` | Arnés de host: `Makefile`, shim `surv_test.h`, runner y archivos de test |
-
-Los seis primeros no incluyen ninguna cabecera de ESP-IDF fuera de `stdint.h`/`stdbool.h`/`string.h`. Es la condición para que los tests corran en host, y el build de gcc del `test/Makefile` la impone: si alguien incluye `esp_wifi.h` ahí, los tests dejan de compilar.
-
-### App nueva: `firmware/main/apps/surveillance/`
-
-| Archivo | Responsabilidad |
-|---|---|
-| `surveillance_module.c/.h` | Ciclo de vida, callbacks de botones, orquestación |
-| `surveillance_screens.c/.h` | Pantallas OLED |
-| `surveillance_log.c/.h` | Escritura CSV, GPX y pcap a microSD |
-
-`firmware/main/CMakeLists.txt` hace `file(GLOB_RECURSE ...)` sobre `main/`, así que **no hay que registrar los archivos nuevos**.
-
-### Archivos existentes que se modifican
-
-| Archivo | Cambio |
-|---|---|
-| `firmware/components/trackers_scanner/trackers_scanner.c` | Delega el disector a `surv_match`; pasa a scan pasivo |
-| `firmware/components/bt_gattc/bt_gattc.c`, `bt_gattc.h` | Permitir scan pasivo sin cambiar el default de otros consumidores |
-| `firmware/components/radio_selector/include/radio_selector.h`, `radio_selector.c` | `RADIO_SELECT_SURVEILLANCE` y su setter |
-| `firmware/main/modules/menus_module/menus_include/menus.h` | Entrada de menú |
-| `firmware/main/modules/settings/` | Perfil de radio, toggle de scan activo, máscara de buzzer |
-| `.github/workflows/` | Workflow nuevo para tests de host |
+- **ESP-IDF v5.5.1** at `/home/sabas/esp/esp-idf-v5.5.1`, target `esp32c6`.
+  Activate with `. /home/sabas/esp/esp-idf-v5.5.1/export.sh` before running any
+  `idf.py` command. Verified baseline: the firmware compiles cleanly with this version.
+- **Host tests: direct `gcc` against the vendored Unity** at
+  `$IDF_PATH/components/unity/unity/src`. Do **not** use the ESP-IDF `linux`
+  target: it requires `libbsd-dev`, which is not installed and requires `sudo`
+  to install. Verified with an end-to-end probe.
+- **`surv_signatures.c`, `surv_match.c`, `surv_ie.c`, `surv_overlay.c`, and
+  `surv_engine.c` must not include ESP-IDF headers.** The `gcc` build fails if
+  they do, which guarantees that tests run without hardware.
+- **GPL-3.0 license.** Every file derived from flock-you or eye-spy carries a header with `SPDX-License-Identifier: GPL-3.0-or-later` and a provenance notice citing the original project and its license (MIT / Apache-2.0).
+- **`surv_` prefix** on all component symbols. Never `sd_` (collides with `sd_card`).
+- **No `printf`, `malloc`, or file I/O inside radio callbacks.** Comparison and enqueuing only.
+- **Ring buffer:** 32 entries.
+- **Device table:** 200 MACs maximum.
+- **Score:** decay -1 every **60 s**; re-score cooldown **120 s** per class; CLEAR 0-2, CAUTION 3-5, ALERT 6+.
+- **Emission dedupe:** 5 s per MAC; a higher tier preempts it.
+- **Channels:** 11/6/1 descending, dwell **250 ms**; in the `Surveillance` profile it extends to 13/8/3 every 4 passes. Always clamped to the region's `nchan`.
+- **RSSI threshold:** frames and advertisements below **-95 dBm** are discarded. (`RSSI_MIN` value from flock-you. The spec left it unset; it is fixed here.)
+- **CSV:** up to **200 bytes** per line, **200-line** buffer, `surveil/` directory.
+- **pcap:** **4 MB** cap per session.
+- **Overlay:** caps of **256 OUIs, 64 keywords, 8 IE signatures**, plus **16 UUIDs**
+  (the spec did not set a UUID cap; it is fixed here).
+- **Base table:** 75 OUIs (35 Flock, 6 contract manufacturer, 1 SoundThinking, 1 ALPR, 31 cameras, 1 Axon).
+  The spec says 74 when counting only eye-spy's five WiFi tables; Axon is detected there
+  by BLE MAC OUI outside those tables. Here it lives in the same unified table, queried
+  by both the WiFi and BLE paths.
+- **Do not filter locally administered MACs.** `82:6b:f2` has that bit set and is a confirmed Flock camera.
 
 ---
 
-## Task 1: Esqueleto del componente, tipos y test app en host
+## File Structure
+
+### New Component: `firmware/components/surveillance_detect/`
+
+| File | Responsibility |
+|---|---|
+| `include/surv_types.h` | Enums (`surv_class_t`, `surv_proto_t`, `surv_tier_t`) and `surv_event_t`. No dependencies |
+| `include/surv_signatures.h`, `surv_signatures.c` | Base table of OUIs, keywords, BLE names, UUIDs, IE signature. Accessors |
+| `include/surv_match.h`, `surv_match.c` | Pure matchers: OUI with bitmap prefilter, SSID keyword, BLE name, advertising dissector |
+| `include/surv_ie.h`, `surv_ie.c` | Information Element fingerprint. Isolated because it is the most delicate piece |
+| `include/surv_overlay.h`, `surv_overlay.c` | microSD overlay parser. Accepts text in memory, does not touch the filesystem |
+| `include/surv_engine.h`, `surv_engine.c` | Score, decay, cooldown, per-MAC table, dedupe |
+| `surv_radio.c` | Phase scheduler and channel hopping. Depends on ESP-IDF |
+| `include/surveillance_detect.h`, `surveillance_detect.c` | Public API, radio callbacks, ring buffer. Depends on ESP-IDF |
+| `test/` | Host test harness: `Makefile`, `surv_test.h` shim, runner, and test files |
+
+The first six do not include any ESP-IDF headers beyond `stdint.h`/`stdbool.h`/`string.h`. That is the condition for running tests on the host, and the `gcc` build in `test/Makefile` enforces it: if anyone includes `esp_wifi.h` there, the tests fail to compile.
+
+### New App: `firmware/main/apps/surveillance/`
+
+| File | Responsibility |
+|---|---|
+| `surveillance_module.c/.h` | Lifecycle, button callbacks, orchestration |
+| `surveillance_screens.c/.h` | OLED screens |
+| `surveillance_log.c/.h` | CSV, GPX, and pcap writing to microSD |
+
+`firmware/main/CMakeLists.txt` uses `file(GLOB_RECURSE ...)` across `main/`, so **new files do not need manual registration**.
+
+### Modified Existing Files
+
+| File | Change |
+|---|---|
+| `firmware/components/trackers_scanner/trackers_scanner.c` | Delegate the dissector to `surv_match`; switch to passive scan |
+| `firmware/components/bt_gattc/bt_gattc.c`, `bt_gattc.h` | Allow passive scan without changing the default for other consumers |
+| `firmware/components/radio_selector/include/radio_selector.h`, `radio_selector.c` | `RADIO_SELECT_SURVEILLANCE` and its setter |
+| `firmware/main/modules/menus_module/menus_include/menus.h` | Menu entry |
+| `firmware/main/modules/settings/` | Radio profile, active scan toggle, buzzer mask |
+| `.github/workflows/` | New workflow for host tests |
+
+---
+
+## Task 1: Component Skeleton, Types, and Host Test App
 
 **Files:**
 - Create: `firmware/components/surveillance_detect/CMakeLists.txt`
@@ -102,10 +102,10 @@ Los seis primeros no incluyen ninguna cabecera de ESP-IDF fuera de `stdint.h`/`s
 - Create: `.github/workflows/host-tests.yml`
 
 **Interfaces:**
-- Consumes: nada.
+- Consumes: nothing.
 - Produces: `surv_class_t`, `surv_proto_t`, `surv_event_t`, `SURV_TIER_*`; `surv_signatures_oui_count()`.
 
-- [ ] **Step 1: Escribir el test que falla**
+- [ ] **Step 1: Write the failing test**
 
 `test/test_surv_signatures.c`:
 
@@ -115,17 +115,14 @@ Los seis primeros no incluyen ninguna cabecera de ESP-IDF fuera de `stdint.h`/`s
 #include "surv_signatures.h"
 #include "surv_types.h"
 
-TEST_CASE("la tabla base tiene 75 OUIs", "[surv][signatures]") {
+TEST_CASE("base table has 75 OUIs", "[surv][signatures]") {
   TEST_ASSERT_EQUAL_UINT16(75, surv_signatures_oui_count());
 }
 ```
 
-- [ ] **Step 2: Crear el arnés de tests de host**
+- [ ] **Step 2: Create the host test harness**
 
-Tres archivos. El shim `surv_test.h` reproduce la macro `TEST_CASE` de ESP-IDF
-sobre Unity vanilla con auto-registro por constructor, de modo que los archivos
-de test se escriben igual que en `components/console/test_apps` pero corren con
-gcc, sin ESP-IDF y sin `libbsd-dev`.
+Three files. The `surv_test.h` shim reproduces ESP-IDF's `TEST_CASE` macro on top of vanilla Unity using constructor auto-registration, so test files are written just like in `components/console/test_apps` but run with `gcc`, without ESP-IDF or `libbsd-dev`.
 
 `test/surv_test.h`:
 
@@ -140,7 +137,7 @@ void surv_test_register(const char* name, const char* tags, surv_test_fn fn);
 #define SURV_CAT_(a, b) a##b
 #define SURV_CAT(a, b) SURV_CAT_(a, b)
 
-// Declara el test y un constructor que lo registra antes de main().
+// Declares the test and a constructor that registers it before main().
 #define TEST_CASE(desc, tags)                                        \
   static void SURV_CAT(surv_test_, __LINE__)(void);                  \
   __attribute__((constructor)) static void SURV_CAT(surv_reg_,       \
@@ -187,13 +184,12 @@ int main(void) {
 }
 ```
 
-`test/Makefile` — `TESTS` es la lista a la que cada tarea posterior añade su
-archivo:
+`test/Makefile` - `TESTS` is the list to which each subsequent task appends its test file:
 
 ```make
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Tests de host: gcc contra la Unity vendorizada en ESP-IDF.
-# Requiere IDF_PATH (. $IDF_PATH/export.sh) pero NO usa el build system de IDF.
+# Host tests: gcc against the Unity vendored in ESP-IDF.
+# Requires IDF_PATH (. $IDF_PATH/export.sh) but does NOT use the IDF build system.
 UNITY  := $(IDF_PATH)/components/unity/unity/src
 SRCDIR := ..
 
@@ -220,21 +216,20 @@ clean:
 .PHONY: run-tests clean
 ```
 
-Las tabulaciones de las recetas del Makefile son obligatorias: si el editor las
-convierte en espacios, `make` falla con `missing separator`.
+Tabs in Makefile recipes are mandatory: if the editor converts them to spaces, `make` fails with `missing separator`.
 
-- [ ] **Step 3: Escribir los tipos**
+- [ ] **Step 3: Write the types**
 
 `include/surv_types.h`:
 
 ```c
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Tipos compartidos del detector de vigilancia.
+// Shared types for the surveillance detector.
 //
-// Procedencia: la taxonomia de surv_class_t deriva de los motores de deteccion
-// de eye-spy (simeononsecurity, Apache-2.0), en concreto de los DECL_DETECTOR
-// de src/es_confidence.h. Los niveles de tier SURV_TIER_* derivan de flock-you
+// Provenance: the surv_class_t taxonomy derives from the detection engines in
+// eye-spy (simeononsecurity, Apache-2.0), specifically the DECL_DETECTOR macros
+// in src/es_confidence.h. The SURV_TIER_* tier levels derive from flock-you
 // (colonelpanichacks, MIT).
 #pragma once
 #include <stdbool.h>
@@ -242,13 +237,13 @@ convierte en espacios, `make` falla con `missing separator`.
 
 typedef enum {
   SURV_CLASS_NONE = 0,
-  SURV_CLASS_FLOCK,       // cámara Flock Safety
-  SURV_CLASS_FLOCK_MFR,   // OUI de fabricante contratista, baja confianza
-  SURV_CLASS_ALPR,        // lector de placas genérico
+  SURV_CLASS_FLOCK,       // Flock Safety camera
+  SURV_CLASS_FLOCK_MFR,   // contract manufacturer OUI, low confidence
+  SURV_CLASS_ALPR,        // generic license plate reader
   SURV_CLASS_SOUNDTHINKING,
   SURV_CLASS_AXON,        // body cam
   SURV_CLASS_GLASSES,     // Ray-Ban Meta
-  SURV_CLASS_CAM,         // cámara IP de consumo
+  SURV_CLASS_CAM,         // consumer IP camera
   SURV_CLASS_AIRTAG,
   SURV_CLASS_SMARTTAG,
   SURV_CLASS_TILE,
@@ -258,7 +253,7 @@ typedef enum {
   SURV_CLASS_SKIMMER,
   SURV_CLASS_MESHCORE,
   SURV_CLASS_RAVEN,
-  SURV_CLASS_PERSIST,     // MAC desconocida vista repetidamente
+  SURV_CLASS_PERSIST,     // unknown MAC seen repeatedly
   SURV_CLASS_MAX
 } surv_class_t;
 
@@ -277,22 +272,22 @@ typedef struct {
   surv_class_t klass;
   uint8_t      tier;
   int8_t       rssi;
-  uint8_t      channel;  // 0 si es BLE
+  uint8_t      channel;  // 0 if BLE
   surv_proto_t proto;
 } surv_event_t;
 ```
 
-- [ ] **Step 4: Escribir la tabla base y su accessor**
+- [ ] **Step 4: Write the base table and its accessor**
 
 `include/surv_signatures.h`:
 
 ```c
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Tablas de firmas. Procedencia:
-//   - OUIs de Flock: @NitekryDPaul (nite-oui-collection) vía flock-you (MIT)
-//     y DeFlockJoplin (82:6b:f2).
-//   - OUIs de cámaras, ALPR, SoundThinking y firmas BLE: eye-spy (Apache-2.0).
+// Signature tables. Provenance:
+//   - Flock OUIs: @NitekryDPaul (nite-oui-collection) via flock-you (MIT)
+//     and DeFlockJoplin (82:6b:f2).
+//   - Camera, ALPR, SoundThinking OUIs and BLE signatures: eye-spy (Apache-2.0).
 #pragma once
 #include <stdint.h>
 #include "surv_types.h"
@@ -300,8 +295,8 @@ typedef struct {
 typedef struct {
   uint8_t      oui[3];
   surv_class_t klass;
-  uint8_t      points;  // peso en el score global
-  uint8_t      tier;    // TECHO de confianza para esta firma, no el tier del evento
+  uint8_t      points;  // weight in global score
+  uint8_t      tier;    // confidence CEILING for this signature, not the event tier
 } surv_oui_entry_t;
 
 typedef struct {
@@ -311,7 +306,7 @@ typedef struct {
 } surv_kw_entry_t;
 
 typedef struct {
-  uint16_t     uuid;    // service UUID de 16 bits
+  uint16_t     uuid;    // 16-bit service UUID
   surv_class_t klass;
   uint8_t      points;
   const char*  label;
@@ -335,8 +330,8 @@ const surv_name_entry_t*  surv_signatures_ble_names(void);
 uint16_t                  surv_signatures_skimmer_count(void);
 const char* const*        surv_signatures_skimmers(void);
 
-// Reconstruye la tabla efectiva = base + anadidos - quitados. La llama el
-// overlay (Task 8). Con extra_count y removed_count en 0 devuelve la base.
+// Rebuilds the effective table = base + added - removed. Called by the
+// overlay (Task 8). With extra_count and removed_count at 0, returns the base table.
 void surv_signatures_build_effective(const surv_oui_entry_t* extra,
                                      uint16_t extra_count,
                                      const uint8_t (*removed)[3],
@@ -346,49 +341,47 @@ void surv_signatures_build_effective_kws(const surv_kw_entry_t* extra,
 void surv_signatures_build_effective_uuids(const surv_uuid_entry_t* extra,
                                            uint16_t extra_count);
 
-// Topes del overlay. Fuente unica de verdad: aqui dimensionan los arreglos
-// efectivos y en surv_overlay.c limitan cuantas entradas se aceptan.
+// Overlay caps. Single source of truth: here they size the effective arrays
+// and in surv_overlay.c they limit how many entries are accepted.
 #define SURV_OVERLAY_MAX_OUIS  256
 #define SURV_OVERLAY_MAX_KWS   64
 #define SURV_OVERLAY_MAX_UUIDS 16
 ```
 
-`surv_signatures.c` — las 74 entradas. Extracto con la estructura exacta; las
-restantes se transcriben de `eye-spy/src/es_detect.h` respetando la clase y el
-peso de cada tabla de origen:
+`surv_signatures.c` - the 75 entries. Excerpt showing the exact structure; the remaining entries are transcribed from `eye-spy/src/es_detect.h` preserving the class and weight of each source table:
 
 ```c
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "surv_signatures.h"
 
 static const surv_oui_entry_t OUIS[] = {
-    // --- Flock Safety (@NitekryDPaul, 25 entradas) --- clase FLOCK, +5, techo tier 4
+    // --- Flock Safety (@NitekryDPaul, 25 entries) --- class FLOCK, +5, tier ceiling 4
     {{0x70, 0xc9, 0x4e}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
     {{0x3c, 0x91, 0x80}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
-    // ... 23 más
-    // --- DeFlockJoplin: bit LAA puesto, NO filtrar ---
+    // ... 23 more
+    // --- DeFlockJoplin: LAA bit set, DO NOT filter ---
     {{0x82, 0x6b, 0xf2}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
-    // --- Asignación IEEE directa de Flock Safety ---
+    // --- Direct IEEE assignment to Flock Safety ---
     {{0xb4, 0x1e, 0x52}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
-    // --- FS Ext Battery (6 entradas) ---
+    // --- FS Ext Battery (6 entries) ---
     {{0x04, 0x0d, 0x84}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
-    // ... 5 más
-    // --- Entradas legacy de eye-spy ---
+    // ... 5 more
+    // --- Legacy eye-spy entries ---
     {{0xd4, 0xbb, 0xe6}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
     {{0x3c, 0x61, 0x05}, SURV_CLASS_FLOCK, 5, SURV_TIER_IE_SIG},
-    // --- Fabricante contratista (Liteon/USI, 6) --- techo tier 1: hardware compartido
+    // --- Contract manufacturer (Liteon/USI, 6) --- tier ceiling 1: shared hardware
     {{0xf4, 0x6a, 0xdd}, SURV_CLASS_FLOCK_MFR, 2, SURV_TIER_ADDR13},
-    // ... 5 más
+    // ... 5 more
     // --- SoundThinking / ShotSpotter (1) ---
     {{0xd4, 0x11, 0xd6}, SURV_CLASS_SOUNDTHINKING, 4, SURV_TIER_ADDR2},
     // --- ALPR: Motorola Solutions / Vigilant (1) ---
     {{0x00, 0x0e, 0x58}, SURV_CLASS_ALPR, 5, SURV_TIER_ADDR2},
-    // --- Cámaras IP (31) ---
+    // --- IP Cameras (31) ---
     {{0x00, 0x40, 0x8c}, SURV_CLASS_CAM, 3, SURV_TIER_ADDR2},  // Axis
-    // ... 30 más
-    // --- Axon: OUI de MAC BLE (body cams, tasers, equipo policial) ---
-    // En eye-spy vive fuera de las tablas de OUI y se compara contra la BDA del
-    // advertisement. Aqui va en la misma tabla: la consultan los dos caminos.
+    // ... 30 more
+    // --- Axon: BLE MAC OUI (body cams, tasers, police gear) ---
+    // In eye-spy this lives outside the OUI tables and is matched against the
+    // advertisement BDA. Here it goes into the same table, queried by both paths.
     {{0x00, 0x25, 0xdf}, SURV_CLASS_AXON, 5, SURV_TIER_ADDR2},
 };
 
@@ -401,7 +394,7 @@ const surv_oui_entry_t* surv_signatures_ouis(void) {
 }
 ```
 
-`CMakeLists.txt` del componente:
+Component `CMakeLists.txt`:
 
 ```cmake
 idf_component_register(SRCS "surv_signatures.c"
@@ -415,20 +408,14 @@ idf_component_register(SRCS "surv_signatures.c"
                        REQUIRES esp_wifi bt esp_timer radio_selector)
 ```
 
-El componente solo se compila para `esp32c6`; los tests de host no pasan por
-CMake. La disciplina de "sin cabeceras de ESP-IDF" en los cinco archivos puros
-la impone el build de gcc del `test/Makefile`, que falla si alguien la rompe.
+The component only compiles for `esp32c6`; host tests do not go through CMake. The "no ESP-IDF headers" discipline across the five pure files is enforced by the `gcc` build in `test/Makefile`, which fails if anyone violates it.
 
-**Todos** los archivos `.c` listados se crean en esta tarea. Los cinco puros
-(`surv_match.c`, `surv_ie.c`, `surv_overlay.c`, `surv_engine.c`) van vacíos
-salvo el `#include` de su cabecera; su contenido llega en las Tasks 2, 6, 8 y 7.
+**All** listed `.c` files are created in this task. The four remaining pure files (`surv_match.c`, `surv_ie.c`, `surv_overlay.c`, `surv_engine.c`) start empty except for `#include` of their header; their implementation arrives in Tasks 2, 6, 8, and 7.
 
-`surv_radio.c` y `surveillance_detect.c` van con **stubs no-op** que devuelven
-`ESP_OK` o cero, para que `idf.py build` pase en el Step 6 de esta tarea; las
-Tasks 9 y 10 los reemplazan:
+`surv_radio.c` and `surveillance_detect.c` start with **no-op stubs** returning `ESP_OK` or zero so `idf.py build` passes in Step 6 of this task; Tasks 9 and 10 replace them:
 
 ```c
-// surv_radio.c — stub; la implementacion real llega en la Task 10.
+// surv_radio.c - stub; real implementation arrives in Task 10.
 #include "surv_radio.h"
 esp_err_t surv_radio_start(surv_profile_t p, bool active_scan) {
   (void) p; (void) active_scan; return ESP_OK;
@@ -437,20 +424,16 @@ void    surv_radio_stop(void) {}
 uint8_t surv_radio_current_channel(void) { return 0; }
 ```
 
-`surveillance_detect.c` lleva el mismo tratamiento para `surv_begin`,
-`surv_stop`, `surv_register_cb` y `surv_queue_overflows`.
+`surveillance_detect.c` gets the same treatment for `surv_begin`, `surv_stop`, `surv_register_cb`, and `surv_queue_overflows`.
 
-Las cabeceras `include/surv_radio.h` e `include/surveillance_detect.h` se crean
-aquí **con exactamente estas firmas**, que son las que declaran las Tasks 9 y 10.
-No inventar otras: si divergen, la Task 9 reescribe cabeceras en vez de rellenar
-implementaciones.
+Headers `include/surv_radio.h` and `include/surveillance_detect.h` are created here **with these exact signatures**, matching what Tasks 9 and 10 declare. Do not invent others: if they diverge, Task 9 will rewrite headers instead of filling in implementations.
 
 ```c
 // include/surveillance_detect.h
 typedef enum {
-  SURV_PROFILE_FLOCK = 0,   // 100% WiFi promiscuo
-  SURV_PROFILE_SURVEIL,     // ciclo BLE + WiFi
-  SURV_PROFILE_TRACKERS,    // 100% BLE pasivo
+  SURV_PROFILE_FLOCK = 0,   // 100% promiscuous WiFi
+  SURV_PROFILE_SURVEIL,     // BLE + WiFi cycle
+  SURV_PROFILE_TRACKERS,    // 100% passive BLE
 } surv_profile_t;
 
 typedef void (*surv_detect_cb_t)(const surv_event_t* ev, uint8_t score);
@@ -466,10 +449,9 @@ void      surv_radio_stop(void);
 uint8_t   surv_radio_current_channel(void);
 ```
 
-El perfil describe **qué se está cazando**, no qué radio se enciende: un
-`SURV_PROFILE_BLE`/`SURV_PROFILE_WIFI` seria un concepto distinto y equivocado.
+The profile describes **what is being hunted**, not which radio is turned on: a `SURV_PROFILE_BLE`/`SURV_PROFILE_WIFI` enum would be a different and mistaken concept.
 
-- [ ] **Step 5: Ejecutar el test en host y verificar que pasa**
+- [ ] **Step 5: Run the host test and verify it passes**
 
 ```bash
 . /home/sabas/esp/esp-idf-v5.5.1/export.sh
@@ -477,13 +459,11 @@ cd firmware/components/surveillance_detect/test
 make run-tests
 ```
 
-Salida esperada: `1 Tests 0 Failures 0 Ignored` y `OK`. `make` devuelve un
-código distinto de cero si algún test falla, que es lo que hace útil el CI.
+Expected output: `1 Tests 0 Failures 0 Ignored` and `OK`. `make` returns a non-zero exit code if any test fails, making it suitable for CI.
 
-Esperado: el test `la tabla base tiene 75 OUIs` pasa. Si falla con un conteo
-distinto, faltan entradas por transcribir de `es_detect.h`.
+Expected: test `base table has 75 OUIs` passes. If it fails with a different count, entries are missing from the `es_detect.h` transcription.
 
-- [ ] **Step 6: Verificar que el firmware sigue compilando para el target real**
+- [ ] **Step 6: Verify the firmware still compiles for the real target**
 
 ```bash
 . /home/sabas/esp/esp-idf-v5.5.1/export.sh
@@ -491,14 +471,11 @@ cd firmware
 idf.py build
 ```
 
-Esperado: build OK. El componente nuevo aún no lo usa nadie, pero debe compilar.
-El baseline ya se verificó verde antes de empezar el plan, así que cualquier
-fallo aquí lo introdujo esta tarea.
+Expected: build OK. Nothing uses the new component yet, but it must compile. The baseline was verified green before starting the plan, so any failure here was introduced by this task.
 
-- [ ] **Step 7: Crear el workflow de tests de host**
+- [ ] **Step 7: Create the host test workflow**
 
-`.github/workflows/host-tests.yml`. El workflow existente `builds.yml` solo
-dispara en tags de release y no ejecuta tests, así que este es nuevo:
+`.github/workflows/host-tests.yml`. The existing `builds.yml` workflow only triggers on release tags and does not run tests, so this workflow is new:
 
 ```yaml
 name: Host tests
@@ -524,8 +501,7 @@ jobs:
           IDF_PATH: ${{ runner.temp }}/esp-idf
 ```
 
-El CI no instala el toolchain de ESP-IDF: solo necesita `gcc` y los dos archivos
-de Unity, así que baja el repo de IDF con sparse-checkout. Corre en segundos.
+CI does not install the ESP-IDF toolchain: it only needs `gcc` and the two Unity files, so it fetches the IDF repository with sparse-checkout and runs in seconds.
 
 - [ ] **Step 8: Commit**
 
@@ -536,7 +512,7 @@ git commit -m "feat(surveillance): add component skeleton, signature tables and 
 
 ---
 
-## Task 2: Match por OUI con prefiltro de bitmap
+## Task 2: OUI Matcher with Bitmap Prefilter
 
 **Files:**
 - Modify: `firmware/components/surveillance_detect/surv_match.c`
@@ -548,7 +524,7 @@ git commit -m "feat(surveillance): add component skeleton, signature tables and 
 - Consumes: `surv_signatures_ouis()`, `surv_signatures_oui_count()`, `surv_oui_entry_t`.
 - Produces: `void surv_match_init(void)`, `const surv_oui_entry_t* surv_match_oui(const uint8_t mac[6])`.
 
-- [ ] **Step 1: Escribir los tests que fallan**
+- [ ] **Step 1: Write the failing tests**
 
 `test/test_surv_match.c`:
 
@@ -559,7 +535,7 @@ git commit -m "feat(surveillance): add component skeleton, signature tables and 
 #include "surv_signatures.h"
 #include "surv_test.h"
 
-TEST_CASE("un OUI de Flock matchea con clase FLOCK", "[surv][match]") {
+TEST_CASE("Flock OUI matches with class FLOCK", "[surv][match]") {
   surv_match_init();
   const uint8_t mac[6] = {0x70, 0xc9, 0x4e, 0x11, 0x22, 0x33};
   const surv_oui_entry_t* e = surv_match_oui(mac);
@@ -568,13 +544,13 @@ TEST_CASE("un OUI de Flock matchea con clase FLOCK", "[surv][match]") {
   TEST_ASSERT_EQUAL_UINT8(5, e->points);
 }
 
-TEST_CASE("una MAC desconocida no matchea", "[surv][match]") {
+TEST_CASE("unknown MAC does not match", "[surv][match]") {
   surv_match_init();
   const uint8_t mac[6] = {0xde, 0xad, 0xbe, 0xef, 0x00, 0x01};
   TEST_ASSERT_NULL(surv_match_oui(mac));
 }
 
-TEST_CASE("la MAC localmente administrada 82:6b:f2 SI matchea", "[surv][match]") {
+TEST_CASE("locally administered MAC 82:6b:f2 DOES match", "[surv][match]") {
   surv_match_init();
   const uint8_t mac[6] = {0x82, 0x6b, 0xf2, 0x14, 0x07, 0x3a};
   const surv_oui_entry_t* e = surv_match_oui(mac);
@@ -582,7 +558,7 @@ TEST_CASE("la MAC localmente administrada 82:6b:f2 SI matchea", "[surv][match]")
   TEST_ASSERT_EQUAL_INT(SURV_CLASS_FLOCK, e->klass);
 }
 
-TEST_CASE("el OUI de fabricante contratista tiene techo tier 1", "[surv][match]") {
+TEST_CASE("contract manufacturer OUI has tier ceiling 1", "[surv][match]") {
   surv_match_init();
   const uint8_t mac[6] = {0xf4, 0x6a, 0xdd, 0x01, 0x02, 0x03};
   const surv_oui_entry_t* e = surv_match_oui(mac);
@@ -591,30 +567,29 @@ TEST_CASE("el OUI de fabricante contratista tiene techo tier 1", "[surv][match]"
   TEST_ASSERT_EQUAL_UINT8(SURV_TIER_ADDR13, e->tier);
 }
 
-TEST_CASE("ningun OUI aparece en dos clases distintas", "[surv][match]") {
+TEST_CASE("no OUI appears in two distinct classes", "[surv][match]") {
   const surv_oui_entry_t* t = surv_signatures_ouis();
   uint16_t n = surv_signatures_oui_count();
   for (uint16_t i = 0; i < n; i++) {
     for (uint16_t j = i + 1; j < n; j++) {
       TEST_ASSERT_FALSE_MESSAGE(memcmp(t[i].oui, t[j].oui, 3) == 0,
-                                "OUI duplicado en la tabla base");
+                                "duplicate OUI in base table");
     }
   }
 }
 ```
 
-Añadir `test_surv_match.c` a la variable `TESTS` de
-`firmware/components/surveillance_detect/test/Makefile`.
+Add `test_surv_match.c` to the `TESTS` variable in `firmware/components/surveillance_detect/test/Makefile`.
 
-- [ ] **Step 2: Ejecutar y verificar que falla**
+- [ ] **Step 2: Run and verify it fails**
 
 ```bash
 make -C firmware/components/surveillance_detect/test run-tests
 ```
 
-Esperado: error de compilación, `surv_match.h` no existe.
+Expected: compilation error, `surv_match.h` does not exist.
 
-- [ ] **Step 3: Escribir la implementación mínima**
+- [ ] **Step 3: Write the minimal implementation**
 
 `include/surv_match.h`:
 
@@ -625,11 +600,11 @@ Esperado: error de compilación, `surv_match.h` no existe.
 #include "surv_signatures.h"
 #include "surv_types.h"
 
-// Construye el prefiltro. Llamar una vez antes de cualquier match.
+// Builds the prefilter. Call once before any match.
 void surv_match_init(void);
 
-// Devuelve la entrada de la tabla o NULL. Apto para llamarse desde el callback
-// promiscuo: sin asignación de memoria, sin I/O.
+// Returns the table entry or NULL. Safe to call from the promiscuous
+// callback: no memory allocation, no I/O.
 const surv_oui_entry_t* surv_match_oui(const uint8_t mac[6]);
 ```
 
@@ -640,8 +615,8 @@ const surv_oui_entry_t* surv_match_oui(const uint8_t mac[6]);
 #include "surv_match.h"
 #include <string.h>
 
-// Prefiltro: un bit por primer octeto posible. Descarta el 99% de las tramas
-// en una operación, que es lo que permite correr esto en el callback de WiFi.
+// Prefilter: one bit per possible first octet. Discards 99% of frames
+// in a single operation, allowing this to run inside the WiFi callback.
 static uint8_t s_first_octet_bitmap[32];
 static bool    s_inited;
 
@@ -676,14 +651,13 @@ const surv_oui_entry_t* surv_match_oui(const uint8_t mac[6]) {
 }
 ```
 
-- [ ] **Step 4: Ejecutar y verificar que pasan**
+- [ ] **Step 4: Run and verify they pass**
 
 ```bash
 make -C firmware/components/surveillance_detect/test run-tests
 ```
 
-Esperado: los cinco tests pasan. Si el de OUI duplicado falla, hay una entrada
-transcrita en dos tablas distintas de `es_detect.h`: corregir la tabla, no el test.
+Expected: all five tests pass. If the duplicate OUI test fails, an entry was transcribed into two different tables in `es_detect.h`: fix the table, not the test.
 
 - [ ] **Step 5: Commit**
 
@@ -694,7 +668,7 @@ git commit -m "feat(surveillance): add OUI matcher with first-octet bitmap prefi
 
 ---
 
-## Task 3: Matchers de keyword de SSID y nombre BLE
+## Task 3: SSID Keyword and BLE Name Matchers
 
 **Files:**
 - Modify: `firmware/components/surveillance_detect/surv_match.c`, `include/surv_match.h`
@@ -705,69 +679,66 @@ git commit -m "feat(surveillance): add OUI matcher with first-octet bitmap prefi
 - Consumes: `surv_signatures_kws()`, `surv_signatures_kw_count()`.
 - Produces: `const surv_kw_entry_t* surv_match_ssid(const char* ssid)`, `bool surv_match_contains_ci(const char* hay, const char* needle)`.
 
-- [ ] **Step 1: Escribir los tests que fallan**
+- [ ] **Step 1: Write the failing tests**
 
-Añadir a `test_surv_match.c`:
+Add to `test_surv_match.c`:
 
 ```c
-TEST_CASE("la busqueda de substring ignora mayusculas", "[surv][match]") {
+TEST_CASE("substring search is case-insensitive", "[surv][match]") {
   TEST_ASSERT_TRUE(surv_match_contains_ci("FLOCK_CAM_0032", "flock"));
-  TEST_ASSERT_TRUE(surv_match_contains_ci("mi-FlOcK-red", "flock"));
+  TEST_ASSERT_TRUE(surv_match_contains_ci("my-FlOcK-net", "flock"));
   TEST_ASSERT_FALSE(surv_match_contains_ci("floc", "flock"));
   TEST_ASSERT_FALSE(surv_match_contains_ci(NULL, "flock"));
   TEST_ASSERT_FALSE(surv_match_contains_ci("flock", NULL));
 }
 
-TEST_CASE("un SSID de Flock matchea con 5 puntos y tier 0", "[surv][match]") {
+TEST_CASE("Flock SSID matches with 5 points and tier 0", "[surv][match]") {
   const surv_kw_entry_t* e = surv_match_ssid("Flock_CAM_0032");
   TEST_ASSERT_NOT_NULL(e);
   TEST_ASSERT_EQUAL_INT(SURV_CLASS_FLOCK, e->klass);
   TEST_ASSERT_EQUAL_UINT8(5, e->points);
 }
 
-TEST_CASE("un SSID de camara matchea con 2 puntos", "[surv][match]") {
-  const surv_kw_entry_t* e = surv_match_ssid("casa-ipcam-01");
+TEST_CASE("camera SSID matches with 2 points", "[surv][match]") {
+  const surv_kw_entry_t* e = surv_match_ssid("home-ipcam-01");
   TEST_ASSERT_NOT_NULL(e);
   TEST_ASSERT_EQUAL_INT(SURV_CLASS_CAM, e->klass);
   TEST_ASSERT_EQUAL_UINT8(2, e->points);
 }
 
-TEST_CASE("un SSID normal no matchea", "[surv][match]") {
+TEST_CASE("ordinary SSID does not match", "[surv][match]") {
   TEST_ASSERT_NULL(surv_match_ssid("INFINITUM1234"));
 }
 
-// Regresion: estos dos rompian el criterio de cero falsos positivos de ALPR.
-TEST_CASE("un modem Motorola de consumo NO es ALPR", "[surv][match]") {
+// Regression: these two violated the zero-false-positive ALPR criterion.
+TEST_CASE("consumer Motorola modem is NOT ALPR", "[surv][match]") {
   TEST_ASSERT_NULL(surv_match_ssid("MOTOROLA-A1B2"));
 }
 
-TEST_CASE("una impresora LPR NO es ALPR", "[surv][match]") {
+TEST_CASE("LPR printer is NOT ALPR", "[surv][match]") {
   TEST_ASSERT_NULL(surv_match_ssid("HP_LPR_Printer"));
 }
 ```
 
-- [ ] **Step 2: Ejecutar y verificar que falla**
+- [ ] **Step 2: Run and verify it fails**
 
-Run: `make -C firmware/components/surveillance_detect/test run-tests`. Esperado: `surv_match_ssid` no declarada.
+Run: `make -C firmware/components/surveillance_detect/test run-tests`. Expected: `surv_match_ssid` undeclared.
 
-- [ ] **Step 3: Añadir la tabla de keywords**
+- [ ] **Step 3: Add the keyword table**
 
-En `surv_signatures.c`, transcritas de `FLOCK_SSID_KW`, `ALPR_SSID_KW` y
-`CAM_SSID_KW` de eye-spy. **Orden importante: de más específica a menos**, para
-que "flocksafety" gane antes de que "cam" atrape un genérico:
+In `surv_signatures.c`, transcribed from `FLOCK_SSID_KW`, `ALPR_SSID_KW`, and `CAM_SSID_KW` in eye-spy. **Order matters: most specific to least specific**, so `"flocksafety"` wins before `"cam"` catches a generic match:
 
 ```c
 static const surv_kw_entry_t KWS[] = {
     {"flocksafety", SURV_CLASS_FLOCK, 5}, {"flock", SURV_CLASS_FLOCK, 5},
     {"pigvision", SURV_CLASS_FLOCK, 5},   {"penguin", SURV_CLASS_FLOCK, 5},
     {"fs ext", SURV_CLASS_FLOCK, 5},      {"raven", SURV_CLASS_RAVEN, 5},
-    // "motorola" y "lpr" estan DELIBERADAMENTE fuera, pese a venir en el
-    // ALPR_SSID_KW de eye-spy: rompen el criterio de aceptacion de cero falsos
-    // positivos de clase ALPR. "motorola" matchea el SSID por defecto de
-    // cualquier modem de consumo Motorola/Arris, que en Mexico reparten Izzi y
-    // Totalplay por millones; "lpr" matchea dentro de "HelpRouter" y de las
-    // impresoras "HP_LPR_*". Quien las quiera puede reponerlas por overlay de
-    // microSD.
+    // "motorola" and "lpr" are DELIBERATELY omitted despite appearing in
+    // eye-spy's ALPR_SSID_KW: they break the zero-false-positive acceptance
+    // criterion for class ALPR. "motorola" matches the default SSID of any
+    // consumer Motorola/Arris modem, deployed by the millions in Mexico by
+    // Izzi and Totalplay; "lpr" matches inside "HelpRouter" and "HP_LPR_*"
+    // printers. Anyone who wants them can re-add them via microSD overlay.
     {"licenseplat", SURV_CLASS_ALPR, 4},  {"plateread", SURV_CLASS_ALPR, 4},
     {"vigilant", SURV_CLASS_ALPR, 4},     {"automate", SURV_CLASS_ALPR, 4},
     {"alpr", SURV_CLASS_ALPR, 4},
@@ -795,9 +766,9 @@ const surv_kw_entry_t* surv_signatures_kws(void) {
 }
 ```
 
-- [ ] **Step 4: Implementar los matchers**
+- [ ] **Step 4: Implement the matchers**
 
-En `surv_match.c`:
+In `surv_match.c`:
 
 ```c
 static char lower_ascii(char c) {
@@ -836,12 +807,12 @@ const surv_kw_entry_t* surv_match_ssid(const char* ssid) {
 }
 ```
 
-Declarar ambas en `surv_match.h`.
+Declare both in `surv_match.h`.
 
-- [ ] **Step 5: Ejecutar y verificar que pasan**
+- [ ] **Step 5: Run and verify they pass**
 
 Run: `make -C firmware/components/surveillance_detect/test run-tests`.
-Esperado: los nueve tests pasan.
+Expected: all nine tests pass.
 
 - [ ] **Step 6: Commit**
 
@@ -852,7 +823,7 @@ git commit -m "feat(surveillance): add case-insensitive SSID keyword matcher"
 
 ---
 
-## Task 4: Disector de advertising BLE compartido
+## Task 4: Shared BLE Advertising Dissector
 
 **Files:**
 - Modify: `firmware/components/surveillance_detect/surv_match.c`, `include/surv_match.h`
@@ -860,24 +831,22 @@ git commit -m "feat(surveillance): add case-insensitive SSID keyword matcher"
 - Test: `firmware/components/surveillance_detect/test/test_surv_ble.c`
 
 **Interfaces:**
-- Consumes: `surv_match_contains_ci()`, `surv_signatures_uuids()`, `surv_signatures_uuid_count()`, `surv_signatures_ble_names()`, `surv_signatures_ble_name_count()`, `surv_signatures_skimmers()`, `surv_signatures_skimmer_count()` (todos declarados en Task 1).
+- Consumes: `surv_match_contains_ci()`, `surv_signatures_uuids()`, `surv_signatures_uuid_count()`, `surv_signatures_ble_names()`, `surv_signatures_ble_name_count()`, `surv_signatures_skimmers()`, `surv_signatures_skimmer_count()` (all declared in Task 1).
 - Produces:
   ```c
   #define SURV_BLE_MAX_HITS 4
   typedef struct {
     surv_class_t klass;
     uint8_t      points;
-    const char*  label;   // "AirTag", "Axon", ... string estático
+    const char*  label;   // "AirTag", "Axon", ... static string
   } surv_ble_hit_t;
   uint8_t surv_match_ble_adv(const uint8_t* adv, uint8_t adv_len,
                              surv_ble_hit_t out[SURV_BLE_MAX_HITS]);
   ```
 
-Diferencia clave con `trackers_scanner`, que hace `break` en el primer match:
-esta función devuelve **hasta 4 clases** del mismo advertisement, porque un
-dispositivo puede ser a la vez iBeacon y otra cosa.
+Key difference from `trackers_scanner`, which breaks on the first match: this function returns **up to 4 classes** from the same advertisement, because a device can simultaneously be an iBeacon and something else.
 
-- [ ] **Step 1: Escribir los tests que fallan**
+- [ ] **Step 1: Write the failing tests**
 
 `test/test_surv_ble.c`:
 
@@ -886,12 +855,12 @@ dispositivo puede ser a la vez iBeacon y otra cosa.
 #include "surv_match.h"
 #include "surv_test.h"
 
-TEST_CASE("detecta un AirTag por mfr data 004C subtipo 12", "[surv][ble]") {
-  // len=0x06 (AD type + 5 bytes de payload), AD type=0xFF,
-  // company=0x004C (LE), subtipo=0x12.
-  // OJO: el byte de longitud debe cuadrar con el buffer real, no con el
-  // advertisement completo de 31 bytes que emite un AirTag de verdad; si no,
-  // el guard de limites lo rechaza (correctamente) y el test falla.
+TEST_CASE("detects an AirTag by mfr data 004C subtype 12", "[surv][ble]") {
+  // len=0x06 (AD type + 5 payload bytes), AD type=0xFF,
+  // company=0x004C (LE), subtype=0x12.
+  // NOTE: the length byte must match the actual buffer, not the full 31-byte
+  // advertisement emitted by a real AirTag; otherwise the bounds guard
+  // (correctly) rejects it and the test fails.
   const uint8_t adv[] = {0x06, 0xff, 0x4c, 0x00, 0x12, 0x19, 0x00};
   surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
   uint8_t n = surv_match_ble_adv(adv, sizeof(adv), hits);
@@ -900,8 +869,8 @@ TEST_CASE("detecta un AirTag por mfr data 004C subtipo 12", "[surv][ble]") {
   TEST_ASSERT_EQUAL_UINT8(4, hits[0].points);
 }
 
-TEST_CASE("detecta un iBeacon por 4C 00 02 15", "[surv][ble]") {
-  // len=0x09 (AD type + 8 bytes de payload)
+TEST_CASE("detects an iBeacon by 4C 00 02 15", "[surv][ble]") {
+  // len=0x09 (AD type + 8 payload bytes)
   const uint8_t adv[] = {0x09, 0xff, 0x4c, 0x00, 0x02, 0x15,
                          0x00, 0x00, 0x00, 0x00};
   surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
@@ -911,7 +880,7 @@ TEST_CASE("detecta un iBeacon por 4C 00 02 15", "[surv][ble]") {
   TEST_ASSERT_EQUAL_UINT8(2, hits[0].points);
 }
 
-TEST_CASE("detecta Tile por service UUID FEED", "[surv][ble]") {
+TEST_CASE("detects Tile by service UUID FEED", "[surv][ble]") {
   // len=0x03, AD type=0x16 (service data), UUID 0xFEED little-endian
   const uint8_t adv[] = {0x03, 0x16, 0xed, 0xfe};
   surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
@@ -920,7 +889,7 @@ TEST_CASE("detecta Tile por service UUID FEED", "[surv][ble]") {
   TEST_ASSERT_EQUAL_INT(SURV_CLASS_TILE, hits[0].klass);
 }
 
-TEST_CASE("detecta Ray-Ban Meta por service UUID FD5F", "[surv][ble]") {
+TEST_CASE("detects Ray-Ban Meta by service UUID FD5F", "[surv][ble]") {
   const uint8_t adv[] = {0x03, 0x03, 0x5f, 0xfd};
   surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
   uint8_t n = surv_match_ble_adv(adv, sizeof(adv), hits);
@@ -929,7 +898,7 @@ TEST_CASE("detecta Ray-Ban Meta por service UUID FD5F", "[surv][ble]") {
   TEST_ASSERT_EQUAL_UINT8(5, hits[0].points);
 }
 
-TEST_CASE("detecta ODID BLE por service UUID FFFA", "[surv][ble]") {
+TEST_CASE("detects BLE ODID by service UUID FFFA", "[surv][ble]") {
   const uint8_t adv[] = {0x03, 0x03, 0xfa, 0xff};
   surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
   uint8_t n = surv_match_ble_adv(adv, sizeof(adv), hits);
@@ -937,8 +906,8 @@ TEST_CASE("detecta ODID BLE por service UUID FFFA", "[surv][ble]") {
   TEST_ASSERT_EQUAL_INT(SURV_CLASS_ODID, hits[0].klass);
 }
 
-TEST_CASE("detecta un skimmer HC-05 por nombre exacto", "[surv][ble]") {
-  // len=0x06, AD type=0x09 (nombre completo), "HC-05"
+TEST_CASE("detects an HC-05 skimmer by exact name", "[surv][ble]") {
+  // len=0x06, AD type=0x09 (complete name), "HC-05"
   const uint8_t adv[] = {0x06, 0x09, 'H', 'C', '-', '0', '5'};
   surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
   uint8_t n = surv_match_ble_adv(adv, sizeof(adv), hits);
@@ -946,7 +915,7 @@ TEST_CASE("detecta un skimmer HC-05 por nombre exacto", "[surv][ble]") {
   TEST_ASSERT_EQUAL_INT(SURV_CLASS_SKIMMER, hits[0].klass);
 }
 
-TEST_CASE("detecta Flock BLE por substring en el nombre", "[surv][ble]") {
+TEST_CASE("detects Flock BLE by name substring", "[surv][ble]") {
   const uint8_t adv[] = {0x0f, 0x09, 'F', 'S', ' ', 'E', 'x', 't',
                          ' ',  'B',  'a', 't', 't', 'e', 'r', 'y'};
   surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
@@ -956,20 +925,20 @@ TEST_CASE("detecta Flock BLE por substring en el nombre", "[surv][ble]") {
   TEST_ASSERT_EQUAL_UINT8(5, hits[0].points);
 }
 
-TEST_CASE("un advertisement truncado no desborda", "[surv][ble]") {
-  // longitud declarada mayor que el buffer real
+TEST_CASE("truncated advertisement does not overflow", "[surv][ble]") {
+  // declared length larger than actual buffer
   const uint8_t adv[] = {0x1f, 0xff, 0x4c};
   surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
   TEST_ASSERT_EQUAL_UINT8(0, surv_match_ble_adv(adv, sizeof(adv), hits));
 }
 
-TEST_CASE("un advertisement sin firma conocida devuelve 0", "[surv][ble]") {
+TEST_CASE("advertisement with no known signature returns 0", "[surv][ble]") {
   const uint8_t adv[] = {0x02, 0x01, 0x06};
   surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
   TEST_ASSERT_EQUAL_UINT8(0, surv_match_ble_adv(adv, sizeof(adv), hits));
 }
 
-TEST_CASE("detecta Axon por el OUI de la MAC BLE", "[surv][ble]") {
+TEST_CASE("detects Axon by BLE MAC OUI", "[surv][ble]") {
   surv_match_init();
   const uint8_t bda[6] = {0x00, 0x25, 0xdf, 0x01, 0x02, 0x03};
   const surv_oui_entry_t* e = surv_match_oui(bda);
@@ -979,16 +948,16 @@ TEST_CASE("detecta Axon por el OUI de la MAC BLE", "[surv][ble]") {
 }
 ```
 
-Añadir `test_surv_ble.c` a la variable `TESTS` del `test/Makefile`.
+Add `test_surv_ble.c` to the `TESTS` variable in `test/Makefile`.
 
-- [ ] **Step 2: Ejecutar y verificar que falla**
+- [ ] **Step 2: Run and verify it fails**
 
-Run: `make -C firmware/components/surveillance_detect/test run-tests`. Esperado: `surv_match_ble_adv` no declarada.
+Run: `make -C firmware/components/surveillance_detect/test run-tests`. Expected: `surv_match_ble_adv` undeclared.
 
-- [ ] **Step 3: Añadir las firmas BLE a `surv_signatures.c`**
+- [ ] **Step 3: Add BLE signatures to `surv_signatures.c`**
 
 ```c
-// UUIDs de 16 bits, de eye-spy (Apache-2.0)
+// 16-bit UUIDs, from eye-spy (Apache-2.0)
 static const surv_uuid_entry_t UUIDS[] = {
     {0xFD5F, SURV_CLASS_GLASSES,  5, "RayBan Meta"},
     {0xFFFA, SURV_CLASS_ODID,     4, "Drone ODID"},
@@ -997,7 +966,7 @@ static const surv_uuid_entry_t UUIDS[] = {
     {0xFEEC, SURV_CLASS_TILE,     3, "Tile"},
 };
 
-// Substrings de nombre BLE, case-insensitive
+// BLE name substrings, case-insensitive
 static const surv_name_entry_t BLE_NAMES[] = {
     {"fs ext battery", SURV_CLASS_FLOCK,    5, "Flock Battery"},
     {"pigvision",      SURV_CLASS_FLOCK,    5, "Flock"},
@@ -1007,19 +976,15 @@ static const surv_name_entry_t BLE_NAMES[] = {
     {"meshcore-",      SURV_CLASS_MESHCORE, 2, "MeshCore"},
 };
 
-// Nombres exactos de modulos de skimmer
+// Exact names of skimmer modules
 static const char* const SKIMMER_NAMES[] = {"HC-03", "HC-05", "HC-06"};
 ```
 
-Escribir los seis accessors declarados en Task 1 (`surv_signatures_uuids`,
-`surv_signatures_uuid_count`, `surv_signatures_ble_names`,
-`surv_signatures_ble_name_count`, `surv_signatures_skimmers`,
-`surv_signatures_skimmer_count`) con el mismo cuerpo trivial que
-`surv_signatures_ouis()`.
+Write the six accessors declared in Task 1 (`surv_signatures_uuids`, `surv_signatures_uuid_count`, `surv_signatures_ble_names`, `surv_signatures_ble_name_count`, `surv_signatures_skimmers`, `surv_signatures_skimmer_count`) with the same trivial body as `surv_signatures_ouis()`.
 
-- [ ] **Step 4: Implementar el disector**
+- [ ] **Step 4: Implement the dissector**
 
-En `surv_match.c`. Recorre TLV estándar de BLE una sola vez y acumula hits:
+In `surv_match.c`. Walks standard BLE TLVs in a single pass and accumulates hits:
 
 ```c
 static void push_hit(surv_ble_hit_t* out, uint8_t* n, surv_class_t k,
@@ -1029,7 +994,7 @@ static void push_hit(surv_ble_hit_t* out, uint8_t* n, surv_class_t k,
   }
   for (uint8_t i = 0; i < *n; i++) {
     if (out[i].klass == k) {
-      return;  // ya registrada
+      return;  // already recorded
     }
   }
   out[*n].klass = k;
@@ -1048,7 +1013,7 @@ uint8_t surv_match_ble_adv(const uint8_t* adv, uint8_t adv_len,
   while (off + 1 < adv_len) {
     uint8_t len = adv[off];
     if (len == 0 || (uint16_t) (off + len + 1) > adv_len) {
-      break;  // longitud imposible: advertisement truncado
+      break;  // impossible length: truncated advertisement
     }
     uint8_t        ad_type = adv[off + 1];
     const uint8_t* d = &adv[off + 2];
@@ -1066,7 +1031,7 @@ uint8_t surv_match_ble_adv(const uint8_t* adv, uint8_t adv_len,
         }
       } else if (company == 0x0075) {  // Samsung
         push_hit(out, &n, SURV_CLASS_SMARTTAG, 3, "SmartTag");
-      } else if (company == 0x09C8) {  // XUNTONG, confirmado Flock (eye-spy)
+      } else if (company == 0x09C8) {  // XUNTONG, confirmed Flock (eye-spy)
         push_hit(out, &n, SURV_CLASS_FLOCK, 5, "Flock BLE");
       }
     }
@@ -1082,7 +1047,7 @@ uint8_t surv_match_ble_adv(const uint8_t* adv, uint8_t adv_len,
       }
     }
 
-    if (ad_type == 0x08 || ad_type == 0x09) {  // nombre corto / completo
+    if (ad_type == 0x08 || ad_type == 0x09) {  // shortened / complete local name
       char name[32];
       uint8_t cp = dlen < sizeof(name) - 1 ? dlen : (uint8_t) (sizeof(name) - 1);
       memcpy(name, d, cp);
@@ -1108,10 +1073,10 @@ uint8_t surv_match_ble_adv(const uint8_t* adv, uint8_t adv_len,
 }
 ```
 
-- [ ] **Step 5: Ejecutar y verificar que pasan**
+- [ ] **Step 5: Run and verify they pass**
 
 Run: `make -C firmware/components/surveillance_detect/test run-tests`.
-Esperado: los nueve tests de `[surv][ble]` pasan.
+Expected: all tests in `[surv][ble]` pass.
 
 - [ ] **Step 6: Commit**
 
@@ -1122,10 +1087,9 @@ git commit -m "feat(surveillance): add shared BLE advertising dissector"
 
 ---
 
-## Task 5: Refactor de `trackers_scanner` sobre el disector compartido
+## Task 5: Refactor `trackers_scanner` onto the Shared Dissector
 
-Esta es la única tarea que toca código que hoy funciona en manos de usuarios.
-Va temprano y aislada, y termina con verificación manual en hardware.
+This is the only task that touches code currently working in users' hands. It goes early and isolated, and ends with mandatory manual verification on hardware.
 
 **Files:**
 - Modify: `firmware/components/trackers_scanner/trackers_scanner.c:115-185`
@@ -1134,12 +1098,11 @@ Va temprano y aislada, y termina con verificación manual en hardware.
 
 **Interfaces:**
 - Consumes: `surv_match_ble_adv()`, `surv_ble_hit_t`, `SURV_BLE_MAX_HITS`.
-- Produces: `void bt_gattc_set_passive_scan(bool passive)` — afecta solo a las llamadas posteriores a `bt_gattc_set_ble_scan_params()`, no al default de otros consumidores.
+- Produces: `void bt_gattc_set_passive_scan(bool passive)` - affects only subsequent calls to `bt_gattc_set_ble_scan_params()`, leaving the default unchanged for other consumers.
 
-- [ ] **Step 1: Añadir el modo pasivo a `bt_gattc`**
+- [ ] **Step 1: Add passive scan mode to `bt_gattc`**
 
-En `bt_gattc.c`, junto a la definición actual de scan params
-(`bt_gattc.c:61` tiene `.scan_type = BLE_SCAN_TYPE_ACTIVE`):
+In `bt_gattc.c`, next to the current scan params definition (`bt_gattc.c:61` has `.scan_type = BLE_SCAN_TYPE_ACTIVE`):
 
 ```c
 static bool s_passive_scan = false;
@@ -1149,19 +1112,17 @@ void bt_gattc_set_passive_scan(bool passive) {
 }
 ```
 
-y en `bt_gattc_set_default_ble_scan_params()` sustituir el literal por:
+and in `bt_gattc_set_default_ble_scan_params()` replace the literal with:
 
 ```c
 .scan_type = s_passive_scan ? BLE_SCAN_TYPE_PASSIVE : BLE_SCAN_TYPE_ACTIVE,
 ```
 
-Declarar `bt_gattc_set_passive_scan` en `bt_gattc.h`.
+Declare `bt_gattc_set_passive_scan` in `bt_gattc.h`.
 
-- [ ] **Step 2: Sustituir el cuerpo de `tracker_dissector`**
+- [ ] **Step 2: Replace the body of `tracker_dissector`**
 
-En `trackers_scanner.c`, reemplazar el recorrido TLV completo (el `while` de
-`tracker_dissector`) por una llamada al disector compartido, conservando la
-firma de la función y el rellenado de `tracker_record`:
+In `trackers_scanner.c`, replace the full TLV loop (the `while` in `tracker_dissector`) with a call to the shared dissector, preserving the function signature and `tracker_record` population:
 
 ```c
 static void tracker_dissector(esp_ble_gap_cb_param_t* scan_rst,
@@ -1174,9 +1135,9 @@ static void tracker_dissector(esp_ble_gap_cb_param_t* scan_rst,
   surv_ble_hit_t hits[SURV_BLE_MAX_HITS];
   uint8_t n = surv_match_ble_adv(adv, adv_len, hits);
 
-  // Esta app solo muestra rastreadores personales. El resto de clases que el
-  // disector compartido reconoce (Flock, Axon, drones) las consume la app de
-  // vigilancia, no esta.
+  // This app only displays personal trackers. The remaining classes recognized
+  // by the shared dissector (Flock, Axon, drones) are consumed by the
+  // surveillance app, not this one.
   for (uint8_t i = 0; i < n; i++) {
     switch (hits[i].klass) {
       case SURV_CLASS_AIRTAG:
@@ -1207,8 +1168,7 @@ static void tracker_dissector(esp_ble_gap_cb_param_t* scan_rst,
 }
 ```
 
-Añadir `#include "surv_match.h"` y, en `trackers_scanner/CMakeLists.txt`,
-`surveillance_detect` a `PRIV_REQUIRES`:
+Add `#include "surv_match.h"` and, in `trackers_scanner/CMakeLists.txt`, add `surveillance_detect` to `PRIV_REQUIRES`:
 
 ```cmake
 idf_component_register(SRCS "trackers_scanner.c"
@@ -1216,37 +1176,36 @@ PRIV_REQUIRES bt bt_gattc surveillance_detect
 INCLUDE_DIRS ".")
 ```
 
-- [ ] **Step 3: Activar scan pasivo en el arranque del scanner**
+- [ ] **Step 3: Enable passive scan on scanner startup**
 
-En `trackers_scanner_start()`, antes de `bt_gattc_set_ble_scan_params()`:
+In `trackers_scanner_start()`, before `bt_gattc_set_ble_scan_params()`:
 
 ```c
 bt_gattc_set_passive_scan(true);
 ```
 
-- [ ] **Step 4: Compilar para el target real**
+- [ ] **Step 4: Compile for the real target**
 
 ```bash
 cd firmware && idf.py set-target esp32c6 && idf.py build
 ```
 
-Esperado: build OK.
+Expected: build OK.
 
-- [ ] **Step 5: Verificación manual en hardware — obligatoria**
+- [ ] **Step 5: Manual verification on hardware - mandatory**
 
 ```bash
 cd firmware && idf.py -p /dev/ttyACM0 flash monitor
 ```
 
-Con un AirTag (o un Tile, o un teléfono Samsung con SmartTag) a menos de 2 m:
+With an AirTag (or a Tile, or a Samsung phone with SmartTag) within 2 m:
 
-1. Menú → Bluetooth → Trackers Scan.
-2. Comprobar que el dispositivo aparece en la lista con su nombre correcto.
-3. Comprobar que el RSSI se actualiza al acercarlo y alejarlo.
-4. Comprobar que salir con BUTTON_LEFT devuelve al menú sin colgarse.
+1. Menu -> Bluetooth -> Trackers Scan.
+2. Verify that the device appears in the list with its proper name.
+3. Verify that the RSSI updates when moving it closer and further away.
+4. Verify that exiting with BUTTON_LEFT returns to the menu without hanging.
 
-Si cualquiera de los cuatro falla, **no continuar**: el disector compartido tiene
-una regresión respecto al original y hay que corregirla aquí.
+If any of the four checks fail, **do not proceed**: the shared dissector has a regression relative to the original and must be fixed here.
 
 - [ ] **Step 6: Commit**
 
@@ -1257,9 +1216,9 @@ git commit -m "refactor(trackers): use shared BLE dissector and passive scanning
 
 ---
 
-## Task 6: Fingerprint de Information Elements
+## Task 6: Information Element Fingerprinting
 
-La pieza más delicada del plan. Va en su propio archivo y su propio test.
+The most delicate piece of the plan. Lives in its own file with its own test suite.
 
 **Files:**
 - Create: `firmware/components/surveillance_detect/include/surv_ie.h`
@@ -1267,39 +1226,36 @@ La pieza más delicada del plan. Va en su propio archivo y su propio test.
 - Test: `firmware/components/surveillance_detect/test/test_surv_ie.c`
 
 **Interfaces:**
-- Consumes: nada.
+- Consumes: nothing.
 - Produces:
   ```c
   typedef struct { uint8_t tag; uint8_t vlen; uint8_t vendor[7]; } surv_ie_tok_t;
   int  surv_ie_is_wildcard_probe(const uint8_t* ies, int len);
   bool surv_ie_matches_flock(const uint8_t* ies, int len);
-  // Anade una firma alternativa. La usa el overlay (Task 8) para seguir a las
-  // camaras cuando Flock actualice su firmware por OTA: una flota puede correr
-  // versiones mezcladas, asi que se admiten hasta SURV_IE_MAX_SIGS a la vez.
-  // Devuelve false si la tabla esta llena.
+  // Adds an alternative signature. Used by the overlay (Task 8) to track
+  // cameras when Flock updates their firmware via OTA: a fleet may run mixed
+  // versions, so up to SURV_IE_MAX_SIGS are supported simultaneously.
+  // Returns false if the table is full.
   bool surv_ie_add_signature(const surv_ie_tok_t* toks, uint8_t count);
-  // Descarta las firmas del overlay y deja solo la compilada.
+  // Discards overlay signatures and leaves only the compiled-in one.
   void surv_ie_reset_signatures(void);
   ```
-  `surv_ie_is_wildcard_probe` devuelve 1 (SSID IE de longitud 0), 0 (SSID IE con
-  longitud) o −1 (no hay SSID IE).
+  `surv_ie_is_wildcard_probe` returns 1 (length-0 SSID IE), 0 (non-empty SSID IE), or -1 (no SSID IE).
 
-- [ ] **Step 1: Escribir los tests que fallan**
+- [ ] **Step 1: Write the failing tests**
 
-`test/test_surv_ie.c`. El vector se construye para reproducir
-exactamente la firma drive-testeada de flock-you
-`2,12,127,221:506f9a16030103,45,191,221:0050f208000000`:
+`test/test_surv_ie.c`. The vector is constructed to reproduce the exact drive-tested signature from flock-you `2,12,127,221:506f9a16030103,45,191,221:0050f208000000`:
 
 ```c
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Vectores de trama. El vector base es sintetico y reproduce la firma
-// documentada por DeFlockJoplin. Debe complementarse con capturas reales
-// extraidas de los pcap de evidencia (Task 15) en cuanto existan.
+// Frame vectors. The base vector is synthetic and reproduces the signature
+// documented by DeFlockJoplin. It should be supplemented with real captures
+// extracted from evidence pcaps (Task 15) once available.
 #include <string.h>
 #include "surv_ie.h"
 #include "surv_test.h"
 
-// SSID wildcard + los siete IE de la firma primaria de Flock
+// Wildcard SSID + the seven IEs of the primary Flock signature
 static const uint8_t FLOCK_IES[] = {
     0x00, 0x00,                                      // tag 0, len 0 (wildcard)
     0x02, 0x02, 0xaa, 0xbb,                          // tag 2
@@ -1311,76 +1267,76 @@ static const uint8_t FLOCK_IES[] = {
     0xdd, 0x07, 0x00, 0x50, 0xf2, 0x08, 0x00, 0x00, 0x00,  // vendor WFA
 };
 
-TEST_CASE("detecta SSID IE wildcard", "[surv][ie]") {
+TEST_CASE("detects wildcard SSID IE", "[surv][ie]") {
   TEST_ASSERT_EQUAL_INT(1, surv_ie_is_wildcard_probe(FLOCK_IES,
                                                      sizeof(FLOCK_IES)));
 }
 
-TEST_CASE("un probe dirigido no es wildcard", "[surv][ie]") {
-  const uint8_t ies[] = {0x00, 0x04, 'c', 'a', 's', 'a'};
+TEST_CASE("a directed probe is not a wildcard", "[surv][ie]") {
+  const uint8_t ies[] = {0x00, 0x04, 'h', 'o', 'm', 'e'};
   TEST_ASSERT_EQUAL_INT(0, surv_ie_is_wildcard_probe(ies, sizeof(ies)));
 }
 
-TEST_CASE("sin SSID IE devuelve -1", "[surv][ie]") {
+TEST_CASE("without SSID IE returns -1", "[surv][ie]") {
   const uint8_t ies[] = {0x2d, 0x02, 0x00, 0x00};
   TEST_ASSERT_EQUAL_INT(-1, surv_ie_is_wildcard_probe(ies, sizeof(ies)));
 }
 
-TEST_CASE("la firma primaria de Flock matchea", "[surv][ie]") {
+TEST_CASE("primary Flock signature matches", "[surv][ie]") {
   TEST_ASSERT_TRUE(surv_ie_matches_flock(FLOCK_IES, sizeof(FLOCK_IES)));
 }
 
-TEST_CASE("un probe con IE distintos no matchea", "[surv][ie]") {
+TEST_CASE("probe with different IEs does not match", "[surv][ie]") {
   const uint8_t ies[] = {0x00, 0x00, 0x01, 0x04, 0x82, 0x84, 0x8b, 0x96};
   TEST_ASSERT_FALSE(surv_ie_matches_flock(ies, sizeof(ies)));
 }
 
-// Comprueba que una cola de bytes tras la firma no la rompe. Lo garantiza la
-// salida temprana del recorrido al completarse la firma, no ningun reintento.
-TEST_CASE("la firma matchea con 4 bytes de FCS al final", "[surv][ie]") {
+// Verifies that trailing bytes after the signature do not break it. Guaranteed
+// by early exit once the signature completes, without needing any retry.
+TEST_CASE("signature matches with 4 trailing FCS bytes", "[surv][ie]") {
   uint8_t ies[sizeof(FLOCK_IES) + 4];
   memcpy(ies, FLOCK_IES, sizeof(FLOCK_IES));
-  memset(ies + sizeof(FLOCK_IES), 0xAB, 4);  // FCS basura
+  memset(ies + sizeof(FLOCK_IES), 0xAB, 4);  // garbage FCS
   TEST_ASSERT_TRUE(surv_ie_matches_flock(ies, sizeof(ies)));
 }
 
-TEST_CASE("un TLV con longitud imposible no cuelga ni desborda", "[surv][ie]") {
+TEST_CASE("TLV with impossible length does not hang or overflow", "[surv][ie]") {
   const uint8_t ies[] = {0x00, 0x00, 0x2d, 0xff, 0x01, 0x02};
-  (void) surv_ie_matches_flock(ies, sizeof(ies));  // no debe crashear
+  (void) surv_ie_matches_flock(ies, sizeof(ies));  // must not crash
   TEST_PASS();
 }
 
-TEST_CASE("len 0 y puntero nulo se manejan", "[surv][ie]") {
+TEST_CASE("len 0 and null pointer are handled", "[surv][ie]") {
   TEST_ASSERT_EQUAL_INT(-1, surv_ie_is_wildcard_probe(NULL, 0));
   TEST_ASSERT_FALSE(surv_ie_matches_flock(NULL, 0));
 }
 
-TEST_CASE("una firma anadida matchea sin perder la compilada", "[surv][ie]") {
+TEST_CASE("added signature matches without losing the compiled-in one", "[surv][ie]") {
   surv_ie_reset_signatures();
-  const uint8_t otra_trama[] = {0x00, 0x00, 0x2d, 0x02, 0x00, 0x00,
-                                0xbf, 0x02, 0x00, 0x00};
-  TEST_ASSERT_FALSE(surv_ie_matches_flock(otra_trama, sizeof(otra_trama)));
+  const uint8_t other_frame[] = {0x00, 0x00, 0x2d, 0x02, 0x00, 0x00,
+                                 0xbf, 0x02, 0x00, 0x00};
+  TEST_ASSERT_FALSE(surv_ie_matches_flock(other_frame, sizeof(other_frame)));
 
-  const surv_ie_tok_t otra[] = {{45, 0, {0}}, {191, 0, {0}}};
-  TEST_ASSERT_TRUE(surv_ie_add_signature(otra, 2));
-  TEST_ASSERT_TRUE(surv_ie_matches_flock(otra_trama, sizeof(otra_trama)));
-  // la compilada sigue viva
+  const surv_ie_tok_t other[] = {{45, 0, {0}}, {191, 0, {0}}};
+  TEST_ASSERT_TRUE(surv_ie_add_signature(other, 2));
+  TEST_ASSERT_TRUE(surv_ie_matches_flock(other_frame, sizeof(other_frame)));
+  // the compiled-in signature remains active
   TEST_ASSERT_TRUE(surv_ie_matches_flock(FLOCK_IES, sizeof(FLOCK_IES)));
 
   surv_ie_reset_signatures();
 }
 
-TEST_CASE("se rechaza una firma con mas tokens de los permitidos",
+TEST_CASE("signature with more tokens than allowed is rejected",
           "[surv][ie]") {
   surv_ie_reset_signatures();
-  surv_ie_tok_t demasiados[SURV_IE_MAX_TOKS + 1];
-  memset(demasiados, 0, sizeof(demasiados));
-  TEST_ASSERT_FALSE(surv_ie_add_signature(demasiados, SURV_IE_MAX_TOKS + 1));
+  surv_ie_tok_t too_many[SURV_IE_MAX_TOKS + 1];
+  memset(too_many, 0, sizeof(too_many));
+  TEST_ASSERT_FALSE(surv_ie_add_signature(too_many, SURV_IE_MAX_TOKS + 1));
   TEST_ASSERT_FALSE(surv_ie_add_signature(NULL, 3));
-  TEST_ASSERT_FALSE(surv_ie_add_signature(demasiados, 0));
+  TEST_ASSERT_FALSE(surv_ie_add_signature(too_many, 0));
 }
 
-TEST_CASE("se respeta el tope de 8 firmas del overlay", "[surv][ie]") {
+TEST_CASE("overlay cap of 8 signatures is respected", "[surv][ie]") {
   surv_ie_reset_signatures();
   const surv_ie_tok_t t1[] = {{45, 0, {0}}};
   for (int i = 0; i < SURV_IE_MAX_SIGS; i++) {
@@ -1391,29 +1347,29 @@ TEST_CASE("se respeta el tope de 8 firmas del overlay", "[surv][ie]") {
 }
 ```
 
-Añadir `test_surv_ie.c` a la variable `TESTS` del `test/Makefile`.
+Add `test_surv_ie.c` to the `TESTS` variable in `test/Makefile`.
 
-- [ ] **Step 2: Ejecutar y verificar que falla**
+- [ ] **Step 2: Run and verify it fails**
 
-Run: `make -C firmware/components/surveillance_detect/test run-tests`. Esperado: `surv_ie.h` no existe.
+Run: `make -C firmware/components/surveillance_detect/test run-tests`. Expected: `surv_ie.h` does not exist.
 
-- [ ] **Step 3: Implementar el patrón y la comparación binaria**
+- [ ] **Step 3: Implement the pattern and binary comparison**
 
 `include/surv_ie.h`:
 
 ```c
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Fingerprint de Information Elements de probe request.
+// Probe request Information Element fingerprint.
 //
-// Procedencia: la firma y el manejo de tramas corruptas vienen de
-// colonelpanichacks/flock-you (MIT), a su vez basado en la investigacion de
-// DeFlockJoplin y en Pintor & Atzori, "Analysis of Wi-Fi Probe Requests
+// Provenance: the signature and corrupt-frame handling come from
+// colonelpanichacks/flock-you (MIT), which in turn is based on research by
+// DeFlockJoplin and Pintor & Atzori, "Analysis of Wi-Fi Probe Requests
 // Towards Information Element Fingerprinting", GLOBECOM 2022.
 //
-// Diferencia con el original: alli la firma se construye como string con
-// snprintf y se compara con strcmp DENTRO del callback promiscuo. Aqui se
-// compara token a token en binario, sin formateo en el hot path.
+// Difference from the original: there, the signature is built as a string with
+// snprintf and compared with strcmp INSIDE the promiscuous callback. Here it is
+// compared token by token in binary, with no string formatting in the hot path.
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
@@ -1424,65 +1380,44 @@ Run: `make -C firmware/components/surveillance_detect/test run-tests`. Esperado:
 
 typedef struct {
   uint8_t tag;
-  uint8_t vlen;       // 0 si no es vendor
-  uint8_t vendor[7];  // primeros 7 bytes del payload vendor
+  uint8_t vlen;       // 0 if not vendor
+  uint8_t vendor[7];  // first 7 bytes of vendor payload
 } surv_ie_tok_t;
 
-// 1 = SSID IE presente con longitud 0; 0 = presente con longitud; -1 = ausente.
+// 1 = SSID IE present with length 0; 0 = present with non-zero length; -1 = absent.
 int surv_ie_is_wildcard_probe(const uint8_t* ies, int len);
 
-// true si los IE reproducen la firma primaria de Flock.
+// true if the IEs reproduce the primary Flock signature.
 bool surv_ie_matches_flock(const uint8_t* ies, int len);
 ```
 
-`surv_ie.c` — **el codigo de este paso se corrigio despues de escribirse el
-plan y la implementacion real es la autoridad**; ver
-`firmware/components/surveillance_detect/surv_ie.c`. Lo que el codigo original
-de este documento tenia mal, y que NO se puede volver a perder:
+`surv_ie.c` - **the code in this step was corrected after the plan was written and the real implementation is authoritative**; see `firmware/components/surveillance_detect/surv_ie.c`. What the original code in this document got wrong, and what MUST NOT be lost again:
 
-1. **Los tres parches de campo faltaban.** El plan los prometia en prosa y no
-   los implementaba: salto de *phantom overflow*, resincronizacion de TLV y
-   canonicalizacion anclada al vendor de LiteON. Sin ellos el comparador es mas
-   estricto que la referencia y **no reconoce camaras reales**, en silencio: un
-   test diferencial sobre 25 000 entradas fallaba 3020, todas en la direccion de
-   no detectar.
-2. **Los tokens vendor son de hasta 8 bytes, no 7.** La referencia codifica
-   `min(elen, 8)`, y `vlen` debe compararse: dos IE con los mismos 7 primeros
-   bytes pero distinta longitud NO son el mismo token.
-3. **El reintento sin FCS es necesario.** Se quito en su momento por parecer
-   codigo muerto, y lo era con la semantica antigua; con la regla de "la firma
-   termina donde termina la lista" una cola de FCS anade tokens y rompe la
-   coincidencia, asi que vuelve a hacer falta.
-4. **La canonicalizacion del original es inconsistente y se reproduce a
-   proposito.** Solo canonicaliza si la cadena no empieza ya por `2,12,127,`,
-   de modo que un tag sobrante dentro del prefijo la rompe y uno delante no. Es
-   el comportamiento validado en carretera; apartarse de el nos vuelve mas
-   permisivos.
+1. **The three field patches were missing.** The plan promised them in prose and failed to implement them: *phantom overflow* skipping, TLV resynchronization, and canonicalization anchored to the LiteON vendor element. Without them, the comparator is stricter than the reference implementation and **silently fails to recognize real cameras**: a differential test across 25,000 inputs failed 3,020 times, all in the direction of failing to detect.
+2. **Vendor tokens are up to 8 bytes, not 7.** The reference encodes `min(elen, 8)`, and `vlen` must be compared: two IEs sharing the same first 7 bytes but having different lengths are NOT the same token.
+3. **Retrying without FCS is necessary.** It was previously removed because it looked like dead code under the old semantics; under the rule "the signature ends where the list ends", a trailing FCS appends tokens and breaks the match, making the retry necessary again.
+4. **The original canonicalization is inconsistent and is reproduced intentionally.** It only canonicalizes if the string does not already start with `2,12,127,`, so an extra tag inside the prefix breaks it while one before the prefix does not. That is the road-validated behavior; deviating from it makes us more permissive.
 
-La garantia de que la reimplementacion binaria conserva la semantica del
-original es el test diferencial de `test/test_surv_ie_diff.c`, que ejecuta
-ambos algoritmos sobre 228 000 entradas y exige coincidencia total. Ese test es
-el criterio de aceptacion de cualquier cambio futuro al comparador.
+The guarantee that the binary reimplementation preserves the original semantics is the differential test in `test/test_surv_ie_diff.c`, which runs both algorithms across 228,000 inputs and requires total agreement. That test is the acceptance criterion for any future change to the comparator.
 
-- [ ] **Step 4: Ejecutar y verificar que pasan**
+- [ ] **Step 4: Run and verify they pass**
 
 Run: `make -C firmware/components/surveillance_detect/test run-tests`.
-Esperado: los once tests de `[surv][ie]` pasan.
+Expected: all eleven tests in `[surv][ie]` pass.
 
-- [ ] **Step 5: Anotar la deuda de vectores reales**
+- [ ] **Step 5: Record the real-vector coverage note**
 
-Añadir al final de `test_surv_ie.c`:
+Append to the end of `test_surv_ie.c`:
 
 ```c
-// PENDIENTE DE CAPTURA REAL: los tests de arriba usan un vector sintetico.
-// Los casos de "phantom overflow" y resync de TLV que flock-you encontro en
-// campo no se pueden reproducir sin tramas reales. En cuanto la Task 15
-// produzca pcap de evidencia, extraer los IE de una trama tier-4 real y
-// anadirla aqui como FLOCK_IES_REAL, con su propio TEST_CASE.
+// PENDING REAL CAPTURE: the tests above use a synthetic vector.
+// The "phantom overflow" and TLV resync cases that flock-you encountered in
+// the field cannot be reproduced without real frames. Once Task 15 produces
+// evidence pcaps, extract the IEs from a real tier-4 frame and add it here as
+// FLOCK_IES_REAL, with its own TEST_CASE.
 ```
 
-Esto no es un placeholder de implementación: la función queda completa y
-probada. Es una nota de cobertura pendiente de material que aún no existe.
+This is not an implementation placeholder: the function is complete and tested. It is a note tracking coverage that depends on captures not yet recorded.
 
 - [ ] **Step 6: Commit**
 
@@ -1493,7 +1428,7 @@ git commit -m "feat(surveillance): add binary IE fingerprint matcher for Flock p
 
 ---
 
-## Task 7: Motor de score, tiers y dedupe
+## Task 7: Scoring, Tiers, and Dedupe Engine
 
 **Files:**
 - Create: `firmware/components/surveillance_detect/include/surv_engine.h`
@@ -1511,16 +1446,15 @@ git commit -m "feat(surveillance): add binary IE fingerprint matcher for Flock p
   void    surv_engine_tick(uint32_t now_ms);
   uint8_t surv_engine_score(void);
   uint8_t surv_engine_best_tier(const uint8_t mac[6]);
-  // Rastreador de persistencia (SURV_CLASS_PERSIST, de eye-spy): una MAC
-  // desconocida vista >=3 veces a lo largo de >=5 min es un posible seguidor.
-  // Devuelve true la vez que dispara la puntuacion.
+  // Persistence tracker (SURV_CLASS_PERSIST, from eye-spy): an unknown MAC
+  // seen >=3 times across >=5 min is a potential follower.
+  // Returns true on the sighting that triggers scoring.
   bool    surv_engine_note_unknown(const uint8_t mac[6], uint32_t now_ms);
   ```
 
-El tiempo entra como parámetro `now_ms` en vez de leerse de `esp_timer`: es lo
-que permite probar decay y cooldown en host sin esperar minutos reales.
+Time is passed in as a `now_ms` parameter rather than read from `esp_timer`: this makes it possible to test decay and cooldown on the host without waiting real minutes.
 
-- [ ] **Step 1: Escribir los tests que fallan**
+- [ ] **Step 1: Write the failing tests**
 
 `test/test_surv_engine.c`:
 
@@ -1550,14 +1484,14 @@ static surv_event_t mk(uint8_t last_octet, surv_class_t k, uint8_t tier) {
   return ev;
 }
 
-TEST_CASE("una deteccion suma sus puntos al score", "[surv][engine]") {
+TEST_CASE("a detection adds its points to the score", "[surv][engine]") {
   surv_engine_reset();
   surv_event_t ev = mk(0x01, SURV_CLASS_FLOCK, SURV_TIER_IE_SIG);
   surv_engine_submit(&ev, 5, 1000);
   TEST_ASSERT_EQUAL_UINT8(5, surv_engine_score());
 }
 
-TEST_CASE("el score decae 1 punto cada 60 s", "[surv][engine]") {
+TEST_CASE("score decays by 1 point every 60 s", "[surv][engine]") {
   surv_engine_reset();
   surv_event_t ev = mk(0x01, SURV_CLASS_FLOCK, SURV_TIER_IE_SIG);
   surv_engine_submit(&ev, 5, 1000);
@@ -1567,24 +1501,24 @@ TEST_CASE("el score decae 1 punto cada 60 s", "[surv][engine]") {
   TEST_ASSERT_EQUAL_UINT8(3, surv_engine_score());
 }
 
-TEST_CASE("el score nunca baja de cero", "[surv][engine]") {
+TEST_CASE("score never drops below zero", "[surv][engine]") {
   surv_engine_reset();
   surv_engine_tick(600000);
   TEST_ASSERT_EQUAL_UINT8(0, surv_engine_score());
 }
 
-TEST_CASE("la misma clase no re-puntua antes de 120 s", "[surv][engine]") {
+TEST_CASE("same class does not re-score before 120 s", "[surv][engine]") {
   surv_engine_reset();
   surv_event_t a = mk(0x01, SURV_CLASS_FLOCK, SURV_TIER_IE_SIG);
   surv_event_t b = mk(0x02, SURV_CLASS_FLOCK, SURV_TIER_IE_SIG);
   surv_engine_submit(&a, 5, 1000);
-  surv_engine_submit(&b, 5, 30000);  // otra MAC, misma clase, dentro de 120 s
+  surv_engine_submit(&b, 5, 30000);  // different MAC, same class, within 120 s
   TEST_ASSERT_EQUAL_UINT8(5, surv_engine_score());
   surv_engine_submit(&b, 5, 1000 + 120001);
   TEST_ASSERT_EQUAL_UINT8(10, surv_engine_score());
 }
 
-TEST_CASE("un tier alto no se degrada con uno bajo", "[surv][engine]") {
+TEST_CASE("a high tier is not degraded by a lower one", "[surv][engine]") {
   surv_engine_reset();
   surv_event_t hi = mk(0x01, SURV_CLASS_FLOCK, SURV_TIER_IE_SIG);
   surv_event_t lo = mk(0x01, SURV_CLASS_FLOCK, SURV_TIER_ADDR13);
@@ -1593,7 +1527,7 @@ TEST_CASE("un tier alto no se degrada con uno bajo", "[surv][engine]") {
   TEST_ASSERT_EQUAL_UINT8(SURV_TIER_IE_SIG, surv_engine_best_tier(hi.mac));
 }
 
-TEST_CASE("el dedupe de 5 s suprime repeticiones del mismo tier",
+TEST_CASE("5 s dedupe suppresses repeats at the same tier",
           "[surv][engine]") {
   surv_engine_reset();
   surv_engine_register_emit_cb(on_emit);
@@ -1606,29 +1540,29 @@ TEST_CASE("el dedupe de 5 s suprime repeticiones del mismo tier",
   TEST_ASSERT_EQUAL_INT(2, s_emits);
 }
 
-TEST_CASE("un tier superior preempta el dedupe", "[surv][engine]") {
+TEST_CASE("a higher tier preempts dedupe", "[surv][engine]") {
   surv_engine_reset();
   surv_engine_register_emit_cb(on_emit);
   s_emits = 0;
   surv_event_t lo = mk(0x01, SURV_CLASS_FLOCK, SURV_TIER_ADDR13);
   surv_event_t hi = mk(0x01, SURV_CLASS_FLOCK, SURV_TIER_IE_SIG);
   surv_engine_submit(&lo, 5, 1000);
-  surv_engine_submit(&hi, 5, 1500);  // dentro de los 5 s, pero tier mayor
+  surv_engine_submit(&hi, 5, 1500);  // within 5 s, but higher tier
   TEST_ASSERT_EQUAL_INT(2, s_emits);
 }
 
-TEST_CASE("una MAC desconocida vista 3 veces en 5 min puntua persistencia",
+TEST_CASE("unknown MAC seen 3 times over 5 min scores persistence",
           "[surv][engine]") {
   surv_engine_reset();
   const uint8_t mac[6] = {0xde, 0xad, 0x00, 0x00, 0x00, 0x01};
   TEST_ASSERT_FALSE(surv_engine_note_unknown(mac, 1000));
   TEST_ASSERT_FALSE(surv_engine_note_unknown(mac, 120000));
-  // tercera vista, y han pasado mas de 5 min desde la primera
+  // third sighting, and more than 5 min have elapsed since the first
   TEST_ASSERT_TRUE(surv_engine_note_unknown(mac, 1000 + 300001));
   TEST_ASSERT_EQUAL_UINT8(2, surv_engine_score());
 }
 
-TEST_CASE("una MAC desconocida vista 3 veces en 1 min no puntua",
+TEST_CASE("unknown MAC seen 3 times within 1 min does not score",
           "[surv][engine]") {
   surv_engine_reset();
   const uint8_t mac[6] = {0xde, 0xad, 0x00, 0x00, 0x00, 0x02};
@@ -1638,33 +1572,33 @@ TEST_CASE("una MAC desconocida vista 3 veces en 1 min no puntua",
   TEST_ASSERT_EQUAL_UINT8(0, surv_engine_score());
 }
 
-TEST_CASE("la tabla se satura a 200 MAC sin desbordar", "[surv][engine]") {
+TEST_CASE("device table saturates at 200 MACs without overflowing", "[surv][engine]") {
   surv_engine_reset();
   for (int i = 0; i < 300; i++) {
     surv_event_t ev = mk((uint8_t) (i & 0xff), SURV_CLASS_CAM, SURV_TIER_ADDR2);
     ev.mac[4] = (uint8_t) (i >> 8);
     surv_engine_submit(&ev, 3, (uint32_t) (1000 + i * 10));
   }
-  TEST_PASS();  // no debe crashear
+  TEST_PASS();  // must not crash
 }
 ```
 
-- [ ] **Step 2: Ejecutar y verificar que falla**
+- [ ] **Step 2: Run and verify it fails**
 
-Run: `make -C firmware/components/surveillance_detect/test run-tests`. Esperado: `surv_engine.h` no existe.
+Run: `make -C firmware/components/surveillance_detect/test run-tests`. Expected: `surv_engine.h` does not exist.
 
-- [ ] **Step 3: Implementar el motor**
+- [ ] **Step 3: Implement the engine**
 
-`include/surv_engine.h` con las firmas del bloque Interfaces, y `surv_engine.c`:
+`include/surv_engine.h` with the signatures from the Interfaces block, and `surv_engine.c`:
 
 ```c
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// Motor de confianza. Combina dos modelos:
-//   - tier por MAC, de flock-you (MIT): que tan seguro estoy de este equipo.
-//   - score global con decay, de eye-spy (Apache-2.0): que tan vigilado esta
-//     este lugar.
-// Son ejes independientes: un SSID "flock" es tier 0 y a la vez 5 puntos.
+// Confidence engine. Combines two models:
+//   - per-MAC tier, from flock-you (MIT): how confident am I about this device.
+//   - global score with decay, from eye-spy (Apache-2.0): how surveilled is
+//     this location.
+// They are independent axes: an SSID "flock" is tier 0 and simultaneously 5 points.
 #include "surv_engine.h"
 #include <string.h>
 
@@ -1709,7 +1643,7 @@ static surv_dev_t* find_or_add(const uint8_t mac[6]) {
     }
   }
   if (s_dev_count >= SURV_MAX_DEVICES) {
-    return NULL;  // tabla llena: se sigue puntuando, no se rastrea el equipo
+    return NULL;  // table full: keep scoring, stop tracking the device
   }
   surv_dev_t* d = &s_devs[s_dev_count++];
   memcpy(d->mac, mac, 6);
@@ -1744,7 +1678,7 @@ void surv_engine_submit(const surv_event_t* ev, uint8_t points,
     d->best_tier = ev->tier;
   }
 
-  // Score global: cooldown por clase, no por MAC.
+  // Global score: cooldown per class, not per MAC.
   bool first = !s_class_seen[ev->klass];
   if (first || (now_ms - s_class_scored_ms[ev->klass]) > SURV_RESCORE_MS) {
     uint16_t sum = (uint16_t) s_score + points;
@@ -1756,7 +1690,7 @@ void surv_engine_submit(const surv_event_t* ev, uint8_t points,
     }
   }
 
-  // Emision: dedupe de 5 s por MAC, preemptado por un tier superior.
+  // Emission: 5 s dedupe per MAC, preempted by a higher tier.
   bool emit = true;
   if (d != NULL) {
     if (!tier_up && d->last_emit_ms != 0 &&
@@ -1787,9 +1721,9 @@ uint8_t surv_engine_score(void) {
   return s_score;
 }
 
-// --- Rastreador de persistencia (de eye-spy, Apache-2.0) --------------------
-// Una MAC que no matchea ninguna firma pero reaparece a lo largo del tiempo es
-// la senal de un seguidor. Se purga a los 30 min de ausencia.
+// --- Persistence tracker (from eye-spy, Apache-2.0) -------------------------
+// A MAC that matches no known signature but reappears over time is the
+// signal of a follower. Purged after 30 min of absence.
 #define SURV_TRACK_MAX      50
 #define SURV_TRACK_MIN_SEEN 3
 #define SURV_TRACK_MIN_SPAN 300000u   // 5 min
@@ -1848,19 +1782,14 @@ bool surv_engine_note_unknown(const uint8_t mac[6], uint32_t now_ms) {
 }
 ```
 
-`surv_engine_reset()` debe limpiar también `s_track` con
-`memset(s_track, 0, sizeof(s_track));`.
+`surv_engine_reset()` must also clear `s_track` with `memset(s_track, 0, sizeof(s_track));`.
 
-**Orden en el archivo:** las declaraciones de `surv_track_t` y `s_track` van
-**antes** de `surv_engine_reset()`, aunque en este documento aparezcan después
-por claridad expositiva. Si se transcriben en el orden del texto,
-`surv_engine_reset()` referencia un identificador aún no declarado y no
-compila.
+**File ordering:** the declarations of `surv_track_t` and `s_track` must appear **before** `surv_engine_reset()`, even though they appear afterward in this document for exposition clarity. If transcribed in the document order, `surv_engine_reset()` will reference an undeclared identifier and fail to compile.
 
-- [ ] **Step 4: Ejecutar y verificar que pasan**
+- [ ] **Step 4: Run and verify they pass**
 
 Run: `make -C firmware/components/surveillance_detect/test run-tests`.
-Esperado: los ocho tests de `[surv][engine]` pasan.
+Expected: all tests in `[surv][engine]` pass.
 
 - [ ] **Step 5: Commit**
 
@@ -1871,7 +1800,7 @@ git commit -m "feat(surveillance): add scoring engine with decay, cooldown and t
 
 ---
 
-## Task 8: Parser del overlay de firmas
+## Task 8: Signature Overlay Parser
 
 **Files:**
 - Create: `firmware/components/surveillance_detect/include/surv_overlay.h`
@@ -1887,10 +1816,9 @@ git commit -m "feat(surveillance): add scoring engine with decay, cooldown and t
   surv_overlay_stats_t surv_overlay_parse(const char* text);
   ```
 
-El parser recibe **texto en memoria**, no una ruta. Leer el archivo es
-responsabilidad de la app (Task 17). Así el parser es 100% testeable en host.
+The parser accepts **in-memory text**, not a file path. Reading the file is the app's responsibility (Task 17). That keeps the parser 100% testable on the host.
 
-- [ ] **Step 1: Escribir los tests que fallan**
+- [ ] **Step 1: Write the failing tests**
 
 `test/test_surv_overlay.c`:
 
@@ -1901,7 +1829,7 @@ responsabilidad de la app (Task 17). Así el parser es 100% testeable en host.
 #include "surv_overlay.h"
 #include "surv_test.h"
 
-TEST_CASE("un OUI anadido pasa a matchear", "[surv][overlay]") {
+TEST_CASE("added OUI starts matching", "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("+oui,aa:bb:cc,flock,5,2\n");
   TEST_ASSERT_EQUAL_UINT16(1, st.added);
@@ -1912,7 +1840,7 @@ TEST_CASE("un OUI anadido pasa a matchear", "[surv][overlay]") {
   TEST_ASSERT_EQUAL_INT(SURV_CLASS_FLOCK, e->klass);
 }
 
-TEST_CASE("un OUI quitado deja de matchear", "[surv][overlay]") {
+TEST_CASE("removed OUI stops matching", "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("-oui,70:c9:4e\n");
   TEST_ASSERT_EQUAL_UINT16(1, st.removed);
@@ -1921,26 +1849,26 @@ TEST_CASE("un OUI quitado deja de matchear", "[surv][overlay]") {
   TEST_ASSERT_NULL(surv_match_oui(mac));
 }
 
-TEST_CASE("los comentarios y las lineas vacias se ignoran", "[surv][overlay]") {
+TEST_CASE("comments and empty lines are ignored", "[surv][overlay]") {
   surv_overlay_reset();
-  surv_overlay_stats_t st = surv_overlay_parse("# comentario\n\n   \n");
+  surv_overlay_stats_t st = surv_overlay_parse("# comment\n\n   \n");
   TEST_ASSERT_EQUAL_UINT16(0, st.added);
   TEST_ASSERT_EQUAL_UINT16(0, st.removed);
   TEST_ASSERT_EQUAL_UINT16(0, st.skipped);
 }
 
-TEST_CASE("una linea malformada se cuenta como saltada", "[surv][overlay]") {
+TEST_CASE("malformed line is counted as skipped", "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse(
-      "+oui,noesunamac,flock,5,2\n"
+      "+oui,notamac,flock,5,2\n"
       "+oui,aa:bb\n"
-      "basura\n"
+      "garbage\n"
       "+oui,dd:ee:ff,flock,5,2\n");
   TEST_ASSERT_EQUAL_UINT16(1, st.added);
   TEST_ASSERT_EQUAL_UINT16(3, st.skipped);
 }
 
-TEST_CASE("un texto nulo o vacio no rompe", "[surv][overlay]") {
+TEST_CASE("null or empty text does not fail", "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse(NULL);
   TEST_ASSERT_EQUAL_UINT16(0, st.added);
@@ -1948,16 +1876,16 @@ TEST_CASE("un texto nulo o vacio no rompe", "[surv][overlay]") {
   TEST_ASSERT_EQUAL_UINT16(0, st.added);
 }
 
-TEST_CASE("una keyword de SSID anadida pasa a matchear", "[surv][overlay]") {
+TEST_CASE("added SSID keyword starts matching", "[surv][overlay]") {
   surv_overlay_reset();
-  surv_overlay_stats_t st = surv_overlay_parse("+ssid,mikamara,cam,3\n");
+  surv_overlay_stats_t st = surv_overlay_parse("+ssid,mycamera,cam,3\n");
   TEST_ASSERT_EQUAL_UINT16(1, st.added);
-  const surv_kw_entry_t* e = surv_match_ssid("red-MiKaMaRa-2");
+  const surv_kw_entry_t* e = surv_match_ssid("net-MyCaMeRa-2");
   TEST_ASSERT_NOT_NULL(e);
   TEST_ASSERT_EQUAL_INT(SURV_CLASS_CAM, e->klass);
 }
 
-TEST_CASE("un UUID anadido pasa a matchear", "[surv][overlay]") {
+TEST_CASE("added UUID starts matching", "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("+uuid,fd6f,cam,3\n");
   TEST_ASSERT_EQUAL_UINT16(1, st.added);
@@ -1967,7 +1895,7 @@ TEST_CASE("un UUID anadido pasa a matchear", "[surv][overlay]") {
   TEST_ASSERT_EQUAL_INT(SURV_CLASS_CAM, hits[0].klass);
 }
 
-TEST_CASE("una firma IE del overlay se suma a la compilada",
+TEST_CASE("overlay IE signature is added to the compiled-in one",
           "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("+iesig,45,191\n");
@@ -1979,14 +1907,14 @@ TEST_CASE("una firma IE del overlay se suma a la compilada",
   TEST_ASSERT_FALSE(surv_ie_matches_flock(ies, sizeof(ies)));
 }
 
-TEST_CASE("una firma IE malformada se salta", "[surv][overlay]") {
+TEST_CASE("malformed IE signature is skipped", "[surv][overlay]") {
   surv_overlay_reset();
   surv_overlay_stats_t st = surv_overlay_parse("+iesig,221:abc\n");
   TEST_ASSERT_EQUAL_UINT16(0, st.added);
   TEST_ASSERT_EQUAL_UINT16(1, st.skipped);
 }
 
-TEST_CASE("se respeta el tope de 256 OUIs", "[surv][overlay]") {
+TEST_CASE("cap of 256 OUIs is respected", "[surv][overlay]") {
   surv_overlay_reset();
   char buf[64];
   surv_overlay_stats_t st = {0};
@@ -2002,21 +1930,20 @@ TEST_CASE("se respeta el tope de 256 OUIs", "[surv][overlay]") {
 }
 ```
 
-- [ ] **Step 2: Ejecutar y verificar que falla**
+- [ ] **Step 2: Run and verify it fails**
 
-Run: `make -C firmware/components/surveillance_detect/test run-tests`. Esperado: `surv_overlay.h` no existe.
+Run: `make -C firmware/components/surveillance_detect/test run-tests`. Expected: `surv_overlay.h` does not exist.
 
-- [ ] **Step 3: Reestructurar las tablas para admitir overlay**
+- [ ] **Step 3: Restructure tables to support the overlay**
 
-`surv_match_init()` deja de leer la tabla base directamente: construye una tabla
-efectiva en RAM = base + añadidos − quitados. En `surv_signatures.c` añadir:
+`surv_match_init()` stops reading the base table directly: it builds an effective table in RAM = base + added - removed. In `surv_signatures.c` add:
 
 ```c
 #define SURV_OVERLAY_MAX_OUIS 256
 
-// OJO: dimensionar desde sizeof(OUIS), NUNCA con un literal. La tabla base
-// crecio de 74 a 75 al anadir el OUI de Axon, y un literal desfasado desborda
-// este array por el final justo cuando el overlay va lleno.
+// NOTE: size using sizeof(OUIS), NEVER a literal. The base table grew from 74
+// to 75 when adding the Axon OUI, and a stale literal overflows the end of
+// this array right when the overlay is full.
 static surv_oui_entry_t
     s_effective[sizeof(OUIS) / sizeof(OUIS[0]) + SURV_OVERLAY_MAX_OUIS];
 static uint16_t         s_effective_count;
@@ -2045,14 +1972,11 @@ void surv_signatures_build_effective(const surv_oui_entry_t* extra,
 }
 ```
 
-`surv_signatures_ouis()` y `surv_signatures_oui_count()` devuelven la tabla
-efectiva si se construyó, y la base si no. El test de Task 1 (74 OUIs) sigue
-pasando porque sin overlay la efectiva es idéntica a la base.
+`surv_signatures_ouis()` and `surv_signatures_oui_count()` return the effective table if built, or the base table otherwise. The Task 1 test (75 OUIs) continues to pass because without an overlay the effective table is identical to the base table.
 
-- [ ] **Step 4: Implementar el parser**
+- [ ] **Step 4: Implement the parser**
 
-`surv_overlay.c` — parsea línea a línea con `strtok_r` sobre una copia acotada,
-sin `malloc`:
+`surv_overlay.c` - parses line by line with `strtok_r` over a bounded copy, without `malloc`:
 
 ```c
 // SPDX-License-Identifier: GPL-3.0-or-later
@@ -2062,11 +1986,11 @@ sin `malloc`:
 #include <string.h>
 #include "surv_signatures.h"
 
-// Los topes del overlay se definen UNA sola vez, en surv_signatures.h: alli
-// dimensionan los arreglos efectivos y aqui limitan cuantas entradas se
-// aceptan. Duplicarlos en los dos archivos es la misma clase de fallo que el
-// literal 74 desfasado: si alguien sube uno y no el otro, build_effective
-// escribe fuera del arreglo y el compilador no dice nada.
+// Overlay caps are defined ONCE in surv_signatures.h: there they size the
+// effective arrays and here they limit how many entries are accepted.
+// Duplicating them across both files is the same class of bug as the stale
+// literal 74: if someone bumps one without the other, build_effective writes
+// out of bounds and the compiler says nothing.
 #define MAX_ADD      SURV_OVERLAY_MAX_OUIS
 #define MAX_ADD_KW   SURV_OVERLAY_MAX_KWS
 #define MAX_ADD_UUID SURV_OVERLAY_MAX_UUIDS
@@ -2117,30 +2041,31 @@ static bool parse_ie_token(const char* s, surv_ie_tok_t* out) {
   }
   char* end = NULL;
   long  tag = strtol(s, &end, 10);
-  // strtol y no atoi, y se rechaza el tag 0. atoi("xyz") devuelve 0 en
-  // silencio, y un token con tag 0 es indistinguible del elemento SSID:
-  // tokens_match_sig lo salta ANTES de compararlo contra la firma, asi que la
-  // firma nunca se completa y queda muerta -ocupando ademas uno de los 8
-  // huecos de overlay-. Mismo modo de fallo que el token 221 sin payload, y
-  // ninguno de los dos avisa de nada.
+  // Use strtol instead of atoi, and reject tag 0. atoi("xyz") silently returns
+  // 0, and a token with tag 0 is indistinguishable from the SSID element:
+  // tokens_match_sig skips it BEFORE comparing against the signature, so the
+  // signature never completes and remains dead while occupying one of the 8
+  // overlay slots. Same failure mode as token 221 without payload, and neither
+  // gives any warning.
   if (end == s || (*end != '\0' && *end != ':') || tag < 1 || tag > 255) {
     return false;
   }
   const char* colon = strchr(s, ':');
   out->tag = (uint8_t) tag;
   if (colon == NULL) {
-    // Un token vendor sin payload se rechaza. El matcher decide comparar bytes
-    // vendor por `tag == 221`, nunca por vlen, asi que aceptar un "221" pelado
-    // produce una firma que se carga sin quejarse y luego no matchea NUNCA, sin
-    // forma de depurarlo. Mejor una linea contada como saltada, que el usuario ve.
+    // Reject a vendor token without payload. The matcher decides whether to
+    // compare vendor bytes via `tag == 221`, never via vlen, so accepting a
+    // bare "221" produces a signature that loads without complaint and then
+    // NEVER matches, with no way to debug it. Counting the line as skipped is
+    // visible to the user.
     return out->tag != SURV_IE_VENDOR_TAG;
   }
   const char* hex = colon + 1;
   size_t      hl = strlen(hex);
-  if (hl != 14) {  // exactamente 7 bytes de vendor
+  if (hl != 14) {  // exactly 7 vendor bytes
     return false;
   }
-  // (ver abajo: un token 221 sin payload se rechaza antes de llegar aqui)
+  // (see above: a token 221 without payload is rejected before reaching here)
   for (int i = 0; i < 7; i++) {
     unsigned b;
     if (sscanf(hex + i * 2, "%2x", &b) != 1) {
@@ -2164,7 +2089,7 @@ static surv_class_t parse_class(const char* s) {
 static bool handle_line(char* line, surv_overlay_stats_t* st) {
   while (*line == ' ' || *line == '\t') line++;
   if (*line == '\0' || *line == '#' || *line == '\r') {
-    return true;  // ignorada, no cuenta como saltada
+    return true;  // ignored, does not count as skipped
   }
   char  sign = *line++;
   char* save = NULL;
@@ -2183,8 +2108,8 @@ static bool handle_line(char* line, surv_overlay_stats_t* st) {
       st->skipped++;
       return true;
     }
-    // La copia al pool es necesaria: `value` apunta al buffer de linea, que se
-    // reutiliza en la siguiente iteracion.
+    // Copying into the pool is required: `value` points into the line buffer,
+    // which is reused on the next iteration.
     strcpy(s_kw_pool[s_add_kw_count], value);
     s_add_kw[s_add_kw_count].kw = s_kw_pool[s_add_kw_count];
     s_add_kw[s_add_kw_count].klass = k;
@@ -2216,15 +2141,15 @@ static bool handle_line(char* line, surv_overlay_stats_t* st) {
     return true;
   }
   if (strcmp(kind, "iesig") == 0) {
-    // El resto de la linea son los tokens: "2", "12", "221:506f9a16030103"...
-    // `value` es el primero; los demas salen de strtok_r.
+    // The rest of the line holds the tokens: "2", "12", "221:506f9a16030103"...
+    // `value` is the first token; the rest come from strtok_r.
     surv_ie_tok_t toks[SURV_IE_MAX_TOKS];
     uint8_t       n = 0;
     const char*   tok = value;
     while (tok != NULL) {
       if (n >= SURV_IE_MAX_TOKS) {
-        // Mas tokens de los que caben: se salta la linea entera. Aplicarla
-        // truncada dejaria cargada una firma que el usuario no escribio.
+        // More tokens than fit: skip the entire line. Applying a truncated
+        // signature would load something the user did not write.
         st->skipped++;
         return true;
       }
@@ -2314,17 +2239,12 @@ surv_overlay_stats_t surv_overlay_parse(const char* text) {
 }
 ```
 
-`surv_signatures_build_effective_kws()` y `surv_signatures_build_effective_uuids()`
-son los gemelos de `surv_signatures_build_effective()` para keywords y UUIDs:
-copian la tabla base a un arreglo estático en RAM y añaden las del overlay al
-final. Sin overlay devuelven la base, así que los tests de las Tasks 3 y 4
-siguen pasando.
+`surv_signatures_build_effective_kws()` and `surv_signatures_build_effective_uuids()` are the counterparts of `surv_signatures_build_effective()` for keywords and UUIDs: they copy the base table into a static RAM array and append the overlay entries at the end. Without an overlay they return the base table, so the tests from Tasks 3 and 4 continue to pass.
 
-- [ ] **Step 5: Ejecutar y verificar que pasan**
+- [ ] **Step 5: Run and verify they pass**
 
 Run: `make -C firmware/components/surveillance_detect/test run-tests`.
-Esperado: los seis tests de `[surv][overlay]` pasan y los de Task 2 siguen
-pasando (la tabla efectiva sin overlay es idéntica a la base).
+Expected: all tests in `[surv][overlay]` pass and the Task 2 tests continue to pass (the effective table without an overlay is identical to the base table).
 
 - [ ] **Step 6: Commit**
 
@@ -2335,7 +2255,7 @@ git commit -m "feat(surveillance): add microSD signature overlay parser"
 
 ---
 
-## Task 9: Ring buffer, callbacks de radio y API pública
+## Task 9: Ring Buffer, Radio Callbacks, and Public API
 
 **Files:**
 - Create: `firmware/components/surveillance_detect/include/surveillance_detect.h`
@@ -2354,9 +2274,9 @@ git commit -m "feat(surveillance): add microSD signature overlay parser"
   uint32_t  surv_queue_overflows(void);
   ```
 
-- [ ] **Step 1: Añadir `RADIO_SELECT_SURVEILLANCE`**
+- [ ] **Step 1: Add `RADIO_SELECT_SURVEILLANCE`**
 
-En `radio_selector.h`, al enum:
+In `radio_selector.h`, add to the enum:
 
 ```c
 typedef enum {
@@ -2370,7 +2290,7 @@ typedef enum {
 void radio_selector_set_surveillance(void);
 ```
 
-En `radio_selector.c`:
+In `radio_selector.c`:
 
 ```c
 void radio_selector_set_surveillance(void) {
@@ -2378,10 +2298,9 @@ void radio_selector_set_surveillance(void) {
 }
 ```
 
-- [ ] **Step 2: Implementar el ring buffer y el callback promiscuo**
+- [ ] **Step 2: Implement the ring buffer and promiscuous callback**
 
-`surveillance_detect.c`. El callback solo compara y encola; nada de `printf`,
-`malloc` ni escritura a disco:
+`surveillance_detect.c`. The callback only compares and enqueues; no `printf`, `malloc`, or disk writes:
 
 ```c
 // SPDX-License-Identifier: GPL-3.0-or-later
@@ -2427,14 +2346,13 @@ uint32_t surv_queue_overflows(void) {
   return s_overflows;
 }
 
-// Puntos del motor ODID por WiFi. Mismo peso que la entrada ODID de la tabla
-// BLE (surv_signatures.c); nombrado para que la duplicacion se vea.
+// Points for the WiFi ODID engine. Same weight as the ODID entry in the BLE
+// table (surv_signatures.c); named so the duplication is explicit.
 #define SURV_PTS_ODID_WIFI 4
 
-// El `tier` de la entrada de OUI es un TECHO, nunca el tier del evento. Se
-// escribe una sola vez: las tres rutas de deteccion aplican el mismo recorte y
-// una de ellas con el ternario al reves promocionaria un OUI de fabricante
-// contratista a tier confirmatorio.
+// The OUI entry `tier` is a CEILING, never the event tier. Written once: all
+// three detection paths apply the same clamp, and reversing the ternary in any
+// of them would promote a contract manufacturer OUI to a confirmatory tier.
 static inline uint8_t clamp_tier(uint8_t computed, uint8_t ceiling) {
   return computed > ceiling ? ceiling : computed;
 }
@@ -2442,12 +2360,11 @@ static inline uint8_t clamp_tier(uint8_t computed, uint8_t ceiling) {
 static void IRAM_ATTR wifi_sniffer_cb(void* buf,
                                       wifi_promiscuous_pkt_type_t type) {
   const wifi_promiscuous_pkt_t* p = (const wifi_promiscuous_pkt_t*) buf;
-  // Descartar tramas que el hardware marco con error de recepcion, como hace
-  // el sniffer de ejemplo de ESP-IDF. Una trama corrupta puede traer un addr2
-  // alterado que coincida por azar con un OUI conocido, y alimentaria las
-  // rutas tier-1/tier-2 -las de solo OUI, ya de por si las mas ruidosas- con
-  // basura. El criterio de aceptacion del proyecto es CERO falsos positivos de
-  // clase FLOCK/ALPR, asi que esto no es higiene opcional.
+  // Discard frames flagged with hardware receive errors, matching ESP-IDF's
+  // example sniffer. A corrupted frame can carry an altered addr2 that
+  // matches a known OUI by chance, feeding garbage into the tier-1/tier-2
+  // OUI-only paths (already the noisiest). Since the project's acceptance
+  // criterion is ZERO false positives for class FLOCK/ALPR, this is mandatory.
   if (p->rx_ctrl.rx_state != 0) {
     return;
   }
@@ -2470,7 +2387,7 @@ static void IRAM_ATTR wifi_sniffer_cb(void* buf,
   ev.channel = p->rx_ctrl.channel;
   ev.proto = SURV_PROTO_WIFI;
 
-  // Tier 3/4: probe request con SSID wildcard desde un OUI conocido.
+  // Tier 3/4: probe request with wildcard SSID from a known OUI.
   if (is_mgmt && subtype == 4 && len > 24) {
     const surv_oui_entry_t* e = surv_match_oui(addr2);
     if (e != NULL) {
@@ -2489,8 +2406,8 @@ static void IRAM_ATTR wifi_sniffer_cb(void* buf,
     }
   }
 
-  // Drone Remote ID por WiFi: trama de gestion dirigida a la MAC NaN fija de
-  // ASTM F3411. No depende de ningun OUI. Motor de eye-spy (Apache-2.0).
+  // Drone Remote ID over WiFi: management frame addressed to the fixed ASTM
+  // F3411 NaN MAC. Does not depend on any OUI. Engine from eye-spy (Apache-2.0).
   static const uint8_t ODID_NAN[6] = {0x51, 0x6f, 0x9a, 0x01, 0x00, 0x00};
   if (is_mgmt && memcmp(addr1, ODID_NAN, 6) == 0) {
     memcpy(ev.mac, addr2, 6);
@@ -2500,7 +2417,7 @@ static void IRAM_ATTR wifi_sniffer_cb(void* buf,
     return;
   }
 
-  // Tier 2: OUI en addr2 de cualquier trama.
+  // Tier 2: OUI in addr2 of any frame.
   const surv_oui_entry_t* e2 = surv_match_oui(addr2);
   if (e2 != NULL) {
     memcpy(ev.mac, addr2, 6);
@@ -2510,7 +2427,7 @@ static void IRAM_ATTR wifi_sniffer_cb(void* buf,
     return;
   }
 
-  // Tier 1: OUI en addr1 o addr3. Ecos, propensos a falso positivo.
+  // Tier 1: OUI in addr1 or addr3. Echoes, prone to false positives.
   const surv_oui_entry_t* e1 = surv_match_oui(addr1);
   if (e1 == NULL && is_mgmt) {
     e1 = surv_match_oui(addr3);
@@ -2525,7 +2442,7 @@ static void IRAM_ATTR wifi_sniffer_cb(void* buf,
 }
 ```
 
-- [ ] **Step 3: Implementar la task del motor**
+- [ ] **Step 3: Implement the engine task**
 
 ```c
 static TaskHandle_t     s_engine_task;
@@ -2558,18 +2475,15 @@ static void engine_task(void* arg) {
 }
 ```
 
-`surv_begin()` llama a `surv_match_init()`, `surv_engine_reset()`,
-`surv_engine_register_emit_cb(engine_emit)`, `radio_selector_set_surveillance()`,
-crea la task con `xTaskCreate(engine_task, "surv_engine", 4096, NULL, 5, &s_engine_task)`
-y arranca `surv_radio_start(profile, active_scan)` (Task 10).
+`surv_begin()` calls `surv_match_init()`, `surv_engine_reset()`, `surv_engine_register_emit_cb(engine_emit)`, `radio_selector_set_surveillance()`, creates the task with `xTaskCreate(engine_task, "surv_engine", 4096, NULL, 5, &s_engine_task)`, and starts `surv_radio_start(profile, active_scan)` (Task 10).
 
-- [ ] **Step 4: Compilar para el target real**
+- [ ] **Step 4: Compile for the real target**
 
 ```bash
 cd firmware && idf.py build
 ```
 
-Esperado: build OK.
+Expected: build OK.
 
 - [ ] **Step 5: Commit**
 
@@ -2580,7 +2494,7 @@ git commit -m "feat(surveillance): add lock-free queue, sniffer callback and pub
 
 ---
 
-## Task 10: Planificador de radio
+## Task 10: Radio Scheduler
 
 **Files:**
 - Modify: `firmware/components/surveillance_detect/surv_radio.c`
@@ -2590,7 +2504,7 @@ git commit -m "feat(surveillance): add lock-free queue, sniffer callback and pub
 - Consumes: `surv_profile_t`, `wifi_sniffer_cb`, `surv_match_ble_adv()`.
 - Produces: `esp_err_t surv_radio_start(surv_profile_t p, bool active_scan)`, `void surv_radio_stop(void)`, `uint8_t surv_radio_current_channel(void)`.
 
-- [ ] **Step 1: Implementar el salto de canal con recorte por región**
+- [ ] **Step 1: Implement channel hopping with region clamping**
 
 ```c
 // SPDX-License-Identifier: GPL-3.0-or-later
@@ -2604,8 +2518,8 @@ git commit -m "feat(surveillance): add lock-free queue, sniffer callback and pub
 static const uint8_t HOP_PRIMARY[]  = {11, 6, 1};
 static const uint8_t HOP_EXTENDED[] = {13, 8, 3};
 
-// Recorta al nchan de la region configurada: con GLOBAL (default de Minino) los
-// canales son 1-11 y saltar al 13 no escucha nada.
+// Clamps to the configured region's nchan: with GLOBAL (Minino's default),
+// channels are 1-11 and hopping to 13 hears nothing.
 static bool channel_allowed(uint8_t ch) {
   wifi_country_t c;
   if (esp_wifi_get_country(&c) != ESP_OK) {
@@ -2615,14 +2529,11 @@ static bool channel_allowed(uint8_t ch) {
 }
 ```
 
-La task de hopping recorre `HOP_PRIMARY` con dwell de 250 ms y, en perfil
-`SURV_PROFILE_SURVEIL`, intercala `HOP_EXTENDED` cada cuarta vuelta, saltando
-los canales que `channel_allowed()` rechace.
+The hopping task iterates over `HOP_PRIMARY` with a 250 ms dwell and, in the `SURV_PROFILE_SURVEIL` profile, interleaves `HOP_EXTENDED` every fourth pass, skipping channels rejected by `channel_allowed()`.
 
-- [ ] **Step 2: Implementar las fases**
+- [ ] **Step 2: Implement the phases**
 
-Ambos stacks quedan inicializados; lo exclusivo es el escaneo. **No** se hace
-`esp_bluedroid_deinit` por ciclo: fragmenta el heap y cuesta cientos de ms.
+Both stacks remain initialized; only scanning is mutually exclusive. Do **not** call `esp_bluedroid_deinit` every cycle: it fragments the heap and costs hundreds of ms.
 
 ```c
 static void radio_task(void* arg) {
@@ -2647,21 +2558,15 @@ static void radio_task(void* arg) {
 }
 ```
 
-`ble_window_ms()` llama a `esp_ble_gap_start_scanning()` con
-`BLE_SCAN_TYPE_PASSIVE` y `window == interval`; al terminar,
-`esp_ble_gap_stop_scanning()`. `wifi_window_ms()` hace
-`esp_wifi_set_promiscuous(true)` con `wifi_sniffer_cb`, corre el hopping y
-termina con `esp_wifi_set_promiscuous(false)`.
+`ble_window_ms()` calls `esp_ble_gap_start_scanning()` with `BLE_SCAN_TYPE_PASSIVE` and `window == interval`; when finished, it calls `esp_ble_gap_stop_scanning()`. `wifi_window_ms()` calls `esp_wifi_set_promiscuous(true)` with `wifi_sniffer_cb`, runs channel hopping, and finishes with `esp_wifi_set_promiscuous(false)`.
 
-- [ ] **Step 3: Compilar y verificar en hardware**
+- [ ] **Step 3: Compile and verify on hardware**
 
 ```bash
 cd firmware && idf.py build && idf.py -p /dev/ttyACM0 flash monitor
 ```
 
-Sin app todavía; se invoca desde el monitor por consola o con una llamada
-temporal en `app_main`. Esperado en el log: alternancia de fases y cambio de
-canal cada 250 ms, sin `Guru Meditation` ni watchdog en 10 minutos.
+No app yet; invoke it from the console monitor or via a temporary call in `app_main`. Expected in the log: phase alternation and channel switches every 250 ms, with no `Guru Meditation` or watchdog triggers over 10 minutes.
 
 - [ ] **Step 4: Commit**
 
@@ -2672,7 +2577,7 @@ git commit -m "feat(surveillance): add radio phase scheduler with region-aware h
 
 ---
 
-## Task 11: App, entrada de menú y pantallas
+## Task 11: App, Menu Entry, and Screens
 
 **Files:**
 - Create: `firmware/main/apps/surveillance/surveillance_module.c`, `.h`
@@ -2681,17 +2586,17 @@ git commit -m "feat(surveillance): add radio phase scheduler with region-aware h
 
 **Interfaces:**
 - Consumes: `surv_begin()`, `surv_stop()`, `surv_register_cb()`, `surv_queue_overflows()`.
-- Produces: `void surveillance_module_begin(void)` — la usa `menus.h` como `on_enter_cb`.
+- Produces: `void surveillance_module_begin(void)` - used by `menus.h` as `on_enter_cb`.
 
-- [ ] **Step 1: Añadir la entrada de menú**
+- [ ] **Step 1: Add the menu entry**
 
-En `menus.h`, al enum, junto a `MENU_GPIO_APPS`:
+In `menus.h`, add to the enum next to `MENU_GPIO_APPS`:
 
 ```c
   MENU_SURVEILLANCE,
 ```
 
-y a la tabla de menús, con `parent_idx = MENU_APPLICATIONS`:
+and to the menus table, with `parent_idx = MENU_APPLICATIONS`:
 
 ```c
     {.display_name = "Surveillance",
@@ -2704,26 +2609,22 @@ y a la tabla de menús, con `parent_idx = MENU_APPLICATIONS`:
      .is_visible = true},
 ```
 
-más `#include "surveillance_module.h"` en la zona de includes de `menus.h`.
+plus `#include "surveillance_module.h"` in the includes section of `menus.h`.
 
-- [ ] **Step 2: Definir los umbrales del semáforo una sola vez**
+- [ ] **Step 2: Define the status level thresholds in one place**
 
-Los umbrales son semántica del motor, no de la pantalla, y los consumen tanto
-esta tarea como la Task 12 (LEDs). Si se escriben como literales en los dos
-sitios, el día que alguien ajuste uno y no el otro la pantalla y los LEDs
-discrepan sobre el nivel de alerta, que es de los fallos más desconcertantes
-posibles en campo. Añadir a `include/surv_engine.h`:
+The thresholds are engine semantics, not screen semantics, and are consumed by both this task and Task 12 (LEDs). Writing them as literals in two places means that if someone adjusts one without the other, the screen and LEDs will disagree on the alert level, which is one of the most confusing possible failures in the field. Add to `include/surv_engine.h`:
 
 ```c
-// Umbrales del semaforo, del modelo de score de eye-spy (Apache-2.0):
-// 0-2 CLEAR, 3-5 CAUTION, 6+ ALERT. Los consumen la pantalla y los LEDs.
+// Status level thresholds from the eye-spy scoring model (Apache-2.0):
+// 0-2 CLEAR, 3-5 CAUTION, 6+ ALERT. Consumed by the screen and LEDs.
 #define SURV_SCORE_CAUTION 3
 #define SURV_SCORE_ALERT   6
 ```
 
-- [ ] **Step 3: Implementar la pantalla principal**
+- [ ] **Step 3: Implement the main screen**
 
-`surveillance_screens.c`, con `oled_screen_display_text` sobre las 8 páginas:
+`surveillance_screens.c`, using `oled_screen_display_text` across the 8 pages:
 
 ```c
 void surveillance_screens_show_status(uint8_t score, const char* profile,
@@ -2750,24 +2651,22 @@ void surveillance_screens_show_status(uint8_t score, const char* profile,
 }
 ```
 
-- [ ] **Step 4: Implementar la pantalla de ayuda con el aviso regional**
+- [ ] **Step 4: Implement the help screen with the regional notice**
 
-El spec §9.4 lo exige: con la tabla base, en México la app puede correr una hora
-sin una sola detección, y ese es el resultado correcto. Sin decirlo, parece
-firmware roto.
+Spec section 9.4 requires this: with the base table in Mexico, the app can run for an hour without a single detection, and that is the expected result. Without stating this, the firmware looks broken.
 
 ```c
 static const char* HELP_LINES[] = {
-    "Detector pasivo de",
-    "vigilancia.",
+    "Passive cam &",
+    "tracker detector.",
     "",
-    "Flock/ALPR se usa",
-    "en EUA y Canada.",
-    "En MX es normal",
-    "no ver nada.",
+    "Flock/ALPR works",
+    "in US & Canada.",
+    "In MX it is normal",
+    "to see nothing.",
     "",
-    "Carga firmas de tu",
-    "region en microSD:",
+    "Load regional sigs",
+    "on microSD:",
     "surveil/",
     "signatures.csv",
 };
@@ -2782,14 +2681,13 @@ void surveillance_screens_show_help(uint8_t page) {
 }
 ```
 
-Se llega con BUTTON_UP desde la pantalla principal; BUTTON_LEFT vuelve.
+Reached via BUTTON_UP from the main screen; BUTTON_LEFT returns.
 
-- [ ] **Step 5: Implementar el ciclo de vida y los botones**
+- [ ] **Step 5: Implement lifecycle and button handling**
 
-`surveillance_module.c`, siguiendo el patrón de
-`main/apps/wifi/deauth_detector/detector.c`:
+`surveillance_module.c`, following the pattern of `main/apps/wifi/deauth_detector/detector.c`:
 
-Helpers que usa el bloque siguiente, en el mismo archivo:
+Helpers used by the block below, in the same file:
 
 ```c
 static surv_profile_t load_profile_from_prefs(void) {
@@ -2802,9 +2700,8 @@ static bool load_active_scan_from_prefs(void) {
   return preferences_get_uchar("surv_active", 0) != 0;
 }
 
-// Llamado desde la task del motor. Solo guarda estado y marca la pantalla como
-// sucia: el refresco del OLED y la escritura a microSD ocurren en el bucle de
-// la app, nunca aqui.
+// Called from the engine task. Only saves state and marks the screen dirty:
+// OLED refresh and microSD writes happen in the app loop, never here.
 static void on_detection(const surv_event_t* ev, uint8_t score) {
   s_last_event = *ev;
   s_last_score = score;
@@ -2813,15 +2710,14 @@ static void on_detection(const surv_event_t* ev, uint8_t score) {
 }
 ```
 
-`surveillance_screens_show_radio_busy()` es una pantalla estática de
-`surveillance_screens.c` con el texto `802.15.4 activo` / `reinicia Minino`.
+`surveillance_screens_show_radio_busy()` is a static screen in `surveillance_screens.c` displaying the text `802.15.4 active` / `Restart Minino`.
 
 ```c
 void surveillance_module_begin(void) {
   if (radio_selector_is_stack_initialized()) {
     surveillance_screens_show_radio_busy();
     menus_module_set_app_state(true, surveillance_input_cb);
-    return;  // 802.15.4 tiene la antena; no se disputa
+    return;  // 802.15.4 owns the antenna; do not contend for it
   }
   menus_module_set_app_state(true, surveillance_input_cb);
   surv_register_cb(on_detection);
@@ -2844,17 +2740,16 @@ void surveillance_module_stop(void) {
 }
 ```
 
-- [ ] **Step 6: Compilar, flashear y verificar en hardware**
+- [ ] **Step 6: Compile, flash, and verify on hardware**
 
 ```bash
 cd firmware && idf.py build && idf.py -p /dev/ttyACM0 flash monitor
 ```
 
-1. Menú → Applications → Surveillance: la app arranca y muestra `score 0 CLEAR`.
-2. BUTTON_UP muestra la ayuda con el aviso regional; BUTTON_LEFT vuelve.
-3. BUTTON_LEFT desde la principal devuelve al menú sin colgarse.
-4. Reentrar y volver a salir tres veces: no debe caer el heap libre de forma
-   monotónica (comprobar con `esp_get_free_heap_size()` en el log).
+1. Menu -> Applications -> Surveillance: the app starts and displays `score 0 CLEAR`.
+2. BUTTON_UP displays the help screen with the regional notice; BUTTON_LEFT returns.
+3. BUTTON_LEFT from the main screen returns to the menu without hanging.
+4. Re-enter and exit three times: free heap must not drop monotonically (verify with `esp_get_free_heap_size()` in the log).
 
 - [ ] **Step 7: Commit**
 
@@ -2865,7 +2760,7 @@ git commit -m "feat(surveillance): add app, menu entry and status screen"
 
 ---
 
-## Task 12: Buzzer por tier y LEDs por cadencia
+## Task 12: Per-Tier Buzzer and LED Cadence
 
 **Files:**
 - Modify: `firmware/main/apps/surveillance/surveillance_module.c`
@@ -2874,19 +2769,17 @@ git commit -m "feat(surveillance): add app, menu entry and status screen"
 - Consumes: `buzzer_set_freq()`, `buzzer_play_for()`, `led_start_blink()`, `led_start_breath()`, `led_stop()`, `preferences_get_uchar()`.
 - Produces: `void surveillance_alert(uint8_t tier, uint8_t score)`.
 
-Minino no tiene LED RGB —`leds.h` expone `LED_LEFT`/`LED_RIGHT` con brillo, sin
-color—, así que el semáforo va en pantalla y los LEDs codifican el nivel por
-cadencia.
+Minino does not have an RGB LED (`leds.h` exposes `LED_LEFT`/`LED_RIGHT` with brightness only, no color), so the status level is shown on screen and the LEDs encode the level via cadence.
 
-- [ ] **Step 1: Implementar los tonos por tier**
+- [ ] **Step 1: Implement per-tier tones**
 
 ```c
-// Tonos de flock-you (MIT): el metodo de deteccion se distingue de oido
-// mientras se maneja, sin mirar la pantalla.
+// Tones from flock-you (MIT): the detection method can be distinguished by ear
+// while driving, without looking at the screen.
 static void tier_chirp(uint8_t tier) {
   uint8_t mask = preferences_get_uchar("surv_beep", 0x1F);
   if ((mask & (1u << tier)) == 0) {
-    return;  // silenciado: la deteccion se registra igual
+    return;  // muted: the detection is still logged
   }
   switch (tier) {
     case SURV_TIER_IE_SIG:
@@ -2904,7 +2797,7 @@ static void tier_chirp(uint8_t tier) {
 }
 ```
 
-- [ ] **Step 2: Implementar el semáforo en LEDs**
+- [ ] **Step 2: Implement LED status levels**
 
 ```c
 static void update_leds(uint8_t score) {
@@ -2922,27 +2815,22 @@ static void update_leds(uint8_t score) {
     led_start_breath(LED_LEFT, 2000);
   } else if (level == 2) {
     // led_start_blink(led, duty, pulse_count, time_on, time_off, time_out)
-    // pulse_count 0 y time_out 0 = parpadeo indefinido hasta led_stop().
+    // pulse_count 0 and time_out 0 = blink indefinitely until led_stop().
     led_start_blink(LED_LEFT, 100, 0, 200, 200, 0);
     led_start_blink(LED_RIGHT, 100, 0, 200, 200, 0);
   }
 }
 ```
 
-La firma de `led_start_blink` es la de
-`firmware/components/leds/include/leds.h`: seis parámetros, no dos. Confirmar el
-significado de `duty` y `time_out` en `leds.c` antes de dar por buenos los
-valores: si `pulse_count = 0` no significa "indefinido", usar un valor alto y
-rearmar el parpadeo desde `update_leds()`.
+The signature of `led_start_blink` matches `firmware/components/leds/include/leds.h`: six parameters, not two. Confirm the meaning of `duty` and `time_out` in `leds.c` before finalizing the values: if `pulse_count = 0` does not mean "indefinite", use a high count and re-arm blinking from `update_leds()`.
 
-- [ ] **Step 3: Verificar en hardware**
+- [ ] **Step 3: Verify on hardware**
 
-Flashear y, con el overlay de microSD apuntando a un dispositivo propio
-(Task 17) o forzando una detección de prueba:
+Flash and, with the microSD overlay targeting a personal device (Task 17) or by forcing a test detection:
 
-1. Tier 4 suena distinto de tier 1 y se distingue a oído.
-2. Con `surv_beep` = 0 en NVS no suena nada pero la detección sigue registrándose.
-3. Los LEDs pasan de apagado a respiración a parpadeo según sube el score.
+1. Tier 4 sounds distinct from tier 1 and can be told apart by ear.
+2. With `surv_beep` = 0 in NVS, nothing sounds while detections continue to be logged.
+3. LEDs transition from off to breathing to blinking as the score rises.
 
 - [ ] **Step 4: Commit**
 
@@ -2953,7 +2841,7 @@ git commit -m "feat(surveillance): add per-tier buzzer tones and LED cadence lev
 
 ---
 
-## Task 13: Registro CSV con GPS
+## Task 13: CSV Logging with GPS
 
 **Files:**
 - Create: `firmware/main/apps/surveillance/surveillance_log.c`, `.h`
@@ -2963,14 +2851,13 @@ git commit -m "feat(surveillance): add per-tier buzzer tones and LED cadence lev
 - Consumes: `sd_card_append_to_file()`, `gps_module_get_instance()`, `get_full_date_time()`, `surv_event_t`.
 - Produces: `void surveillance_log_begin(void)`, `void surveillance_log_detection(const surv_event_t* ev, uint8_t score, gps_t* gps)`, `void surveillance_log_flush(void)`.
 
-- [ ] **Step 1: Definir el formato**
+- [ ] **Step 1: Define the format**
 
-En `surveillance_log.h`. Las 14 columnas de WigleWifi primero, las cuatro propias
-al final, para que `cut -d, -f1-14` produzca un archivo subible a WiGLE:
+In `surveillance_log.h`. The 14 WigleWifi columns come first, followed by the four custom columns at the end, so `cut -d, -f1-14` produces a file ready for WiGLE upload:
 
 ```c
 #define SURV_DIR_NAME    "surveil"
-#define SURV_CSV_LINE    200   // no caben en los 150 de CSV_LINE_SIZE
+#define SURV_CSV_LINE    200   // does not fit in the 150-byte CSV_LINE_SIZE
 #define SURV_CSV_LINES   200
 #define SURV_CSV_BUF_SZ  (SURV_CSV_LINE * SURV_CSV_LINES)
 
@@ -2984,10 +2871,9 @@ al final, para que `cut -d, -f1-14` produzca un archivo subible a WiGLE:
   "Class,Tier,Method,Score"
 ```
 
-- [ ] **Step 2: Escribir los helpers de formato**
+- [ ] **Step 2: Write the formatting helpers**
 
-Todos en `surveillance_log.c`, con buffers estáticos: no se asigna memoria por
-detección.
+All in `surveillance_log.c`, using static buffers: no memory is allocated per detection.
 
 ```c
 static const char* class_name(surv_class_t k) {
@@ -3030,8 +2916,8 @@ static const char* mac_str(const uint8_t mac[6]) {
   return buf;
 }
 
-// Formato de fecha de wardriving. Sin fix GPS no hay reloj fiable: se escribe
-// el uptime en ms, que al menos ordena las detecciones entre si.
+// Wardriving date format. Without a GPS fix there is no reliable clock: write
+// uptime in ms, which at least orders detections relative to each other.
 static const char* date_str(gps_t* gps) {
   static char buf[32];
   if (gps != NULL && gps->valid) {
@@ -3052,8 +2938,8 @@ static uint16_t freq_of(uint8_t channel) {
   return (uint16_t) (channel == 14 ? 2484 : 2407 + channel * 5);
 }
 
-// Acumula en RAM y vuelca por lotes. Escribir por deteccion desgastaria la
-// microSD y bloquearia el drenaje del ring buffer.
+// Accumulates in RAM and flushes in batches. Writing on every detection would
+// wear out the microSD card and stall ring buffer draining.
 static char     s_buf[SURV_CSV_BUF_SZ];
 static uint16_t s_lines;
 
@@ -3069,10 +2955,9 @@ static void append_buffered(const char* line) {
 }
 ```
 
-`surveillance_log_flush()` hace el último `sd_card_append_to_file(s_csv_name, s_buf)`
-al salir de la app.
+`surveillance_log_flush()` performs the final `sd_card_append_to_file(s_csv_name, s_buf)` when exiting the app.
 
-- [ ] **Step 3: Implementar la escritura sin fix GPS**
+- [ ] **Step 3: Implement logging without a GPS fix**
 
 ```c
 void surveillance_log_detection(const surv_event_t* ev, uint8_t score,
@@ -3080,8 +2965,8 @@ void surveillance_log_detection(const surv_event_t* ev, uint8_t score,
   char line[SURV_CSV_LINE];
   char lat[16] = "";
   char lon[16] = "";
-  // Sin fix se escribe igual con coordenada vacia: perder una camara
-  // confirmada por no tener GPS seria el peor intercambio posible.
+  // Without a fix, log anyway with empty coordinates: losing a confirmed
+  // camera because GPS has not fixed yet would be the worst possible tradeoff.
   if (gps != NULL && gps->valid) {
     snprintf(lat, sizeof(lat), "%f", gps->latitude);
     snprintf(lon, sizeof(lon), "%f", gps->longitude);
@@ -3097,15 +2982,12 @@ void surveillance_log_detection(const surv_event_t* ev, uint8_t score,
 }
 ```
 
-- [ ] **Step 4: Verificar en hardware**
+- [ ] **Step 4: Verify on hardware**
 
-1. Con microSD y GPS con fix: recorrer una manzana con el overlay apuntando a un
-   dispositivo propio.
-2. Sacar la tarjeta y comprobar que `surveil/*.csv` tiene el header correcto y
-   filas con coordenadas.
-3. `cut -d, -f1-14 surveil/xxx.csv > wigle.csv` y comprobar que las columnas
-   cuadran con un CSV de `warfi/`.
-4. Repetir sin fix GPS: las filas deben aparecer con lat/lon vacías, no faltar.
+1. With a microSD card and a GPS fix: walk a block with the overlay targeting a personal device.
+2. Remove the card and verify that `surveil/*.csv` has the proper header and rows with coordinates.
+3. Run `cut -d, -f1-14 surveil/xxx.csv > wigle.csv` and verify that the columns match a `warfi/` CSV.
+4. Repeat without a GPS fix: rows must appear with empty lat/lon fields rather than being dropped.
 
 - [ ] **Step 5: Commit**
 
@@ -3116,21 +2998,20 @@ git commit -m "feat(surveillance): log detections to WiGLE-compatible CSV with G
 
 ---
 
-## Task 14: Exportación GPX de tier 4
+## Task 14: Tier-4 GPX Export
 
 **Files:**
 - Modify: `firmware/main/apps/surveillance/surveillance_log.c`, `.h`
 
 **Interfaces:**
-- Consumes: lo de Task 13.
+- Consumes: Task 13 interfaces.
 - Produces: `void surveillance_log_gpx_waypoint(const surv_event_t* ev, gps_t* gps)`.
 
-DeFlock **no** consume CSV: es OpenStreetMap con nodos etiquetados. El GPX se
-carga como capa en el editor iD para colocar los nodos sin repetir el recorrido.
+DeFlock does **not** consume CSV: it is OpenStreetMap with tagged nodes. The GPX file is loaded as a layer in the iD editor to place nodes without repeating the drive.
 
-- [ ] **Step 1: Implementar el waypoint**
+- [ ] **Step 1: Implement waypoint logging**
 
-Solo para tier 4 con coordenada válida:
+Only for tier 4 detections with valid coordinates:
 
 ```c
 void surveillance_log_gpx_waypoint(const surv_event_t* ev, gps_t* gps) {
@@ -3147,14 +3028,11 @@ void surveillance_log_gpx_waypoint(const surv_event_t* ev, gps_t* gps) {
 }
 ```
 
-El archivo se abre con la cabecera GPX en `surveillance_log_begin()` y se cierra
-con `</gpx>` en `surveillance_log_flush()`.
+The file is opened with the GPX header in `surveillance_log_begin()` and closed with `</gpx>` in `surveillance_log_flush()`.
 
-- [ ] **Step 2: Verificar**
+- [ ] **Step 2: Verify**
 
-Generar un GPX con al menos un waypoint y abrirlo en
-[openstreetmap.org/edit](https://www.openstreetmap.org/edit) como capa GPX.
-Esperado: el waypoint aparece en la posición correcta.
+Generate a GPX file containing at least one waypoint and open it in [openstreetmap.org/edit](https://www.openstreetmap.org/edit) as a GPX layer. Expected: the waypoint appears at the proper location.
 
 - [ ] **Step 3: Commit**
 
@@ -3165,22 +3043,19 @@ git commit -m "feat(surveillance): export tier-4 detections as GPX waypoints"
 
 ---
 
-## Task 15: Evidencia en pcap
+## Task 15: PCAP Evidence
 
 **Files:**
 - Modify: `firmware/main/apps/surveillance/surveillance_log.c`, `.h`
 - Modify: `firmware/components/surveillance_detect/surveillance_detect.c`, `include/surveillance_detect.h`
 
 **Interfaces:**
-- Consumes: `espressif__pcap` (ya en `managed_components`, usado por `wifi_sniffer`).
-- Produces: el evento encolado lleva una copia de la trama cuando `tier >= 3`.
+- Consumes: `espressif__pcap` (already in `managed_components`, used by `wifi_sniffer`).
+- Produces: the enqueued event carries a copy of the frame when `tier >= 3`.
 
-Ni flock-you ni eye-spy guardan la evidencia. Esto convierte a Minino en
-herramienta de investigación: la firma IE se verifica a mano en Wireshark en
-lugar de creerle al firmware. Los mismos volcados alimentan los vectores
-pendientes de la Task 6.
+Neither flock-you nor eye-spy saves raw evidence. This turns Minino into a research tool: the IE signature can be verified manually in Wireshark rather than taking the firmware's word for it. These same dumps feed the pending vectors in Task 6.
 
-- [ ] **Step 1: Ampliar el item de cola para tier 3 y 4**
+- [ ] **Step 1: Expand the queue item for tiers 3 and 4**
 
 ```c
 #define SURV_EVIDENCE_MAX 320
@@ -3188,15 +3063,14 @@ pendientes de la Task 6.
 typedef struct {
   surv_event_t ev;
   uint8_t      points;
-  uint16_t     raw_len;                    // 0 si no se copio
+  uint16_t     raw_len;                    // 0 if not copied
   uint8_t      raw[SURV_EVIDENCE_MAX];
 } surv_qitem_t;
 ```
 
-La copia solo ocurre cuando el match ya disparó con `tier >= SURV_TIER_PROBE`,
-así que el coste no está en el camino de la trama común.
+Copying only happens after a match has already triggered with `tier >= SURV_TIER_PROBE`, so there is no overhead on the common frame path.
 
-- [ ] **Step 2: Abrir la sesión de pcap**
+- [ ] **Step 2: Open the pcap session**
 
 ```c
 static pcap_file_handle_t s_pcap;
@@ -3211,15 +3085,14 @@ esp_err_t surveillance_log_pcap_begin(const char* path) {
                        .minor_version = PCAP_DEFAULT_VERSION_MINOR,
                        .time_zone = PCAP_DEFAULT_TIME_ZONE};
   ESP_RETURN_ON_ERROR(pcap_new_session(&cfg, &s_pcap), TAG, "pcap session");
-  // 802.11 sin cabecera de radio: es lo que entrega el modo promiscuo.
+  // 802.11 without radio header: matches what promiscuous mode delivers.
   return pcap_write_header(s_pcap, PCAP_LINK_TYPE_802_11);
 }
 ```
 
-Comparar con `firmware/components/wifi_sniffer/cmd_pcap.c`, que ya hace esta
-secuencia, y reutilizar sus nombres de campo si difieren de los de arriba.
+Compare with `firmware/components/wifi_sniffer/cmd_pcap.c`, which already performs this sequence, and reuse its field names if they differ from those above.
 
-- [ ] **Step 3: Escribir el pcap con tope de 4 MB**
+- [ ] **Step 3: Write pcap with a 4 MB cap**
 
 ```c
 #define SURV_PCAP_MAX_BYTES (4u * 1024u * 1024u)
@@ -3234,7 +3107,7 @@ void surveillance_log_evidence(const uint8_t* raw, uint16_t len,
   }
   if (s_pcap_bytes + len + 16 > SURV_PCAP_MAX_BYTES) {
     s_pcap_full = true;
-    // Se deja de escribir evidencia, pero la deteccion y el CSV siguen.
+    // Stop writing evidence, but detection and CSV logging continue.
     surveillance_screens_show_pcap_full();
     return;
   }
@@ -3245,16 +3118,14 @@ void surveillance_log_evidence(const uint8_t* raw, uint16_t len,
 }
 ```
 
-Al salir de la app: `pcap_del_session(s_pcap)` y `fclose(s_pcap_fp)`, en ese
-orden.
+When exiting the app: call `pcap_del_session(s_pcap)` and `fclose(s_pcap_fp)`, in that order.
 
-- [ ] **Step 4: Verificar en hardware**
+- [ ] **Step 4: Verify on hardware**
 
-1. Provocar una detección tier 3 o 4 con la segunda placa (Task 17).
-2. Abrir `surveil/evidence_*.pcap` en Wireshark.
-3. Comprobar que la trama es un Probe Request, que el SSID IE tiene longitud 0 y
-   que los vendor IE contienen `50:6f:9a:16:03:01:03`.
-4. Extraer esos IE y añadirlos como `FLOCK_IES_REAL` al test de la Task 6.
+1. Trigger a tier 3 or 4 detection using the second board (Task 17).
+2. Open `surveil/evidence_*.pcap` in Wireshark.
+3. Verify that the frame is a Probe Request, that the SSID IE has length 0, and that the vendor IEs contain `50:6f:9a:16:03:01:03`.
+4. Extract those IEs and add them as `FLOCK_IES_REAL` to the Task 6 test.
 
 - [ ] **Step 5: Commit**
 
@@ -3265,37 +3136,33 @@ git commit -m "feat(surveillance): dump tier-3/4 frames to pcap evidence file"
 
 ---
 
-## Task 16: Settings — perfil, scan activo y máscara de buzzer
+## Task 16: Settings - Profile, Active Scan, and Buzzer Mask
 
 **Files:**
-- Modify: `firmware/main/modules/settings/` (submenú nuevo)
+- Modify: `firmware/main/modules/settings/` (new submenu)
 - Modify: `firmware/main/modules/menus_module/menus_include/menus.h`
 
 **Interfaces:**
 - Consumes: `preferences_put_uchar()`, `preferences_get_uchar()`.
-- Produces: claves NVS `surv_profile` (0–2), `surv_active` (0/1), `surv_beep` (máscara de 5 bits, default `0x1F`).
+- Produces: NVS keys `surv_profile` (0-2), `surv_active` (0/1), `surv_beep` (5-bit mask, default `0x1F`).
 
-- [ ] **Step 1: Añadir las tres opciones**
+- [ ] **Step 1: Add the three options**
 
-Siguiendo el patrón de `main/modules/settings/wifi/`, con
-`general_radio_selection` para el perfil:
+Following the pattern in `main/modules/settings/wifi/`, using `general_radio_selection` for the profile:
 
-- **Perfil**: `Flock/ALPR`, `Vigilancia`, `Trackers`. Default `Vigilancia`.
-- **Scan activo**: on/off, default off. Solo visible en los perfiles
-  `Flock/ALPR` y `Vigilancia`; en `Trackers` la opción se ignora.
-- **Buzzer por tier**: cinco toggles, uno por tier, default todos activos.
+- **Profile**: `Flock/ALPR`, `Surveillance`, `Trackers`. Default `Surveillance`.
+- **Active scan**: on/off, default off. Only visible in the `Flock/ALPR` and `Surveillance` profiles; ignored in `Trackers`.
+- **Per-tier buzzer**: five toggles, one per tier, all enabled by default.
 
-- [ ] **Step 2: Mostrar el aviso de scan activo**
+- [ ] **Step 2: Display the active scan indicator**
 
-Cuando `surv_active` está en 1, la pantalla principal muestra `!` junto al
-nombre del perfil: habilitarlo hace que el dispositivo transmita probe requests
-y deje de ser indetectable, y eso tiene que verse sin entrar a settings.
+When `surv_active` is 1, the main screen displays `!` next to the profile name: enabling active scan causes the device to transmit probe requests and stop being undetectable, which must be visible without entering settings.
 
-- [ ] **Step 3: Verificar la persistencia**
+- [ ] **Step 3: Verify persistence**
 
-1. Cambiar perfil a `Flock/ALPR`, salir, reiniciar la placa.
-2. Entrar a la app: debe arrancar en `Flock/ALPR`.
-3. Silenciar tier 1, reiniciar, comprobar que sigue silenciado y que tier 4 suena.
+1. Change the profile to `Flock/ALPR`, exit, and reboot the board.
+2. Enter the app: it must start in `Flock/ALPR`.
+3. Mute tier 1, reboot, and verify that tier 1 stays muted while tier 4 still sounds.
 
 - [ ] **Step 4: Commit**
 
@@ -3306,7 +3173,7 @@ git commit -m "feat(surveillance): add radio profile, active scan and beep mask 
 
 ---
 
-## Task 17: Carga del overlay desde microSD y validación de campo
+## Task 17: microSD Overlay Loading and Field Validation
 
 **Files:**
 - Modify: `firmware/main/apps/surveillance/surveillance_module.c`
@@ -3314,11 +3181,11 @@ git commit -m "feat(surveillance): add radio profile, active scan and beep mask 
 
 **Interfaces:**
 - Consumes: `sd_card_read_file()`, `surv_overlay_parse()`, `surv_overlay_reset()`.
-- Produces: nada nuevo; cierra el ciclo.
+- Produces: nothing new; closes the loop.
 
-- [ ] **Step 1: Leer el archivo en `surveillance_module_begin()`**
+- [ ] **Step 1: Read the file in `surveillance_module_begin()`**
 
-Antes de `surv_begin()`, nunca desde un callback:
+Before `surv_begin()`, never from a callback:
 
 ```c
 static void load_overlay(void) {
@@ -3339,46 +3206,33 @@ static void load_overlay(void) {
 }
 ```
 
-La pantalla de arranque muestra `sigs: 74 base +12 SD` o `SD: none`.
+The startup screen displays `sigs: 74 base +12 SD` or `SD: none`.
 
-- [ ] **Step 2: Escribir la documentación de usuario**
+- [ ] **Step 2: Write user documentation**
 
-`docs/surveillance-signatures.md` con el formato del archivo (los cinco tipos:
-`oui`, `ssid`, `blename`, `uuid`, `iesig`), un ejemplo completo, los topes
-(256 OUIs, 64 keywords, 16 UUIDs, 8 firmas IE) y **el aviso regional**, el
-mismo que muestra la pantalla de ayuda de la Task 11: Flock Safety se despliega
-en Estados Unidos y, en menor medida, Canadá; con la tabla base, en México la
-app puede correr una hora sin una sola detección y ese es el resultado correcto,
-no un fallo.
+`docs/surveillance-signatures.md` covering the file format (the five entry types: `oui`, `ssid`, `blename`, `uuid`, `iesig`), a complete example, the caps (256 OUIs, 64 keywords, 16 UUIDs, 8 IE signatures), and **the regional notice**, matching the help screen from Task 11: Flock Safety is deployed in the United States and, to a lesser extent, Canada; with the base table in Mexico, the app can run for an hour without a single detection and that is the expected result, not a bug.
 
-Incluir cómo subir el archivo por WiFi con el `web_file_browser` que Minino ya
-tiene, sin sacar la tarjeta.
+Include instructions for uploading the file over WiFi using the `web_file_browser` that Minino already provides, without removing the microSD card.
 
-- [ ] **Step 3: Validación de campo con dos placas**
+- [ ] **Step 3: Two-board field validation**
 
-Placa A (emisor): firmware con un modo de prueba que transmite con
-`esp_wifi_80211_tx` una probe request con SSID IE de longitud 0, `addr2` con un
-OUI de la tabla y los IE de `FLOCK_IES`. Reutilizar el patrón de
-`main/apps/wifi/ssid_spam` y `components/drone_id/spoofer`.
+Board A (transmitter): firmware with a test mode that transmits via `esp_wifi_80211_tx` a probe request with a length-0 SSID IE, `addr2` set to an OUI from the table, and the `FLOCK_IES` information elements. Reuse the pattern from `main/apps/wifi/ssid_spam` and `components/drone_id/spoofer`.
 
-Placa B (detector): la app de vigilancia en perfil `Flock/ALPR`.
+Board B (detector): the surveillance app running in the `Flock/ALPR` profile.
 
-No se depende de que una sola placa se reciba a sí misma: la radio es
-half-duplex y no está previsto que funcione.
+Do not rely on a single board receiving its own transmissions: the radio is half-duplex and self-reception is not supported.
 
-- [ ] **Step 4: Verificar los criterios de aceptación del spec**
+- [ ] **Step 4: Verify the spec acceptance criteria**
 
-| Criterio | Cómo se mide | Umbral |
+| Criterion | How It Is Measured | Threshold |
 |---|---|---|
-| Falsos positivos, tabla base, 30 min en zona urbana de México | App en perfil `Vigilancia`, contar filas de clase FLOCK/ALPR en el CSV | 0 |
-| Detección de trama tier-4 sintética con hop activo | Placa A emitiendo cada segundo; cronómetro desde el arranque de B | < 2 s |
-| Overflow del ring buffer en 1 h | `surv_queue_overflows()` en la pantalla de debug | 0 |
-| Bloqueo del drenaje por escritura a microSD | Log de `esp_timer` alrededor de `sd_card_append_to_file` | < 50 ms |
-| App de trackers tras el refactor | Verificación manual de la Task 5 | Sin regresión |
+| False positives, base table, 30 min in an urban area in Mexico | App in `Surveillance` profile, count FLOCK/ALPR class rows in the CSV | 0 |
+| Detection of synthetic tier-4 frame with active channel hopping | Board A transmitting every second; stopwatch from Board B startup | < 2 s |
+| Ring buffer overflow in 1 h | `surv_queue_overflows()` on the debug screen | 0 |
+| Ring buffer drain stall caused by microSD writes | `esp_timer` log around `sd_card_append_to_file` | < 50 ms |
+| Trackers app after refactor | Manual verification from Task 5 | No regression |
 
-Cualquier criterio que falle vuelve a la tarea que lo causó. El de falsos
-positivos, si falla, casi siempre apunta a una keyword de SSID demasiado
-genérica en la Task 3.
+Any failing criterion returns to the task that caused it. A false-positive failure almost always points to an overly generic SSID keyword in Task 3.
 
 - [ ] **Step 5: Commit**
 

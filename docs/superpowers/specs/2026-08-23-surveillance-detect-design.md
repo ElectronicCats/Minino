@@ -1,260 +1,202 @@
-# Detector de vigilancia para Minino — diseño
+# Surveillance Detector for Minino - Design
 
-Fecha: 2026-08-23
-Estado: aprobado para plan de implementación
+Date: 2026-08-23
+Status: Approved for implementation plan
 
-## 1. Objetivo
+## 1. Objective
 
-Dotar a Minino de un detector pasivo de infraestructura de vigilancia: cámaras
-Flock Safety y lectores de placas (ALPR), body cams, rastreadores personales,
-cámaras IP, drones y skimmers. La alerta es local (OLED, buzzer, LEDs) y cada
-detección se registra con coordenadas GPS en microSD para mapear después.
+Equip Minino with a passive surveillance infrastructure detector: Flock Safety cameras and license plate readers (ALPR), body cams, personal trackers, IP cameras, drones, and skimmers. Alerting is local (OLED, buzzer, LEDs) and each detection is logged with GPS coordinates to microSD for subsequent mapping.
 
-El trabajo sintetiza dos proyectos existentes:
+This work synthesizes two existing projects:
 
-- [flock-you](https://github.com/colonelpanichacks/flock-you) (MIT) — el motor de
-  detección de Flock con niveles de confianza y el fingerprint de Information
-  Elements.
-- [eye-spy](https://github.com/simeononsecurity/eye-spy) (Apache-2.0) — el
-  alcance amplio de motores de detección y el modelo de score acumulativo.
+- [flock-you](https://github.com/colonelpanichacks/flock-you) (MIT) - the Flock detection engine with confidence levels and Information Element fingerprinting.
+- [eye-spy](https://github.com/simeononsecurity/eye-spy) (Apache-2.0) - the broad scope of detection engines and the cumulative score model.
 
-No es un port: Minino es ESP32-C6 con ESP-IDF en C, y ambos proyectos son
-Arduino/PlatformIO sobre ESP32-S3 y ESP32-PICO-D4. Se reimplementa el algoritmo,
-no el código.
+This is not a port: Minino runs on ESP32-C6 with ESP-IDF in C, whereas both reference projects use Arduino/PlatformIO on ESP32-S3 and ESP32-PICO-D4. We reimplement the algorithm, not the code.
 
-## 2. Decisiones tomadas
+## 2. Decisions Made
 
-| Decisión | Valor |
+| Decision | Value |
 |---|---|
-| Alcance de detección | Vigilancia amplia (modelo eye-spy), con el motor Flock de flock-you dentro |
-| Salida | Alerta local (OLED + buzzer + LEDs) y log GPS a microSD. Sin streaming USB ni dashboard web |
-| OPSEC | Pasivo por defecto; scan activo de WiFi como opción en settings |
-| Firmas | Tabla base compilada en flash + overlay opcional desde microSD |
-| Solape con `trackers_scanner` | Se extrae el disector BLE al componente compartido; no se duplica |
-| Pruebas de radio | Con dos placas Minino (emisor + detector). No se depende de auto-loopback |
+| Detection scope | Broad surveillance (eye-spy model), embedding the Flock engine from flock-you |
+| Output | Local alert (OLED + buzzer + LEDs) and GPS log to microSD. No USB streaming or web dashboard |
+| OPSEC | Passive by default; active WiFi scan as an option in settings |
+| Signatures | Base table compiled in flash + optional overlay from microSD |
+| Overlap with `trackers_scanner` | Extract the BLE dissector to the shared component; no duplication |
+| Radio testing | Two Minino boards (transmitter + detector). Do not rely on self-loopback |
 
-## 3. Alcance
+## 3. Scope
 
-### Dentro
+### In Scope
 
-- Componente `surveillance_detect` con motores BLE y WiFi.
-- App de menú con pantallas, buzzer y LEDs.
-- Registro CSV con GPS a microSD, compatible con subida a WiGLE.
-- Exportación GPX de detecciones tier 4 con coordenada.
-- Volcado pcap de la evidencia de tier 3 y 4.
-- Overlay de firmas desde microSD.
-- Refactor de `trackers_scanner` para usar el disector compartido.
-- Tests en host de los matchers y del motor de score.
+- `surveillance_detect` component with BLE and WiFi engines.
+- Menu app with screens, buzzer, and LEDs.
+- CSV logging with GPS to microSD, compatible with WiGLE uploads.
+- GPX export of tier 4 detections with coordinates.
+- PCAP dump of tier 3 and 4 evidence.
+- Signature overlay from microSD.
+- Refactor of `trackers_scanner` to use the shared dissector.
+- Host unit tests for matchers and the scoring engine.
 
-### Fuera
+### Out of Scope
 
-- Dashboard Flask o cualquier herramienta de host.
-- Streaming JSON por USB.
-- Detección en 5 GHz (el ESP32-C6 es 2.4 GHz).
-- Contribución automatizada a DeFlock (es OpenStreetMap; el GPX es una ayuda,
-  no una integración).
+- Flask dashboard or any host tool.
+- JSON streaming over USB.
+- 5 GHz detection (the ESP32-C6 is 2.4 GHz only).
+- Automated contribution to DeFlock (it is OpenStreetMap; GPX is a helper, not an integration).
 
-## 4. Arquitectura
+## 4. Architecture
 
-### 4.1 Componente `firmware/components/surveillance_detect/`
+### 4.1 Component `firmware/components/surveillance_detect/`
 
-Prefijo `surv_` para no colisionar con `sd_card`. Sin dependencias de OLED,
-menús ni pantallas.
+Prefix `surv_` to avoid colliding with `sd_card`. No dependencies on OLED, menus, or screens.
 
 ```
 surveillance_detect/
 ├── CMakeLists.txt
 ├── include/
 │   ├── surv_types.h            surv_event_t, surv_class_t, surv_proto_t
-│   ├── surv_match.h            matchers puros
-│   ├── surv_engine.h           score, decay, cooldown, tabla por MAC
-│   └── surveillance_detect.h   API pública
-├── surv_signatures.c           tablas base en flash
-├── surv_overlay.c              parser del overlay de microSD
-├── surv_match.c                matchers (sin hardware, testeables en host)
-├── surv_engine.c               motor de score y tiers
-├── surv_radio.c                planificador de fases BLE/WiFi
-└── test_apps/                  Unity en host
+│   ├── surv_match.h            pure matchers
+│   ├── surv_engine.h           score, decay, cooldown, per-MAC table
+│   └── surveillance_detect.h   public API
+├── surv_signatures.c           base tables in flash
+├── surv_overlay.c              microSD overlay parser
+├── surv_match.c                matchers (hardware-free, host-testable)
+├── surv_engine.c               scoring and tier engine
+├── surv_radio.c                BLE/WiFi phase scheduler
+└── test_apps/                  Unity on host
 ```
 
-`surv_match.c` no incluye ninguna cabecera de ESP-IDF fuera de tipos básicos:
-es condición para que los tests corran en host.
+`surv_match.c` includes no ESP-IDF headers beyond basic types: this is required for tests to run on the host.
 
 ### 4.2 App `firmware/main/apps/surveillance/`
 
-- `surveillance_module.c/.h` — ciclo de vida, callbacks de botones, escritura
-  CSV/GPX/pcap.
-- `surveillance_screens.c/.h` — pantallas OLED, siguiendo el patrón de
-  `main/apps/ble/trackers/trackers_screens.c`.
+- `surveillance_module.c/.h` - lifecycle, button callbacks, CSV/GPX/pcap writing.
+- `surveillance_screens.c/.h` - OLED screens, following the pattern of `main/apps/ble/trackers/trackers_screens.c`.
 
-Entrada de menú nueva bajo `MENU_APPLICATIONS` (no bajo `MENU_WIFI_APPS`, porque
-usa las dos radios), declarada en `main/modules/menus_module/menus_include/menus.h`
-y gated por Kconfig como el resto de apps.
+New menu entry under `MENU_APPLICATIONS` (not under `MENU_WIFI_APPS`, because it uses both radios), declared in `main/modules/menus_module/menus_include/menus.h` and gated by Kconfig like the rest of the apps.
 
-### 4.3 Flujo de datos
+### 4.3 Data Flow
 
 ```
-callback promiscuo WiFi ─┐
-                         ├─→ matcher rápido ─→ ring buffer (32) ─→ task surv_engine
-callback GAP de BLE     ─┘   sin printf/malloc                          │
-                                                                        ▼
-                                          score + dedupe por MAC ──→ callback de la app
-                                                                        │
-                                                            ┌───────────┼───────────┐
-                                                          OLED       buzzer    CSV/GPX/pcap
+WiFi promiscuous callback ─┐
+                           ├─→ fast matcher ─→ ring buffer (32) ─→ task surv_engine
+BLE GAP callback          ─┘   no printf/malloc                          │
+                                                                         ▼
+                                             score + per-MAC dedupe ──→ app callback
+                                                                         │
+                                                             ┌───────────┼───────────┐
+                                                           OLED       buzzer    CSV/GPX/pcap
 ```
 
-El callback promiscuo corre en la task de WiFi con restricciones de tiempo real:
-solo compara y encola. La escritura a microSD nunca ocurre en la task del motor
-—un `sd_card_append_to_file` de decenas de ms detendría el drenaje del ring
-buffer y se perderían tramas—; se bufferea en RAM y se vuelca por lotes, igual
-que hace `main/modules/gps/wardriving/wardriving_module.c`.
+The promiscuous callback runs in the WiFi task with real-time constraints: it only compares and enqueues. Writing to microSD never happens in the engine task (an `sd_card_append_to_file` call taking tens of ms would stall ring buffer draining and drop frames); instead, data is buffered in RAM and flushed in batches, matching `main/modules/gps/wardriving/wardriving_module.c`.
 
 ### 4.4 Tasks
 
-| Task | Prioridad | Stack | Responsabilidad |
+| Task | Priority | Stack | Responsibility |
 |---|---|---|---|
-| `surv_radio` | 10 | 3 KB | Fases BLE/WiFi y salto de canal |
-| `surv_engine` | 5 | 4 KB | Drena el ring buffer, score, dedupe, callbacks |
-| (task de WiFi) | — | — | Callback promiscuo: compara y encola |
-| (task de la app) | — | — | UI y volcado por lotes a microSD |
+| `surv_radio` | 10 | 3 KB | BLE/WiFi phases and channel hopping |
+| `surv_engine` | 5 | 4 KB | Drains ring buffer, score, dedupe, callbacks |
+| (WiFi task) | - | - | Promiscuous callback: compares and enqueues |
+| (App task) | - | - | UI and batch flushing to microSD |
 
-## 5. Modelo de detección
+## 5. Detection Model
 
-Los dos proyectos usan modelos distintos que responden preguntas distintas. Se
-implementan ambos.
+The two reference projects use distinct models that answer distinct questions. Both are implemented.
 
-- **Tier (0–4)**, de flock-you — *"¿qué tan seguro estoy de este dispositivo?"*.
-  Propiedad por MAC. Un tier alto nunca se sobrescribe con uno bajo y puede
-  saltarse el cooldown de dedupe: sin esa excepción, un tier 1 (que dispara con
-  cualquier trama) gana la carrera al cooldown de 5 s y esconde la confirmación
-  tier 4 del mismo dispositivo. Determina el tono del buzzer y la etiqueta que
-  se guarda.
-- **Score**, de eye-spy — *"¿qué tan vigilado está este lugar?"*. Acumulador
-  global: suma puntos por clase, decae −1 cada 60 s, con cooldown de 120 s por
-  clase para que un dispositivo persistente no acumule sin límite. Determina el
-  semáforo (0–2 CLEAR, 3–5 CAUTION, 6+ ALERT).
+- **Tier (0-4)**, from flock-you - *"how confident am I about this device?"*. Per-MAC property. A high tier is never overwritten by a lower one and can bypass the dedupe cooldown: without that exception, a tier 1 hit (which triggers on any frame) wins the race to the 5 s cooldown and hides the tier 4 confirmation from the same device. It determines the buzzer tone and the saved label.
+- **Score**, from eye-spy - *"how surveilled is this location?"*. Global accumulator: adds points per class, decays -1 every 60 s, with a 120 s per-class cooldown so a persistent device cannot accumulate without bound. It determines the status level (0-2 CLEAR, 3-5 CAUTION, 6+ ALERT).
 
-### 5.1 Evento
+### 5.1 Event
 
 ```c
 typedef struct {
   uint8_t      mac[6];
   surv_class_t klass;    // FLOCK, ALPR, AXON, AIRTAG, CAM, ODID, SKIMMER, ...
-  uint8_t      tier;     // 0-4, confianza del método que disparó
+  uint8_t      tier;     // 0-4, confidence of the triggering method
   int8_t       rssi;
-  uint8_t      channel;  // 0 si es BLE
+  uint8_t      channel;  // 0 if BLE
   surv_proto_t proto;    // BLE | WIFI
 } surv_event_t;
 ```
 
-El motor mantiene una tabla por MAC (cap 200, como flock-you) con `best_tier` y
-`methods_seen`, más el acumulador global con su decay.
+The engine maintains a per-MAC table (cap 200, like flock-you) with `best_tier` and `methods_seen`, plus the global accumulator with its decay.
 
-`tier` y `points` son ejes independientes y no deben derivarse uno del otro. Un
-SSID que contiene "flock" es evidencia débil de que *ese* dispositivo sea una
-cámara —un SSID es trivial de falsificar— pero es evidencia fuerte de que el
-lugar tiene infraestructura Flock. Por eso puede ser tier 0 y a la vez sumar 5
-puntos al score. El matching por keyword de SSID va **habilitado** por defecto
-(flock-you lo trae apagado), precisamente porque a tier 0 nunca etiqueta un
-dispositivo como confirmado.
+`tier` and `points` are independent axes and must not be derived from one another. An SSID containing "flock" is weak evidence that *that specific* device is a camera (an SSID is trivial to spoof), but it is strong evidence that the area has Flock infrastructure. That is why it can be tier 0 while simultaneously adding 5 points to the score. SSID keyword matching is **enabled** by default (flock-you ships with it disabled), specifically because at tier 0 it never labels a device as confirmed.
 
-### 5.2 Tiers de WiFi (de flock-you)
+### 5.2 WiFi Tiers (from flock-you)
 
-| Tier | Método | Condición |
+| Tier | Method | Condition |
 |---|---|---|
-| 4 | `wildcard_probe_ie_sig` | Probe Request + SSID IE de longitud 0 + OUI en `addr2` + firma IE |
-| 3 | `wildcard_probe` | Igual, sin coincidencia de firma IE |
-| 2 | `oui_addr2` | OUI en `addr2` de cualquier trama |
-| 1 | `oui_addr1` / `oui_addr3` | OUI en `addr1` o BSSID; propenso a falsos positivos |
-| 0 | `ssid_kw` | Keyword en SSID |
+| 4 | `wildcard_probe_ie_sig` | Probe Request + length-0 SSID IE + OUI in `addr2` + IE signature |
+| 3 | `wildcard_probe` | Same, without IE signature match |
+| 2 | `oui_addr2` | OUI in `addr2` of any frame |
+| 1 | `oui_addr1` / `oui_addr3` | OUI in `addr1` or BSSID; prone to false positives |
+| 0 | `ssid_kw` | Keyword in SSID |
 
-Los tiers 1 y 2 son ecos: un AP cercano respondiendo al probe de una cámara pone
-la MAC de la cámara en `addr1`. Se conservan porque cubren estaciones que no
-transmiten durante la ventana, pero degradados.
+Tiers 1 and 2 are echoes: a nearby AP responding to a camera's probe places the camera's MAC in `addr1`. They are kept because they cover stations that do not transmit during the window, but at degraded confidence.
 
-### 5.3 Motores
+### 5.3 Engines
 
-| Origen | Motores |
+| Source | Engines |
 |---|---|
-| flock-you | Los cinco tiers de la tabla anterior |
-| eye-spy | Axon (OUI `00:25:df`), Ray-Ban Meta (UUID `0xFD5F`), Flock BLE por nombre, Flock BLE por mfr ID `0x09C8`, Raven (UUIDs GATT), skimmers HC-03/05/06, ODID BLE (`0xFFFA`), ODID WiFi (NaN a `51:6f:9a:01:00:00`), iBeacon, MeshCore, SoundThinking/ShotSpotter, OUI y SSID de cámaras y ALPR, persistencia de MAC desconocida |
-| `trackers_scanner` (ya en Minino) | AirTag, SmartTag, Tile, Apple Nearby |
-| Nuevo en Minino | Beacons en promiscuo → BSSID y SSID **sin transmitir** |
+| flock-you | The five tiers in the table above |
+| eye-spy | Axon (OUI `00:25:df`), Ray-Ban Meta (UUID `0xFD5F`), Flock BLE by name, Flock BLE by mfr ID `0x09C8`, Raven (GATT UUIDs), HC-03/05/06 skimmers, ODID BLE (`0xFFFA`), ODID WiFi (NaN to `51:6f:9a:01:00:00`), iBeacon, MeshCore, SoundThinking/ShotSpotter, camera and ALPR OUI and SSID, unknown MAC persistence |
+| `trackers_scanner` (already in Minino) | AirTag, SmartTag, Tile, Apple Nearby |
+| New in Minino | Promiscuous beacons -> BSSID and SSID **without transmitting** |
 
-El último es una mejora sobre ambos: eye-spy necesita `esp_wifi_scan` (que emite
-probe requests y delata al dispositivo) para obtener BSSID/SSID; sniffando
-beacons en promiscuo se obtiene lo mismo sin transmitir. flock-you no mira
-beacons.
+The last item is an improvement over both: eye-spy requires `esp_wifi_scan` (which emits probe requests and gives away the device) to obtain BSSID/SSID; sniffing beacons in promiscuous mode obtains the same data without transmitting. flock-you does not inspect beacons.
 
-`SOUNDTHINKING_OUIS`, `RAVEN_UUIDS` y el mfr ID `0x09C8` están en el código de
-eye-spy pero no en su README; se incluyen.
+`SOUNDTHINKING_OUIS`, `RAVEN_UUIDS`, and mfr ID `0x09C8` are present in the eye-spy codebase but not in its README; they are included.
 
-## 6. Firmas
+## 6. Signatures
 
-### 6.1 Tabla base
+### 6.1 Base Table
 
-Una sola tabla con la clase y el peso como datos, en lugar de los cinco arrays
-sueltos de eye-spy (`FLOCK_OUIS` 35, `FLOCK_MFR_OUIS` 6, `SOUNDTHINKING_OUIS` 1,
-`ALPR_OUIS` 1, `CAM_OUIS` 31 = 74 OUIs):
+A single table storing class and weight as data, instead of eye-spy's five separate arrays (`FLOCK_OUIS` 35, `FLOCK_MFR_OUIS` 6, `SOUNDTHINKING_OUIS` 1, `ALPR_OUIS` 1, `CAM_OUIS` 31 = 74 OUIs):
 
 ```c
 typedef struct {
   uint8_t      oui[3];
   surv_class_t klass;
-  uint8_t      points;   // peso en el score global
-  uint8_t      tier;     // techo de confianza para esta firma
+  uint8_t      points;   // weight in global score
+  uint8_t      tier;     // confidence ceiling for this signature
 } surv_oui_entry_t;
 ```
 
-El tier del evento lo determina el **método** que disparó (posición de la
-dirección, probe wildcard, firma IE), no la tabla. El campo `tier` de la entrada
-es un **techo**: las OUIs de fabricante contratista (Liteon, USI), que van en
-hardware que no es de Flock, nunca superan tier 1 aunque el método diera más.
+The event tier is determined by the **method** that triggered (address position, wildcard probe, IE signature), not the table. The entry's `tier` field is a **ceiling**: contract manufacturer OUIs (Liteon, USI), which appear in non-Flock hardware, never exceed tier 1 even if the method would yield a higher tier.
 
-74 entradas × 5 B = 370 bytes. Ordenada, con **prefiltro de bitmap de 32 bytes
-indexado por el primer octeto**: si el bit no está puesto, la trama se descarta
-en una operación. Importa porque el matcher corre en el callback promiscuo con
-cada trama recibida.
+74 entries x 5 B = 370 bytes. Sorted, with a **32-byte bitmap prefilter indexed by the first octet**: if the bit is not set, the frame is discarded in a single operation. This matters because the matcher runs inside the promiscuous callback on every received frame.
 
-No se debe añadir un filtro de "saltar MAC localmente administrada": `82:6b:f2`
-tiene ese bit puesto y es una cámara Flock confirmada en campo por DeFlockJoplin.
+Do not add a "skip locally administered MAC" filter: `82:6b:f2` has that bit set and is a field-confirmed Flock camera reported by DeFlockJoplin.
 
-### 6.2 Firma IE, en binario
+### 6.2 IE Signature, in Binary
 
-flock-you construye la firma como string y compara con `strcmp`, dentro del
-callback promiscuo, violando su propia regla de no formatear en el hot path. La
-firma drive-testeada es:
+flock-you builds the signature as a string and compares it with `strcmp` inside the promiscuous callback, violating its own rule against formatting in the hot path. The drive-tested signature is:
 
 ```
 2,12,127,221:506f9a16030103,45,191,221:0050f208000000
 ```
 
-Aquí se guarda precompilada como tokens y se compara recorriendo los IE de la
-trama y el patrón en paralelo:
+Here it is stored precompiled as tokens and compared by walking the frame's IEs and the pattern in parallel:
 
 ```c
 typedef struct { uint8_t tag; uint8_t vlen; uint8_t vendor[7]; } surv_ie_tok_t;
 // {2} {12} {127} {221,7,50 6f 9a 16 03 01 03} {45} {191} {221,7,00 50 f2 08 00 00 00}
 ```
 
-Mismo resultado, sin formateo de strings en el callback.
+Same result, without string formatting in the callback.
 
-Se conservan tal cual los parches de campo de flock-you, que son hallazgos
-reales y no ruido. **No es opcional:** la primera implementacion los omitio y,
-medida contra el algoritmo original sobre 25 000 entradas, fallo 3020 — todas
-en la direccion de no reconocer camaras que la referencia si reconoce, y sin
-que ningun test convencional lo delatara. La equivalencia se verifica ahora con
-un test diferencial permanente que ejecuta los dos algoritmos en paralelo.
+The field patches from flock-you are preserved as-is, because they represent real field findings rather than noise. **This is not optional:** the first implementation omitted them and, when measured against the original algorithm across 25,000 inputs, failed 3,020 times - all in the direction of failing to recognize cameras that the reference implementation recognizes, without any conventional unit test catching it. Equivalence is now verified by a permanent differential test that runs both algorithms in parallel.
 
-- *Phantom overflow*: TLVs con longitud imposible, se saltan hasta 16 por trama.
-- Resync de TLV cuando el recorrido se desalinea.
-- Reintento con la trama recortada en 4 bytes (FCS).
-- Canonicalización anclada al prefijo vendor LiteON `221:506f9a16030103`.
+- *Phantom overflow*: TLVs with impossible lengths; up to 16 are skipped per frame.
+- TLV resync when traversal loses alignment.
+- Retry with the frame trimmed by 4 bytes (FCS).
+- Canonicalization anchored to the LiteON vendor prefix `221:506f9a16030103`.
 
-### 6.3 Overlay desde microSD
+### 6.3 Overlay from microSD
 
-Archivo `/surveil/signatures.csv`, texto plano. `+` añade, `-` quita:
+File `/surveil/signatures.csv`, plain text. `+` adds, `-` removes:
 
 ```
 +oui,70:c9:4e,flock,5,2
@@ -265,74 +207,43 @@ Archivo `/surveil/signatures.csv`, texto plano. `+` añade, `-` quita:
 +iesig,2,12,127,221:506f9a16030103,45,191,221:0050f208000000
 ```
 
-Se carga una sola vez en `surv_begin()`, nunca desde un callback. Líneas
-malformadas se ignoran y se cuentan. Topes: 256 OUIs, 64 keywords, 8 firmas IE.
-Sin microSD o sin archivo, funciona con la tabla base. La pantalla de arranque
-muestra `sigs: 74 base +12 SD` o `SD: none`.
+Loaded once in `surv_begin()`, never from a callback. Malformed lines are ignored and counted. Limits: 256 OUIs, 64 keywords, 8 IE signatures. Without a microSD card or file, it operates with the base table. The startup screen displays `sigs: 74 base +12 SD` or `SD: none`.
 
-Que sea texto y no binario permite subir una lista actualizada por WiFi con el
-`web_file_browser` que Minino ya tiene, sin sacar la tarjeta ni recompilar.
-Ninguno de los dos proyectos de origen puede hacerlo.
+Using plain text rather than binary allows uploading an updated list over WiFi via the `web_file_browser` that Minino already includes, without removing the card or recompiling. Neither reference project can do this.
 
-Que la firma IE sea actualizable por overlay no es lujo: es lo que va a cambiar
-cuando Flock actualice el firmware de sus cámaras por OTA.
+Making the IE signature updatable via overlay is not a luxury: it is what will change when Flock updates its camera firmware over OTA.
 
-## 7. Planificador de radio
+## 7. Radio Scheduler
 
-El ESP32-C6 tiene una sola antena de 2.4 GHz compartida por WiFi, BLE y 802.15.4.
-Con alcance amplio no se puede cubrir todo a la vez, así que el reparto es una
-elección explícita del usuario, en settings:
+The ESP32-C6 has a single 2.4 GHz antenna shared across WiFi, BLE, and 802.15.4. With broad detection scope, everything cannot be covered simultaneously, so airtime allocation is an explicit user choice in settings:
 
-| Perfil | Reparto | Uso |
+| Profile | Allocation | Use Case |
 |---|---|---|
-| `Flock/ALPR` | 100% WiFi promiscuo | Wardriving en coche; máxima probabilidad de cazar el probe |
-| `Vigilancia` | Ciclo de 20 s: BLE pasivo 6 s → WiFi promiscuo 14 s | Uso general |
-| `Trackers` | 100% BLE pasivo | A pie: body cams, AirTags, gafas |
+| `Flock/ALPR` | 100% promiscuous WiFi | Car wardriving; maximum probability of catching probes |
+| `Surveillance` | 20 s cycle: passive BLE 6 s -> promiscuous WiFi 14 s | General use |
+| `Trackers` | 100% passive BLE | On foot: body cams, AirTags, smart glasses |
 
-Las cámaras emiten probes wildcard cada ~125 ms saltando canales en ascendente,
-así que cada segundo sin escuchar es una cámara potencialmente perdida. El perfil
-mixto cede aproximadamente un 30% del airtime de WiFi.
+Cameras emit wildcard probes every ~125 ms while hopping channels in ascending order, so every second spent not listening is a potentially missed camera. The mixed profile gives up roughly 30% of WiFi airtime.
 
-**Transición entre ventanas.** Ambos stacks quedan inicializados; lo exclusivo es
-el escaneo: `esp_ble_gap_stop_scanning()` antes de `esp_wifi_set_promiscuous(true)`
-y a la inversa. No se hace `esp_bluedroid_deinit`/`esp_bt_controller_deinit` por
-ciclo como en eye-spy: fragmenta el heap y cuesta cientos de ms cada 20 s.
+**Window transitions.** Both stacks remain initialized; only scanning is mutually exclusive: `esp_ble_gap_stop_scanning()` before `esp_wifi_set_promiscuous(true)` and vice versa. Do not call `esp_bluedroid_deinit`/`esp_bt_controller_deinit` every cycle like eye-spy does: it fragments the heap and costs hundreds of ms every 20 s.
 
-**BLE pasivo**: parámetros propios con `BLE_SCAN_TYPE_PASSIVE` y `window ==
-interval` (escucha continua). No se usa el default de `bt_gattc`, que hoy es
-`BLE_SCAN_TYPE_ACTIVE` (`components/bt_gattc/bt_gattc.c:61`).
+**Passive BLE**: custom parameters using `BLE_SCAN_TYPE_PASSIVE` and `window == interval` (continuous listening). Do not use the `bt_gattc` default, which is currently `BLE_SCAN_TYPE_ACTIVE` (`components/bt_gattc/bt_gattc.c:61`).
 
-**Salto de canal**: 11/6/1 descendente con dwell de 250 ms, el de flock-you,
-calibrado contra el salto ascendente de la cámara. En perfil `Vigilancia`, cada
-cuatro vueltas se extiende a 13/8/3 para cubrir ODID, como eye-spy.
+**Channel hopping**: descending 11/6/1 with 250 ms dwell, matching flock-you, calibrated against the camera's ascending hop order. In the `Surveillance` profile, every fourth pass extends to 13/8/3 to cover ODID, matching eye-spy.
 
-**Recorte por región**: el set de canales se recorta al `nchan` de la región
-configurada. Minino resuelve región en `main/modules/settings/wifi/wifi_regions.c`
-y su default es `GLOBAL` = canales 1–11; saltar al 13 ahí no escucha nada.
-eye-spy tiene este defecto (hopea a 13 sin comprobar región).
+**Region clamping**: the channel set is clamped to the configured region's `nchan`. Minino resolves regions in `main/modules/settings/wifi/wifi_regions.c` and defaults to `GLOBAL` = channels 1-11; hopping to channel 13 there hears nothing. eye-spy has this bug (it hops to 13 without checking region).
 
-**Scan activo opcional**: cuando el usuario lo habilita en settings, se añade una
-ventana de 3 s de `esp_wifi_scan` al final del ciclo. Apagado por defecto. Solo
-está disponible en los perfiles `Flock/ALPR` y `Vigilancia`; en `Trackers` la
-opción se ignora. Habilitarlo hace que el dispositivo transmita probe requests y
-deje de ser indetectable: la pantalla lo indica con un `!` junto al perfil.
+**Optional active scan**: when enabled by the user in settings, a 3 s `esp_wifi_scan` window is appended at the end of the cycle. Disabled by default. Only available in the `Flock/ALPR` and `Surveillance` profiles; ignored in `Trackers`. Enabling it causes the device to transmit probe requests and cease being undetectable: the screen indicates this with a `!` next to the profile.
 
-**Integración con `radio_selector`**: hoy son dos flags (`platform_configured`,
-`stack_initialized`) que solo consultan Zigbee y Thread. Se añade
-`RADIO_SELECT_SURVEILLANCE` al enum y, al entrar a la app, si
-`radio_selector_is_stack_initialized()` está en true, se avisa y no se arranca,
-en lugar de disputar la antena con 802.15.4.
+**Integration with `radio_selector`**: currently it consists of two flags (`platform_configured`, `stack_initialized`) only checked by Zigbee and Thread. `RADIO_SELECT_SURVEILLANCE` is added to the enum, and upon entering the app, if `radio_selector_is_stack_initialized()` is true, a warning is shown and the app does not start, avoiding antenna contention with 802.15.4.
 
-**Parada limpia** al salir: promiscuo off, `esp_wifi_stop()`, scan BLE parado,
-tasks borradas y volcado final del buffer CSV. Es el patrón de
-`deauth_detector_stop()`.
+**Clean shutdown** on exit: promiscuous off, `esp_wifi_stop()`, BLE scan stopped, tasks deleted, and final CSV buffer flush. This follows the `deauth_detector_stop()` pattern.
 
-## 8. Persistencia y exportación
+## 8. Persistence and Export
 
 ### 8.1 CSV
 
-Se reutiliza el header de procedencia de `wardriving_module` (`ElecCats-1.0`,
-formato WigleWifi) y se añaden las columnas propias al final:
+Reuses the provenance header from `wardriving_module` (`ElecCats-1.0`, WigleWifi format) and appends custom columns at the end:
 
 ```
 MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,
@@ -340,44 +251,27 @@ CurrentLongitude,AltitudeMeters,AccuracyMeters,RCOIs,MfgrId,Type,
 Class,Tier,Method,Score
 ```
 
-Un `cut -d, -f1-14` deja un archivo WiGLE válido para subir; el archivo completo
-conserva clase, tier y método. Directorio `surveil/`, junto a `warfi/`, `warbee/`
-y `thread/`. Línea de hasta 200 bytes (las 14 columnas WigleWifi más las cuatro
-propias no caben en los 150 B de `CSV_LINE_SIZE` que usa wardriving), buffer de
-200 líneas y volcado por lotes.
+Running `cut -d, -f1-14` yields a valid WiGLE file for upload; the full file preserves class, tier, and method. Stored in the `surveil/` directory alongside `warfi/`, `warbee/`, and `thread/`. Up to 200 bytes per line (the 14 WigleWifi columns plus our four custom columns do not fit in the 150 B `CSV_LINE_SIZE` used by wardriving), 200-line buffer, flushed in batches.
 
-`Type` toma los valores `WIFI` o `BLE`, como WiGLE.
+`Type` takes the values `WIFI` or `BLE`, matching WiGLE.
 
-**Sin fix GPS la detección se guarda igual**, con latitud y longitud vacías.
-Perder una cámara confirmada porque el GPS aún no fijó sería el peor intercambio
-posible; filtrar las filas sin coordenada antes de subir es trivial.
+**Without a GPS fix, the detection is still saved**, with empty latitude and longitude fields. Losing a confirmed camera because GPS has not acquired a fix yet would be the worst possible tradeoff; filtering out rows without coordinates before uploading is trivial.
 
 ### 8.2 GPX
 
-Archivo `surveil/flock_<fecha>.gpx` con un waypoint por detección tier 4 que
-tenga coordenada. Se carga como capa en el editor iD de OpenStreetMap para
-colocar nodos en DeFlock.
+File `surveil/flock_<date>.gpx` containing one waypoint per tier 4 detection that has coordinates. Loaded as a layer in the OpenStreetMap iD editor to place nodes in DeFlock.
 
-DeFlock **no** consume CSV: es OpenStreetMap, con nodos etiquetados
-(`man_made=surveillance`, tipo, orientación) creados desde su app o desde iD. El
-GPX es una ayuda para no repetir el recorrido, no una integración.
+DeFlock does **not** consume CSV: it is OpenStreetMap, with tagged nodes (`man_made=surveillance`, type, orientation) created from its app or from iD. The GPX file is an aid to avoid repeating the drive, not an integration.
 
-### 8.3 Evidencia en pcap
+### 8.3 PCAP Evidence
 
-Para tier 3 y 4 se vuelca la trama cruda a `surveil/evidence_<fecha>.pcap`
-usando `managed_components/espressif__pcap`, que ya está en el proyecto y que
-`wifi_sniffer` ya usa. La copia solo ocurre cuando el match ya disparó, así que
-no pesa en el hot path. El archivo se corta a 4 MB por sesión; alcanzado el tope
-se dejan de escribir tramas y se avisa en pantalla, sin detener la detección ni
-el CSV.
+For tiers 3 and 4, the raw frame is dumped to `surveil/evidence_<date>.pcap` using `managed_components/espressif__pcap`, which is already in the project and used by `wifi_sniffer`. Copying only happens after a match has already triggered, so it adds no weight to the hot path. The file is capped at 4 MB per session; once reached, frame writing stops and an on-screen notice is shown without stopping detection or CSV logging.
 
-Esto permite abrir la captura en Wireshark y verificar la firma IE a mano en vez
-de confiar en el firmware. Ninguno de los dos proyectos de origen guarda la
-evidencia. Los mismos volcados sirven como vectores para los tests de host.
+This makes it possible to open the capture in Wireshark and verify the IE signature manually instead of trusting the firmware blindly. Neither reference project saves raw evidence. These same dumps serve as test vectors for host unit tests.
 
 ## 9. UX
 
-### 9.1 Pantalla principal (SH1106 128×64)
+### 9.1 Main Screen (SH1106 128x64)
 
 ```
 SURVEIL  [FLOCK]
@@ -388,150 +282,118 @@ GPS 12sat  SD ok
 sigs 74+12
 ```
 
-Más una lista navegable de detecciones con botones, patrón `trackers_screens`.
+Plus a button-navigable detection list, following the `trackers_screens` pattern.
 
-### 9.2 Buzzer por tier
+### 9.2 Per-Tier Buzzer
 
-Tomado de flock-you, para distinguir el método de oído mientras se maneja:
+Taken from flock-you, to distinguish the detection method by ear while driving:
 
-| Tier | Tono |
+| Tier | Tone |
 |---|---|
-| 4 | Chirp ascendente 2000 → 2800 Hz |
-| 3 | Chirp ascendente 1400 → 1800 Hz |
+| 4 | Ascending chirp 2000 -> 2800 Hz |
+| 3 | Ascending chirp 1400 -> 1800 Hz |
 | 2 | Blip 1200 Hz |
 | 1 | Blip 800 Hz |
 | 0 | Blip 600 Hz |
 
-Máscara de silencio por tier en settings, persistida con
-`preferences_put_uchar("surv_beep", mask)`. Silenciar afecta solo al buzzer: la
-detección se registra igual.
+Per-tier mute mask in settings, persisted via `preferences_put_uchar("surv_beep", mask)`. Muting only affects the buzzer: detections are still logged.
 
 ### 9.3 LEDs
 
-eye-spy pinta el semáforo en un NeoPixel RGB. Minino no tiene RGB:
-`components/leds/include/leds.h` expone `LED_LEFT` y `LED_RIGHT` con brillo, sin
-color. El semáforo va en pantalla y los LEDs codifican el nivel por cadencia:
+eye-spy renders the status level on an RGB NeoPixel. Minino does not have RGB LEDs: `components/leds/include/leds.h` exposes `LED_LEFT` and `LED_RIGHT` with brightness only, no color. The status level is shown on screen and the LEDs encode the level via cadence:
 
-| Nivel | LEDs |
+| Level | LEDs |
 |---|---|
-| CLEAR (0–2) | Apagados |
-| CAUTION (3–5) | `led_start_breath` lento |
-| ALERT (6+) | `led_start_blink` rápido |
+| CLEAR (0-2) | Off |
+| CAUTION (3-5) | Slow `led_start_breath` |
+| ALERT (6+) | Fast `led_start_blink` |
 
-### 9.4 Aviso regional
+### 9.4 Regional Notice
 
-Flock Safety se despliega en Estados Unidos y, en menor medida, Canadá. Con la
-tabla base, en México la app puede correr una hora sin una sola detección, y eso
-es el resultado correcto, no un fallo. La pantalla de ayuda de la app lo dice
-explícitamente y remite al overlay de microSD para cargar firmas locales.
+Flock Safety is deployed in the United States and, to a lesser extent, Canada. With the base table in Mexico, the app can run for an hour without a single detection, and that is the expected result, not a bug. The app's help screen states this explicitly and points to the microSD overlay for loading local signatures.
 
-## 10. Cambios en código existente
+## 10. Changes to Existing Code
 
-| Archivo | Cambio |
+| File | Change |
 |---|---|
-| `components/trackers_scanner/trackers_scanner.c` | El disector de advertising BLE se mueve a `surv_match.c`; el componente lo llama y conserva su lista y su UI. Pasa a scan pasivo |
-| `components/bt_gattc/bt_gattc.c` | Permitir parámetros de scan pasivo sin cambiar el default de los demás consumidores |
-| `components/radio_selector/` | Nuevo `RADIO_SELECT_SURVEILLANCE` y su setter |
-| `main/modules/menus_module/menus_include/menus.h` | Entrada de menú y `menu_idx` nuevos |
-| `main/modules/settings/` | Perfil de radio, toggle de scan activo, máscara de buzzer |
+| `components/trackers_scanner/trackers_scanner.c` | Move the BLE advertising dissector to `surv_match.c`; the component calls it while keeping its list and UI. Switches to passive scan |
+| `components/bt_gattc/bt_gattc.c` | Allow passive scan parameters without changing the default for other consumers |
+| `components/radio_selector/` | Add `RADIO_SELECT_SURVEILLANCE` and its setter |
+| `main/modules/menus_module/menus_include/menus.h` | New menu entry and `menu_idx` |
+| `main/modules/settings/` | Radio profile, active scan toggle, buzzer mask |
 
-El refactor de `trackers_scanner` (219 líneas más su app) es la parte con riesgo
-de regresión y debe ir acompañada de una verificación manual de la app de
-trackers antes de continuar.
+Refactoring `trackers_scanner` (219 lines plus its app) carries regression risk and must be accompanied by manual verification of the trackers app before proceeding.
 
-## 11. Pruebas y criterios de aceptación
+## 11. Testing and Acceptance Criteria
 
-### 11.1 Tests en host (Unity)
+### 11.1 Host Tests (Unity)
 
-Con el patrón `test_apps` que ya usa `components/console`, enganchados al CI
-existente (`.github/workflows/builds.yml`):
+Using the `test_apps` pattern already used by `components/console`, hooked into existing CI (`.github/workflows/builds.yml`):
 
-- Cada OUI de la tabla base matchea su clase.
-- Exclusión mutua: ningún OUI aparece en dos clases.
-- Keywords de SSID case-insensitive; nombres BLE por substring.
-- Parser del overlay: línea válida, malformada, `-` que quita, tope de entradas,
-  archivo ausente, archivo vacío.
-- Fingerprint IE contra vectores de trama reales, incluidos phantom overflow,
-  resync de TLV, y trama con y sin FCS.
-- Motor: decay de −1/60 s, cooldown de 120 s por clase, un tier alto no se
-  degrada, un tier alto salta el dedupe.
+- Every OUI in the base table matches its class.
+- Mutual exclusion: no OUI appears in two classes.
+- Case-insensitive SSID keywords; BLE names by substring.
+- Overlay parser: valid line, malformed line, `-` removal, entry limit, missing file, empty file.
+- IE fingerprint against real frame vectors, including phantom overflow, TLV resync, and frames with and without FCS.
+- Engine: -1/60 s decay, 120 s per-class cooldown, high tier never degrades, high tier bypasses dedupe.
 
-Los vectores de trama salen de los volcados pcap de la sección 8.3.
+Frame vectors come from the PCAP dumps described in section 8.3.
 
-### 11.2 Pruebas de radio con dos placas
+### 11.2 Two-Board Radio Tests
 
-El parser se prueba en host inyectando el buffer directamente. La radio, los
-canales y el timing requieren **dos Minino**: una emitiendo tramas sintéticas con
-`esp_wifi_80211_tx` (ya se usa en `ssid_spam` y `drone_id/spoofer`) y otra
-detectando. No se depende de que una sola placa se reciba a sí misma en modo
-promiscuo: la radio es half-duplex y no está previsto que funcione.
+The parser is tested on the host by injecting buffers directly. Testing the radio, channels, and timing requires **two Minino boards**: one transmitting synthetic frames via `esp_wifi_80211_tx` (already used in `ssid_spam` and `drone_id/spoofer`) and the other detecting. Do not rely on a single board receiving its own transmissions in promiscuous mode: the radio is half-duplex and self-reception is not supported.
 
-### 11.3 Validación sin cámaras Flock cerca
+### 11.3 Validation Without Nearby Flock Cameras
 
-El overlay lo resuelve: se añade el OUI de un dispositivo propio a
-`/surveil/signatures.csv` y se comprueba que dispara el tier correcto y que la
-línea CSV sale bien formada. El tier 4 se valida reproduciendo con la segunda
-placa una trama del dataset. Sin esta ruta, "no detecta nada" es indistinguible
-de "está roto".
+The overlay solves this: add the OUI of a personal device to `/surveil/signatures.csv` and verify that it triggers the expected tier and outputs a well-formed CSV line. Tier 4 is validated by replaying a dataset frame from the second board. Without this path, "detects nothing" is indistinguishable from "broken".
 
-### 11.4 Criterios de aceptación
+### 11.4 Acceptance Criteria
 
-| Criterio | Umbral |
+| Criterion | Threshold |
 |---|---|
-| Falsos positivos con tabla base, 30 min en zona urbana de México | 0 |
-| Detección de trama tier-4 sintética con hop activo | < 2 s |
-| Overflow del ring buffer en sesión de 1 h | 0 (contador visible en pantalla de debug) |
-| Bloqueo del drenaje del ring buffer por escritura a microSD | < 50 ms |
-| App de trackers tras el refactor | Sin regresión, verificada a mano |
+| False positives with base table, 30 min in an urban area in Mexico | 0 |
+| Detection of synthetic tier-4 frame with active channel hopping | < 2 s |
+| Ring buffer overflow in a 1 h session | 0 (counter visible on debug screen) |
+| Ring buffer drain stall caused by microSD writes | < 50 ms |
+| Trackers app after refactor | No regression, manually verified |
 
-## 11.5 Orden de implementación
+## 11.5 Implementation Order
 
-El trabajo es grande y conviene ejecutarlo en este orden, cada etapa verificable
-por sí sola:
+The scope is large and should be executed in this order, with each stage independently verifiable:
 
-1. `surv_match` + `surv_signatures` + tests en host. Sin radio, sin UI.
-2. Refactor de `trackers_scanner` sobre el disector compartido, con verificación
-   manual de la app de trackers. Riesgo de regresión aislado y resuelto pronto.
-3. `surv_engine` (score, tiers, dedupe) + tests en host.
-4. `surv_radio` y los motores WiFi/BLE sobre hardware, perfil `Flock/ALPR`
-   primero.
-5. App, pantallas, buzzer y LEDs.
-6. Persistencia: CSV, luego GPX, luego pcap.
-7. Overlay de microSD.
-8. Pruebas de radio con dos placas y validación de los criterios de aceptación.
+1. `surv_match` + `surv_signatures` + host tests. No radio, no UI.
+2. Refactor `trackers_scanner` onto the shared dissector, with manual verification of the trackers app. Regression risk isolated and resolved early.
+3. `surv_engine` (score, tiers, dedupe) + host tests.
+4. `surv_radio` and the WiFi/BLE engines on hardware, `Flock/ALPR` profile first.
+5. App, screens, buzzer, and LEDs.
+6. Persistence: CSV, then GPX, then PCAP.
+7. microSD overlay.
+8. Two-board radio tests and acceptance criteria validation.
 
-## 12. Licencias y créditos
+## 12. Licenses and Credits
 
-Minino es GPL-3.0. MIT (flock-you) y Apache-2.0 (eye-spy) son compatibles hacia
-GPLv3, conservando los avisos de copyright. Los créditos se preservan en las
-cabeceras de los archivos que derivan de cada investigación y en la pantalla de
-About:
+Minino is GPL-3.0. MIT (flock-you) and Apache-2.0 (eye-spy) are compatible with GPLv3 when preserving copyright notices. Credits are preserved in the headers of files derived from each research source and on the About screen:
 
-- **OrdoOuroboros / @NitekryDPaul** — lista de OUIs de Flock y la técnica de
-  detección por `addr1`.
-- **DeFlockJoplin** — firma de probe request wildcard, fingerprint de IE y el
-  OUI `82:6b:f2`.
-- **Lucia Pintor y Luigi Atzori** — *Analysis of Wi-Fi Probe Requests Towards
-  Information Element Fingerprinting*, GLOBECOM 2022,
-  doi:10.1109/GLOBECOM48099.2022.10001618.
-- **colonelpanichacks** — flock-you.
-- **SimeonOnSecurity** — eye-spy.
-- **DeFlock (FoggedLens)** — datos y metodología de localización de ALPR.
+- **OrdoOuroboros / @NitekryDPaul** - Flock OUI list and `addr1` detection technique.
+- **DeFlockJoplin** - wildcard probe request signature, IE fingerprint, and OUI `82:6b:f2`.
+- **Lucia Pintor and Luigi Atzori** - *Analysis of Wi-Fi Probe Requests Towards Information Element Fingerprinting*, GLOBECOM 2022, doi:10.1109/GLOBECOM48099.2022.10001618.
+- **colonelpanichacks** - flock-you.
+- **SimeonOnSecurity** - eye-spy.
+- **DeFlock (FoggedLens)** - ALPR location data and methodology.
 
-## 13. Riesgos
+## 13. Risks
 
-| Riesgo | Mitigación |
+| Risk | Mitigation |
 |---|---|
-| El refactor de `trackers_scanner` rompe una app que hoy funciona | Verificación manual antes de seguir; el refactor va primero y aislado |
-| Randomización de MAC deja ciegos los tiers 1–2 | Documentado; el tier 4 no depende del OUI solo |
-| La firma IE deja de coincidir tras una OTA de Flock | Firma actualizable por overlay de microSD |
-| Contención de radio con 802.15.4 | Comprobación de `radio_selector_is_stack_initialized()` al entrar |
-| Desgaste de la microSD | Volcado por lotes de 200 líneas, como wardriving |
-| Expectativa de detecciones en México | Aviso regional en la pantalla de ayuda |
+| Refactoring `trackers_scanner` breaks a currently working app | Manual verification before proceeding; refactor goes first and in isolation |
+| MAC randomization blinds tiers 1-2 | Documented; tier 4 does not rely on OUI alone |
+| IE signature stops matching after a Flock OTA update | Signature is updatable via microSD overlay |
+| Radio contention with 802.15.4 | Check `radio_selector_is_stack_initialized()` on entry |
+| microSD wear | Batch flushing every 200 lines, matching wardriving |
+| Expectation of detections in Mexico | Regional notice on the help screen |
 
-## 14. Fuera de este diseño, posible después
+## 14. Out of Scope for This Design, Possible Later
 
-- Streaming JSON por USB para un dashboard de host.
-- Detección de Flock por BLE (dejó de funcionar en primavera de 2026 según
-  flock-you; se reevalúa si vuelve).
-- Importación directa del formato de export web de WiGLE como overlay.
+- JSON streaming over USB for a host dashboard.
+- Flock detection over BLE (stopped working in spring 2026 according to flock-you; re-evaluate if it returns).
+- Direct import of WiGLE web export format as an overlay.

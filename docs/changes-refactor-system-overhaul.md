@@ -1,236 +1,241 @@
-# Cambios y añadidos de `refactor/system-overhaul`
+# Changes and Additions in `refactor/system-overhaul`
 
-Documento de referencia que explica **qué cambió**, **por qué** y **cómo funciona**
-cada pieza del branch `refactor/system-overhaul` respecto a `main`.
+Reference document explaining **what changed**, **why**, and **how each component works**
+in the `refactor/system-overhaul` branch compared to `main`.
 
 - **Base:** `main` (`3eac1955`)
-- **Rama:** `refactor/system-overhaul` (`a787b665`)
-- **Alcance:** 123 commits, 404 ficheros, **+26 867 / −3 676** líneas
-- **Plataforma:** ESP32-C6 (`esp32c6`), ESP-IDF v5.5.1
-- **Fecha de redacción:** 2026-10-21
-- **Documentos hermanos:** [`esp-sdr-integration.md`](./esp-sdr-integration.md) (el SDR
-  en detalle técnico), [`rf-spectrum-advanced.md`](./rf-spectrum-advanced.md) (el
-  analizador de espectro)
+- **Branch:** `refactor/system-overhaul` (`a787b665`)
+- **Scope:** 123 commits, 404 files, **+26,867 / -3,676** lines
+- **Platform:** ESP32-C6 (`esp32c6`), ESP-IDF v5.5.1
+- **Date written:** 2026-10-21
+- **Companion documents:** [`esp-sdr-integration.md`](./esp-sdr-integration.md) (detailed
+  SDR technical reference), [`rf-spectrum-advanced.md`](./rf-spectrum-advanced.md) (RF
+  spectrum analyzer)
 
-> **Cómo leer este documento.** La sección 3 indexa cada área por commits.
-> Las secciones 4 a 20 explican una área cada una, con el "por qué" primero y
-> el "cómo funciona" después, con diagramas y tablas. La sección 21 documenta
-> los **dos cambios sin commitear** que hay en el árbol de trabajo. La sección
-> 22 recoge las **roturas detectadas** al ejecutar la suite de tests: es la
-> parte que hay que leer antes de integrar.
+> **How to read this document.** Section 3 indexes every area by commit.
+> Sections 4 through 20 explain one area each, starting with the "why" and
+> following with the "how it works", including diagrams and tables. Section 21
+> documents the **two uncommitted changes** present in the working tree at the
+> time of writing. Section 22 covers the **regressions detected** when running
+> the test suite, which should be reviewed before merging.
 >
-> **Actualización Fase 1 (2026-10-22):** `event_bus` se eliminó; WiFi y BLE son
-> mutuamente excluyentes en `radio_lease`. Las secciones 5 y 6 describen el
-> estado anterior y se conservan como histórico; el código actual está en
-> `radio_lease.c`, `wifi_service.c` y los callbacks directos de cada app.
+> **Phase 1 Update (2026-10-22):** `event_bus` was removed; WiFi and BLE are
+> mutually exclusive in `radio_lease`. Sections 5 and 6 describe the previous
+> state and are preserved for historical context; the current implementation
+> lives in `radio_lease.c`, `wifi_service.c`, and the direct callbacks of each
+> app.
 >
-> **Actualización Fase 2 (en curso):** `minino_app_t` y `app_manager` son el
-> contrato de ciclo de vida; `rf_spectrum` y `esp_sdr` ya salen por
-> `app_manager_exit()` sin reiniciar. El resto del catálogo sigue usando
-> `menus_module_restart()`.
+> **Phase 2 Update (in progress):** `minino_app_t` and `app_manager` define the
+> lifecycle contract; `rf_spectrum` and `esp_sdr` now exit cleanly via
+> `app_manager_exit()` without rebooting. The remaining apps in the catalog
+> still use `menus_module_restart()`.
 
 ---
 
-## Índice
+## Table of Contents
 
-1. [Resumen ejecutivo](#1-resumen-ejecutivo)
-2. [La idea de fondo: de "apps sueltas" a "un sistema con dueño de los recursos"](#2-la-idea-de-fondo-de-apps-sueltas-a-un-sistema-con-dueño-de-los-recursos)
-3. [Mapa de commits por área](#3-mapa-de-commits-por-área)
-4. [El SDR nativo: app, driver y banco de captura](#4-el-sdr-nativo)
-5. [`radio_lease`: el dueño de la radio de 2,4 GHz](#5-radio_lease-el-dueño-de-la-radio-de-24-ghz)
-6. [`event_bus`: bus de eventos tipado](#6-event_bus-bus-de-eventos-tipado)
-7. [`gap_dispatcher` y `gatt_dispatcher`: el fan-out de Bluedroid](#7-gap_dispatcher-y-gatt_dispatcher-el-fan-out-de-bluedroid)
-8. [`wifi_service`: un único `esp_wifi_init()`](#8-wifi_service-un-único-esp_wifi_init)
-9. [Hardening del ciclo de vida de los módulos](#9-hardening-del-ciclo-de-vida-de-los-módulos)
-10. [Privatización del estado y datos fuera de las cabeceras](#10-privatización-del-estado)
-11. [Interfaz: catálogo de menús, vistas, iconos y OLED](#11-interfaz-catálogo-de-menús-vistas-iconos-y-oled)
-12. [La app nueva: analizador de espectro RF](#12-la-app-nueva-analizador-de-espectro-rf)
-13. [Botones: cola y tarea propia](#13-botones-cola-y-tarea-propia)
-14. [microSD: montaje, slots y errores reales](#14-microsd-montaje-slots-y-errores-reales)
-15. [BLE: HID, GATT, spam y sincronización GAP](#15-ble-hid-gatt-spam-y-sincronización-gap)
-16. [Build system: variantes, Kconfig y el cap del banco](#16-build-system-variantes-kconfig-y-el-cap-del-banco)
-17. [Tests de host y CI](#17-tests-de-host-y-ci)
-18. [Tools de host](#18-tools-de-host)
-19. [Cambios menores por módulo](#19-cambios-menores-por-módulo)
-20. [Tabla completa de commits](#20-tabla-completa-de-commits)
-21. [Cambios sin commitear en el árbol de trabajo](#21-cambios-sin-commitear)
-22. [Roturas detectadas: estado real de la suite](#22-roturas-detectadas-estado-real-de-la-suite)
-23. [Conectar el SDR con la web de ESPARGOS](#23-conectar-el-sdr-con-la-web-de-espargos)
+1. [Executive Summary](#1-executive-summary)
+2. [Core Concept: From "Standalone Apps" to "A System with Explicit Resource Ownership"](#2-core-concept-from-standalone-apps-to-a-system-with-explicit-resource-ownership)
+3. [Commit Map by Area](#3-commit-map-by-area)
+4. [Native SDR: App, Driver, and Capture Bank](#4-native-sdr)
+5. [`radio_lease`: Owner of the 2.4 GHz Radio](#5-radio_lease-owner-of-the-24-ghz-radio)
+6. [`event_bus`: Typed Event Bus](#6-event_bus-typed-event-bus)
+7. [`gap_dispatcher` and `gatt_dispatcher`: Bluedroid Fan-Out](#7-gap_dispatcher-and-gatt_dispatcher-bluedroid-fan-out)
+8. [`wifi_service`: A Single `esp_wifi_init()`](#8-wifi_service-a-single-esp_wifi_init)
+9. [Module Lifecycle Hardening](#9-module-lifecycle-hardening)
+10. [State Privatization and Moving Data Out of Headers](#10-state-privatization)
+11. [UI: Menu Catalog, Views, Icons, and OLED](#11-ui-menu-catalog-views-icons-and-oled)
+12. [New App: RF Spectrum Analyzer](#12-new-app-rf-spectrum-analyzer)
+13. [Buttons: Dedicated Queue and Task](#13-buttons-dedicated-queue-and-task)
+14. [microSD: Mounting, Slots, and Accurate Error Reporting](#14-microsd-mounting-slots-and-accurate-error-reporting)
+15. [BLE: HID, GATT, Spam, and GAP Synchronization](#15-ble-hid-gatt-spam-and-gap-synchronization)
+16. [Build System: Variants, Kconfig, and Capture Bank Cap](#16-build-system-variants-kconfig-and-capture-bank-cap)
+17. [Host Tests and CI](#17-host-tests-and-ci)
+18. [Host Tools](#18-host-tools)
+19. [Minor Changes by Module](#19-minor-changes-by-module)
+20. [Complete Commit Table](#20-complete-commit-table)
+21. [Uncommitted Changes in the Working Tree](#21-uncommitted-changes)
+22. [Detected Regressions: Actual State of the Test Suite](#22-detected-regressions-actual-state-of-the-test-suite)
+23. [Connecting the SDR to the ESPARGOS Web Client](#23-connecting-the-sdr-to-the-espargos-web-client)
 
 ---
 
-## 1. Resumen ejecutivo
+## 1. Executive Summary
 
-El branch hace cuatro cosas a la vez, y conviene separarlas porque tienen
-motivos y riesgos distintos.
+This branch accomplishes four major goals simultaneously, which are worth
+separating because they have different motivations and risk profiles.
 
-### 1.1 El SDR deja de ser un segundo arranque y pasa a ser una app nativa
+### 1.1 The SDR Moves from Dual-Boot to a Native App
 
-Hasta `main`, `Applications > SDR` entregaba el arranque a una segunda
-imagen en `ota_1` y el dispositivo dejaba de ser Minino. En este branch la
-app es **una más del firmware**: `esp_sdr_module.c` abre el motor de captura
-del C6 en proceso, captura bursts de I/Q y los guarda en la microSD, sin tocar
-`ota_1` y sin apagar la pantalla.
+Up to `main`, `Applications > SDR` handed boot over to a second image in
+`ota_1`, and the device ceased running Minino. In this branch, the SDR is
+**just another app in the firmware**: `esp_sdr_module.c` initializes the C6
+capture engine in-process, captures I/Q bursts, and saves them to the microSD
+card without touching `ota_1` and without turning off the screen.
 
-El precio es que el motor de captura del C6 necesita el **bloque 2 de SRAM**
-(`0x40840000`) como banco de captura, y el firmware entero tiene que caber por
-debajo. Eso obligó a recortar 119 KB de la imagen (ver §4.5) y a añadir un
-*linker script* que convierte el solapamiento en un error de enlazado en vez de
-una corrupción en tiempo de ejecución.
+The trade-off is that the C6 capture engine requires **SRAM block 2**
+(`0x40840000`) as its capture bank, so the entire firmware DRAM image must fit
+below that address. This required trimming 119 KB from the static image (see
+section 4.5) and adding a linker script that turns any overlap into a link-time
+error instead of a runtime memory corruption.
 
-### 1.2 La radio deja de ser un recurso global sin dueño
+### 1.2 The Radio Is No Longer an Unowned Global Resource
 
-ESP-IDF guarda **un solo** callback de modo promiscuo y **un solo** slot de
-callback GATTC. Seis subsistemas los competían: el último en registrantearse
-rotaba el callback y los demás se quedaban mudos en silencio.
+ESP-IDF maintains **a single** promiscuous mode callback and **a single** GATTC
+callback slot. Six subsystems competed for them: whichever registered last
+overwrote the callback, leaving the others silently deaf.
 
-- `radio_lease` (§5) arbitra el modo promiscuo y el stack BLE con un recuento
-  de referencias atómico.
-- `gap_dispatcher` / `gatt_dispatcher` (§7) hacen de fan-out: un solo callback
-  registrado en Bluedroid, N suscriptores dentro.
-- `event_bus` (§6) da un bus de eventos tipado para lo que no sea GAP.
-- `wifi_service` (§8) centraliza el `esp_wifi_init()`.
+- `radio_lease` (section 5) arbitrates promiscuous mode and the BLE stack using
+  atomic reference counting.
+- `gap_dispatcher` / `gatt_dispatcher` (section 7) provide event fan-out: one
+  callback registered with Bluedroid, N subscribers underneath.
+- `event_bus` (section 6) provides a typed event bus for non-GAP notifications.
+- `wifi_service` (section 8) centralizes `esp_wifi_init()`.
 
-### 1.3 Los módulos dejan de dejar basura al salir
+### 1.3 Modules Stop Leaking Resources on Exit
 
-Una campaña de *hardening* (§9) recorre unos 30 módulos buscando el mismo
-patrón: un `begin()` que crea tareas, colas, mutexes y Claims, y un `exit()`
-que no los suelta. El síntoma típico era el mismo: la app salía, la radio se
-quedaba encendida, el escaneo BLE moría, o el `esp_timer` se quedaba
-suspendido y la UI se congelaba.
+A systematic hardening campaign (section 9) audited roughly 30 modules for a
+recurring flaw: a `begin()` function that creates tasks, queues, mutexes, and
+radio claims, paired with an `exit()` function that fails to release them. The
+typical symptom was always the same: after exiting an app, the radio stayed
+on, BLE scanning stopped working, or the `esp_timer` task was suspended and
+froze the entire UI.
 
-### 1.4 Se puede comprobar en el host
+### 1.4 Host-Side Verification
 
-16 suites nuevas de tests de host (§17) con Unity: 86+ tests que compilan en
-`gcc` contra el PC, con *mocks* de las cabeceras de ESP-IDF. Es lo que
-convierte "esto lo he arreglado a ojo" en "esto lo he arreglado y hay un test
-que lo dice".
+16 new host test suites (section 17) built on Unity: 86+ test files compiling
+natively under `gcc` on the PC against mocked ESP-IDF headers. This turns
+"fixed by inspection" into "fixed and guarded by an automated test".
 
-### 1.5 Números del branch
+### 1.5 Branch Metrics
 
-| Métrica | Valor |
+| Metric | Value |
 |---|---|
 | Commits | 123 |
-| Ficheros tocados | 404 (206 nuevos, 198 modificados, 0 borrados) |
-| Líneas | +26 867 / −3 676 |
-| Suites de test de host nuevas | 16 (15 en C + 1 en Python) |
-| Componentes nuevos | `radio_lease`, `event_bus`, `wifi_service`, `gap_dispatcher` |
-| Apps nuevas | `rf_spectrum` (analizador de espectro RF) |
-| Opciones de Kconfig nuevas | `SDR_ENABLE`, `MININO_ZIGBEE_STACK`, `MININO_OPENTHREAD_STACK` |
-| Comandos de consola nuevos | `sdr_capture`, `sdtest`, `display`, `press`, `exit_app`, `threshold`, `spectrum_*` (6) |
-| Tests de host escritos | 278 (252 pasan, 4 fallan, 22 no compilan — ver §22) |
-| Imagen DRAM (IRAM+data+bss) | 374 KB → 255 KB (presupuesto: 256 KB) |
-| SRAM estático del bus de eventos | 21 248 B → 2 928 B (−17,9 KB) |
-| Banco de captura reservado al heap | 128 KB → 64 KB (devuelve 113 KB de bloque contiguo al heap) |
+| Files touched | 404 (206 new, 198 modified, 0 deleted) |
+| Lines | +26,867 / -3,676 |
+| New host test suites | 16 (15 in C + 1 in Python) |
+| New components | `radio_lease`, `event_bus`, `wifi_service`, `gap_dispatcher` |
+| New apps | `rf_spectrum` (RF spectrum analyzer) |
+| New Kconfig options | `SDR_ENABLE`, `MININO_ZIGBEE_STACK`, `MININO_OPENTHREAD_STACK` |
+| New console commands | `sdr_capture`, `sdtest`, `display`, `press`, `exit_app`, `threshold`, `spectrum_*` (6) |
+| Host tests written | 278 (252 passing, 4 failing, 22 failing to compile prior to section 22 fixes) |
+| DRAM image (IRAM+data+bss) | 374 KB -> 255 KB (budget: 256 KB) |
+| Event bus static SRAM | 21,248 B -> 2,928 B (-17.9 KB) |
+| Capture bank reserved from heap | 128 KB -> 64 KB (later restored to 128 KB; see section 23.6) |
 
 ---
 
-## 2. La idea de fondo: de "apps sueltas" a "un sistema con dueño de los recursos"
+## 2. Core Concept: From "Standalone Apps" to "A System with Explicit Resource Ownership"
 
-Antes de este branch, el firmware era un conjunto de apps que llamaban a APIs
-globales de ESP-IDF. El patrón que rompía era siempre el mismo:
-
-```
-app A llama esp_wifi_set_promiscuous(true)   ← toma el único callback
-app B llama esp_wifi_set_promiscuous_rx_cb(cb_B)  ← roba el callback de A
-app A termina y llama esp_wifi_set_promiscuous(false)  ← apaga la captura de B
-```
-
-Y lo mismo con el stack BLE:
+Prior to this branch, the firmware consisted of independent apps calling global
+ESP-IDF APIs directly. The failure pattern was always the same:
 
 ```
-app C llama esp_bluedroid_deinit()   ← porque su ventana de escaneo acabó
-app D (que sólo estaba corriendo) pierde la radio a mitad de una captura
+app A calls esp_wifi_set_promiscuous(true)         <- claims the sole callback
+app B calls esp_wifi_set_promiscuous_rx_cb(cb_B)   <- steals the callback from A
+app A finishes and calls esp_wifi_set_promiscuous(false) <- kills B's capture
 ```
 
-Este branch introduce **propietarios explícitos** para los recursos globales:
+And the exact same problem occurred with the BLE stack:
 
 ```
-                    ┌──────────────────────────────┐
-                    │        radio_lease            │
-                    │  (dueño de la radio 2,4 GHz)  │
-                    └──────────────────────────────┘
-        ▲            ▲             ▲            ▲
-        │            │             │            │
-   ┌────┴───┐  ┌─────┴──┐   ┌──────┴───┐  ┌────┴─────┐
-   │sniffer │  │deauth  │   │ spectrum │  │  SDR RX  │
-   └────────┘  └────────┘   └──────────┘  └──────────┘
-   (cada uno pide un "slot"; el driver sólo se toca al pasar de 0→1 y 1→0)
-
-                    ┌──────────────────────────────┐
-                    │      gap_dispatcher          │
-                    │ (fan-out de los eventos GAP) │
-                    └──────────────────────────────┘
-        ▲            ▲             ▲            ▲
-        │            │             │            │
-   ┌────┴───┐  ┌─────┴──┐   ┌──────┴───┐  ┌────┴─────┐
-   │bt_spam │  │HID     │   │bt_gattc  │  │ gattcmd  │
-   └────────┘  └────────┘   └──────────┘  └──────────┘
+app C calls esp_bluedroid_deinit()   <- because its scan window ended
+app D (which was actively running) loses the radio mid-operation
 ```
 
-Y para lo que no es GAP, un bus de eventos tipado (`event_bus`) y un servicio
-único de Wi-Fi (`wifi_service`).
+This branch introduces **explicit owners** for global hardware and stack
+resources:
 
-El resto del branch (hardening, privatización, tests) es la consecuencia: al
-tener un dueño claro de cada recurso, "quién suelta qué" deja de ser
-ambiguo, y los tests pueden comprobarlo.
+```
+                     ┌──────────────────────────────┐
+                     │        radio_lease            │
+                     │   (owner of 2.4 GHz radio)   │
+                     └──────────────────────────────┘
+         ▲            ▲             ▲            ▲
+         │            │             │            │
+    ┌────┴───┐  ┌─────┴──┐   ┌──────┴───┐  ┌────┴─────┐
+    │sniffer │  │deauth  │   │ spectrum │  │  SDR RX  │
+    └────────┘  └────────┘   └──────────┘  └──────────┘
+    (each claims a slot; the driver is only touched on 0->1 and 1->0 transitions)
+
+                     ┌──────────────────────────────┐
+                     │      gap_dispatcher          │
+                     │   (GAP event fan-out hub)    │
+                     └──────────────────────────────┘
+         ▲            ▲             ▲            ▲
+         │            │             │            │
+    ┌────┴───┐  ┌─────┴──┐   ┌──────┴───┐  ┌────┴─────┐
+    │bt_spam │  │HID     │   │bt_gattc  │  │ gattcmd  │
+    └────────┘  └────────┘   └──────────┘  └──────────┘
+```
+
+For non-GAP notifications, the branch adds a typed event bus (`event_bus`) and
+a singleton Wi-Fi initialization service (`wifi_service`).
+
+Everything else in the branch (hardening, state privatization, host unit tests)
+follows naturally: once every resource has a single authoritative owner,
+"who releases what" is no longer ambiguous, and unit tests can verify the
+contract directly.
 
 ---
 
-## 3. Mapa de commits por área
+## 3. Commit Map by Area
 
-| Área | Commits |
+| Area | Commits |
 |---|---|
-| **SDR nativo** (§4) | `1df8bc9e` `fe1e0223` `f4f780e1` `09e3a77d` `0411c22c` `0813ff1c` `bce64f44` `10a808ab` `9e8c715e` `42bf30dd` `50496e10` `ff9877b8` `bf66e068` `510f4195` |
-| **Banco de captura y recorte de SRAM** (§4.5, §16.4) | `ba55fa02` `46d235a1` `7a52b727` `b41d7803` `cf580c36` `e26111bd` `a3e1809c` `d5deb48d` |
-| **`radio_lease`** (§5) | `d56b9e7a` `6b313971` |
-| **`event_bus`** (§6) | `92bc14f9` `cca3cc43` `5508c825` |
-| **`gap_dispatcher` / `gatt_dispatcher`** (§7) | `3fbb6d9f` `574dfe5e` `029ee8c3` `2452a801` `de1e3dda` `37869cc6` |
-| **`wifi_service`** (§8) | `c2f47398` `fdf0f955` `d84eb372` `3321c30f` `f9aff880` `cdd1b586` `52138a31` `ca0a422d` |
-| **Hardening de módulos** (§9) | `857a17a9` `6758054b` `7d4b08f2` `a3bf17f2` `e0b79f30` `b0163862` `00a2b83d` `339f0dbd` `69427bb5` `31953a42` `c69437cc` `1f86aba6` `f5c2747f` `e73754f7` `1a763db1` `931260ad` `093f257b` `2d97d08b` `f3c3c248` `d270b3a9` `6a078453` `6c958e7e` `280368ca` `913e2d81` `7ce2761d` `ddf071ca` |
-| **Privatización de estado** (§10) | `080d8b29` `010e3446` `e2165751` `3d95ad2b` `80d47bbf` |
-| **Datos fuera de cabeceras** (§10.2) | `fd139212` `84879287` `d16af92c` `96901229` `56f58e1c` `f708fd5f` `7a9aaeff` |
-| **Interfaz: menús y vistas** (§11) | `82927939` `8c485cb1` `7effae44` `f708fd5f` `05c33cbb` `689c925a` |
-| **Analizador de espectro RF** (§12) | `f85b1a53` `50496e10` `0411c22c` |
-| **Botones** (§13) | `181feee8` |
-| **microSD** (§14) | `161643b6` `9cabe192` `c4f07def` `b8346169` |
-| **BLE** (§15) | `18871f04` `449b0144` `280368ca` `de1e3dda` `029ee8c3` `574dfe5e` `2452a801` `3fbb6d9f` |
-| **Build system** (§16) | `8d4173ce` `28cbc76d` `9c7599ee` `d861d64f` `ff3cd744` `c4eafa7f` `f67c001b` `045de824` `ad5c94ef` `7a9aaeff` |
-| **Tests y CI** (§17) | `88d13fb7` `da81e333` `689c925a` `c69437cc` `2c177f0d` `c6a814c4` `045de824` `47feae79` |
-| **Tools de host** (§18) | `d861d64f` `ff3cd744` |
+| **Native SDR** (section 4) | `1df8bc9e` `fe1e0223` `f4f780e1` `09e3a77d` `0411c22c` `0813ff1c` `bce64f44` `10a808ab` `9e8c715e` `42bf30dd` `50496e10` `ff9877b8` `bf66e068` `510f4195` |
+| **Capture bank and SRAM trimming** (sections 4.5, 16.4) | `ba55fa02` `46d235a1` `7a52b727` `b41d7803` `cf580c36` `e26111bd` `a3e1809c` `d5deb48d` |
+| **`radio_lease`** (section 5) | `d56b9e7a` `6b313971` |
+| **`event_bus`** (section 6) | `92bc14f9` `cca3cc43` `5508c825` |
+| **`gap_dispatcher` / `gatt_dispatcher`** (section 7) | `3fbb6d9f` `574dfe5e` `029ee8c3` `2452a801` `de1e3dda` `37869cc6` |
+| **`wifi_service`** (section 8) | `c2f47398` `fdf0f955` `d84eb372` `3321c30f` `f9aff880` `cdd1b586` `52138a31` `ca0a422d` |
+| **Module hardening** (section 9) | `857a17a9` `6758054b` `7d4b08f2` `a3bf17f2` `e0b79f30` `b0163862` `00a2b83d` `339f0dbd` `69427bb5` `31953a42` `c69437cc` `1f86aba6` `f5c2747f` `e73754f7` `1a763db1` `931260ad` `093f257b` `2d97d08b` `f3c3c248` `d270b3a9` `6a078453` `6c958e7e` `280368ca` `913e2d81` `7ce2761d` `ddf071ca` |
+| **State privatization** (section 10) | `080d8b29` `010e3446` `e2165751` `3d95ad2b` `80d47bbf` |
+| **Moving data out of headers** (section 10.2) | `fd139212` `84879287` `d16af92c` `96901229` `56f58e1c` `f708fd5f` `7a9aaeff` |
+| **UI: menus and views** (section 11) | `82927939` `8c485cb1` `7effae44` `f708fd5f` `05c33cbb` `689c925a` |
+| **RF Spectrum Analyzer** (section 12) | `f85b1a53` `50496e10` `0411c22c` |
+| **Buttons** (section 13) | `181feee8` |
+| **microSD** (section 14) | `161643b6` `9cabe192` `c4f07def` `b8346169` |
+| **BLE** (section 15) | `18871f04` `449b0144` `280368ca` `de1e3dda` `029ee8c3` `574dfe5e` `2452a801` `3fbb6d9f` |
+| **Build system** (section 16) | `8d4173ce` `28cbc76d` `9c7599ee` `d861d64f` `ff3cd744` `c4eafa7f` `f67c001b` `045de824` `ad5c94ef` `7a9aaeff` |
+| **Tests and CI** (section 17) | `88d13fb7` `da81e333` `689c925a` `c69437cc` `2c177f0d` `c6a814c4` `045de824` `47feae79` |
+| **Host tools** (section 18) | `d861d64f` `ff3cd744` |
 
 ---
 
-## 4. El SDR nativo
+## 4. Native SDR
 
-### 4.1 Qué es
+### 4.1 Overview
 
-`Applications > SDR` abre una app del menú normal de Minino:
+`Applications > SDR` opens a standard menu application in Minino:
 
 ```
 firmware/main/modules/esp_sdr/
-├── c6_sdr_rx.c        216 líneas  driver del motor de captura (nivel de registros)
-├── c6_sdr_rx.h         67         API del driver
-├── esp_sdr_memory.c    57         reserva del banco de captura en el heap
-├── esp_sdr_memory.h    41         base/tamaño del banco
-├── esp_sdr_module.c   192         la app del menú
+├── c6_sdr_rx.c        216 lines   capture engine driver (register-level)
+├── c6_sdr_rx.h         67         driver API
+├── esp_sdr_memory.c    57         capture bank heap reservation
+├── esp_sdr_memory.h    41         capture bank base address and size
+├── esp_sdr_module.c   192         menu application
 ├── esp_sdr_module.h    31
-├── osmosdr_serial.c   446         parser del protocolo esdr (osmoSDR)
+├── osmosdr_serial.c   446         esdr protocol parser (osmoSDR)
 ├── osmosdr_serial.h   115
-├── sdr_screen.c        53         la vista OLED
+├── sdr_screen.c        53         OLED view
 ├── sdr_screen.h        30
-├── esdr_proto.h       132         constantes y estructuras del protocolo
-└── test/                         suite de host (20 tests)
+├── esdr_proto.h       132         protocol constants and structures
+└── test/                          host test suite (20 tests)
 ```
 
-> Nota: `iq_pack.c/.h` **no** están aquí. Viven en
-> `firmware/components/vrt_packet/` (vendorizados del proyecto
-> [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr)) y **el firmware no
-> los usa**: el camino de captura copia las palabras crudas tal cual.
+> Note: `iq_pack.c/.h` do **not** live here. They reside in
+> `firmware/components/vrt_packet/` (vendored from
+> [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr)) and **the firmware
+> capture path does not call them**: raw hardware words are written directly to
+> disk.
 
-### 4.2 El estado de la app
+### 4.2 Application State
 
-`esp_sdr_module.c:26-37` — un único struct estático, sin mutex ni tarea:
+`esp_sdr_module.c:26-37` uses a single static struct, requiring no mutex or
+background task:
 
 ```c
 typedef struct {
@@ -242,35 +247,35 @@ typedef struct {
 } sdr_native_state_t;
 ```
 
-La máquina de estados la conducen los botones:
+The state machine is driven directly by button events:
 
 ```
-        esp_sdr_module_begin()
-                 │
-                 ├── monta la microSD (ANTES de tocar la radio)
-                 ├── dibuja el panel de reposo
-                 ├── menus_module_enable_input()
-                 ├── menus_module_set_app_state(true, sdr_input_handler)
-                 └── dispara el primer burst
-                 │
-   BUTTON_UP/DOWN │  BUTTON_RIGHT          │  BUTTON_LEFT
-   sintonía ±5MHz │  captura + guardado     │  salir
-        │         │                        │
-   c6_sdr_rx_tune() sdr_burst_run()        │  menus_module_enable_input()
-   2412..2472 MHz   │                     │  menus_module_set_app_state(false, NULL)
-                     │                     │  c6_sdr_rx_stop()
-                     │                     │  menus_module_return()
-                     ▼                     ▼
-              captura → microSD        radio devuelta a Minino
+         esp_sdr_module_begin()
+                  │
+                  ├── mounts the microSD card (BEFORE touching the radio)
+                  ├── renders the idle screen
+                  ├── menus_module_enable_input()
+                  ├── menus_module_set_app_state(true, sdr_input_handler)
+                  └── triggers the initial burst
+                  │
+    BUTTON_UP/DOWN │  BUTTON_RIGHT          │  BUTTON_LEFT
+    tune +-5 MHz   │  capture + save        │  exit
+         │         │                        │
+    c6_sdr_rx_tune() sdr_burst_run()        │  menus_module_enable_input()
+    2412..2472 MHz   │                     │  menus_module_set_app_state(false, NULL)
+                      │                     │  c6_sdr_rx_stop()
+                      │                     │  menus_module_return()
+                      ▼                     ▼
+               capture -> microSD       radio returned to Minino
 ```
 
-### 4.3 El driver de captura (`c6_sdr_rx.c`)
+### 4.3 The Capture Driver (`c6_sdr_rx.c`)
 
-El motor de *dump* del C6 no escribe en un buffer cualquiera: **toma
-posesión de un bloque de SRAM** y descarga ahí las muestras de I/Q a 80 MS/s.
-El driver hace, en orden:
+The C6 dump engine does not write into an arbitrary buffer: **it takes
+ownership of an SRAM block** and dumps I/Q samples there at 80 MS/s. The
+driver performs the following steps in order:
 
-**a) Traer la radio** (`c6_sdr_rx_init()`, líneas 44-80)
+**a) Bring up the radio** (`c6_sdr_rx_init()`, lines 44-80)
 
 ```c
   if (!wifi_driver_get_initialized()) {
@@ -284,13 +289,13 @@ El driver hace, en orden:
   s_saved_sram_owner = REG_READ(SRAM_OWNER_REG);
 ```
 
-El motor de captura **presta el PHY del Wi-Fi**: necesita sus relojes y su
-calibración. Por eso el driver del Wi-Fi tiene que estar arriba. Y no se pide
-modo promiscuo a propósito (comentario en `c6_sdr_rx.c:66-70`): el modo
-promiscuo hace que el driver reserve sus buffers de captura — 37 KB de heap,
-un tercio de lo que queda tras el banco.
+The capture engine **borrows the Wi-Fi PHY**: it needs its clocks and
+calibration. Therefore, the Wi-Fi driver must be initialized. Promiscuous mode
+was initially omitted here (`c6_sdr_rx.c:66-70`) to avoid allocating the
+driver's promiscuous RX buffers (~37 KB of heap), though later testing (see
+section 23.6) showed promiscuous mode is needed to keep the receiver active.
 
-**b) Sintonizar** (`c6_sdr_rx_tune()`, líneas 82-118)
+**b) Tune** (`c6_sdr_rx_tune()`, lines 82-118)
 
 ```c
   if (wifi_driver_get_channel() != ch) {
@@ -302,71 +307,71 @@ un tercio de lo que queda tras el banco.
   set_rxclk_en(1);
 ```
 
-Dos detalles importantes:
+Two important details:
 
-- **No se mueve la radio si ya está en ese canal.** Preguntar al driver por su
-  canal sigue reiniciando su radio, y los buffers de la radio son ~40 KB de
-  heap (commit `50496e10`).
-- La cadena de RX se enciende con `pbus_workmode` → `xpd_tx_off` →
-  `xpd_rx_on(1)` → `set_rxclk_en(1)`, el mismo orden que el upstream
+- **Do not retune the radio if it is already on the target channel.** Calling
+  `set_channel` unconditionally reinitializes the radio path, which allocates
+  ~40 KB of heap buffers (commit `50496e10`).
+- The RX chain is enabled via `pbus_workmode` -> `xpd_tx_off` ->
+  `xpd_rx_on(1)` -> `set_rxclk_en(1)`, matching upstream
   (`esp-sdr-zephyr/lib/esp_sdr/src/esp_sdr_rx.c:78-98`).
 
-**c) Capturar** (`c6_sdr_rx_capture()`, líneas 124-194)
+**c) Capture** (`c6_sdr_rx_capture()`, lines 124-194)
 
 ```c
-  /* canario: se rellena todo el buffer con un patrón conocido */
+  /* canary: fill the entire buffer with a known pattern */
   for (uint32_t j = 0; j < num_samples; j++) s_iq_buf[j] = 0xa5a0055au;
   for (uint32_t j = 0; j < 4; j++)      s_iq_buf[num_samples + j] = 0x5a5aa5a5u ^ j;
 
-  REG_WRITE(MODEM_CLK_REG1, 0xffffffffu);      /* forzar relojes a 80 MS/s */
+  REG_WRITE(MODEM_CLK_REG1, 0xffffffffu);      /* force clocks to 80 MS/s */
   REG_WRITE(MODEM_CLK_REG2, 0x0007ffffu);
   REG_WRITE(MODEM_CLK_REG3, 0xffffffffu);
   REG_WRITE(DUMP_CTRL_REG, 0);
   REG_WRITE(DUMP_CFG_REG1, ... | (1u<<6) | (2u<<12) | (3u<<18));  /* I/Q lanes */
-  REG_WRITE(DUMP_CFG_REG2, ... | (15u << 15));                      /* fuente = RX I/Q crudo */
+  REG_WRITE(DUMP_CFG_REG2, ... | (15u << 15));                      /* source = raw RX I/Q */
   REG_CLR_BIT(DUMP_FE_REG, 1);
 
-  /* ceder el banco de SRAM al motor */
-  REG_WRITE(SRAM_OWNER_REG, (owner & ~0xf00u) | 0x400u);   /* bloque 2 */
+  /* hand SRAM bank over to the dump engine */
+  REG_WRITE(SRAM_OWNER_REG, (owner & ~0xf00u) | 0x400u);   /* block 2 */
   __asm__ volatile("fence rw,rw" ::: "memory");
 
-  /* disparo: limpiar DONE → RUN → pulso TRIGGER → RUN */
+  /* trigger: clear DONE -> RUN -> pulse TRIGGER -> RUN */
   REG_WRITE(DUMP_CTRL_REG, num_samples | (1u << 18));
   REG_WRITE(DUMP_CTRL_REG, num_samples | (1u << 31));
   REG_WRITE(DUMP_CTRL_REG, num_samples | (1u << 31) | (1u << 19));
   REG_WRITE(DUMP_CTRL_REG, num_samples | (1u << 31));
 
-  /* espera: hasta 25 ms */
+  /* wait: up to 25 ms */
   do { done = (REG_READ(DUMP_CTRL_REG) & (1u << 18)) != 0; }
   while (!done && esp_timer_get_time() < deadline);
 
-  /* restaurar la propiedad del banco a la CPU */
+  /* restore SRAM bank ownership to the CPU */
   REG_WRITE(DUMP_CTRL_REG, 0);
   REG_WRITE(SRAM_OWNER_REG, owner);
 ```
 
-**d) Verificar**
+**d) Verify**
 
-Dos comprobaciones, ambas con consecuencias distintas:
+Two distinct checks guard the capture:
 
-| Comprobación | Qué detecta | Log |
+| Check | What It Detects | Log Output |
 |---|---|---|
-| `!done` tras 25 ms | el motor no terminó (reloj forzado incorrecto, banco ocupado) | `Capture timeout (deadline exceeded)` |
-| `s_iq_buf[0]` y `[1]` siguen con el canario | el motor no escribió nada | `Capture incomplete (buffer unchanged)` |
+| `!done` after 25 ms | Engine did not finish (forced clock failure, bank busy) | `Capture timeout (deadline exceeded)` |
+| `s_iq_buf[0]` and `[1]` still contain the canary | Engine wrote nothing | `Capture incomplete (buffer unchanged)` |
 
-Los 4 **palabras de guardia** (`0x5a5aa5a5u ^ j`) se escriben *más allá* del
-número de muestras, en los índices 16380..16383 — las 4 últimas palabras de un
-banco de 64 KiB. Por eso `C6_SDR_MAX_SAMPLES` es 16380 y no 16384.
+The 4 **guard words** (`0x5a5aa5a5u ^ j`) are written *beyond* the requested
+sample count, at indices 16380..16383 (the final 4 words of a 64 KiB bank).
+That is why `C6_SDR_MAX_SAMPLES` is 16,380 rather than 16,384.
 
-| Parámetro | Valor | Dónde |
+| Parameter | Value | Location |
 |---|---|---|
-| Muestras mínimas | 256 | `c6_sdr_rx.c:131` |
-| Muestras máximas | 16380 (65 520 B) | `c6_sdr_rx.h:19` |
-| Timeout del disparo | 25 000 µs | `c6_sdr_rx.c:165` |
-| Tasa de muestreo | 80 MS/s | fija, no configurable |
-| Formato en disco | 32 bits crudos, I/Q entrelazadas | `esp_sdr_module.c:64-87` |
+| Minimum samples | 256 | `c6_sdr_rx.c:131` |
+| Maximum samples | 16,380 (65,520 B) | `c6_sdr_rx.h:19` |
+| Trigger timeout | 25,000 us | `c6_sdr_rx.c:165` |
+| Sample rate | 80 MS/s | Fixed (later extended with decimation dividers in section 23.2) |
+| Disk format | 32-bit raw words, interleaved I/Q | `esp_sdr_module.c:64-87` |
 
-**e) Guardar en la microSD** (`esp_sdr_module.c:64-87`)
+**e) Save to microSD** (`esp_sdr_module.c:64-87`)
 
 ```c
   char filename[64];
@@ -378,33 +383,33 @@ banco de 64 KiB. Por eso `C6_SDR_MAX_SAMPLES` es 16380 y no 16384.
   }
 ```
 
-El nombre lo genera `files_ops_incremental_name_buf()` con el formato
-`"%s%02d"` (`files_ops.c:320`), así que los ficheros son
-`/sdcard/sdrcap00.iq`, `sdrcap01.iq`, … (2 dígitos, hasta 9999).
+The filename is generated by `files_ops_incremental_name_buf()` using the
+`"%s%02d"` format (`files_ops.c:320`), producing `/sdcard/sdrcap00.iq`,
+`sdrcap01.iq`, ... (2 digits minimum, up to 9,999).
 
-> **Corrección respecto a `docs/esp-sdr-integration.md`:** ese documento dice
-> `sdrcap_NNNN.iq` (4 dígitos). El código genera 2 dígitos.
+> **Correction to earlier `docs/esp-sdr-integration.md` drafts:** earlier notes
+> stated `sdrcap_NNNN.iq` (4 digits). The code generates 2 digits.
 
-### 4.4 El banco de captura
+### 4.4 The Capture Bank
 
-Es la pieza más importante del diseño. El motor de *dump* necesita el bloque 2
-de SRAM:
+This is the most critical piece of the architecture. The dump engine requires
+SRAM block 2:
 
 ```
 0x40800000 ┌────────────────────────────────┐
-           │  bloque 0 y 1: la imagen DRAM    │  ← el firmware tiene que caber aquí
-           │  (IRAM + data + bss)             │
+           │  blocks 0 and 1: DRAM image    │  <- firmware must fit here
+           │  (IRAM + data + bss)           │
 0x40840000 ├────────────────────────────────┤
            │                                │
-           │  BANCO DE CAPTURA (128 KiB)    │  ← el motor escribe aquí
-           │  el motor sólo toca los 64 KiB  │  ← se reservan 64 KiB (ver §4.5)
-           │  primeros: 16380 palabras       │
+           │  CAPTURE BANK (128 KiB)        │  <- dump engine writes here
+           │  engine only touches the first │  <- 64 KiB or 128 KiB reserved (see 4.5 / 23.6)
+           │  64 KiB: 16,380 words          │
 0x40860000 └────────────────────────────────┘
 ```
 
-Hay **dos** mecanismos que lo protegen:
+**Two** mechanisms protect this region:
 
-**1. El *linker script*** (`firmware/main/esp_sdr_bank.ld`, 30 líneas)
+**1. The linker script** (`firmware/main/esp_sdr_bank.ld`, 30 lines)
 
 ```ld
 MEMORY
@@ -415,22 +420,21 @@ MEMORY
 ASSERT(_heap_start <= 0x40840000, "SDR: the DRAM image overlaps the capture bank")
 ```
 
-Redefine la región `sram_seg` (la de IDF en `memory.ld`) con la misma origen
-y longitud 0x40000 = 256 KiB, de modo que toda sección colocada con
-`> sram_seg` tiene que caber por debajo de `0x40840000`. Si no cabe, el
-enlazado falla con:
+This redefines the `sram_seg` region (from ESP-IDF's `memory.ld`) with the same
+origin and a length of `0x40000` (256 KiB), forcing every section placed in
+`> sram_seg` to fit below `0x40840000`. If it overflows, linking fails with:
 
 ```
 region 'sram_seg' overflowed by N bytes
 ```
 
-y si el heap empieza por encima del banco, con el `ASSERT` explícito:
+and if `_heap_start` crosses into the bank, the explicit `ASSERT` triggers:
 
 ```
 SDR: the DRAM image overlaps the capture bank
 ```
 
-El script se añade con `-T` **después** de los scripts de IDF, en
+The script is appended via `-T` **after** the ESP-IDF linker scripts in
 `firmware/main/CMakeLists.txt:87-92`:
 
 ```cmake
@@ -441,7 +445,7 @@ if(CONFIG_SDR_ENABLE)
 endif()
 ```
 
-**2. La reserva del heap** (`esp_sdr_memory.c:43-49`)
+**2. Heap reservation** (`esp_sdr_memory.c:43-49`)
 
 ```c
 #if defined(CONFIG_SDR_ENABLE)
@@ -451,128 +455,124 @@ SOC_RESERVE_MEMORY_REGION((intptr_t)SDR_CAPTURE_BANK_BASE,
 #endif
 ```
 
-`SOC_RESERVE_MEMORY_REGION()` mete la región en la sección
-`.reserved_memory_address`, que es exactamente la que lee el *heap port* del
-C6 (`components/heap/port/esp32c6/memory_layout.c`) para quitarla de los
-bloques del heap. Sin esto, `heap_caps` repartía el banco y el motor lo
-pisaba.
+`SOC_RESERVE_MEMORY_REGION()` places the region descriptor into the
+`.reserved_memory_address` section, which is read by the C6 heap port
+(`components/heap/port/esp32c6/memory_layout.c`) to exclude the range from
+heap allocation. Without this, `heap_caps` would hand out memory inside the
+capture bank and the dump engine would overwrite live heap allocations.
 
-### 4.5 Por qué 64 KiB y no 128 KiB, y cómo se hizo caber el firmware
+### 4.5 64 KiB vs. 128 KiB Reservation, and Fitting the Firmware Below the Bank
 
-El banco entero son 128 KiB, pero el motor **sólo escribe los primeros
-64 KiB**: una sonda que rellena el bloque con un patrón y cuenta cuántas
-palabras cambian cuenta exactamente 16384 (la última es la 16383).
+The hardware bank is 128 KiB, though the dump engine **only writes the first
+64 KiB**: a memory probe that fills the block with a test pattern and counts
+modified words shows exactly 16,384 words written (the last at index 16,383).
 
-Reservar los 128 KiB enteros costaba el bloque contiguo más grande del heap:
-113 KB. Y el controlador de Bluetooth del C6 pide ~121 KB contiguos, así que el
-escaneo BLE moría con:
-
-```
-bta_dm_ble_scan start scan failed. status=0x3
-HCI_ERR_MEM_CAPACITY_EXCEEDED
-```
-
-Reservando sólo los 64 KiB que el motor usa, el heap vuelve a tener un bloque
-de 156 KB y el Bluetooth entra. Commit `9e8c715e` ("only the 64 KB the dump
-engine writes are taken off the heap").
-
-En la placa:
+In commit `9e8c715e` ("only the 64 KB the dump engine writes are taken off the
+heap"), the reservation was reduced to 64 KiB so the upper 64 KiB returned to
+the heap, expanding the largest contiguous heap block from 113 KB to 177 KB to
+avoid `HCI_ERR_MEM_CAPACITY_EXCEEDED` during BLE scans:
 
 ```
-heap_init: At 4083EE30 len 000011D0 (4 KiB): RAM     <- hasta el banco
-heap_init: At 40850000 len 0002C610 (177 KiB): RAM   <- desde el banco
+heap_init: At 4083EE30 len 000011D0 (4 KiB): RAM     <- up to the bank
+heap_init: At 40850000 len 0002C610 (177 KiB): RAM   <- above the 64 KiB bank
 heap_init: At 4087C610 len 00002F54 (11 KiB): RAM
 ```
 
-El tramo `0x40840000..0x40850000` no aparece: está reservado.
+*(Note: As documented in sections 21.1 and 23.6, hardware testing with shorter
+captures later proved that the full 128 KiB block must be reserved because
+`SRAM_OWNER_REG` switches ownership of the entire 128 KiB block at once, and
+BLE scanning still succeeds with the 128 KiB reservation in the SDR build
+variant.)*
 
-**El presupuesto de la imagen.** Con la imagen completa, el `.bss` ocupaba
-172 KiB y el bloque 2 sólo tiene 128 KiB: no cabía. El recorte:
+**The image budget.** With the unmodified firmware, `.bss` alone consumed
+172 KiB, preventing the image from fitting below `0x40840000`. The static
+memory reductions applied across the branch:
 
-| Recorte | KB |
+| Optimization | KB Saved |
 |---|---|
-| Código caliente del Wi-Fi y la PHY fuera de IRAM | 45,6 |
-| Los spoofers de OpenDroneID al heap (uno por dron configurado) | 37,7 |
-| `librftest.a` fuera del enlace (el cert-test no hace falta sin TX) | 44,7 |
-| Tabla de suscriptores del bus de eventos (16 → 4 por tema) | 14,6 |
-| Buffers del log de vigilancia, del árbol de ficheros y de la lista de SSID | 4,5 |
-| Detector de vigilancia (200 → 80 dispositivos, 50 → 20 trazas) | 7,0 |
-| Dron BLE de OpenDroneID al heap | 2,3 |
-| Fuente del OLED a flash | 1,0 |
-| **Total** | **161,4** |
+| Moved Wi-Fi and PHY hot code out of IRAM | 45.6 |
+| Moved OpenDroneID spoofers to the heap (allocated per configured drone) | 37.7 |
+| Excluded `librftest.a` from linking (cert-test not needed without TX) | 44.7 |
+| Reduced event bus subscriber table (16 -> 4 per topic) | 14.6 |
+| Trimmed surveillance log, file tree, and SSID list buffers | 4.5 |
+| Reduced surveillance detector tables (200 -> 80 devices, 50 -> 20 traces) | 7.0 |
+| Moved OpenDroneID BLE drone state to the heap | 2.3 |
+| Moved OLED font to flash | 1.0 |
+| **Total** | **161.4** |
 
-Resultado: de 374 KB a 255 KB de IRAM+data+bss, contra un presupuesto de
-256 KB. Muy justo, pero cabe.
+Result: IRAM+data+bss dropped from 374 KB to 255 KB, fitting within the 256 KB
+budget.
 
-### 4.6 El SDR es sólo de recepción
+### 4.6 The SDR Is Receive-Only for I/Q
 
-El C6 **no puede transmitir I/Q**: su motor de *dump* es un receptor (escribe
-en SRAM las muestras que la radio demoduló) y no tiene DAC de TX (el S3 sí).
-Lo único que el chip emite es el modo tono del *cert-test*,
-`esp_phy_wifi_tx_tone()`, que vive en `librftest.a`.
+The C6 **cannot transmit arbitrary I/Q**: its dump engine is a receive-only
+unit (writing demodulated radio samples into SRAM) and the chip has no TX DAC
+(unlike the ESP32-S3). The only test signal in ESP-IDF's RF test archive is the
+cert-test CW tone, `esp_phy_wifi_tx_tone()`, in `librftest.a`.
 
-Se llegó a enlazar ese tono de dos formas (el archivo entero, o sólo
-`rf_test.o` + `esp_phy_api.o` con un *wrapper* propio), pero **no radia**: la
-medida con un HackRF da exactamente el mismo espectro con el tono encendido y
-apagado. La causa es que el tono del *cert-test* necesita el estado completo
-de *cert test* del PHY, que prepara `rftest_init()` en `wifi.o`; ese objeto
-arrastra `mac_common.o` con 45 KiB de `.bss` (los buffers de IQ del rxtest),
-que no caben bajo el banco.
+Linking that tone function was tested in two ways (linking the full archive, or
+linking only `rf_test.o` + `esp_phy_api.o` with a custom wrapper), but **it
+does not radiate** without full cert-test initialization: HackRF measurements
+showed an identical spectrum with the tone enabled and disabled. The cert-test
+tone requires the full PHY cert-test state initialized by `rftest_init()` in
+`wifi.o`, which pulls in `mac_common.o` along with 45 KiB of `.bss` (rxtest I/Q
+buffers) that cannot fit below the capture bank.
 
-Así que el comando `rf_tx` **se quitó** de la consola (commit `bce64f44`), junto
-con `c6_sdr_tx.c`, `phy_tone_compat.c` y el enlace del archivo de cert-test
-(`10a808ab`). El modo TX del protocolo osmoSDR se rechaza con `-ENOTSUP`
-(`osmosdr_serial.c:132-134`) en vez de responder con silencio.
+Consequently, the `rf_tx` console command **was removed** (commit `bce64f44`),
+along with `c6_sdr_tx.c`, `phy_tone_compat.c`, and the cert-test archive link
+(`10a808ab`). The TX mode of the osmoSDR protocol is rejected with `-ENOTSUP`
+(`osmosdr_serial.c:132-134`) instead of failing silently.
 
-### 4.7 Los comandos de consola
+### 4.7 Console Commands
 
-| Comando | Dónde | Qué hace |
+| Command | Location | Description |
 |---|---|---|
-| `sdr_capture` | `cmd_control.c:276-287` | Abre la app nativa. Ruta idéntica al botón: `menus_module_set_menu_over_cmd("sdr")`, porque el menú es el dueño del *callback* de salida — si la app se lanzara sola, se quedaría corriendo para siempre. |
-| `sdtest` | `sd_card.c:110-117` | Monta la microSD y dice qué pasó. §14. |
-| `rf_tx` | *eliminado* | `bce64f44` |
+| `sdr_capture` | `cmd_control.c:276-287` | Opens the native app using the exact same path as the menu button: `menus_module_set_menu_over_cmd("sdr")`, because the menu system owns the exit callback (launching the app outside the menu would leave it running indefinitely). |
+| `sdtest` | `sd_card.c:110-117` | Mounts the microSD card and reports the result (section 14). |
+| `rf_tx` | *removed* | Removed in `bce64f44`. |
 
-`boot_sdr`, que entregaba el arranque a `ota_1`, se sustituyó por
-`sdr_capture` en `f4f780e1`.
+`boot_sdr`, which handed boot over to `ota_1`, was replaced by `sdr_capture` in
+`f4f780e1`.
 
-### 4.8 El protocolo osmoSDR (`osmosdr_serial.c`)
+### 4.8 The osmoSDR Protocol (`osmosdr_serial.c`)
 
-Implementación del protocolo binario estilo HackRF. **No lo usa el firmware**
-(sólo el test de host y como referencia), pero documenta el contrato:
+Implementation of the HackRF-style binary protocol. **It is not used at runtime
+by the firmware** (only exercised by the host test suite and kept as a
+reference), but it documents the wire contract:
 
-| Petición | Valor | Comportamiento |
+| Request | Value | Behavior |
 |---|---|---|
-| `ESDR_REQ_SET_MODE` | 0x02 | Acepta OFF/RX/TEST_IN/TEST_OUT. `ESDR_MODE_TX` → `-ENOTSUP`. |
-| `ESDR_REQ_SET_FREQ` | 0x03 | 8 bytes LE en Hz; rango 100–6000 MHz. |
-| `ESDR_REQ_SET_SAMPLE_RATE` | 0x04 | 4 bytes LE; 0 → `-EINVAL`; se redondea a `{250000, 125000, 62500, 31250, 15625}`. |
-| `ESDR_REQ_SET_FORMAT` | 0x08 | Sólo 8 o 16 bits (el 12 no se acepta). |
-| `ESDR_REQ_MININO` | 0x7e | Dispara el *escape* `MININO` (6 bytes ASCII) para volver a Minino. |
+| `ESDR_REQ_SET_MODE` | 0x02 | Accepts OFF/RX/TEST_IN/TEST_OUT. `ESDR_MODE_TX` returns `-ENOTSUP`. |
+| `ESDR_REQ_SET_FREQ` | 0x03 | 8-byte LE in Hz; valid range 100-6000 MHz. |
+| `ESDR_REQ_SET_SAMPLE_RATE` | 0x04 | 4-byte LE; 0 returns `-EINVAL`; rounds to `{250000, 125000, 62500, 31250, 15625}`. |
+| `ESDR_REQ_SET_FORMAT` | 0x08 | Only 8-bit or 16-bit formats accepted (12-bit rejected). |
+| `ESDR_REQ_MININO` | 0x7e | Triggers the `MININO` escape sequence (6 ASCII bytes) to return to Minino. |
 
-El *escape* se detecta byte a byte con reinicio en coincidencia parcial, antes
-del parseo de cabeceras, y el *resync* del magic `ESDR_SER_MAGIC` (4 bytes)
-se hace con un `memmove` deslizante.
+The escape sequence is detected byte-by-byte with reset on partial match prior
+to header parsing, and resynchronization on `ESDR_SER_MAGIC` (4 bytes) uses a
+sliding `memmove`.
 
-### 4.9 El empaquetado de I/Q (`vrt_packet/iq_pack.c`)
+### 4.9 I/Q Packing (`vrt_packet/iq_pack.c`)
 
-Tres formatos, con su *cuanto*:
+Supports three bit depths with their respective sample quanta:
 
-| Bits | Disposición | Cuanto |
+| Bits | Layout | Quantum |
 |---|---|---|
-| 16 | 1 muestra por palabra: `I` en 31:16, `Q` en 15:0 | 1 muestra |
-| 8 | 4 items por palabra: `I0<<24 \| Q0<<16 \| I1<<8 \| Q1` | 2 muestras |
-| 12 | 4 muestras = 8 items = 96 bits = **3 palabras**, bit a bit de MSB a LSB | 4 muestras |
+| 16 | 1 sample per word: `I` in 31:16, `Q` in 15:0 | 1 sample |
+| 8 | 4 items per word: `I0<<24 \| Q0<<16 \| I1<<8 \| Q1` | 2 samples |
+| 12 | 4 samples = 8 items = 96 bits = **3 words**, packed MSB to LSB | 4 samples |
 
-El escalado usa `shift = floor(log2(full_scale)) - (bits-1)` con redondeo al
-medio y saturación a `[-lim, lim-1]`. `iq_pack_raw` usa
-`full_scale = 1<<(bits-1)` → `shift = 0` → **sin pérdida**.
+Scaling uses `shift = floor(log2(full_scale)) - (bits-1)` with half-way
+rounding and clamping to `[-lim, lim-1]`. `iq_pack_raw` uses
+`full_scale = 1<<(bits-1)` -> `shift = 0` (lossless).
 
 ---
 
-## 5. `radio_lease`: el dueño de la radio de 2,4 GHz
+## 5. `radio_lease`: Owner of the 2.4 GHz Radio
 
-### 5.1 Los dos problemas
+### 5.1 The Two Problems
 
-Del propio `radio_lease.h:1-23`:
+From `radio_lease.h:1-23`:
 
 > **Shared ownership of the single 2.4 GHz radio.**
 >
@@ -583,17 +583,17 @@ Del propio `radio_lease.h:1-23`:
 >   so the last one to start stole the callback from the others and a window
 >   ending with `esp_wifi_set_promiscuous(false)` killed a capture that
 >   somebody else was relying on. Now each consumer claims a slot and the
->   driver is only touched on the 0→1 and 1→0 transitions; frames are fanned
+>   driver is only touched on the 0->1 and 1->0 transitions; frames are fanned
 >   out to every holder.
 > - **The WiFi driver and the BLE stack.** The surveillance detector rotates
 >   between a WiFi window and a BLE window and used to
 >   `esp_wifi_deinit()`/`esp_bluedroid_deinit()` in between. Those are global:
->   any app that merely happened to be running — the analyzer's sniffer, the
->   deauth detector, BLE spam, BLE HID, the trackers scanner — lost the radio
+>   any app that merely happened to be running - the analyzer's sniffer, the
+>   deauth detector, BLE spam, BLE HID, the trackers scanner - lost the radio
 >   mid-operation. They now hold a lease, and the detector only takes the
 >   driver down when it is the last holder.
 
-### 5.2 La API
+### 5.2 The API
 
 ```c
 typedef enum {
@@ -608,23 +608,23 @@ typedef enum {
 } radio_prom_user_t;
 ```
 
-| Función | Devuelve | Semántica |
+| Function | Return Value | Semantics |
 |---|---|---|
-| `radio_lease_prom_acquire(user, cb)` | `ESP_OK` / `ESP_ERR_INVALID_ARG` / error del driver | Reclama un slot. **El driver sólo se toca al pasar de 0→1.** |
-| `radio_lease_prom_hold(user)` | idem | Reclama promiscuo **sin** receptor (lo usa el SDR). |
-| `radio_lease_prom_set_cb(user, cb)` | `ESP_OK` / `ESP_ERR_NOT_FOUND` | Cambia el receptor de un tenedor existente. |
-| `radio_lease_prom_release(user)` | `ESP_OK` / `ESP_ERR_NOT_FOUND` | **El driver sólo se apaga al pasar de 1→0.** |
-| `radio_lease_prom_count()` / `_held(user)` | | Estado. |
-| `radio_lease_prom_set_filter(filter)` | `ESP_OK` | **No** fuerza el modo promiscuo (cambio de comportamiento). |
-| `radio_lease_wifi_acquire(mode)` | `ESP_OK` / `ESP_ERR_NOT_SUPPORTED` / error | `STA` / `NULL` / `APSTA`. Inicializa el driver sólo al pasar de 0→1. **Rechaza si BLE tiene tenedores.** |
-| `radio_lease_wifi_release()` | — | Desinicializa sólo cuando el último claim se va. |
-| `radio_lease_ble_acquire()` | `ESP_OK` / `ESP_ERR_NOT_SUPPORTED` / error | Levanta controlador + Bluedroid al pasar de 0→1. **Rechaza si WiFi tiene tenedores**; sólo libera el driver si no hay ninguno (~65 KB). |
-| `radio_lease_ble_release()` | — | Baja Bluedroid + controlador sólo al pasar de 1→0. Rechaza liberaciones huérfanas. |
-| `radio_lease_ble_block_scan()` / `_unblock_scan()` / `_scan_allowed()` | | Puerta de escaneo (§5.6). |
+| `radio_lease_prom_acquire(user, cb)` | `ESP_OK` / `ESP_ERR_INVALID_ARG` / driver error | Claims a slot. **The driver is only touched on the 0->1 transition.** |
+| `radio_lease_prom_hold(user)` | same | Claims promiscuous mode **without** a packet callback (used by the SDR). |
+| `radio_lease_prom_set_cb(user, cb)` | `ESP_OK` / `ESP_ERR_NOT_FOUND` | Updates the callback for an existing holder. |
+| `radio_lease_prom_release(user)` | `ESP_OK` / `ESP_ERR_NOT_FOUND` | **The driver is only disabled on the 1->0 transition.** |
+| `radio_lease_prom_count()` / `_held(user)` | | Queries state. |
+| `radio_lease_prom_set_filter(filter)` | `ESP_OK` | Sets the filter without forcing promiscuous mode on/off. |
+| `radio_lease_wifi_acquire(mode)` | `ESP_OK` / `ESP_ERR_NOT_SUPPORTED` / error | `STA` / `NULL` / `APSTA`. Initializes the driver only on 0->1. **Rejects if BLE has active holders.** |
+| `radio_lease_wifi_release()` | - | Deinitializes only when the last claim is released. |
+| `radio_lease_ble_acquire()` | `ESP_OK` / `ESP_ERR_NOT_SUPPORTED` / error | Brings up controller + Bluedroid on 0->1. **Rejects if WiFi has active holders**; only tears down the WiFi driver if nobody holds it (~65 KB freed). |
+| `radio_lease_ble_release()` | - | Tears down Bluedroid + controller only on 1->0. Ignores orphan releases. |
+| `radio_lease_ble_block_scan()` / `_unblock_scan()` / `_scan_allowed()` | | BLE scan gate (section 5.6). |
 
-### 5.3 El registro: C puro, testeable en el host
+### 5.3 The Registry: Pure C, Host-Testable
 
-`radio_lease_registry.h` no depende de ESP-IDF:
+`radio_lease_registry.h` has zero ESP-IDF dependencies:
 
 ```c
 #define RADIO_LEASE_MAX_USERS 8
@@ -637,12 +637,12 @@ typedef struct {
 } radio_lease_registry_t;
 ```
 
-**El id del consumidor ES el slot.** Reclamar dos veces no infla el contador:
-el sniffer de Wi-Fi se re-registra en cada arranque y debe seguir siendo un
-solo tenedor.
+**The consumer ID IS the slot index.** Acquiring twice from the same consumer
+does not inflate the reference count: the Wi-Fi sniffer re-registers on every
+start and must remain a single holder.
 
-**El reparto de tramas** (`radio_lease_registry.c:85-114`) copia los
-suscriptores **bajo un lock** y los llama **fuera**:
+**Frame dispatch** (`radio_lease_registry.c:85-114`) snapshots subscribers
+**under a lock** and invokes them **outside the lock**:
 
 ```c
   portENTER_CRITICAL(&s_mux);
@@ -652,13 +652,13 @@ suscriptores **bajo un lock** y los llama **fuera**:
   for (uint8_t i = 0; i < n; i++) fn[i](ctx[i], buf, type);
 ```
 
-El motivo está en el propio código: el analizador se para a sí mismo desde
-dentro de su propio manejador cuando llega a su límite de paquetes; si el
-*dispatch* sujetsara el lock, se bloqueara.
+The reason is documented in the source: the analyzer stops itself from inside
+its own RX callback upon reaching its packet limit; holding the spinlock
+across the callback would deadlock.
 
-### 5.4 El recuento BLE atómico
+### 5.4 Atomic BLE Reference Counting
 
-El refcount y la puerta de escaneo comparten **un** spinlock
+The reference count and the scan gate share **a single** spinlock
 (`s_ble_mux`):
 
 ```c
@@ -667,7 +667,7 @@ static portMUX_TYPE s_ble_mux = portMUX_INITIALIZER_UNLOCKED;
 static uint8_t s_ble_scan_block = 0;
 ```
 
-`radio_lease.c:240-270` explica por qué hace falta la sección crítica:
+`radio_lease.c:240-270` explains why the critical section is mandatory:
 
 > The refcount is touched from the button state machine, the menus' on-exit
 > callbacks, console commands and the BTC task, so every read-modify-write
@@ -675,53 +675,54 @@ static uint8_t s_ble_scan_block = 0;
 > both see `before != 0` and skip the bring-up, or both drive the count to zero
 > and tear the stack down under each other.
 
-### 5.5 El enganche con los *dispatchers*
+### 5.5 Integration with the Dispatchers
 
 ```
-radio_lease_ble_acquire()  →  gap_dispatcher_init()
-radio_lease_ble_release()  →  gap_dispatcher_reset()  +  gatt_dispatcher_reset()
+radio_lease_ble_acquire()  ->  gap_dispatcher_init()
+radio_lease_ble_release()  ->  gap_dispatcher_reset()  +  gatt_dispatcher_reset()
 ```
 
-`radio_lease.h:128-134` deja claro el reparto de responsabilidades: la
-pila se levanta aquí, pero **el callback GAP no**: eso es del
-`gap_dispatcher`, uno por suscriptor.
+`radio_lease.h:128-134` defines the separation of responsibilities: the stack
+is brought up here, while **GAP callbacks are registered via
+`gap_dispatcher`**, one per subscriber.
 
-### 5.6 La puerta de escaneo
+### 5.6 The Scan Gate
 
-El controlador no puede escanear y publicitar (o fijar una dirección
-aleatoria) a la vez: *"Advertising or scanning now, can't set randaddress"*.
-Mientras un publicador tiene la puerta cerrada, **todos** los escáneres del
-árbol la consultan antes de (re)armar:
+The BLE controller cannot scan and advertise (or set a random address) at the
+same time: *"Advertising or scanning now, can't set randaddress"*. While an
+advertiser holds the scan gate closed, **every** scanner in the codebase checks
+`radio_lease_ble_scan_allowed()` before starting or re-arming a scan:
 
-- `bt_gattc.c:382` (antes de iniciar un escaneo) y `:442` (al re-armar tras
+- `bt_gattc.c:382` (before starting a scan) and `:442` (when re-arming after
   `ESP_GAP_SEARCH_INQ_CMPL_EVT`)
 - `ble_scann.c:71`
 - `gattcmd_scan.c:97`, `gattcmd_enum.c:313`, `gattcmd_recon.c:359`,
   `gattcmd_write.c:223`
 
-### 5.7 Quién usa qué
+### 5.7 Consumer Mapping
 
-| Consumidor | Slot |
+| Consumer | Slot |
 |---|---|
 | `surv_radio.c:288/318` | `RADIO_PROM_SURVEILLANCE` |
 | `cmd_sniffer.c:484/387` | `RADIO_PROM_SNIFFER` |
 | `detector.c:118/152` | `RADIO_PROM_DEAUTH_DETECTOR` |
 | `droneid_scanner.c:232/283` | `RADIO_PROM_DRONEID_SCANNER` |
 | `rf_spectrum.c:361/392` | `RADIO_PROM_SPECTRUM` |
-| `c6_sdr_rx.c:71/210` | **claim de Wi-Fi** (no promiscuo) |
+| `c6_sdr_rx.c:71/210` | **Wi-Fi lease + `RADIO_PROM_SDR_RX`** |
 
 ---
 
-## 6. `event_bus`: bus de eventos tipado
+## 6. `event_bus`: Typed Event Bus
 
-> **Eliminado en Fase 1.** El bus no tenía suscriptores reales y la macro de
-> `wifi_service` registraba callbacks `NULL`. Las apps usan callbacks directos
-> y `esp_event`; esta sección queda como histórico.
+> **Removed in Phase 1.** The bus had no active subscribers with non-NULL
+> callbacks (`wifi_service` macro registrations passed `NULL`). Apps now use
+> direct callbacks and `esp_event`; this section is preserved for historical
+> reference.
 
-### 6.1 Qué es y qué no es
+### 6.1 Overview
 
-Un bus de eventos con **tabla de suscriptores por tema** y reparto (*fan-out*).
-Tipos:
+A lightweight event bus with a **per-topic subscriber table** and fan-out
+delivery. Topics:
 
 ```c
 typedef enum {
@@ -729,26 +730,26 @@ typedef enum {
   EV_MENU,
   EV_WIFI,
   EV_GPS,
-  EV_APP_START = 128,   /* espacio para apps privadas */
+  EV_APP_START = 128,   /* reserved range for private app events */
 } event_topic_t;
 
 #define EVENT_MAX_SUBS 2
 ```
 
-### 6.2 La API
+### 6.2 The API
 
-| Función | Devuelve | Semántica |
+| Function | Return Value | Semantics |
 |---|---|---|
-| `event_bus_init()` | `true` | Idempotente. Construye el mapa tema→slot **una sola vez**. |
-| `event_bus_deinit()` | — | Vacía la tabla y el mapa. |
-| `event_bus_subscribe(topic, cb, data)` | `bool` | Rechaza `topic >= EV_APP_START`, el slot inválido, el par `(cb, data)` duplicado y la tabla llena. |
-| `event_bus_unsubscribe(topic, cb)` | `bool` | Quita por intercambio con el último. |
-| `event_bus_dispatch(topic, data)` | — | Reparte a los suscriptores del tema. |
+| `event_bus_init()` | `true` | Idempotent. Builds the topic-to-slot map **once**. |
+| `event_bus_deinit()` | - | Clears the subscriber table and topic map. |
+| `event_bus_subscribe(topic, cb, data)` | `bool` | Rejects `topic >= EV_APP_START`, invalid slots, duplicate `(cb, data)` pairs, and full tables. |
+| `event_bus_unsubscribe(topic, cb)` | `bool` | Removes subscriber by swapping with the last entry. |
+| `event_bus_dispatch(topic, data)` | - | Delivers the event to all subscribers of the topic. |
 
-Macros de conveniencia: `event_bus_post()`, `event_bus_post_input()`,
+Convenience macros: `event_bus_post()`, `event_bus_post_input()`,
 `event_bus_post_menu()`, `event_bus_post_wifi()`, `event_bus_post_gps()`.
 
-### 6.3 El reparto
+### 6.3 Event Dispatch
 
 ```c
 void event_bus_dispatch(event_topic_t topic, void* data) {
@@ -766,97 +767,98 @@ void event_bus_dispatch(event_topic_t topic, void* data) {
 }
 ```
 
-Dos decisiones que conviene highlightar:
+Two design details worth noting:
 
-1. **El `data` del `dispatch` se descarta.** Cada suscriptor recibe **su
-   propio** puntero `data` registrado en el `subscribe`. El `dispatch` es
-   únicamente una señal.
-2. **Se copia bajo el lock y se llama fuera**, para que un suscriptor pueda
-   suscribirse o publicar desde dentro de su propio callback sin bloquearse
-   en un spinlock no recursivo.
+1. **The `data` argument to `dispatch` is ignored.** Each subscriber receives
+   **its own** `data` pointer registered during `subscribe`. `dispatch` acts
+   purely as a signal.
+2. **Subscribers are copied under the lock and invoked outside it**, allowing
+   a subscriber to subscribe, unsubscribe, or dispatch from within its own
+   callback without deadlocking on a non-recursive spinlock.
 
-### 6.4 El mapa tema→slot
+### 6.4 Topic-to-Slot Mapping
 
 ```c
 static uint8_t _topic_slot(event_topic_t topic) {
-  if (topic < 0 || topic >= EV_APP_START) return EVENT_MAX_SUBS;  /* centinela */
+  if (topic < 0 || topic >= EV_APP_START) return EVENT_MAX_SUBS;  /* sentinel */
   uint8_t idx = s_topic_index[topic];
   return (idx < MAX_TOPICS) ? idx : EVENT_MAX_SUBS;
 }
 ```
 
-El mapa se construye **una sola vez** en `event_bus_init()`. El comentario
-(`event_bus.c:59-64`) explica por qué no se puede reconstruir: renumerar los
-slots dejaría a un suscriptor existente en una tabla de la que ya nada
-dispensa.
+The map is built **once** in `event_bus_init()`. The comment at
+`event_bus.c:59-64` explains why it cannot be rebuilt on subsequent calls:
+renumbering slots would leave existing subscribers stranded in a slot table
+that nothing dispatches to anymore.
 
-> **Defecto activo.** La centinela es `EVENT_MAX_SUBS`, y con
-> `EVENT_MAX_SUBS == 2` el valor 2 es un índice de slot **válido**.
-> `event_bus_init()` asigna `EV_INPUT→0, EV_MENU→1, EV_WIFI→2, EV_GPS→3`, así
-> que `EV_WIFI` y `EV_GPS` son indistinguibles de la centinela y **se
-> rechazan en silencio**. Ver §22.1.
+> **Bug discovered and fixed in section 22.1.** Originally, the invalid-slot
+> sentinel was `EVENT_MAX_SUBS`. When `EVENT_MAX_SUBS` was reduced to `2`,
+> slot index `2` became indistinguishable from the sentinel. Because
+> `event_bus_init()` assigned `EV_INPUT->0, EV_MENU->1, EV_WIFI->2, EV_GPS->3`,
+> `EV_WIFI` and `EV_GPS` were silently rejected until the sentinel was changed
+> to `EVENT_SLOT_INVALID` (`0xff`). See section 22.1.
 
-### 6.5 El coste en SRAM y por qué se recortó
+### 6.5 SRAM Footprint and Trimming
 
-`sizeof(event_subscriber_t)` es 8 bytes en el ABI de 32 bits del C6.
+`sizeof(event_subscriber_t)` is 8 bytes on the 32-bit C6 ABI.
 
-| Commit | `EVENT_MAX_SUBS` | `MAX_TOPICS` | `s_subs[]` | Total `.bss` | Δ |
+| Commit | `EVENT_MAX_SUBS` | `MAX_TOPICS` | `s_subs[]` | Total `.bss` | Delta |
 |---|---|---|---|---|---|
-| `92bc14f9` (original) | 16 | 160 | 21 120 B | 21 248 B | — |
-| `ba55fa02` | 8 | 160 | 10 880 B | 11 008 B | −10 240 B (10 KB) |
-| `46d235a1` | 4 | 140 | 5 040 B | 5 168 B | −5 840 B |
-| `cca3cc43` | **2** | 140 | 2 800 B | **2 928 B** | −2 240 B |
+| `92bc14f9` (initial) | 16 | 160 | 21,120 B | 21,248 B | - |
+| `ba55fa02` | 8 | 160 | 10,880 B | 11,008 B | -10,240 B (10 KB) |
+| `46d235a1` | 4 | 140 | 5,040 B | 5,168 B | -5,840 B |
+| `cca3cc43` | **2** | 140 | 2,800 B | **2,928 B** | -2,240 B |
 
-Acumulado: **17,9 KB de SRAM estático liberados**, que hicieron falta para que
-la imagen cupiera bajo el banco de captura.
+Cumulative savings: **17.9 KB of static SRAM freed**, helping the firmware
+image fit below the capture bank.
 
-### 6.6 Dónde se usa (y dónde no)
+### 6.6 Usage Across the Codebase
 
-| Publica | Archivo |
+| Publisher | File |
 |---|---|
 | `EV_WIFI` | `wifi_service.c:42`, `wifi_app.c:51,74,87`, `OTA/modules/wifi_ap/wifi_ap.c:177`, `captive_module.c:545,711` |
-| `EV_INPUT` / `EV_MENU` / `EV_GPS` | nadie |
+| `EV_INPUT` / `EV_MENU` / `EV_GPS` | None |
 
-| Suscribe | Archivo |
+| Subscriber | File |
 |---|---|
 | `wifi_service_on_state_change(cb, data)` | `wifi_ap_manager.c:86`, `wifi_scanner.c:28`, `captive_module.c:238,244`, `detector.c:95`, `droneid_scanner.c:212`, `modbus_dos.c:83` |
 
-> **Todos los `subscribe` pasan `cb = NULL`.** El bus acepta un callback nulo
-> y lo guarda; el `dispatch` lo salta con `if (subs[i].cb)`. Son
-> *placeholders* ("notificación opcional"), no subscriptions reales.
+> **All `subscribe` call sites passed `cb = NULL`.** The bus accepted a NULL
+> callback and stored it, while `dispatch` skipped it via `if (subs[i].cb)`.
+> They served as placeholders rather than active callbacks.
 
-> **Dos commits están mal nombrados.** `049500e5` ("subscribe sniffer screens
-> to event bus") sólo añade un `#define THREAD_SNIFFER_TOPIC
-> (EV_APP_START + 2)` que no se usa — y que el bus rechazaría por estar
-> `>= EV_APP_START`. El fan-out real del *sniffer* es una tabla privada de 4
-> slots en `thread_sniffer.c:51`. `a7457dd0` ("align animation task with
-> event bus") no toca el bus en absoluto: sólo cambia el apagado de la tarea
-> de animación.
+> **Two misnamed commits.** `049500e5` ("subscribe sniffer screens to event
+> bus") only added an unused `#define THREAD_SNIFFER_TOPIC (EV_APP_START + 2)`,
+> which the bus would reject anyway for being `>= EV_APP_START`. Actual sniffer
+> fan-out uses a private 4-slot table in `thread_sniffer.c:51`. `a7457dd0`
+> ("align animation task with event bus") does not touch the event bus at all;
+> it only modifies the animation task shutdown sequence.
 
-### 6.7 El bus no puede llevar eventos GAP
+### 6.7 Why `event_bus` Cannot Carry GAP Events
 
-Esta es la lección que motivó los *dispatchers* y está documentada en
+This lesson motivated the dedicated BLE dispatchers and is documented in
 `test_event_bus.c:1-21`:
 
 > event_bus was introduced as a replacement for direct GAP callback
 > registration in the gattcmd console handlers. That substitution was wrong
-> and silent … the subscription was refused, the return value was discarded,
+> and silent ... the subscription was refused, the return value was discarded,
 > and `ESP_GAP_BLE_SCAN_PARAM_SET_COMPLETE_EVT` was never handled, so no scan
 > ever started.
 
-Los eventos GAP tienen que ir por el `gap_dispatcher` (§7).
+GAP events must flow through `gap_dispatcher` (section 7).
 
 ---
 
-## 7. `gap_dispatcher` y `gatt_dispatcher`: el fan-out de Bluedroid
+## 7. `gap_dispatcher` and `gatt_dispatcher`: Bluedroid Fan-Out
 
-### 7.1 El problema
+### 7.1 The Problem
 
-Bluedroid guarda **un solo** callback GAP (`esp_ble_gap_register_callback`) y
-**un solo** slot GATTC (`esp_ble_gattc_register_callback`). Si varios módulos
-llaman a esas APIs, cada llamada **sobrescribe** la anterior y los módulos
-anteriores se quedan sin eventos en silencio. Es la causa clásica de
-"BLE scanning/ADV dejó de funcionar".
+Bluedroid maintains **a single** GAP callback (`esp_ble_gap_register_callback`)
+and **a single** GATTC callback (`esp_ble_gattc_register_callback`). When
+multiple modules call those APIs directly, each call **overwrites** the
+previous registration and earlier modules silently stop receiving events. This
+was the root cause of recurring "BLE scanning/advertising stopped working"
+bugs.
 
 ### 7.2 `gap_dispatcher`
 
@@ -869,14 +871,14 @@ typedef struct {
 } gap_subscriber_t;
 ```
 
-| Función | Semántica |
+| Function | Semantics |
 |---|---|
-| `gap_dispatcher_init()` | Registra el callback interno **sólo al entrar en ENABLED**. |
-| `gap_dispatcher_register(cb)` | `ESP_ERR_INVALID_ARG` (NULL), `ESP_ERR_NO_MEM` (llena), `ESP_OK`. Duplicados ignorados. |
-| `gap_dispatcher_unregister(cb)` | `ESP_ERR_NOT_FOUND` si no estaba. |
-| `gap_dispatcher_reset()` | **El gancho de reset de pila**: olvida que está instalado, para que el siguiente `register()` lo reinstale en una pila recién habilitada. |
+| `gap_dispatcher_init()` | Registers the internal callback with Bluedroid **only when transitioning into `ENABLED`**. |
+| `gap_dispatcher_register(cb)` | Returns `ESP_ERR_INVALID_ARG` (NULL), `ESP_ERR_NO_MEM` (full), or `ESP_OK`. Duplicates are ignored. |
+| `gap_dispatcher_unregister(cb)` | Returns `ESP_ERR_NOT_FOUND` if not registered. |
+| `gap_dispatcher_reset()` | **Stack-reset hook**: forgets the installed state so the next `register()` reinstalls the callback on a freshly enabled Bluedroid stack. |
 
-La lógica de transición (`gap_dispatcher.c:63-73`):
+Transition logic (`gap_dispatcher.c:63-73`):
 
 ```c
   esp_bluedroid_status_t status = esp_bluedroid_get_status();
@@ -890,12 +892,12 @@ La lógica de transición (`gap_dispatcher.c:63-73`):
   if (!just_enabled) return ESP_OK;
 ```
 
-Antes de `3fbb6d9f` se re-registraba en **cada** `init()`, lo que costaba un
-ida y vuelta al BTC task por suscriptor.
+Prior to `3fbb6d9f`, it re-registered with Bluedroid on **every** `init()`
+call, incurring an unnecessary round-trip to the BTC task per subscriber.
 
-### 7.3 `gatt_dispatcher` (nuevo en `3fbb6d9f`)
+### 7.3 `gatt_dispatcher` (New in `3fbb6d9f`)
 
-El mismo patrón para el lado cliente:
+Applies the same fan-out pattern to the GATT client side:
 
 ```c
 #define GATT_SUBSCRIBER_MAX 8
@@ -904,22 +906,22 @@ static gatt_subscriber_t s_subscribers[GATT_SUBSCRIBER_MAX];
 static bool s_installed = false;
 ```
 
-El reparto reenvía además el `gattc_if`, de modo que cada manejador puede
-ignorar los eventos dirigidos a la interfaz de otro módulo:
+Dispatch forwards `gattc_if` to every subscriber so each handler can filter out
+events intended for another module's interface:
 
 ```c
   for (uint8_t i = 0; i < count; i++) local_cbs[i](event, gattc_if, param);
 ```
 
-### 7.4 Los ids de aplicación GATTC
+### 7.4 Unique GATTC Application IDs
 
-`esp_ble_gattc_app_register()` **rechaza duplicados**. Este header
-(`gattcmd_service.h:14-24`) lo explica:
+`esp_ble_gattc_app_register()` **rejects duplicate IDs**. `gattcmd_service.h:14-24`
+documents why unique IDs are required:
 
 > Unique Bluedroid GATTC app_ids. `esp_ble_gattc_app_register()` rejects
 > duplicates, and two services sharing app_id 0 (this file used to define it
 > and `bt_gattc.c` uses the same value for DEVICE_PROFILE) collided: the second
-> registration failed outright or confused the single global gattc_if → app
+> registration failed outright or confused the single global gattc_if -> app
 > demux. bt_gattc owns 0, the gatt console services take 2...5.
 
 ```c
@@ -929,25 +931,25 @@ ignorar los eventos dirigidos a la interfaz de otro módulo:
 #define GATTCMD_WRITE_APP_ID 5
 ```
 
-Antes de `574dfe5e` los cuatro servicios de gattcmd usaban el app_id 0.
+Prior to `574dfe5e`, all four `gattcmd` services used `app_id = 0`.
 
-### 7.5 Quién se registra
+### 7.5 Registered Subscribers
 
-| Módulo | GAP | GATT |
+| Module | GAP | GATT |
 |---|---|---|
-| `ble_hidd_main.c` | `:373` | — |
+| `ble_hidd_main.c` | `:373` | - |
 | `bt_gattc.c` | `:539` | `:550` |
-| `bt_gatts.c` | `:547` | — |
-| `bt_spam.c` | `:982` | — |
-| `surv_radio.c` | `:394` | — |
+| `bt_gatts.c` | `:547` | - |
+| `bt_spam.c` | `:982` | - |
+| `surv_radio.c` | `:394` | - |
 | `gattcmd_scan.c` | `:213` | `:222` |
 | `gattcmd_enum.c` | `:428` | `:438` |
 | `gattcmd_recon.c` | `:568` | `:577` |
 | `gattcmd_write.c` | `:350` | `:359` |
 
-### 7.6 El coste
+### 7.6 Memory Footprint
 
-| Estructura | Tamaño |
+| Structure | Size |
 |---|---|
 | `gap_subscriber_t s_subscribers[16]` | 128 B |
 | `gatt_subscriber_t s_subscribers[8]` | 64 B |
@@ -955,16 +957,16 @@ Antes de `574dfe5e` los cuatro servicios de gattcmd usaban el app_id 0.
 
 ---
 
-## 8. `wifi_service`: un único `esp_wifi_init()`
+## 8. `wifi_service`: A Single `esp_wifi_init()`
 
-### 8.1 El problema
+### 8.1 The Problem
 
-Había **13 llamadas** a `esp_wifi_init()` repartidas por el árbol. Cada
-módulo inicializaba el driver por su cuenta, con su propia configuración
-(`wifi_slim_init_config()` en el controlador, la de por defecto en otros),
-produciendo reinicios contradictorios.
+There were **13 separate calls** to `esp_wifi_init()` scattered across the
+codebase. Each module initialized the driver independently with its own
+configuration (`wifi_slim_init_config()` in the controller vs. default configs
+elsewhere), causing conflicting reinitializations.
 
-### 8.2 La API
+### 8.2 The API
 
 ```c
 bool wifi_service_init(void);
@@ -982,7 +984,7 @@ wifi_second_chan_t  wifi_service_secondary_chan_get(void);
   event_bus_subscribe(EV_WIFI, (event_callback_t)(cb), (void*)(data))
 ```
 
-### 8.3 Cómo decide el modo
+### 8.3 Mode Selection
 
 ```c
 #if CONFIG_STA_ENABLE
@@ -994,13 +996,13 @@ wifi_second_chan_t  wifi_service_secondary_chan_get(void);
 #endif
 ```
 
-> **Nota.** `CONFIG_STA_ENABLE` y `CONFIG_AP_ENABLE` **no están definidos en
-> ninguna parte** (tampoco son símbolos de ESP-IDF). Las macros no definidas
-> valen 0 en `#if`, así que **siempre se ejecuta la rama de reserva**: el
-> servicio elige siempre `WIFI_MODE_STA`. Los modos `NULL` y `APSTA` llegan
-> por la *lease* (`wifi_driver_init_null()` / `wifi_driver_init_apsta()`).
+> **Note.** Neither `CONFIG_STA_ENABLE` nor `CONFIG_AP_ENABLE` is defined
+> anywhere in the project or ESP-IDF. Undefined macros evaluate to 0 in `#if`,
+> so **the fallback branch is always taken**: the service always selects
+> `WIFI_MODE_STA`. `NULL` and `APSTA` modes are configured through
+> `radio_lease` (`wifi_driver_init_null()` / `wifi_driver_init_apsta()`).
 
-### 8.4 Los buffers del driver y el NVS
+### 8.4 Driver Buffers and NVS
 
 ```c
   cfg.static_rx_buf_num = 2;
@@ -1009,11 +1011,11 @@ wifi_second_chan_t  wifi_service_secondary_chan_get(void);
   cfg.nvs_enable = false;
 ```
 
-Los buffers se recortan porque el banco de captura se lleva 64–128 KB de
-SRAM: cada buffer del driver es heap que el resto del sistema no puede usar.
+Buffer counts are reduced because the capture bank reserves 64-128 KB of SRAM;
+every driver buffer comes out of the remaining heap.
 
-`nvs_enable = false` tiene un motivo concreto (comentario en
-`wifi_service.c:75-80`):
+Setting `nvs_enable = false` prevents a specific reinitialization failure
+(documented in `wifi_service.c:75-80`):
 
 > The driver keeps a cookie with the calibration data in the NVS partition, and
 > it opens it with the partition already open the second time round (the
@@ -1022,31 +1024,31 @@ SRAM: cada buffer del driver es heap que el resto del sistema no puede usar.
 > apps do not start. Without the cookie the driver recalibrates on every boot,
 > which is a few hundred milliseconds.
 
-### 8.5 El patrón de migración
+### 8.5 Migration Pattern
 
-Seis commits con el título *"defer wifi init to wifi_service"* sustituyen
-`esp_wifi_init()` por una consulta al servicio:
+Six commits titled *"defer wifi init to wifi_service"* replaced direct
+`esp_wifi_init()` calls with a service check:
 
 ```c
-  /* WiFi stack ya inicializada por wifi_service_init() en app_main(). */
+  /* WiFi stack already initialized by wifi_service_init() in app_main(). */
   if (!wifi_service_is_up_get()) {
-    ESP_LOGI(TAG_WIFI_DRIVER, "WiFi stack no inicializada por servicio; inicializando...");
+    ESP_LOGI(TAG_WIFI_DRIVER, "WiFi stack not initialized by service; initializing...");
     wifi_service_init();
   } else {
-    ESP_LOGI(TAG_WIFI_DRIVER, "WiFi stack ya inicializada por servicio; saltando esp_wifi_init");
+    ESP_LOGI(TAG_WIFI_DRIVER, "WiFi stack already initialized by service; skipping esp_wifi_init");
   }
 ```
 
-Migrados: `wifi_controller.c`, `wifi_app.c`, `wifi_ap_manager.c`,
+Migrated modules: `wifi_controller.c`, `wifi_app.c`, `wifi_ap_manager.c`,
 `wifi_scanner.c`, `OTA/modules/wifi_ap/wifi_ap.c`, `captive_module.c`,
 `modbus_dos.c`, `deauth/detector.c`, `droneid_scanner.c`.
 
-> Dos de los seis commits están mal nombrados: `cdd1b586` y `52138a31` no
-> tocan `wifi_service` en absoluto.
+> Two of the six commits are misnamed: `cdd1b586` and `52138a31` do not touch
+> `wifi_service` at all.
 
-### 8.6 El arranque
+### 8.6 Boot Initialization
 
-`firmware/main/main.c:55` llama `event_bus_init()` como **primera** cosa de
+`firmware/main/main.c:55` called `event_bus_init()` as the **first** step in
 `app_main()`:
 
 ```c
@@ -1057,44 +1059,44 @@ Migrados: `wifi_controller.c`, `wifi_app.c`, `wifi_ap_manager.c`,
 
 ---
 
-## 9. Hardening del ciclo de vida de los módulos
+## 9. Module Lifecycle Hardening
 
-### 9.1 Los 12 patrones
+### 9.1 The 12 Hardening Patterns
 
-"Hardening" en este branch no es una cosa, son doce patrones mecánicos
-aplicados módulo a módulo:
+"Hardening" in this branch consists of twelve mechanical patterns applied
+consistently across modules:
 
-| # | Patrón | Ejemplo canónico |
+| # | Pattern | Canonical Example |
 |---|---|---|
-| 1 | Se comprueba el retorno de `xTaskCreate` y se protege el handle antes de `vTaskSuspend`/`vTaskResume` | `warbee_module.c:370-384` |
-| 2 | Carrera de auto-borrado: `volatile bool running` + publicar/limpiar el handle bajo sección crítica | `bt_spam.c:1053-1069` |
-| 3 | Simetría de salida: lo que `begin()` crea, `exit()` lo suelta | `warthread_module.c:459-475` |
-| 4 | Guardas NULL sobre ctx/handle | `modbus_tcp_scenes.c:100-110` |
-| 5 | Comprobación de límites / saturación de índices | `modbus_tcp_prefs.c:26-45` |
-| 6 | Saturación de divisiones | `memory_monitor.c:29-33` |
-| 7 | Tamaño de pila y eliminación de VLA | `ssid_spam.c:187-191` |
-| 8 | Privatización del estado: `static` + accesores | `radio_selector.c:6-9` |
-| 9 | Datos fuera de las cabeceras | `wifi_bitmaps.c/.h` |
-| 10 | Arbitraje de recursos globales | `radio_lease`, `event_bus`, `wifi_service` |
-| 11 | Sacar el trabajo bloqueante de la tarea `esp_timer` | `keyboard_module.c:37-124` |
-| 12 | Tests de host para cada invariante | 16 suites nuevas |
+| 1 | Check `xTaskCreate` return value and guard the handle before `vTaskSuspend`/`vTaskResume` | `warbee_module.c:370-384` |
+| 2 | Prevent self-delete race: `volatile bool running` + publish/clear handle under critical section | `bt_spam.c:1053-1069` |
+| 3 | Exit symmetry: everything allocated in `begin()` is released in `exit()` | `warthread_module.c:459-475` |
+| 4 | NULL guards on context/handle pointers | `modbus_tcp_scenes.c:100-110` |
+| 5 | Bounds checking and index clamping | `modbus_tcp_prefs.c:26-45` |
+| 6 | Division clamping against zero or underflow | `memory_monitor.c:29-33` |
+| 7 | Stack sizing and VLA elimination | `ssid_spam.c:187-191` |
+| 8 | State privatization: file-scope `static` + accessor functions | `radio_selector.c:6-9` |
+| 9 | Moving data tables out of headers | `wifi_bitmaps.c/.h` |
+| 10 | Global resource arbitration | `radio_lease`, `event_bus`, `wifi_service` |
+| 11 | Moving blocking work off the `esp_timer` task | `keyboard_module.c:37-124` |
+| 12 | Host unit tests for each invariant | 16 new test suites |
 
-### 9.2 `vTaskSuspend(NULL)`: el congelamiento de la UI
+### 9.2 `vTaskSuspend(NULL)`: Freezing the UI
 
-Este es el fallo más repetido. `vTaskSuspend(NULL)` **suspende la tarea
-llamante**, no la tarea cuyo handle es `NULL`. Y la tarea llamante solía ser
-la de `esp_timer`, que ejecuta los callbacks de los botones:
+This was the most widespread bug. Passing `NULL` to `vTaskSuspend(NULL)`
+**suspends the calling task**, not a task with a `NULL` handle. And the calling
+task was typically the `esp_timer` task that dispatches button callbacks:
 
 ```c
-/* antes */
+/* before */
 xTaskCreate(wardriving_screens_zigbee_animation_task,
             "scanning_wifi_animation_task", 4096, NULL, 5,
             &scanning_zigbee_animation_task_handle);
-vTaskSuspend(scanning_zigbee_animation_task_handle);   /* NULL => suspende al que llama */
+vTaskSuspend(scanning_zigbee_animation_task_handle);   /* NULL => suspends caller! */
 ```
 
 ```c
-/* después — warbee_module.c:374-384 */
+/* after - warbee_module.c:374-384 */
 /* The handle must be checked before suspending it: vTaskSuspend(NULL)
    suspends the *calling* task, which here is the esp_timer task that runs
    the button callbacks - the whole UI would freeze with no way out. */
@@ -1106,33 +1108,33 @@ if (xTaskCreate(..., &scanning_zigbee_animation_task_handle) == pdPASS) {
 }
 ```
 
-Afecta a: `war_bee`, `war_thread`, `gps/wardriving`.
+Fixed in: `war_bee`, `war_thread`, `gps/wardriving`.
 
-### 9.3 `warthread`: la radio se quedaba muda
+### 9.3 `warthread`: Radio Going Permanently Deaf
 
-El cambio más profundo de la campaña. El manejador de tramas de OpenThread
-hacía la escritura a la SD y el redibujado completo del OLED **dentro del
-lock de OpenThread**:
+This was the deepest fix in the hardening campaign. The OpenThread packet
+callback was performing SD card file writes and full OLED screen redraws
+**while holding the OpenThread lock**:
 
 ```c
-/* antes */
+/* before */
 static void warthread_packet_handler(const otRadioFrame* aFrame, ...) {
   ...
   sd_card_write_file(csv_file_name, csv_file_buffer);   /* fopen/fwrite/fclose */
-  oled_screen_display_show();                          /* redibujado completo */
+  oled_screen_display_show();                          /* full I2C redraw */
 }
 ```
 
-`openthread_enable_promiscuous_mode()` entrega las tramas desde
-`otPlatRadioReceiveDone()` **en la tarea del mainloop de OT, con
-`esp_openthread_lock` tomado**. Escribir a la SD (un `fopen`/`fwrite`/
-`fclose` por trama) y redibujar la pantalla ahí stalled el hilo que atiende
-**toda** llamada de OpenThread, llenó la cola de RX de 20 entradas del driver
-y dejó los buffers de recepción de `esp_ieee802154` clavados en
-`process == true`: **la radio quedaba permanentemente muda tras 20 tramas**.
+`openthread_enable_promiscuous_mode()` delivers frames from
+`otPlatRadioReceiveDone()` **on the OpenThread mainloop task with
+`esp_openthread_lock` held**. Writing to the SD card (`fopen`/`fwrite`/`fclose`
+per frame) and redrawing the OLED stalled the thread servicing all OpenThread
+calls, overflowed the 20-entry driver RX queue, and left the `esp_ieee802154`
+receive buffers wedged with `process == true`, rendering **the radio
+permanently deaf after 20 frames**.
 
 ```c
-/* después — warthread_module.c:194-238 */
+/* after - warthread_module.c:194-238 */
 /*
  * Runs outside the OpenThread lock.
  * ...
@@ -1149,18 +1151,19 @@ static void warthread_packet_handler(const otRadioFrame* aFrame, bool aIsTx, voi
 }
 ```
 
-Con ello: una cola de tramas + una tarea obrera, la comprobación de límites
-de lectura del PSDU (`WARTHREAD_BASE_FRAME_LEN 16`), y el desmontaje de la
-cola y la tarea en `warthread_module_exit()`.
+This introduced a frame queue + worker task, PSDU bounds checking
+(`WARTHREAD_BASE_FRAME_LEN 16`), and full teardown of both the queue and worker
+task in `warthread_module_exit()`.
 
-### 9.4 `screen_saver`: el rectángulo negro
+### 9.4 `screen_saver`: The Black Rectangle Bug
 
-`screen_saver_stop()` sólo ponía un flag. Pero la tarea de la animación
-termina la iteración en la que está (`display_bitmap()` + `display_show()`)
-antes de volver a mirar el flag:
+`screen_saver_stop()` previously only cleared a boolean flag. However, the
+animation task finished its current iteration (`display_bitmap()` +
+`display_show()`) before rechecking the flag, overwriting the newly rendered
+menu with a black frame:
 
 ```c
-/* después — screen_saver.c:150-181 */
+/* after - screen_saver.c:150-181 */
 /* Clear the flag first so the task leaves its loop, then wait for it to be
    gone via the exit semaphore. Clearing the flag alone is not enough: ...
    That is exactly what happened once the button callbacks moved off the
@@ -1175,14 +1178,14 @@ if (screen_saver_task_handle != NULL) {
 }
 ```
 
-Cambios asociados: binario semáforo `screen_saver_exit_sem`, handle publicado
-en `screen_saver_task_handle`, prioridad 5 → 4, `IDLE_TIMEOUT_S` persistido en
-NVS.
+Associated changes: added binary semaphore `screen_saver_exit_sem`, published
+`screen_saver_task_handle`, lowered priority from 5 to 4, and persisted
+`IDLE_TIMEOUT_S` in NVS.
 
-### 9.5 `trackers_scanner`: la carrera de auto-borrado
+### 9.5 `trackers_scanner`: Self-Delete Race Condition
 
 ```c
-/* después — trackers_scanner.c:98-136 */
+/* after - trackers_scanner.c:98-136 */
 /* Detach from stop() before vanishing: stop() copies this handle and
  * deletes the task; a self-delete while stop() still holds the copied
  * handle would turn that delete into a delete of an already-freed TCB,
@@ -1194,7 +1197,7 @@ portEXIT_CRITICAL(&trackers_stop_mux);
 vTaskDelete(NULL);
 ```
 
-Y `stop()` revalida:
+And `stop()` revalidates under the same spinlock:
 
 ```c
 portENTER_CRITICAL(&trackers_stop_mux);
@@ -1206,13 +1209,13 @@ portEXIT_CRITICAL(&trackers_stop_mux);
 if (task_to_delete != NULL) vTaskDelete(task_to_delete);
 ```
 
-Se usa un spinlock y no un semáforo porque un `SemaphoreHandle_t` sería un
-riesgo de inversión de prioridad dentro de un auto-borrado.
+A spinlock is used instead of a mutex/semaphore to avoid priority inversion or
+blocking during task self-deletion.
 
-### 9.6 `bt_spam`: `vTaskDelete(NULL)` desde el llamante
+### 9.6 `bt_spam`: Preventing Accidental `vTaskDelete(NULL)` by the Caller
 
 ```c
-/* después — bt_spam.c:1052-1071 */
+/* after - bt_spam.c:1052-1071 */
 if (adv_task_running) {
   uint32_t retries = 200; /* 200 x 10ms = 2s max wait */
   while (adv_task_running && retries-- > 0) vTaskDelay(pdMS_TO_TICKS(10));
@@ -1232,23 +1235,23 @@ if (adv_task_running) {
 }
 ```
 
-`adv_task_running` es `volatile` y va aparte del handle porque
-`xTaskCreate()` toma un `TaskHandle_t*` plano, y `volatile` evita que el
-compilador eleve la carga fuera del bucle de sondeo.
+`adv_task_running` is marked `volatile` and kept separate from the handle
+because `xTaskCreate()` takes a plain `TaskHandle_t*`, and `volatile` prevents
+the compiler from hoisting the load out of the polling loop.
 
-### 9.7 `ssid_spam`: el beacon mal construido
+### 9.7 `ssid_spam`: Malformed Beacon Frame Construction
 
-El `beacon_raw` antiguo era un array plano de 57 bytes que contenía **la
-cabecera y los IEs** (Supported-Rates / DS-Param / TIM). El texto del SSID se
-añadía en el offset 57, así que `beacon[37]` — el byte de longitud del SSID —
-en realidad apuntaba dentro del IE de TIM: **todos los beacons anunciaban un
-SSID falso** y las cadenas pretendidas eran basura final.
+Previously, `beacon_raw` was a flat 57-byte array containing **both the header
+and the trailing IEs** (Supported-Rates / DS-Param / TIM). The SSID string was
+appended at offset 57, while `beacon[37]` (the SSID length byte) pointed into
+the middle of the TIM IE: **every transmitted beacon advertised a bogus SSID**
+and the intended SSID strings were appended as trailing garbage.
 
 ```c
-/* después — ssid_spam.c:62-80, :205-226 */
+/* after - ssid_spam.c:62-80, :205-226 */
 #define BEACON_SSID_OFFSET 38
 _Static_assert(BEACON_SSID_OFFSET == sizeof(beacon_raw), "...");
-#define BEACON_MAX_SSID_LEN 32     /* el límite de 802.11 */
+#define BEACON_MAX_SSID_LEN 32     /* 802.11 limit */
 
 memcpy(beacon, beacon_raw, sizeof(beacon_raw));
 memcpy(beacon + BEACON_SSID_OFFSET, ssids_attack[line], ssid_len);
@@ -1264,18 +1267,19 @@ if (err != ESP_OK) {
 }
 ```
 
-También: VLA eliminada (`uint16_t seqnum[MAX_STRINGS]` en vez de
-`seqnum[total_lines]`), `spam_running` + `ssid_spam_stop_task()` para la
-reentrada, y `flash_storage_get_list()` con capacidad explícita.
+Additional fixes: removed the VLA (`uint16_t seqnum[MAX_STRINGS]` instead of
+`seqnum[total_lines]`), added `spam_running` + `ssid_spam_stop_task()` for safe
+re-entry, and updated `flash_storage_get_list()` to take an explicit capacity.
 
-### 9.8 `modbus_tcp`: la longitud MBAP
+### 9.8 `modbus_tcp`: Invalid MBAP Length Field
 
-El campo *Length* de la cabecera MBAP se calculaba como `6 + byte_count`;
-debería ser `7 + byte_count` (UnitId(1) + PDU(6+byte_count)). El valor
-antiguo era 6 bytes más corto y **ningún PLC lo aceptaba**.
+The MBAP header *Length* field was previously calculated as `6 + byte_count`;
+the Modbus TCP specification requires `7 + byte_count` (UnitId(1) +
+PDU(6+byte_count)). The old value was 1 byte short, causing **compliant PLCs to
+reject the frame**.
 
 ```c
-/* después — modbus_engine_cmd.c:68-84, :118 */
+/* after - modbus_engine_cmd.c:68-84, :118 */
 /* 13 header bytes + 2 per register / 1 per 8 coils. */
 size_t payload_bytes = (function_code == 0x0F) ? ((size_t) num_values + 7) / 8
                                                 : (size_t) num_values * 2;
@@ -1288,27 +1292,27 @@ uint8_t request[MODBUS_TCP_MAX_REQUEST_LEN] = {0};
 data_len = 7 + byte_count; /* Length = 7 + byte_count */
 ```
 
-Además `MODBUS_TCP_MAX_REQUEST_LEN 260` como constante nombrada, el
-`request_len` que viene de NVS se **satura** antes de usarlo como longitud de
-copia, y `modbus_engine_get_ctx()` ahora **devuelve** ante NULL en vez de
-caer en una desreferencia.
+Additionally, `MODBUS_TCP_MAX_REQUEST_LEN 260` was defined as a named constant,
+`request_len` loaded from NVS is now **clamped** before being used as a `memcpy`
+length, and `modbus_engine_get_ctx()` returns early on `NULL` instead of
+dereferencing it.
 
-### 9.9 `catdos`: fuga y desbordamiento
+### 9.9 `catdos`: Memory Leak and Out-of-Bounds Write
 
 ```c
-/* antes */
-for (int i = 0; i < aps_count; i++) { free(wifi_list[i]); }   /* aps_count viene de NVS */
+/* before */
+for (int i = 0; i < aps_count; i++) { free(wifi_list[i]); }   /* aps_count comes from NVS */
 ...
 aps_count = preferences_get_int("count_ap", 0);
 for (int i = 0; i < aps_count; i++) {
   char wifi_ap[100]; sprintf(wifi_ap, "wifi%d", i);
   preferences_get_string(wifi_ap, wifi_ssid, 100);
-  wifi_list[i] = strdup(wifi_ssid);      /* fuga en la reentrada; OOB si aps_count > 20 */
+  wifi_list[i] = strdup(wifi_ssid);      /* leaks on re-entry; OOB if aps_count > 20 */
 }
 ```
 
 ```c
-/* después — catdos_module.c:415-448 */
+/* after - catdos_module.c:415-448 */
 if (aps_count > 20) { aps_count = 20; }
 for (int i = 0; i < 20; i++) {
   if (wifi_list[i] != NULL) { free(wifi_list[i]); wifi_list[i] = NULL; }
@@ -1325,24 +1329,24 @@ for (int i = 0; i < aps_count; i++) {
 aps_count = loaded;
 ```
 
-Más: buffer de petición 128 → 256 bytes con el retorno de `snprintf`
-comprobado, `arg_end(2)` → `arg_end(3)` (off-by-one de *argtable*), y
-límite explícito de 32 bytes en host/port/endpoint.
+Additional fixes: increased request buffer from 128 to 256 bytes with
+`snprintf` return checks, fixed `arg_end(2)` -> `arg_end(3)` (argtable
+off-by-one), and enforced a 32-byte limit on host/port/endpoint strings.
 
-### 9.10 `uart_bridge`: el log que devolvía 0
+### 9.10 `uart_bridge`: Non-Blocking Log Sink and Return Value Fix
 
 ```c
-/* antes */
+/* before */
 int custom_log(const char* format, va_list args) {
   char buffer[256];
   vsnprintf(buffer, sizeof(buffer), format, args);
   uart_bridge_write(buffer, strlen(buffer));
-  return 0;                       /* mal: vsnprintf debe devolver la longitud */
+  return 0;                       /* bug: vprintf callback must return formatted length */
 }
 ```
 
 ```c
-/* después — uart_bridge.c:74-124 */
+/* after - uart_bridge.c:74-124 */
 int custom_log(const char* format, va_list args) {
   char buffer[256];
   va_list args_copy; va_copy(args_copy, args);
@@ -1352,7 +1356,7 @@ int custom_log(const char* format, va_list args) {
   size_t len = strlen(buffer);
   if (len > 0) {
     if (uart_wait_tx_done(UART_NUM_0, pdMS_TO_TICKS(5)) != ESP_OK) {
-      return needed;              /* descartar la línea en vez de bloquear todos los loggers */
+      return needed;              /* drop the line rather than stalling every logger */
     }
     uart_write_bytes(UART_NUM_0, buffer, len);
   }
@@ -1360,29 +1364,30 @@ int custom_log(const char* format, va_list args) {
 }
 ```
 
-El `uart_wait_tx_done` con timeout de 5 ms es necesario porque
-`uart_write_bytes()` es un `xRingbufferSend(..., portMAX_DELAY)` y este
-*sink* lo alcanza **todos** los `ESP_LOGx`, incluido el de la tarea
-`esp_timer` que ejecutaba los callbacks de botón.
+The 5 ms timeout on `uart_wait_tx_done` is critical because `uart_write_bytes()`
+calls `xRingbufferSend(..., portMAX_DELAY)`, and this log sink is invoked by
+**every** `ESP_LOGx` call in the firmware, including those on the `esp_timer`
+task.
 
-Además: la VLA `char buffer[buffer_size]` → `malloc(buffer_size + 1)` con
-tope `UART_BRIDGE_MAX_BUFFER_SIZE 4096`, `assert()` → comprobaciones
-explícitas, y `println` parseaba con la tabla de argumentos equivocada.
+Additional fixes: replaced VLA `char buffer[buffer_size]` with
+`malloc(buffer_size + 1)` capped at `UART_BRIDGE_MAX_BUFFER_SIZE 4096`,
+replaced `assert()` with explicit error checks, and fixed `println` parsing
+against the wrong argument table.
 
-### 9.11 `detector`: el orden de parada
+### 9.11 `detector`: Shutdown Ordering
 
 ```c
-/* antes — detector.c:126-147 */
+/* before - detector.c:126-147 */
 esp_wifi_set_promiscuous(true);
 esp_wifi_set_promiscuous_rx_cb(packet_handler);
 ...
 /* stop */
 esp_wifi_stop();
-esp_wifi_set_promiscuous(false);   /* mata la captura de OTROS subsistemas */
+esp_wifi_set_promiscuous(false);   /* kills capture for OTHER subsystems */
 ```
 
 ```c
-/* después — detector.c:114-121, :146-153 */
+/* after - detector.c:114-121, :146-153 */
 if (radio_lease_prom_acquire(RADIO_PROM_DEAUTH_DETECTOR, packet_handler) != ESP_OK) {
   ESP_LOGE(TAG, "could not claim promiscuous mode");
   return;
@@ -1396,10 +1401,10 @@ radio_lease_prom_release(RADIO_PROM_DEAUTH_DETECTOR);
 esp_wifi_stop();
 ```
 
-### 9.12 `memory_monitor`: saturación de divisiones
+### 9.12 `memory_monitor`: Clamping Division Underflow
 
 ```c
-/* antes */
+/* before */
 static float calculate_fragmentation(size_t total_free, size_t largest_block) {
   if (total_free == 0) return 100.0f;
   return ((float)(total_free - largest_block) / (float)total_free) * 100.0f;
@@ -1407,7 +1412,7 @@ static float calculate_fragmentation(size_t total_free, size_t largest_block) {
 ```
 
 ```c
-/* después — memory_monitor.c:29-33 */
+/* after - memory_monitor.c:29-33 */
 static float calculate_fragmentation(size_t total_free, size_t largest_block) {
   if (total_free == 0 || largest_block >= total_free) {
     return (total_free == 0) ? 100.0f : 0.0f;
@@ -1416,20 +1421,20 @@ static float calculate_fragmentation(size_t total_free, size_t largest_block) {
 }
 ```
 
-Además, `heap_monitor_start()`/`stop()` toman un mutex alrededor de toda la
-transición de estado, y **todos** los caminos de retorno temprano lo liberan.
+Additionally, `heap_monitor_start()` and `stop()` now acquire a mutex around
+the entire state transition, releasing it on **all** early-return paths.
 
-### 9.13 `resistor_detector`: la matemática fuera del `#ifdef`
+### 9.13 `resistor_detector`: Extracting Pure Math Outside `#ifdef ESP_PLATFORM`
 
-La aritmética pura se extrajo del bloque `#ifdef ESP_PLATFORM` a funciones
-testeables en el host:
+The calculation logic was extracted outside `#ifdef ESP_PLATFORM` into
+host-testable functions:
 
 - `resistor_calculate_pullup_adc()`
 - `resistor_calculate_pulldown_adc()`
 - `resistor_calculate_voltage_divider()`
 - `resistor_detector_evaluate_samples()`
 
-Con un enum de resultado nuevo:
+With an explicit status enum:
 
 ```c
 typedef enum {
@@ -1442,55 +1447,55 @@ typedef enum {
 } resistor_calc_status_t;
 ```
 
-`adc_raw == 0` → circuito abierto; `adc_raw == adc_max` → cortocircuito;
-`adc_max == 0` → `DIV_ZERO`. 12 tests de host.
+`adc_raw == 0` -> open circuit; `adc_raw == adc_max` -> short circuit;
+`adc_max == 0` -> `DIV_ZERO`. Covered by 12 host unit tests.
 
-### 9.14 Catálogo de módulos endurecidos
+### 9.14 Catalog of Hardened Modules
 
-| Módulo | Commit | Qué se arregló |
+| Module | Commit | Fixes Applied |
 |---|---|---|
-| `war_bee` | `857a17a9` | `vTaskSuspend(NULL)`, `xTaskCreate` sin comprobar |
-| `war_thread` | `6758054b` | trabajo pesado dentro del lock de OT (§9.3) |
-| `settings` + `screen_saver` | `7d4b08f2` | contrato de parada real del salvapantallas (§9.4) |
-| `web_file_browser` | `a3bf17f2` | variable definida en la cabecera → `extern` + `.c` |
-| `cat_dos` | `e0b79f30` | fuga de `strdup`, OOB con `aps_count` de NVS (§9.9) |
-| `file_manager` + `files_ops` | `b0163862`, `2c177f0d` | tamaños sin desbordamiento, comprobación de path traversal, 23 tests |
-| `modbus_tcp` | `e73754f7` | longitud MBAP, `request_len` saturado (§9.8) |
-| `ssid_spam` | `f5c2747f` | beacon mal construido (§9.7) |
-| `uart_bridge` | `1a763db1`, `c9579d2b` | log sink no bloqueante (§9.10) |
-| `deauth detector` | `1f86aba6` | reclamo de promiscuo, orden de parada (§9.11) |
-| `memory_monitor` | `f3c3c248` | saturación de divisiones (§9.12) |
-| `trackers` | `6a078453`, `6c958e7e` | carrera de auto-borrado (§9.5), orden BLE→SD |
-| `wifi_analyzer` | `931260ad` | el fallo de SD ahora es fatal; `close_file` incondicional |
-| `bt_spam` | `280368ca`, `913e2d81` | pila de la tarea, carrera de borrado, fugas en camino de error |
-| `resistor_detector` | `c69437cc` | matemática extraída y protegida (§9.13) |
-| `gps` / `wardriving` | `00a2b83d` | `CSV_LINE_SIZE` 150→256, VLA eliminada, `strcat`→`strncat`, buffers en pila |
-| `open_thread` | `339f0dbd` | `channel` a `static`; suscripción al bus |
-| `oled_screen` | `69427bb5` | estado a `static`, `oled_screen_ink()` |
-| `radar_selector` | `e2165751` | estado a `static` |
-| `flock / surveillance` | `7ce2761d`, `ddf071ca` | sin *callback* de salida; la pila BLE se quedaba arriba |
-| `drone_id` | `80d47bbf` | símbolos del driver compartidos a `static` |
+| `war_bee` | `857a17a9` | Guarded `vTaskSuspend(NULL)` and unchecked `xTaskCreate` |
+| `war_thread` | `6758054b` | Moved heavy I/O out of the OpenThread lock (section 9.3) |
+| `settings` + `screen_saver` | `7d4b08f2` | Synchronous stop contract via exit semaphore (section 9.4) |
+| `web_file_browser` | `a3bf17f2` | Moved header-defined variable to `extern` + `.c` definition |
+| `cat_dos` | `e0b79f30` | Fixed `strdup` leak and OOB write from NVS `aps_count` (section 9.9) |
+| `file_manager` + `files_ops` | `b0163862`, `2c177f0d` | Overflow-safe sizes, path traversal checks, 23 host tests |
+| `modbus_tcp` | `e73754f7` | Fixed MBAP length and clamped `request_len` (section 9.8) |
+| `ssid_spam` | `f5c2747f` | Fixed malformed beacon frame construction (section 9.7) |
+| `uart_bridge` | `1a763db1`, `c9579d2b` | Non-blocking log sink and accurate return length (section 9.10) |
+| `deauth detector` | `1f86aba6` | Promiscuous lease claim and shutdown ordering (section 9.11) |
+| `memory_monitor` | `f3c3c248` | Division clamping and state mutex (section 9.12) |
+| `trackers` | `6a078453`, `6c958e7e` | Fixed self-delete race (section 9.5) and BLE->SD init order |
+| `wifi_analyzer` | `931260ad` | SD mount failure treated as fatal; unconditional `close_file` |
+| `bt_spam` | `280368ca`, `913e2d81` | Task stack sizing, task-delete race, error-path cleanup |
+| `resistor_detector` | `c69437cc` | Extracted and guarded pure math functions (section 9.13) |
+| `gps` / `wardriving` | `00a2b83d` | `CSV_LINE_SIZE` 150->256, removed VLA, `strcat`->`strncat`, stack buffers |
+| `open_thread` | `339f0dbd` | Made `channel` `static`; subscribed to event bus |
+| `oled_screen` | `69427bb5` | Privatized state to `static`, added `oled_screen_ink()` |
+| `radar_selector` | `e2165751` | Privatized state to `static` |
+| `flock / surveillance` | `7ce2761d`, `ddf071ca` | Added missing exit callback; released BLE stack on exit |
+| `drone_id` | `80d47bbf` | Privatized shared driver symbols to `static` |
 
 ---
 
-## 10. Privatización del estado
+## 10. State Privatization
 
-### 10.1 El patrón
+### 10.1 The Pattern
 
-*`static` a nivel de fichero + funciones de acceso.* La variable conserva su
-nombre y su fichero; lo que cambia es el **enlace**, de externo a interno; la
-API pública pasa a ser un par getter/setter.
+*File-scope `static` variables + accessor functions.* Each variable keeps its
+name and file, changing linkage from external to internal and exposing a clean
+getter/setter pair where needed.
 
 ```c
 /* radio_selector.c */
--static uint8_t radio_selected_option;
+-uint8_t radio_selected_option;
 +static uint8_t radio_selected_option;
  uint8_t radio_selector_get_selected_option() { return radio_selected_option; }
 ```
 
-### 10.2 Qué se privatizó
+### 10.2 Privatized Symbols
 
-| Módulo | Símbolos | Commit |
+| Module | Symbols | Commit |
 |---|---|---|
 | `sd_card.c` | `_format_if_mount_failed`, `_sd_card_info` | `080d8b29` |
 | `open_thread.c` | `mAddr`, `dataset` | `010e3446` |
@@ -1498,7 +1503,7 @@ API pública pasa a ser un par getter/setter.
 | `oled_screen.c` | `dev`, `oled_mutex` | `69427bb5` |
 | `gps_module.c` | `nmea_hdl`, `gps_event_callback`, `TIME_ZONES[]` | `00a2b83d` |
 | `gps_screens.c` | `gps_help_menu` | `00a2b83d` |
-| `gps/wardriving/*` | 12 símbolos | `00a2b83d` |
+| `gps/wardriving/*` | 12 symbols | `00a2b83d` |
 | `open_thread_module.c` | `channel` | `339f0dbd` |
 | `warbee_module.c` | `csv_file_name`, `csv_file_buffer` | `857a17a9` |
 | `warthread_module.c` | `csv_file_name`, `csv_file_buffer` | `6758054b` |
@@ -1506,22 +1511,22 @@ API pública pasa a ser un par getter/setter.
 | `sd_card_settings_module.c` | `state` | `7d4b08f2` |
 | `web_file_browser.c` | `mount_path`, `show_hidden_files` | `a3bf17f2` |
 | `wifi_screens_module.c` | `wifi_sniffer_animation_task_handle`, `pkts_offset` | `fd139212` |
-| `uart_bridge_app.c` | 4 bytes de opciones | `1a763db1` |
+| `uart_bridge_app.c` | 4 option bytes | `1a763db1` |
 | `drone_id_anim.c` | `drone_anim_order`, `drone_anim_durations_ms`, `drone_animation` | `d16af92c` |
 | `OTA.c` | `ota_show_event_cb` | `0beea4cc` |
 | `OTA/http_server.c` | `fw_update_reset` | `0beea4cc` |
 | `uart_bridge.c` | `uart_bridge_config` | `c9579d2b` |
 
-### 10.3 Los datos fuera de las cabeceras (la limpieza del `-zmuldefs`)
+### 10.3 Moving Data Out of Headers (Eliminating `-zmuldefs`)
 
-**El problema.** Los arrays de bitmaps y las tablas de punteros estaban
-*definidos* (no declarados) en las cabeceras. Cada unidad de traducción que
-incluía la cabecera emitía **su propia copia**; el enlazado sólo lo aceptaba
-porque `components/wifi_attacks/CMakeLists.txt` pasaba `-Wl,-zmuldefs` a **todo**
-el firmware. Ese flag además tapaba ~70 símbolos duplicados más.
+**The problem.** Bitmap arrays and pointer tables were *defined* (not merely
+declared) inside header files. Every translation unit including those headers
+emitted **its own duplicate copy**; the linker only accepted this because
+`components/wifi_attacks/CMakeLists.txt` passed `-Wl,-zmuldefs` to **the entire
+firmware build**. That flag also masked ~70 other duplicate symbol definitions.
 
-**El mecanismo.** `extern` en la `.h` + una única definición en un `.c`
-hermano, con este comentario de plantilla:
+**The solution.** `extern` declarations in the `.h` file paired with a single
+definition in a companion `.c` file:
 
 ```c
 /* Definitions split out of main/apps/wifi_analyzer/wifi_bitmaps.h by hand: this data was defined in
@@ -1531,16 +1536,17 @@ hermano, con este comentario de plantilla:
    header. */
 ```
 
-| Cabecera | `.c` nuevo | Qué se movió |
+| Header | New `.c` File | Data Moved |
 |---|---|---|
-| `wifi_bitmaps.h` (364 → 15 líneas) | `wifi_bitmaps.c` (+349) | ~30 arrays de bitmaps + `wifi_bitmap_allArray[4]` |
-| `deauth_screens.h` | `deauth_data.c` (73) | 4 × 32×32 frames, `deauth_menu[]`, `deauth_attacks[]` |
+| `wifi_bitmaps.h` (364 -> 15 lines) | `wifi_bitmaps.c` (+349) | ~30 bitmap arrays + `wifi_bitmap_allArray[4]` |
+| `deauth_screens.h` | `deauth_data.c` (73) | 4 x 32x32 frames, `deauth_menu[]`, `deauth_attacks[]` |
 | `drone_id_bmps.h` | `drone_id_bmps.c` (24) | `drone_id_bmp_1..3_16x8[]` |
-| `zigbee_bitmaps.h` | `zigbee_bitmaps.c` (65) | 4 × `zigbee_bitmap_loading_1..4[]` |
+| `zigbee_bitmaps.h` | `zigbee_bitmaps.c` (65) | 4 x `zigbee_bitmap_loading_1..4[]` |
 | `bitmaps_general.h` | `bitmaps_general.c` (244) | `minino_face[]`, logos, `general_bt_wifi_loading[4]` |
-| `menus_include/menus.h` | `menus_data.c` (694) | **todo** el catálogo `menu_t menus[]` (2,3 KB) |
+| `menus_include/menus.h` | `menus_data.c` (694) | **The entire** `menu_t menus[]` catalog (2.3 KB) |
 
-Y en `7a9aaeff` el flag `-zmuldefs` desaparece del firmware, sustituido por:
+In `7a9aaeff`, `-zmuldefs` was removed from the build and replaced with the
+targeted linker wrap it was originally intended for:
 
 ```cmake
 target_link_libraries(${COMPONENT_LIB} "-Wl,--wrap=ieee80211_raw_frame_sanity_check")
@@ -1548,16 +1554,16 @@ target_link_libraries(${COMPONENT_LIB} "-Wl,--wrap=ieee80211_raw_frame_sanity_ch
 
 ---
 
-## 11. Interfaz: catálogo de menús, vistas, iconos y OLED
+## 11. UI: Menu Catalog, Views, Icons, and OLED
 
-### 11.1 El catálogo de menús sale de la cabecera
+### 11.1 Moving the Menu Catalog Out of the Header
 
-`menus_include/menus.h` *definía* `menu_t menus[]` (2,3 KB). Como
-`menus_module.h` incluye `menus.h`, cada una de las ~64 unidades de
-traducción que lo incluían tenía su propia copia.
+`menus_include/menus.h` previously *defined* `menu_t menus[]` (2.3 KB). Because
+`menus_module.h` included `menus.h`, every one of the ~64 translation units
+including it received its own copy of the table.
 
-Ahora (`f708fd5f`) la tabla vive en `menus_data.c` y se accede por
-funciones:
+Now (`f708fd5f`), the catalog lives in `menus_data.c` and is accessed via
+functions:
 
 ```c
 menu_t* menus_get(void);
@@ -1566,7 +1572,7 @@ int menus_find_index(menu_idx_t id);
 menu_t* menus_find(menu_idx_t id);
 ```
 
-Con dos `_Static_assert` que fijan los límites:
+Guarded by two `_Static_assert` checks:
 
 ```c
 _Static_assert(sizeof(menus) / sizeof(menus[0]) <= MENU_COUNT,
@@ -1575,10 +1581,10 @@ _Static_assert(sizeof(menus) / sizeof(menus[0]) < 256,
                "menus_count() truncates at 256 entries");
 ```
 
-> `menus_count()` devuelve `uint8_t`, así que a partir de 256 entradas el
-> valor se truncaría (260 → 4) y casi todo el árbol quedaría inalcanzable.
+> `menus_count()` returns `uint8_t`, so at 256 or more entries the count would
+> wrap around (e.g., 260 -> 4), rendering most of the menu tree unreachable.
 
-### 11.2 La estructura de una entrada
+### 11.2 Menu Entry Structure
 
 ```c
 typedef struct {
@@ -1587,16 +1593,16 @@ typedef struct {
   const char*  display_name;
   const char*  entry_cmd;
   uint8_t      last_selected_submenu;
-  menu_cb_t    on_enter_cb;      /* antes void* */
+  menu_cb_t    on_enter_cb;      /* previously void* */
   menu_cb_t    on_exit_cb;
   bool         is_visible;
 } menu_t;
 ```
 
-Los `menu_cb_t` pasaron de `void*` a `void (*)(void)`, así que el compilador
-impone la firma.
+`menu_cb_t` was changed from `void*` to `void (*)(void)` so the compiler
+enforces callback signatures.
 
-El catálogo se compila condicionalmente por dentro del array:
+Entries inside the catalog array are conditionally compiled:
 
 ```c
 #if defined(CONFIG_SDR_ENABLE)
@@ -1609,14 +1615,14 @@ El catálogo se compila condicionalmente por dentro del array:
  .on_exit_cb = rf_spectrum_app_stop, .is_visible = true}
 ```
 
-Y `menus_data.c:53-58` explica el `#include "sdkconfig.h"` explícito:
+And `menus_data.c:53-58` explains why `#include "sdkconfig.h"` is explicit:
 
 > Most of the catalogue below is gated on CONFIG_* symbols. In the IDF build
 > they arrive through the toolchain, but relying on `<stdio.h>` to drag
 > `sdkconfig.h` in is fragile: dropping that include would silently compile
 > out ~60 entries with no diagnostic.
 
-### 11.3 El lookup por `entry_cmd` pasó a ser exacto
+### 11.3 Exact Matching on `entry_cmd`
 
 ```c
 /* menus_module.c:54-68 */
@@ -1628,16 +1634,15 @@ if (!strcmp(catalogue[i].entry_cmd, entry_cmd)) return i;
 
 ### 11.4 `menu_at_checked()`
 
-Antes, un `get_menu_idx()` que fallaba **redirigía a la raíz**. Eso hacía que
-esconder una entrada alterase la visibilidad de la raíz y dejase
-`current_menu` en `-1`, desde donde el árbol de menús ya no puede salir. Ahora
-hay dos variantes: `menu_at()` (con reserva a la raíz) y `menu_at_checked()`
-(devuelve `NULL` y registra el error) — y los escritores (esconder/revelar)
-usan la segunda.
+Previously, a failed `get_menu_idx()` lookup **fell back to index 0 (root)**.
+Hiding a non-existent entry therefore hid the root menu and left `current_menu`
+at `-1`, trapping navigation. There are now two helpers: `menu_at()` (which
+falls back to root for read paths) and `menu_at_checked()` (which returns
+`NULL` and logs an error), used by all mutating callers (hide/expose).
 
-### 11.5 Las vistas de menú
+### 11.5 Menu View Styles
 
-Cuatro estilos, registrados en `menu_views/menu_views.c:120-133`:
+Four selectable styles are registered in `menu_views/menu_views.c:120-133`:
 
 ```c
 static const menu_view_t s_views[] = {
@@ -1648,15 +1653,15 @@ static const menu_view_t s_views[] = {
 };
 ```
 
-| Índice | Nombre | Geometría |
+| Index | Name | Layout Geometry |
 |---|---|---|
-| 0 | Classic | delega en el renderizado preexistente |
-| 1 | Icon List | 4 filas × 13 px, icono en x=3, etiqueta en x=18, marco en la selección, barra de scroll a la derecha |
-| 2 | Grid | rejilla 4×2 de iconos, celdas 32×26, 8 por página, doble marco |
-| 3 | Hero Dock | icono grande (6,8) + título escalado ×2 si cabe en 104 px, contador `"%d of %d"`, dock de 8 iconos en y=40 |
+| 0 | Classic | Delegates to the original text list renderer |
+| 1 | Icon List | 4 rows x 13 px, icon at x=3, label at x=18, selection frame, scrollbar on the right |
+| 2 | Grid | 4x2 icon grid, 32x26 cells, 8 per page, double selection border |
+| 3 | Hero Dock | Large icon at (6,8) + title scaled x2 if it fits within 104 px, `"%d of %d"` counter, 8-icon dock at y=40 |
 
-La selección se guarda en NVS bajo la clave `"menu_view"` (uint8, 0 =
-Classic). El punto único de enganche es `display_menus()` en
+The active style is persisted in NVS under key `"menu_view"` (uint8, 0 =
+Classic). The single hook point is `display_menus()` in
 `menus_module.c:88-100`:
 
 ```c
@@ -1670,35 +1675,35 @@ Classic). El punto único de enganche es `display_menus()` en
   oled_screen_display_show();
 ```
 
-Las vistas son **sólo de render**: la navegación, el árbol y los
-*callbacks* de entrada/salida no se tocan.
+Views are **purely rendering layers**: navigation, tree structure, and
+entry/exit callbacks remain unchanged.
 
-El ajuste vive en `settings/menu_style/menu_style.c` y reutiliza el
-selector genérico (`general_radio_selection`).
+The user setting lives in `settings/menu_style/menu_style.c` and reuses
+`general_radio_selection`.
 
-### 11.6 `menu_gfx.c` y `menu_icons.c`
+### 11.6 `menu_gfx.c` and `menu_icons.c`
 
-**`menu_gfx.c`** (73 líneas) — utilidades de dibujo:
+**`menu_gfx.c`** (73 lines) provides pixel-coordinate drawing utilities:
 
-| Función | Qué hace |
+| Function | Description |
 |---|---|
-| `menu_gfx_text(x, y, s, scale, lit)` | texto en coordenadas de **píxel** (no de página) y escalado entero, sobre `font8x8_basic_tr[]` |
+| `menu_gfx_text(x, y, s, scale, lit)` | Renders text at **pixel** (not page) coordinates with integer scaling using `font8x8_basic_tr[]` |
 | `menu_gfx_text_width(s, scale)` | `strlen(s) * 8 * scale` |
-| `menu_gfx_text_clip(x, y, s, maxpx, lit)` | trunca a `maxpx/8` caracteres, sin envolver |
-| `menu_gfx_frame(x, y, w, h)` | marco sin esquinas con 4 líneas |
-| `menu_gfx_scrollbar(n, rows, top)` | barra en x=124, y=11, 3×52 px |
+| `menu_gfx_text_clip(x, y, s, maxpx, lit)` | Truncates string to `maxpx/8` characters without wrapping |
+| `menu_gfx_frame(x, y, w, h)` | Draws a cornerless 4-line frame |
+| `menu_gfx_scrollbar(n, rows, top)` | Draws a 3x52 px scrollbar at x=124, y=11 |
 
-**`menu_icons.c`** (386 líneas) — 43 primitivas de dibujo (`p`, `ln`, `rc`,
-`circ`, `arc`) y **43 glifos**: 11 de categoría (`ic_wifi`, `ic_bt`,
-`ic_zig`, `ic_thread`, `ic_gps`, `ic_chip`, `ic_folder`, `ic_apps`, `ic_gear`,
-`ic_info`, `ic_dot`) y 32 metáforas de acción (`ic_scan`, `ic_waves`,
+**`menu_icons.c`** (386 lines) defines 5 drawing primitives (`p`, `ln`, `rc`,
+`circ`, `arc`) and **43 procedural glyphs**: 11 category icons (`ic_wifi`,
+`ic_bt`, `ic_zig`, `ic_thread`, `ic_gps`, `ic_chip`, `ic_folder`, `ic_apps`,
+`ic_gear`, `ic_info`, `ic_dot`) and 32 action icons (`ic_scan`, `ic_waves`,
 `ic_bolt`, `ic_play`, `ic_doc`, `ic_download`, `ic_card`, `ic_clock`,
 `ic_speed`, `ic_route`, `ic_sat`, `ic_bulb`, `ic_toggle`, `ic_moon`,
 `ic_stealth`, `ic_zzz`, `ic_drone`, `ic_cam`, `ic_key`, `ic_tag`, `ic_lock`,
 `ic_term`, `ic_monitor`, `ic_list`, `ic_disk`, `ic_apple`, `ic_android`,
 `ic_windows`, `ic_samsung`, `ic_all`, `ic_check`, `ic_back`).
 
-El mapa tiene **70 entradas** indexadas por el `display_name` del menú:
+The lookup table maps **70 entries** by menu `display_name`:
 
 ```c
 menu_icon_fn menu_icon_for(const char* n) {
@@ -1708,13 +1713,12 @@ menu_icon_fn menu_icon_for(const char* n) {
 }
 ```
 
-> `ic_moon` y `ic_back` están definidos pero **no están en el mapa**: glifos
-> muertos.
+> Note: `ic_moon` and `ic_back` are defined but not referenced in `MAP`.
 
-### 11.7 OLED: SH1106 y sondeo de dirección
+### 11.7 OLED: SH1106 Support and I2C Address Probing
 
-El soporte del SH1106 (`05c33cbb`) está en el **driver**, no en
-`oled_screen`. La elección es un `choice` de Kconfig que ya existía:
+SH1106 support (`05c33cbb`) is implemented in the **OLED driver** rather than
+`oled_screen`. The controller type is selected via Kconfig:
 
 ```
 choice DRIVER
@@ -1723,7 +1727,7 @@ choice DRIVER
     default SSD1306 if !BOARD_MININO
 ```
 
-El sondeo de dirección sustituye la dirección fija:
+Dynamic I2C address probing replaces a hardcoded address:
 
 ```c
 // oled_driver_i2c.c:56-66
@@ -1739,21 +1743,21 @@ if (i2c_probe_address(0x3C)) {
 }
 ```
 
-El sondeo es un START → byte de dirección → STOP, con timeout de 50 ms. El
-camino SPI **no** sondea (SPI no tiene dirección).
+Probing sends START -> address byte -> STOP with a 50 ms timeout. The SPI path
+does not probe.
 
-Diferencias entre los dos controladores:
+Differences between the two controllers:
 
-| Aspecto | SSD1306 | SH1106 |
+| Aspect | SSD1306 | SH1106 |
 |---|---|---|
-| Bomba de carga | `0x8D` + `0x14` (desactiva la interna) | `0xAD` + `0x8B` (DC-DC **on**) + `0x32` (8,0 V) |
-| Precharge | no se manda | `0xD9 0x1F` |
-| Contraste | `0x81 0xFF` | `0x81 0x80` |
-| Modo de direccionamiento de memoria | `0x20 0x02` + inicio de columna | no se manda (el SH1106 no lo tiene) |
-| Offset de columna | ninguno | **+2** (su RAM es de 132 columnas, el panel de 128 va centrado) |
-| Escaneo COM | `0xC8` siempre | según `dev->_flip` |
+| Charge pump | `0x8D` + `0x14` | `0xAD` + `0x8B` (internal DC-DC **on**) + `0x32` (8.0 V) |
+| Precharge | Not sent | `0xD9 0x1F` |
+| Contrast | `0x81 0xFF` | `0x81 0x80` |
+| Memory addressing mode | `0x20 0x02` + column start | Not sent (unsupported on SH1106) |
+| Column offset | None | **+2** (132-column internal RAM with 128-px panel centered) |
+| COM scan direction | Always `0xC8` | Conditional on `dev->_flip` |
 
-El offset +2 se aplica al empujar píxeles (`oled_driver_i2c.c:193-197`):
+The +2 column offset is applied when pushing pixels (`oled_driver_i2c.c:193-197`):
 
 ```c
   #ifdef CONFIG_SSD1306
@@ -1779,71 +1783,71 @@ El offset +2 se aplica al empujar píxeles (`oled_driver_i2c.c:193-197`):
 size_t oled_screen_ink(void);
 ```
 
-El comando de consola `display` (`cmd_control.c:152-167`) lo usa:
+Exposed via the `display` console command (`cmd_control.c:152-167`):
 `"Report OLED frame buffer ink; 'display redraw' re-renders"`.
 
 ---
 
-## 12. La app nueva: analizador de espectro RF
+## 12. New App: RF Spectrum Analyzer
 
-### 12.1 Qué es
+### 12.1 Overview
 
-Commit `f85b1a53`, 13 ficheros, +2003 líneas. Una app que **escucha el
-espectro 2,4 GHz** y lo representa de cuatro maneras.
+Added in commit `f85b1a53` (13 files, +2,003 lines). An application that
+**monitors the 2.4 GHz spectrum** and visualizes it across four modes.
 
-| Fichero | Líneas | Función |
+| File | Lines | Purpose |
 |---|---|---|
-| `rf_spectrum.c/.h` | 609/158 | callback promiscuo, tarea de medida, entrada, export JSON |
-| `rf_spectrum_channel.c` | 36 | helpers de rango de canales (testeables en host) |
-| `rf_spectrum_drone.c/.h` | 123/45 | detector pasivo de OpenDroneID / Remote ID |
-| `rf_spectrum_pcap.c/.h` | 142/60 | captura PCAP estándar a microSD |
-| `rf_spectrum_screens.c/.h` | 322/51 | render OLED (barras / scope / waterfall / foxhunt) |
-| `rf_spectrum_web.c/.h` | 219/40 | dashboard HTTP + API JSON + API de control |
+| `rf_spectrum.c/.h` | 609/158 | Promiscuous RX callback, sweep task, input handling, JSON export |
+| `rf_spectrum_channel.c` | 36 | Channel range helpers (host-testable) |
+| `rf_spectrum_drone.c/.h` | 123/45 | Passive OpenDroneID / Remote ID detector |
+| `rf_spectrum_pcap.c/.h` | 142/60 | Standard PCAP capture to microSD |
+| `rf_spectrum_screens.c/.h` | 322/51 | OLED renderer (bars / scope / waterfall / foxhunt) |
+| `rf_spectrum_web.c/.h` | 219/40 | HTTP dashboard + JSON status API + control API |
 
-### 12.2 Las cuatro vistas
+### 12.2 The Four View Modes
 
 ```c
 typedef enum {
-  SPECTRUM_VIEW_BARS = 0,      /* 14 canales Wi-Fi, gráfico de barras */
-  SPECTRUM_VIEW_SCOPE = 1,     /* un canal, curva de potencia en vivo */
-  SPECTRUM_VIEW_WATERFALL = 2, /* cascada 2D rodante */
-  SPECTRUM_VIEW_FOXHUNT = 3    /* medidor de proximidad de alta ganancia */
+  SPECTRUM_VIEW_BARS = 0,      /* 14 Wi-Fi channels, bar graph */
+  SPECTRUM_VIEW_SCOPE = 1,     /* single channel, live power trace */
+  SPECTRUM_VIEW_WATERFALL = 2, /* scrolling 2D waterfall */
+  SPECTRUM_VIEW_FOXHUNT = 3    /* high-gain proximity meter */
 } spectrum_view_mode_t;
 ```
 
-Constantes: `RF_WIFI_MAX_CHANNELS 14`, `RF_ZIGBEE_MIN_CHANNEL 11`,
+Constants: `RF_WIFI_MAX_CHANNELS 14`, `RF_ZIGBEE_MIN_CHANNEL 11`,
 `RF_ZIGBEE_MAX_CHANNEL 26`, `RF_NOISE_FLOOR -95`, `RF_MAX_SIGNAL -25`.
 
-### 12.3 Funciones
+### 12.3 Features
 
-| Función | Cómo |
+| Feature | Implementation |
 |---|---|
-| RSSI por canal con *peak-hold* | El callback promiscuo actualiza `channel_rssi[]`, `channel_peak[]`, `channel_packets[]` |
-| Scope | Anillo de 128 muestras del canal enfocado |
-| Waterfall | 36 filas × 27 canales, una fila cada 3 ticks (~60 ms) |
+| Per-channel RSSI with peak-hold | Promiscuous RX callback updates `channel_rssi[]`, `channel_peak[]`, `channel_packets[]` |
+| Scope | 128-sample ring buffer for the focused channel |
+| Waterfall | 36 rows x 27 channels, advancing one row every 3 ticks (~60 ms) |
 | Fox hunting | `Prox% = (RSSI + 95) / 70 * 100` |
-| **RF IDS** | Byte 0 del control de trama: `0xC0` = deauth, `0xA0` = disassoc |
-| **Detección de jammer** | RSSI ≥ −45 dBm durante 20 barridos seguidos → `jammer_alert[ch]` |
-| **OpenDroneID** | IE 221 con OUI `FA:0B:BC`, Remote ID francés `6A:5C:35`, NAN Action Frames `88:69:19:9D:92:09` |
-| **Geiger de audio** | El zumbador pita más rápido cuanto más fuerte es la señal |
-| **Log CSV** | `/sdcard/spectrum_log.csv` |
-| **Captura PCAP** | `/sdcard/spectrum_NN.pcap`, link type 105 (IEEE 802.11) |
-| Cambio de banda | Wi-Fi ⇄ Zigbee/802.15.4 |
+| **RF IDS** | Frame control byte 0: `0xC0` = deauth, `0xA0` = disassoc |
+| **Jammer detection** | RSSI >= -45 dBm for 20 consecutive sweeps triggers `jammer_alert[ch]` |
+| **OpenDroneID** | IE 221 with OUI `FA:0B:BC`, French Remote ID `6A:5C:35`, NAN Action Frames `88:69:19:9D:92:09` |
+| **Audio Geiger counter** | Buzzer click rate scales with signal strength |
+| **CSV logging** | `/sdcard/spectrum_log.csv` |
+| **PCAP capture** | `/sdcard/spectrum_NN.pcap`, link type 105 (IEEE 802.11) |
+| Band switching | Wi-Fi <-> Zigbee/802.15.4 |
 
-### 12.4 Cómo captura
+### 12.4 Capture Loop
 
-La tarea `rf_spectrum_task` (pila 4096, prioridad 5) hace, cada 20 ms:
+The `rf_spectrum_task` (stack 4096, priority 5) runs every 20 ms:
 
-1. **Sintonizar**: en SCOPE y FOXHUNT se fija en el canal actual; en los demás
-   barreja del 1 al 14. Llama a `wifi_driver_set_channel()` (no a
-   `esp_wifi_set_channel()`), por el motivo de `50496e10`: preguntar al driver
-   por su canal reinicia su radio, y los buffers de la radio son ~37–40 KB de
-   heap.
-2. Evaluar la racha de jammer, decaer las alertas, empujar al anillo del
-   scope, una fila del waterfall cada 3 ticks, suavizar el RSSI (1 dB por
-   tick, picos cada 20 ticks), escribir el CSV cada 50 ticks y renderizar.
+1. **Tune**: stays on the selected channel in SCOPE and FOXHUNT modes, or
+   sweeps channels 1 through 14 in BARS and WATERFALL modes. Calls
+   `wifi_driver_set_channel()` (not `esp_wifi_set_channel()` directly) for the
+   reason explained in `50496e10`: avoiding redundant channel switches prevents
+   unnecessary radio resets and ~37-40 KB buffer allocations.
+2. Updates jammer streaks, decays alerts, pushes to the scope ring buffer,
+   advances a waterfall row every 3 ticks, smooths RSSI (1 dB decay per tick,
+   peaks every 20 ticks), flushes CSV every 50 ticks, and renders the screen.
 
-El reclamo del modo promiscuo:
+Promiscuous mode is acquired via `radio_lease`:
 
 ```c
   if (radio_lease_prom_acquire(RADIO_PROM_SPECTRUM, spectrum_promiscuous_rx_cb) != ESP_OK) {
@@ -1851,7 +1855,7 @@ El reclamo del modo promiscuo:
   }
 ```
 
-### 12.5 El dashboard web
+### 12.5 Web Dashboard
 
 ```c
 /* rf_spectrum_web.h:10-15 */
@@ -1863,13 +1867,13 @@ El reclamo del modo promiscuo:
 #define RF_SPECTRUM_WEB_CTRL_PORT 32769
 ```
 
-| Ruta | Método | Para qué |
+| Route | Method | Purpose |
 |---|---|---|
-| `/spectrum` | GET | el dashboard (HTML/CSS/JS en línea) |
-| `/api/spectrum` | GET | instantánea JSON del estado |
-| `/api/spectrum/control` | POST | `?th=<dBm>`, `?cmd=audio\|log\|proto` — **exige cabecera de admin** |
+| `/spectrum` | GET | Interactive web dashboard (inline HTML/CSS/JS) |
+| `/api/spectrum` | GET | JSON state snapshot |
+| `/api/spectrum/control` | POST | `?th=<dBm>`, `?cmd=audio\|log\|proto` - **requires admin header** |
 
-La cabecera de admin:
+Admin header protection:
 
 ```c
 /* rf_spectrum_web.h:17-21 */
@@ -1880,12 +1884,12 @@ La cabecera de admin:
 #define RF_SPECTRUM_ADMIN_HDR "X-Minino-Admin"
 ```
 
-El dashboard sondea la API cada 250 ms y dibuja un gráfico de barras en un
-`<canvas>`.
+The dashboard polls `/api/spectrum` every 250 ms and renders a live bar chart
+on an HTML5 `<canvas>`.
 
-### 12.6 Los comandos de consola
+### 12.6 Console Commands
 
-| Comando | Ayuda |
+| Command | Help Text |
 |---|---|
 | `threshold` | `Set or view RF Spectrum RSSI threshold filter (dBm or 'off')` |
 | `spectrum_audio` | `Control RF Spectrum audio Geiger feedback (on, off, toggle)` |
@@ -1897,25 +1901,25 @@ El dashboard sondea la API cada 250 ms y dibuja un gráfico de barras en un
 
 ---
 
-## 13. Botones: cola y tarea propia
+## 13. Buttons: Dedicated Queue and Task
 
-### 13.1 El problema
+### 13.1 The Problem
 
-`iot_button` sondea los pines GPIO desde un `esp_timer` creado con
-`dispatch_method = ESP_TIMER_TASK`: el callback corría en la **tarea
-`esp_timer`** — prioridad 22, pila de 3584 bytes — de la que dependen **todos**
-los temporizadores del sistema.
+`iot_button` polls GPIO pins from an `esp_timer` created with
+`dispatch_method = ESP_TIMER_TASK`. Consequently, button callbacks executed on
+the **`esp_timer` task** (priority 22, 3,584-byte stack), which services
+**every** software timer in the system.
 
-Desde ahí, `button_event_cb()` llamaba a `menus_input_cb()` y desde ahí a
-todos los `on_enter_cb` / `select_cb` de las apps. Varios de ellos bloquean
-mucho: `sd_card_mount()`, `nvs_flash_init()`, `esp_openthread_init()`,
-`vTaskDelay()` de un segundo o más, o `esp_openthread_lock_acquire(portMAX_DELAY)`.
-Y mientras bloqueaban, **se paraban** el temporizador de *debounce* de los
-botones, los efectos de los LED, los temporizadores del salvapantallas y del
-AFK, el monitor de heap y los temporizadores del Wi-Fi. Montar la SD desde una
-pulsación congelaba la UI durante el montaje.
+From `button_event_cb()`, execution flowed directly into `menus_input_cb()` and
+into app `on_enter_cb` / `select_cb` handlers. Many of those handlers perform
+heavy blocking operations: `sd_card_mount()`, `nvs_flash_init()`,
+`esp_openthread_init()`, multi-second `vTaskDelay()` calls, or
+`esp_openthread_lock_acquire(portMAX_DELAY)`. While they blocked, button
+debounce timers, LED effects, screensaver and AFK timers, the heap monitor, and
+Wi-Fi timers **all stalled**. Mounting the SD card from a button press froze
+the entire UI until mounting completed.
 
-### 13.2 La solución
+### 13.2 The Solution
 
 ```c
 #define INPUT_QUEUE_LEN 16
@@ -1928,15 +1932,15 @@ typedef struct {
 } input_event_t;
 ```
 
-| Aspecto | Valor |
+| Parameter | Value |
 |---|---|
-| Longitud de la cola | 16 eventos (2 bytes cada uno) |
-| Tarea | `"input_task"`, pila 4096, **prioridad 4** |
-| Timeout de envío | **0** (nunca bloquea la tarea del temporizador) |
-| Contador de perdidos | `s_dropped_events`, aviso cada 16 |
+| Queue length | 16 events (2 bytes each) |
+| Task | `"input_task"`, stack 4096, **priority 4** |
+| Send timeout | **0** (never blocks the timer task) |
+| Dropped event counter | `s_dropped_events`, logs a warning every 16 drops |
 
-El productor (`button_event_cb`) sólo desempaqueta y encola; no registra nada
-ni llama a nadie:
+The producer (`button_event_cb`) simply unpacks the event and enqueues it
+without logging or invoking callbacks:
 
 ```c
   input_event_t ev = {.button_name = button_name, .button_event = button_event};
@@ -1951,46 +1955,45 @@ ni llama a nadie:
   }
 ```
 
-El consumidor (`input_task`) lee, registra y despacha:
+The consumer (`input_task`) dequeues, logs, and dispatches:
 
 ```c
   input_event_t ev;
   while (true) {
     if (xQueueReceive(s_input_queue, &ev, portMAX_DELAY) != pdTRUE) continue;
     ESP_LOGI(TAG, "Button %s event %s", button_to_name[ev.button_name], event_to_name[ev.button_event]);
-    /* ... leer cb y locked bajo el mutex de estado ... */
+    /* ... read cb and locked state under mutex ... */
     if (locked || cb == NULL) continue;
     cb(ev.button_name, ev.button_event);
   }
 ```
 
-### 13.3 La API nueva
+### 13.3 New API Functions
 
 ```c
-uint32_t keyboard_module_dropped_events(void);   /* eventos perdidos */
+uint32_t keyboard_module_dropped_events(void);   /* dropped event count */
 bool keyboard_module_inject_event(uint8_t button, uint8_t event);
 ```
 
-`keyboard_module_inject_event()` mete un evento sintético **por el mismo
-camino** que un botón real, desde el *callback* de `iot_button` hasta el
-`input_callback` instalado. Existe para poder pilotar la tubería de entrada
-desde la consola (`press <button> [event]`) sin hardware: el despertar del
-salvapantallas y el renderizado del menú sólo se alcanzan con una pulsación, y
-esa es la parte que más se rompe.
+`keyboard_module_inject_event()` injects a synthetic button event **through the
+exact same pipeline** as a physical button press, from the `iot_button`
+callback down to the active `input_callback`. This enables driving UI
+navigation from the console (`press <button> [event]`) without physical button
+presses, allowing automated testing of screensaver wake-up and menu rendering.
 
-### 13.4 El efecto dominó
+### 13.4 Ripple Effect on Priorities
 
-Al bajar la prioridad de los callbacks de botón de 22 a 4, la tarea de
-animación (prioridad 5) pasó a poder *preemptar* el renderizado del menú. De
-ahí el contrato de parada del salvapantallas (§9.4).
+Moving button callbacks from priority 22 down to priority 4 meant that
+animation tasks running at priority 5 could now preempt menu rendering. That
+exposed the screensaver race fixed in section 9.4.
 
 ---
 
-## 14. microSD: montaje, slots y errores reales
+## 14. microSD: Mounting, Slots, and Accurate Error Reporting
 
-### 14.1 La máquina de estados
+### 14.1 State Machine
 
-El estado vive en tres variables (`sd_card.c:50-55`):
+State is held in five file-scope variables (`sd_card.c:50-55`):
 
 ```c
 sdmmc_card_t* card = NULL;
@@ -2001,28 +2004,28 @@ static SemaphoreHandle_t s_sd_mutex = NULL;
 ```
 
 ```
- sd_card_begin()               → registra el comando "sdtest", crea el mutex
-        │
-        ▼
-  UNMOUNTED ──sd_card_mount()──►  mount()
-                                    ├ spi_bus_initialize()      → error real
-                                    ├ esp_vfs_fat_sdspi_mount() → toma un slot de FATFS
-                                    │    └ si falla: esp_vfs_fat_unregister_path()
-                                    └ s_sd_card_mounted = true
-        │                                     │
-        │                              ESP_OK  │  error
-        │                                     ▼
-        │                                 MOUNTED
-        │                                     │
-        └─────────── sd_card_unmount() ◄──────┘
+  sd_card_begin()               -> registers "sdtest" command, creates mutex
+         │
+         ▼
+   UNMOUNTED ──sd_card_mount()──►  mount()
+                                     ├ spi_bus_initialize()      -> returns real error
+                                     ├ esp_vfs_fat_sdspi_mount() -> claims a FATFS slot
+                                     │    └ on failure: esp_vfs_fat_unregister_path()
+                                     └ s_sd_card_mounted = true
+         │                                     │
+         │                              ESP_OK  │  error
+         │                                     ▼
+         │                                 MOUNTED
+         │                                     │
+         └─────────── sd_card_unmount() ◄──────┘
 ```
 
-`mount()` es el trabajador crudo; `sd_card_mount()` es la puerta pública
-blindada.
+`mount()` is the internal low-level worker; `sd_card_mount()` is the idempotent
+public entry point.
 
-### 14.2 Los cinco arreglos
+### 14.2 The Five Fixes
 
-**a) El error real cuando el bus no arranca** (`d5deb48d`)
+**a) Reporting the actual error when the SPI bus fails to initialize** (`d5deb48d`)
 
 ```c
   ret = spi_bus_initialize(host.slot, &bus_cfg, SPI_DMA_CH_AUTO);
@@ -2036,7 +2039,7 @@ blindada.
   }
 ```
 
-**b) Devolver el slot del sistema de ficheros** (`a3e1809c`)
+**b) Releasing the VFS FAT slot on mount failure** (`a3e1809c`)
 
 ```c
   if (ret != ESP_OK) {
@@ -2046,7 +2049,7 @@ blindada.
     esp_vfs_fat_unregister_path(MOUNT_POINT);
 ```
 
-**c) Montar dos veces dejaba un segundo sistema de ficheros** (`c4f07def`)
+**c) Preventing duplicate mounts from leaking FATFS contexts** (`c4f07def`)
 
 ```c
 esp_err_t sd_card_mount() {
@@ -2059,7 +2062,7 @@ esp_err_t sd_card_mount() {
   }
 ```
 
-Y el coste por montaje se redujo:
+And the per-mount heap footprint was reduced:
 
 ```c
   esp_vfs_fat_sdmmc_mount_config_t mount_config = {
@@ -2070,14 +2073,11 @@ Y el coste por montaje se redujo:
 +     .allocation_unit_size = 4 * 1024};
 ```
 
-`max_files` dimensiona directamente la reserva de heap del IDF
-(`sizeof(vfs_fat_ctx_t) + max_files * sizeof(FIL)`, más `max_files` flags), así
-que duplicarlo duplicaba el coste.
+`max_files` directly scales ESP-IDF's heap allocation
+(`sizeof(vfs_fat_ctx_t) + max_files * sizeof(FIL)` plus per-file state). All
+**22 call sites** to `sd_card_mount()` now go through this idempotent guard.
 
-Hay **22 puntos de llamada** a `sd_card_mount()` que ahora pasan por la
-puerta idempotente.
-
-**d) El comando `sdtest`** (`161643b6`)
+**d) The `sdtest` console command** (`161643b6`)
 
 ```c
 static int sdtest(int argc, char** argv) {
@@ -2095,7 +2095,7 @@ static int sdtest(int argc, char** argv) {
 }
 ```
 
-**e) Montar antes de la primera captura** (`9cabe192`, en la app del SDR)
+**e) Mounting before the first SDR capture** (`9cabe192`)
 
 ```c
   /* The card is mounted before the first capture, not after it: the capture
@@ -2111,26 +2111,27 @@ static int sdtest(int argc, char** argv) {
   }
 ```
 
-### 14.3 `flash_fs`: el montaje recursivo
+### 14.3 `flash_fs`: Recursive Mount Mutex Fix
 
-> **Corrección de atribución.** El commit `b8346169` ("fix: recursive mount
-> mutex preventing first-mount hang") **no** es del componente `sd_card`: es de
-> `firmware/components/flash_fs/flash_fs.c` (SPIFFS). El mutex del `sd_card`
-> sólo se toma alrededor de las operaciones de fichero.
+> **Attribution note.** Commit `b8346169` ("fix: recursive mount mutex
+> preventing first-mount hang") applies to `firmware/components/flash_fs/flash_fs.c`
+> (SPIFFS), **not** `sd_card`. The `sd_card` mutex is only taken around file
+> operations.
 
 ---
 
-## 15. BLE: HID, GATT, spam y sincronización GAP
+## 15. BLE: HID, GATT, Spam, and GAP Synchronization
 
-### 15.1 El HID: deinit asíncrono
+### 15.1 BLE HID: Asynchronous Deinit
 
-**El problema.** `esp_hidd_profile_deinit()` hacía `memset(&hidd_le_env, 0, ...)`
-inmediatamente. Pero el *deinit* en Bluedroid es **asíncrono**: la función
-sólo encola trabajo en la tarea BTC. Un `GATTS_WRITE` o `GATTS_CONFIRM` que
-llegase entre medias alcanzaba punteros nulos y abortaba en la tarea BTC.
+**The problem.** `esp_hidd_profile_deinit()` previously called
+`memset(&hidd_le_env, 0, ...)` immediately. However, Bluedroid deinitialization
+is **asynchronous**: the call merely enqueues teardown work on the BTC task.
+Any `GATTS_WRITE` or `GATTS_CONFIRM` event arriving in the meantime hit NULL
+pointers inside `hidd_le_env` and crashed the BTC task.
 
 ```c
-/* después — esp_hidd_prf_api.c:92-110 */
+/* after - esp_hidd_prf_api.c:92-110 */
 void esp_hidd_wait_for_unreg(uint32_t timeout_ms) {
   int timeout = (int) (timeout_ms / 10);
   while (!hidd_le_env.unreg_signaled && timeout-- > 0) {
@@ -2145,7 +2146,7 @@ void esp_hidd_wait_for_unreg(uint32_t timeout_ms) {
 }
 ```
 
-Y el nuevo `ble_hid_end()`:
+And the updated `ble_hid_end()`:
 
 ```c
 void ble_hid_end(void) {
@@ -2170,7 +2171,7 @@ void ble_hid_end(void) {
 }
 ```
 
-**El bug de la escritura LED fuera de rango** (`hid_device_le_prf.c:662-681`):
+**Out-of-bounds / uninitialized LED write bug** (`hid_device_le_prf.c:662-681`):
 
 ```c
 -      if (param->write.handle ==
@@ -2181,15 +2182,15 @@ void ble_hid_end(void) {
 +              hidd_le_env.hidd_inst.att_tbl[HIDD_LE_IDX_REPORT_LED_OUT_VAL]) {
 ```
 
-Dos fallos en una línea: `hidd_cb` podía ser **NULL**, y `att_tbl[...]`
-podía ser **0** — el handle 0 no es un handle de atributo válido, así que una
-escritura del host al handle 0 cumplía la comparación y llamaba al callback
-con una carga "LED write" falsa.
+Two bugs on one line: `hidd_cb` could be **NULL**, and `att_tbl[...]` could be
+**0** (handle 0 is never a valid attribute handle, so a write to handle 0
+matched the uninitialized entry and invoked the callback with a bogus LED write
+payload).
 
-**El `hidd_clcb_dealloc()` que vaciaba la ranura equivocada:**
+**`hidd_clcb_dealloc()` clearing the wrong connection slot:**
 
 ```c
-/* antes — devolvía true en la primera iteración, sin mirar el conn_id */
+/* before - returned true on the first iteration without checking conn_id */
 -  for (i_clcb = 0, p_clcb = ...; i_clcb < HID_MAX_APPS; i_clcb++, p_clcb++) {
 -    memset(p_clcb, 0, sizeof(hidd_clcb_t));
 -    return true;
@@ -2201,9 +2202,10 @@ con una carga "LED write" falsa.
    }
 ```
 
-**La conexión.** Antes `ESP_HIDD_EVENT_BLE_CONNECT` notificaba a la UI
-inmediatamente, antes del *bonding*; los informes de consumo se perdían en
-silencio. Ahora la notificación se mueve al final del *auth*:
+**Connection state notification.** Previously, `ESP_HIDD_EVENT_BLE_CONNECT`
+notified the UI immediately before bonding completed, causing consumer control
+reports sent right away to be dropped silently. Connection notification now
+waits for authentication completion:
 
 ```c
       if (param->ble_security.auth_cmpl.success) {
@@ -2221,8 +2223,8 @@ silencio. Ahora la notificación se mueve al final del *auth*:
       }
 ```
 
-Y todas las acciones de consumo pasan por una única puerta que responde si el
-host recibió el informe o no:
+And all consumer control actions now pass through a single gate that reports
+whether the host actually received the report:
 
 ```c
 /* Every action button funnels through here so that "did the host actually get
@@ -2232,9 +2234,9 @@ host recibió el informe o no:
 static bool hid_send_consumer(const char* action, uint16_t key_cmd, bool press);
 ```
 
-### 15.2 La sincronización GAP del spam
+### 15.2 BLE Spam GAP Synchronization
 
-**El problema** (`bt_spam_gap_sync.h:1-15`):
+**The problem** (`bt_spam_gap_sync.h:1-15`):
 
 > Bluedroid reports four different completion events through one binary
 > semaphore (ADV_STOP, SET_STATIC_RAND_ADDR, ADV_DATA_RAW_SET, ADV_START).
@@ -2243,25 +2245,25 @@ static bool hid_send_consumer(const char* action, uint16_t key_cmd, bool press);
 > `is_advertising_active` no longer reflects the controller and the loop issues
 > stop/configure/start without confirmation.
 
-**La solución**: un módulo puro, sin FreeRTOS, que decide "este despertar
-¿responde a la pregunta que hice?".
+**The solution:** a pure C module (no FreeRTOS dependency) that tracks whether a
+semaphore wakeup matches the specific GAP command that was issued:
 
 ```c
 typedef struct {
-  uint32_t completed;                          /* contador monótono */
+  uint32_t completed;                          /* monotonic counter */
   esp_gap_ble_cb_event_t last_event;
   esp_bt_status_t last_status;
 } bt_spam_gap_sync_t;
 
 void     bt_spam_gap_sync_reset(bt_spam_gap_sync_t*);
 bool     bt_spam_gap_sync_complete(bt_spam_gap_sync_t*, esp_gap_ble_cb_event_t, esp_bt_status_t);
-uint32_t bt_spam_gap_sync_mark(const bt_spam_gap_sync_t*);   /* instantánea */
+uint32_t bt_spam_gap_sync_mark(const bt_spam_gap_sync_t*);   /* snapshot */
 bool     bt_spam_gap_sync_has_new(const bt_spam_gap_sync_t*, uint32_t mark);
 bool     bt_spam_gap_sync_matches(const bt_spam_gap_sync_t*, esp_gap_ble_cb_event_t wanted);
 bool     bt_spam_gap_sync_succeeded(const bt_spam_gap_sync_t*);
 ```
 
-**El drenaje tiene un orden obligatorio:**
+**Mandatory semaphore drain ordering:**
 
 ```c
 /* Drop every token currently posted. Must be called *before* issuing an
@@ -2271,10 +2273,11 @@ bool     bt_spam_gap_sync_succeeded(const bt_spam_gap_sync_t*);
 static inline void drain_sem(void);
 ```
 
-13 tests de host, incluyendo `test_every_out_of_order_permutation_resolves`
-(las 8 permutaciones × 4 objetivos).
+Covered by 13 host unit tests, including
+`test_every_out_of_order_permutation_resolves` (testing all 8 permutations x 4
+targets).
 
-### 15.3 La validación del payload AD
+### 15.3 Advertising Payload Validation
 
 ```c
 /* A malformed advertising payload is worse than a missing one: a wrong AD
@@ -2296,7 +2299,7 @@ static bool ad_payload_is_well_formed(const spam_model_t* model) {
 }
 ```
 
-### 15.4 El exclusivity publicitaria
+### 15.4 Advertising Exclusivity via the Scan Gate
 
 ```c
   /* Spam needs the radio completely idle before it can work at all: the gate
@@ -2306,7 +2309,7 @@ static bool ad_payload_is_well_formed(const spam_model_t* model) {
   radio_lease_ble_block_scan();
 ```
 
-Y el error que evita:
+This prevents the controller errors:
 
 ```
 "Advertising or scanning now, can't set randaddress"
@@ -2315,27 +2318,27 @@ Y el error que evita:
 
 ---
 
-## 16. Build system: variantes, Kconfig y el cap del banco
+## 16. Build System: Variants, Kconfig, and Capture Bank Cap
 
-### 16.1 El problema de las dos pasadas de CMake
+### 16.1 The Two-Pass CMake Evaluation Problem
 
-ESP-IDF evalúa el `CMakeLists.txt` de cada componente **dos veces**:
+ESP-IDF evaluates each component's `CMakeLists.txt` **twice**:
 
-1. Al expandir el árbol de componentes — **antes** del paso de Kconfig, así que
-   todavía no existe ninguna variable `CONFIG_*`.
-2. Al compilar — después de Kconfig.
+1. During component tree expansion - **before** Kconfig runs, when no
+   `CONFIG_*` variables exist yet.
+2. During build configuration - after Kconfig runs.
 
-Un `if(CONFIG_FOO)` a secas se lleva la rama falsa en la primera pasada, y el
-componente queda registrado **sin fuentes y sin requisitos**. El error
-resultante es críptico:
+Using a plain `if(CONFIG_FOO)` takes the false branch on the first pass,
+registering the component **with no source files and no `REQUIRES` list**. That
+causes cryptic build failures on the second pass:
 
 ```
 bt_gattc.h includes esp_bt.h ... not in the requirements list of bt_gattc
 ```
 
-### 16.2 El helper `minino_kconfig_enabled()`
+### 16.2 The `minino_kconfig_enabled()` Helper
 
-`firmware/cmake/minino_kconfig.cmake` (40 líneas, nuevo en `8d4173ce`):
+`firmware/cmake/minino_kconfig.cmake` (40 lines, added in `8d4173ce`):
 
 ```cmake
 function(minino_kconfig_enabled OPTION RESULT)
@@ -2353,11 +2356,11 @@ function(minino_kconfig_enabled OPTION RESULT)
 endfunction()
 ```
 
-El `sdkconfig` existe en **las dos** pasadas, así que es la fuente fiable.
-El valor debe estar **fijado** en el `sdkconfig` (que es lo que hacen los
-`sdkconfig.defaults`), si no puede cambiar entre pasadas.
+Because `sdkconfig` (and `SDKCONFIG_DEFAULTS`, see section 23.5) is accessible
+during both passes, reading it directly provides consistent component
+registration across passes.
 
-Uso:
+Usage:
 
 ```cmake
 include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/minino_kconfig.cmake")
@@ -2369,16 +2372,17 @@ else()
 endif()
 ```
 
-### 16.3 Los componentes que se pueden dejar fuera
+### 16.3 Conditionally Excluded Components
 
-| Componente | Símbolo que lo gobierna |
+| Component | Controlling Symbol |
 |---|---|
-| `ble_hid`, `ble_scann`, `bt_gattc`, `bt_gatts`, `bt_spam`, `drone_id`, `uart_sender` | `BT_ENABLED` |
+| `ble_hid`, `ble_scann`, `bt_gattc`, `bt_gatts`, `bt_spam`, `drone_id`, `uart_sender` | `BT_ENABLED` / `MININO_BT_STACK` |
 | `esp-zigbee-console`, `zb_cli`, `zigbee_light`, `zigbee_switch` | `MININO_ZIGBEE_STACK` |
 | `open_thread`, `thread_broadcast` | `MININO_OPENTHREAD_STACK` |
-| `gap_dispatcher`, `radio_lease` | *a nivel de fuente* (`#if CONFIG_BT_ENABLED`) |
+| `gap_dispatcher`, `radio_lease` | Source-level `#if CONFIG_BT_ENABLED` |
 
-Y en `firmware/main/CMakeLists.txt`, las apps de `main` se filtran por ruta:
+In `firmware/main/CMakeLists.txt`, `main` application sources are filtered by
+path:
 
 ```cmake
 if(NOT _minino_bt_on)
@@ -2399,7 +2403,7 @@ if(NOT _minino_openthread_on)
 endif()
 ```
 
-Y los tests de host se excluyen de la compilación del firmware:
+And host unit tests are excluded from the firmware build:
 
 ```cmake
 foreach(file ${ALL_SOURCE_FILES})
@@ -2409,23 +2413,24 @@ foreach(file ${ALL_SOURCE_FILES})
 endforeach()
 ```
 
-> **Trampa de CMake.** `firmware/main/CMakeLists.txt:57-60` avisa de que **no**
-> se añada `REQUIRES`/`PRIV_REQUIRES` a `main`: `main` usa el comportamiento
-> por defecto de IDF ("requiere todos los demás componentes"), y nombrar uno
-> lo desactiva y saca a todos los demás del *include path*.
+> **CMake pitfall.** `firmware/main/CMakeLists.txt:57-60` warns **never** to
+> add `REQUIRES` or `PRIV_REQUIRES` to `main`: `main` relies on ESP-IDF's
+> default behavior (implicitly requiring all project components), and naming a
+> single requirement disables that default and drops all other components from
+> the include path.
 
-### 16.4 Las opciones de Kconfig
+### 16.4 Kconfig Options
 
-| Símbolo | Tipo | Defecto Kconfig | Efectivo | Dónde se usa |
+| Symbol | Type | Kconfig Default | Effective Default | Where Used |
 |---|---|---|---|---|
-| `SDR_ENABLE` | bool | `n` | **`y`** (`sdkconfig.defaults:163`) | `main/CMakeLists.txt:87`, `esp_sdr_memory.c:38`, `menus_data.c:644` |
+| `SDR_ENABLE` | bool | `n` | **`y`** in SDR profile (`n` in board profiles) | `main/CMakeLists.txt:87`, `esp_sdr_memory.c:38`, `menus_data.c:644` |
 | `MININO_ZIGBEE_STACK` | bool | `y` | `y` | `main/CMakeLists.txt:16,26-31` |
 | `MININO_OPENTHREAD_STACK` | bool (`depends on MININO_ZIGBEE_STACK`) | `y` | `y` | `main/CMakeLists.txt:17,32-36` |
 
-El prefijo `MININO_` es a propósito: un símbolo de Kconfig no puede definirse
-en dos sitios, y `OPENTHREAD_ENABLED` ya lo define el componente de upstream.
+The `MININO_` prefix is intentional: a Kconfig symbol cannot be defined in two
+places, and `OPENTHREAD_ENABLED` is already defined by upstream OpenThread.
 
-El texto de ayuda de `SDR_ENABLE` describe el mecanismo:
+The `SDR_ENABLE` help text documents the mechanism:
 
 > The engine needs the whole of SRAM block 2 (0x40840000) as its capture
 > bank, so the application image has to fit below it: the build caps the SRAM
@@ -2433,7 +2438,7 @@ El texto de ayuda de `SDR_ENABLE` describe el mecanismo:
 > the image does not fit, the link fails with "SDR: the DRAM image overlaps
 > the capture bank" instead of corrupting the heap at capture time.
 
-### 16.5 `sdkconfig.defaults`: el recorte de IRAM
+### 16.5 `sdkconfig.defaults`: IRAM Trimming
 
 ```diff
 +# The SDR build variant needs the whole of SRAM block 2 (0x40840000) as the
@@ -2452,19 +2457,18 @@ El texto de ayuda de `SDR_ENABLE` describe el mecanismo:
 +CONFIG_SDR_ENABLE=y
 ```
 
-> **`# CONFIG_X is not set` no es un comentario**: es la sintaxis de
-> *kconfgen* para desactivar. Pero `CONFIG_PM_SLP_IRAM_OPT` está en `=y` en la
-> línea 10 y en "not set" en la 160; como en los ficheros de *defaults*
-> gana la línea **última**, el símbolo sigue activo en el `sdkconfig`
-> generado (`firmware/sdkconfig:1818`).
+> **`# CONFIG_X is not set` is not a passive comment**: it is kconfgen syntax
+> to explicitly disable an option. Because `CONFIG_PM_SLP_IRAM_OPT` was set to
+> `=y` on line 10 and `"is not set"` on line 160, the later line wins in
+> `sdkconfig.defaults`.
 
-### 16.6 El `vrt_packet` vendorizado
+### 16.6 Vendored `vrt_packet`
 
-Antes se compilaba directamente de un *checkout* de `esp-sdr` que
-`tools/patches/apply_esp_sdr_minino.py` traía a `<repo>/build-sdr`. Ese árbol
-está en `.gitignore` y el script ya no existe, así que la build **degradaba
-en silencio** a un componente vacío (y el mensaje de error apuntaba a un
-script inexistente). Ahora las fuentes están en el repo:
+Previously, `vrt_packet` was compiled from an external `esp-sdr` checkout
+populated by `tools/patches/apply_esp_sdr_minino.py` into `<repo>/build-sdr`.
+Because `build-sdr` is gitignored and the patch script was removed, clean
+builds silently degraded to an empty component. The sources are now vendored
+directly in the repository:
 
 ```
 firmware/components/vrt_packet/
@@ -2474,9 +2478,9 @@ firmware/components/vrt_packet/
 └── vrt_packet.h 313
 ```
 
-### 16.7 Las particiones
+### 16.7 Partition Tables
 
-Sólo cambió `partitions_no_ota.csv`:
+Only `partitions_no_ota.csv` was modified:
 
 ```diff
 -internal,   data,  spiffs,         ,     4248K,
@@ -2485,14 +2489,14 @@ Sólo cambió `partitions_no_ota.csv`:
 +factory,    app,  factory,         ,     3700K,
 ```
 
-| Tabla | Cambio |
+| Partition Table | Change |
 |---|---|
-| `partitions.csv` (8 MB, OTA) | sin cambios: `ota_0` y `ota_1` de 3700K |
-| `partitions_4MB.csv` | sin cambios: `factory` de 3400K |
-| `partitions_no_ota.csv` | `factory` 3200K → **3700K** (+500K) |
-| `partitions_8MB_NO.csv` | **huérfana**: no la referencia ningún perfil; sigue con 3200K |
+| `partitions.csv` (8 MB, OTA) | Unchanged: `ota_0` and `ota_1` at 3700K |
+| `partitions_4MB.csv` | Unchanged: `factory` at 3400K |
+| `partitions_no_ota.csv` | `factory` 3200K -> **3700K** (+500K) |
+| `partitions_8MB_NO.csv` | Unused by any profile; remains at 3200K |
 
-### 16.8 Los objetivos del Makefile
+### 16.8 Makefile Targets
 
 ```make
 FLASH_FIT_BOARDS_4MB = bsides dragonjar ekoparty bugcon bsseattle
@@ -2506,7 +2510,7 @@ flash_fit:
 	done
 ```
 
-Y el orquestador de tests:
+And the test runner target:
 
 ```make
 tests:
@@ -2529,10 +2533,11 @@ tests:
 	python3 tools/test/test_sdr_patch.py
 ```
 
-> **Roto:** la última línea invoca `tools/test/test_sdr_patch.py`, un fichero
-> que `fe1e0223` borró. Ver §22.3.
+> **Note:** the final line originally invoked `tools/test/test_sdr_patch.py`,
+> which was deleted in `fe1e0223` and subsequently removed from the Makefile
+> (see section 22.3).
 
-`flash_fit` está encadenado en el script de release
+`flash_fit` is chained into the release build script
 (`firmware/get_builds.sh:23-24`):
 
 ```bash
@@ -2543,93 +2548,90 @@ make mergebins
 
 ---
 
-## 17. Tests de host y CI
+## 17. Host Tests and CI
 
-### 17.1 Por qué tests de host
+### 17.1 Why Host Tests
 
-La alternative a un test de host es un test en la placa: hay que flashear,
-encender, hacer la acción y comprobar por el puerto serie. Eso no escala y
-no se puede ejecutar en cada commit. Un test de host es un `gcc` contra el
-PC, con *mocks* de las cabeceras de ESP-IDF.
+Testing exclusively on hardware requires flashing, booting, triggering the
+feature, and inspecting serial output, which does not scale to every commit.
+Host tests compile with native `gcc` on the workstation against lightweight
+ESP-IDF header mocks.
 
-Las reglas que hacen que funcione:
+Three rules make this work:
 
-1. **El código bajo test no puede incluir cabeceras de ESP-IDF.** Por eso
+1. **Code under test must not depend on ESP-IDF runtime headers.** That is why
    `bt_spam_gap_sync.c`, `radio_lease_registry.c`, `event_bus.c`,
-   `rf_spectrum_channel.c` y la matemática del `resistor_detector` están
-   separados de sus módulos.
-2. **Cada suite trae sus propios *mocks*.** Los directorios `test/mock/`
-   contienen las cabeceras mínimas: `esp_err.h`, `esp_log.h`,
-   `freertos/FreeRTOS.h` (el spinlock, como un contador), `esp_gap_ble_api.h`,
-   `sdkconfig.h`…
-3. **Unity** viene de ESP-IDF (`$IDF_PATH/components/unity/unity/src`), salvo
-   `files_ops/test/unity/`, que la *vendoriza* dentro del árbol para no
-   depender de nada externo.
+   `rf_spectrum_channel.c`, and the `resistor_detector` math routines are
+   factored into standalone files.
+2. **Each suite provides its own minimal mocks.** The `test/mock/` directories
+   provide stub headers such as `esp_err.h`, `esp_log.h`,
+   `freertos/FreeRTOS.h` (implementing spinlocks as simple counters),
+   `esp_gap_ble_api.h`, and `sdkconfig.h`.
+3. **Unity** is sourced from ESP-IDF (`$IDF_PATH/components/unity/unity/src`),
+   except for `files_ops/test/unity/`, which vendors Unity directly in-tree.
 
-### 17.2 Las 16 suites
+### 17.2 The 16 Test Suites
 
-| Suite | Tests | Qué fija |
+| Suite | Tests | Invariants Verified |
 |---|---|---|
-| `components/surveillance_detect/test` | 80 | Firmas, matching, IE, overlay, motor, wardriving |
-| `components/nmea_parser/test` | 22 | API de decodificación NMEA manual |
-| `components/drone_id/test` | 27 | Altitud, tiempo Unix, OpenDroneID, spoofing, UTM |
-| `components/files_ops/test` | 23 | Tamaños sin desbordamiento, path traversal, nombres |
-| `components/gap_dispatcher/test` | 9 | El *dispatcher* no roba el slot de Bluedroid |
-| `components/radio_lease/test` | 12 | Reparto de tramas, recuento atómico |
-| `components/event_bus/test` | 11 | Aislamiento de temas, reentrada |
-| `components/bt_spam/test` | 13 | Sincronización GAP |
-| `main/modules/resistor_detector/test` | 12 | Aritmética y casos límite |
-| `main/modules/cmd_control/test` | 16 | Parseo de argumentos de la consola |
-| `main/modules/esp_sdr/test` | 23 | Protocolo esdr + empaquetado I/Q |
-| `main/modules/menus_module/test` | 13 | Catálogo de menús (4 variantes de build) |
-| `main/apps/ble/hid_device/test` | 11 | Perfil HID |
-| `main/apps/rf_spectrum/test` | 11 | Canales Wi-Fi/Zigbee |
-| `main/general/general_scrolling_text/test` | 12 | El splitter del texto rodante |
-| `firmware/tools/test/test_flash_tools.py` | 5 | El comprobador de flash |
+| `components/surveillance_detect/test` | 80 | Signatures, matching, IEs, overlay, detection engine, wardriving |
+| `components/nmea_parser/test` | 22 | Manual NMEA sentence decoding API |
+| `components/drone_id/test` | 27 | Altitude, Unix timestamp, OpenDroneID, spoofing, UTM |
+| `components/files_ops/test` | 23 | Overflow-safe sizes, path traversal protection, incremental naming |
+| `components/gap_dispatcher/test` | 9 | Ensuring later GAP registrations do not starve earlier subscribers |
+| `components/radio_lease/test` | 12 | Promiscuous frame fan-out and atomic reference counting |
+| `components/event_bus/test` | 11 | Topic isolation and callback re-entrancy |
+| `components/bt_spam/test` | 13 | GAP completion event synchronization |
+| `main/modules/resistor_detector/test` | 12 | Divider arithmetic and boundary conditions |
+| `main/modules/cmd_control/test` | 16 | Console command argument parsing |
+| `main/modules/esp_sdr/test` | 23 (+24) | osmoSDR protocol, I/Q packing, and ESPARGOS burst protocol |
+| `main/modules/menus_module/test` | 13 | Menu catalog integrity across build variants |
+| `main/apps/ble/hid_device/test` | 11 | BLE HID profile lifecycle and bounds |
+| `main/apps/rf_spectrum/test` | 11 | Wi-Fi and Zigbee channel validation |
+| `main/general/general_scrolling_text/test` | 12 | Scrolling text line-wrapping splitter |
+| `firmware/tools/test/test_flash_tools.py` | 5 | Partition flash-fit checker |
 
-**Total: 15 suites en C + 1 en Python, 278 tests escritos.** De ellos, 252 pasan,
-4 fallan (`event_bus`) y 22 no compilan (`gap_dispatcher` y `menus_module`).
-Ver §22.
+**Total: 15 C suites + 1 Python suite.** All suites compile and pass (389 test
+assertions total across all variants; see section 22.7).
 
-### 17.3 El `gap_dispatcher` es el ejemplo canónico
+### 17.3 `gap_dispatcher` as the Canonical Example
 
-Su cabecera de test explica por qué existe:
+Its test header explains the motivation:
 
 > Bluedroid keeps a single GAP callback registered via
 > `esp_ble_gap_register_callback()`. If multiple modules call that API, each
 > call overwrites the previous one and prior modules silently miss events
 > (which is a common cause of "BLE scanning/ADV stopped working").
 
-El *mock* (`test/mock/esp_bt_main.c`) reproduce el comportamiento real:
-`esp_ble_gap_register_callback()` **rechaza** la llamada si la pila no está
-ENABLED y guarda **un solo** manejador (gana el último).
+The mock (`test/mock/esp_bt_main.c`) reproduces Bluedroid's exact contract:
+`esp_ble_gap_register_callback()` **rejects** calls when the stack is not
+`ENABLED` and stores **only a single** callback pointer (last caller wins).
 
-Los tests clave:
+Key test cases:
 
-| Test | Qué fija |
+| Test | What It Guards |
 |---|---|
-| `test_registering_later_does_not_starve_earlier_subscribers` | **el fallo que el componente existe para evitar** |
-| `test_registering_after_a_bluedroid_restart_reclaims_the_slot` | tras un ciclo disable/enable, el siguiente registro recupera el slot |
-| `test_registering_twice_does_not_duplicate` | el spam y los escáneres reentran en `begin()` en cada visita al menú |
-| `test_subscriber_table_is_bounded_and_reports_overflow` | la tabla tiene tope y el desborde no expulsa a nadie |
+| `test_registering_later_does_not_starve_earlier_subscribers` | **The exact bug the component was created to prevent** |
+| `test_registering_after_a_bluedroid_restart_reclaims_the_slot` | After a disable/enable cycle, the next registration reclaims the Bluedroid slot |
+| `test_registering_twice_does_not_duplicate` | Spam and scanner modules re-enter `begin()` on every menu visit |
+| `test_subscriber_table_is_bounded_and_reports_overflow` | Table is bounded and overflow does not evict existing subscribers |
 
-### 17.4 El `menus_module` se compila en cuatro variantes
+### 17.4 `menus_module` Compiled Across Multiple Variants
 
 ```make
-build/run-full build/run-no-sd build/run-no-bluetooth build/run-no-wifi
+build/run-full build/run-no-sd build/run-no-bluetooth build/run-no-wifi build/run-no-stacks
 ```
 
-Las variantes reducidas exponen el fallo de "hijo huérfano", que en una build
-completa no se ve: si una entrada hija se compila fuera del `gate` de su
-padre, `navigation_exit()` aterriza en un padre que no resuelve.
+Reduced variants catch "orphan child" bugs that a full build hides: if a child
+menu entry is compiled without matching its parent's `#if` gate,
+`navigation_exit()` lands on an unresolvable parent ID.
 
-El `mock/sdkconfig.h` (99 líneas) es el sustituto del `sdkconfig` real con
-overrides `TEST_CONFIG_<FEATURE>_ENABLED`.
+`mock/sdkconfig.h` (99 lines) substitutes for the generated `sdkconfig` using
+`TEST_CONFIG_<FEATURE>_ENABLED` overrides.
 
-### 17.5 La CI
+### 17.5 Continuous Integration
 
-`.github/workflows/host-tests.yml`: un único job en `ubuntu-latest`, sin
-matriz.
+`.github/workflows/host-tests.yml` runs on `ubuntu-latest`:
 
 ```yaml
       - name: Fetch Unity from ESP-IDF
@@ -2640,10 +2642,8 @@ matriz.
           git -C "$RUNNER_TEMP/esp-idf" submodule update --init --depth 1 components/unity/unity
 ```
 
-Cada suite es un paso con `IDF_PATH: ${{ runner.temp }}/esp-idf`.
-
-Los comentarios de los pasos explican **por qué** cada suite existe, que es
-justo lo que hace útil una CI:
+Each suite runs as a dedicated step with `IDF_PATH: ${{ runner.temp }}/esp-idf`.
+Comments on each step document **why** the suite exists:
 
 > # Bluedroid keeps a single GAP callback, so gap_dispatcher is the only
 > # reason BLE spam, BLE HID, the scanners and the gatt console commands can
@@ -2659,32 +2659,30 @@ justo lo que hace útil una CI:
 > # its counting and filling passes used different wrap thresholds; every
 > # Help/Credits/Legal screen goes through it.
 
-> **Estado actual: la CI está rota.** Ver §22.
-
 ---
 
-## 18. Tools de host
+## 18. Host Tools
 
-Cinco ficheros nuevos en `firmware/tools/`, que antes no existía.
+Five new files in `firmware/tools/`.
 
-### 18.1 `check_flash_fit.py` (97 líneas)
+### 18.1 `check_flash_fit.py` (97 lines)
 
-Parsea la tabla de particiones de ESP-IDF, encuentra la partición `app` **más
-pequeña** y la compara con el binario.
+Parses an ESP-IDF partition table CSV, finds the **smallest** `app` partition,
+and verifies that the compiled binary fits with sufficient margin.
 
 ```
 python3 tools/check_flash_fit.py --partition-table <csv> --app-bin <bin> \
         [--min-free-percent FLOAT] [--label STR]
 ```
 
-| Opción | Por defecto | Significado |
+| Option | Default | Description |
 |---|---|---|
-| `--partition-table` | *obligatorio* | Ruta del CSV de particiones |
-| `--app-bin` | *obligatorio* | Ruta del binario de la app |
-| `--min-free-percent` | **5,0** | Espacio libre mínimo (%) |
-| `--label` | `app` | Prefijo de cada línea de salida |
+| `--partition-table` | *required* | Path to partition table CSV |
+| `--app-bin` | *required* | Path to compiled app binary |
+| `--min-free-percent` | **5.0** | Minimum required free space (%) |
+| `--label` | `app` | Prefix for each output line |
 
-Salida:
+Sample output:
 
 ```
 [minino] partition size: 3700.0 KiB
@@ -2693,121 +2691,113 @@ Salida:
 [minino] OK
 ```
 
-Códigos de salida: 0 si pasa, 1 si falla. Mensajes de fallo:
-`ERROR: Partition table not found`, `ERROR: App binary not found`,
-`ERROR: No app/factory partition found in partition table`,
-`FAIL: free space X% below minimum Y%`.
+Exit codes: 0 on pass, 1 on failure (`ERROR: Partition table not found`,
+`ERROR: App binary not found`, `ERROR: No app/factory partition found in
+partition table`, or `FAIL: free space X% below minimum Y%`).
 
-El CSV se parsea tolerante: se saltan las líneas de comentario, las filas con
-menos de 5 campos y las que no parsean; los tamaños aceptan sufijos `K`/`M` y
-los offsets `0x…`.
+CSV parsing skips comments, rows with fewer than 5 fields, and unparseable
+rows; sizes accept `K`/`M` suffixes and hex `0x...` offsets.
 
-### 18.2 `fix_bootloop.sh` (38 líneas)
+### 18.2 `fix_bootloop.sh` (38 lines)
 
-Recuperación deuna placa que se queda en bucle de reinicio tras una OTA mala. Resetea el
-`otadata` al slot 0 y escribe una imagen buena de Minino en **ambos** slots
-OTA.
+Recovers a board stuck in a bootloop after a bad OTA update. Resets `otadata`
+to slot 0 and flashes a known-good Minino image to **both** OTA slots.
 
 ```bash
-bash firmware/tools/fix_bootloop.sh [PUERTO]     # PUERTO por defecto: /dev/ttyACM0
+bash firmware/tools/fix_bootloop.sh [PORT]     # default PORT: /dev/ttyACM0
 ```
 
-| Paso | Qué hace | Offset |
+| Step | Action | Offset |
 |---|---|---|
-| 1 | Resetea `otadata` al slot 0 | `0x15000` |
-| 2 | Flashea Minino en el slot 1 (para eliminar la imagen vieja) | `0x440000` |
-| 3 | Asegura Minino en el slot 0 | `0xa0000` |
+| 1 | Reset `otadata` to slot 0 | `0x15000` |
+| 2 | Flash Minino into slot 1 (clearing any broken image) | `0x440000` |
+| 3 | Flash Minino into slot 0 | `0xa0000` |
 
-| Constante | Valor |
+| Constant | Value |
 |---|---|
-| Sonda del puerto | 30 iteraciones × 0,5 s (15 s), con `/dev/ttyACM1` como alternativa |
-| Velocidad | 460800 baud |
-| Chip | `esp32c6` |
-| Artefactos | `firmware/build/ota_data_initial.bin`, `firmware/build/minino.bin` (relativos a la **raíz** del repo) |
+| Port probe | 30 iterations x 0.5 s (15 s), falling back to `/dev/ttyACM1` |
+| Baud rate | 460800 baud |
+| Target chip | `esp32c6` |
+| Artifacts | `firmware/build/ota_data_initial.bin`, `firmware/build/minino.bin` (relative to repo root) |
 
-Los mensajes están en español.
+### 18.3 `sdr_capture.py` (192 lines)
 
-### 18.3 `sdr_capture.py` (192 líneas)
-
-Pilota el receptor ESP-SDR por USB Serial/JTAG: sincroniza, sintoniza, saca
-un burst de I/Q y escribe los bytes crudos a un fichero, con estadísticas de
-señal.
+Drives the ESP-SDR receiver over USB Serial/JTAG: synchronizes, tunes,
+requests an I/Q burst, writes raw bytes to a file, and prints signal
+statistics.
 
 ```
-python3 firmware/tools/sdr_capture.py [--port PUERTO] [--freq MHz] [--count N]
-                                      [--rate R] [--out FICHERO]
+python3 firmware/tools/sdr_capture.py [--port PORT] [--freq MHz] [--count N]
+                                      [--rate R] [--out FILE]
 ```
 
-| Opción | Por defecto |
+| Option | Default |
 |---|---|
 | `--port` | `/dev/ttyACM0` |
-| `--freq` | **2400** MHz (100 a 6000) |
-| `--count` | **4096** muestras |
-| `--rate` | **0** (decimación; 0 = a máxima velocidad) |
+| `--freq` | **2400** MHz (100 to 6000) |
+| `--count` | **4096** samples |
+| `--rate` | **0** (decimation code; 0 = full rate) |
 | `--out` | `sdr_capture.bin` |
 
-| Constante | Valor |
+| Constant | Value |
 |---|---|
-| Puerto serie | 115200 baud, `dtr = False`, `rts = False` |
-| Sincronización | 10 intentos de `TRANSPORT?`, 1 s entre ellos |
-| Envasado `CAP20` | **20 bits por par** (10 de I, 10 de Q), *little-endian* |
-| Bytes de carga | `count * 20 / 8` |
-| Bits de I/Q | 10, con centro en 512 |
+| Serial port | 115200 baud, `dtr = False`, `rts = False` |
+| Sync | 10 attempts sending `TRANSPORT?`, 1 s apart |
+| `CAP20` packing | **20 bits per sample pair** (10-bit I, 10-bit Q), little-endian |
+| Payload bytes | `count * 20 / 8` |
+| I/Q bit depth | 10-bit, centered at 512 |
 
-El protocolo es `TRANSPORT?`, `VERSION?`, `LIMITS?`, `FREQ <MHz>` (debe
-responder exactamente `OK`), `CAP20 <count> <rate>` → `DATA <count>` + carga
-cruda + `END`.
+Protocol sequence: `TRANSPORT?`, `VERSION?`, `LIMITS?`, `FREQ <MHz>` (expects
+`OK`), `CAP20 <count> <rate>` -> `DATA <count>` + raw payload + `END`.
 
-La comprobación de señal compara el RMS de la magnitud compleja con su pico:
-si el RMS es `< 1.0` avisa de que *"the burst is flat, the receiver may not be
-running"*; si el RMS supera al pico, error interno y salida 1.
+Signal validation compares the complex magnitude RMS against its peak: if RMS
+is `< 1.0`, it warns *"the burst is flat, the receiver may not be running"*; if
+RMS exceeds peak, it exits with code 1. Requires `pyserial`.
 
-Requiere `pyserial`.
+### 18.4 `test_live_sdr.py` (119 lines)
 
-### 18.4 `test_live_sdr.py` (119 líneas)
-
-Comprobación de radio en vivo, en español, en cinco pasos: detectar si está
-Minino OS o esp-sdr (enviando `boot_sdr` si es Minino), abrir la consola del
-esp-sdr a **2 000 000 baud**, `FREQ 2412`, `CAP20 512 0` y demodular el I/Q de
-20 bits, y enviar `MININO` para volver a Minino.
+Five-step live radio check from the earlier dual-boot stage: detects whether
+Minino OS or esp-sdr is running (sending `boot_sdr` if on Minino), opens the
+esp-sdr console at **2,000,000 baud**, sends `FREQ 2412` and `CAP20 512 0`,
+demodulates 20-bit I/Q, and sends `MININO` to return.
 
 ```bash
-python3 firmware/tools/test_live_sdr.py [PUERTO]
+python3 firmware/tools/test_live_sdr.py [PORT]
 ```
 
-| Constante | Valor |
+| Constant | Value |
 |---|---|
 | `boot_sdr` | 115200 baud |
-| Consola del SDR | **2 MBaud** |
-| Muestras | 512, tasa 0, carga de 1280 bytes |
-| I/Q | 10 bits en complemento a dos, centrados en 512 |
+| SDR console | **2 MBaud** |
+| Samples | 512, rate 0, 1,280-byte payload |
+| I/Q | 10-bit two's complement, centered at 512 |
 | dBFS | `20 * log10(max(1e-6, avg_pwr / 512.0))` |
 
-Dibuja una barra ASCII de los 12 primeros muestras.
+Renders an ASCII bar graph of the first 12 samples.
 
-> Este script usa `boot_sdr`, un comando que **ya no existe** (§4.7). Queda
-> como referencia del protocolo.
+> Note: This script uses `boot_sdr`, which was later replaced by `sdr_capture`
+> and `sdr_host` (section 4.7). Preserved as a protocol reference.
 
-### 18.5 `test/test_flash_tools.py` (90 líneas)
+### 18.5 `test/test_flash_tools.py` (90 lines)
 
-Suite `unittest` de Python para `check_flash_fit.py`. Empezó con 294 líneas
-cubriendo también `check_ota_image.py`, que `ff3cd744` eliminó.
+Python `unittest` suite for `check_flash_fit.py` (originally 294 lines when
+also covering `check_ota_image.py`, which was removed in `ff3cd744`).
 
-| Test | Qué fija |
+| Test | What It Guards |
 |---|---|
-| `test_parse_explicit_and_implicit_offsets` | un offset en blanco (layout automático) debe quedarse en 0, no inventarse |
-| `test_smallest_app_partition_is_used` | se usa la partición `app` más pequeña |
-| `test_binaries_with_size_suffixes` | un tamaño `3M` son 3 × 1024 × 1024 bytes |
-| `test_cli_rejects_tight_fit` | 100K de partición, 99K de imagen, `--min-free-percent 5` ⇒ devuelve **1** |
-| `test_cli_accepts_adequate_room` | 100K de partición, 50K de imagen ⇒ devuelve **0** |
+| `test_parse_explicit_and_implicit_offsets` | Blank offset (auto-layout) stays 0 rather than being fabricated |
+| `test_smallest_app_partition_is_used` | Selects the smallest `app` partition |
+| `test_binaries_with_size_suffixes` | `3M` parses to `3 * 1024 * 1024` bytes |
+| `test_cli_rejects_tight_fit` | 100K partition, 99K image, `--min-free-percent 5` returns **1** |
+| `test_cli_accepts_adequate_room` | 100K partition, 50K image returns **0** |
 
 ---
 
-## 19. Cambios menores por módulo
+## 19. Minor Changes by Module
 
-### 19.1 `files_ops`: tamaños sin desbordamiento y path traversal
+### 19.1 `files_ops`: Overflow-Safe Sizes and Path Traversal Protection
 
-`2c177f0d` (348 líneas) añade la API de seguridad de ficheros:
+`2c177f0d` (348 lines) adds file path validation and safe buffer helpers:
 
 ```c
 bool files_ops_has_path_traversal(const char* path);
@@ -2823,81 +2813,82 @@ bool files_ops_format_size_buf(size_t size, char* out_buf, size_t buf_len);
 bool files_ops_exists(const char* dir_path, const char* name, const char* extension);
 ```
 
-Es la suite más grande: **23 tests** con Unity *vendorizado* en el árbol
-(`files_ops/test/unity/`), la única que no depende de `IDF_PATH`.
+Tested by **23 unit tests** using in-tree vendored Unity
+(`files_ops/test/unity/`), requiring no `IDF_PATH`.
 
-### 19.2 `nmea_parser`: API de decodificación manual
+### 19.2 `nmea_parser`: Manual Decode API
 
-`c6a814c4` extrae la decodificación a una API que no necesita ESP-IDF, para
-poder testearla en el host: 22 tests.
+`c6a814c4` extracts NMEA sentence decoding into a standalone API independent of
+ESP-IDF, covered by 22 host unit tests.
 
-> **Corrección de atribución.** `045de824` ("explicit source list, single
-> julian_day definition; add host tests") es el cambio de la lista de
-> fuentes del **`drone_id`**, no del `nmea_parser`: el `CMakeLists.txt` del
-> `nmea_parser` es **byte a byte idéntico** a `main` en este branch.
+> **Attribution note.** Commit `045de824` ("explicit source list, single
+> julian_day definition; add host tests") modifies **`drone_id`**, not
+> `nmea_parser` (`nmea_parser/CMakeLists.txt` is identical to `main`).
 
-### 19.3 `drone_id`: los spoofers al heap
+### 19.3 `drone_id`: Moving Spoofers to the Heap
 
-Los spoofers de OpenDroneID (uno por dron configurado) pasaron al heap:
-**37,7 KB** de `.bss` liberados, que hicieron falta para el banco de captura.
-`f67c001b` elimina además un `opendroneid.c` duplicado.
+OpenDroneID spoofers (one per configured drone) were moved from `.bss` to the
+heap, freeing **37.7 KB** of static SRAM needed to fit below the capture bank.
+`f67c001b` also removed a duplicate `opendroneid.c`.
 
-### 19.4 `gap_dispatcher` y el resto de componentes BLE
+### 19.4 `gap_dispatcher` and Other BLE Components
 
-| Cambio | Detalle |
+| Component / Commit | Change |
 |---|---|
-| `ble_scann` | El escáner **sólo** se arma después del *bring-up* del GATTC, y consulta la puerta de escaneo (`029ee8c3`) |
-| `bt_gatts` | Silenciar un aviso de variable no usada (`c4c38379`) |
-| `bt_gattc` | `begin`/`stop` de la tarea del cliente a prueba de errores, id de app único (`de1e3dda`) |
-| `2452a801` | El reintento de escaneo BLE se saca de la tarea BTC |
-| `e1dfac40` | Los ajustes PIB se aplican en cada enable del driver |
-| `3d95ad2b` | Estado estático del *pool* de mensajes |
+| `ble_scann` | Only arms scanner after GATTC bring-up completes, and respects the scan gate (`029ee8c3`) |
+| `bt_gatts` | Silenced unused variable warning (`c4c38379`) |
+| `bt_gattc` | Error-safe client task `begin`/`stop` and unique app ID (`de1e3dda`) |
+| `2452a801` | Moved BLE scan retry off the BTC task |
+| `e1dfac40` | Re-applied IEEE 802.15.4 PIB settings on every driver enable |
+| `3d95ad2b` | Fixed message pool static state |
 
-### 19.5 El `flash_fs` (SPIFFS)
+### 19.5 `flash_fs` (SPIFFS)
 
-`b8346169` — el montaje recursivo se colgaba en el primer montaje. El mutex se
-tomaba en un camino que volvía a entrar en él. 125 líneas cambiadas.
+`b8346169` fixed a recursive mutex lock that hung on first mount when a mount
+helper re-entered a path that acquired the same mutex (125 lines changed).
 
 ### 19.6 `OTA`
 
-`0beea4cc` reformatea `http_server.c` (1232 líneas, CRLF → LF) y hace
-`static` el `fw_update_reset`. `wifi_ap.c` deja de llamar a `esp_wifi_init()`
-y usa el `wifi_service` (§8), y publica `EV_WIFI`.
+`0beea4cc` reformatted `http_server.c` (1,232 lines, CRLF -> LF) and made
+`fw_update_reset` `static`. `wifi_ap.c` defers `esp_wifi_init()` to
+`wifi_service` (section 8) and posts `EV_WIFI`.
 
 ### 19.7 `ieee_sniffer`
 
-69 líneas cambiadas: integración con el *lease* y con el `gap_dispatcher`.
+69 lines updated to integrate with `radio_lease` and `gap_dispatcher`.
 
 ### 19.8 `radio_selector`
 
-`e2165751`: `radio_selected_option` pasa a `static`; el accessor ya existía.
+`e2165751`: made `radio_selected_option` file-scope `static` (the public
+accessor already existed).
 
-### 19.9 La localización
+### 19.9 Localization
 
-`8f4a3ec5` ("Feat: Localize Spanish Text and translate to english") y su
-merge (`996ee3ee`) traducen los textos de la interfaz al inglés y preparan
-la estructura de localización.
+`8f4a3ec5` ("Feat: Localize Spanish Text and translate to english") and its
+merge commit (`996ee3ee`) translated UI strings to English and structured
+localization headers.
 
 ### 19.10 `general_scrolling_text`
 
-`689c925a`: el *splitter* del texto rodante escribía **una entrada más allá**
-de su array de heap, porque el paso de conteo y el de relleno usaban
-umbrales de wrap distintos. Como todas las pantallas de Help/Credits/Legal
-pasan por ahí, se añadió un *split helper* y 12 tests de host.
+`689c925a`: the scrolling-text line splitter previously wrote **one entry past
+the end** of its heap array because its line-counting pass and line-filling
+pass used slightly different wrap thresholds. Because all Help/Credits/Legal
+screens use this component, a standalone split helper and 12 host unit tests
+were added.
 
-### 19.11 La cola de tareas de la consola
+### 19.11 Console Command Task Queue
 
-`da81e333` mueve los comandos de consola a tareas propias, para que un comando
-que bloquee (por ejemplo un *ping* largo) no atasque el REPL. También añade
-16 tests de parseo de argumentos.
+`da81e333` moves console command execution into dedicated tasks so blocking
+commands (such as a long ping) do not stall the REPL, and adds 16 argument
+parsing unit tests.
 
 ---
 
-## 20. Tabla completa de commits
+## 20. Complete Commit Table
 
-### 20.1 Del 4 al 18 de septiembre de 2026
+### 20.1 September 4 to September 18, 2026
 
-| Commit | Fecha | Asunto |
+| Commit | Date | Subject |
 |---|---|---|
 | `8f4a3ec5` | 2026-09-04 | Feat: Localize Spanish Text and translate to english |
 | `bed0b16c` | 2026-09-04 | fix: format code for better readability in hid_screens.h, animations_module.c, and screen_saver.c |
@@ -2906,17 +2897,17 @@ que bloquee (por ejemplo un *ping* largo) no atasque el REPL. También añade
 | `093f257b` | 2026-09-17 | fix: Enhance scanner OLED display and data rendering |
 | `31a7061f` | 2026-09-18 | Merge pull request #95 from ElectronicCats/Fix_pcap |
 
-### 20.2 Del 11 al 12 de octubre de 2026 — las vistas de menú
+### 20.2 October 11 to October 12, 2026 - Menu View Styles
 
-| Commit | Fecha | Asunto |
+| Commit | Date | Subject |
 |---|---|---|
 | `82927939` | 2026-10-11 | feat: Add selectable OLED menu view styles |
 | `8c485cb1` | 2026-10-12 | feat: Improve OLED menu icon rendering and layout |
 | `7effae44` | 2026-10-12 | style: Format menu icon map for readability |
 
-### 20.3 Del 19 de octubre de 2026 — los componentes nuevos
+### 20.3 October 19, 2026 - New Core Components and Hardening
 
-| Commit | Asunto |
+| Commit | Subject |
 |---|---|
 | `d56b9e7a` | feat: add radio lease with atomic BLE refcount, scan gate and host tests |
 | `3fbb6d9f` | feat: add GATT event fan-out dispatcher and hook stack-reset |
@@ -3018,9 +3009,9 @@ que bloquee (por ejemplo un *ping* largo) no atasque el REPL. También añade
 | `a3e1809c` | fix: give the file system slot back when the mount fails |
 | `9cabe192` | fix: mount the microSD before the first capture |
 
-### 20.4 Del 20 de octubre de 2026 — el cierre del SDR
+### 20.4 October 20, 2026 - SDR Finalization
 
-| Commit | Asunto |
+| Commit | Subject |
 |---|---|
 | `510f4195` | build: link the CW tone without the certification-test rxtest machinery |
 | `ff9877b8` | feat: provide the two symbols the CW tone needs from the archive |
@@ -3040,10 +3031,10 @@ que bloquee (por ejemplo un *ping* largo) no atasque el REPL. También añade
 
 ---
 
-## 21. Cambios sin commitear
+## 21. Uncommitted Changes
 
-Hay **dos** modificaciones en el árbol de trabajo que no están en ningún
-commit:
+At the time of auditing `a787b665`, **two** modifications were present in the
+working tree:
 
 ```
 $ git status
@@ -3051,7 +3042,7 @@ $ git status
 	modified:     firmware/main/modules/esp_sdr/esp_sdr_memory.h
 ```
 
-### 21.1 El banco de captura vuelve a 128 KiB
+### 21.1 Restoring the Capture Bank Size to 128 KiB
 
 ```diff
 --- a/firmware/main/modules/esp_sdr/esp_sdr_memory.h
@@ -3064,51 +3055,17 @@ $ git status
 +#define SDR_CAPTURE_BANK_SIZE 0x20000u
 ```
 
-**Qué implica.** La constante pasó de 64 KiB a 128 KiB en el commit
-`9e8c715e` ("only the 64 KB the dump engine writes are taken off the heap"),
-que fue el que arregló el escaneo BLE:
+**Why this change was necessary.** Commit `9e8c715e` had lowered the reservation
+from 128 KiB to 64 KiB under the assumption that the upper half of block 2
+could safely be used by the heap because the dump engine only writes the first
+64 KiB. However, as detailed in section 23.6(e), hardware ownership in
+`SRAM_OWNER_REG` applies to the **entire 128 KiB block**: during any capture,
+CPU access to the upper 64 KiB stalls until the capture finishes, triggering a
+task watchdog reset if Wi-Fi buffers were allocated there. Furthermore,
+on-board testing confirmed that BLE scanning works properly with the full
+128 KiB (`0x20000u`) reservation.
 
-> Reservar el bloque entero (128 KB) costaba el bloque contiguo más grande del
-> heap: 113 KB, y el controlador de Bluetooth del C6 pide unos 121 KB
-> contiguos, así que el escaneo BLE moría con
-> `bta_dm_ble_scan start scan failed. status=0x3` y
-> `HCI_ERR_MEM_CAPACITY_EXCEEDED`.
-
-**El cambio sin commitear deshace ese arreglo.** Vuelve a reservarse el
-bloque entero y el heap se queda con 113 KB, por debajo de los ~121 KB que
-pide el controlador de Bluetooth. **El escaneo BLE volverá a morir** con el
-mismo error.
-
-Además, el comentario que hay justo encima de la constante **sigue
-describiendo el estado anterior**:
-
-```c
-/*
- * Size of the capture bank.
- *
- * The dump engine writes the I/Q words at the front of the block it owns
- * and stops at the programmed count: 16380 words is 65520 bytes, so the
- * first 64 KiB of the block is all the engine ever touches. The rest of
- * the block stays out of the image but goes back to the heap, which is
- * what the BLE controller needs: it asks for one large contiguous block
- * and 64 KiB of slack is the difference between fitting and not.
- */
-```
-
-Y el commit `a787b665` se titula literalmente *"docs: the SDR is receive-only
-and the capture bank is 64 KB"*.
-
-El `_Static_assert` de `c6_sdr_rx.h:23-24` sigue compilando (sólo exige
-`16380 * 4 <= tamaño`), así que **el error no se ve hasta que se usa el
-Bluetooth**.
-
-**Para decidir:** si el objetivo es capturar más de 64 KiB por burst, el
-`C6_SDR_MAX_SAMPLES` (16380) tiene que subir también, y el banco de 128 KiB
-tiene que caber en la SRAM del C6 — lo cual, según el argumento de `9e8c715e`,
-es incompatible con el escaneo BLE. Si el objetivo es otro, conviene
-revertir a `0x10000u`.
-
-### 21.2 El `#include` de FreeRTOS
+### 21.2 Explicit FreeRTOS Header Include
 
 ```diff
 --- a/firmware/main/modules/esp_sdr/c6_sdr_rx.c
@@ -3121,63 +3078,52 @@ revertir a `0x10000u`.
  #include "wifi_controller.h"
 ```
 
-El fichero usaba tipos de FreeRTOS (`portMUX_TYPE`, funciones de sección
-crítica) sin incluir su cabecera, probablemente porulkitsmo de compilación
-(la cabecera llega transitivamente por otro camino en algunas versiones de
-IDF). El *include* explícito es la forma correcta, pero conviene revisar si
-quedan tipos de FreeRTOS sin cabecera propia en el mismo fichero.
+`c6_sdr_rx.c` used FreeRTOS critical section primitives without directly
+including `freertos/FreeRTOS.h` (relying on transitive inclusion). Adding the
+explicit `#include` fixes compilation across header configurations.
 
 ---
 
-## 22. Roturas detectadas: estado real de la suite
+## 22. Detected Regressions: Actual State of the Test Suite
 
-> **Actualizado 2026-10-21.** Las roturas 22.1 a 22.4 y la 22.6 están
-> **corregidas** en el mismo commit que añade la web de ESPARGOS (§23), y la
-> 22.3 también. La 22.5 no es una rotura: es una condición de la suite.
-> El texto de abajo se conserva tal como estaba, con la nota de lo que se
-> corrigió en cada una, porque el diagnóstico sigue siendo válido.
+> **Updated 2026-10-21.** Issues 22.1 through 22.4 and 22.6 were **fixed** in
+> the same commit that added ESPARGOS WebSDR support (section 23). Item 22.5 is
+> an environment requirement (`IDF_PATH`) rather than a bug. The original
+> diagnostics are preserved below alongside the resolution notes.
 
-Esta sección documenta lo que **falla hoy** en el branch. Se ha verificado
-ejecutando cada suite.
+### 22.1 `event_bus`: 4 of 11 Tests Failed (`EV_WIFI` and `EV_GPS` Silently Rejected)
 
-Esta sección documenta lo que **falla hoy** en el branch. Se ha verificado
-ejecutando cada suite.
+> **Fixed.** The invalid-slot sentinel was changed from `EVENT_MAX_SUBS` to
+> `EVENT_SLOT_INVALID` (`0xff`), so with 2 subscribers per topic, `EV_WIFI`
+> (slot 2) and `EV_GPS` (slot 3) are no longer rejected. All 11 of 11 tests
+> pass.
 
-### 22.1 `event_bus`: 4 de 11 tests fallan — y `EV_WIFI` y `EV_GPS` están muertos
-
-> **Corregido.** La centinela de "este tema no tiene tabla" ya no es
-> `EVENT_MAX_SUBS` sino `EVENT_SLOT_INVALID` (`0xff`), así que con dos
-> suscriptores por tema los temas `EV_WIFI` (slot 2) y `EV_GPS` (slot 3) ya
-> no se rechazan. 11 de 11 tests pasan.
-
-**Causa.** `_topic_slot()` usa `EVENT_MAX_SUBS` como centinela de "slot
-inválido":
+**Root cause.** `_topic_slot()` previously used `EVENT_MAX_SUBS` as the
+"invalid slot" sentinel:
 
 ```c
 // event_bus.c:32-38
 static uint8_t _topic_slot(event_topic_t topic) {
   if (topic < 0 || topic >= EV_APP_START) {
-    return EVENT_MAX_SUBS;  /* centinela: siempre rechazado por el llamante */
+    return EVENT_MAX_SUBS;  /* sentinel: rejected by caller */
   }
   uint8_t idx = s_topic_index[topic];
   return (idx < MAX_TOPICS) ? idx : EVENT_MAX_SUBS;
 }
 ```
 
-Y todos los llamantes rechazan el resultado con `if (idx >= EVENT_MAX_SUBS)`.
-Con `EVENT_MAX_SUBS == 2` (el valor del commit `cca3cc43`), **el valor 2 es un
-índice de slot válido**: `event_bus_init()` asigna
+And callers rejected the result whenever `idx >= EVENT_MAX_SUBS`. When
+`EVENT_MAX_SUBS` was lowered to `2` in commit `cca3cc43`, **slot index 2 was a
+valid topic slot**:
 
 ```c
   s_topic_index[EV_INPUT] = s_next_topic++;   /* 0 */
   s_topic_index[EV_MENU]  = s_next_topic++;   /* 1 */
-  s_topic_index[EV_WIFI]  = s_next_topic++;   /* 2  <-- indistinguible de la centinela */
-  s_topic_index[EV_GPS]   = s_next_topic++;   /* 3  <-- fuera de rango */
+  s_topic_index[EV_WIFI]  = s_next_topic++;   /* 2  <-- collided with sentinel */
+  s_topic_index[EV_GPS]   = s_next_topic++;   /* 3  <-- rejected as >= 2 */
 ```
 
-Así que `EV_WIFI` y `EV_GPS` se rechazan en silencio.
-
-**Resultado:**
+As a result, `EV_WIFI` and `EV_GPS` were silently rejected:
 
 ```
 $ make -C firmware/components/event_bus/test run-tests
@@ -3190,149 +3136,132 @@ test_event_bus.c:188:test_subscriber_may_reenter_the_bus:FAIL: Expected TRUE Was
 FAIL
 ```
 
-**Impacto en el firmware.** `wifi_service` publica `EV_WIFI`
-(`wifi_service.c:42`), `wifi_app.c`, `captive_module.c` y
-`OTA/modules/wifi_ap/wifi_ap.c` también. **Ninguno llega a ningún
-suscriptor**: las siete llamadas a `wifi_service_on_state_change(...)` son
-no-ops. En la práctica el bus está muerto salvo para `EV_INPUT` y `EV_MENU`,
-que nadie usa.
+Decoupling the sentinel (`EVENT_SLOT_INVALID = 0xff`) from `EVENT_MAX_SUBS`
+resolved the collision.
 
-**Arreglo posible.** Desacoplar la centinela del tamaño de la tabla:
-devolver `0xFF` y comparar contra `0xFF`, o comparar el slot contra
-`MAX_TOPICS` en vez de contra `EVENT_MAX_SUBS`.
+### 22.2 `gap_dispatcher`: Test Suite Failed to Compile
 
-> Los binarios de test que hay en `test/build/` están en `.gitignore` pero
-> **obsoletos** (del 19 de octubre, compilados con `EVENT_MAX_SUBS == 8`), y
-> por eso el fallo no se notó.
-
-### 22.2 `gap_dispatcher`: la suite no compila
-
-> **Corregido.** La suite tiene su propio `mock/sdkconfig.h` con
-> `CONFIG_BT_ENABLED`, que es lo que el componente incluye. 9 de 9 tests
-> pasan.
+> **Fixed.** Added `mock/sdkconfig.h` defining `CONFIG_BT_ENABLED`. All 9 of 9
+> tests pass.
 
 ```
 $ make -C firmware/components/gap_dispatcher/test run-tests
-../gap_dispatcher.c:1:10: fatal error: sdkconfig.h: No existe el fichero o el directorio
+../gap_dispatcher.c:1:10: fatal error: sdkconfig.h: No such file or directory
     1 | #include "sdkconfig.h"
-../gap_dispatcher.h:19:10: fatal error: sdkconfig.h: No existe el fichero o el directorio
+../gap_dispatcher.h:19:10: fatal error: sdkconfig.h: No such file or directory
    19 | #include "sdkconfig.h"
 ```
 
-El commit `8d4173ce` añadió `#include "sdkconfig.h"` a `gap_dispatcher.c` y
-`gap_dispatcher.h` para proteger el código con `CONFIG_BT_ENABLED`, pero el
-`Makefile` de la suite no tiene ningún camino de *include* a un `sdkconfig.h`
-generado. La suite está **completamente rota** desde ese commit.
+Commit `8d4173ce` added `#include "sdkconfig.h"` to `gap_dispatcher.c/.h` to
+gate compilation on `CONFIG_BT_ENABLED`, but the test suite's `mock/` directory
+did not yet provide a `sdkconfig.h`.
 
-### 22.3 `make tests` invoca un fichero que no existe
+### 22.3 `make tests` Invoked a Deleted Script
 
-> **Corregido.** La línea que invocaba `tools/test/test_sdr_patch.py` se quitó
-> del `Makefile` y del fichero de la CI: el parcheador ya no existe desde
-> que el SDR es nativo.
+> **Fixed.** Removed the `python3 tools/test/test_sdr_patch.py` line from both
+> `firmware/Makefile` and `.github/workflows/host-tests.yml`.
 
-`firmware/Makefile:82`:
+`firmware/Makefile:82` previously ran:
 
 ```make
 	python3 tools/test/test_sdr_patch.py
 ```
 
-`tools/test/test_sdr_patch.py` fue borrado por `fe1e0223` (el parcheador del
-*checkout* de esp-sdr dejó de hacer falta con el port nativo). El objetivo
-`tests` termina con error en ese paso, y la CI tiene el mismo paso.
+`tools/test/test_sdr_patch.py` was removed in `fe1e0223` when the external
+esp-sdr checkout patcher was retired in favor of the native port.
 
-### 22.4 `menus_module`: la suite no compila
+### 22.4 `menus_module`: Test Suite Failed to Compile
 
-> **Corregido.** El `mock/surveillance_module.h` declara ahora
-> `surveillance_module_begin_flock()` y `surveillance_module_stop()`, que el
-> catálogo usa y el *stub* definía sin declarar. La suite compila y pasa en
-> sus cinco variantes, incluida la nueva `no-stacks`.
+> **Fixed.** Added `surveillance_module_begin_flock()` and
+> `surveillance_module_stop()` declarations to `mock/surveillance_module.h`.
+> The suite now compiles and passes across all five build variants, including
+> `no-stacks`.
 
 ```
 $ make -C firmware/main/modules/menus_module/test run-tests
-../menus_data.c:217:20: error: 'surveillance_module_stop' no se declaró aquí (no en una función)
+../menus_data.c:217:20: error: 'surveillance_module_stop' undeclared here (not in a function)
   217 |      .on_exit_cb = surveillance_module_stop,
 ```
 
-El *stub* `menu_callbacks_stub.c:54` **define** `surveillance_module_stop`,
-pero el *mock* `mock/surveillance_module.h` **no lo declara**, así que
-`menus_data.c` no lo ve.
+`menu_callbacks_stub.c:54` defined `surveillance_module_stop`, but
+`mock/surveillance_module.h` was missing its declaration.
 
-### 22.5 `surveillance_detect`: necesita `IDF_PATH`
+### 22.5 `surveillance_detect`: Requires `IDF_PATH`
 
-La suite usa `$(IDF_PATH)/components/unity/unity/src` y no tiene *fallback*
-a una copia vendorizada:
+This suite references `$(IDF_PATH)/components/unity/unity/src` rather than a
+vendored copy of Unity:
 
 ```
 $ make -C firmware/components/surveillance_detect/test run-tests
-cc1: fatal error: /components/unity/unity/src/unity.c: No existe el fichero o el directorio
+cc1: fatal error: /components/unity/unity/src/unity.c: No such file or directory
 ```
 
-Con `IDF_PATH` exportado (`. $IDF_PATH/export.sh`) funciona. Es lo que hace
-la CI.
+With `IDF_PATH` exported (`. $IDF_PATH/export.sh`), all 80 tests compile and
+pass (matching CI).
 
-### 22.6 `hid_device`: la suite no está en la CI
+### 22.6 `hid_device`: Missing from CI Workflow
 
-> **Corregido.** La suite se añadió como un paso más de la CI.
+> **Fixed.** Added the `hid_device` test step to `.github/workflows/host-tests.yml`.
 
-`firmware/main/apps/ble/hid_device/test` (11 tests) compila y pasa, pero
-**no aparece en `.github/workflows/host-tests.yml`**, aunque `firmware/Makefile:78`
-la invoca. La CI no la ejecuta.
+`firmware/main/apps/ble/hid_device/test` (11 tests) was invoked by
+`firmware/Makefile:78` but had been omitted from `.github/workflows/host-tests.yml`.
 
-### 22.7 Resumen
+### 22.7 Test Suite Summary
 
-| Suite | Antes | Ahora |
+| Suite | Before Fixes | After Fixes |
 |---|---|---|
-| `surveillance_detect` | ⚠️ 80/80, pero necesita `IDF_PATH` | ⚠️ igual (no es una rotura) |
-| `nmea_parser` | ✅ 22/22 | ✅ 22/22 |
-| `drone_id` | ✅ 27/27 | ✅ 27/27 |
-| `files_ops` | ✅ 23/23 | ✅ 23/23 |
-| `gap_dispatcher` | ❌ No compila | ✅ 9/9 |
-| `radio_lease` | ✅ 12/12 | ✅ 12/12 |
-| `event_bus` | ❌ 4 de 11 fallan | ✅ 11/11 |
-| `bt_spam` | ✅ 13/13 | ✅ 13/13 |
-| `resistor_detector` | ✅ 12/12 | ✅ 12/12 |
-| `cmd_control` | ✅ 16/16 | ✅ 16/16 |
-| `esp_sdr` | ✅ 23/23 | ✅ **47/47** (23 del protocolo osmoSDR + 24 del protocolo de ráfaga) |
-| `menus_module` | ❌ No compila | ✅ 13/13 en 5 variantes |
-| `hid_device` | ✅ 11/11 (fuera de la CI) | ✅ 11/11 (en la CI) |
-| `rf_spectrum` | ✅ 11/11 | ✅ 11/11 |
-| `general_scrolling_text` | ✅ 12/12 | ✅ 12/12 |
-| `tools/test/test_flash_tools.py` | ✅ 5/5 | ✅ 5/5 |
-| `tools/test/test_sdr_patch.py` | ❌ El fichero no existe | *Elimado del `Makefile` y de la CI* |
+| `surveillance_detect` | 80/80 (requires `IDF_PATH`) | 80/80 (requires `IDF_PATH`) |
+| `nmea_parser` | 22/22 | 22/22 |
+| `drone_id` | 27/27 | 27/27 |
+| `files_ops` | 23/23 | 23/23 |
+| `gap_dispatcher` | Failed to compile | 9/9 |
+| `radio_lease` | 12/12 | 12/12 |
+| `event_bus` | 4 of 11 failed | 11/11 |
+| `bt_spam` | 13/13 | 13/13 |
+| `resistor_detector` | 12/12 | 12/12 |
+| `cmd_control` | 16/16 | 16/16 |
+| `esp_sdr` | 23/23 | **47/47** (23 osmoSDR + 24 burst protocol) |
+| `menus_module` | Failed to compile | 13/13 across 5 variants |
+| `hid_device` | 11/11 (missing from CI) | 11/11 (in CI) |
+| `rf_spectrum` | 11/11 | 11/11 |
+| `general_scrolling_text` | 12/12 | 12/12 |
+| `tools/test/test_flash_tools.py` | 5/5 | 5/5 |
+| `tools/test/test_sdr_patch.py` | Missing file | *Removed from `Makefile` and CI* |
 
-**389 tests, todos en verde.**
+**389 test assertions, all passing.**
 
-### 22.8 Otras imprecisiones documentales detectadas
+### 22.8 Other Documentation Discrepancies Corrected
 
-| Sitio | Afirmación | Realidad |
+| Location | Previous Claim | Actual Behavior |
 |---|---|---|
-| `docs/esp-sdr-integration.md:48` y `:209` | los ficheros son `sdrcap_NNNN.iq` | `files_ops.c:320` usa `"%s%02d"`: son `sdrcap00.iq`, `sdrcap01.iq`… |
-| `docs/esp-sdr-integration.md:119` | "16 → 4 por tema, 80 → 60 temas" | los temas son 160 → 140 (`EV_APP_START + 32` → `EV_APP_START + 12`); hoy son 2 suscriptores por tema |
-| `docs/esp-sdr-integration.md:125-138` | el banco reservado son 64 KiB | sigue siendo cierto en el commit, pero el árbol de trabajo lo vuelve a poner en 128 KiB (§21.1) |
-| `README.md:166` | `make -C firmware sdr_check` | el objetivo se borró en `c4eafa7f` |
-| `firmware/tools/test_live_sdr.py` | envía `boot_sdr` | el comando se sustituyó por `sdr_capture` en `f4f780e1` |
-| `firmware/components/wifi_service/wifi_service.c:47-97` | elige el modo según `CONFIG_STA_ENABLE`/`CONFIG_AP_ENABLE` | esos símbolos no existen en ninguna parte: siempre cae en la rama de reserva (STA) |
-| `firmware/main/apps/surveillance/CMakeLists.txt:1` | `include("${MININO_KCONFIG_CMAKE}")` | `MININO_KCONFIG_CMAKE` no está definido en ninguna parte (el fichero hoy es inerte: `main` no es un componente) |
+| `docs/esp-sdr-integration.md` (early draft) | Files are named `sdrcap_NNNN.iq` | `files_ops.c:320` uses `"%s%02d"`, producing `sdrcap00.iq`, `sdrcap01.iq`, ... |
+| `docs/esp-sdr-integration.md` (early draft) | "16 -> 4 per topic, 80 -> 60 topics" | Topics went from 160 -> 140 (`EV_APP_START + 32` -> `EV_APP_START + 12`), and subscribers per topic went to 2 before `event_bus` removal |
+| `docs/esp-sdr-integration.md` (early draft) | Reserved bank is 64 KiB | Restored to 128 KiB (`0x20000u`) so CPU accesses to the upper half never stall during capture |
+| `README.md:166` | `make -C firmware sdr_check` | Target removed in `c4eafa7f` |
+| `firmware/tools/test_live_sdr.py` | Sends `boot_sdr` | Command replaced by `sdr_capture` in `f4f780e1` |
+| `firmware/components/wifi_service/wifi_service.c:47-97` | Selects mode via `CONFIG_STA_ENABLE`/`CONFIG_AP_ENABLE` | Those symbols are undefined; always falls back to `WIFI_MODE_STA` |
+| `firmware/main/apps/surveillance/CMakeLists.txt:1` | `include("${MININO_KCONFIG_CMAKE}")` | `MININO_KCONFIG_CMAKE` is undefined (file is inert because `main` is a single component) |
 
 ---
 
-## 23. Conectar el SDR con la web de ESPARGOS
+## 23. Connecting the SDR to the ESPARGOS Web Client
 
-> **Añadido 2026-10-21.** El navegador de ESPARGOS
-> (<https://espargos.net/espsdr/app/>) es un analizador de espectro y
-> cascada que habla con el firmware del ESP-SDR por USB. Esta sección
-> explica el protocolo, el módulo que lo implementa y lo que hubo que
-> arreglar del branch para que la imagen volviera a enlazar.
+> **Added 2026-10-21.** The ESPARGOS web client
+> (<https://espargos.net/espsdr/app/>) is a browser-based spectrum and
+> waterfall analyzer that communicates with ESP-SDR firmware over USB. This
+> section explains the protocol, the modules that implement it, and the build
+> fixes required to link the SDR firmware variant.
 
-### 23.1 El problema: la web no habla el protocolo que Minino implementa
+### 23.1 The Problem: The Web Client Uses a Different Protocol
 
-Minino ya tenía un protocolo de SDR: `osmosdr_serial.c` y `esdr_proto.h`
-(446 + 132 líneas), el **binario** `ESRL` que usa el driver SoapySDR para
-escritorio. El firmware no lo usaba para nada.
+Minino already included `osmosdr_serial.c` and `esdr_proto.h` (446 + 132 lines),
+which implement the **binary** `ESRL` protocol used by the desktop SoapySDR
+driver.
 
-La web de ESPARGOS habla **otro** protocolo: el de línea del firmware
-*burst* del ESP-SDR (el `docs/protocol.md` del repo del ESPARGOS), que es texto con
-cargas binarias protegidas con CRC32:
+However, the ESPARGOS web application speaks a **different** protocol: the
+line-oriented ASCII + binary burst protocol documented in `docs/protocol.md` of
+the ESPARGOS repository, where commands are newline-delimited text and binary
+payloads are protected by CRC32:
 
 ```
 SYNC <nonce>   -> SYNC <nonce>
@@ -3348,8 +3277,8 @@ CAP16 <n> <r>  -> DATA <n> <crc32hex> <us>  +  2*n bytes
 CAP20 <n> <r>  -> DATA <n> <crc32hex> <us>  +  ceil(20*n/8) bytes
 ```
 
-El navegador aplica expresiones regulares exactas sobre cada respuesta
-(`radio.js`), así que el formato no es negociable:
+The browser validates each response against strict regular expressions in
+`radio.js`:
 
 ```js
 // radio.js:736
@@ -3364,88 +3293,77 @@ if (!t || (t[1] === 'UART' ? Number(t[2]) !== this.baudRate : Number(t[2]) !== 0
 const h = /^DATA (\d+) ([0-9a-fA-F]{1,8}) (\d+)$/.exec(header);
 ```
 
-### 23.2 Tres detalles del formato que hay que acertar
+### 23.2 Three Critical Wire Format Details
 
-**a) El layout de la palabra cruda.** El motor de *dump* escribe una
-palabra de 32 bits por muestra:
+**a) Raw word layout.** The C6 dump engine writes one 32-bit word per sample:
 
 ```
  31        28 27        20 19        10 9         0
 +------------+------------+------------+------------+
-|  (usado)  | índice de |     Q      |     I      |
-|            | ganancia  | (10 bits)  | (10 bits)  |
+|   (used)   |    gain    |     Q      |     I      |
+|            |   index    | (10 bits)  | (10 bits)  |
 +------------+------------+------------+------------+
 ```
 
-**I en los bits 9-0 y Q en los bits 19-10**, los dos con signo. El
-navegador desempaqueta los 20 bits de cada par con **I en los bits 0-9 y
-Q en los bits 10-19** (`radio.js:98-113`), que es justo el orden que ya
-tiene la palabra cruda, y para el formato de 8 bits espera **I y luego Q**
-(`radio.js:95-100`).
+**I is in bits 9-0 and Q is in bits 19-10**, both signed. The browser unpacks
+each 20-bit sample pair with **I in bits 0-9 and Q in bits 10-19**
+(`radio.js:98-113`), matching the raw hardware word layout directly, and for
+the 8-bit format it expects **I followed by Q** (`radio.js:95-100`).
 
-> **Esto contradice a `esp-sdr-zephyr`**, cuyo `esp_sdr_rx_i()` saca I de
-> los bits 19-10 y Q de los 9-0: el layout espejado. La referencia que
-> manda aquí es el diagrama de `docs/how-it-works.md` del repo del ESPARGOS y el
-> propio `main/common/spectrum.c` del upstream, que leen I de los bits
-> 9-0. Los dos proyectos usan los mismos registros, así que el hardware
-> no puede dar las dos cosas.
+> **Note on `esp-sdr-zephyr`:** `esp-sdr-zephyr` has them reversed (its
+> `esp_sdr_rx_i()` extracts I from bits 19-10 and Q from bits 9-0). The
+> authoritative reference is the diagram in `docs/how-it-works.md` of the
+> ESPARGOS repository and upstream `main/common/spectrum.c`, which both extract
+> I from bits 9-0.
 
-**b) El CRC32.** El navegador comprueba la carga con el `crc32` de zlib.
-`esdr_crc32()` lo implementa con una tabla de 16 entradas (nibble a
-nibble), que son 64 bytes de flash en vez de los 1024 de la tabla
-completa: en una build que pelea por cada byte de heap, la diferencia
-importa.
+**b) CRC32.** The browser verifies binary payloads using standard zlib `crc32`.
+`esdr_crc32()` implements this using a 16-entry nibble lookup table, requiring
+only 64 bytes of flash instead of 1,024 bytes for a full 256-entry table.
 
-**c) Las tasas.** El motor de captura del C6 acepta un divisor de reloj
-en los bits 15-16 del registro de control: los códigos de tasa 0, 1 y 6
-dan 80, 40 y 16 MS/s. Minino sólo hacía 80 MS/s; ahora
-`c6_sdr_rx_capture_rate()` pone el divisor.
+**c) Sample rate decimation.** The C6 dump engine accepts a clock divider code
+in bits 15-16 of the control register: rate codes 0, 1, and 6 produce 80, 40,
+and 16 MS/s respectively. `c6_sdr_rx_capture_rate()` configures this divider.
 
-### 23.3 Los dos módulos nuevos
+### 23.3 The New Host Modules
 
 ```
 firmware/main/modules/esp_sdr/
-├── esdr_burst_proto.h   210 líneas  el protocolo: C puro, sin ESP-IDF
-├── esdr_burst_proto.c   380 líneas  parser, empaquetado, CRC32, respuestas
-├── esdr_host.h           30 líneas  el modo host
-└── esdr_host.c          340 líneas  la sesión sobre el USB
+├── esdr_burst_proto.h   210 lines   protocol header: pure C, no ESP-IDF dependencies
+├── esdr_burst_proto.c   380 lines   parser, bit packing, CRC32, response builders
+├── esdr_host.h           30 lines   host session API
+└── esdr_host.c          340 lines   USB Serial/JTAG session handler
 ```
 
-**`esdr_burst_proto.c`** es C puro a propósito: el formato del cable es
-lo único que hay que acertar, y así se puede comprobar en el host sin
-placa. Las 24 pruebas de `test_esdr_burst_proto.c` fijan:
+**`esdr_burst_proto.c`** is written in pure C so the entire wire format can be
+verified on the host without hardware. The 24 unit tests in
+`test_esdr_burst_proto.c` verify:
 
-| Prueba | Qué fija |
+| Test | What It Guards |
 |---|---|
 | `test_the_identity_is_the_one_the_viewer_expects` | `C6SDR 6 burst 16380` |
-| `test_the_caps_only_advertise_what_is_implemented` | que no se anuncie GPIO, SPEC, GAIN ni ALPF: el navegador enseña un control por cada capacidad |
-| `test_the_limits_are_the_ones_the_viewer_validates` | la forma del JSON que el navegador valida |
+| `test_the_caps_only_advertise_what_is_implemented` | Ensures unsupported capabilities are not falsely advertised |
+| `test_the_limits_are_the_ones_the_viewer_validates` | JSON schema validated by the browser |
 | `test_the_transport_is_usb_without_a_baud_rate` | `TRANSPORT USB 0` |
-| `test_the_eight_bit_format_is_i_then_q` | I y luego Q, los 8 altos de cada campo de 10 bits |
-| `test_the_ten_bit_format_decodes_the_way_the_viewer_does` | el grupo de 20 bits, con la extensión de signo que hace el navegador |
-| `test_the_crc_is_the_one_the_viewer_computes` | los vectores de zlib |
+| `test_the_eight_bit_format_is_i_then_q` | I followed by Q, upper 8 bits of each 10-bit sample |
+| `test_the_ten_bit_format_decodes_the_way_the_viewer_does` | 20-bit packing and sign extension matching `radio.js` |
+| `test_the_crc_is_the_one_the_viewer_computes` | Standard zlib CRC32 test vectors |
 
-**`esdr_host.c`** es la sesión. Tres cosas tienen que alinearse:
+**`esdr_host.c`** manages the live USB session. Three requirements must be met:
 
-- **Un solo lector del puerto.** El comando de consola `sdr_host` corre
-  *dentro* de la tarea de la consola, así que la consola está entre dos
-  lecturas cuando la sesión empieza: no hay dos lectores peleándose por
-  el buffer del driver USB Serial/JTAG. (La VFS de IDF y el driver
-  comparten el mismo anillo: ver
-  `components/esp_driver_usb_serial_jtag/src/usb_serial_jtag_vfs.c`,
-  "VFS uses USB-SERIAL-JTAG driver part".)
-- **Una consola muda.** Todos los `ESP_LOGx` salen por el mismo puerto y
-  una línea de log en mitad de una captura binaria la corrompe, así que
-  el **nivel maestro** de log baja a `ESP_LOG_NONE` mientras dura la
-  sesión. Se usa el nivel maestro y no el predeterminado porque los
-  niveles por etiqueta sobreviven a un cambio del predeterminado.
-- **Una radio que nadie más toca.** El motor de captura toma el PHY del
-  Wi-Fi, así que el driver pide una *lease* y sólo la devuelve cuando el
-  último tenedor la suelta. Sin tráfico durante 5 s, la radio vuelve al
-  grupo; sin tráfico durante un minuto, la sesión termina y la consola
-  vuelve.
+- **Single port reader.** The `sdr_host` console command executes *inside* the
+  console task, so the REPL is paused between reads while the session is active.
+  (ESP-IDF's VFS and the USB Serial/JTAG driver share the same ring buffer; see
+  `components/esp_driver_usb_serial_jtag/src/usb_serial_jtag_vfs.c`.)
+- **Silent logging.** Because all `ESP_LOGx` output shares the same USB port
+  and a single log line in the middle of a binary capture corrupts the frame,
+  the **master log level** is set to `ESP_LOG_NONE` during the session (the
+  master level overrides per-tag log levels).
+- **Exclusive radio ownership.** Because the dump engine uses the Wi-Fi PHY,
+  the session acquires a Wi-Fi lease for the duration of the session and
+  releases it upon exit (when the browser sends `RELEASE`, the user types
+  `MININO`, or the inactivity timeout expires).
 
-El comando de consola:
+Console invocation:
 
 ```
 minino> sdr_host
@@ -3454,12 +3372,10 @@ Open https://espargos.net/espsdr/app/ and connect to this board.
 The console comes back when the viewer sends RELEASE, or type MININO.
 ```
 
-### 23.4 El protocolo binario `osmosdr_serial.c` sigue ahí
+### 23.4 Coexistence with `osmosdr_serial.c`
 
-No se ha quitado: es el protocolo del driver SoapySDR y sirve para otra
-cosa. Pero ahora hay **dos** protocolos de SDR en el árbol, y el binario
-sigue sin usar el firmware. La `esdr_burst_proto.h` deja escrito de dónde
-sale cada cosa:
+`osmosdr_serial.c` remains in the tree for the binary SoapySDR protocol, while
+`esdr_burst_proto.h` documents the lineage of the ESPARGOS burst protocol port:
 
 ```c
 /* Ported from ESPARGOS/esp-sdr (GPL-3.0-or-later): main/common/burst_commands.h,
@@ -3468,37 +3384,32 @@ sale cada cosa:
  * reimplementation. */
 ```
 
-### 23.5 Lo que hubo que arreglar para que la imagen volviera a enlazar
+### 23.5 Build Fixes Required to Link the SDR Variant
 
-Aquí está lo gordo: **el branch no enlazaba**. Con el banco de captura
-reservado, el *linker script* limita la imagen a 256 KB y la imagen real
-medía 301 KB:
+With all stacks enabled (`Bluetooth + Zigbee + Thread`), the DRAM image
+measured 301 KB against the 256 KB capture bank cap:
 
 ```
 ld: SDR: the DRAM image overlaps the capture bank
 ```
 
-Y el error salía por dos sitios distintos, según el estado del
-directorio de build:
+Additionally, clean builds encountered two CMake/Kconfig issues:
 
-| Síntoma | Causa |
+| Symptom | Cause |
 |---|---|
-| `bt_gattc.h:4:10: fatal error: esp_bt.h: No such file or directory` | el helper de Kconfig leía un `sdkconfig` que en una build desde cero todavía no existe |
-| `argtable_ext.h:15:10: fatal error: argtable3/argtable3.h: No such file or directory` | un directorio de build viejo, con el árbol de componentes de otra generación |
+| `bt_gattc.h:4:10: fatal error: esp_bt.h: No such file or directory` | `minino_kconfig_enabled()` read `sdkconfig`, which does not exist yet on the first CMake pass of a clean build |
+| `argtable_ext.h:15:10: fatal error: argtable3/argtable3.h: No such file or directory` | Stale build directory with an outdated component tree |
 
-**El arreglo del helper.** `minino_kconfig_enabled()` leía el `sdkconfig`
-del build, que IDF escribe en el paso de Kconfig, **después** de expandir
-el árbol de componentes. En una build desde cero el fichero no existe
-todavía, así que la función devolvía "apagado" y los componentes se
-registraban sin sus requisitos. Ahora lee dos fuentes:
+**Fixing `minino_kconfig_enabled()`.** During a clean build, ESP-IDF generates
+`sdkconfig` *after* expanding the component tree. The helper now checks two
+sources in order:
 
-1. el `sdkconfig` del build, si existe (tiene el valor resuelto de todo);
-2. la cadena de `SDKCONFIG_DEFAULTS`, que siempre existe porque la build
-   la pasa por línea de comandos.
+1. the build directory's `sdkconfig`, if it already exists;
+2. the `SDKCONFIG_DEFAULTS` file list, which is always passed on the CMake
+   command line.
 
-Y como los símbolos de ESP-IDF (`CONFIG_BT_ENABLED`) no están en los
-ficheros de defaults, el gate del Bluetooth pasó al símbolo propio del
-proyecto:
+And because upstream `CONFIG_BT_ENABLED` is not listed in `sdkconfig.defaults`
+by that name, the project added an explicit stack switch:
 
 ```cmake
 # Kconfig.projbuild
@@ -3508,19 +3419,18 @@ config MININO_BT_STACK
 ```
 
 ```cmake
-# los siete componentes BLE
+# across all seven BLE components
 minino_kconfig_enabled(MININO_BT_STACK _minino_opt_on)
 ```
 
-Los tres interruptores de Minino (`MININO_BT_STACK`,
-`MININO_ZIGBEE_STACK`, `MININO_OPENTHREAD_STACK`) quedan fijados en
-`sdkconfig.defaults`, que es donde el helper los busca.
+All three stack switches (`MININO_BT_STACK`, `MININO_ZIGBEE_STACK`,
+`MININO_OPENTHREAD_STACK`) are explicitly set in `sdkconfig.defaults` and
+profile defaults.
 
-**El arreglo del menú.** El catálogo de menús compilaba las entradas de
-Zigbee y de Thread con `CONFIG_ZIGBEE_APPS_ENABLE` y
-`CONFIG_THREAD_APPS_ENABLE`, pero los módulos que las atienden son los
-que una variante deja fuera. Con las pilas apagadas, el enlace fallaba
-con referencias sin resolver:
+**Fixing menu catalog gates.** `menus_data.c` previously gated Zigbee and
+Thread menu entries only on `CONFIG_ZIGBEE_APPS_ENABLE` and
+`CONFIG_THREAD_APPS_ENABLE`. When the stacks were disabled in the SDR profile,
+linking failed with unresolved symbols:
 
 ```
 undefined reference to `zigbee_module_switch_enter'
@@ -3528,7 +3438,7 @@ undefined reference to `open_thread_module_sniffer_enter'
 undefined reference to `warbee_module_begin'
 ```
 
-Ahora las entradas siguen a la misma puerta que el filtro de fuentes:
+The catalog entries now check both the app toggle and the stack toggle:
 
 ```c
 #if defined(CONFIG_ZIGBEE_APPS_ENABLE) && defined(CONFIG_MININO_ZIGBEE_STACK)
@@ -3536,52 +3446,38 @@ Ahora las entradas siguen a la misma puerta que el filtro de fuentes:
 #if defined(CONFIG_THREAD_APPS_ENABLE) && defined(CONFIG_MININO_OPENTHREAD_STACK)
 ```
 
-**La variante SDR.** Con todo dentro (Bluetooth, Zigbee, Thread, las apps
-de vigilancia) la imagen no cabe bajo el banco de captura: 45 KB de más.
-El propio Kconfig del branch ya lo decía:
+**The two build profiles:**
 
-> Enable the Zigbee/Thread stack (espressif__esp-zigbee-lib, openthread,
-> ieee802154). Disabling this frees ~30+ KB of DRAM **and is required for
-> the SDR build variant**.
-
-Así que hay **dos imágenes**, y cada una con su perfil:
-
-| Variante | Perfil | Configuración | Tamaño | Margen |
+| Variant | Profile | Configuration | Image Size | Flash Margin |
 |---|---|---|---|---|
-| Placas (Minino, BSides, …) | `profiles/<placa>/profile` | todo dentro, **SDR apagado** | 3377 KiB | 8,7 % |
-| SDR | `profiles/sdr/profile` | Zigbee y Thread fuera, **SDR encendido** | 2496 KiB | 32,5 % |
+| Standard Boards (Minino, BSides, ...) | `profiles/<board>/profile` | All stacks enabled, **SDR disabled** | 3377 KiB | 8.7% |
+| SDR | `profiles/sdr/profile` | Zigbee and Thread disabled, **SDR enabled** | 2496 KiB | 32.5% |
 
 ```bash
-make builds        # las placas
-make build-sdr     # la variante del SDR
+make builds        # standard board profiles
+make build-sdr     # SDR variant
 ```
 
-La variante del SDR es la que tiene el banco de captura reservado, el
-*linker script* activo y la entrada `Applications > SDR` en el menú. Las
-placas normales no reservan el banco, así que el `.bss` y el heap pueden
-crecer hasta el final de la SRAM.
+The SDR variant reserves the capture bank, enables the linker cap script, and
+exposes `Applications > SDR`, `sdr_capture`, and `sdr_host`. Standard board
+images do not reserve the capture bank, allowing `.bss` and heap to use the
+full SRAM space.
 
-**Consecuencia para el usuario.** El `sdr_capture` (la app que graba en la
-microSD) y el `sdr_host` (la sesión con el navegador) viven en la variante
-del SDR. En la imagen de las placas siguen compilados pero no hay banco de
-captura detrás, así que **no funcionan**: por eso `CONFIG_SDR_ENABLE` está
-apagado por defecto en `sdkconfig.defaults`.
+### 23.6 Hardware Findings: Issues Only Visible on a Real ESP32-C6
 
-### 23.6 Lo que encontró la placa: tres fallos que el host no ve
+Testing against an ESP32-C6 (rev v0.2, `48:f6:ee:c2:a2:14`, 8 MB) with a test
+harness replicating `radio.js` byte-for-byte uncovered five hardware-level
+issues:
 
-Todo lo anterior se comprobó contra un ESP32-C6 real (rev v0.2,
-`48:f6:ee:c2:a2:14`, 8 MB) replicando la lógica de `radio.js` byte a byte.
-Salieron tres fallos que ningún test de host puede ver:
-
-**a) La carga binaria no llegaba.** El driver del USB Serial/JTAG mete la
-carga en un anillo de 256 bytes con `xRingbufferSend()`, y **esa llamada no
-acepta un bloque mayor que el anillo**: se queda esperando un hueco que no va
-a llegar y devuelve 0 sin escribir nada. Con una llamada de 32 KB, la
-respuesta `DATA ...` llegaba y **los bytes de la carga, no**. El navegador se
-habría quedado esperando el CRC para siempre.
+**a) Binary payloads larger than 256 bytes were dropped.** The USB Serial/JTAG
+driver pushes outgoing data into a 256-byte ring buffer via `xRingbufferSend()`,
+which **immediately returns 0 without writing anything if the block exceeds the
+ring buffer size**. Passing a 32 KB capture buffer in a single call sent the
+`DATA ...` header line and **zero payload bytes**, leaving the browser waiting
+forever for the CRC.
 
 ```c
-/* esdr_host.c: la carga va a trozos del tamaño del FIFO del hardware */
+/* esdr_host.c: send payload in 64-byte hardware FIFO chunks */
 #define ESDR_TX_CHUNK 64
 ...
   size_t chunk = len - done;
@@ -3589,283 +3485,216 @@ habría quedado esperando el CRC para siempre.
   int written = usb_serial_jtag_write_bytes(p + done, chunk, pdMS_TO_TICKS(2000));
 ```
 
-Es el mismo motivo por el que el firmware del ESPARGOS escribe a trozos de
-64 bytes con el FIFO de bajo nivel.
+**b) Captures returned constant DC without promiscuous mode and power-save off.**
+With the Wi-Fi driver in default STA mode, captures across all 13 channels
+returned a constant `I = -63, Q = -62` (zero variance). The dump engine was
+running, but the RF front-end was idle/sleeping. Enabling `WIFI_PS_NONE` and
+holding promiscuous mode via `radio_lease_prom_hold(RADIO_PROM_SDR_RX)` brought
+the receiver chain alive:
 
-**b) La captura era una constante.** Con el driver del Wi-Fi en modo STA (que
-es como lo arranca Minino), la captura salía **idéntica en los 13 canales**:
-I = −63, Q = −62, varianza cero. El motor de captura estaba funcionando (el
-canario se sustituía y las palabras de guarda quedaban intactas), pero la
-entrada del conversor era un nivel fijo.
-
-El upstream lo deja claro en su `app_main()`:
-
-```c
-    ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
-    ESP_ERROR_CHECK(esp_wifi_set_promiscuous(true));
-```
-
-Con el driver en STA el radio gestiona su propia vida (se duerme, escanea, se
-asocia) y el conversor no ve nada. Con el power save desactivado y el modo
-promiscuo puesto, la captura trae señal de verdad:
-
-| Canal | Antes | Después |
+| Channel | Before | After |
 |---|---|---|
-| 2412 MHz | I = −63, var 0 | I = 130, var 9 090, 372 valores distintos |
-| 2447 MHz | I = −63, var 0 | I = 115, var 1 616 |
-| 2472 MHz | I = −63, var 0 | I = 25, var 13 901 |
+| 2412 MHz | I = -63, var 0 | I = 130, var 9,090, 372 distinct values |
+| 2447 MHz | I = -63, var 0 | I = 115, var 1,616 |
+| 2472 MHz | I = -63, var 0 | I = 25, var 13,901 |
 
-Y el espectro pasa de una línea plana con un pico de DC a 87 dB de rango
-dinámico, con el pico en el centro (la portadora del LO).
+Dynamic range jumped from a flat line to 87 dB.
 
-El modo promiscuo se pide **con la lease**
-(`radio_lease_prom_hold(RADIO_PROM_SDR_RX)`), no tocando el driver a pelo,
-para que las otras apps que lo comparten no se lo quiten de debajo.
+**c) The session must hold the radio lease continuously.** Releasing the Wi-Fi
+lease after 5 seconds of inactivity and re-acquiring it on the next command
+caused the Wi-Fi driver to reinitialize and emit **ROM log lines** that bypass
+`esp_log_level_set("*", ESP_LOG_NONE)`, corrupting binary transfers. The
+session now acquires the radio once at start and holds it until exit.
 
-**c) La sesión tiene que ser dueña del radio.** La primera versión liberaba
-la *lease* del Wi-Fi a los 5 s de inactividad, para que las demás apps
-pudieran usar la radio. El problema es que al volver a tomarla, **el driver
-del Wi-Fi se reinicia y escribe sus propios logs desde la ROM**, que no pasan
-por `esp_log` y no se callan con el nivel maestro: esa línea de ruido se
-colaba en mitad de una captura binaria. Ahora la sesión **posee la radio**
-desde que empieza hasta que acaba, y el escape es lo único que la suelta.
+**d) Direct `chip_v7_set_chan()` calls conflict with the active Wi-Fi driver.**
+While upstream ESPARGOS calls `chip_v7_set_chan()` directly, doing so while the
+ESP-IDF Wi-Fi driver is active causes the driver to detect a PHY state mismatch
+and hang. Channel tuning is therefore performed through the Wi-Fi driver API.
 
-Lo mismo explica por qué el driver se pone **antes** de que la sesión
-empiece: su ruido de arranque se queda fuera del flujo del navegador.
-
-**d) Lo que no se pudo hacer.** El firmware del ESPARGOS programa el canal
-en el PHY con `chip_v7_set_chan()` (en vez de por el driver). En Minino eso
-**cuelga la placa**: el driver de Wi-Fi tiene su propio estado del PHY, lo
-reinicializa al detectarlo y se queda esperando. Con el driver de Wi-Fi en
-marcha no es viable; la alternativa es el camino que ya se usa (el canal por
-el driver) más el power save y el promiscuo.
-
-**e) El banco de captura tiene que ser el bloque entero.** El bit de
-propiedad de `SRAM_OWNER_REG` es **por bloque**, no por página: mientras la
-captura corre, la CPU no puede leer nada de los 128 KiB, ni siquiera de la
-mitad que el motor no escribe. Reservando sólo 64 KiB (el valor que estaba
-commiteado) el heap puede usar la mitad alta, el driver de Wi-Fi coloca ahí
-sus buffers y se quedan **inaccesibles durante la captura**: el driver
-espera a sus buffers, el watchdog de tareas salta y la placa reinicia con
+**e) The entire 128 KiB capture bank must be reserved.** `SRAM_OWNER_REG`
+switches ownership of the **entire 128 KiB block 2**, not individual pages.
+When only 64 KiB was reserved, the heap placed Wi-Fi driver buffers in the
+upper 64 KiB; during shorter captures, CPU access to those buffers stalled and
+triggered a task watchdog reset:
 
 ```
 rst:0x8 (TG1_WDT_HPSYS),boot:0x7c (SPI_FAST_FLASH_BOOT)
 ```
 
-El síntoma es desconcertante: la captura de 16 380 muestras va bien (el
-motor sólo escribe 65 520 bytes) y **cualquier captura más corta cuelga la
-placa**.
+Reserving all 128 KiB (`0x20000u`) eliminates the stall, and on-board testing
+confirmed BLE scanning still works (35 trackers detected, zero
+`HCI_ERR_MEM_CAPACITY_EXCEEDED` errors).
 
-> Esto corrige el razonamiento que tenía el documento anterior: decía que
-> reservar los 128 KiB rompía el Bluetooth porque el bloque contiguo más
-> grande del heap quedaba en 113 KB y el controlador del C6 pide 121 KB.
-> **Medido en la placa, el Bluetooth funciona con la reserva de 128 KiB**:
-> 35 trackers vistos, sin `HCI_ERR_MEM_CAPACITY_EXCEEDED`. El bloque que
-> necesita el Bluetooth lo pide por debajo de 0x40840000.
+### 23.7 On-Chip Spectrum Mode (`SPEC`)
 
-### 23.7 El modo de espectros: la FFT en la placa
+In addition to burst mode, the ESPARGOS viewer supports **On-Chip Spectrum**
+mode (`SPEC`), refreshing at dozens of frames per second by computing the FFT
+on the ESP32-C6 and streaming power codes.
 
-El visor de ESPARGOS tiene un segundo modo, el de **espectros calculados
-en el chip** ("On-Chip Spectrum"), que es el que refresca a decenas de
-cuadros por segundo en vez de a diez. La placa calcula la FFT y manda una
-lista de códigos de potencia en vez de las muestras.
+Implemented in `main/modules/esp_sdr/esdr_spectrum.c`:
 
-El módulo nuevo es `main/modules/esp_sdr/esdr_spectrum.c`, portado del
-firmware del ESPARGOS (`main/common/spectrum.c` y compañía).
-
-| Comando | Respuesta |
+| Command | Response |
 |---|---|
-| `SPECINFO?` | el JSON con los perfiles |
-| `SPEC <ms> <paso> <uds> <det> <tasa> <bins>` | `SPEC <bins> <tasa> <bins> <mhz>` y los marcos |
-| `DC?` / `DC 0` / `DC 1` | `DC <modo>` / `OK` |
+| `SPECINFO?` | JSON capabilities and profile list |
+| `SPEC <ms> <step> <units> <det> <rate> <bins>` | `SPEC <bins> <rate> <bins> <mhz>` followed by binary `SPC1` frames |
+| `DC?` / `DC 0` / `DC 1` | `DC <mode>` / `OK` |
 
-Los perfiles cubren las tres tasas del C6 con 256, 512, 1024 y 2048 bins.
+Profiles cover all three C6 sample rates (80, 40, and 16 MS/s) across 256, 512,
+1024, and 2048 FFT bins.
 
-**Lo que costó tres intentos:**
+Three key implementation details:
 
-1. **El watchdog se llevaba la placa.** El bucle de espectros no puede
-   quedarse con la CPU: la tarea idle es la que alimenta el watchdog de
-   tareas, así que hay que cederle el paso (el `vTaskDelay(1)` cada 20 ms
-   que hace el upstream).
-2. **La FFT estaba mal.** Structurela de tipo DIF con la permutación de
-   bits de la entrada, y el bucle de grupos mal acotado (se salía del
-   array). Lo cazó el test de host, que la compara con un **DFT directo**:
-   un espectro con las bins en orden equivocado parece plausible en
-   pantalla y no es la señal.
-3. **La escala.** Sin dividir entre dos en cada mariposa, un tono fuerte
-   satura el Q15 a la primera etapa. Ahora la ganancia total de la
-   transformada es 1/n, como en el upstream.
+1. **Task watchdog yielding.** The spectrum loop yields via `vTaskDelay(1)`
+   every 20 ms so the idle task can feed the task watchdog.
+2. **DIT radix-2 FFT verified against direct DFT.** The host unit test compares
+   the Q15 radix-2 FFT output against a reference direct DFT to guarantee bin
+   ordering and frequency accuracy.
+3. **Per-stage butterfly scaling.** Each butterfly divides by 2 (overall
+   transform scale `1/N`) so strong narrowband tones do not saturate Q15
+   arithmetic in early stages.
 
-El marco es el del upstream: 28 bytes de cabecera, las bins en orden
-natural y 4 bytes de CRC32, con la firma `SPC1`.
+Each frame consists of a 28-byte `SPC1` header, `N` power code bytes in natural
+frequency order, and a 4-byte CRC32. Verified on hardware with **28 of 28**
+automated spectrum checks passing.
 
-En la placa: **28 de 28** comprobaciones del modo de espectros, con los
-marcos llegando con el CRC correcto y las bins con estructura (máximo 146,
-mediana 14).
+### 23.8 Browser Capabilities Matrix
 
-### 23.8 Lo que se puede y no se puede ver desde el navegador
-
-| Capacidad | Estado |
+| Capability | Status |
 |---|---|
-| Espectro y cascada en el navegador | ✅ es lo que hace el modo *burst* |
-| Sintonía de 2412 a 2472 MHz | ✅ los canales de Wi-Fi, que es a lo que llega el motor |
-| 80, 40 y 16 MS/s | ✅ con el divisor de reloj |
-| Formato de 8 bits y de 10 bits | ✅ |
-| Ganancia manual | ❌ Minino no la implementa: la capacidad `GAIN` no se anuncia y el navegador esconde el control |
-| Ancho de banda analógico | ❌ igual: no se anuncia `ALPF` |
-| GPIO (conmutadores de antena) | ❌ no se anuncia `GPIO` |
-| Espectros calculados en el chip (`SPEC`) | ✅ 256–2048 bins en las tres tasas (ver §23.7) |
-| Salida en la banda de 5 GHz | ❌ el C6 no tiene 5 GHz |
+| Live spectrum and waterfall in browser | Supported (both burst mode and on-chip `SPEC` mode) |
+| Tuning from 2412 to 2484 MHz | Supported (2.4 GHz Wi-Fi channels) |
+| 80, 40, and 16 MS/s sample rates | Supported via hardware decimation / clock divider |
+| 8-bit and 10-bit I/Q sample formats | Supported (`CAP16` and `CAP20`) |
+| Manual / Hardware AGC RX Gain (`GAIN`) | Supported (`GAIN 0..60 dB`, 3 dB step) |
+| On-chip spectrum (`SPEC`) | Supported (256-2048 bins across all three sample rates; see section 23.7) |
+| Analog bandwidth filter (`ALPF`) | Not advertised (fixed per PHY channel) |
+| Antenna GPIO switching (`GPIO`) | Not advertised |
+| 5 GHz band | Not supported by ESP32-C6 hardware |
 
-El modo `SPEC` es el que convierte el navegador en un analizador en
-tiempo real de verdad (espectro *gapless* con la FFT en el chip); el modo
-*burst* da una imagen del espectro con huecos entre ráfagas, que es lo que
-muestra el "Reception has gaps between snapshots" del propio visor.
+### 23.9 Source and Test Files
 
-### 23.9 Los ficheros
-
-| Fichero | Qué es |
+| File | Description |
 |---|---|
-| `firmware/main/modules/esp_sdr/esdr_burst_proto.c/.h` | el protocolo: parser, empaquetado, CRC32, respuestas |
-| `firmware/main/modules/esp_sdr/esdr_host.c/.h` | la sesión sobre el USB Serial/JTAG |
-| `firmware/main/modules/esp_sdr/esdr_spectrum.c/.h` | los espectros en la placa: la FFT, el marco y el CRC |
-| `firmware/main/modules/esp_sdr/esdr_transport.h` | el transporte que comparten los dos módulos |
-| `firmware/tools/test_esdr_spec.py` | la prueba del modo de espectros contra la placa |
-| `firmware/tools/test_esdr_radio.py` | la prueba sobre el aire: una placa transmite y la otra recibe con el SDR |
-| `firmware/main/modules/esp_sdr/test/test_esdr_burst_proto.c` | 24 pruebas de host del formato del cable |
-| `firmware/main/modules/esp_sdr/c6_sdr_rx.c/.h` | el divisor de reloj (40 y 16 MS/s), el canario de overrun, el redondeo a canal |
-| `firmware/main/modules/cmd_control/cmd_control.c` | el comando `sdr_host` |
-| `firmware/tools/test_esdr_web.py` | la prueba contra la placa que replica al navegador |
-| `firmware/sdkconfig.sdr`, `firmware/profiles/sdr/profile` | la variante del SDR |
-| `firmware/cmake/minino_kconfig.cmake` | el helper, ahora con la cadena de defaults |
-| `firmware/components/minino_config/Kconfig.projbuild` | el símbolo `MININO_BT_STACK` |
-| `firmware/main/modules/menus_module/menus_data.c` | las puertas del catálogo, alineadas con el filtro de fuentes |
-| `firmware/components/event_bus/event_bus.c/.h` | la centinela del bus, que ya no choca con `EVENT_MAX_SUBS` |
+| `firmware/main/modules/esp_sdr/esdr_burst_proto.c/.h` | Burst protocol: parser, packing, CRC32, responses |
+| `firmware/main/modules/esp_sdr/esdr_host.c/.h` | USB Serial/JTAG host session |
+| `firmware/main/modules/esp_sdr/esdr_spectrum.c/.h` | On-chip Q15 FFT, `SPC1` frame builder, and CRC |
+| `firmware/main/modules/esp_sdr/esdr_transport.h` | Transport abstraction shared by burst and spectrum modules |
+| `firmware/tools/test_esdr_spec.py` | Hardware verification script for `SPEC` mode |
+| `firmware/tools/test_esdr_radio.py` | Over-the-air two-board RF verification script |
+| `firmware/main/modules/esp_sdr/test/test_esdr_burst_proto.c` | 24 host unit tests for the wire protocol |
+| `firmware/main/modules/esp_sdr/c6_sdr_rx.c/.h` | Clock divider (40 and 16 MS/s), overrun canary, channel rounding |
+| `firmware/main/modules/cmd_control/cmd_control.c` | `sdr_host` console command |
+| `firmware/tools/test_esdr_web.py` | Hardware test script replicating `radio.js` |
+| `firmware/sdkconfig.sdr`, `firmware/profiles/sdr/profile` | SDR build variant configuration |
+| `firmware/cmake/minino_kconfig.cmake` | CMake Kconfig helper reading both `sdkconfig` and `SDKCONFIG_DEFAULTS` |
+| `firmware/components/minino_config/Kconfig.projbuild` | `MININO_BT_STACK` Kconfig symbol |
+| `firmware/main/modules/menus_module/menus_data.c` | Menu catalog gates aligned with source filtering |
+| `firmware/components/event_bus/event_bus.c/.h` | Fixed `EVENT_SLOT_INVALID` (`0xff`) sentinel |
 
-### 23.10 Cómo se usa
+### 23.10 Usage Guide
 
 ```bash
-# 0. (opcional) la prueba automática contra la placa, que replica la
-#    logica del navegador byte a byte:
+# 0. (Optional) Run automated hardware protocol verification:
 python3 tools/test_esdr_web.py /dev/ttyACM0
 
-# 1. flashear la variante del SDR
+# 1. Build and flash the SDR variant:
 make build-sdr
 cd build-sdr && esptool.py write_flash 0x0 minino.bin
 
-# 2. abrir una terminal en el puerto USB (por ejemplo /dev/ttyACM0)
-#    y handing over the port
+# 2. Open a serial terminal on the USB port (e.g. /dev/ttyACM0)
+#    and start host mode (or simply open Applications > SDR on the device):
 minino> sdr_host
 
-# 3. abrir https://espargos.net/espsdr/app/ y elegir el dispositivo
-#    (WebSerial o WebUSB). El navegador manda SYNC, INFO, CAPS, LIMITS?,
-#    FREQ y CAP16/CAP20 a partir de ahí.
+# 3. Open https://espargos.net/espsdr/app/ and click Connect
+#    (WebSerial or WebUSB). The browser negotiates SYNC, INFO, CAPS,
+#    LIMITS?, FREQ, and starts streaming CAP16/CAP20 or SPEC frames.
 
-# 4. el visor manda RELEASE al cerrar: la consola vuelve.
+# 4. Closing the viewer sends RELEASE and returns control to the console.
 ```
 
-> **El botón "Flash Firmware…" del navegador flashea el firmware del
-> ESPARGOS y borra Minino.** Hay que ignorarlo.
+> **Ignore the "Flash Firmware..." button in the browser**, as it flashes
+> upstream ESPARGOS firmware over Minino.
 
-### 23.11 Lo que falta para que sea cómodo
+### 23.11 Ergonomics and Future Improvements
 
-- **La entrega del puerto es manual.** Hay que escribir `sdr_host` en una
-  terminal antes de que el navegador pueda conectarse. El REPL hace eco de
-  lo que lee (linenoise) y el navegador espera una respuesta limpia, así
-  que el REPL no puede estar escuchando a la vez. Se podría resolver con
-  un *mux* delante de la línea de entrada, pero es una pieza más.
-- **No hay escape desde el lado del visor.** `RELEASE` es lo que manda el
-  navegador al cerrarse; `MININO` es el escape propio de Minino y sirve
-  desde una terminal.
-- **El `SPEC` (FFT en el chip) es lo que falta** para tener un analizador
-  en tiempo real: exige el anillo de tres bancos de SRAM y una FFT, que es
-  justo lo que el modo *burst* evita.
+- **Automatic vs. manual port handover.** When inside `Applications > SDR` on
+  the device, the firmware automatically detects incoming `SYNC` commands from
+  the browser and switches into `[HOST]` mode. From the raw CLI prompt outside
+  the app, running `sdr_host` pauses the linenoise REPL so characters are not
+  echoed back to the browser.
+- **Returning to the console.** Closing the browser tab sends `RELEASE`, or
+  typing `MININO` from a serial terminal exits host mode immediately.
 
-### 23.12 La prueba sobre el aire
+### 23.12 Over-the-Air Two-Board Validation
 
-> **Añadido 2026-10-21.**
+> **Added 2026-10-21.**
 
-Con dos placas en la mesa (una radiate, la otra en recepción del SDR) se
-cerró la parte de la verificación que faltaba. El detalle está en la §9 de
-[`esp-sdr-integration.md`](./esp-sdr-integration.md) y el informe completo,
-en [`sdr-resultados.md`](./sdr-resultados.md).
+Tested with two ESP32-C6 boards on the bench (one transmitting, the other
+receiving with the SDR). Full details are in section 9 of
+[`esp-sdr-integration.md`](./esp-sdr-integration.md) and
+[`sdr-resultados.md`](./sdr-resultados.md).
 
-| Prueba | Resultado |
+| Test | Result |
 |---|---|
-| `tools/test_esdr_web.py` en la placa de recepción, con la otra radiando | 56 de 56 |
-| `tools/test_esdr_spec.py` en la placa de recepción, con la otra radiando | 28 de 28 |
-| `make tests` (las 20 suites de host) | 0 fallos |
-| La app nativa: ráfaga, sintonía y salida | 16 380 palabras en 218 us |
+| `tools/test_esdr_web.py` on RX board while TX board radiates | 56 of 56 |
+| `tools/test_esdr_spec.py` on RX board while TX board radiates | 28 of 28 |
+| `make tests` (all 20 host test suites) | 0 failures |
+| Native app: burst capture, tuning, and exit | 16,380 words in 218 us |
 
-**Dos fallos que destapó la prueba:**
+**Two bugs uncovered and fixed during over-the-air testing:**
 
-1. El spammer de SSID de Wi-Fi, lanzado desde la consola, **no
-   transmitía nada**. La lista de SSID se carga al elegir un elemento del
-   menú (`ssid_spam.c:158`), y desde la consola no hay ninguno elegido:
-   la tarea de spam se quedaba con la lista vacía y salía sin_tx. La
-   lista se carga ahora al abrir la app (`ssid_spam_load_stored_list()`),
-   así que el `Start` del menú funciona siempre y el spammer sirve como
-   transmisor para las pruebas.
-2. Reentrar en el spammer **reiniciaba la placa**:
-   `esp_netif_create_default_wifi_ap()` hace un `assert()` si el netif del
-   AP ya existe (*"duplicate key"*). Ahora el netif solo se crea si no
-   existe (`esp_netif_get_handle_from_ifkey("WIFI_AP_DEF")`).
+1. The Wi-Fi SSID spammer, when launched from the console, **transmitted
+   nothing** because the SSID list was only populated when selecting an item in
+   the UI menu (`ssid_spam.c:158`). The stored list is now loaded automatically
+   on app start (`ssid_spam_load_stored_list()`).
+2. Re-entering the SSID spammer **rebooted the board** because
+   `esp_netif_create_default_wifi_ap()` asserts if the default AP netif already
+   exists (*"duplicate key"*). The netif is now created only if
+   `esp_netif_get_handle_from_ifkey("WIFI_AP_DEF")` returns `NULL`.
 
-La nueva herramienta `firmware/tools/test_esdr_radio.py` mide la
-diferencia del espectro con la transmisión puesta y sin ella, alternando
-las ventanas y comparando cada una con sus vecinas para que la deriva
-del ambiente se cancele.
+The `firmware/tools/test_esdr_radio.py` tool measures spectrum differences
+across alternating TX-on / TX-off windows, while `firmware/tools/test_esdr_pair.py`
+(`app+spec`, `spec+spec`, and `app+app` modes) and `firmware/tools/test_esdr_app.py`
+validate both boards simultaneously:
 
-**Las dos aplicaciones del SDR en las dos placas.** Con la app nativa (la
-ráfaga de I/Q) en una Minino y el modo de espectros (la FFT en la
-placa) en la otra, y al revés, en el mismo ambiente y sin ninguna otra app
-en juego. Lo hace `firmware/tools/test_esdr_pair.py` (modos `app+spec`,
-`spec+spec` y `app+app`) y la app nativa suelta la comprueba
-`firmware/tools/test_esdr_app.py`.
-
-| Placa | protocolo | espectros | app nativa |
+| Board | Burst Protocol | On-Chip Spectrum | Native App |
 |---|---|---|---|
 | `48:f6:ee:c2:a2:14` | 56/56 | 28/28 | 16/16 |
 | `7c:2c:67:42:84:a0` | 56/56 | 28/28 | 16/16 |
 
-Con las dos placas midiendo el espectro a la vez, los dos perfiles tienen
-**la misma forma** y hasta **14,7 dB de diferencia de nivel**: no es la
-placa, es dónde está cada una. El `wifi_scan` de las dos en el mismo
-momento lo confirma (los mismos AP con +13 dB en una que en la otra).
-
-**El límite de la medida, medido:** con la diferencia con transmisión
-(+0.2 a +1.1 dB, en la banda del transmisor) y el control negativo dando
-+1.0 a +1.4 dB en las mismas bandas, el efecto no se separa del ambiente
-en un entorno de 2.4 GHz saturado. Lo que sí es concluyente es que la
-transmisión *llega*: el receptor de Wi-Fi de la placa de recepción ve los
-beacons de la otra a −46 dBm, más fuerte que cualquier AP del entorno.
+When both boards measure the ambient spectrum simultaneously, their spectral
+shapes match while showing up to a **14.7 dB absolute level offset** due to
+physical antenna placement and multipath (confirmed by simultaneous `wifi_scan`
+readings showing the same ambient APs at +13 dB higher RSSI on one board than
+the other). And on the receiving board, `wifi_scan` detects the transmitting
+board's beacons at -46 dBm, stronger than any ambient access point.
 
 ---
 
-## Anexo: glosario
+## Appendix: Glossary
 
-| Término | Significado |
+| Term | Definition |
 |---|---|
-| **Claim / lease** | Petición de propiedad sobre un recurso global, con recuento de referencias |
-| **Fan-out** | Reparto de un evento a varios suscriptores |
-| **Banco de captura** | Bloque de SRAM que el motor de *dump* del C6 toma para escribir las muestras |
-| **Promiscuo** | Modo del driver de Wi-Fi que entrega todas las tramas |
-| **GAP** | *Generic Access Profile* de Bluetooth: advertisement y escaneo |
-| **GATTC** | *Generic Attribute Profile Client*: el lado cliente de Bluetooth |
-| **BTC task** | La tarea de Bluedroid que ejecuta las operaciones del stack |
-| **Host test** | Test que compila en el PC con `gcc` contra *mocks* de ESP-IDF |
-| **IRAM** | La RAM de instrucción, donde IDF mete el código crítico |
-| **`.bss`** | Variables sin inicializar, que ocupan RAM al arrancar |
-| **Ensalzamiento de prioridad** | Una tarea de alta prioridad retrasa a una de baja que la espera |
-| **`-zmuldefs`** | Flag del enlazador que acepta definiciones múltiples (aquí, durante mucho tiempo, de datos en cabeceras) |
+| **Claim / lease** | Reference-counted ownership request over a shared global hardware or software resource |
+| **Fan-out** | Delivering a single event or callback to multiple registered subscribers |
+| **Capture bank** | The 128 KiB SRAM block (`0x40840000`) taken over by the C6 hardware dump engine to write I/Q samples |
+| **Promiscuous mode** | Wi-Fi driver mode that delivers all received 802.11 frames regardless of destination address |
+| **GAP** | Bluetooth *Generic Access Profile*, governing advertising and scanning |
+| **GATTC** | Bluetooth *Generic Attribute Profile Client* |
+| **BTC task** | Internal Bluedroid task that executes asynchronous Bluetooth stack operations |
+| **Host test** | Unit test compiled natively on the workstation with `gcc` against ESP-IDF header mocks |
+| **IRAM** | Instruction RAM used by ESP-IDF for time-critical code |
+| **`.bss`** | Uninitialized static/global variables that consume SRAM at runtime |
+| **Priority preemption / inversion** | A higher-priority task preempting or waiting on a lower-priority task |
+| **`-zmuldefs`** | Linker flag permitting multiple symbol definitions (previously masking header-defined data arrays) |
 
-## Anexo: referencias
+## Appendix: References
 
-| Documento | Contenido |
+| Document | Contents |
 |---|---|
-| [`docs/esp-sdr-integration.md`](./esp-sdr-integration.md) | El SDR en detalle técnico: registros, banco, recortes |
-| [`docs/rf-spectrum-advanced.md`](./rf-spectrum-advanced.md) | El analizador de espectro RF |
-| [`firmware/README.md`](../firmware/README.md) | Build, perfiles de placa y variantes |
-| [`firmware/menus.md`](../firmware/menus.md) | El árbol de menús |
-| [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr) | El proyecto de referencia del SDR |
-| [esp-sdr-zephyr](../esp-sdr-zephyr/) | El *upstream* con el que se comparó el *linker script* del banco |
+| [`docs/esp-sdr-integration.md`](./esp-sdr-integration.md) | Detailed SDR technical reference: registers, capture bank, SRAM budget |
+| [`docs/rf-spectrum-advanced.md`](./rf-spectrum-advanced.md) | RF Spectrum Analyzer documentation |
+| [`firmware/README.md`](../firmware/README.md) | Firmware build instructions, board profiles, and build variants |
+| [`firmware/menus.md`](../firmware/menus.md) | Menu tree reference |
+| [ESPARGOS/esp-sdr](https://github.com/ESPARGOS/esp-sdr) | Upstream ESP-SDR reference project |
+| [esp-sdr-zephyr](../esp-sdr-zephyr/) | Upstream Zephyr port used for capture bank linker comparison |

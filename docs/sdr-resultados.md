@@ -1,67 +1,67 @@
-# Resultados de las pruebas del SDR de Minino
+# Minino SDR Test Results
 
-> Informe de las pruebas hechas sobre dos Minino con la variante del SDR
-> (la que reserva el banco de captura): una en recepción del SDR y la otra
-> radiando, y al revés, en el mismo ambiente de RF.
+> Test report for two Minino boards running the SDR firmware variant (which
+> reserves the hardware capture bank): one board operating as an SDR receiver
+> while the other radiates, and vice versa, in the same RF environment.
 >
-> - **Fecha:** 2026-10-21
-> - **Placas:** ESP32-C6 rev v0.2 `48:f6:ee:c2:a2:14` y rev v0.1
->   `7c:2c:67:42:84:a0`, las dos de 8 MB
+> - **Date:** 2026-10-21
+> - **Boards:** ESP32-C6 rev v0.2 `48:f6:ee:c2:a2:14` and rev v0.1
+>   `7c:2c:67:42:84:a0`, both with 8 MB flash
 > - **Toolchain:** ESP-IDF v5.5.1, target `esp32c6`
-> - **Firmware:** `firmware/build-sdr` (`minino.bin`, 2.561.504 bytes, 32 %
->   libre en la partición de aplicación)
-> - **Documentos hermanos:** el resumen de las dos aplicaciones
->   [`spectrum-SDR-results.md`](./spectrum-SDR-results.md), la guía de uso
->   [`sdr-guia.md`](./sdr-guia.md), el formato de los paquetes sobre el
->   cable [`sdr-protocolo.md`](./sdr-protocolo.md) y la referencia técnica
+> - **Firmware:** `firmware/build-sdr` (`minino.bin`, 2,561,504 bytes, 32%
+>   free space in the application partition)
+> - **Related Documents:** Dual-application summary in
+>   [`spectrum-SDR-results.md`](./spectrum-SDR-results.md), user guide in
+>   [`sdr-guia.md`](./sdr-guia.md), wire packet format in
+>   [`sdr-protocolo.md`](./sdr-protocolo.md), and technical design reference in
 >   [`esp-sdr-integration.md`](./esp-sdr-integration.md)
 
 ---
 
-## 1. Resumen
+## 1. Summary
 
-| # | Qué se probó | Dónde | Resultado |
+| # | What Was Tested | Where | Result |
 |---|---|---|---|
-| 1 | Las 15 suites de C (378 pruebas) y la de Python | host | **0 fallos** |
-| 2 | El protocolo del visor de ESPARGOS, byte a byte | las dos placas | **56/56** y **56/56** |
-| 3 | El modo de espectros (FFT en la placa) | las dos placas | **28/28** y **28/28** |
-| 4 | La app nativa del SDR (ráfaga, sintonía, salida) | las dos placas | **16/16** y **16/16** |
-| 5 | La app nativa y el modo de espectros **a la vez**, en las dos placas | las dos placas | correcto en las 4 asignaciones |
-| 6 | Los dos perfiles de espectro medidos a la vez | las dos placas | misma forma, hasta **14,7 dB** de diferencia de nivel |
-| 7 | *Round aparte:* la transmisión de una placa vista por la otra | las dos placas | los beacons a **−46 dBm** (§7) |
+| 1 | All 15 C test suites (378 tests) plus the Python suite | Host | **0 failures** |
+| 2 | ESPARGOS viewer protocol, byte by byte | Both boards | **56/56** and **56/56** |
+| 3 | Spectrum mode (on-chip FFT) | Both boards | **28/28** and **28/28** |
+| 4 | Native SDR app (burst capture, tuning, exit) | Both boards | **16/16** and **16/16** |
+| 5 | Native app and spectrum mode **simultaneously** across both boards | Both boards | Passed all 4 role assignments |
+| 6 | Both spectrum profiles measured simultaneously | Both boards | Identical shape, up to **14.7 dB** level difference |
+| 7 | *Separate round:* transmission from one board observed by the other | Both boards | Beacons received at **-46 dBm** (Section 7) |
 
-Lo que queda por encima de todo: **las dos placas miden el mismo
-ambiente de RF y sus resultados son coherentes entre sí**, con la
-única salvedad de que el nivel depende de dónde esté cada placa (§6).
+Key takeaway: **both boards measure the same RF environment and produce
+mutually consistent results**, with amplitude differences explained entirely by
+the physical position of each board relative to surrounding access points
+(Section 6).
 
 ---
 
-## 2. Cómo se repitieron las pruebas
+## 2. How to Reproduce the Tests
 
 ```bash
-# el firmware
+# Build and flash firmware
 cd firmware
 make build-sdr
 idf.py -B build-sdr -p /dev/ttyACM0 flash
 idf.py -B build-sdr -p /dev/ttyACM1 flash
 
-# las suites
-python3 tools/test_esdr_web.py  /dev/ttyACM0    # el protocolo del visor
-python3 tools/test_esdr_spec.py /dev/ttyACM0    # el modo de espectros
-python3 tools/test_esdr_app.py  /dev/ttyACM0    # la app nativa
+# Single-board test suites
+python3 tools/test_esdr_web.py  /dev/ttyACM0    # Viewer wire protocol
+python3 tools/test_esdr_spec.py /dev/ttyACM0    # On-chip spectrum mode
+python3 tools/test_esdr_app.py  /dev/ttyACM0    # Native on-board app
 
-# las dos aplicaciones a la vez en las dos placas
+# Simultaneous dual-board tests
 python3 tools/test_esdr_pair.py app+spec  /dev/ttyACM0 /dev/ttyACM1
 python3 tools/test_esdr_pair.py app+spec  /dev/ttyACM1 /dev/ttyACM0
 python3 tools/test_esdr_pair.py app+app   /dev/ttyACM0 /dev/ttyACM1
 python3 tools/test_esdr_pair.py spec+spec /dev/ttyACM0 /dev/ttyACM1
 
-# la prueba sobre el aire (una placa radia)
+# Over-the-air test (one board radiating)
 python3 tools/test_esdr_radio.py /dev/ttyACM1 /dev/ttyACM0 --mode spec
 ```
 
-Las placas se identifican por su número de serie de USB, que no cambia al
-reconectarlas:
+The boards are uniquely identified by their persistent USB serial numbers:
 
 ```
 /dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_unit_48:F6:EE:C2:A2:14-if00
@@ -70,92 +70,93 @@ reconectarlas:
 
 ---
 
-## 3. Las suites
+## 3. Test Suites
 
-### 3.1 El protocolo del visor de ESPARGOS
+### 3.1 ESPARGOS Viewer Protocol
 
-`tools/test_esdr_web.py` replica la lógica de `radio.js` del navegador:
-el handshake, las expresiones regulares exactas sobre cada respuesta, la
-comprobación del CRC32 y el desempaquetado de I/Q.
+`tools/test_esdr_web.py` replicates the browser's `radio.js` logic:
+handshake, exact regular expressions on every response, CRC32 verification, and
+I/Q sample unpacking.
 
-| Comprobación | Resultado |
+| Check | Result |
 |---|---|
-| La consola aparece y el modo host arranca | PASA |
-| El marcador de sincronización vuelve intacto | PASA |
-| `INFO` → `C6SDR 6 burst 16380` | PASA |
-| `CAPS` anuncia lo que el visor espera y **no** anuncia `GPIO`, `GAIN`, `ALPF`, `SPECSTAT` | PASA |
-| `TRANSPORT?` → `TRANSPORT USB 0` | PASA |
-| `RANGE?` → `RANGE 2412 2472 1` | PASA |
-| `LIMITS?` con el JSON del visor (ganancia, tasas, bits) | PASA |
-| `VERSION?` con el JSON del visor | PASA |
-| `FREQ 2412` y `FREQ 2417` → `OK`; `FREQ 2000` → `ERR` | PASA |
-| `CAP16` y `CAP20` de 16 380 muestras, con su CRC | PASA |
-| Las tres tasas (80, 40 y 16 MS/s) | PASA |
-| El espectro de la captura tiene rango dinámico (86 dB) y el pico en el LO | PASA |
-| `RELEASE` responde `OK` y la consola vuelve | PASA |
-| `MININO` devuelve la consola | PASA |
+| Console responds and host mode starts | PASS |
+| Synchronization nonce returns intact | PASS |
+| `INFO` -> `C6SDR 6 burst 16380` | PASS |
+| `CAPS` advertises expected tokens and **omits** `GPIO`, `GAIN`, `ALPF`, `SPECSTAT` | PASS |
+| `TRANSPORT?` -> `TRANSPORT USB 0` | PASS |
+| `RANGE?` -> `RANGE 2412 2472 1` | PASS |
+| `LIMITS?` returns valid viewer JSON (gain, sample rates, bit depths) | PASS |
+| `VERSION?` returns valid viewer JSON | PASS |
+| `FREQ 2412` and `FREQ 2417` -> `OK`; `FREQ 2000` -> `ERR` | PASS |
+| `CAP16` and `CAP20` of 16,380 samples with valid CRC32 | PASS |
+| All three sample rates (80, 40, and 16 MS/s) | PASS |
+| Captured spectrum has dynamic range (86 dB) and peak at the LO | PASS |
+| `RELEASE` replies `OK` and restores the console | PASS |
+| `MININO` escape command restores the console | PASS |
 
-**56 de 56 en las dos placas.**
+**56 of 56 passed on both boards.**
 
-La captura, en números:
+Capture metrics:
 
-| | `48:f6:ee` | `7c:2c:67` |
+| Metric | `48:f6:ee` | `7c:2c:67` |
 |---|---|---|
-| `CAP16` de 16 380 muestras | 32 760 bytes, 217 us de captura, 608 kB/s | 32 760 bytes, 217 us, 611 kB/s |
-| `CAP16`: pico / rms de la I/Q | 0,477 / 0,247 | 0,367 / 0,120 |
-| `CAP20` de 16 380 muestras | 40 950 bytes, 209 us, 618 kB/s | 40 950 bytes, 208 us, 618 kB/s |
-| `CAP20`: pico / rms de la I/Q | 0,445 / 0,223 | 0,275 / 0,076 |
-| Rango dinámico del espectro | 88,2 dB (pico −3,4 dBFS, suelo −91,7 dBFS) | 86,2 dB (pico −9,4 dBFS, suelo −95,6 dBFS) |
-| El pico está en el LO | sí | sí |
+| `CAP16` (16,380 samples) | 32,760 bytes, 217 us capture time, 608 kB/s | 32,760 bytes, 217 us, 611 kB/s |
+| `CAP16`: I/Q peak / RMS | 0.477 / 0.247 | 0.367 / 0.120 |
+| `CAP20` (16,380 samples) | 40,950 bytes, 209 us, 618 kB/s | 40,950 bytes, 208 us, 618 kB/s |
+| `CAP20`: I/Q peak / RMS | 0.445 / 0.223 | 0.275 / 0.076 |
+| Spectrum dynamic range | 88.2 dB (peak -3.4 dBFS, floor -91.7 dBFS) | 86.2 dB (peak -9.4 dBFS, floor -95.6 dBFS) |
+| Peak located at the LO | Yes | Yes |
 
-### 3.2 El modo de espectros (la FFT en la placa)
+### 3.2 Spectrum Mode (On-Chip FFT)
 
-`tools/test_esdr_spec.py`: los perfiles, la corriente de marcos, el CRC
-y el corte.
+`tools/test_esdr_spec.py`: tests all profiles, frame streaming, CRC32 integrity,
+and clean stream termination.
 
-| Comprobación | Resultado |
+| Check | Result |
 |---|---|
-| Los 12 perfiles (3 tasas × 4 tamaños de FFT) | PASA |
-| La cabecera `SPEC <bins> <tasa> <bins> <mhz>` | PASA |
-| Los marcos `SPC1` llegan con el CRC bueno | PASA |
-| Las bins son códigos de 0 a 255 y el espectro tiene estructura | PASA |
-| La portadora del LO está en el bin 0 | PASA |
-| `SPECEND` con los doce campos y el corte limpio | PASA |
+| All 12 profiles (3 sample rates x 4 FFT sizes) | PASS |
+| Stream header `SPEC <bins> <rate> <bins> <mhz>` | PASS |
+| `SPC1` frames arrive with valid CRC32 | PASS |
+| Bins contain codes in `0..255` and spectrum shows real structure | PASS |
+| LO carrier peak is at bin 0 | PASS |
+| `SPECEND` returns all twelve fields on clean stop | PASS |
 
-**28 de 28 en las dos placas.**
+**28 of 28 passed on both boards.**
 
-### 3.3 La app nativa del SDR
+### 3.3 Native SDR App
 
-`tools/test_esdr_app.py`: la app de la pantalla, sin pasar por el visor.
+`tools/test_esdr_app.py`: tests the on-device UI app directly without the web
+viewer.
 
-| Comprobación | `48:f6:ee` | `7c:2c:67` |
+| Check | `48:f6:ee` | `7c:2c:67` |
 |---|---|---|
-| La app arranca | PASA | PASA |
-| El motor de captura se levanta (banco en 0x40840000) | PASA | PASA |
-| Sintoniza 2412 MHz (CH 1) al entrar | PASA | PASA |
-| La microSD responde | PASA | PASA |
-| La ráfaga son 16 380 palabras | PASA | PASA |
-| La tasa está cerca de los 80 MS/s | 75,5 MS/s | 75,1 MS/s |
-| La ráfaga se guarda en la microSD | PASA | PASA |
-| UP sintoniza 2417 MHz (CH 2) | PASA | PASA |
-| DOWN vuelve a 2412 MHz (CH 1) | PASA | PASA |
-| El contador de ráfagas avanza | PASA | PASA |
-| La app sale y el motor se para | PASA | PASA |
-| La radio vuelve a Minino | PASA | PASA |
-| La consola sigue viva | PASA | PASA |
+| App launches | PASS | PASS |
+| Capture engine initializes (buffer at `0x40840000`) | PASS | PASS |
+| Tunes to 2412 MHz (CH 1) on entry | PASS | PASS |
+| MicroSD card responds | PASS | PASS |
+| Burst size is 16,380 words | PASS | PASS |
+| Capture rate is close to 80 MS/s | 75.5 MS/s | 75.1 MS/s |
+| Burst is saved to microSD | PASS | PASS |
+| UP tunes to 2417 MHz (CH 2) | PASS | PASS |
+| DOWN tunes back to 2412 MHz (CH 1) | PASS | PASS |
+| Burst counter increments | PASS | PASS |
+| App exits and stops the capture engine | PASS | PASS |
+| Radio lease returns to Minino | PASS | PASS |
+| Serial console remains responsive | PASS | PASS |
 
-**16 de 16 en las dos placas.**
+**16 of 16 passed on both boards.**
 
-### 3.4 Las suites de host
+### 3.4 Host Test Suites
 
 ```
 make tests
 ```
 
-15 suites de C (**378 pruebas**) más la de Python (`test_flash_tools.py`,
-5 pruebas): **0 fallos**.
+15 C test suites (**378 unit tests**) plus the Python test suite
+(`test_flash_tools.py`, 5 tests): **0 failures**.
 
-| Suite | Pruebas | Suite | Pruebas |
+| Suite | Tests | Suite | Tests |
 |---|---|---|---|
 | `surveillance_detect` | 80 | `cmd_control` | 16 |
 | `nmea_parser` | 22 | `esp_sdr` | 24 |
@@ -168,186 +169,188 @@ make tests
 
 ---
 
-## 4. Las dos aplicaciones a la vez, en las dos placas
+## 4. Both Applications Running Simultaneously Across Both Boards
 
-`tools/test_esdr_pair.py`. Cada hilo habla con su placa: la app nativa
-por la consola (con `sdr_capture` y el gancho `press`) y el modo de
-espectros por el protocolo (con `SPEC`).
+`tools/test_esdr_pair.py`. Each thread communicates with its assigned board:
+the native app over the serial console (`sdr_capture` and the `press` hook) and
+spectrum mode over the binary wire protocol (`SPEC`).
 
-| Asignación | Placa A | Placa B | Resultado |
+| Assignment | Board A | Board B | Result |
 |---|---|---|---|
-| 1 | app nativa | modo de espectros | app: 3 ráfagas de 16 380 palabras (218, 217, 218 us), sintonía 2412 ↔ 2417, salida limpia, radio liberada · espectros: **1 416 marcos** con CRC bueno, pico 116, mediana 58 |
-| 2 | modo de espectros | app nativa | espectros: **1 399 marcos**, pico 112, mediana 59 · app: 3 ráfagas de 16 380 palabras (217, 218, 218 us) |
-| 3 | app nativa | app nativa | las dos a la vez: 3 ráfagas cada una (una de 557 us, un tirón del driver) |
-| 4 | modo de espectros | modo de espectros | **1 413** y **1 402** marcos, y los dos perfiles comparados banda a banda (§6) |
+| 1 | Native app | Spectrum mode | App: 3 bursts of 16,380 words (218, 217, 218 us), tuning 2412 <-> 2417, clean exit, radio released; Spectrum: **1,416 frames** with valid CRC, peak 116, median 58 |
+| 2 | Spectrum mode | Native app | Spectrum: **1,399 frames**, peak 112, median 59; App: 3 bursts of 16,380 words (217, 218, 218 us) |
+| 3 | Native app | Native app | Both simultaneously: 3 bursts each (one took 557 us due to a driver pause) |
+| 4 | Spectrum mode | Spectrum mode | **1,413** and **1,402** frames, with both profiles compared band by band (Section 6) |
 
-En las cuatro asignaciones, el `SPECEND` sale limpio: estado 0, sin
-marcos perdidos (`drops` 0), sin abandonos (`abandoned` 0) y todos los
-FFTs entregados.
+Across all four role assignments, `SPECEND` completed cleanly: status 0, zero
+dropped frames (`drops = 0`), zero abandoned captures (`abandoned = 0`), and all
+FFTs delivered.
 
 ---
 
-## 5. El espectro, en las dos placas
+## 5. Spectrum Profile Across Both Boards
 
-Instantánea del modo de espectros: LO en 2412 MHz, 40 MS/s, 1024 bins,
-1 427 marcos promediados, una placa cada vez.
+Snapshot from spectrum mode: LO at 2412 MHz, 40 MS/s, 1024 bins,
+1,427 averaged frames, measured one board at a time.
 
-| | `48:f6:ee` | `7c:2c:67` |
+| Metric | `48:f6:ee` | `7c:2c:67` |
 |---|---|---|
-| Pico | 113 | 116 |
-| Mediana | 58 | 58 |
-| Mínimo (suelo) | 8 | 8 |
-| El LO (bin 0) | 74,0 dB | 74,4 dB |
+| Peak | 113 | 116 |
+| Median | 58 | 58 |
+| Minimum (noise floor) | 8 | 8 |
+| LO (bin 0) | 74.0 dB | 74.4 dB |
 
-Perfil banda a banda (dB, MHz relativos al LO):
+Band-by-band profile (dB, MHz offset relative to LO):
 
-| Banda | `48:f6:ee` | `7c:2c:67` |
+| Band | `48:f6:ee` | `7c:2c:67` |
 |---|---|---|
-| −12 MHz | 49,5 | 50,2 |
-| −10 MHz | 56,6 | 55,7 |
-| −5 MHz | 61,7 | 60,5 |
-| −2 MHz | 68,2 | 65,0 |
-| **0 MHz (LO)** | **74,0** | **74,4** |
-| +2 MHz | 71,1 | 75,2 |
-| +5 MHz | 69,1 | 71,6 |
-| +10 MHz | 65,0 | 69,8 |
-| +12 MHz | 48,7 | 54,6 |
-| +15 MHz | 22,5 | 28,3 |
-| +19 MHz | 10,8 | 12,9 |
+| -12 MHz | 49.5 | 50.2 |
+| -10 MHz | 56.6 | 55.7 |
+| -5 MHz | 61.7 | 60.5 |
+| -2 MHz | 68.2 | 65.0 |
+| **0 MHz (LO)** | **74.0** | **74.4** |
+| +2 MHz | 71.1 | 75.2 |
+| +5 MHz | 69.1 | 71.6 |
+| +10 MHz | 65.0 | 69.8 |
+| +12 MHz | 48.7 | 54.6 |
+| +15 MHz | 22.5 | 28.3 |
+| +19 MHz | 10.8 | 12.9 |
 
-Las dos ven lo mismo: una joroba ancha de unos 20 MHz centrada en el LO
-(la banda del canal 1 de Wi-Fi, 2401-2423 MHz), con el suelo de ruido
-10 MHz más allá.
-
----
-
-## 6. Las dos placas a la vez: el mismo ambiente, niveles distintos
-
-Midiendo las dos a la vez (LO 2412 MHz, 40 MS/s, 1024 bins):
-
-| Banda | `7c:2c:67` | `48:f6:ee` | dif |
-|---|---|---|---|
-| −20 MHz | 8,9 | 9,0 | −0,1 |
-| −18 MHz | 12,4 | 11,5 | +0,9 |
-| −16 MHz | 19,6 | 19,0 | +0,6 |
-| −14 MHz | 34,0 | 33,4 | +0,6 |
-| −12 MHz | 52,7 | 52,7 | +0,0 |
-| −10 MHz | 57,8 | 58,2 | −0,4 |
-| −8 MHz | 59,5 | 60,0 | −0,5 |
-| −6 MHz | 59,9 | 60,7 | −0,7 |
-| −4 MHz | 62,2 | 62,3 | −0,0 |
-| 0 MHz | 69,9 | 67,8 | +2,0 |
-| +2 MHz | 82,3 | 67,6 | **+14,7** |
-| +4 MHz | 81,5 | 68,3 | +13,1 |
-| +6 MHz | 80,7 | 67,7 | +13,0 |
-| +8 MHz | 80,4 | 68,1 | +12,4 |
-| +10 MHz | 73,9 | 61,8 | +12,2 |
-| +12 MHz | 57,4 | 44,4 | +13,0 |
-| +14 MHz | 40,6 | 27,3 | +13,3 |
-| +16 MHz | 28,1 | 16,6 | +11,6 |
-| +18 MHz | 18,8 | 11,2 | +7,6 |
-
-**La forma es la misma; el nivel no.** Hasta 14,7 dB por encima del LO.
-
-### 6.1 La explicación: dónde está cada placa
-
-El `wifi_scan` de las dos, en el mismo momento:
-
-| Red | `48:f6:ee` | `7c:2c:67` | diferencia |
-|---|---|---|---|
-| INFINITUM2843 | −45 dBm | −58 dBm | **+13 dB** |
-| Totalplay-77A5 | −69 dBm | −87 dBm | **+18 dB** |
-| Club_Totalplay_WiFi | −71 dBm | −87 dBm | +16 dB |
-| Totalplay-77A5_EXT | −83 dBm | −95 dBm | +12 dB |
-| Totalplay-B6B8 | −90 dBm | −90 dBm | 0 dB |
-| IZZI-8BDC | −90 dBm | −95 dBm | +5 dB |
-| IZZI-F50C | −91 dBm | −89 dBm | −2 dB |
-| Totalplay-2.4G-F9C0 | −93 dBm | −92 dBm | −1 dB |
-
-Los mismos AP, con hasta 18 dB más nivel en una placa que en la otra: la
-diferencia del espectro es la del entorno, no la del firmware. Por debajo
-del LO (donde la señal es más débil y el ruido de la propia placa pesa
-más) las dos coinciden dentro de ±1 dB.
-
-> **Para comparar dos placas del SDR hay que medir el RSSI de referencia
-> al mismo tiempo.** Sin eso, dos placas a medio metro pueden dar 14 dB
-> de diferencia sin que haya nada raro.
+Both boards observe the exact same feature: a wide ~20 MHz hump centered at the
+LO (Wi-Fi channel 1, 2401-2423 MHz), dropping to the noise floor 10 MHz further
+out.
 
 ---
 
-## 7. La transmisión de una placa vista por la otra
+## 6. Simultaneous Measurement: Same Environment, Different Levels
 
-> **Este round es el único que necesita una tercera aplicación** (una app
-> que radia). El resto del informe es solo con las dos del SDR. Se deja
-> aquí como la medición del límite de la §7.1.
+Measuring both boards simultaneously (LO 2412 MHz, 40 MS/s, 1024 bins):
 
-Con la placa A radando (spammer de beacons de Wi-Fi) y la B en recepción
-del SDR:
+| Band | `7c:2c:67` | `48:f6:ee` | Diff |
+|---|---|---|---|
+| -20 MHz | 8.9 | 9.0 | -0.1 |
+| -18 MHz | 12.4 | 11.5 | +0.9 |
+| -16 MHz | 19.6 | 19.0 | +0.6 |
+| -14 MHz | 34.0 | 33.4 | +0.6 |
+| -12 MHz | 52.7 | 52.7 | +0.0 |
+| -10 MHz | 57.8 | 58.2 | -0.4 |
+| -8 MHz | 59.5 | 60.0 | -0.5 |
+| -6 MHz | 59.9 | 60.7 | -0.7 |
+| -4 MHz | 62.2 | 62.3 | -0.0 |
+| 0 MHz | 69.9 | 67.8 | +2.0 |
+| +2 MHz | 82.3 | 67.6 | **+14.7** |
+| +4 MHz | 81.5 | 68.3 | +13.1 |
+| +6 MHz | 80.7 | 67.7 | +13.0 |
+| +8 MHz | 80.4 | 68.1 | +12.4 |
+| +10 MHz | 73.9 | 61.8 | +12.2 |
+| +12 MHz | 57.4 | 44.4 | +13.0 |
+| +14 MHz | 40.6 | 27.3 | +13.3 |
+| +16 MHz | 28.1 | 16.6 | +11.6 |
+| +18 MHz | 18.8 | 11.2 | +7.6 |
 
-**Que la señal llega** (el receptor de Wi-Fi de la propia placa B):
+**The spectral shape is identical; the power level is not** (up to 14.7 dB
+difference above the LO).
+
+### 6.1 Explanation: Physical Board Placement
+
+Running `wifi_scan` on both boards at the same time reveals why:
+
+| Network | `48:f6:ee` | `7c:2c:67` | Difference |
+|---|---|---|---|
+| INFINITUM2843 | -45 dBm | -58 dBm | **+13 dB** |
+| Totalplay-77A5 | -69 dBm | -87 dBm | **+18 dB** |
+| Club_Totalplay_WiFi | -71 dBm | -87 dBm | +16 dB |
+| Totalplay-77A5_EXT | -83 dBm | -95 dBm | +12 dB |
+| Totalplay-B6B8 | -90 dBm | -90 dBm | 0 dB |
+| IZZI-8BDC | -90 dBm | -95 dBm | +5 dB |
+| IZZI-F50C | -91 dBm | -89 dBm | -2 dB |
+| Totalplay-2.4G-F9C0 | -93 dBm | -92 dBm | -1 dB |
+
+The same access points measure up to 18 dB stronger on one board than on the
+other: the difference in the spectrum comes from the local RF environment, not
+the firmware. Below the LO (where external signal energy is weaker and internal
+receiver noise dominates), both boards agree within ±1 dB.
+
+> **To compare absolute levels between two SDR boards, reference RSSI must be
+> measured simultaneously.** Without it, two boards placed half a meter apart
+> can easily differ by 14 dB due to multipath and proximity to nearby APs.
+
+---
+
+## 7. Transmission from One Board Observed by the Other
+
+> **This test round is the only one that requires a third application** (a
+> radiating app). The rest of this report uses exclusively the two SDR modes.
+> It is included here to document the measurement limits discussed in
+> Section 7.1.
+
+With board A radiating (Wi-Fi beacon spammer) and board B receiving in SDR mode:
+
+**Verification that the signal arrives** (via board B's Wi-Fi receiver):
 
 ```
-[-46] MININO_SDR_3       <- la placa A
-[-46] MININO_SDR_1       <- la placa A
-[-53] INFINITUM2843      <- el AP más fuerte del entorno
+[-46] MININO_SDR_3       <- board A
+[-46] MININO_SDR_1       <- board A
+[-53] INFINITUM2843      <- strongest ambient AP
 [-81] Totalplay-77A5
 [-88] Totalplay-77A5_EXT
 ```
 
-**Que el SDR la ve**, la diferencia del espectro con y sin transmisión
-(LO en 2412 MHz), cayendo en la banda del emisor:
+**What the SDR observes**, comparing the spectrum with and without transmission
+(LO at 2412 MHz), falling within the transmitter band:
 
-| Emisor | Dónde sale la diferencia | Tamaño |
+| Transmitter | Where the Difference Appears | Magnitude |
 |---|---|---|
-| Spammer de beacons de Wi-Fi | **2421..2428 MHz** (+9 a +16 MHz del LO) | +0,2 a +1,1 dB |
-| Spammer de BLE | **2426 MHz** (+13,5 a +14,3 MHz del LO) y 2402 MHz (−10/−11 MHz) | +1,1 a +1,5 dB |
+| Wi-Fi Beacon Spammer | **2421..2428 MHz** (+9 to +16 MHz from LO) | +0.2 to +1.1 dB |
+| BLE Spammer | **2426 MHz** (+13.5 to +14.3 MHz from LO) and 2402 MHz (-10/-11 MHz) | +1.1 to +1.5 dB |
 
-La banda DSSS del spammer de beacons son 11 MHz y el bloque medido son 7
-de ellos: el emisor está en el canal 4 (2427 MHz). Con la antena en
-2427 MHz el mismo bandeado cae sobre el LO, lo que confirma el canal.
+The DSSS bandwidth of the beacon spammer is 11 MHz, and the measured block
+spans 7 MHz of that: the transmitter is on channel 4 (2427 MHz). When tuning
+the receiver to 2427 MHz, the same band falls directly over the LO, confirming
+the channel.
 
-> El spammer configura su AP en el canal 1, pero los beacons salen por el
-> canal en el que está la radio: `esp_wifi_80211_tx()` usa el canal
-> actual, no el de la configuración del AP.
+> The spammer configures its AP on channel 1, but beacons are emitted on the
+> radio's active channel: `esp_wifi_80211_tx()` uses the current operating
+> channel rather than the AP configuration channel.
 
-**El límite de esta medida**: el control negativo (los dos estados
-haciendo lo mismo) da +1,0 a +1,4 dB en las mismas bandas, así que el
-efecto está al nivel del ruido del ambiente. En un entorno de 2,4 GHz
-saturado, con el AGC normalizando la ganancia y con los transmisores de
-Minino en un ciclo de trabajo bajo, la media no separa al emisor del
-fondo.
+**Measurement limit**: the negative control (both states doing the same thing)
+yields +1.0 to +1.4 dB in the same bands, meaning the averaged delta sits near
+ambient variance. In a crowded 2.4 GHz environment, with hardware AGC
+normalizing gain and Minino transmitters running at a low duty cycle, time
+averaging does not separate the transmitter from the background floor.
 
-Y el motivo por el que el SDR, con la misma antena y el mismo preamplificador
-del C6, no lo ve mejor que el resto: **las dos placas tienen la misma
-banda de 2,4 GHz que el Bluetooth** (los canales de publicidad de BLE
-son 2402, 2426 y 2480 MHz), pero el SDR solo llega a los canales de
-Wi-Fi (2412-2472). Los canales de BLE caen en los bordes: el 37 (2402)
-queda a −10 MHz del LO en 2412 y el 39 (2480) a +8 MHz del LO en 2472.
+Furthermore, because the SDR borrows the Wi-Fi PHY, **both boards share the
+2.4 GHz band with Bluetooth** (BLE advertising channels are at 2402, 2426, and
+2480 MHz), while the SDR local oscillator can only tune to Wi-Fi channel
+centers (2412-2472 MHz). Consequently, outer BLE advertising channels fall near
+the capture edges: channel 37 (2402 MHz) sits at -10 MHz from the 2412 MHz LO,
+and channel 39 (2480 MHz) sits at +8 MHz from the 2472 MHz LO.
 
 ---
 
-## 8. Los fallos que encontraron las pruebas
+## 8. Bugs Uncovered by the Test Suites
 
-| Fallo | Síntoma | Arreglo |
+| Issue | Symptom | Fix |
 |---|---|---|
-| El spammer de SSID no emitía | desde la consola la app no transmitía: la lista de SSID solo se carga al elegir un elemento del menú | `ssid_spam_load_stored_list()`: la lista se carga al abrir la app |
-| Reentrar en el spammer reiniciaba la placa | `assert()` de `esp_netif_create_default_wifi_ap()`: *"duplicate key"* | el netif del AP solo se crea si no existe |
-| La entrega del puerto fallaba a veces | las pruebas mandaban `sdr_host` con LF y la consola de Minino cierra las líneas con **CR** | las pruebas mandan CR |
+| SSID spammer did not transmit | When launched from the console, the app transmitted nothing because the SSID list was only loaded upon menu selection | `ssid_spam_load_stored_list()`: load the list automatically when opening the app |
+| Re-entering the spammer rebooted the board | `assert()` in `esp_netif_create_default_wifi_ap()`: *"duplicate key"* | Create the default AP `netif` only if it does not already exist |
+| Port handover occasionally failed | Test scripts sent `sdr_host` terminated with LF while the Minino console expects **CR** | Test scripts now send CR |
 
-Ninguno de los tres era del SDR en sí, pero los tres impedían medirlo.
+None of these three bugs were inside the SDR module itself, but all three
+prevented automated end-to-end testing until fixed.
 
 ---
 
-## 9. Conclusión
+## 9. Conclusion
 
-- **La cadena de recepción funciona**: el protocolo del visor, el modo
-  de espectros y la app nativa pasan en las dos placas, con y sin la
-  otra placa radiando.
-- **Las dos placas miden el mismo ambiente**: misma forma de espectro,
-  mismo juego de redes, y el nivel explica exactamente la distancia a
-  los AP.
-- **La captura es de verdad**: 16 380 muestras en 217-218 us (75 MS/s),
-  con 86 dB de rango dinámico y el pico en el LO.
-- **Lo que no se ha podido demostrar**: que la señal de *otra* Minino se
-  separe del ambiente en la media del espectro. Hace falta un entorno de
-  RF en silencio, o una jaula.
+- **The receive chain works end to end**: the viewer protocol, on-chip spectrum
+  mode, and native app pass all checks on both boards, both with and without
+  the second board radiating.
+- **Both boards measure the same environment**: identical spectral shapes, same
+  visible Wi-Fi networks, and amplitude differences that match the RSSI delta to
+  surrounding access points.
+- **Captures are genuine hardware dumps**: 16,380 samples in 217-218 us
+  (75 MS/s), with 86 dB of dynamic range and the carrier peak at the LO.
+- **Open-air limitation**: separating another Minino's low-duty-cycle beacon
+  from ambient Wi-Fi traffic in an averaged spectrum requires an RF-quiet
+  environment or a shielded enclosure.

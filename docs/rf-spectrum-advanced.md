@@ -1,101 +1,101 @@
-# 2.9 RF Spectrum Analyzer Avanzado: Fox Hunting, Captura PCAP y Detección de Drones (DroneID)
+# 2.9 Advanced RF Spectrum Analyzer: Fox Hunting, PCAP Capture, and Drone Detection (DroneID)
 
-El **Analizador de Espectro RF de Minino** (`Applications > Spectrum`) transforma el transceptor de radio de 2.4 GHz del **ESP32-C6** en una herramienta de grado forense y cacería física de emisores. 
+The **Minino RF Spectrum Analyzer** (`Applications > Spectrum`) transforms the **ESP32-C6** 2.4 GHz radio transceiver into a forensic-grade analysis and physical transmitter hunting tool.
 
-A diferencia de un simple escáner de redes Wi-Fi basado en llamadas a nivel de sistema operativo (`scan`), el motor de Spectrum opera directamente sobre la **capa física (PHY) y de enlace de datos (MAC)** mediante el modo promiscuo del hardware. Esto le permite capturar, medir y analizar cualquier emisión electromagnética en la banda, independientemente de si la trama está cifrada, corrupta, si proviene de redes ocultas o incluso de tecnologías ajenas a Wi-Fi estándar (como balizas de drones o inhibidores de señal).
+Unlike a basic Wi-Fi network scanner based on operating system scan calls (`scan`), the Spectrum engine operates directly on the **physical (PHY) and data link (MAC) layers** using hardware promiscuous mode. This enables it to capture, measure, and analyze any electromagnetic emission in the band, regardless of whether frames are encrypted, corrupted, originating from hidden networks, or emitted by non-standard Wi-Fi technologies (such as drone beacons or signal jammers).
 
 ---
 
-## 🧭 Visión Global de la Arquitectura RF
+## 🧭 Global RF Architecture Overview
 
 ```mermaid
 flowchart TD
-    Antenna["📡 Antena 2.4 GHz (ESP32-C6)"] --> L1["Capa Física (PHY) & RSSI LNA"]
-    L1 --> PromiscCB["⚡ Promiscuous RX Callback (Interrupción)"]
+    Antenna["📡 2.4 GHz Antenna (ESP32-C6)"] --> L1["Physical Layer (PHY) & LNA RSSI"]
+    L1 --> PromiscCB["⚡ Promiscuous RX Callback (Interrupt)"]
     
-    PromiscCB --> SignalCalc["📊 Cálculo de Intensidad & Peak Hold"]
-    PromiscCB --> DroneParser["🛸 Parser Pasivo DroneID (ASTM F3411 / NAN)"]
+    PromiscCB --> SignalCalc["📊 Signal Strength & Peak Hold Calculation"]
+    PromiscCB --> DroneParser["🛸 Passive DroneID Parser (ASTM F3411 / NAN)"]
     PromiscCB --> DeauthIDS["🛡️ RF IDS: Deauth & Disassoc (0xC0 / 0xA0)"]
-    PromiscCB --> JammerDetect["⚠️ Detector de Jammer (Saturación Continua >= -45dBm)"]
-    PromiscCB --> PCAPStream["💾 Motor PCAP Streaming -> MicroSD (/sdcard/spectrum_XX.pcap)"]
+    PromiscCB --> JammerDetect["⚠️ Jammer Detector (Continuous Saturation >= -45 dBm)"]
+    PromiscCB --> PCAPStream["💾 PCAP Streaming Engine -> MicroSD (/sdcard/spectrum_XX.pcap)"]
     
-    SignalCalc --> OLED["🖥️ Display OLED SSD1306/SH1106"]
+    SignalCalc --> OLED["🖥️ SSD1306/SH1106 OLED Display"]
     DroneParser --> OLED
     DeauthIDS --> OLED
     JammerDetect --> OLED
     
-    DroneParser -.-> Buzzer["🔊 Buzzer Geiger Audio"]
+    DroneParser -.-> Buzzer["🔊 Geiger Audio Buzzer"]
     SignalCalc -.-> Buzzer
 ```
 
 ---
 
-## 🦊 1. Modo Fox Hunting: Cacería Física de Transmisores
+## 🦊 1. Fox Hunting Mode: Physical Transmitter Hunting
 
-### 1.1 Principios Físicos de la Radiogoniometría (Direction Finding)
-El *Fox Hunting* (cacería del zorro) es la disciplina de localizar geográficamente un emisor de radio desconocido basándose en la intensidad de campo recibido (**RSSI - Received Signal Strength Indicator**).
+### 1.1 Physical Principles of Radio Direction Finding
+*Fox Hunting* is the discipline of geographically locating an unknown radio transmitter based on received field strength (**RSSI - Received Signal Strength Indicator**).
 
-En el espacio libre, la potencia de una onda electromagnética decae según la **Ley de Atenuación en Espacio Libre (FSPL)**:
+In free space, the power of an electromagnetic wave decays according to the **Free Space Path Loss (FSPL)** law:
 
 $$FSPL(dB) = 20\log_{10}(d) + 20\log_{10}(f) + 20\log_{10}\left(\frac{4\pi}{c}\right)$$
 
-Donde $d$ es la distancia y $f$ es la frecuencia (2.4 GHz). En términos prácticos:
-* **Cada vez que se duplica la distancia entre Minino y el emisor, la potencia recibida cae aproximadamente 6 dBm**.
-* Una señal a 1 metro rondará entre **-30 dBm y -40 dBm**.
-* A 10 metros rondará entre **-60 dBm y -70 dBm**.
-* Al límite de recepción rondará entre **-85 dBm y -95 dBm**.
+Where $d$ is distance and $f$ is frequency (2.4 GHz). In practical terms:
+* **Every time the distance between Minino and the transmitter doubles, the received power drops by approximately 6 dBm**.
+* A signal at 1 meter typically measures between **-30 dBm and -40 dBm**.
+* At 10 meters, it typically measures between **-60 dBm and -70 dBm**.
+* At the reception threshold, it ranges between **-85 dBm and -95 dBm**.
 
 > [!TIP]
-> **Técnica de Atenuación por Sombra Corporal (Body Shielding):**
-> Al cazar un emisor con una antena omnidireccional estándar, coloca a Minino pegado a tu pecho y gira lentamente sobre tu propio eje $360^\circ$. El cuerpo humano (compuesto por un 70% de agua) atenúa la señal de 2.4 GHz entre **15 y 20 dBm**. La dirección en la que el medidor de proximidad marque el **mínimo relativo** indica que el emisor está **exactamente a tu espalda**; por el contrario, cuando marque el **máximo relativo**, el objetivo está **directamente frente a ti**.
+> **Body Shielding Attenuation Technique:**
+> When hunting a transmitter with a standard omnidirectional antenna, hold Minino close to your chest and slowly rotate $360^\circ$ around your axis. The human body (composed of roughly 70% water) attenuates 2.4 GHz signals by **15 to 20 dBm**. The direction where the proximity meter shows a **relative minimum** indicates that the transmitter is **directly behind your back**; conversely, when it reads a **relative maximum**, the target is **directly in front of you**.
 
 ---
 
-### 1.2 Interfaz Gráfica del Medidor de Proximidad (OLED 128×64)
+### 1.2 Proximity Meter Graphical Interface (128x64 OLED)
 
-La pantalla de Fox Hunting (`SPECTRUM_VIEW_FOXHUNT`, accesible pulsando el botón derecho **▶ RIGHT** en Spectrum) fue diseñada específicamente para proporcionar máxima visibilidad y respuesta instantánea bajo la luz solar:
+The Fox Hunting screen (`SPECTRUM_VIEW_FOXHUNT`, accessible by pressing the **▶ RIGHT** button in Spectrum) is designed for maximum visibility and instant responsiveness in outdoor conditions:
 
 ```text
 ┌────────────────────────────────────────────────────────┐
 │ C06*  -54dB  T:-75*                       [HEADER]     │
-│ -90   -70   -50   -30                     [PÁGINA 1]   │
+│ -90   -70   -50   -30                     [PAGE 1]     │
 │   |     |     |     |                     [TICKS]      │
 │ ┌────────────────────────────────────────────────────┐ │
 │ │█████████████████████████████   |    :              │ │
 │ └────────────────────────────────────────────────────┘ │
-│ PROX: 62%   PK:-48                        [PÁGINA 5]   │
+│ PROX: 62%   PK:-48                        [PAGE 5]     │
 │ +-Ch  >FOX   A  CAP                       [FOOTER]     │
 └────────────────────────────────────────────────────────┘
 ```
 
-#### Elementos del Medidor:
-1. **Escala de Calibración Superior (Página 1 y Ticks):**
-   * Marcas graduadas en posiciones estratégicas: `-90 dBm`, `-70 dBm`, `-50 dBm` y `-30 dBm`.
-   * Permite evaluar cuantitativamente la severidad de la aproximación sin depender únicamente de un número abstracto.
-2. **Barra de Proximidad de Alto Contraste (116 × 16 píxeles):**
-   * Rango dinámico normalizado:
+#### Meter Elements:
+1. **Upper Calibration Scale (Page 1 and Ticks):**
+   * Graduated tick marks at strategic positions: `-90 dBm`, `-70 dBm`, `-50 dBm`, and `-30 dBm`.
+   * Allows quantitative assessment of approach proximity without relying solely on an abstract percentage.
+2. **High-Contrast Proximity Bar (116 x 16 pixels):**
+   * Normalized dynamic range:
      $$Prox(\%) = \frac{RSSI - (-95)}{(-25) - (-95)} \times 100$$
-   * Proporciona una respuesta visual continua de 0% a 100%.
-3. **Indicador de Retención de Pico (Peak Hold Line `|`):**
-   * Una línea vertical dentro de la barra almacena el nivel más alto registrado en la sesión reciente.
-   * Si apuntas en una dirección y la barra actual no alcanza la línea de pico, sabes de inmediato que **te estás alejando o apuntando fuera del lóbulo principal**.
-4. **Marcador de Silenciamiento / Squelch (`:` punteado):**
-   * Muestra visualmente el umbral (`Threshold`) fijado por el usuario. Las señales por debajo de este nivel no llenan la barra, aislando el ruido ambiental de fondo.
-5. **Lectura Numérica Dual (Página 5):**
-   * `PROX: XXX%`: Porcentaje instantáneo.
-   * `PK: -XXdBm`: Pico numérico en decibelios. Si hay drones en el canal, conmuta automáticamente a `DRN: XX`.
+   * Provides continuous visual feedback from 0% to 100%.
+3. **Peak Hold Indicator (Peak Hold Line `|`):**
+   * A vertical line inside the bar stores the highest level recorded during the recent session.
+   * If you point in a direction and the current bar falls short of the peak line, you know immediately that **you are moving away or pointing outside the main lobe**.
+4. **Squelch / Threshold Marker (dotted `:`):**
+   * Visually displays the user-defined `Threshold`. Signals below this level do not fill the bar, isolating ambient background noise.
+5. **Dual Numeric Readout (Page 5):**
+   * `PROX: XXX%`: Instantaneous proximity percentage.
+   * `PK: -XXdBm`: Numeric peak in decibels. If drones are detected on the channel, this automatically switches to `DRN: XX`.
 
 ---
 
-## 💾 2. Captura Forense Directa a PCAP (MicroSD)
+## 💾 2. Direct Forensic PCAP Capture (MicroSD)
 
-### 2.1 El Formato Estándar Libpcap
-Para que una captura inalámbrica sea admisible en herramientas de análisis como **Wireshark**, **tshark** o **NetworkMiner**, no se pueden guardar cadenas de texto plano arbitrarias; deben estructurarse respetando el estándar binario **libpcap**.
+### 2.1 The Standard Libpcap Format
+For a wireless capture to be valid in forensic analysis tools such as **Wireshark**, **tshark**, or **NetworkMiner**, arbitrary plain-text strings cannot be saved; packets must be structured according to the binary **libpcap** standard.
 
-Minino genera directamente en la MicroSD un archivo binario compuesto por:
-1. **Global Header (24 bytes):** Escrito una sola vez al inicializar el archivo.
-2. **Packet Record Header (16 bytes):** Precede a cada trama capturada.
-3. **Packet Data (Payload 802.11 raw):** La trama completa recibida por el radio.
+Minino writes a binary file directly to the MicroSD card consisting of:
+1. **Global Header (24 bytes):** Written once when initializing the file.
+2. **Packet Record Header (16 bytes):** Precedes each captured frame.
+3. **Packet Data (Raw 802.11 Payload):** The complete frame received by the radio.
 
 ```mermaid
 classDiagram
@@ -105,14 +105,14 @@ classDiagram
         uint16_t version_minor: 4
         int32_t  thiszone: 0 (GMT)
         uint32_t sigfigs: 0
-        uint32_t snaplen: 65535 (Sin truncar)
+        uint32_t snaplen: 65535 (Untruncated)
         uint32_t network: 105 (LINKTYPE_IEEE802_11)
     }
     class PcapPacketHeader {
-        uint32_t ts_sec: Timestamp segundos
-        uint32_t ts_usec: Timestamp microsegundos
-        uint32_t incl_len: Longitud capturada
-        uint32_t orig_len: Longitud en el aire
+        uint32_t ts_sec: Timestamp seconds
+        uint32_t ts_usec: Timestamp microseconds
+        uint32_t incl_len: Captured length
+        uint32_t orig_len: On-air length
     }
     class FrameData {
         uint8_t payload[]: 802.11 Raw MAC Frame
@@ -122,129 +122,129 @@ classDiagram
     PcapPacketHeader --> FrameData
 ```
 
-### 2.2 Rotación Automática y Prevención de Desgaste
-* **Nombres Secuenciales:** El sistema busca en `/sdcard/` desde `spectrum_00.pcap` hasta `spectrum_99.pcap`. Si encuentra un archivo existente, avanza al siguiente índice libre, **garantizando que ninguna captura previa se sobrescriba**.
-* **Búfering y Flush:** Para no desgastar las celdas flash de la MicroSD ni penalizar la interrupción del radio Wi-Fi, Minino no invoca `fsync()` en cada paquete individual. Se utiliza un búfer intermedio que vacía los bloques a disco cada **50 paquetes**.
-* **Activación por Hardware o Terminal:**
-  * **Pulsación larga del botón ABAJO (▼ DOWN long press):** Alterna la grabación al instante.
-  * **Comando serial:** `spectrum_pcap on`, `spectrum_pcap off`, `spectrum_pcap toggle`.
-* **Indicación no intrusiva:** La actividad se refleja en el pie de pantalla con la etiqueta `"CAP"`.
+### 2.2 Automatic File Rotation and Wear Prevention
+* **Sequential Naming:** The system scans `/sdcard/` from `spectrum_00.pcap` to `spectrum_99.pcap`. When an existing file is found, it advances to the next available index, **ensuring no previous capture is overwritten**.
+* **Buffering and Flushing:** To prevent premature wear on MicroSD flash cells and avoid stalling the Wi-Fi radio interrupt, Minino does not call `fsync()` on every individual packet. An intermediate buffer flushes blocks to disk every **50 packets**.
+* **Hardware or Terminal Activation:**
+  * **Long press on the DOWN button (▼ DOWN long press):** Toggles recording immediately.
+  * **Serial command:** `spectrum_pcap on`, `spectrum_pcap off`, `spectrum_pcap toggle`.
+* **Non-Intrusive Indicator:** Active recording is shown in the screen footer with the `"CAP"` label.
 
 ---
 
-## 🛸 3. Detección Integrada de Drones (DroneID / Remote ID)
+## 🛸 3. Integrated Drone Detection (DroneID / Remote ID)
 
-### 3.1 Fundamentos de Remote ID (FAA & EASA)
-Las regulaciones internacionales (FAA Parte 89 en EE.UU. y EASA en Europa) exigen que todo dron comercial o recreativo de más de 250 gramos transmita periódicamente su identificación y telemetría por radiofrecuencia (Direct Remote ID / Broadcast Remote ID).
+### 3.1 Remote ID Fundamentals (FAA & EASA)
+International aviation regulations (FAA Part 89 in the US and EASA in Europe) require all commercial and recreational drones weighing over 250 grams to periodically broadcast their identification and telemetry via radio frequency (Direct Remote ID / Broadcast Remote ID).
 
-Los fabricantes (como DJI, Autel, Parrot) implementan esto utilizando tres métodos en la banda de 2.4 GHz:
-1. **Information Elements (IE) en Beacons Wi-Fi (ASTM F3411 / ASD-STAN):**
-   Las balizas habituales de 802.11 incorporan un elemento de proveedor específico (`Vendor Specific IE = 0xDD`) con el identificador organizacional (**OUI**) asignado:
-   * **ASD-STAN / ASTM F3411:** OUI `FA:0B:BC`, Tipo `0x0D`.
-   * **Direct Remote ID (Francia):** OUI `6A:5C:35`.
+Manufacturers (such as DJI, Autel, and Parrot) implement this using three methods in the 2.4 GHz band:
+1. **Information Elements (IE) in Wi-Fi Beacons (ASTM F3411 / ASD-STAN):**
+   Standard 802.11 beacons embed a Vendor Specific Information Element (`Vendor Specific IE = 0xDD`) carrying an assigned Organizationally Unique Identifier (**OUI**):
+   * **ASD-STAN / ASTM F3411:** OUI `FA:0B:BC`, Type `0x0D`.
+   * **Direct Remote ID (France):** OUI `6A:5C:35`.
 2. **Wi-Fi Aware (NAN - Neighbor Awareness Networking):**
-   Tramas de acción públicas (Public Action Frames) donde el dron publica un servicio con el hash SHA-256 de identificación de Remote ID: `88:69:19:9D:92:09`.
+   Public Action Frames in which the drone advertises a service matching the Remote ID SHA-256 service hash: `88:69:19:9D:92:09`.
 
-### 3.2 El Motor de Inspección Pasiva en Minino (`rf_spectrum_drone.c`)
+### 3.2 Passive Inspection Engine in Minino (`rf_spectrum_drone.c`)
 
-Cada vez que el hardware del ESP32-C6 recibe una trama, el parser inspecciona los primeros bytes del encabezado MAC:
+Each time the ESP32-C6 hardware receives a frame, the parser inspects the leading bytes of the MAC header and payload:
 
 ```c
-/* Estructura del Vendor Specific IE para Remote ID */
+/* Vendor Specific IE structure for Remote ID */
 typedef struct __attribute__((packed)) {
     uint8_t element_id;     /* 0xDD */
-    uint8_t length;         /* Longitud del payload del elemento */
+    uint8_t length;         /* Element payload length */
     uint8_t oui[3];         /* 0xFA, 0x0B, 0xBC */
     uint8_t oui_type;       /* 0x0D */
-    uint8_t message_data[]; /* Bloque OpenDroneID */
+    uint8_t message_data[]; /* OpenDroneID message block */
 } opendroneid_ie_t;
 ```
 
-Si la firma coincide:
-1. Se extrae el **UAS ID (Número de Serie Único)** del dron (hasta 20 caracteres alfanuméricos).
-2. Se incrementa el contador de drones en el canal actual (`drone_count[ch]++`).
-3. Se proyecta de inmediato un banner de alta prioridad en pantalla: `! DRONE CH X !`.
-4. El buzzer emite un tono acústico diferenciado de 30 ms.
-5. La información queda registrada en memoria para ser consultada mediante el comando de consola `spectrum_drone`.
+When a signature matches:
+1. The **UAS ID (Unique Serial Number)** of the drone (up to 20 alphanumeric characters) is extracted.
+2. The drone counter for the current channel is incremented (`drone_count[ch]++`).
+3. A high-priority alert banner is immediately displayed on screen: `! DRONE CH X !`.
+4. The buzzer emits a distinct 30 ms acoustic tone.
+5. The event is logged in memory and can be queried via the `spectrum_drone` console command.
 
 ---
 
-## ⚠️ 4. Detección de Inhibidores (RF Jammer Detection)
+## ⚠️ 4. RF Jammer Detection
 
-### 4.1 ¿Qué es un Jammer de Radiofrecuencia?
-Un inhibidor de señal (*jammer*) es un dispositivo que inyecta ruido electromagnético continuo o pulsos deliberados en las frecuencias de 2.4 GHz para colapsar la relación señal/ruido ($SNR$), impidiendo que los receptores legítimos puedan sincronizarse con las cabeceras de las tramas.
+### 4.1 What Is an RF Jammer?
+A signal jammer is a device that injects continuous electromagnetic noise or deliberate pulses into the 2.4 GHz band to collapse the signal-to-noise ratio ($SNR$), preventing legitimate receivers from synchronizing with frame headers.
 
-Existen principalmente tres tipos de ataques de jamming:
-1. **Continuous Wave (CW / Barrido continuo):** Una portadora de RF pura sin modulación transmitida a alta potencia.
-2. **Noise Jamming (Ruido blanco gaussiano):** Modulación de ruido que eleva artificialmente el piso de ruido por encima de -60 dBm.
-3. **Deauth / Protocol Jamming:** Saturación masiva de tramas legítimas de desautenticación.
+There are three primary types of jamming attacks:
+1. **Continuous Wave (CW / Continuous Sweep):** A high-power unmodulated pure RF carrier.
+2. **Noise Jamming (Additive White Gaussian Noise):** Noise modulation that artificially raises the noise floor above -60 dBm.
+3. **Deauth / Protocol Jamming:** Massive flooding of spoofed deauthentication frames.
 
-### 4.2 Algoritmo de Detección en Minino
-El radio del ESP32-C6 no solo escucha tramas decodificables; su amplificador de bajo ruido (LNA) y detector de potencia en recepción (RSSI) miden la energía electromagnética bruta en la banda.
+### 4.2 Detection Algorithm in Minino
+The ESP32-C6 radio does not merely listen for decodable frames; its low-noise amplifier (LNA) and receive power detector (RSSI) measure raw electromagnetic energy across the band.
 
-Minino ejecuta el siguiente algoritmo en cada ciclo de barrido (cada 20 ms):
+Minino runs the following algorithm on every sweep cycle (every 20 ms):
 
-$$\text{Si } RSSI \ge -45\text{ dBm} \implies \text{Streak} \leftarrow \text{Streak} + 1$$
-$$\text{Si } \text{Streak} \ge 20 \text{ (~400 ms ininterrumpidos)} \implies \mathbf{ALERTA\ JAMMER}$$
-$$\text{Si } RSSI < -45\text{ dBm} \implies \text{Streak} \leftarrow \max(0, \text{Streak} - 1)$$
+$$\text{If } RSSI \ge -45\text{ dBm} \implies \text{Streak} \leftarrow \text{Streak} + 1$$
+$$\text{If } \text{Streak} \ge 20 \text{ (~400 ms uninterrupted)} \implies \mathbf{JAMMER\ ALERT}$$
+$$\text{If } RSSI < -45\text{ dBm} \implies \text{Streak} \leftarrow \max(0, \text{Streak} - 1)$$
 
-* **¿Por qué se requiere un Streak de 20 barridos?**
-  Las comunicaciones legítimas (descarga de un archivo pesado por Wi-Fi o streaming de video) generan picos elevados de señal, pero ocurren en **ráfagas discontinuas** separadas por silencios de contienda (CSMA/CA). Una señal que permanece fija por encima de **-45 dBm** durante casi medio segundo sin decaer representa una saturación continua anormal del medio físico.
+* **Why is a streak of 20 sweeps required?**
+  Legitimate communications (such as downloading a large file over Wi-Fi or streaming video) generate high signal peaks, but they occur in **discontinuous bursts** separated by contention inter-frame spaces (CSMA/CA). A signal remaining pinned above **-45 dBm** for nearly half a second without decaying indicates abnormal continuous saturation of the physical medium.
 
 > [!NOTE]
-> **Falsos Positivos en Laboratorio:**
-> Si tienes la placa Minino conectada por USB a tu computadora portátil a menos de 30 cm de la antena Wi-Fi integrada de la laptop mientras navegas, el RSSI puede rondar los -35 dBm y activar la advertencia. Para pruebas de campo, mantén a Minino separado de tus propios emisores.
+> **Laboratory False Positives:**
+> If the Minino board is connected via USB to a laptop within 30 cm of the laptop's internal Wi-Fi antenna during active network traffic, the RSSI may hover around -35 dBm and trigger the warning. For field testing, keep Minino separated from your own active transmitters.
 
 ---
 
-## 🛠️ 5. Guía de Comandos de Consola Serial
+## 🛠️ 5. Serial Console Command Guide
 
-Puedes controlar y auditar todas las nuevas funciones a través de la interfaz serial conectándote a **115200 baudios** (`/dev/ttyACM0`):
+You can control and audit all Spectrum features through the serial interface at **115200 baud** (`/dev/ttyACM0`):
 
-| Comando | Parámetros | Descripción Técnica |
+| Command | Parameters | Technical Description |
 | :--- | :--- | :--- |
-| `spectrum_pcap` | `[on\|off\|toggle]` | Consulta el estado de grabación o inicia/detiene el volcado `.pcap` en la MicroSD. |
-| `spectrum_drone` | `[clear]` | Despliega las estadísticas de tramas DroneID recibidas por canal y el último UAS ID detectado. |
-| `spectrum_ids` | `[clear]` | Muestra el reporte de alertas de desautenticación (0xC0) y detección de jammers activos. |
-| `threshold` | `[<dBm\|off>]` | Configura el filtro de umbral squelch (ej. `threshold -70` ignora señales menores a -70 dBm). |
-| `spectrum_audio` | `[on\|off\|toggle]` | Activa o silencia el clic acústico tipo contador Geiger proporcional a la intensidad de señal. |
-| `spectrum_band` | `[wifi\|zigbee]` | Alterna entre los 14 canales Wi-Fi y los 16 canales IEEE 802.15.4 / Zigbee. |
-| `exit_app` | *Ninguno* | Cierra limpiamente el analizador de espectro y retorna al menú principal sin reiniciar el sistema. |
+| `spectrum_pcap` | `[on\|off\|toggle]` | Queries recording status or starts/stops `.pcap` capture to the MicroSD card. |
+| `spectrum_drone` | `[clear]` | Displays received DroneID frame statistics per channel and the last detected UAS ID. |
+| `spectrum_ids` | `[clear]` | Displays the deauthentication alert report (0xC0) and active jammer detections. |
+| `threshold` | `[<dBm\|off>]` | Configures the squelch threshold filter (e.g., `threshold -70` ignores signals below -70 dBm). |
+| `spectrum_audio` | `[on\|off\|toggle]` | Enables or mutes Geiger-counter acoustic clicks proportional to signal strength. |
+| `spectrum_band` | `[wifi\|zigbee]` | Switches between the 14 Wi-Fi channels and the 16 IEEE 802.15.4 / Zigbee channels. |
+| `exit_app` | *None* | Cleanly closes the spectrum analyzer and returns to the main menu without rebooting. |
 
 ---
 
-## 🧪 6. Casos Prácticos de Laboratorio
+## 🧪 6. Practical Laboratory Exercises
 
-### Laboratorio A: Cacería de una Baliza Oculta (Fox Hunt)
-1. **Preparación del Objetivo:** Enciende un dispositivo emisor (por ejemplo, un teléfono móvil compartiendo red en el canal 6 con SSID oculto).
-2. **Configuración en Minino:**
-   * Entra a `Applications > Spectrum`.
-   * Presiona **▲ UP** o **▼ DOWN** para fijar el canal en `C06`.
-   * Presiona **▶ RIGHT** hasta seleccionar el modo `FOX`.
-   * Si hay mucho ruido ambiental, pulsa el botón **BOOT** para activar el modo de edición `Th` (Threshold) y sube el umbral a `-75 dBm`.
-3. **Localización:**
-   * Gira sobre tu eje usando la técnica de blindaje corporal hasta identificar el ángulo con el pico más alto (`PK`).
-   * Camina en línea recta hacia el transmisor observando cómo la barra de proximidad pasa del 20% al 85%+.
-   * Al estar a menos de 1 metro, la barra alcanzará el 100% (-25 dBm).
+### Lab A: Hunting a Hidden Beacon (Fox Hunt)
+1. **Target Setup:** Turn on a transmitting device (for example, a mobile phone hotspot on channel 6 with a hidden SSID).
+2. **Minino Configuration:**
+   * Navigate to `Applications > Spectrum`.
+   * Press **▲ UP** or **▼ DOWN** to lock onto channel `C06`.
+   * Press **▶ RIGHT** until `FOX` mode is selected.
+   * If ambient noise is high, press the **BOOT** button to enter `Th` (Threshold) edit mode and raise the threshold to `-75 dBm`.
+3. **Localization:**
+   * Rotate around your axis using the body shielding technique until you identify the angle with the highest peak (`PK`).
+   * Walk in a straight line toward the transmitter while watching the proximity bar climb from 20% to 85%+.
+   * Within 1 meter of the source, the bar reaches 100% (-25 dBm).
 
 ---
 
-### Laboratorio B: Captura y Análisis Forense en Wireshark
-1. Inserta una tarjeta MicroSD formateada en FAT32 en Minino.
-2. Inicia Spectrum y pulsa prolongadamente el botón **▼ DOWN** (o escribe `spectrum_pcap on` en consola). Verifica que en la esquina inferior derecha del display aparezca `"CAP"`.
-3. Deja capturar durante 2 o 3 minutos mientras realizas pruebas de radio.
-4. Vuelve a mantener presionado **▼ DOWN** para cerrar el archivo libpcap con seguridad.
-5. Retira la MicroSD e inserta el archivo en tu computadora:
+### Lab B: Forensic Capture and Analysis in Wireshark
+1. Insert a FAT32-formatted MicroSD card into Minino.
+2. Launch Spectrum and long-press the **▼ DOWN** button (or run `spectrum_pcap on` in the serial console). Verify that `"CAP"` appears in the bottom-right corner of the display.
+3. Capture traffic for 2 to 3 minutes while performing radio tests.
+4. Long-press **▼ DOWN** again to safely flush and close the libpcap file.
+5. Remove the MicroSD card and open the capture file on your computer:
    ```bash
    wireshark /media/sdcard/spectrum_00.pcap
    ```
-6. **Filtros útiles en Wireshark:**
-   * Ver solo balizas de drones: `wlan.tag.number == 221 && wlan.tag.oui == fa:0b:bc`
-   * Ver ataques DoS de desautenticación: `wlan.fc.type_subtype == 0x000c`
-   * Filtrar por dirección MAC del emisor: `wlan.addr == xx:xx:xx:xx:xx:xx`
+6. **Useful Wireshark Display Filters:**
+   * View only drone beacons: `wlan.tag.number == 221 && wlan.tag.oui == fa:0b:bc`
+   * View deauthentication DoS attacks: `wlan.fc.type_subtype == 0x000c`
+   * Filter by transmitter MAC address: `wlan.addr == xx:xx:xx:xx:xx:xx`
 
 ---
 
-[[Wi-Fi Analyzer y Espectro|⬅️ Volver a 2.7 Wi-Fi Analyzer y Espectro]] | [[Wi-Fi Wardriving con WiGLE|Siguiente: 2.8 Wi-Fi Wardriving ➡️]]
+[[Wi-Fi Analyzer and Spectrum|⬅️ Back to 2.7 Wi-Fi Analyzer and Spectrum]] | [[Wi-Fi Wardriving with WiGLE|Next: 2.8 Wi-Fi Wardriving ➡️]]
 
-#minino #esp32c6 #spectrum #fox-hunting #pcap #droneid #ciberseguridad-rf #hacking-etico
+#minino #esp32c6 #spectrum #fox-hunting #pcap #droneid #rf-cybersecurity #ethical-hacking

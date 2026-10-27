@@ -1,262 +1,265 @@
-# Integración del SDR nativo en Minino
+# Native SDR Integration in Minino
 
-> **Guia de uso:** [`sdr-guia.md`](./sdr-guia.md) (puesta en marcha, las
-> tres formas de usarlo).
-> **Informe de las pruebas:** [`sdr-resultados.md`](./sdr-resultados.md)
-> (las dos placas, las dos aplicaciones, los perfiles del espectro).
-> **El cable, byte a byte:** [`sdr-protocolo.md`](./sdr-protocolo.md)
-> (los dos paquetes, los bytes reales y dónde se ve cada cosa).
+> **Usage guide:** [`sdr-guia.md`](./sdr-guia.md) (getting started, the
+> three ways to use it).
+> **Test report:** [`sdr-resultados.md`](./sdr-resultados.md)
+> (both boards, both applications, spectrum profiles).
+> **Wire protocol, byte by byte:** [`sdr-protocolo.md`](./sdr-protocolo.md)
+> (both packet formats, raw bytes, and where each field appears).
 
-Documento de referencia de la integración entre Minino (ESP-IDF) y el
-firmware de radio definida por software. El arranque dual está retirado:
-el SDR corre **en proceso** dentro de Minino OS, sin tocar `ota_1`.
+Reference document for the integration between Minino (ESP-IDF) and the
+software-defined radio firmware. Dual boot has been retired:
+the SDR runs **in-process** inside Minino OS, without touching `ota_1`.
 
-- **Fecha:** 2026-10-19 (actualizado el 2026-10-21)
-- **Placas usadas:** ESP32-C6 rev v0.1 (`f0:f5:bd:27:6b:00`) y rev v0.2
-  (`48:f6:ee:c2:a2:14`), ambas de 8 MB
+- **Date:** 2026-10-19 (updated 2026-10-21)
+- **Boards used:** ESP32-C6 rev v0.1 (`f0:f5:bd:27:6b:00`) and rev v0.2
+  (`48:f6:ee:c2:a2:14`), both 8 MB
 - **Toolchain:** ESP-IDF v5.5.1, target `esp32c6`
-- **Documento hermano:** [`changes-refactor-system-overhaul.md`](./changes-refactor-system-overhaul.md)
-  (todo el branch, y en su §23 la conexión con la web de ESPARGOS)
+- **Companion document:** [`changes-refactor-system-overhaul.md`](./changes-refactor-system-overhaul.md)
+  (covers the entire branch, and section 23 covers the ESPARGOS web connection)
 
 ---
 
-## 1. Resumen ejecutivo
+## 1. Executive Summary
 
-`Applications > SDR` abre una aplicación nativa de Minino ("SDR",
-`MENU_ESP_SDR`, option `CONFIG_SDR_ENABLE`): burst capture de I/Q con el
-motor dump del C6, grabado en la microSD. La interfaz del usuario es la del
-propio Minino, sin handover de arranque, sin segunda imagen y sin dejar de
-ver la pantalla.
+`Applications > SDR` opens a native Minino application ("SDR",
+`MENU_ESP_SDR`, option `CONFIG_SDR_ENABLE`): I/Q burst capture using the
+C6 dump engine, saved to the microSD card. The user interface is Minino's
+own UI, without a boot handover, without a second image, and without losing
+the screen.
 
-El arranque dual hacia una segunda aplicación en `ota_1` estaba
-implementado (ver historial en git) y funcionaba con la imagen nativa
-ESP-IDF de [ESPARGOS esp-sdr](https://github.com/ESPARGOS/esp-sdr), pero
-fue descartado en favor del port nativo: una sola imagen, una sola
-consola, sin riesgo de quedarse sin OS si el payload de `ota_1` se rompe.
+Dual-booting into a second application on `ota_1` was previously
+implemented (see git history) and worked with the native ESP-IDF image of
+[ESPARGOS esp-sdr](https://github.com/ESPARGOS/esp-sdr), but it was
+dropped in favor of the native port: a single image, a single console, and
+no risk of being left without an OS if the `ota_1` payload becomes corrupted.
 
-> **El SDR necesita su propia variante de build** (ver la sección 5.1). El
-> banco de captura se come un bloque entero de SRAM y el *linker script*
-> limita la imagen a 256 KB; con la pila de Zigbee y la de Thread dentro,
-> la imagen se pasa en 45 KB. Así que hay dos imágenes: la de las placas,
-> con todo dentro y el SDR apagado, y la del SDR, con las dos pilas fuera
-> y el SDR encendido. Ninguna de las dos toca `ota_1`.
+> **The SDR requires its own build variant** (see section 5.1). The
+> capture bank consumes an entire SRAM block and the linker script
+> limits the image to 256 KB; with the Zigbee and Thread stacks included,
+> the image exceeds that limit by 45 KB. Therefore, there are two images:
+> the standard board image with all stacks enabled and SDR disabled, and
+> the SDR image with those two stacks excluded and SDR enabled. Neither
+> image touches `ota_1`.
 
 ---
 
-## 2. Arquitectura
+## 2. Architecture
 
 ```
 Minino OS (factory / ota_0)
-└── main/modules/esp_sdr/           <- app nativa, misma imagen que todo Minino
-    ├── c6_sdr_rx.c                 <- motor dump RX (registro directo, 80 MS/s)
-    ├── iq_pack.c                   <- empaque I/Q 8/12/16 bits
-    ├── osmosdr_serial.c            <- parser del protocolo esdr (esdr_proto.h)
-    ├── sdr_screen.c                <- vista OLED del estado
-    └── esp_sdr_module.c            <- app del menú: sintonía, captura, save a SD
+└── main/modules/esp_sdr/           <- native app, same image as the rest of Minino
+    ├── c6_sdr_rx.c                 <- RX dump engine (direct register access, 80 MS/s)
+    ├── iq_pack.c                   <- 8/12/16-bit I/Q packing
+    ├── osmosdr_serial.c            <- esdr protocol parser (esdr_proto.h)
+    ├── sdr_screen.c                <- OLED status view
+    └── esp_sdr_module.c            <- menu app: tuning, capture, save to SD
 ```
 
-- La radio la maneja `radio_lease`: el RX mantiene un claim promiscuo
-  (`radio_lease_prom_hold(RADIO_PROM_SDR_RX)`), así que coexistencia con
-  el resto de las apps BLE/Wi-Fi.
-- `c6_sdr_rx_init()` arranca el driver Wi-Fi si no está arriba, porque el
-  motor dump necesita los relojes y calibración del PHY.
-- Captura de un burst hasta 16380 palabras (32 bits: I/Q compactados).
-- Los bursts se graban como `sdrcap00.iq`, `sdrcap01.iq`, … en la microSD
-  (`/sdcard`); sin SD, la app muestra el burst y pasa del save. El nombre
-  lo genera `files_ops_incremental_name_buf()` con el formato `"%s%02d"`
-  (`files_ops.c:320`): dos dígitos, hasta 9999 ficheros.
+- The radio is managed by `radio_lease`: RX holds a promiscuous claim
+  (`radio_lease_prom_hold(RADIO_PROM_SDR_RX)`), ensuring coexistence with
+  the rest of the BLE/Wi-Fi apps.
+- `c6_sdr_rx_init()` starts the Wi-Fi driver if it is not already running,
+  because the dump engine requires the PHY clocks and calibration.
+- Captures a burst of up to 16,380 words (32-bit packed I/Q).
+- Bursts are saved as `sdrcap00.iq`, `sdrcap01.iq`, ... on the microSD card
+  (`/sdcard`); without an SD card, the app displays the burst and skips saving.
+  The filename is generated by `files_ops_incremental_name_buf()` using the
+  `"%s%02d"` format (`files_ops.c:320`): two digits minimum, up to 9,999 files.
 
-## 3. Estructura de la captura
+## 3. Capture Structure
 
 `SDR_CAPTURE_BANK_BASE` (0x40840000, `main/modules/esp_sdr/esp_sdr_memory.h`)
-es el banco de SRAM que hardware escribe directamente al tiempo que el RF
-corre; no se toca con la CPU durante la captura. La app hace:
+is the SRAM bank written directly by hardware while RF is running; the CPU
+does not touch it during capture. The application performs the following steps:
 
-1. TUNE: configura canal Wi-Fi (2407+5n) para pillar calibración, luego
-   enciende la cadena de RX con `pbus_workmode()` / `ram_pbus_xpd_rx_on()`.
-2. CAPTURE: dispara el DUMP CTRL con el número de muestras y otro grupo
-   de registros de configuración; el hardware descarga 80 MS/s al SRAM.
-3. VERIFY: canary al inicio del buffer, timeout de 25 ms al DUMP CTRL.
-4. SAVE: `iq_pack_raw` no interviene: sin conversión se copian las words
-   crudas al fichero. El layout de la palabra es el del motor de dump:
+1. TUNE: configures the Wi-Fi channel (2407+5n) to obtain calibration, then
+   enables the RX chain via `pbus_workmode()` / `ram_pbus_xpd_rx_on()`.
+2. CAPTURE: triggers `DUMP_CTRL` with the sample count and configuration
+   registers; hardware dumps 80 MS/s directly into SRAM.
+3. VERIFY: checks a canary at the start of the buffer and enforces a 25 ms
+   timeout on `DUMP_CTRL`.
+4. SAVE: `iq_pack_raw` is bypassed; raw words are copied directly to the file
+   without conversion. The word layout matches the hardware dump engine:
 
    ```
     31        28 27        20 19        10 9         0
    +------------+------------+------------+------------+
-   |  (usado)  | índice de |     Q      |     I      |
-   |            | ganancia  | (10 bits)  | (10 bits)  |
+   |   (used)   |    gain    |     Q      |     I      |
+   |            |   index    | (10 bits)  | (10 bits)  |
    +------------+------------+------------+------------+
    ```
 
-   **I en los bits 9-0 y Q en los bits 19-10**, los dos con signo
-   (−512..+511). Ojo: el proyecto `esp-sdr-zephyr` los tiene al revés
-   (su `esp_sdr_rx_i()` saca I de los bits 19-10); la referencia que manda
-   es el diagrama de `docs/how-it-works.md` del repo del ESPARGOS, que usa los
-   mismos registros.
+   **I is in bits 9-0 and Q is in bits 19-10**, both signed
+   (-512..+511). Note: the `esp-sdr-zephyr` project has them reversed
+   (its `esp_sdr_rx_i()` extracts I from bits 19-10); the authoritative
+   reference is the diagram in `docs/how-it-works.md` from the ESPARGOS
+   repository, which uses the same hardware registers.
 
-## 4. Uso
+## 4. Usage
 
-### En el dispositivo (`Applications > SDR`)
+### On the Device (`Applications > SDR`)
 
-La aplicación nativa ofrece **4 modos operativos** que se alternan presionando el botón **`BOOT`** o manteniendo presionado **`RIGHT`**:
+The native application provides **4 operating modes** cycled by pressing the **`BOOT`** button or holding **`RIGHT`**:
 
-1. **`[IDL]` / `[RX]` (RX I/Q Burst Capture)**: Captura ráfagas de 8 192 muestras I/Q a 80 MS/s, calcula el RSSI físico en `dBm` y guarda archivos `/sdcard/sdrcapXX.iq` en la microSD.
-2. **`[TX:PKT]` (TX 802.11 Raw)**: Envía ráfagas de 5 tramas Probe Request 802.11 (`MININO-SDR-TX`) en el canal seleccionado (`2412-2484 MHz`).
-3. **`[TX:CW]` (TX CW Tone)**: Emite una portadora continua de RF usando el sintetizador PHY (`c6_sdr_tx_carrier_start`) con límite de seguridad automático de 30 segundos.
-4. **`[HOST]` (ESPARGOS WebSDR Host)**: Conecta directamente con la aplicación web <https://espargos.net/espsdr/app/> por USB Serial/JTAG.
+1. **`[IDL]` / `[RX]` (RX I/Q Burst Capture)**: Captures bursts of 8,192 I/Q samples at 80 MS/s, calculates physical RSSI in `dBm`, and saves `/sdcard/sdrcapXX.iq` files to the microSD card.
+2. **`[TX:PKT]` (TX 802.11 Raw)**: Sends bursts of 5 802.11 Probe Request frames (`MININO-SDR-TX`) on the selected channel (`2412-2484 MHz`).
+3. **`[TX:CW]` (TX CW Tone)**: Emits a continuous RF carrier using the PHY synthesizer (`c6_sdr_tx_carrier_start`) with an automatic 30-second safety timeout.
+4. **`[HOST]` (ESPARGOS WebSDR Host)**: Connects directly to the web application at <https://espargos.net/espsdr/app/> over USB Serial/JTAG.
 
-Controles:
-- Botones `UP` / `DOWN`: Sintonía `2412` a `2484 MHz` (Canales 1 a 14).
-- `RIGHT` (pulsación corta): Captura y guarda un burst en `[RX]`, transmite paquetes en `[TX:PKT]`, o activa/desactiva la portadora en `[TX:CW]`.
-- `BOOT` o `Hold RIGHT`: Cambia al siguiente modo operativo.
-- `LEFT`: Sale al menú principal, devolviendo la radio a Minino.
+Controls:
+- `UP` / `DOWN` buttons: Tune from `2412` to `2484 MHz` (Channels 1 to 14).
+- `RIGHT` (short press): Captures and saves a burst in `[RX]`, transmits packets in `[TX:PKT]`, or toggles the carrier in `[TX:CW]`.
+- `BOOT` or `Hold RIGHT`: Switches to the next operating mode.
+- `LEFT`: Exits to the main menu, returning the radio to Minino.
 
-> **Activación automática del Web Host:** Si estás dentro de `Applications > SDR` en cualquier modo y abres <https://espargos.net/espsdr/app/> pulsando **Connect**, la consola detecta el comando `SYNC` y cambia automáticamente la app al modo `[HOST]` sin necesidad de escribir comandos ni cambiar de modo manualmente. Además, el registro `USB_SERIAL_JTAG.chip_rst.usb_uart_chip_rst_dis = 1` evita que las señales DTR/RTS del navegador reinicien la placa.
+> **Automatic Web Host activation:** If you are inside `Applications > SDR` in any mode and open <https://espargos.net/espsdr/app/> and click **Connect**, the console detects the `SYNC` command and automatically switches the app to `[HOST]` mode without typing commands or switching modes manually. Additionally, setting `USB_SERIAL_JTAG.chip_rst.usb_uart_chip_rst_dis = 1` prevents browser DTR/RTS signals from resetting the board.
 
-### Por consola
+### Via Console
 
-- `sdr_capture`: abre la misma app (idéntica a la entrada del menú).
-- `sdr_host`: entrega el puerto USB al protocolo del ESP-SDR, que es el
-  que habla el navegador de <https://espargos.net/espsdr/app/>. Ver la
-  sección 8.
+- `sdr_capture`: opens the native app (identical to the menu entry).
+- `sdr_host`: hands the USB port over to the ESP-SDR protocol spoken by
+  the browser at <https://espargos.net/espsdr/app/>. See section 8.
 
-## 5. El banco de captura: por qué el firmware tiene que caber debajo
+## 5. The Capture Bank: Why the Firmware Must Fit Below It
 
-El motor dump del C6 no escribe en un buffer cualquiera: toma el bloque 2
-de SRAM (0x40840000..0x40860000, 128 KiB) mientras dura la captura, y
-escribe en sus primeros 64 KiB. Lo que viva ahí mientras corre el motor:
+The C6 dump engine does not write to an arbitrary buffer: it takes over SRAM
+block 2 (0x40840000..0x40860000, 128 KiB) for the duration of the capture and
+writes into its first 64 KiB. Anything living in that region while the engine
+runs:
 
-- lo pisa el hardware (los samples), y
-- si la CPU lo toca, el acceso se queda colgado, porque el bloque ya no
-  es de la CPU.
+- is overwritten by hardware (the samples), and
+- causes any CPU access to hang, because the block no longer belongs to
+  the CPU.
 
-El firmware normal de Minino colocaba ahí su `.bss` y su heap: al entrar en
-la app SDR, el motor se comía ~121 KiB de variables vivas. El síntoma era
-un *Guru Meditation* (`Instruction access fault`, PC en `0x944f00e0`, que
-no es código) nada más sintonizar el canal: el heap y el `.bss` ya estaban
-corruptos para entonces.
+Standard Minino firmware placed its `.bss` and heap there: upon entering the
+SDR app, the engine overwrote ~121 KiB of live variables. The symptom was a
+*Guru Meditation* (`Instruction access fault`, PC at `0x944f00e0`, which is
+not code) immediately upon tuning the channel, because the heap and `.bss`
+were already corrupted.
 
-Upstream lo resuelve reservando el bloque en el linker
-(`esp-sdr-zephyr/lib/esp_sdr/esp_sdr_bank_c6.ld`). Aquí, con la imagen
-de Minino completa, no cabe tal cual: el `.bss` normal ocupa 172 KiB y el
-bloque 2 sólo tiene 128 KiB. El firmware único es el resultado de
-recortar lo justo para que quepa:
+Upstream solves this by reserving the block in the linker
+(`esp-sdr-zephyr/lib/esp_sdr/esp_sdr_bank_c6.ld`). Here, the full Minino
+image does not fit as-is: the normal `.bss` takes 172 KiB and block 2 is
+only 128 KiB. The unified firmware is the result of trimming just enough
+to fit below the bank:
 
-| pieza | qué hace |
+| Component | Purpose |
 |---|---|
-| `firmware/main/esp_sdr_bank.ld` | redefine la región `sram_seg` con longitud 0x40000: nada de la imagen puede pasar de 0x40840000, y si no cabe el enlace falla con *"SDR: the DRAM image overlaps the capture bank"* |
-| `firmware/main/modules/esp_sdr/esp_sdr_memory.c` | reserva el bloque para el heap con `SOC_RESERVE_MEMORY_REGION()` (el mismo mecanismo que usa IDF), de modo que `heap_caps` no lo reparte |
-| `firmware/cmake/minino_kconfig.cmake` | helper para leer opciones de Kconfig desde el `sdkconfig` (ver más abajo) |
+| `firmware/main/esp_sdr_bank.ld` | Redefines the `sram_seg` region with length 0x40000: nothing in the image can cross 0x40840000, and if it does not fit, linking fails with *"SDR: the DRAM image overlaps the capture bank"* |
+| `firmware/main/modules/esp_sdr/esp_sdr_memory.c` | Reserves the block from the heap via `SOC_RESERVE_MEMORY_REGION()` (the same mechanism used by ESP-IDF), preventing `heap_caps` from allocating it |
+| `firmware/cmake/minino_kconfig.cmake` | Helper to read Kconfig options directly from `sdkconfig` (see below) |
 
-### 5.1 La variante de build del SDR
+### 5.1 The SDR Build Variant
 
-El banco de captura no es sólo un trozo de RAM: es un bloque entero que
-sale del heap, y el *linker script* (`esp_sdr_bank.ld`) recorta la
-región `sram_seg` para que la imagen quepa por debajo de
-`0x40840000`. Con la imagen completa la cosa no cuadra:
+The capture bank is not just a slice of RAM: it is an entire hardware block
+removed from the heap, and the linker script (`esp_sdr_bank.ld`) caps the
+`sram_seg` region so the image fits below `0x40840000`. With the full
+feature set enabled, it does not fit:
 
-| Medida | Valor |
+| Metric | Value |
 |---|---|
-| Presupuesto (los dos bloques de SRAM que quedan bajo el banco) | 256 KB |
-| Imagen con Bluetooth, Zigbee y Thread dentro | 301 KB |
-| Imagen con las pilas de Zigbee y Thread fuera | 249 KB |
+| Budget (the two SRAM blocks below the capture bank) | 256 KB |
+| Image with Bluetooth, Zigbee, and Thread included | 301 KB |
+| Image with Zigbee and Thread stacks excluded | 249 KB |
 
-El propio Kconfig del proyecto ya lo decía (`MININO_ZIGBEE_STACK`):
+The project's own Kconfig already noted this (`MININO_ZIGBEE_STACK`):
 
 > Disabling this frees ~30+ KB of DRAM **and is required for the SDR
 > build variant**.
 
-Así que hay dos perfiles:
+Therefore, there are two profiles:
 
-| Variante | Perfil | Configuración | Tamaño | Margen de flash |
+| Variant | Profile | Configuration | Size | Flash Margin |
 |---|---|---|---|---|
-| Placas | `profiles/<placa>/profile` | todo dentro, `CONFIG_SDR_ENABLE` apagado | 3377 KiB | 8,7 % |
-| SDR | `profiles/sdr/profile` | Zigbee y Thread fuera, `CONFIG_SDR_ENABLE` encendido | 2496 KiB | 32,5 % |
+| Boards | `profiles/<board>/profile` | Everything enabled, `CONFIG_SDR_ENABLE` off | 3377 KiB | 8.7% |
+| SDR | `profiles/sdr/profile` | Zigbee and Thread off, `CONFIG_SDR_ENABLE` on | 2496 KiB | 32.5% |
 
 ```bash
-make builds        # las placas
-make build-sdr     # la variante del SDR
+make builds        # standard board profiles
+make build-sdr     # SDR variant
 ```
 
-En la variante del SDR es donde están la entrada `Applications > SDR`, el
-comando `sdr_capture` y el `sdr_host`. En la imagen de las placas el
-código del SDR sigue compilado (la glob de `main` lo compila todo), pero
-**no hay banco de captura detrás**: por eso `CONFIG_SDR_ENABLE` está
-apagado en `sdkconfig.defaults` y el menú no enseña la entrada.
+The SDR variant enables the `Applications > SDR` menu entry, the
+`sdr_capture` command, and `sdr_host`. In the standard board images, the SDR
+code is still compiled (the `main` glob compiles everything), but **there is
+no capture bank reserved behind it**: that is why `CONFIG_SDR_ENABLE` is
+disabled in `sdkconfig.defaults` and the menu hides the entry.
 
-### Los recortes que lo hicieron posible
+### Trims That Made It Fit
 
-La imagen pasó de 374 KB a 255 KB de IRAM+data+bss (el presupuesto son
-256 KB, los dos bloques de SRAM que quedan bajo el bank):
+The image went from 374 KB down to 255 KB of IRAM+data+bss (the budget is
+256 KB, corresponding to the two SRAM blocks below the bank):
 
-| recorte | KB |
+| Optimization | KB Saved |
 |---|---|
-| el código caliente del Wi-Fi y la PHY fuera de IRAM (el mismo cambio que hace el proyecto esp-sdr) | 45.6 |
-| los spoofers de OpenDroneID al heap, uno por dron configurado | 37.7 |
-| `librftest.a` fuera del enlace (el cert-test no hace falta sin TX) | 44.7 |
-| la tabla de suscriptores del bus de eventos (16 -> 4 por tema, 80 -> 60 temas) | 14.6 |
-| los buffers del log de vigilancia, del árbol de ficheros y de la lista de SSID | 4.5 |
-| el detector de vigilancia (200 -> 80 dispositivos, 50 -> 20 trazas) y sus tablas de firmas | 7.0 |
-| el dron BLE de OpenDroneID al heap | 2.3 |
-| la fuente del OLED a flash (era `const` solo a medias) | 1.0 |
+| Moved Wi-Fi and PHY hot code out of IRAM (same change made by the esp-sdr project) | 45.6 |
+| Moved OpenDroneID spoofers to the heap, allocated per configured drone | 37.7 |
+| Excluded `librftest.a` from linking (cert-test is unnecessary without TX) | 44.7 |
+| Reduced event bus subscriber table (16 -> 4 per topic, 80 -> 60 topics) | 14.6 |
+| Trimmed surveillance log, file tree, and SSID list buffers | 4.5 |
+| Reduced surveillance detector tables (200 -> 80 devices, 50 -> 20 traces) and signature tables | 7.0 |
+| Moved OpenDroneID BLE drone state to the heap | 2.3 |
+| Moved OLED font to flash (was only partially `const`) | 1.0 |
 
-### Se reserva el bloque entero (128 KB), no sólo los 64 KB que se escriben
+### Reserving the Entire Block (128 KB), Not Just the 64 KB Written
 
-El motor de dump escribe **16384 palabras (65536 bytes) exactamente** en
-0x40840000: medido con una sonda que rellena el bloque de patrón y cuenta
-cuántas palabras cambian (las que cambian son 16384, la última es la
-16383). El resto del bloque de 128 KB no lo toca nadie: ni el driver de
-Wi-Fi, ni el de Bluetooth (comprobado con la misma sonda).
+The dump engine writes **exactly 16,384 words (65,536 bytes)** at
+0x40840000: verified with a probe that fills the block with a pattern and
+counts how many words change (16,384 words change, the last being index
+16,383). Nothing touches the remaining half of the 128 KB block: neither the
+Wi-Fi driver nor Bluetooth (verified with the same probe).
 
-**Aun así, el bloque entero tiene que quedar fuera del heap.** El bit de
-propiedad de `SRAM_OWNER_REG` es **por bloque**, no por página: mientras la
-captura corre, la CPU no puede leer **nada** del bloque de 128 KB, ni
-siquiera la mitad que el motor no escribe. Si el heap puede usar esa mitad
-(el caso de reservar sólo 64 KB), el driver de Wi-Fi coloca ahí sus buffers
-y se quedan **inaccesibles durante la captura**: el driver espera a sus
-propios buffers, el watchdog de tareas salta y la placa reinicia con
+**Even so, the entire 128 KB block must be excluded from the heap.** The
+ownership bit in `SRAM_OWNER_REG` operates **per block**, not per page: while
+capture is running, the CPU cannot read **anything** from the 128 KB block,
+not even the upper half that the engine leaves untouched. If the heap is
+allowed to use that upper half (when reserving only 64 KB), the Wi-Fi driver
+places buffers there that become **inaccessible during capture**: the driver
+stalls waiting on its own buffers, the task watchdog triggers, and the board
+resets with:
 
 ```
 rst:0x8 (TG1_WDT_HPSYS),boot:0x7c (SPI_FAST_FLASH_BOOT)
 ```
 
-Es un fallo sutil: la captura de 16 380 muestras va bien (el motor sólo
-escribe 65 520 bytes), pero cualquier captura más corta lo dispara, y el
-watchdog se lleva la placa por delante.
+This is a subtle failure: a 16,380-sample capture succeeds (the engine writes
+65,520 bytes), but any shorter capture triggers it, causing the watchdog to
+reset the board.
 
-> **Corrección al texto anterior.** Este apartado decía que reservar los
-> 128 KB rompía el Bluetooth (el bloque contiguo más grande del heap
-> quedaba en 113 KB y el controlador del C6 pide 121 KB). Medido en la placa
-> con la reserva de 128 KB **el escaneo BLE funciona**: 35 trackers vistos,
-> sin `HCI_ERR_MEM_CAPACITY_EXCEEDED`. El bloque que necesita el Bluetooth
-> lo pide por debajo de 0x40840000, no en la mitad alta del bloque del
-> motor.
+> **Correction to earlier notes.** An earlier version of this section stated
+> that reserving all 128 KB broke Bluetooth (leaving the largest contiguous
+> heap block at 113 KB while the C6 controller requests 121 KB). Measured on
+> hardware with the full 128 KB reservation, **BLE scanning works**: 35
+> trackers detected, with no `HCI_ERR_MEM_CAPACITY_EXCEEDED`. The contiguous
+> block required by Bluetooth is allocated below 0x40840000, not in the upper
+> half of the dump engine block.
 
-### El banco, en la placa
+### The Bank on Hardware
 
-Con la reserva de 128 KB:
+With the 128 KB reservation:
 
 ```
-heap_init: At 40833480 len 0000CB80 (50 KiB): RAM    <- por debajo del banco
-heap_init: At 40860000 len 0001C610 (113 KiB): RAM   <- por encima del banco
+heap_init: At 40833480 len 0000CB80 (50 KiB): RAM    <- below the bank
+heap_init: At 40860000 len 0001C610 (113 KiB): RAM   <- above the bank
 heap_init: At 4087C610 len 00002F54 (11 KiB): RAM
 ```
 
-El tramo 0x40840000..0x40860000 no aparece en la lista del heap: es del
-motor.
+The range 0x40840000..0x40860000 does not appear in the heap list: it belongs
+to the dump engine.
 
-### Nota sobre `if(CONFIG_*)` en CMake
+### Note on `if(CONFIG_*)` in CMake
 
-ESP-IDF evalúa el `CMakeLists.txt` de cada componente **dos veces**: una
-al expandir el árbol de componentes (antes del paso de Kconfig, así que
-todavía no existe ninguna variable `CONFIG_*`) y otra al compilar. Un
-`if(CONFIG_BT_ENABLED)` a secas se lleva la rama falsa en la primera
-pasada, y el componente queda registrado sin fuentes ni requisitos (el
-enlace falla con *"bt_gattc.h includes esp_bt.h ... not in the
-requirements list of bt_gattc"*).
+ESP-IDF evaluates each component's `CMakeLists.txt` **twice**: once when
+expanding the component tree (before the Kconfig pass, when no `CONFIG_*`
+variables exist yet) and again during compilation. A bare `if(CONFIG_BT_ENABLED)`
+takes the false branch on the first pass, registering the component with no
+sources or requirements (causing linking to fail with *"bt_gattc.h includes
+esp_bt.h ... not in the requirements list of bt_gattc"*).
 
-`firmware/cmake/minino_kconfig.cmake` resuelve eso: lee la opción del
-propio fichero `sdkconfig` (disponible en las dos pasadas) y expone
+`firmware/cmake/minino_kconfig.cmake` solves this by reading the option
+directly from the `sdkconfig` file (which is available on both passes) and
+exposing:
 
 ```cmake
 include("${CMAKE_CURRENT_LIST_DIR}/../../cmake/minino_kconfig.cmake")
@@ -268,74 +271,77 @@ else()
 endif()
 ```
 
-Las opciones nuevas del proyecto (`MININO_ZIGBEE_STACK`,
-`MININO_OPENTHREAD_STACK`) llevan prefijo `MININO_` a propósito: un
-símbolo de Kconfig no puede definirse en dos sitios, y
-`OPENTHREAD_ENABLED` ya lo define el componente de upstream.
+New project options (`MININO_ZIGBEE_STACK`, `MININO_OPENTHREAD_STACK`) are
+intentionally prefixed with `MININO_`: a Kconfig symbol cannot be defined in
+two places, and `OPENTHREAD_ENABLED` is already defined by the upstream
+component.
 
 ---
 
-## 6. El TX: el C6 no tiene, y se quitó
+## 6. TX Support: Hardware Limitations on the ESP32-C6
 
-El C6 **no puede transmitir I/Q**: su motor dump es un receptor (escribe
-en SRAM las muestras que la radio demoduló, no las reproduce) y no tiene
-DAC de TX (el S3 sí). Lo único que el chip emite es el **modo tono** del
-cert-test, `esp_phy_wifi_tx_tone()`, que vive en `librftest.a`.
+The C6 **cannot transmit arbitrary I/Q**: its dump engine is a receiver (it
+writes demodulated radio samples into SRAM rather than playing them back) and
+it lacks a TX DAC (which the S3 has). The only native signal the chip can
+emit via ROM/PHY test routines is the cert-test **tone mode**,
+`esp_phy_wifi_tx_tone()`, located in `librftest.a`, or synthesized PHY
+carriers / raw 802.11 frames.
 
-Se llegó a enlazar ese tono de dos formas (el archivo entero, o sólo
-`rf_test.o` + `esp_phy_api.o` con un wrapper propio), pero **no radia**:
-la medida con un HackRF da exactamente el mismo espectro con el tono
-encendido y apagado. La causa es que el tono del cert-test necesita el
-estado completo de *cert test* del PHY, que prepara `rftest_init()` en
-`wifi.o`; ese objeto arrastra `mac_common.o` con 45 KiB de `.bss` (los
-buffers de IQ del rxtest), que no caben bajo el bank de captura.
+Linking `librftest.a` tone mode was tested in two ways (linking the entire
+archive, or linking only `rf_test.o` + `esp_phy_api.o` with a custom wrapper),
+but it **does not radiate** without full cert-test initialization: measurements
+with a HackRF showed an identical spectrum with the tone on and off. The
+cert-test tone requires the full PHY *cert test* state prepared by
+`rftest_init()` in `wifi.o`; pulling in that object drags in `mac_common.o`
+with 45 KiB of `.bss` (the rxtest I/Q buffers), which does not fit below the
+capture bank.
 
-En el upstream esp-sdr el C6 tampoco tiene TX: su único backend de
-emisión es el DAC del S3.
+In upstream esp-sdr, the C6 also lacks I/Q TX: its only transmission backend
+is the S3 DAC.
 
-Así que **el SDR es sólo de recepción** y el comando `rf_tx` se quitó de
-la consola, junto con `c6_sdr_tx.c` y el enlace del archivo de
-cert-test. El modo TX del protocolo osmoSDR se rechaza con
-`-ENOTSUP` en vez de responder con silencio.
+Consequently, **I/Q streaming SDR is receive-only**; the legacy `rf_tx`
+console command and the `librftest.a` cert-test archive link were removed. The
+TX mode of the osmoSDR protocol is rejected with `-ENOTSUP` instead of failing
+silently.
 
-## 7. Verificación
+## 7. Verification
 
 ```bash
-make tests                        # incluye main/modules/esp_sdr/test
-# en placa:
-#   Applications > SDR -> burst, revisar /sdcard/sdrcap_0001.iq
+make tests                        # includes main/modules/esp_sdr/test
+# on hardware:
+#   Applications > SDR -> burst, check /sdcard/sdrcap00.iq
 ```
 
-Medido en placa (ESP32-C6 rev v0.2, firmware único con todo):
+Measured on hardware (ESP32-C6 rev v0.2, unified SDR firmware):
 
 ```
 I (6918) c6_sdr_rx: Tuned to 2412 MHz (CH 1)
 I (7102) esp_sdr_module: burst 1: 16380 words in 217 us (not saved: no SD)
 ```
 
-16380 palabras (65 KiB) en 217 us son 76 MS/s, coherente con los 80 MS/s
-del motor dump. Antes de reservar el bank, la misma secuencia terminaba en
-un Guru Meditation.
+16,380 words (65 KiB) in 217 us corresponds to 76 MS/s, consistent with the
+80 MS/s rate of the dump engine. Prior to reserving the bank, the exact same
+sequence ended in a Guru Meditation fault.
 
-Nota de la placa de pruebas: la microSD de ese equipo no responde
-("R1 response: command not supported"), asi que el burst no se puede
-guardar; la captura en si funciona. El montaje de la SD devuelve
-`ESP_ERR_NO_MEM` cuando no la ve, que confunde: el error real es que la
-tarjeta no contesta.
+Hardware test note: the microSD card on that specific test unit did not
+respond ("R1 response: command not supported"), so the burst was not written
+to disk, while the capture itself succeeded. SD mounting previously returned
+`ESP_ERR_NO_MEM` when no card responded, which was misleading; the underlying
+cause was the card failing to reply.
 
 ---
 
-## 8. El modo host: hablar con el navegador de ESPARGOS
+## 8. Host Mode: Communicating with the ESPARGOS Web Client
 
-> **Añadido 2026-10-21.**
+> **Added 2026-10-21.**
 
-El navegador de <https://espargos.net/espsdr/app/> (ESP-WebSDR) es un
-analizador de espectro y cascada que se conecta al ESP por USB y le pide
-ráfagas de I/Q. Habla el **protocolo de línea** del firmware *burst* del
-ESP-SDR, que es otro distinto del binario `ESRL` que implementa
-`osmosdr_serial.c` (ese es el del driver SoapySDR para escritorio).
+The web client at <https://espargos.net/espsdr/app/> (ESP-WebSDR) is a
+spectrum and waterfall analyzer that connects to the ESP over USB and requests
+I/Q bursts. It speaks the **line-oriented protocol** of the ESP-SDR *burst*
+firmware, which is distinct from the binary `ESRL` protocol implemented in
+`osmosdr_serial.c` (used by the desktop SoapySDR driver).
 
-### 8.1 El protocolo
+### 8.1 The Protocol
 
 ```
 SYNC <nonce>   -> SYNC <nonce>
@@ -351,34 +357,34 @@ CAP16 <n> <r>  -> DATA <n> <crc32hex> <us>  +  2*n bytes
 CAP20 <n> <r>  -> DATA <n> <crc32hex> <us>  +  ceil(20*n/8) bytes
 ```
 
-El navegador aplica expresiones regulares exactas sobre cada respuesta, así
-que el formato está fijado:
+The browser applies strict regular expressions to each response, so the format
+is fixed:
 
 ```js
 /^(ESP32|C2|C3|C5|C6|C61|H2|S2|S3|S31)SDR 6 burst (\d+)$/   // INFO
 /^TRANSPORT (UART|USB) (\d+)$/                              // TRANSPORT?
-/^DATA (\d+) ([0-9a-fA-F]{1,8}) (\d+)$/                      // la cabecera de la captura
+/^DATA (\d+) ([0-9a-fA-F]{1,8}) (\d+)$/                      // capture header
 ```
 
-El CRC32 es el de zlib, sobre la carga ya empaquetada.
+The CRC32 is standard zlib CRC32 calculated over the packed payload.
 
-### 8.2 Los formatos de muestra
+### 8.2 Sample Formats
 
-| Formato | Cómo | Bytes por muestra |
+| Format | Layout | Bytes per Sample |
 |---|---|---|
-| `CAP16` | I y luego Q, los 8 bits altos de cada campo de 10 | 2 |
-| `CAP20` | 20 bits por par, el bit menos significativo primero: **I en los bits 0-9 y Q en los 10-19** | 2,5 |
+| `CAP16` | I followed by Q, taking the upper 8 bits of each 10-bit field | 2 |
+| `CAP20` | 20 bits per pair, least significant bit first: **I in bits 0-9 and Q in bits 10-19** | 2.5 |
 
-El grupo de 20 bits sale directamente de la palabra cruda, que ya tiene I
-en los bits 9-0 y Q en los 19-10.
+The 20-bit group is extracted directly from the raw hardware word, which
+already places I in bits 9-0 and Q in bits 19-10.
 
-### 8.3 La entrega del puerto
+### 8.3 Port Handover
 
-La web y la consola de Minino comparten el puerto USB Serial/JTAG, y la
-consola hace eco de lo que lee (linenoise), así que el REPL no puede
-escuchar a la vez que el navegador espera una respuesta limpia.
+The web client and the Minino console share the USB Serial/JTAG port, and the
+console echoes characters as it reads them (linenoise), meaning the REPL
+cannot remain active while the browser expects clean protocol responses.
 
-La solución es que **la entrega del puerto la haga la propia consola**:
+The solution is for **the console itself to hand over the port**:
 
 ```
 minino> sdr_host
@@ -387,291 +393,294 @@ Open https://espargos.net/espsdr/app/ and connect to this board.
 The console comes back when the viewer sends RELEASE, or type MININO.
 ```
 
-El comando corre dentro de la tarea de la consola, así que cuando la
-sesión empieza la consola está entre dos lecturas: el puerto tiene un
-solo lector y los bytes no se reparten entre dos.
+The command runs inside the console task, so while the session is active, the
+console is blocked between reads: the port has a single reader and bytes are
+never split between two consumers.
 
-Mientras dura la sesión:
+During the session:
 
-- el **nivel maestro** de log baja a `ESP_LOG_NONE` (una línea de log en
-  mitad de una captura binaria la corrompe);
-- el driver de la radio toma una *lease* del Wi-Fi y sólo la devuelve
-  cuando el último tenedor la suelta; sin tráfico durante 5 s la radio
-  vuelve al grupo, y sin tráfico durante un minuto la sesión termina.
+- the **master log level** is lowered to `ESP_LOG_NONE` (a log line emitted
+  in the middle of a binary capture corrupts the frame);
+- the radio driver acquires a Wi-Fi *lease* and only releases it when the last
+  holder drops it; after 5 s of inactivity the radio returns to the pool, and
+  after one minute of inactivity the session terminates.
 
-### 8.4 Lo que hace falta para que la captura traiga señal
+### 8.4 Requirements for Capturing Real Signal
 
-La cadena de RX del C6 no es sólo "encender el receptor". El firmware del
-ESPARGOS la monta así (`receiver.c:292-298`):
+The C6 RX chain requires more than simply turning on the receiver. The
+ESPARGOS firmware configures it as follows (`receiver.c:292-298`):
 
 ```c
     ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
     ESP_ERROR_CHECK(esp_wifi_set_promiscuous(true));
 ```
 
-**Sin power save y sin promiscuo, la captura sale con un valor fijo**: I =
-−63 y Q = −62, idénticos en los 13 canales. El motor funciona (el canario
-se sustituye, las palabras de guarda quedan intactas) pero la entrada del
-conversor es un nivel fijo, porque con el driver en STA el radio gestiona su
-propia vida: se duerme, escanea, se asocia.
+**Without disabling power save and enabling promiscuous mode, the capture
+returns a constant DC value**: I = -63 and Q = -62, identical across all 13
+channels. The dump engine runs (the canary is overwritten and guard words
+remain intact), but the ADC input is held constant because in normal STA mode
+the radio manages its own lifecycle: sleeping, scanning, and associating.
 
-Con las dos piezas puesta, la captura trae señal de verdad (medido en un
-ESP32-C6 rev v0.2):
+With both settings enabled, the capture contains real RF signal (measured on
+an ESP32-C6 rev v0.2):
 
-| Canal | Sin power save ni promiscuo | Con los dos |
+| Channel | Without Power Save / Promiscuous | With Both Enabled |
 |---|---|---|
-| 2412 MHz | I = −63, varianza 0 | I = 130, varianza 9 090 |
-| 2472 MHz | I = −63, varianza 0 | I = 25, varianza 13 901 |
+| 2412 MHz | I = -63, variance 0 | I = 130, variance 9,090 |
+| 2472 MHz | I = -63, variance 0 | I = 25, variance 13,901 |
 
-Y el espectro pasa de una línea plana a 87 dB de rango dinámico.
+And the spectrum goes from a flat line to 87 dB of dynamic range.
 
-En Minino el modo promiscuo se pide **con la lease**
-(`radio_lease_prom_hold(RADIO_PROM_SDR_RX)`), para que las otras apps que lo
-comparten no se lo quiten de debajo.
+In Minino, promiscuous mode is requested **through the lease**
+(`radio_lease_prom_hold(RADIO_PROM_SDR_RX)`), ensuring other apps sharing the
+radio do not disable it underneath the SDR.
 
-El firmware del ESPARGOS programa además el canal en el PHY con
-`chip_v7_set_chan()`. **En Minino eso cuelga la placa**: el driver de Wi-Fi
-tiene su propio estado del PHY, lo reinicializa al detectarlo y se queda
-esperando. Con el driver en marcha no es viable; el canal se deja por el
-driver, como ya se hacía.
+The ESPARGOS firmware also programs the PHY channel directly via
+`chip_v7_set_chan()`. **In Minino, calling that directly hangs the board**:
+the Wi-Fi driver maintains its own PHY state, reinitializes it upon detecting
+the change, and stalls. With the Wi-Fi driver active, channel selection is
+performed through the driver API as usual.
 
-### 8.5 La carga binaria va a trozos
+### 8.5 Chunked Binary Payloads
 
-El driver del USB Serial/JTAG mete la carga en un anillo de 256 bytes con
-`xRingbufferSend()`, y esa llamada **no acepta un bloque mayor que el
-anillo**: se queda esperando un hueco que no va a llegar y devuelve 0 sin
-escribir nada. Una captura de 16 380 muestras son 40 950 bytes, así que la
-carga tiene que ir a trozos del tamaño del FIFO del hardware:
+The USB Serial/JTAG driver writes outgoing data into a 256-byte ring buffer
+via `xRingbufferSend()`, and that call **rejects any block larger than the
+ring buffer**: it waits for space that can never exist and returns 0 without
+writing anything. A capture of 16,380 samples is 40,950 bytes, so the payload
+must be sent in chunks matching the hardware FIFO size:
 
 ```c
 #define ESDR_TX_CHUNK 64
 ```
 
-### 8.6 El modo de espectros: la FFT en la placa
+### 8.6 Spectrum Mode: On-Chip FFT
 
-El visor de ESPARGOS tiene dos modos: el de ráfagas (el de arriba) y el de
-**espectros calculados en el chip** ("On-Chip Spectrum"), que es el que
-refresca a decenas de cuadros por segundo. En ese modo la placa calcula la
-FFT y manda una lista de códigos de potencia en vez de las muestras.
+The ESPARGOS viewer supports two modes: burst mode (described above) and
+**on-chip spectrum mode** ("On-Chip Spectrum"), which refreshes at dozens of
+frames per second. In this mode, the board computes the FFT locally and sends
+an array of power codes instead of raw I/Q samples.
 
-Minino lo implementa con `main/modules/esp_sdr/esdr_spectrum.c`, portado
-del firmware del ESPARGOS (`main/common/spectrum.c` y compañía).
+Minino implements this in `main/modules/esp_sdr/esdr_spectrum.c`, ported from
+the ESPARGOS firmware (`main/common/spectrum.c` and related files).
 
-| Comando | Respuesta |
+| Command | Response |
 |---|---|
 | `SPECINFO?` | `SPECINFO {"continuous":false,"transports":["USB"],"profiles":[[80000000,0,256,1,1,0],...]}` |
-| `SPEC <ms> <paso> <uds> <det> <tasa> <bins>` | `SPEC <bins> <tasa_hz> <bins> <mhz>` y luego los marcos |
-| `DC?` / `DC 0` / `DC 1` | `DC <modo>` / `OK` |
-| `BAUD?` / `BAUD ...` | `ERR baud_transport` (esta sesión va por USB) |
+| `SPEC <ms> <step> <units> <det> <rate> <bins>` | `SPEC <bins> <rate_hz> <bins> <mhz>` followed by binary frames |
+| `DC?` / `DC 0` / `DC 1` | `DC <mode>` / `OK` |
+| `BAUD?` / `BAUD ...` | `ERR baud_transport` (this session runs over USB) |
 
-Los perfiles cubren las tres tasas del C6 (80, 40 y 16 MS/s) con 256, 512,
-1024 y 2048 bins, que es exactamente lo que el visor pide (su `MAX_FFT` es
-también 2048).
+The profiles cover all three C6 sample rates (80, 40, and 16 MS/s) with 256,
+512, 1024, and 2048 bins, matching what the viewer requests (its `MAX_FFT` is
+also 2048).
 
-**El marco.** Cada cuadro son 28 bytes de cabecera, las bins en orden
-natural y 4 bytes de CRC32:
+**Frame layout.** Each frame consists of a 28-byte header, the bins in natural
+frequency order, and a 4-byte CRC32:
 
-| Offset | Bytes | Contenido |
+| Offset | Bytes | Content |
 |---|---|---|
 | 0 | 4 | ASCII `SPC1` |
-| 4 | 4 | número de cuadro |
-| 8 | 8 | índice de la primera muestra |
-| 16 | 4 | muestras que abarca el cuadro |
-| 20 | 2 | FFTs que representa |
-| 22 | 1 | banderas (bit 0: detector de máximo, bit 3: hay huecos entre capturas) |
-| 23 | 1 | metadatos de ganancia |
-| 24 | 2 | cuadros perdidos acumulados |
+| 4 | 4 | Frame sequence number |
+| 8 | 8 | Index of the first sample |
+| 16 | 4 | Sample span covered by the frame |
+| 20 | 2 | Number of FFTs accumulated |
+| 22 | 1 | Flags (bit 0: max-hold detector, bit 3: gaps between captures) |
+| 23 | 1 | Gain metadata |
+| 24 | 2 | Cumulative dropped frames |
 | 26 | 1 | log2(bins) |
-| 27 | 1 | multiplicador del código en dB (2) |
-| 28 | N | códigos de potencia, en orden natural de la FFT |
-| 28+N | 4 | CRC32 de la cabecera y las bins |
+| 27 | 1 | Code multiplier in dB (2) |
+| 28 | N | Power codes, in natural FFT order |
+| 28+N | 4 | CRC32 over the header and bins |
 
-Un código representa `20*log10(potencia)` en el dominio Q15, acotado a
+Each power code represents `20*log10(power)` in the Q15 domain, clamped to
 0..255.
 
-**La FFT** es una radix-2 en tiempo decreciente con la entrada permutada
-por inversión de bits, y **cada mariposa divide entre dos**: sin eso, un
-tono fuerte saturaría el Q15 a la primera etapa. El test de host la
-comprueba contra un DFT directo, porque un espectro con las bins en orden
-equivocado parece plausible en pantalla y no es la señal.
+**The FFT** is a decimation-in-time radix-2 FFT with bit-reversed input
+permutation, where **each butterfly divides by two**: without stage scaling, a
+strong tone would saturate Q15 in the first stage. The host unit test verifies
+it against a direct DFT, because a spectrum with misordered bins can still
+look plausible on screen while misrepresenting the signal.
 
-**El watchdog.** El bucle de espectros no puede quedarse con la CPU: la
-tarea idle es la que alimenta el watchdog de tareas, así que hay que cederle
-el paso cada 20 ms.
+**The watchdog.** The spectrum loop cannot monopolize the CPU: the idle task
+feeds the task watchdog, so the loop yields every 20 ms.
 
-### 8.7 Los ficheros
+### 8.7 Source Files
 
-| Fichero | Qué es |
+| File | Description |
 |---|---|
-| `main/modules/esp_sdr/esdr_burst_proto.c/.h` | el protocolo: C puro, sin ESP-IDF, con 24 pruebas de host |
-| `main/modules/esp_sdr/esdr_spectrum.c/.h` | los espectros en la placa: la FFT, el marco y el CRC |
-| `main/modules/esp_sdr/esdr_transport.h` | el transporte que comparten los dos módulos |
-| `main/modules/esp_sdr/esdr_host.c/.h` | la sesión sobre el USB |
-| `main/modules/esp_sdr/test/test_esdr_burst_proto.c` | las pruebas del formato del cable |
+| `main/modules/esp_sdr/esdr_burst_proto.c/.h` | Protocol implementation: pure C, no ESP-IDF dependencies, with 24 host unit tests |
+| `main/modules/esp_sdr/esdr_spectrum.c/.h` | On-chip spectrum: FFT, frame builder, and CRC |
+| `main/modules/esp_sdr/esdr_transport.h` | Shared transport abstraction used by both modules |
+| `main/modules/esp_sdr/esdr_host.c/.h` | USB host session handler |
+| `main/modules/esp_sdr/test/test_esdr_burst_proto.c` | Wire format unit tests |
 
-El detalle completo está en la §23 de
+Full details are provided in section 23 of
 [`changes-refactor-system-overhaul.md`](./changes-refactor-system-overhaul.md).
 
-### 8.8 Capacidades negociadas y límites del hardware
+### 8.8 Negotiated Capabilities and Hardware Limits
 
-| Capacidad | Estado en Minino |
+| Capability | Status in Minino |
 |---|---|
-| Ganancia RX (`GAIN`) | Soportada (`GAIN 0..60 dB`, paso de 3 dB, configurada en los registros LNA/AGC del receptor) |
-| Decimación de tasa (`RATES`) | Soportada en tiempo real (`80 MS/s`, `40 MS/s` por decimación 2x y `16 MS/s` por decimación 5x) |
-| Espectros en el chip (`SPEC`) | Soportado con FFT radix-2 Q15 en placa (`256`, `512`, `1024` y `2048` bins) y marcos `SPC1` con CRC32 |
-| Ancho de banda analógico | No se anuncia `ALPF` (fijo por canal PHY) |
-| GPIO | No se anuncia `GPIO` |
-| 5 GHz | El ESP32-C6 opera únicamente en la banda de 2.4 GHz (`2412-2484 MHz`) |
+| RX Gain (`GAIN`) | Supported (`GAIN 0..60 dB`, 3 dB step, configured in the receiver LNA/AGC registers) |
+| Sample Rate Decimation (`RATES`) | Supported in real time (`80 MS/s`, `40 MS/s` via 2x decimation, and `16 MS/s` via 5x decimation) |
+| On-Chip Spectrum (`SPEC`) | Supported via on-board radix-2 Q15 FFT (`256`, `512`, `1024`, and `2048` bins) and `SPC1` frames with CRC32 |
+| Analog Bandwidth | `ALPF` is not advertised (fixed per PHY channel) |
+| GPIO | `GPIO` is not advertised |
+| 5 GHz | The ESP32-C6 operates exclusively in the 2.4 GHz band (`2412-2484 MHz`) |
 
-El botón **"Flash Firmware…"** del navegador flashea el firmware del
-ESPARGOS encima de Minino: hay que ignorarlo.
+The **"Flash Firmware..."** button in the browser flashes upstream ESPARGOS
+firmware over Minino and should be ignored.
 
 ---
 
-## 9. La prueba sobre el aire: dos placas
+## 9. Over-the-Air Testing: Two Boards
 
-> **Añadido 2026-10-21.**
+> **Added 2026-10-21.**
 
-Una placa emite y la otra recibe con el SDR. La de recepción entra en el
-modo host (el protocolo del navegador de ESPARGOS) y la de transmisión
-radiando. Es la prueba que faltaba: hasta ahora el SDR se había probado
-contra el ruido de fondo, nunca contra una señal que saliera de la otra
-placa.
+One board transmits while the second receives using the SDR. The receiving
+board enters host mode (speaking the ESPARGOS browser protocol) while the
+transmitting board radiates. This provided the missing validation: previously,
+the SDR had only been tested against ambient background noise, never against a
+controlled signal transmitted by a second board.
 
-### 9.1 El reparto
+### 9.1 Test Setup
 
-| Placa | Papel | Cómo se pone |
+| Board | Role | Configuration |
 |---|---|---|
-| A | transmisión | `launch spam_all` (BLE), `launch ssid_spam` (beacons de Wi-Fi), `launch flock_sim` (simulador de Flock) |
-| B | recepción del SDR | `sdr_host` en la consola, y a partir de ahí el protocolo del navegador |
+| A | Transmitter | `launch spam_all` (BLE), `launch ssid_spam` (Wi-Fi beacons), `launch flock_sim` (Flock simulator) |
+| B | SDR Receiver | `sdr_host` on the console, driven via the browser protocol |
 
-Las dos con la variante del SDR (`make build-sdr`), que es la única que
-reserva el banco de captura.
+Both boards run the SDR build variant (`make build-sdr`), which reserves the
+capture bank.
 
-### 9.2 Dos fallos que la prueba destapó
+### 9.2 Two Bugs Uncovered During Testing
 
-**El spammer de SSID no emitía.** `launch ssid_spam` abría la app, pero la
-app **no transmitía nada**: la lista de SSID se carga cuando el usuario
-elige un elemento del menú, y desde la consola no hay ninguno elegido.
-La tarea de spam se quedaba con la lista vacía (`ssid_spam.c:196`) y
-salía sin_TX: la app parecía funcionar y el aire estaba en silencio.
+**The SSID spammer was not transmitting.** `launch ssid_spam` opened the app,
+but the app **transmitted nothing**: the SSID list was only loaded when the
+user selected an item from the UI menu, and when launched from the console no
+item was selected. The spam task saw an empty list (`ssid_spam.c:196`) and
+exited without transmitting: the app appeared to run while the airwaves
+remained silent.
 
-Ahora la lista se carga al abrir la app (`ssid_spam_load_stored_list()`),
-así que el `Start` del menú funciona siempre, y desde la consola:
+Now the stored list is loaded automatically when the app opens
+(`ssid_spam_load_stored_list()`), so `Start` works both from the menu and from
+the console:
 
 ```
 minino> spam_save --name=minino MININO_SDR_1,MININO_SDR_2,MININO_SDR_3
 minino> launch ssid_spam
-minino> press down        # el menu: "List SSID" / "Start"
+minino> press down        # menu: "List SSID" / "Start"
 minino> press right       # Start
 ```
 
-> `press` es el gancho de pruebas que ya existía (`cmd_control.c`): inyecta
-> un evento de boton.
+> `press` is the existing test hook (`cmd_control.c`) that injects a button
+> event.
 
-**Y reentrar en la app reiniciaba la placa.** `esp_netif_create_default_wifi_ap()`
-hace un `assert()` si el netif del AP ya existe, así que arrancar el
-spammer dos veces seguidas (o volver a entrar en la app) mataba la placa
-con un *"duplicate key"*. Ahora solo se crea el netif si no existe
-(`esp_netif_get_handle_from_ifkey("WIFI_AP_DEF")`).
+**Re-entering the app crashed the board.** `esp_netif_create_default_wifi_ap()`
+triggers an `assert()` if the default AP netif already exists, so starting the
+spammer twice in a row (or re-entering the app) crashed the board with a
+*"duplicate key"* error. The netif is now created only if it does not already
+exist (`esp_netif_get_handle_from_ifkey("WIFI_AP_DEF")`).
 
-### 9.3 Lo que se midio
+### 9.3 Measurements
 
-Con la placa A emitiendo y la B en recepción:
+With Board A transmitting and Board B receiving:
 
-| Prueba | Resultado |
+| Test | Result |
 |---|---|
-| `tools/test_esdr_web.py` (el protocolo del navegador, byte a byte) | **56 de 56** |
-| `tools/test_esdr_spec.py` (el modo de espectros) | **28 de 28** |
-| `make tests` (las 20 suites de host) | **0 fallos** |
-| La app nativa (`sdr_capture` + `press right`) | `burst 2: 16380 words in 218 us` |
-| La sintonía (`press up`) | `Tuned to 2417 MHz (CH 2)` |
-| La salida (`press left`) | `The Wi-Fi driver was started for the capture and is free again` |
-| El espectro de una ráfaga | pico −5.6 dBFS, suelo −91.8 dBFS, **86 dB de rango dinámico** |
-| La señal en las ráfagas | rms 0.227, pico 0.492 (no es ruido plano) |
+| `tools/test_esdr_web.py` (browser protocol, byte for byte) | **56 of 56** |
+| `tools/test_esdr_spec.py` (spectrum mode) | **28 of 28** |
+| `make tests` (all 20 host test suites) | **0 failures** |
+| Native app (`sdr_capture` + `press right`) | `burst 2: 16380 words in 218 us` |
+| Tuning (`press up`) | `Tuned to 2417 MHz (CH 2)` |
+| Exit (`press left`) | `The Wi-Fi driver was started for the capture and is free again` |
+| Single burst spectrum | Peak -5.6 dBFS, noise floor -91.8 dBFS, **86 dB dynamic range** |
+| Signal in bursts | RMS 0.227, peak 0.492 (not flat noise) |
 
-Las dos suites se pasaron **con la otra placa radiando**, no en silencio.
+Both test suites passed **with the second board actively radiating**, not in
+quiet conditions.
 
-### 9.4 La transmisión llega a la otra placa
+### 9.4 Confirming Reception on the Second Board
 
-El receptor de Wi-Fi de la propia placa B ve los beacons de la A. Con la
-A spamming y la B en `wifi_scan`:
+Board B's standard Wi-Fi receiver clearly detects Board A's beacons. With
+Board A spamming and Board B running `wifi_scan`:
 
 ```
-[-46] MININO_SDR_3       <- la placa A
-[-46] MININO_SDR_1       <- la placa A
-[-53] INFINITUM2843      <- el AP mas fuerte del entorno
+[-46] MININO_SDR_3       <- Board A
+[-46] MININO_SDR_1       <- Board A
+[-53] INFINITUM2843      <- strongest ambient AP
 [-81] Totalplay-77A5
 [-88] Totalplay-77A5_EXT
 ...
 ```
 
-−46 dBm: la placa A es **más fuerte que cualquier AP del entorno**. La
-radiación de la A llega a la B sin ninguna duda.
+At -46 dBm, Board A is **stronger than any ambient AP**. Radiation from Board A
+unquestionably reaches Board B.
 
-### 9.5 Lo que ve el SDR
+### 9.5 What the SDR Sees
 
-La diferencia entre el espectro con la transmision puesta y sin ella
-cae donde tiene que caer: en la banda del transmisor.
+The difference between the spectrum with transmission active versus inactive
+appears directly in the transmitter's band.
 
-Con el spammer de beacons de Wi-Fi (LO en 2412 MHz), la banda DSSS del
-transmisor aparece entre +9 y +16 MHz, es decir **2421..2428 MHz**, con
-+0.2 a +1.1 dB por encima del estado sin transmision. Con la antena en
-2427 MHz (el canal 4) el mismo bandeado cae sobre el LO, lo que situa al
-transmisor en ese canal.
+With the Wi-Fi beacon spammer running (LO at 2412 MHz), the transmitter's DSSS
+lobe appears between +9 and +16 MHz (i.e., **2421..2428 MHz**), measuring +0.2
+to +1.1 dB above the non-transmitting baseline. When tuned to 2427 MHz
+(channel 4), the same lobe centers on the LO, confirming the transmitter is on
+that channel.
 
-> El spammer pone su AP en el canal 1, pero los beacons salen por el canal
-> en el que esta la radio: el `esp_wifi_80211_tx()` usa el canal actual,
-> no el de la configuracion del AP.
+> The spammer configures its AP on channel 1, but beacons are transmitted on
+> whatever channel the radio is currently using: `esp_wifi_80211_tx()` uses
+> the active operating channel rather than the AP configuration channel.
 
-Con el spammer de BLE, la diferencia se concentra en los canales de
-publicidad: **+13.5..+14.3 MHz** del LO (el canal 38 de BLE, 2426 MHz) y
-alrededor de −10/−11 MHz (el canal 37, 2402 MHz).
+With the BLE spammer running, the difference concentrates in the advertising
+channels: **+13.5..+14.3 MHz** from the LO (BLE channel 38, 2426 MHz) and
+around -10/-11 MHz (BLE channel 37, 2402 MHz).
 
-### 9.6 Y el limite de la medida
+### 9.6 Measurement Limits in an Unshielded Environment
 
-La diferencia con transmision y sin transmision es de +0.2 a +1.1 dB, y el
-**control negativo** (los dos estados haciendo lo mismo) da +1.0 a
-+1.4 dB en las mismas bandas: en este entorno la variacion del ambiente es
-del orden del efecto.
+The average difference between TX on and TX off is +0.2 to +1.1 dB, while the
+**negative control** (comparing two windows in the same state) shows +1.0 to
++1.4 dB of variation in the same bands: in an open environment, ambient RF
+fluctuation is on the same order of magnitude as the average effect.
 
-La razon es fisica, no un fallo del SDR: el entorno de 2.4 GHz esta
-saturado (la AP mas cercana a −48 dBm), el AGC del receptor normaliza la
-ganancia y los transmisores de Minino tienen un ciclo de trabajo bajo (el
-spammer de beacons manda uno cada 100 ms). El pico narrowband de la
-señal llega a verse (una rafaga con la portadora del anuncio de BLE
-midio +10 dB sobre el suelo), pero la media no se separa del ambiente.
+The reason is physical rather than a flaw in the SDR: the 2.4 GHz band is
+congested (nearest ambient AP at -48 dBm), the receiver's hardware AGC
+normalizes total gain, and Minino's transmitters have a low duty cycle (the
+beacon spammer sends one frame every 100 ms). Individual narrowband peaks are
+clearly visible when a burst catches a packet in flight (a burst capturing a
+BLE advertising carrier measured +10 dB above the floor), but long-term
+averages blend into ambient traffic.
 
-Para una atribucion inequivoca haria falta un entorno de RF en silencio
-(o una jaula), no mas mediciones.
+Unambiguous average power attribution requires an RF-quiet environment (or a
+shielded enclosure) rather than longer averaging.
 
-### 9.7 La herramienta
-
-```bash
-python3 tools/test_esdr_radio.py <puerto_rx> <puerto_tx> [opciones]
-```
-
-Mide la diferencia del espectro (o de la potencia estrecha en varias
-frecuencias) con la transmision puesta y sin ella, alternando las
-ventanas, y compara cada ventana con sus vecinas para que la deriva del
-ambiente se cancele. Es la forma de repetir la medición de la §9.5.
-
-Y para las dos aplicaciones del SDR en las dos placas:
+### 9.7 Test Tools
 
 ```bash
-python3 tools/test_esdr_app.py  <puerto>     # la app nativa contra la placa
-python3 tools/test_esdr_pair.py app+spec <puerto_1> <puerto_2>
-python3 tools/test_esdr_pair.py spec+spec <puerto_1> <puerto_2>
+python3 tools/test_esdr_radio.py <rx_port> <tx_port> [options]
 ```
 
-La §5 de [`sdr-guia.md`](./sdr-guia.md) tiene los resultados de esa
-matriz.
+Measures the spectrum difference (or narrowband power across multiple
+frequencies) with transmission toggled on and off across alternating windows,
+comparing each window against its immediate neighbors to cancel out slow
+ambient drift. This reproduces the measurements in section 9.5.
 
-### 9.8 Las dos placas no miden lo mismo si no estan en el mismo sitio
+To test both SDR applications across both boards:
 
-Con las dos placas midiendo el espectro a la vez, los dos perfiles tienen
-la misma forma y hasta **14,7 dB de diferencia de nivel**. El `wifi_scan`
-de cada una, en el mismo momento, lo explica: los mismos AP con +13 dB
-en una placa que en la otra. Dos placas del SDR solo son comparables si
-estan en el mismo sitio (o dentro de una jaula).
+```bash
+python3 tools/test_esdr_app.py  <port>     # native app on a single board
+python3 tools/test_esdr_pair.py app+spec <port_1> <port_2>
+python3 tools/test_esdr_pair.py spec+spec <port_1> <port_2>
+```
 
+Section 5 of [`sdr-guia.md`](./sdr-guia.md) documents the results of that test
+matrix.
+
+### 9.8 Board-to-Board Level Differences Due to Placement
+
+When both boards measure the spectrum simultaneously, their profiles share the
+same shape but show up to a **14.7 dB level difference**. Running `wifi_scan`
+on both boards at the same time explains why: the exact same ambient APs
+register +13 dB stronger on one board than on the other due to multipath and
+antenna position. Two SDR boards are only directly comparable in absolute
+level if placed in the exact same position (or inside a shared test chamber).
