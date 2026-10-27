@@ -158,7 +158,7 @@ make all
 
 ### Cleaning the project
 
-If you you have dependencies issues or want to clean the project, run the following command:
+If you have dependency issues or want to clean the project, run the following command:
 
 ```bash
 make clean
@@ -227,10 +227,10 @@ Find the instructions [here](menus.md).
 ## WIFI
 
 ### DoS test
-First run a python simple server with:
+First, run a simple Python HTTP server with:
 `python3 -m http.server`
 
-Next open the DoS app in minino and if you haven't a AP saved in the serial terminal you need to add your AP:
+Next, open the DoS app in Minino. If you do not have an AP saved, add your AP in the serial terminal:
 ```
 Welcome to the Minino Console.
 Type 'help' to get the list of commands.
@@ -241,8 +241,8 @@ command.
 minino> save AP_NAME PASSWORD
 ```
 
-The minino will try to connect to AP.
-Once you have a AP saved if the minino app do not show the AP's exit and come back to the app to load AP, once minino found a AP available this will try to connect and if done, the next screen will show the target, if target is not configured, you need to introduce manually in the serial terminal:
+Minino will try to connect to the AP.
+Once you have an AP saved, if the Minino app does not show the APs, exit and re-enter the app to reload the list. Once Minino finds an available AP, it will connect and display the target screen. If a target is not configured, set it manually in the serial terminal:
 ```
 Welcome to the Minino Console.
 Type 'help' to get the list of commands.
@@ -252,9 +252,9 @@ Press Enter or Ctrl+C will terminate the current
 command.
 minino> web_config IP_VICTIM PORT_VICTIM _PATH_VICTIM
 ```
-In this case our victim server are our pc so the command will be like this: `web_config 192.168.0.178 8000 /`
+In this case, our target server is our PC, so the command looks like this: `web_config 192.168.0.178 8000 /`
 
-Then we can execute the command `catdos` to start the attack.
+Then execute the command `catdos` to start the attack.
 
 ### Spam SSID
 ```bash
@@ -266,24 +266,24 @@ Type 'help <command>' to get help for a specific command
 ```
 
 ### Save
-If you want to save a SSID to use for the spam you need to follow the next command:
+To save an SSID list for spamming, run the following command:
 ```bash
 spam_save --name=NewName "Never gonna give you up, Never gonna let you down, Never gonna run around and desert you"
 ```
-For each `comma` we splited into a sentence so the output will showing us like:
+Each `comma` splits the string into a separate SSID entry, producing:
 - Never gonna give you up
 - Never gonna let you down
 - Never gonna run around and desert you
 
-When you use `spam_save` and the name are the same as other saved, this will be updated.
+When you use `spam_save` with an existing list name, the entry is updated.
 
 **Limitations**:
-- The name of the SSID will be written without spaces and this not exceed 13 characters
+- The list name must be written without spaces and must not exceed 13 characters.
 
-> The max limit of characters are **1024**
+> The maximum character limit is **1024**.
 
 ### Delete
-Delete a SSID you need the index of this, so you can use `spam_show` and then `spam_delete idx` where `idx` are the value of the ssid you want delete.
+To delete a saved SSID list, run `spam_show` to find its index, then run `spam_delete idx` where `idx` is the index of the SSID list you want to delete.
 
 
 
@@ -294,7 +294,7 @@ Delete a SSID you need the index of this, so you can use `spam_show` and then `s
 - **AuthMode**: Auth type
 - **FirstSeen**: Date time
 - **Channel**: Channel
-- **Frequency**: Frecuency of the Ap
+- **Frequency**: Frequency of the AP
 - **RSSI**: Signal strength
 ```csv
 ElecCats-1.0,appRelease=1.1.6.0,model=MININO,release=1.1.6.0,device=MININO,display=SH1106 OLED,board=ESP32C6,brand=Electronic Cats,star=Sol,body=3,subBody=0
@@ -311,9 +311,9 @@ MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongit
 > git checkout 1.1.13.0
 > ```
 
-- **SourcePanID**: Source panID
+- **SourcePanID**: Source PAN ID
 - **SourceADDR**: Source address
-- **DestinationADDR**: Destionation short address
+- **DestinationADDR**: Destination short address
 - **Channel**: Channel
 - **RSSI**: Signal strength
 ```csv
@@ -331,12 +331,12 @@ SourcePanID,SourceADDR,DestinationADDR,Channel,RSSI,SecurityEnabled,FrameType,Cu
 > git checkout 1.1.13.0
 > ```
 
-- **DestinationPAN**: Destination from the source
+- **DestinationPAN**: Destination PAN ID
 - **Destination**: Destination short address
-- **ExtendedSource**: Extended source address from the source
-- **Channel**: Channel of the capture
-- **UDPSource**: UDP Port where source send the message
-- **UDPDestination**: UDP port where destination receive
+- **ExtendedSource**: Extended source address
+- **Channel**: Capture channel
+- **UDPSource**: UDP source port
+- **UDPDestination**: UDP destination port
 - **Protocol**: Thread or IEEE 802.15.4 message type
 ```csv
 ElecCats-1.0,appRelease=1.1.6.0,model=MININO,release=1.1.6.0,device=MININO,display=SH1106 OLED,board=ESP32C6,brand=Electronic Cats,star=Sol,body=3,subBody=0
@@ -378,7 +378,7 @@ idf.py set-target esp32h2
 idf.py -p {PORT} erase-flash flash monitor
 ```
 
-> Some configuration with the developer board can not working with the USB connection, then use the serial interface
+> Some development board configurations may not work over the USB connection; use the UART serial interface instead.
 
 ## OT Border Router - Commissioner
 
@@ -415,7 +415,7 @@ I(368243) OPENTHREAD:[N] RouterTable---: Allocate router id 12
 I(368243) OPENTHREAD:[N] Mle-----------: RLOC16 fffe -> 3000
 I(368243) OPENTHREAD:[N] Mle-----------: Role detached -> leader
 I(368263) OPENTHREAD:[N] Mle-----------: Partition ID 0x52de31e6
-# After a moment, check the device state, when the state is 'Leader' then the network it is ready
+# After a moment, check the device state; when the state is 'leader', the network is ready
 > state
 leader
 Done
@@ -425,9 +425,9 @@ Done
 **Commands**:
 - `dataset init new`: Create a new network
 - `dataset`: Show the network details
-- `dataset commit active`: Setting up the configuration and set as active
-- `ifconfig up`: Activate the phy interface
-- `thread start`: Activate the thread service
+- `dataset commit active`: Apply the configuration and set it as active
+- `ifconfig up`: Activate the PHY interface
+- `thread start`: Activate the Thread service
 - `state`: Show the device status
 
 ## OT End device
@@ -463,10 +463,10 @@ Done
 ```
 
 **Commands**:
-- `dataset networkkey`: Set the networkkey with the Border Route entwork
-- `dataset commit active`: Setting up the configuration and set as active
-- `ifconfig up`: Activate the phy interface
-- `thread start`: Activate the thread service
+- `dataset networkkey`: Set the network key to match the Border Router network
+- `dataset commit active`: Apply the configuration and set it as active
+- `ifconfig up`: Activate the PHY interface
+- `thread start`: Activate the Thread service
 - `state`: Show the device status
 
 ## View UDP Packets
@@ -493,7 +493,7 @@ udp open
 udp send fd96:26d8:408f:b50e:4bff:b763:4835:9104 20617 CatsRules
 ```
 
-The Border Router recived:
+The Border Router received:
 ```shell
 > 9 bytes from fd96:26d8:408f:b50e:bca0:8fb6:ed5a:4a27 49154 CatsRules
 ```
@@ -503,10 +503,10 @@ The Border Router recived:
 
 > ⚠️ Warning: These commands are based on my specific setup. Your configuration may differ, so make sure to adjust the IP address, request type, registers, and coils according to your environment.
 
-> **Important**: The registers and coils depend on your setup — do not assume mine will work for you.
+> **Important**: The registers and coils depend on your setup; do not assume mine will work for you.
 
 ```bash
-# List the availables Access Point
+# List the available Access Points
 list
 # Connect to your Access Point
 connect 0
@@ -526,16 +526,16 @@ mb_engine_start_dos
 mb_engine_stop_attack
 ```
 
-> For more information you can use the `help` function and the command to view more information about it.
+> For more information, use the `help` command to view details about each command.
 
 
 ## GATTCMD
-A command line for interect with Bluetooth Characteristics
-- `gattcmd_scan`: Scan for MAC Address
-- `gattcmd_enum`: Enum the Characteristics from the device
-- `gattcmd_write`: Write a value in a GATT characteristic
+A command-line utility to interact with Bluetooth GATT Characteristics:
+- `gattcmd_scan`: Scan for MAC addresses
+- `gattcmd_enum`: Enumerate characteristics from the device
+- `gattcmd_write`: Write a value to a GATT characteristic
 
-> This app is still under development, all the testing have been done with devices with no encription for gatt writing.
+> This app is still under development; all testing has been performed on devices without encryption for GATT writes.
 
 ## Captive Portal new version
 The updated captive portal module enables the Minino device to function as a Wi-Fi Access Point (AP), allowing it to intercept client connections and present a fully customizable web interface. This update brings enhanced flexibility, user data handling, and configuration options, making it easier to create engaging and effective captive experiences.
@@ -552,7 +552,7 @@ You can now choose between two operational modes:
   1. Standalone: Minino creates a Wi-Fi AP using a user-defined SSID.
   2. Replicate: Minino scans for nearby Wi-Fi networks and clones the SSID of a selected access point (useful for social engineering or penetration testing scenarios).
 - **Custom AP Configuration via Menuconfig**
-The AP name, password, IP configuration, and more can now be set directly through the menuconfig interface—no need to modify the source code.
+The AP name, password, IP configuration, and more can now be set directly through the menuconfig interface without modifying the source code.
 
 ### Building a Custom Captive Portal
 To create your own portal, use the provided root.html template as a reference. This HTML page includes a form that sends a `GET` request to the `/validate` endpoint:
@@ -575,7 +575,7 @@ To create your own portal, use the provided root.html template as a reference. T
 ```
 The form inputs should use the reserved names `user1` through `user4` to ensure the system captures the data correctly.
 
-The value: `idf.py menuconfig > Component config > HTTP Server > (1024)Max HTTP Request Header Length` will set to 1024 to avoid issues with Android
+The value `idf.py menuconfig > Component config > HTTP Server > (1024) Max HTTP Request Header Length` is set to 1024 to avoid issues with Android devices.
 
 # Zigbee CLI
 
@@ -588,17 +588,17 @@ The value: `idf.py menuconfig > Component config > HTTP Server > (1024)Max HTTP 
 > ```
 
 ## Important
-**To use the CLI you need to enable it in the `Settings -> ZB CLI` to use, if you want to use zigbee apps you need to disable the CLI before use the app like the sniffer.**
+**To use the CLI, enable it in `Settings -> ZB CLI`. If you want to use other Zigbee apps (such as the sniffer), disable the CLI first.**
 
 ## Zigbee test connections
-This test code shows how to configure Zigbee device and use it as HA Device Types, such as On/Off Switch, Window Covering, Door Lock, On/Off Light Device and so on.
+This test code shows how to configure a Zigbee device and use it as Home Automation (HA) Device Types, such as On/Off Switch, Window Covering, Door Lock, and On/Off Light Device.
 
 ## Hardware Required
 * Minino
 * Another development board with ESP32-H2 SoC as communication peer (loaded with esp_zigbee_all_device_types_app example or other examples).
 
 ## Play with All Device Type Example
-This section demonstrate the process to create HA on_off_light and on_off_switch devices.
+This section demonstrates the process to create HA `on_off_light` and `on_off_switch` devices.
 
 ### Start Node 1 as on_off_light
 
@@ -649,7 +649,7 @@ I (933991) cli_cmd_bdb: Joined network successfully (Extended PAN ID: 0x744dbdff
 
 Get the light on/off status by reading the attribute from the switch:
 
-zcl send_gen read -d 0xe643 --dst-ep 1 -e 2 -c 6 -a 0
+`zcl send_gen read -d 0xe643 --dst-ep 1 -e 2 -c 6 -a 0`
 
 
 ```bash
@@ -675,17 +675,17 @@ I (1420021) cli_cmd_zcl: attribute(0x00), type(0x10), data size(1)
 I (1420031) : 0x40818ca6   01                                                |.|
 ```
 ## Cool commands
-- **Netowrk discovery**: `network scan -m 0x07fff800`
+- **Network discovery**: `network scan -m 0x07fff800`
 - **Network energy detection**: `network ed_scan -m 0x07fff800`
 - **Discover Attributes**: `zcl send_gen disc_attr -d 0xe643 --dst-ep 1 -e 2 -c 4`
-- **Request Active End Point**: `zdo request active_ep -d 0xe643`
+- **Request Active Endpoint**: `zdo request active_ep -d 0xe643`
 - **Request Neighbors**: `zdo request neighbors -d 0xe643`
-zdo request neighbors -d 0x0000
+`zdo request neighbors -d 0x0000`
 
 # Change log
 
 ## v1.1.7.0
 ### Added
-- SSID spam command: Now you can use custom ssid attacks
-- Wardriving thread protocol
-- Flash storage module to handle list of values
+- SSID spam command: Custom SSID lists for beacon flooding attacks
+- Wardriving Thread protocol support
+- Flash storage module to handle lists of values

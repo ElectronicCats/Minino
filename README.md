@@ -19,7 +19,7 @@
     </a>
 </p>
 
-Minino is an original multiprotocol, and multiband board made for sniffing, communicating, and attacking IoT (Internet of Things) devices. It was designed as a mini Cat that integrates the powerful ESP32C6 and a GPS, microSD with OLED.  This board is a mini Swiss army knife for IoT security researchers, developers, and enthusiasts. 
+Minino is an original multiprotocol and multiband board made for sniffing, communicating, and attacking IoT (Internet of Things) devices. It was designed as a mini Cat that integrates the powerful ESP32-C6, GPS, microSD card slot, and OLED display. This board is a mini Swiss army knife for IoT security researchers, developers, and enthusiasts. 
 
 Minino can operate across multiple wireless technologies and RF tools:
 - **BLE** (Trackers scanner for AirTag, SmartTag, Tile, Chipolo & BLE Spam / HID)
@@ -32,14 +32,14 @@ Minino can operate across multiple wireless technologies and RF tools:
 - **GPS** (Wardriving & Geotagged Evidence Logging)
 
 ## Features
-- Compatible with Pycatsniffer of Catsniffer
+- Compatible with CatSniffer's PyCatSniffer
 - Compatible with Wireshark (Live serial streaming & `.pcap` logging on microSD)
 - Compatible with [ESPARGOS WebSDR](https://espargos.net/espsdr/app/) (Browser-based real-time waterfall, FFT spectrum, and I/Q capture over WebSerial)
 - Real-time 2.4 GHz RF Spectrum Analyzer with Fox Hunting, 2X Peak Tracker, EMA filtering, and Smart Anti-Jammer detection
 - Selectable OLED Menu Styles (`Classic`, `Icon List`, `Grid`, `Hero + Dock`)
 - WarDriving (WiFi, Zigbee, Thread, BLE, Surveillance)
-- Sniffing multiprotocol
-- Support file `.pcap` and `.iq` in microSD
+- Multiprotocol packet sniffing
+- Supports `.pcap` and `.iq` file storage on microSD
 - File Manager Web & Local OLED Browser
 - Unified firmware image generation (`minino-merged.bin` and `minino-merged.hex`)
 - OpenSource & Open Hardware
@@ -269,9 +269,9 @@ Electronic Cats invests time and resources providing this open source design, pl
 
 Designed by Electronic Cats.
 
-Firmware released under an GNU AGPL v3.0 license. See the LICENSE file for more information.
+Firmware released under a GNU AGPL v3.0 license. See the LICENSE file for more information.
 
-Hardware released under an CERN Open Hardware Licence v1.2. See the LICENSE_HARDWARE file for more information.
+Hardware released under a CERN Open Hardware Licence v1.2. See the LICENSE_HARDWARE file for more information.
 
 Electronic Cats is a registered trademark, please do not use if you sell these PCBs.
 
