@@ -96,13 +96,22 @@ corre; no se toca con la CPU durante la captura. La app hace:
 
 ## 4. Uso
 
-### En el dispositivo
+### En el dispositivo (`Applications > SDR`)
 
-`Applications > SDR`
+La aplicación nativa ofrece **4 modos operativos** que se alternan presionando el botón **`BOOT`** o manteniendo presionado **`RIGHT`**:
 
-- Botones UP/DOWN: sintonia ±5 MHz (2412 a 2472).
-- RIGHT: captura y guarda un burst.
-- LEFT: salir, devolviendo la radio a Minino.
+1. **`[IDL]` / `[RX]` (RX I/Q Burst Capture)**: Captura ráfagas de 8 192 muestras I/Q a 80 MS/s, calcula el RSSI físico en `dBm` y guarda archivos `/sdcard/sdrcapXX.iq` en la microSD.
+2. **`[TX:PKT]` (TX 802.11 Raw)**: Envía ráfagas de 5 tramas Probe Request 802.11 (`MININO-SDR-TX`) en el canal seleccionado (`2412-2484 MHz`).
+3. **`[TX:CW]` (TX CW Tone)**: Emite una portadora continua de RF usando el sintetizador PHY (`c6_sdr_tx_carrier_start`) con límite de seguridad automático de 30 segundos.
+4. **`[HOST]` (ESPARGOS WebSDR Host)**: Conecta directamente con la aplicación web <https://espargos.net/espsdr/app/> por USB Serial/JTAG.
+
+Controles:
+- Botones `UP` / `DOWN`: Sintonía `2412` a `2484 MHz` (Canales 1 a 14).
+- `RIGHT` (pulsación corta): Captura y guarda un burst en `[RX]`, transmite paquetes en `[TX:PKT]`, o activa/desactiva la portadora en `[TX:CW]`.
+- `BOOT` o `Hold RIGHT`: Cambia al siguiente modo operativo.
+- `LEFT`: Sale al menú principal, devolviendo la radio a Minino.
+
+> **Activación automática del Web Host:** Si estás dentro de `Applications > SDR` en cualquier modo y abres <https://espargos.net/espsdr/app/> pulsando **Connect**, la consola detecta el comando `SYNC` y cambia automáticamente la app al modo `[HOST]` sin necesidad de escribir comandos ni cambiar de modo manualmente. Además, el registro `USB_SERIAL_JTAG.chip_rst.usb_uart_chip_rst_dis = 1` evita que las señales DTR/RTS del navegador reinicien la placa.
 
 ### Por consola
 
@@ -110,8 +119,6 @@ corre; no se toca con la CPU durante la captura. La app hace:
 - `sdr_host`: entrega el puerto USB al protocolo del ESP-SDR, que es el
   que habla el navegador de <https://espargos.net/espsdr/app/>. Ver la
   sección 8.
-
-No hay comando de TX: el C6 no tiene transmisor (ver la sección 6).
 
 ## 5. El banco de captura: por qué el firmware tiene que caber debajo
 
@@ -505,15 +512,16 @@ el paso cada 20 ms.
 El detalle completo está en la §23 de
 [`changes-refactor-system-overhaul.md`](./changes-refactor-system-overhaul.md).
 
-### 8.8 Lo que no está
+### 8.8 Capacidades negociadas y límites del hardware
 
-| Capacidad | Por qué |
+| Capacidad | Estado en Minino |
 |---|---|
-| Ganancia manual | Minino no la implementa; la capacidad `GAIN` no se anuncia y el navegador esconde el control |
-| Ancho de banda analógico | igual, no se anuncia `ALPF` |
-| GPIO | no se anuncia `GPIO` |
-| Espectros en el chip (`SPEC`) | es la FFT en el chip con un anillo de tres bancos: mucho más trabajo |
-| 5 GHz | el C6 no lo tiene |
+| Ganancia RX (`GAIN`) | Soportada (`GAIN 0..60 dB`, paso de 3 dB, configurada en los registros LNA/AGC del receptor) |
+| Decimación de tasa (`RATES`) | Soportada en tiempo real (`80 MS/s`, `40 MS/s` por decimación 2x y `16 MS/s` por decimación 5x) |
+| Espectros en el chip (`SPEC`) | Soportado con FFT radix-2 Q15 en placa (`256`, `512`, `1024` y `2048` bins) y marcos `SPC1` con CRC32 |
+| Ancho de banda analógico | No se anuncia `ALPF` (fijo por canal PHY) |
+| GPIO | No se anuncia `GPIO` |
+| 5 GHz | El ESP32-C6 opera únicamente en la banda de 2.4 GHz (`2412-2484 MHz`) |
 
 El botón **"Flash Firmware…"** del navegador flashea el firmware del
 ESPARGOS encima de Minino: hay que ignorarlo.

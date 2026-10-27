@@ -102,11 +102,25 @@ make setup
 
 ## Building the firmware
 
-To build the firmware, run the following command:
+To build the standard firmware, run the following command:
 
 ```bash
 make compile
 ```
+
+To build the **SDR-enabled firmware variant** (which reserves the 128 KiB SRAM hardware capture bank at `0x40840000` and enables `Applications > SDR`, `sdr_capture`, and `sdr_host`):
+
+```bash
+make build-sdr
+```
+
+To run the host-side unit test suites (20+ Unity and Python suites):
+
+```bash
+make tests
+```
+
+> **Note:** Every build automatically generates unified single-file firmware images (`minino-merged.bin` and `minino-merged.hex`) inside the build directory (`build/` or `build-sdr/`), ready to be flashed at offset `0x0`.
 
 ### Flashing the firmware
 

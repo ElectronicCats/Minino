@@ -17,20 +17,16 @@
 
 ## 1. Qué es, en una página
 
-El C6 no tiene conversor de salida: no puede generar señales de RF. Lo
-que sí tiene es el **motor de recepción por dump**, un bloque de SRAM
-(0x40840000) donde el hardware deja las muestras de I/Q que la radio
-desmoduló, a 80, 40 o 16 MS/s. Con eso se puede:
+El ESP32-C6 cuenta con un **motor de recepción por dump** en hardware, un bloque dedicado de SRAM (`0x40840000`) donde el radio deposita directamente las muestras crudas de I/Q demoduladas a **80 MS/s** (con decimación a 40 y 16 MS/s), además de modos de inyección de tramas 802.11 y portadora continua (CW) del sintetizador PHY. Con la aplicación nativa (`Applications > SDR`) dispones de **4 modos operativos** en el dispositivo (conmutables con el botón **BOOT** o dejando presionado **RIGHT**):
 
-| Modo | Qué es | Para qué |
+| Modo | Encabezado OLED | Qué es y para qué sirve |
 |---|---|---|
-| **App nativa** | `Applications > SDR` | ráfagas de I/Q a la microSD, con la pantalla del Minino |
-| **Modo host** | el comando `sdr_host` | el analizador de espectro de ESPARGOS (<https://espargos.net/espsdr/app/>) habla con la placa por USB |
-| **Modo espectros** | el comando `SPEC` del protocolo | la FFT se calcula **en la placa** y llegan los códigos de potencia: decenas de cuadros por segundo |
+| **1. Captura RX I/Q** | `MININO SDR [IDL]` / `[RX]` | Captura ráfagas de 8 192 muestras I/Q a 80 MS/s, calcula el RSSI físico en tiempo real (`dBm`) y las guarda en la microSD (`/sdcard/sdrcapXX.iq`). |
+| **2. Inyección 802.11 Raw** | `MININO SDR [TX:PKT]` | Inyecta ráfagas de paquetes 802.11 Probe Request (`MININO-SDR-TX`) en el canal sintonizado (`2412-2484 MHz`, Canales 1 a 14). |
+| **3. Portadora Continua CW** | `MININO SDR [TX:CW]` | Emite un tono de portadora continua (CW) mediante el sintetizador PHY (`c6_sdr_tx_carrier_start`) con apagado de seguridad automático a los 30 segundos. |
+| **4. Modo Host WebSDR** | `MININO SDR [HOST]` | Conecta la placa por USB con el analizador web de **ESPARGOS** (<https://espargos.net/espsdr/app/>) para visualizar cascada (waterfall), espectro FFT en chip (`SPEC`/`SPC1`) y capturas I/Q (`CAP16`/`CAP20`) con control de ganancia LNA (`0-60 dB`). |
 
-El SDR **solo recibe**. No hay TX, ni control de ganancia, ni ancho de
- banda analógico, ni 5 GHz. Todo lo que se ve en el aire sale de la
-antena del C6 y de los 11 MHz del canal de Wi-Fi que esté sintonizado.
+Además, mientras estás dentro de `Applications > SDR`, Minino **bloquea el auto-reset por USB DTR/RTS** (`usb_uart_chip_rst_dis = 1`) y **activa automáticamente el modo `[HOST]`** en cuanto la página <https://espargos.net/espsdr/app/> envía el comando `SYNC`.
 
 ---
 
@@ -91,21 +87,22 @@ python3 tools/test_esdr_spec.py /dev/ttyACM0   # el modo de espectros
 
 ## 3. Las tres formas de usarlo
 
-### 3.1 La app nativa
+### 3.1 La app nativa y sus 4 modos
 
 `Applications > SDR` (o `sdr_capture` en la consola):
 
 | Botón | Qué hace |
 |---|---|
-| UP / DOWN | sintonía ±5 MHz, de 2412 a 2472 MHz |
-| RIGHT | captura una ráfaga de 16 380 muestras y la guarda en la microSD |
-| LEFT | sale y devuelve la radio a Minino |
+| `UP` / `DOWN` | Sintonía ±5 MHz, de `2412` a `2484 MHz` (Canales 1 a 14) |
+| `RIGHT` (pulsación corta) | Ejecuta la acción del modo activo: captura ráfaga I/Q en `[RX]`, envía paquetes en `[TX:PKT]`, o conmuta la portadora en `[TX:CW]` |
+| `BOOT` o `Hold RIGHT` | Cambia entre los 4 modos: `RX Capture` -> `TX 802.11 Raw` -> `TX CW Tone` -> `Web Host Mode` |
+| `LEFT` | Detiene cualquier transmisión o sesión Host y sale al menú devolviendo la radio a Minino |
 
 En la consola, el gancho de pruebas permite lo mismo sin botones:
 
 ```
 minino> sdr_capture
-minino> press right     # burst 1: 16380 words in 218 us
+minino> press right     # burst 1: 8192 words in 218 us
 minino> press up        # Tuned to 2417 MHz (CH 2)
 minino> press left      # sale y libera el driver de Wi-Fi
 ```
@@ -113,10 +110,15 @@ minino> press left      # sale y libera el driver de Wi-Fi
 Los ficheros van a `/sdcard/sdrcap00.iq` (una palabra de 32 bits por
 muestra, I en los bits 9-0 y Q en los 19-10). **Sin microSD la captura
 funciona igual, pero no se guarda**: la app lo dice en pantalla y en el
-log (`not saved: no SD`).
+log (`Cap OK: not saved`).
 
-### 3.2 El modo host y el visor de ESPARGOS
+### 3.2 El modo host y el visor web de ESPARGOS
 
+Puedes conectar Minino con la aplicación web oficial **ESPARGOS WebSDR** (<https://espargos.net/espsdr/app/>) de **tres formas**:
+
+1. **Activación automática desde la app SDR (recomendado):** Entra a `Applications > SDR` en el dispositivo, abre <https://espargos.net/espsdr/app/> en Chrome/Edge/Brave y pulsa **Connect**. Al recibir `SYNC` por USB, Minino cambia automáticamente al modo `MININO SDR [HOST]`, pausa la consola serial y comienza la transmisión de espectro/I/Q sin reiniciar la placa.
+2. **Selección manual en pantalla:** Dentro de `Applications > SDR`, presiona **BOOT** (o mantén presionado **RIGHT**) hasta llegar a `MININO SDR [HOST]` (`Web: espargos.net`), y luego conéctate desde el navegador.
+3. **Por comando en consola serial:**
 ```bash
 minino> sdr_host
 Serving the ESP-SDR protocol on the USB port.
@@ -125,12 +127,10 @@ The console comes back when the viewer sends RELEASE, or type MININO.
 ```
 
 A partir de ahí el visor habla el protocolo de línea del firmware
-*burst* del ESP-SDR (`SYNC`, `INFO`, `CAPS`, `FREQ`, `CAP16`, `CAP20`,
+*burst* del ESP-SDR (`SYNC`, `INFO`, `CAPS`, `FREQ`, `GAIN`, `CAP16`, `CAP20`,
 `SPEC`...). La consola deja de leer el puerto mientras dure la sesión
-(la entrega la hace la propia consola, desde el interior de la tarea, y
-el log baja a `ESP_LOG_NONE` para que una línea de log no corrompa una
-captura binaria). El visor manda `RELEASE` al cerrar; `MININO` es el
-escape propio de Minino.
+y el log baja a `ESP_LOG_NONE` para que una línea de log no corrompa una
+captura binaria. El visor manda `RELEASE` al cerrar; también puedes salir pulsando **LEFT** o **BOOT** en Minino, o enviando `MININO`.
 
 > El botón **"Flash Firmware…"** del visor flashea el firmware del
 > ESPARGOS encima de Minino: hay que ignorarlo.

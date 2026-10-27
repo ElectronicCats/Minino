@@ -21,24 +21,28 @@
 
 Minino is an original multiprotocol, and multiband board made for sniffing, communicating, and attacking IoT (Internet of Things) devices. It was designed as a mini Cat that integrates the powerful ESP32C6 and a GPS, microSD with OLED.  This board is a mini Swiss army knife for IoT security researchers, developers, and enthusiasts. 
 
-Minino can operate in 7 different technologies:
-- BLE (Trackers scanner for AirTag, SmartTag, Tile & BLE SPAM)
-- Wi-Fi (Sniffer, deauthenticator, and attacks)
-- Surveillance Detection (Flock Safety ALPR, Body Cams, Skimmers)
-- Zigbee (Sniffer over CLI and Spoofing)
-- Thread
-- Matter
-- GPS (WarDriving & Evidence Logging)
+Minino can operate across multiple wireless technologies and RF tools:
+- **BLE** (Trackers scanner for AirTag, SmartTag, Tile, Chipolo & BLE Spam / HID)
+- **Wi-Fi** (Sniffer, Deauthenticator, CatDoS, SSID Spam, Captive Portal, DroneID)
+- **RF Spectrum Analyzer** (2.4 GHz Wi-Fi & Zigbee real-time analyzer, Fox Hunting, Peak Tracker, Jammer & DroneID IDS, PCAP capture)
+- **Software Defined Radio (SDR)** (Native 80 MS/s I/Q transceiver, CW/Packet TX, On-Chip FFT, and [ESPARGOS WebSDR](https://espargos.net/espsdr/app/) Host)
+- **Surveillance Detection** (Flock Safety ALPR, Body Cams, Skimmers)
+- **Zigbee** (IEEE 802.15.4 Sniffer over CLI and Spoofing)
+- **Thread & Matter** (IEEE 802.15.4 / 6LoWPAN Sniffer and Broadcast)
+- **GPS** (Wardriving & Geotagged Evidence Logging)
 
 ## Features
 - Compatible with Pycatsniffer of Catsniffer
-- Compatible with Wireshark
+- Compatible with Wireshark (Live serial streaming & `.pcap` logging on microSD)
+- Compatible with [ESPARGOS WebSDR](https://espargos.net/espsdr/app/) (Browser-based real-time waterfall, FFT spectrum, and I/Q capture over WebSerial)
+- Real-time 2.4 GHz RF Spectrum Analyzer with Fox Hunting, 2X Peak Tracker, EMA filtering, and Smart Anti-Jammer detection
+- Selectable OLED Menu Styles (`Classic`, `Icon List`, `Grid`, `Hero + Dock`)
 - WarDriving (WiFi, Zigbee, Thread, BLE, Surveillance)
 - Sniffing multiprotocol
-- Support file .pcap in microSD
-- File Manager Web
-- OpenSource
-- Open Hardware
+- Support file `.pcap` and `.iq` in microSD
+- File Manager Web & Local OLED Browser
+- Unified firmware image generation (`minino-merged.bin` and `minino-merged.hex`)
+- OpenSource & Open Hardware
 - OTA Updates
 
 ### TODO Features
@@ -106,87 +110,28 @@ Minino can operate in 7 different technologies:
 - [x] **File Manager Local**: On-device microSD file browser using OLED screen and buttons.
 - [x] **File Manager Web**: Embedded HTTP web server for WiFi-based file downloads and uploads.
 
+#### Spectrum (`Applications > Spectrum`)
+- [x] **14-Channel Bars (`BARS`)**: Real-time 2.4 GHz bar chart overview with Peak Hold markers across all channels.
+- [x] **Live Channel Scope (`SCOPE`)**: Single-channel rolling time-domain power curve and RSSI telemetry.
+- [x] **2D Waterfall (`WATER`)**: Rolling spectrogram for visualizing transient transmissions and duty cycles.
+- [x] **Fox Hunting Meter (`FOX`)**: High-contrast direction-finding proximity gauge (`0-100%`), calibrated dBm scale (`-90` to `-30 dBm`), Peak Hold line, and Squelch threshold marker.
+- [x] **2X Peak Tracker (`PEAK`)**: Big-font display highlighting the strongest active signal (`dBm`), channel number, and center frequency (`MHz`) for rapid field readings.
+- [x] **Dual-Band & Tri-Channel Sweep**: Supports both **Wi-Fi** (`Ch 1-14`, `2412-2484 MHz`) and **IEEE 802.15.4 / Zigbee** (`Ch 11-26`, `2405-2480 MHz`), plus rapid **Tri-Channel Sweep** (`Ch 1, 6, 11`).
+- [x] **Smart Anti-Jammer & RF IDS**: Multi-factor evaluator (`rf_jammer_evaluate`) and EMA filter (`rf_filter_ema_rssi`) that distinguish Layer-1 RF noise/CW jammers and Layer-2 Deauth floods (`0xC0`/`0xA0`) from normal high-throughput AP traffic and adjacent-channel spillover.
+- [x] **Passive DroneID Detection**: Inspects ASTM F3411 (`OUI FA:0B:BC`), French Direct Remote ID (`OUI 6A:5C:35`), and Wi-Fi Aware NAN (`88:69:19:9D:92:09`) frames to alert and log active drone UAS IDs per channel.
+- [x] **Direct PCAP & CSV Logging**: Streams raw 802.11 frames to microSD (`/sdcard/spectrum_XX.pcap`) and signal telemetry to CSV without dropping the spectrum view.
+
 #### SDR (`Applications > SDR`)
-- [x] **ESP-SDR Launcher**: Boots the [ESPARGOS esp-sdr](https://github.com/ESPARGOS/esp-sdr)
-  software defined radio firmware, flashed into the secondary OTA slot.
-
-Design notes, root cause analysis and verification log:
-[`docs/esp-sdr-integration.md`](docs/esp-sdr-integration.md).
-
-Test results and a getting-started guide (build variant, flashing, the
-three ways of using it, the measurements on two boards):
-[`docs/sdr-guia.md`](docs/sdr-guia.md).
-
-The full test report (both boards, both applications, the spectrum
-profiles and the limits of the measurement):
-[`docs/sdr-resultados.md`](docs/sdr-resultados.md).
-
-The wire format of the two packets (the burst and the on-chip spectrum),
-with the real bytes captured from the board, and where each one is
-displayed:
-[`docs/sdr-protocolo.md`](docs/sdr-protocolo.md).
-
-The results of the two applications (SDR and Spectrum) on the two
-boards:
-[`docs/spectrum-SDR-results.md`](docs/spectrum-SDR-results.md).
-
-Only available on 8MB boards built with OTA (`CONFIG_SDR_ENABLE`, default on for
-`BOARD_MININO`). Install the radio firmware with:
-
-```bash
-firmware/tools/flash_dual_app.sh /dev/ttyACM0
-```
-
-The script builds Minino OS, builds esp-sdr for `esp32c6` with ESP-IDF, and
-writes both images (`ota_0` / `ota_1`) in a single pass. `Right` on the
-confirmation screen switches the boot slot, `Left` goes back.
-
-Once esp-sdr runs it owns the USB port as its serial console (it reconfigures
-GPIO16/17, the USB-Serial-JTAG pins, as a UART), so the Minino monitor goes
-quiet.
-
-##### Coming back from the SDR
-
-Minino normally navigates with `Right` to enter and `Left` to exit, so `Right`
-is what launches the SDR. Upstream esp-sdr has no way to undo that, which
-would leave the board unbootable from the menu, so `tools/flash_dual_app.sh`
-runs `tools/patches/apply_esp_sdr_minino.py`, which injects a `MININO` command
-into the burst protocol that selects `ota_0` and reboots:
-
-```bash
-stty -F /dev/ttyACM0 115200 raw; printf 'MININO\n' > /dev/ttyACM0
-```
-
-The board comes back up as Minino with `ota_0` selected. The injection is
-idempotent and anchored on `handle_command()`, so it survives upstream edits
-elsewhere in the file, needs no CMake change (the `otadata` layout is declared
-locally with a size assertion), and fails loudly if that function is ever
-renamed. When it cannot be applied the flasher says so and the SDR still
-works, but returning means reflashing Minino over USB.
-
-The version shown on the Minino confirmation screen carries a `-dirty` suffix
-when the injection is in, which tells you at a glance whether `MININO` exists.
-
-##### Why not a Zephyr build
-
-The secondary slot has to hold an image the ESP-IDF bootloader can start. On
-the ESP32-C6 (`SOC_MMU_PAGE_SIZE_CONFIGURABLE`) the bootloader aborts with
-`Failed to fetch app description header!` unless the image carries an
-`esp_app_desc_t` at partition offset `0x20`, which Zephyr images do not
-produce. ESP-IDF images do, and ESP-IDF links IROM/DROM partition-relative, so
-an esp-sdr build can be relocated to `ota_1` (`0x440000`) as-is.
-
-Both the flasher and the menu entry verify this before switching the boot
-partition, so an unbootable payload is reported instead of bricking the board:
-
-```bash
-make -C firmware sdr_check      # host-side check of the ota_1 payload
-```
+- [x] **RX I/Q Burst Capture (`[IDL]` / `[RX]`)**: Native in-process 80 MS/s hardware DMA/dump capture into reserved SRAM (`0x40840000`), live physical RSSI calculation (`dBm`), and automatic `.iq` file saving to microSD (`/sdcard/sdrcapXX.iq`).
+- [x] **802.11 Raw Packet TX (`[TX:PKT]`)**: Injects bursts of custom 802.11 raw Probe Request frames (`MININO-SDR-TX`) on the selected channel (`2412-2484 MHz`, `Ch 1-14`).
+- [x] **PHY Continuous Wave Carrier (`[TX:CW]`)**: Emits an unmodulated RF test carrier on the tuned frequency via the ESP32-C6 PHY synthesizer with a 30-second hardware safety timeout.
+- [x] **ESPARGOS WebSDR Host (`[HOST]`)**: Streams real-time I/Q bursts (`CAP16`/`CAP20` at `80`, `40`, or `16 MS/s` with software decimation and LNA gain control `0-60 dB`) and on-chip radix-2 FFT spectrum frames (`SPEC` / `SPC1`) over USB directly to the **[ESPARGOS WebSDR App (`https://espargos.net/espsdr/app/`)](https://espargos.net/espsdr/app/)**.
 
 ---
 
 ### Menu: Settings (`Settings`)
 - [x] **Display**: Configures OLED screensaver style and timeout.
+- [x] **Menu Style**: Selectable OLED menu rendering views persisted in NVS (**Classic**, **Icon List**, **Grid**, and **Hero + Dock**).
 - [x] **Logs Output**: Configures serial and on-screen log levels.
 - [x] **SD Card Settings**: Displays SD capacity, checks format integrity, and provides FAT32 formatting.
 - [x] **WiFi Settings**: Manages WiFi station credentials and radio settings.
@@ -200,6 +145,82 @@ make -C firmware sdr_check      # host-side check of the ota_1 payload
 - [x] **Version & License**: Displays firmware version, build date, and licensing details.
 - [x] **Credits & Legal**: Contributor credits and responsible disclosure notice.
 - [x] **OTA Firmware Update**: Over-The-Air firmware updates via WiFi.
+
+---
+
+## Native 80 MS/s SDR Transceiver & ESPARGOS WebSDR Host
+
+Minino integrates a **native, in-process Software Defined Radio (SDR)** engine (`firmware/main/modules/esp_sdr/`) running directly inside Minino OS without requiring dual-boot or a secondary `ota_1` partition. It drives the ESP32-C6 hardware I/Q dump engine at **80 MS/s**, reserves the 128 KiB SRAM Block 2 (`0x40840000 - 0x40860000`) at link time (`esp_sdr_bank.ld`), and locks the USB-Serial-JTAG reset register (`usb_uart_chip_rst_dis = 1`) while active so browser WebSerial DTR/RTS transitions never reboot the board.
+
+### Building & Flashing the SDR Firmware Variant
+Because the hardware I/Q capture bank requires 128 KiB of contiguous SRAM below `0x40840000`, the SDR variant compiles without the Zigbee and OpenThread stacks to fit within the 256 KiB lower-SRAM budget (`profiles/sdr/profile`). Every build automatically generates both individual partition binaries and unified single-file images (`minino-merged.bin` and `minino-merged.hex`):
+
+```bash
+cd firmware
+make build-sdr                                    # Builds the SDR-enabled firmware in build-sdr/
+idf.py -B build-sdr -p /dev/ttyACM0 flash         # Flashes bootloader, partition table, and app
+```
+
+Or flash the single unified binary at address `0x0`:
+```bash
+esptool.py --chip esp32c6 -p /dev/ttyACM0 write_flash 0x0 build-sdr/minino-merged.bin
+```
+
+### The 4 Operating Modes on Device (`Applications > SDR`)
+Inside `Applications > SDR` (or by running `sdr_capture` in the serial console), press **`BOOT`** or **hold `RIGHT`** to cycle through the four operating modes:
+
+| Mode Header | Function | Controls |
+| :--- | :--- | :--- |
+| **`MININO SDR [IDL]` / `[RX]`** | **RX I/Q Burst Capture**: Captures 8,192 32-bit I/Q words (`10-bit signed I` in bits `9:0`, `10-bit signed Q` in bits `19:10`) at 80 MS/s, computes physical RSSI (`dBm`), and saves `/sdcard/sdrcapXX.iq`. | `UP`/`DOWN`: Tune `2412-2484 MHz` (`Ch 1-14`)<br>`RIGHT`: Capture & Save<br>`BOOT` / `Hold RIGHT`: Next mode<br>`LEFT`: Exit |
+| **`MININO SDR [TX:PKT]`** | **802.11 Raw Packet Injection**: Transmits 5-packet bursts of raw 802.11 Probe Request frames (`SSID: MININO-SDR-TX`) on the active channel. | `UP`/`DOWN`: Tune channel<br>`RIGHT`: Send packet burst<br>`BOOT` / `Hold RIGHT`: Next mode |
+| **`MININO SDR [TX:CW]`** | **PHY Continuous Wave Tone**: Emits an unmodulated RF carrier via the ESP32-C6 PHY synthesizer (`c6_sdr_tx_carrier_start`) with an automatic **30-second safety timeout**. | `UP`/`DOWN`: Tune channel<br>`RIGHT`: Toggle CW ON/OFF<br>`BOOT` / `Hold RIGHT`: Next mode |
+| **`MININO SDR [HOST]`** | **ESPARGOS WebSDR Host**: Serves the ESP-SDR line/binary protocol over USB for real-time waterfall, FFT, and I/Q streaming in the browser. | `BOOT`: Exit Host mode to RX<br>`LEFT`: Stop Host & Exit app |
+
+### Using the SDR Host with the ESPARGOS WebSDR Page
+Minino is fully compatible with the official **[ESPARGOS WebSDR application (`https://espargos.net/espsdr/app/`)](https://espargos.net/espsdr/app/)**, providing a real-time waterfall, spectrum analyzer, constellation viewer, and I/Q burst streamer in any Chromium-based browser (Chrome, Edge, Brave) via WebSerial:
+
+1. **Connect Minino via USB** and open `Applications > SDR` on the device.
+2. **Open [https://espargos.net/espsdr/app/](https://espargos.net/espsdr/app/)** in your browser and click **Connect** to select the Minino USB serial port (`/dev/ttyACM0` or `COMx`).
+3. **Automatic & Manual Activation**:
+   - **Auto-Switch from SDR App**: If you are anywhere inside `Applications > SDR`, as soon as the ESPARGOS web app sends its initial `SYNC` handshake, Minino **automatically switches into `[HOST]` mode**, suspends the interactive serial console, and begins streaming.
+   - **Manual Toggle on OLED**: Press `BOOT` (or hold `RIGHT`) inside the SDR app until the screen displays `MININO SDR [HOST]` (`Web: espargos.net` / `App: /espsdr/app`), then click **Connect** on the web page.
+   - **From Serial Console**: Type `sdr_host` in the Minino console (`115200` baud) to hand over the USB port directly.
+4. **Supported ESPARGOS WebSDR Capabilities**:
+   - **On-Chip Spectrum (`SPEC` / `SPC1`)**: High-FPS radix-2 Q15 FFT computed directly on the ESP32-C6 (`256`, `512`, `1024`, or `2048` bins) with DC offset modes (`DC 0`/`DC 1`) and zlib CRC32 verification.
+   - **Raw I/Q Burst Streaming (`CAP16` / `CAP20`)**: 8-bit (`CAP16`) and 10-bit packed (`CAP20`) I/Q transfers with hardware-chunked 64-byte USB FIFO writes.
+   - **Live Parameter Negotiation**: Supports on-the-fly center frequency tuning (`FREQ 2412..2484`), sample rate decimation (`80 MS/s`, `40 MS/s`, `16 MS/s`), and RX LNA gain control (`GAIN 0..60 dB`).
+5. **Exiting Host Mode**: Disconnect from the browser (sends `RELEASE`), press `LEFT` or `BOOT` on Minino, or send `MININO\n` over serial. *(Note: Do not click "Flash Firmware..." on the ESPARGOS page, as that overwrites Minino OS with upstream esp-sdr).*
+
+---
+
+## RF Spectrum Analyzer & Fox Hunting
+
+The **RF Spectrum Analyzer** (`Applications > Spectrum`, implemented in `firmware/main/apps/rf_spectrum/`) operates directly on the ESP32-C6 physical (PHY) and MAC layers to provide real-time 2.4 GHz situational awareness and transmitter hunting:
+
+- **5 Interactive OLED Views** (cycle with `RIGHT`):
+  1. **`BARS`**: 14-channel bar chart with Peak Hold indicators.
+  2. **`SCOPE`**: Single-channel real-time RSSI oscilloscope trace.
+  3. **`WATER`**: 2D rolling waterfall spectrogram.
+  4. **`FOX` (Fox Hunting)**: High-contrast direction-finding proximity meter (`0-100%`) with calibrated dBm ticks (`-90` to `-30 dBm`), Peak Hold line (`|`), Squelch marker (`:`), and Geiger counter audio clicks (`HOLD UP`).
+  5. **`PEAK` (2X Peak Tracker)**: Large 2X-scaled readout of the strongest detected signal (`dBm`), channel, and frequency (`MHz`).
+- **Signal Processing & Smart Anti-Jammer**:
+  - **EMA Smoothing**: Applies an Exponential Moving Average filter (`rf_filter_ema_rssi`) to stabilize noisy RSSI readings while preserving rapid peak attack.
+  - **Intelligent Jammer Evaluator (`rf_jammer_evaluate`)**: Cross-checks RSSI saturation (`>= -45 dBm`), valid 802.11 frame counts, beacon presence, FCS CRC error ratios, Deauth/Disassoc counts (`0xC0`/`0xA0`), and adjacent-channel AP spillover (`+-1` channel at `>= -38 dBm`) to eliminate false positives from nearby routers.
+- **Passive DroneID & PCAP Forensics**:
+  - Automatically decodes ASTM F3411 / ASD-STAN (`FA:0B:BC`), French Direct Remote ID (`6A:5C:35`), and Wi-Fi Aware NAN (`88:69:19:9D:92:09`) beacons, displaying `! DRONE CH X !` and logging the drone's serial `UAS ID`.
+  - Hold `DOWN` (or run `spectrum_pcap on`) to stream raw 802.11 frames into sequential `/sdcard/spectrum_00.pcap` files compatible with Wireshark.
+- **Serial Console Commands**: Control and inspect live state via `spectrum_pcap [on|off|toggle]`, `spectrum_drone [clear]`, `spectrum_ids [clear]`, `threshold [<dBm>|off]`, `spectrum_audio [on|off|toggle]`, `spectrum_band [wifi|zigbee]`, and `exit_app`.
+
+---
+
+## Core Architecture & Resource Arbitration
+
+Minino OS uses a deterministic resource management and lifecycle architecture across all wireless modules:
+- **`radio_lease` (`components/radio_lease/`)**: Reference-counted hardware arbiter that manages mutually exclusive Wi-Fi/802.15.4 and BLE radio claims plus shared promiscuous RX leases (`RADIO_PROM_SDR_RX`, `RADIO_PROM_SPECTRUM`, `RADIO_PROM_SURV`, `RADIO_PROM_ANALYZER`).
+- **`wifi_service` (`components/wifi_service/`)**: Centralizes `esp_wifi_init()` and netif creation so switching between AP, STA, Sniffer, Spammer, and SDR modes never triggers duplicate netif assertions or memory leaks.
+- **`gap_dispatcher` & `gatt_dispatcher` (`components/gap_dispatcher/`)**: Multiplexes Bluedroid GAP and GATTC callbacks to multiple concurrent subscribers without callback rotation conflicts.
+- **`app_manager` & Selectable OLED Menu Styles (`main/modules/menus_module/`)**: Clean `minino_app_t` (`on_enter`, `on_input`, `on_exit`) lifecycle with a dedicated FreeRTOS button input queue and four NVS-persisted UI styles (`Classic`, `Icon List`, `Grid`, `Hero + Dock`).
+- **Host Unit Test Suite**: Over 20 host-side Unity and Python test suites (`make -C firmware tests`) validating protocol parsers, FFT math, channel clamping, radio leases, and NMEA/PCAP formatting on standard `gcc` without hardware.
 
 ---
 
