@@ -71,6 +71,13 @@ void ble_spam_all_begin(void) {
   ble_spam_start_mode(BT_SPAM_MODE_ALL, "Random Spam");
 }
 
+void ble_spam_saturate_begin(void) {
+  /* Lab-only channel-saturation stress test: payloads for every platform
+   * family rotate at the fastest legal pacing, to measure how a lab receiver's
+   * scanner handles a saturated advertising channel. */
+  ble_spam_start_mode(BT_SPAM_MODE_SATURATE, "Saturate Lab");
+}
+
 void ble_spam_stop(void) {
   bt_spam_register_cb(NULL);
   bt_spam_register_connect_cb(NULL);
@@ -144,6 +151,12 @@ void app_manager_enter_wrapper_ble_spam_samsung(void) {
 
 void app_manager_enter_wrapper_ble_spam_all(void) {
   s_selected_spam_mode = BT_SPAM_MODE_ALL;
+  extern const minino_app_t ble_spam_app;
+  app_manager_enter(&ble_spam_app);
+}
+
+void app_manager_enter_wrapper_ble_spam_saturate(void) {
+  s_selected_spam_mode = BT_SPAM_MODE_SATURATE;
   extern const minino_app_t ble_spam_app;
   app_manager_enter(&ble_spam_app);
 }

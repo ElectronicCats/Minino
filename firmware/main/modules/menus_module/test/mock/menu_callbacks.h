@@ -15,6 +15,7 @@ void adv_scanner_module_stop(void);
 void hid_module_stop(void);
 void analyzer_scenes_main_menu(void);
 void ble_spam_all_begin(void);
+void ble_spam_saturate_begin(void);
 void ble_spam_android_begin(void);
 void ble_spam_apple_begin(void);
 void ble_spam_samsung_begin(void);

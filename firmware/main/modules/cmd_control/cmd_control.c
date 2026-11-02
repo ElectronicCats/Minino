@@ -216,6 +216,7 @@ void cmd_control_register_launch_cmd() {
                "spam_windows\n"
                "spam_samsung\n"
                "spam_all\n"
+               "spam_saturate\n"
                "hid\n"
                "trackers\n"
                "switch\n"
