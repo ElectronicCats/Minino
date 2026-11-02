@@ -112,6 +112,10 @@ c = Client(PORT)
 
 # ------------------------------------------------------------------ startup
 print("[1] startup and port hand-over")
+c.write(b"MININO\r\n\r\n")
+time.sleep(0.3)
+c.ser.read(4096)
+c.write(b"\r\n")
 boot = b""
 t0 = time.perf_counter()
 while time.perf_counter() - t0 < 6:
@@ -244,6 +248,9 @@ if b"SPECEND" in end:
     check("sample pairs were processed", int(fields[4]) > 0, fields[4])
     check("frames were emitted", int(fields[8]) > 0, fields[8])
     check("host stopped the stream", fields[12] == "1", fields[12])
+
+c.command("RELEASE")
+time.sleep(0.3)
 
 print(f"\n=== {OK} passed, {FAIL} failed ===\n")
 sys.exit(1 if FAIL else 0)

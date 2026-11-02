@@ -203,6 +203,7 @@ c = Client(PORT)
 # drops while RTS is high (matching resetUsbJtag() in radio.js). Wait for boot
 # to complete before talking to the board.
 print("[0] boot (opening the port resets the chip)")
+c.write(b"\r\n")
 boot = b""
 t0 = time.perf_counter()
 while time.perf_counter() - t0 < 6:
@@ -271,10 +272,10 @@ c.command("CAPS")
 caps = c.line()
 flags = caps.split(" ")
 check("CAPS is non-empty", len(flags) > 1, caps)
-for want in ("VERSION", "RXLIMITS", "HWAGC", "IQ8", "SERIALLEASE", "TUNEEXT", "RX40", "RX16",
+for want in ("VERSION", "RXLIMITS", "HWAGC", "GAIN", "IQ8", "SERIALLEASE", "TUNEEXT", "RX40", "RX16",
               "UARTBAUD", "SPEC", "SPECN", "SPECCAPS", "DCT"):
     check(f"CAPS advertises {want}", want in flags)
-for absent in ("GPIO", "GAIN", "ALPF", "SPECSTAT"):
+for absent in ("GPIO", "ALPF", "SPECSTAT"):
     check(f"CAPS does NOT advertise {absent} (viewer would hide that control)", absent not in flags)
 
 if "UARTBAUD" in flags:
