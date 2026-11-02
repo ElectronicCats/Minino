@@ -52,6 +52,15 @@ static size_t min_free_heap_during_spam = 0;
    deduplication caches that the rotating address exists to defeat. */
 #define SPAM_MAC_ROTATION_CYCLES 8
 
+/* Saturation-mode timing. Its goal is channel occupancy, not pairing popups: the
+   dwell is cut to one 50 ms slice so a new payload hits the air ~5x faster, the
+   MAC rotates every 2 cycles to defeat per-address dedup caches, and the
+   advertising interval is pinned to the 20/20 ms connectable floor. */
+#define SPAM_MAC_ROTATION_CYCLES_SATURATE 2
+#define SPAM_DWELL_SLICES 5
+#define SPAM_DWELL_SLICES_SATURATE 1
+#define SPAM_ADV_INTERVAL_SATURATE 0x20
+
 /*
  * ADV_TYPE_IND (connectable undirected advertising) allows adv_int down to 20ms
  * (0x20) and is required for Apple proximity/continuity modals, Android Fast
@@ -500,6 +509,7 @@ static bool model_matches_mode(const spam_model_t* model, bt_spam_mode_t mode) {
     case BT_SPAM_MODE_SAMSUNG:
       return (model->type == SPAM_TYPE_SAMSUNG_SETUP);
     case BT_SPAM_MODE_ALL:
+    case BT_SPAM_MODE_SATURATE:
     default:
       return true;
   }
@@ -828,7 +838,10 @@ static void start_adv(void* pvParameters) {
      *    neither a stable identity nor a usable connection window, so no popup
      *    ever appeared. Payload changes are pushed on the fly instead, which
      *    keeps the radio advertising continuously. */
-    bool rotate_mac = (cycle_count % SPAM_MAC_ROTATION_CYCLES) == 0;
+    bool rotate_mac =
+        (cycle_count % (current_mode == BT_SPAM_MODE_SATURATE
+                            ? SPAM_MAC_ROTATION_CYCLES_SATURATE
+                            : SPAM_MAC_ROTATION_CYCLES)) == 0;
 
     if (rotate_mac || !is_advertising_active) {
       drain_sem();
@@ -900,9 +913,15 @@ static void start_adv(void* pvParameters) {
       }
     }
 
-    /* 6. Dwell for ~250ms in 50ms slices for fast exit response */
-    for (int i = 0; i < 5 && running_task; i++) {
+    /* 6. Dwell for ~250ms in 50ms slices for fast exit response. The
+     *    saturation mode cuts the dwell to one slice: it owns the channel,
+     *    so a shorter cycle maximises advertising occupancy in the air. */
+    if (current_mode == BT_SPAM_MODE_SATURATE) {
       vTaskDelay(pdMS_TO_TICKS(50));
+    } else {
+      for (int i = 0; i < SPAM_DWELL_SLICES && running_task; i++) {
+        vTaskDelay(pdMS_TO_TICKS(50));
+      }
     }
 
     /* 7. Advance to next model within current active mode */
@@ -1012,6 +1031,17 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
   current_mode = mode;
   rebuild_active_indices(current_mode);
   adv_index = 0;
+
+  /* Saturation owns the channel, so it pins the advertising interval to the
+   * connectable 20 ms floor (and restores the permissive default for every
+   * other mode, in case the profile setters changed it mid-session). */
+  if (current_mode == BT_SPAM_MODE_SATURATE) {
+    ble_adv_params.adv_int_min = SPAM_ADV_INTERVAL_SATURATE;
+    ble_adv_params.adv_int_max = SPAM_ADV_INTERVAL_SATURATE;
+  } else {
+    ble_adv_params.adv_int_min = 0x20;
+    ble_adv_params.adv_int_max = 0x30;
+  }
 
   /* Stop any advertising in progress before starting task */
   drain_sem();

@@ -16,6 +16,9 @@ typedef enum {
   BT_SPAM_MODE_ANDROID,
   BT_SPAM_MODE_WINDOWS,
   BT_SPAM_MODE_SAMSUNG,
+  /* Lab-only saturation mode: full-spectrum advertising stress test (see
+   * docs/rea_jammers/README.md for the scope and legality notes). */
+  BT_SPAM_MODE_SATURATE,
   BT_SPAM_MODE_MAX,
 } bt_spam_mode_t;
 
