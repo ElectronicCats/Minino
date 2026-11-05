@@ -39,7 +39,10 @@ static void ble_module_state_machine(uint8_t button_name,
 
 static void ble_spam_start_mode(bt_spam_mode_t mode, const char* title) {
   if (bt_spam_is_running()) {
-    bt_spam_app_stop();
+    /* stop() only joins the advertising task; the BLE lease is released by
+       deinit(). Reusing stop() here would acquire a second lease in
+       bt_spam_app_main() and leak it on exit. */
+    bt_spam_app_deinit();
   }
   hid_module_stop();
   wifi_driver_deinit_if_started();
@@ -96,7 +99,8 @@ void ble_module_begin(void) {
 static void ble_spam_on_enter(void) {
   // Start the selected spam mode
   if (bt_spam_is_running()) {
-    bt_spam_app_stop();
+    /* Release the previous lease as well as joining the old task. */
+    bt_spam_app_deinit();
   }
   hid_module_stop();
   wifi_driver_deinit_if_started();
