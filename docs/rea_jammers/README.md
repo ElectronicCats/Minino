@@ -23,6 +23,15 @@ El ESP32-C6 de Minino no dispone de hardware nRF24 ni soporte Bluetooth clásico
 - **Control de interfaz**: Accesible desde el menú OLED (`Bluetooth > Spam > Saturate`) y terminal serie (`spam_saturate`).
 - **Objetivo técnico**: Evaluación de resiliencia del scanner del receptor en laboratorio y prueba de detección de `Tracker Scanner` ante alta densidad publicitaria en los canales 37, 38 y 39.
 
+## Pruebas
+
+El modo Saturate debe probarse con el perfil por defecto (`make compile`), no
+con el perfil `zigbee-thread`: ese build deja poco heap y `bt_spam` rechaza
+arrancar por debajo de 40 KB para evitar que el controlador falle al habilitar
+advertising. La prueba mínima es lanzar `spam_saturate`, comprobar que aparece
+`start_adv task started` con al menos 40 KB libres, verificar anuncios BLE con
+un scanner y salir con `exit_app` comprobando que WiFi vuelve a inicializarse.
+
 ## Licencias
 
 - Implementación `BT_SPAM_MODE_SATURATE` y adaptaciones en firmware: GPLv3 (Minino / Electronic Cats).
