@@ -34,6 +34,10 @@
 #if defined(CONFIG_ZIGBEE_APPS_ENABLE) && defined(CONFIG_MININO_ZIGBEE_STACK)
   #include "warbee_module.h"
 #endif
+#if defined(CONFIG_THREAD_APPS_ENABLE) && \
+    defined(CONFIG_MININO_OPENTHREAD_STACK)
+  #include "warthread_module.h"
+#endif
 #include "ota_module.h"
 #include "rf_spectrum.h"
 #include "sd_card_settings_module.h"

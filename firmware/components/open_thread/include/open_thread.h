@@ -13,6 +13,7 @@
 void openthread_init();
 
 void openthread_deinit();
+bool openthread_wait_until_ready(uint32_t timeout_ms);
 
 esp_err_t openthread_set_dataset(uint8_t channel, uint16_t panid);
 

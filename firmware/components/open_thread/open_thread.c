@@ -33,6 +33,10 @@
 #define THREAD_NETWORK_NAME      "OpenThread-ESP"
 #define THREAD_EXTPANID          "dead00beef00cafe"
 #define THREAD_MESH_LOCAL_PREFIX "fd00:db8:a0:0::/64"
+
+static volatile bool s_openthread_ready = false;
+static bool s_openthread_initialized = false;
+static TaskHandle_t s_ot_task_handle = NULL;
 #define THREAD_NETWORK_MASTERKEY "00112233445566778899aabbccddeeff"
 #define THREAD_NETWORK_PSKC      "104810e2315100afd6bc9215a6bfac53"
 
@@ -85,14 +89,17 @@ static size_t hex_string_to_binary(const char* hex_string,
 }
 
 void openthread_set_channel(uint8_t channel) {
+  if (!s_openthread_ready) {
+    openthread_wait_until_ready(1000);
+  }
   esp_openthread_lock_acquire(portMAX_DELAY);
   otInstance* instance = esp_openthread_get_instance();
+  if (instance == NULL) {
+    esp_openthread_lock_release();
+    return;
+  }
   bool promiscuous = otLinkIsPromiscuous(instance);
-  otIp6SetEnabled(instance, false);
-  otThreadSetEnabled(instance, false);
   otLinkSetChannel(instance, channel);
-  otIp6SetEnabled(instance, true);
-  otThreadSetEnabled(instance, true);
   if (promiscuous) {
     otLinkSetPromiscuous(instance, true);
   }
@@ -326,16 +333,26 @@ otError openthread_enable_promiscous_mode(otLinkPcapCallback promiscuous_cb) {
   esp_openthread_lock_release();
   return error;
 }
+
+bool openthread_wait_until_ready(uint32_t timeout_ms) {
+  uint32_t elapsed = 0;
+  while (!s_openthread_ready && elapsed < timeout_ms) {
+    vTaskDelay(pdMS_TO_TICKS(10));
+    elapsed += 10;
+  }
+  return s_openthread_ready;
+}
+
 otError openthread_disable_promiscous_mode() {
   esp_openthread_lock_acquire(portMAX_DELAY);
   otInstance* instance = esp_openthread_get_instance();
   otError error = OT_ERROR_NONE;
-  otIp6SetEnabled(instance, false);
-  otThreadSetEnabled(instance, false);
-  otLinkSetPcapCallback(instance, NULL, NULL);
-  error = otLinkSetPromiscuous(instance, false);
-  otIp6SetEnabled(instance, true);
-  otThreadSetEnabled(instance, true);
+  if (instance != NULL) {
+    otIp6SetEnabled(instance, false);
+    otThreadSetEnabled(instance, false);
+    otLinkSetPcapCallback(instance, NULL, NULL);
+    error = otLinkSetPromiscuous(instance, false);
+  }
   esp_openthread_lock_release();
   return error;
 }
@@ -347,7 +364,15 @@ static void ot_task_worker() {
       .port_config = ESP_OPENTHREAD_DEFAULT_PORT_CONFIG(),
   };
 
-  ESP_ERROR_CHECK(esp_openthread_init(&config));
+  esp_err_t err = esp_openthread_init(&config);
+  if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
+    ESP_LOGE(TAG, "esp_openthread_init failed: 0x%x", err);
+    s_openthread_initialized = false;
+    s_openthread_ready = false;
+    s_ot_task_handle = NULL;
+    vTaskDelete(NULL);
+    return;
+  }
   esp_netif_t* openthread_netif;
   openthread_netif = init_openthread_netif(&config);
   esp_netif_set_default_netif(openthread_netif);
@@ -355,21 +380,32 @@ static void ot_task_worker() {
   openthread_set_dataset(THREAD_CHANNEL, THREAD_PANID);
   print_data();
 
+  s_openthread_ready = true;
   esp_openthread_launch_mainloop();
 
   // Clean up
+  s_openthread_ready = false;
   esp_openthread_netif_glue_deinit();
   esp_netif_destroy(openthread_netif);
 
   esp_vfs_eventfd_unregister();
+  s_openthread_initialized = false;
+  s_ot_task_handle = NULL;
   vTaskDelete(NULL);
 }
 
 void openthread_deinit() {
+  s_openthread_ready = false;
   esp_openthread_deinit();
+  s_openthread_initialized = false;
+  s_ot_task_handle = NULL;
 }
 
 void openthread_init() {
+  if (s_openthread_initialized) {
+    ESP_LOGI(TAG, "OpenThread already initialized");
+    return;
+  }
 #if !defined(CONFIG_OPEN_THREAD_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
@@ -394,5 +430,6 @@ void openthread_init() {
     ESP_LOGE(TAG, "event loop create failed: %s", esp_err_to_name(ret));
   }
   esp_vfs_eventfd_register(&eventfd_config);
-  xTaskCreate(ot_task_worker, "ot_cli_main", 1024 * 5, NULL, 10, NULL);
+  s_openthread_initialized = true;
+  xTaskCreate(ot_task_worker, "ot_cli_main", 5120, NULL, 10, &s_ot_task_handle);
 }
