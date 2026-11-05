@@ -88,6 +88,10 @@ void open_thread_module_exit(void) {
 
   thread_sniffer_unsubscribe_show_event(ot_sniffer_event_handler);
   thread_sniffer_stop();
+  /* The sniffer leaves the OpenThread instance initialized. Deinit it here so
+     the next app (including BLE spam) gets the heap back; a later Thread
+     entry calls openthread_init() again. */
+  openthread_deinit();
   animations_task_stop();
   led_control_stop();
 
