@@ -11,14 +11,13 @@
 #define TAG_BLE_SPAM "ble_spam:main"
 
 typedef enum {
-  BT_SPAM_MODE_ALL = 0,
+  BT_SPAM_MODE_SATURATE = 0,
   BT_SPAM_MODE_APPLE,
   BT_SPAM_MODE_ANDROID,
   BT_SPAM_MODE_WINDOWS,
   BT_SPAM_MODE_SAMSUNG,
-  /* Lab-only saturation mode: full-spectrum advertising stress test (see
-   * docs/rea_jammers/README.md for the scope and legality notes). */
-  BT_SPAM_MODE_SATURATE,
+  /* Matter onboarding commissioning advertisement spoofing */
+  BT_SPAM_MODE_MATTER,
   BT_SPAM_MODE_MAX,
 } bt_spam_mode_t;
 

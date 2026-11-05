@@ -547,7 +547,7 @@ controlled signal transmitted by a second board.
 
 | Board | Role | Configuration |
 |---|---|---|
-| A | Transmitter | `launch spam_all` (BLE), `launch ssid_spam` (Wi-Fi beacons), `launch flock_sim` (Flock simulator) |
+| A | Transmitter | `launch spam_saturate` (BLE), `launch ssid_spam` (Wi-Fi beacons), `launch flock_sim` (Flock simulator) |
 | B | SDR Receiver | `sdr_host` on the console, driven via the browser protocol |
 
 Both boards run the SDR build variant (`make build-sdr`), which reserves the

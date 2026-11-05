@@ -246,7 +246,7 @@ void ble_screens_start_scanning_animation(const char* title) {
     current_model_name[sizeof(current_model_name) - 1] = '\0';
     xSemaphoreGive(text_mutex);
   }
-  oled_screen_clear();
+  ble_screens_display_scanning_animation();
   animations_task_run(ble_screens_display_scanning_animation, 100, NULL);
 }
 

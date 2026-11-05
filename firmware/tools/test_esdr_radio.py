@@ -22,7 +22,7 @@ Two measurements, depending on mode:
 Options:
     --mode M     "spec" (default) or "iq"
     --on CMD     console command that starts transmission (default
-                 "launch spam_all"). Multiple commands separated by ';' are
+                 "launch spam_saturate"). Multiple commands separated by ';' are
                  sent in order (the beacon spammer needs to open the menu and
                  press Start: "launch ssid_spam;press down;press right")
     --off CMD    command that stops it (default "exit_app")
@@ -452,7 +452,7 @@ def main():
         print(__doc__)
         sys.exit(1)
     rx_port, tx_port = sys.argv[1], sys.argv[2]
-    on_cmd = arg_value("--on", "launch spam_all")
+    on_cmd = arg_value("--on", "launch spam_saturate")
     off_cmd = arg_value("--off", "exit_app")
     mode = arg_value("--mode", "spec")
     rate = int(arg_value("--rate", 40000000))
