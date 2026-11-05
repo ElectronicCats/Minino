@@ -150,6 +150,7 @@ static void ieee_sniffer_configure() {
 }
 
 void ieee_sniffer_begin(void* args) {
+  (void) args;
   running = true;
   ieee_sniffer_configure();
   while (running) {

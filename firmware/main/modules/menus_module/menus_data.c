@@ -31,6 +31,9 @@
 #include "modbus_dos.h"
 #include "modbus_tcp_scenes.h"
 #include "open_thread_module.h"  // Deprecated since v1.1.14.0
+#if defined(CONFIG_ZIGBEE_APPS_ENABLE) && defined(CONFIG_MININO_ZIGBEE_STACK)
+  #include "warbee_module.h"
+#endif
 #include "ota_module.h"
 #include "rf_spectrum.h"
 #include "sd_card_settings_module.h"
