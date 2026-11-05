@@ -111,6 +111,10 @@ static void i2c_scanner_on_exit(void) {
   }
 }
 
+void i2c_scanner_exit(void) {
+  i2c_scanner_on_exit();
+}
+
 // Wrapper for menu entry
 void app_manager_enter_wrapper_i2c_scanner(void) {
   extern const minino_app_t i2c_scanner_app;

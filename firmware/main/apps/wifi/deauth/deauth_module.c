@@ -290,6 +290,20 @@ static void deauth_module_cb_event_attacks(uint8_t button_name,
   }
 }
 
+void deauth_module_exit(void) {
+  if (scanning_task_handle != NULL) {
+    vTaskDelete(scanning_task_handle);
+    scanning_task_handle = NULL;
+  }
+  animations_task_stop();
+  wifi_attacks_module_stop();
+  wifi_scanner_clear_ap_records();
+  led_control_stop();
+  current_item = 0;
+  menu_stadistics.attack = 99;
+  current_wifi_state.state = DEAUTH_STATE_IDLE;
+}
+
 static void deauth_module_cb_event_run(uint8_t button_name,
                                        uint8_t button_event) {
   if (button_event != BUTTON_PRESS_DOWN) {

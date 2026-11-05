@@ -183,6 +183,10 @@ static void deauth_detector_on_exit(void) {
   }
 }
 
+void deauth_detector_exit(void) {
+  deauth_detector_on_exit();
+}
+
 // Wrapper for menu entry
 void app_manager_enter_wrapper_deauth_detector(void) {
   extern const minino_app_t deauth_detector_app;

@@ -71,6 +71,8 @@ Minino can operate across multiple wireless technologies and RF tools:
 
 #### BLE (`Applications > Bluetooth`)
 - [x] **BLE Spammer**: Floods advertisement popups targeting iOS (Apple), Android, Windows, and Samsung devices.
+- [x] **BLE Saturate**: Lab-only channel-saturation mode with 20 ms advertising and MAC rotation.
+- [x] **BLE Matter Spoof**: Emits Matter commissioning onboarding advertisements (`0xFFF6`).
 - [x] **BLE HID Spoofing**: Emulates Bluetooth Human Interface Devices (keyboard, mouse, media remote).
 - [x] **BLE ADV Sniffer**: Raw advertisement packet sniffer with Wireshark serial streaming.
 - [x] **BLE Trackers Scanner**: Detects and tracks Apple AirTags, Samsung SmartTags, Tile, and Chipolo with RSSI signal and distance estimation.
@@ -79,19 +81,20 @@ Minino can operate across multiple wireless technologies and RF tools:
 #### Zigbee (`Applications > Zigbee`)
 - [x] **Zigbee Sniffer**: IEEE 802.15.4 over-the-air packet sniffer.
 - [x] **Zigbee Spoofing**: End Device emulation (smart light bulbs and switches).
-- [x] **Wardriving**: Geotagged Zigbee network reconnaissance.
+- [x] **Mesh Topology**: Passive PAN/link map with LQI/RSSI and SD logging.
+- [x] **Wardriving (WarBee)**: Geotagged Zigbee network reconnaissance with channel hopping.
 - [x] **Wireshark integration**: Zigbee frame capture streaming to Wireshark.
 
 #### Thread (`Applications > Thread`)
 - [x] **Thread Sniffer**: IEEE 802.15.4 / 6LoWPAN Thread network packet sniffer.
 - [x] **Thread Broadcast**: Injects multicast and broadcast packets into Thread networks.
-- [ ] Wardriving
+- [x] **Wardriving (WarThread)**: Geotagged Thread/802.15.4 reconnaissance with MLE parsing.
 - [x] Wireshark integration
 
 #### Matter (`Applications > Matter`)
+- [x] **Matter onboarding advertisement spoofing (BLE)**: `Applications > Bluetooth > Spam > Matter`.
 - [ ] Matter protocol support
 - [ ] Matter CLI
-- [ ] Matter Spoof
 
 #### GPS (`Applications > GPS`)
 - [x] **Wardriving**: Geotagged reconnaissance (WiFi, Zigbee, Thread) logged to SD card.
@@ -145,6 +148,27 @@ Minino can operate across multiple wireless technologies and RF tools:
 - [x] **Version & License**: Displays firmware version, build date, and licensing details.
 - [x] **Credits & Legal**: Contributor credits and responsible disclosure notice.
 - [x] **OTA Firmware Update**: Over-The-Air firmware updates via WiFi.
+
+---
+
+## Firmware profiles and memory budget
+
+The default firmware keeps the Zigbee/OpenThread stacks **off** so BLE
+advertising has enough internal SRAM. Zigbee and Thread apps are available in a
+dedicated profile:
+
+```bash
+cd firmware
+make compile                 # default: BLE/WiFi
+make build-zigbee-thread     # Zigbee + OpenThread
+make build-sdr               # SDR capture bank, stacks off
+```
+
+`bt_spam` refuses to start when free heap is below 40 KB and stops advertising
+if it falls below 20 KB. This prevents
+`btm_ble_write_adv_enable_complete failed` on memory-constrained builds. Use
+the default profile for BLE Spam; the Zigbee/Thread profile is intended for
+`zbmesh`, `warbee`, `warthread`, the sniffers and `broadcast`.
 
 ---
 

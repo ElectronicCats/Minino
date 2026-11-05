@@ -129,6 +129,13 @@ void uart_bridge_app_begin() {
                       &uart_bridge_app_task_handle);
 }
 
+void uart_bridge_app_stop(void) {
+  /* The bridge task owns the UART/USB cleanup; asking it to leave is enough.
+     Do not delete it from here: it still has to run uart_bridge_end() and
+     cat_console_resume(). */
+  uart_bridge_exit = true;
+}
+
 void set_uart_baudrate(uint8_t option) {
   uart_baudrate_option = option;
 }

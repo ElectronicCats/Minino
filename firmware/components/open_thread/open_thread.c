@@ -352,6 +352,11 @@ otError openthread_disable_promiscous_mode() {
     otThreadSetEnabled(instance, false);
     otLinkSetPcapCallback(instance, NULL, NULL);
     error = otLinkSetPromiscuous(instance, false);
+    /* Restore the Thread interface after leaving promiscuous mode. Without
+       this, a sniffer session leaves IPv6/Thread disabled and the next
+       Broadcast session cannot send until the device reboots. */
+    otIp6SetEnabled(instance, true);
+    otThreadSetEnabled(instance, true);
   }
   esp_openthread_lock_release();
   return error;

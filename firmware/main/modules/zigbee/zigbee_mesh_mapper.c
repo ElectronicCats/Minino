@@ -110,15 +110,13 @@ static void parse_and_record_frame(uint8_t* packet, uint8_t packet_len) {
     return;
   }
 
-  // Extract LQI and RSSI from end of 802.15.4 frame if present
-  uint8_t lqi = 180;
-  int8_t rssi = -65;
-  if (packet_len >= 2) {
-    lqi = packet[packet_len - 1];
-    rssi = (int8_t) packet[packet_len - 2];
-    if (rssi > 0 || rssi < -100) {
-      rssi = -70;
-    }
+  // The PSDU does not carry link metrics: read the values reported by the
+  // radio for the frame that was just received. The last two bytes of an
+  // 802.15.4 frame are the FCS, not RSSI/LQI.
+  uint8_t lqi = ieee_sniffer_get_lqi();
+  int8_t rssi = ieee_sniffer_get_rssi();
+  if (rssi > 0 || rssi < -100) {
+    rssi = -70;
   }
 
   s_total_packets++;

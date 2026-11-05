@@ -443,6 +443,10 @@ static void ssid_spam_on_exit(void) {
   current_item = 0;
 }
 
+void ssid_spam_exit(void) {
+  ssid_spam_on_exit();
+}
+
 // Wrapper for menu entry
 void app_manager_enter_wrapper_ssid_spam(void) {
   extern const minino_app_t ssid_spam_app;

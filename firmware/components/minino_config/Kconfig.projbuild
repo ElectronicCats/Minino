@@ -350,7 +350,6 @@ menu "General project"
 					bool "Enable Zigbee/Thread stack"
 					default y
 					select ZB_ENABLED
-					select ZB_ZCZR
 					help
 						Enable the Zigbee/Thread stack (espressif__esp-zigbee-lib,
 						openthread, ieee802154). Disabling this frees ~30+ KB of DRAM

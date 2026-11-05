@@ -69,9 +69,15 @@ build-sdr:
 	rm -rf build-sdr
 	idf.py @profiles/sdr/profile build
 
+# Zigbee/OpenThread validation profile. The default profile keeps both stacks
+# off so BLE advertising has enough heap; use this one for Zigbee/Thread.
+build-zigbee-thread:
+	rm -rf build-zigbee-thread
+	idf.py @profiles/zigbee-thread/profile build
+
 tests:
 	./tools/run_host_tests.sh
 
 host-tests: tests
 
-.PHONY: test_port setup compile flash monitor clean all ff binmerge flash_fit mergebins clean_builds builds build-sdr tests host-tests
+.PHONY: test_port setup compile flash monitor clean all ff binmerge flash_fit mergebins clean_builds builds build-sdr build-zigbee-thread tests host-tests

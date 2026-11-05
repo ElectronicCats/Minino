@@ -34,6 +34,10 @@ static bt_spam_gap_sync_t gap_sync = {
     .last_status = ESP_BT_STATUS_SUCCESS};
 static bt_spam_mode_t current_mode = BT_SPAM_MODE_SATURATE;
 static bool gap_callback_registered = false;
+/* True while this module owns a radio_lease BLE claim. The lease is released
+   exactly once, either from bt_spam_app_deinit() or from the error path of
+   bt_spam_app_main(). */
+static bool bt_spam_lease_held = false;
 
 /* Chained GAP callback for other modules (e.g., bt_gattc) */
 static esp_gap_ble_cb_t chained_gap_cb = NULL;
@@ -62,6 +66,37 @@ static size_t min_free_heap_during_spam = 0;
 #define SPAM_DWELL_SLICES                 5
 #define SPAM_DWELL_SLICES_SATURATE        2
 #define SPAM_ADV_INTERVAL_SATURATE        0x20
+
+/* Bluedroid plus the controller need a healthy amount of heap before the
+   first advertising enable. Starting with less is what produced
+   "btm_ble_write_adv_enable_complete failed" on the Zigbee/Thread build:
+   the command reached the controller but it could not allocate its
+   advertising state. Keep a margin above the 30 KB heap-monitor critical
+   threshold and stop the loop if it falls below the emergency threshold. */
+#define BT_SPAM_MIN_START_HEAP_BYTES  (40 * 1024)
+#define BT_SPAM_MIN_START_BLOCK_BYTES (20 * 1024)
+#define BT_SPAM_MIN_RUN_HEAP_BYTES    (20 * 1024)
+#define BT_SPAM_MIN_RUN_BLOCK_BYTES   (8 * 1024)
+
+static bool bt_spam_heap_is_safe(size_t min_free, size_t min_largest) {
+  size_t free_heap = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+  size_t largest = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
+  if (free_heap >= min_free && largest >= min_largest) {
+    return true;
+  }
+  ESP_LOGE(TAG,
+           "Not enough heap for BLE advertising: free=%zu KB (need %zu KB), "
+           "largest=%zu KB (need %zu KB)",
+           free_heap / 1024, min_free / 1024, largest / 1024,
+           min_largest / 1024);
+  return false;
+}
+
+static void bt_spam_report_low_heap(void) {
+  if (display_records_cb != NULL) {
+    display_records_cb("Low Heap");
+  }
+}
 
 /*
  * ADV_TYPE_IND (connectable undirected advertising) allows adv_int down to 20ms
@@ -816,6 +851,12 @@ static void start_adv(void* pvParameters) {
   uint8_t payload_buffer[31];
   min_free_heap_during_spam = heap_caps_get_free_size(MALLOC_CAP_8BIT);
 
+  if (!bt_spam_heap_is_safe(BT_SPAM_MIN_RUN_HEAP_BYTES,
+                            BT_SPAM_MIN_RUN_BLOCK_BYTES)) {
+    bt_spam_report_low_heap();
+    running_task = false;
+  }
+
   /* Stop any existing advertising before setting random address */
   drain_sem();
   uint32_t init_stop_mark = bt_spam_gap_sync_mark(&gap_sync);
@@ -838,6 +879,13 @@ static void start_adv(void* pvParameters) {
            active_indices_count, (int) (min_free_heap_during_spam / 1024));
 
   while (running_task) {
+    if (!bt_spam_heap_is_safe(BT_SPAM_MIN_RUN_HEAP_BYTES,
+                              BT_SPAM_MIN_RUN_BLOCK_BYTES)) {
+      bt_spam_report_low_heap();
+      running_task = false;
+      break;
+    }
+
     if (active_indices_count == 0) {
       vTaskDelay(pdMS_TO_TICKS(50));
       continue;
@@ -954,8 +1002,9 @@ static void start_adv(void* pvParameters) {
     }
 
     /* 6. Dwell for ~250ms in 50ms slices for fast exit response. The
-     *    saturation mode cuts the dwell to one slice: it owns the channel,
-     *    so a shorter cycle maximises advertising occupancy in the air. */
+     *    saturation mode cuts the dwell to two slices (100 ms): it owns the
+     *    channel, so a shorter cycle maximises advertising occupancy in the
+     *    air while keeping a stable identity long enough for popups. */
     if (current_mode == BT_SPAM_MODE_SATURATE) {
       for (int i = 0; i < SPAM_DWELL_SLICES_SATURATE && running_task; i++) {
         vTaskDelay(pdMS_TO_TICKS(50));
@@ -1007,6 +1056,12 @@ bool bt_spam_is_running(void) {
 void bt_spam_app_main(bt_spam_mode_t mode) {
   ESP_LOGI(TAG, "Starting BT Spam mode %d...", mode);
 
+  if (!bt_spam_heap_is_safe(BT_SPAM_MIN_START_HEAP_BYTES,
+                            BT_SPAM_MIN_START_BLOCK_BYTES)) {
+    bt_spam_report_low_heap();
+    return;
+  }
+
   esp_err_t ret = ESP_OK;
 
   /* Brings up the controller and Bluedroid, and holds a BLE claim for the whole
@@ -1022,12 +1077,22 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
     }
     return;
   }
+  bt_spam_lease_held = true;
 
   /* Spam needs the radio completely idle before it can work at all: the gate
    * is taken *before* stopping the scan so no scanner's restart loop re-arms
    * a scan behind our back (the restart loops of the bt_gattc consumers check
    * radio_lease_ble_scan_allowed() before re-arming). */
   radio_lease_ble_block_scan();
+
+  /* Bluedroid has already allocated its host buffers here. Check again before
+     creating the advertising task: the pre-acquire check alone cannot see
+     that cost. */
+  if (!bt_spam_heap_is_safe(BT_SPAM_MIN_START_HEAP_BYTES,
+                            BT_SPAM_MIN_START_BLOCK_BYTES)) {
+    bt_spam_report_low_heap();
+    goto error;
+  }
 
   /* The random address can only be programmed while neither advertising nor
       scanning, and advertising can only start once a random address exists, so
@@ -1100,6 +1165,15 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
   bt_spam_gap_sync_reset(&gap_sync);
   is_advertising_active = false;
 
+  /* The 4 KB advertising task stack comes out of this heap next. Do not start
+     it if that would leave the controller without room to enable advertising.
+   */
+  if (!bt_spam_heap_is_safe(BT_SPAM_MIN_START_HEAP_BYTES,
+                            BT_SPAM_MIN_START_BLOCK_BYTES)) {
+    bt_spam_report_low_heap();
+    goto error;
+  }
+
   running_task = true;
   adv_task_running = true;
   BaseType_t task_ret =
@@ -1121,7 +1195,10 @@ error:
     gap_callback_registered = false;
   }
   radio_lease_ble_unblock_scan();
-  radio_lease_ble_release();
+  if (bt_spam_lease_held) {
+    radio_lease_ble_release();
+    bt_spam_lease_held = false;
+  }
 }
 
 void bt_spam_app_stop(void) {
@@ -1180,8 +1257,12 @@ void bt_spam_app_stop(void) {
 void bt_spam_app_deinit(void) {
   bt_spam_app_stop();
   /* Gives the BLE claim back; the stack is only torn down when this was the
-      last claim, which radio_lease tracks centrally. */
-  radio_lease_ble_release();
+      last claim, which radio_lease tracks centrally. The error path of
+      bt_spam_app_main() may already have released it. */
+  if (bt_spam_lease_held) {
+    radio_lease_ble_release();
+    bt_spam_lease_held = false;
+  }
   /* Only now may the scanners take the radio again. */
   radio_lease_ble_unblock_scan();
 

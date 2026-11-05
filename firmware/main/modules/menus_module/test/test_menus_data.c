@@ -297,7 +297,6 @@ static void test_all_expected_cli_entry_cmds_resolve(void) {
       "zbmesh",
       "broadcast",
       "thread_sniffer",
-      "matter",
       "gps_wardriving",
       "warbee",
       "warthread",

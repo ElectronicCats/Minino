@@ -24,6 +24,10 @@ typedef struct {
 /**
  * @brief Parse an IEEE 802.15.4 / Thread PSDU frame into structured data.
  *
+ * Only frames with a short destination address and an extended source address
+ * are supported; other addressing modes are rejected instead of being parsed
+ * at the wrong offsets.
+ *
  * @param psdu Raw frame buffer.
  * @param frame_len Total length of the frame in bytes.
  * @param out Pointer to output struct.

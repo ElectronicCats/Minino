@@ -25,4 +25,5 @@ typedef struct {
 typedef void (*file_manager_show_event_cb_t)(file_manager_events_t, void*);
 
 void file_manager_module_init();
+void file_manager_module_cleanup(void);
 void file_manager_set_show_event_callback(file_manager_show_event_cb_t cb);

@@ -17,6 +17,7 @@
 #include "deauth_module.h"
 #include "detector_scenes.h"
 #include "display_settings.h"
+#include "drone_id.h"
 #include "drone_id_scenes.h"
 #include "droneid_scanner.h"
 #include "esp_sdr_module.h"
@@ -38,7 +39,6 @@
 #endif
 #if defined(CONFIG_THREAD_APPS_ENABLE) && \
     defined(CONFIG_MININO_OPENTHREAD_STACK)
-  #include "matter_audit_module.h"
   #include "warthread_module.h"
 #endif
 #include "ota_module.h"
@@ -394,14 +394,6 @@ static menu_t menus[] = {
      .last_selected_submenu = 0,
      .on_enter_cb = open_thread_module_sniffer_enter,
      .on_exit_cb = open_thread_module_exit,
-     .is_visible = true},
-    {.display_name = "Matter Audit",
-     .menu_idx = MENU_THREAD_MATTER_AUDIT,
-     .parent_idx = MENU_THREAD_APPS,
-     .entry_cmd = "matter",
-     .last_selected_submenu = 0,
-     .on_enter_cb = matter_audit_module_begin,
-     .on_exit_cb = matter_audit_module_on_exit,
      .is_visible = true},
     {.display_name = "Run",
      .menu_idx = MENU_THREAD_SNIFFER_RUN,

@@ -19,9 +19,18 @@ Del análisis de implementaciones basadas en ESP32 clásico (como BlueJammer) y 
 El ESP32-C6 de Minino no dispone de hardware nRF24 ni soporte Bluetooth clásico. La técnica aplicable dentro del marco legal y de laboratorio propio es la **saturación de canales BLE publicitarios** (`Saturate Lab`):
 
 - **Modo en stack**: Añadido en `firmware/components/bt_spam/bt_spam.{h,c}` como `BT_SPAM_MODE_SATURATE`.
-- **Parámetros de saturación**: Dwell reducido a 50 ms, rotación de MAC cada 2 ciclos e intervalo publicitario fijado al piso mínimo normativo de 20 ms (`0x20`).
+- **Parámetros de saturación**: Dwell de 100 ms (dos slices de 50 ms), rotación de MAC cada 20 ciclos e intervalo publicitario fijado al piso mínimo normativo de 20 ms (`0x20`).
 - **Control de interfaz**: Accesible desde el menú OLED (`Bluetooth > Spam > Saturate`) y terminal serie (`spam_saturate`).
 - **Objetivo técnico**: Evaluación de resiliencia del scanner del receptor en laboratorio y prueba de detección de `Tracker Scanner` ante alta densidad publicitaria en los canales 37, 38 y 39.
+
+## Pruebas
+
+El modo Saturate debe probarse con el perfil por defecto (`make compile`), no
+con el perfil `zigbee-thread`: ese build deja poco heap y `bt_spam` rechaza
+arrancar por debajo de 40 KB para evitar que el controlador falle al habilitar
+advertising. La prueba mínima es lanzar `spam_saturate`, comprobar que aparece
+`start_adv task started` con al menos 40 KB libres, verificar anuncios BLE con
+un scanner y salir con `exit_app` comprobando que WiFi vuelve a inicializarse.
 
 ## Licencias
 

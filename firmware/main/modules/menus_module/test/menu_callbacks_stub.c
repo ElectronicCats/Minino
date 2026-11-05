@@ -54,8 +54,6 @@ void open_thread_module_broadcast_enter(void) {}
 void open_thread_module_exit(void) {}
 void open_thread_module_sniffer_enter(void) {}
 void open_thread_module_sniffer_run(void) {}
-void matter_audit_module_begin(void) {}
-void matter_audit_module_on_exit(void) {}
 void ota_module_init(void) {}
 void sd_card_settings_verify_sd_card(void) {}
 void sleep_mode_scenes_main(void) {}

@@ -114,6 +114,18 @@ To build the **SDR-enabled firmware variant** (which reserves the 128 KiB SRAM h
 make build-sdr
 ```
 
+To build the **Zigbee/OpenThread validation profile** (enables `zbmesh`,
+`warbee`, `warthread`, `zigbee_sniffer`, `thread_sniffer` and `broadcast`):
+
+```bash
+make build-zigbee-thread
+```
+
+The default profile keeps both stacks off so BLE advertising has enough heap.
+`bt_spam` now refuses to start below 40 KB free and stops below 20 KB during a
+run. Use the default profile for BLE and the Zigbee/Thread profile for 802.15.4
+apps.
+
 To run the host-side unit test suites (20+ Unity and Python suites):
 
 ```bash
@@ -303,13 +315,20 @@ MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongit
 ```
 # Zigbee
 
-> [!WARNING]
-> **Not available in this beta version**: Zigbee components do not work in this beta version of Minino. These components are only available in versions prior to 1.1.13.0.
->
-> **To use Zigbee components**: If you need to use Zigbee functionality, you must checkout the version 1.1.13.0 using:
-> ```bash
-> git checkout 1.1.13.0
-> ```
+> [!NOTE]
+> Zigbee apps are built only in the `zigbee-thread` profile:
+> `make build-zigbee-thread`. The default profile keeps the stack off so BLE
+> advertising has enough heap.
+
+Available apps: `Spoofing > Switch`, `Spoofing > Light`, `Sniffer`,
+`Mesh Topology` (`launch zbmesh`) and `GPS > Wardriving > Zigbee Start`
+(`launch warbee`).
+
+`zbmesh` writes `/sdcard/zigbee/mesh_topology.csv`:
+
+```csv
+Timestamp,Channel,PAN_ID,Src_Short,Dst_Short,Frame_Type,LQI,RSSI,Packets
+```
 
 - **SourcePanID**: Source PAN ID
 - **SourceADDR**: Source address
@@ -323,13 +342,13 @@ SourcePanID,SourceADDR,DestinationADDR,Channel,RSSI,SecurityEnabled,FrameType,Cu
 ```
 # Thread
 
-> [!WARNING]
-> **Not available in this beta version**: Thread/OpenThread components do not work in this beta version of Minino. These components are only available in versions prior to 1.1.13.0.
+> [!NOTE]
+> Thread apps are built only in the `zigbee-thread` profile:
+> `make build-zigbee-thread`. Available apps: `Sniffer`
+> (`launch thread_sniffer`), `Broadcast` (`launch broadcast`) and
+> `GPS > Wardriving > Thread Start` (`launch warthread`).
 >
-> **To use Thread/OpenThread components**: If you need to use Thread/OpenThread functionality, you must checkout the version 1.1.13.0 using:
-> ```bash
-> git checkout 1.1.13.0
-> ```
+> `warthread` writes `/sdcard/thread/WarThread_<timestamp>.csv`.
 
 - **DestinationPAN**: Destination PAN ID
 - **Destination**: Destination short address
@@ -352,13 +371,14 @@ DestinationPAN,Destination,ExtendedSource,Channel,UDPSource,UDPDestination,Proto
 
 # Wardriving Thread test
 
-> [!WARNING]
-> **Not available in this beta version**: Thread/OpenThread components do not work in this beta version of Minino. These components are only available in versions prior to 1.1.13.0.
->
-> **To use Thread/OpenThread components**: If you need to use Thread/OpenThread functionality, you must checkout the version 1.1.13.0 using:
-> ```bash
-> git checkout 1.1.13.0
-> ```
+Use the `zigbee-thread` profile and run `launch warthread` from the console or
+`GPS > Wardriving > Thread Start` from the menu. A GPS fix is required before
+rows are written to `/sdcard/thread/WarThread_<timestamp>.csv`.
+
+For a smoke test, verify that `launch warthread` prints
+`Thread Wardriving module begin`, that `exit_app` returns to `minino>`, and that
+WiFi is initialized again. BLE advertising is intentionally refused in this
+profile when free heap is below 40 KB.
 
 # Openthread - Install example
 ## ESP-IDF

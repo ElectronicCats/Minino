@@ -12,6 +12,7 @@ typedef enum {
 } catdos_menu_t;
 
 void catdos_module_begin(void);
+void catdos_module_exit(void);
 
 void catdos_module_set_config(char* ssid, char* passwd);
 void catdos_module_set_target(char* host, char* port, char* endpoint);
