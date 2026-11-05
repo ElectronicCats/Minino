@@ -230,6 +230,7 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
   uint8_t src_addr[8] = {0};
   uint16_t short_dst_addr = 0;
   uint16_t short_src_addr = 0;
+  bool source_pan_consumed = false;
 
   char dst_addr_str[32] = "N/A";
   char src_addr_str[32] = "N/A";
@@ -252,6 +253,7 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
                 position + 2 <= packet_length) {
               pan_id = *((uint16_t*) &packet[position]);
               position += sizeof(uint16_t);
+              source_pan_consumed = true;
             }
             snprintf(dst_addr_str, sizeof(dst_addr_str), "0x%04x",
                      short_dst_addr);
@@ -272,6 +274,22 @@ static void warbee_packet_dissector(uint8_t* packet, uint8_t packet_length) {
           break;
         default:
           return;
+      }
+
+      /* When PAN ID compression is disabled, the source PAN ID sits between
+         the destination address and the source address. Skipping it here
+         keeps the source address aligned; the broadcast case above may have
+         already consumed it. */
+      if (!fcs->panIdCompressed && !source_pan_consumed &&
+          fcs->srcAddrType != ADDR_MODE_NONE) {
+        if (position + sizeof(uint16_t) > packet_length) {
+          return;
+        }
+        uint16_t source_pan = *((uint16_t*) &packet[position]);
+        position += sizeof(uint16_t);
+        if (pan_id == 0xFFFF) {
+          pan_id = source_pan;
+        }
       }
 
       switch (fcs->srcAddrType) {

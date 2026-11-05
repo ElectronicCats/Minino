@@ -1011,6 +1011,10 @@ static void captive_on_exit(void) {
   last_index_selected = 0;
 }
 
+void captive_module_exit(void) {
+  captive_on_exit();
+}
+
 // Wrapper for menu entry
 void app_manager_enter_wrapper_captive(void) {
   extern const minino_app_t captive_app;

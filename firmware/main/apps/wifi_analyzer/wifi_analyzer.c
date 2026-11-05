@@ -512,18 +512,23 @@ static void wifi_analyzer_on_exit(void) {
     led_control_stop();
     wifi_sniffer_close_file();
   }
-  // Free summary buffer
-  xSemaphoreTake(summary_mutex, portMAX_DELAY);
-  wifi_analizer_free_summary();
-  xSemaphoreGive(summary_mutex);
+  // Free summary buffer. The cleanup path can run more than once (menu
+  // callback plus app_manager), so every mutex has to be checked first.
+  if (summary_mutex != NULL) {
+    xSemaphoreTake(summary_mutex, portMAX_DELAY);
+    wifi_analizer_free_summary();
+    xSemaphoreGive(summary_mutex);
+  }
   // Reset all state
-  xSemaphoreTake(state_mutex, portMAX_DELAY);
-  analizer_running = false;
-  analizer_initialized = false;
-  analizer_initializing = false;
-  no_mem = false;
-  analyzer_exiting = false;
-  xSemaphoreGive(state_mutex);
+  if (state_mutex != NULL) {
+    xSemaphoreTake(state_mutex, portMAX_DELAY);
+    analizer_running = false;
+    analizer_initialized = false;
+    analizer_initializing = false;
+    no_mem = false;
+    analyzer_exiting = false;
+    xSemaphoreGive(state_mutex);
+  }
   // Delete mutexes (optional, but clean)
   if (summary_mutex != NULL) {
     vSemaphoreDelete(summary_mutex);
@@ -533,6 +538,10 @@ static void wifi_analyzer_on_exit(void) {
     vSemaphoreDelete(state_mutex);
     state_mutex = NULL;
   }
+}
+
+void wifi_analyzer_cleanup(void) {
+  wifi_analyzer_on_exit();
 }
 
 // App definition for app_manager

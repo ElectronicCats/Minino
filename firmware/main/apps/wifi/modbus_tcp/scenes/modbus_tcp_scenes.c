@@ -424,6 +424,10 @@ static void modbus_tcp_on_exit(void) {
   last_settings_selection = 0;
 }
 
+void modbus_tcp_scenes_exit(void) {
+  modbus_tcp_on_exit();
+}
+
 // Wrapper for menu entry
 void app_manager_enter_wrapper_modbus_tcp(void) {
   extern const minino_app_t modbus_tcp_app;

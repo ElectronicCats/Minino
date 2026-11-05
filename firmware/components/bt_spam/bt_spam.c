@@ -954,8 +954,9 @@ static void start_adv(void* pvParameters) {
     }
 
     /* 6. Dwell for ~250ms in 50ms slices for fast exit response. The
-     *    saturation mode cuts the dwell to one slice: it owns the channel,
-     *    so a shorter cycle maximises advertising occupancy in the air. */
+     *    saturation mode cuts the dwell to two slices (100 ms): it owns the
+     *    channel, so a shorter cycle maximises advertising occupancy in the
+     *    air while keeping a stable identity long enough for popups. */
     if (current_mode == BT_SPAM_MODE_SATURATE) {
       for (int i = 0; i < SPAM_DWELL_SLICES_SATURATE && running_task; i++) {
         vTaskDelay(pdMS_TO_TICKS(50));

@@ -226,7 +226,6 @@ void cmd_control_register_launch_cmd() {
                "zbmesh\n"
                "broadcast\n"
                "thread_sniffer\n"
-               "matter\n"
                "gps_wardriving\n"
                "wardriving_start\n"
                "warbee\n"

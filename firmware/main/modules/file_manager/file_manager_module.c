@@ -420,6 +420,10 @@ static void file_manager_on_exit(void) {
   }
 }
 
+void file_manager_module_cleanup(void) {
+  file_manager_on_exit();
+}
+
 // Wrapper for menu entry
 void app_manager_enter_wrapper_file_manager(void) {
   extern const minino_app_t file_manager_app;

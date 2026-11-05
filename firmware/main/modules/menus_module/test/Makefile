@@ -22,7 +22,7 @@ UNITY    := $(IDF_PATH)/components/unity/unity/src
 SRCDIR   := ..
 
 CFLAGS := -std=gnu99 -Wall -Wextra -Werror -g \
-          -I. -Imock -I$(SRCDIR) -I$(SRCDIR)/menus_include -I../../app_manager -I../../war_thread -I../../war_bee -I../../zigbee -I$(UNITY)
+          -I. -Imock -I$(SRCDIR) -I$(SRCDIR)/menus_include -I../../app_manager -I../../war_thread -I../../war_bee -I../../zigbee -I../../../apps/wifi/drone_id -I$(UNITY)
 
 # menus_data.c references the on_enter/on_exit callbacks of every app in the
 # tree, so linking it for the host requires stubbing them all out. The stubs

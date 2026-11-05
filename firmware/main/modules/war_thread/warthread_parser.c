@@ -8,7 +8,7 @@
 bool warthread_parse_frame(const uint8_t* psdu,
                            uint8_t frame_len,
                            warthread_parsed_frame_t* out) {
-  if (psdu == NULL || out == NULL || frame_len < WARTHREAD_BASE_FRAME_LEN) {
+  if (psdu == NULL || out == NULL || frame_len < 3) {
     return false;
   }
 
@@ -17,11 +17,31 @@ bool warthread_parse_frame(const uint8_t* psdu,
   uint8_t position = 0;
   out->frame_control = psdu[position] | ((uint16_t) psdu[position + 1] << 8);
   position += sizeof(uint16_t);
+
+  /* This parser is deliberately limited to the layout used by Thread MLE and
+     the 802.15.4 data frames that carry an extended source address. Reject
+     other addressing modes instead of reading the following fields at the
+     wrong offsets. */
+  uint8_t dst_addr_mode = (out->frame_control >> 10) & 0x03;
+  uint8_t src_addr_mode = (out->frame_control >> 14) & 0x03;
+  bool pan_compressed = (out->frame_control & (1 << 6)) != 0;
+  if (dst_addr_mode != 2 || src_addr_mode != 3) {
+    return false;
+  }
+
+  uint8_t base_len = 3 + 4 + (pan_compressed ? 0 : 2) + 8;
+  if (frame_len < base_len) {
+    return false;
+  }
+
   position += sizeof(uint8_t);  // Sequence number
   out->destination_pan = psdu[position] | ((uint16_t) psdu[position + 1] << 8);
   position += sizeof(uint16_t);
   out->destination = psdu[position] | ((uint16_t) psdu[position + 1] << 8);
   position += sizeof(uint16_t);
+  if (!pan_compressed) {
+    position += sizeof(uint16_t);  // Source PAN ID
+  }
 
   uint8_t extd_source[8] = {0};
   for (uint8_t idx = 0; idx < sizeof(extd_source); idx++) {

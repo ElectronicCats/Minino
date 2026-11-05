@@ -16,10 +16,11 @@ void test_null_and_short_frames_rejected(void) {
 }
 
 void test_ieee802154_data_frame_parsed(void) {
-  // 802.15.4 frame: FCF=0x9869, Seq=0x12, DstPAN=0x7668, DstAddr=0xffff,
+  // 802.15.4 frame: FCF=0xE841 (data, PAN compressed, dst short, src extended),
+  // Seq=0x12, DstPAN=0x7668, DstAddr=0xffff,
   // ExtAddr=0x5a,0xd2,0xcf,0x46,0xfc,0xae,0x75,0xd7
   uint8_t psdu[20] = {
-      0x69, 0x98,              // FCF (little-endian 0x9869)
+      0x41, 0xe8,              // FCF (little-endian 0xE841)
       0x12,                    // Sequence number
       0x68, 0x76,              // Destination PAN (0x7668)
       0xff, 0xff,              // Destination short address (0xffff)
@@ -29,11 +30,36 @@ void test_ieee802154_data_frame_parsed(void) {
 
   warthread_parsed_frame_t parsed;
   TEST_ASSERT_TRUE(warthread_parse_frame(psdu, sizeof(psdu), &parsed));
-  TEST_ASSERT_EQUAL_HEX16(0x9869, parsed.frame_control);
+  TEST_ASSERT_EQUAL_HEX16(0xe841, parsed.frame_control);
   TEST_ASSERT_EQUAL_HEX16(0x7668, parsed.destination_pan);
   TEST_ASSERT_EQUAL_HEX16(0xffff, parsed.destination);
   TEST_ASSERT_FALSE(parsed.is_mle);
   TEST_ASSERT_EQUAL_STRING(PROTOCOL_TYPE_IEEE, parsed.protocol_type);
+  TEST_ASSERT_EQUAL_STRING("5a:d2:cf:46:fc:ae:75:d7", parsed.extd_source_str);
+}
+
+void test_short_source_frames_are_rejected(void) {
+  // FCF=0x9869 has a 16-bit source address, which this parser does not model.
+  uint8_t psdu[20] = {
+      0x69, 0x98, 0x12, 0x68, 0x76, 0xff, 0xff, 0x01,
+      0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+  };
+
+  warthread_parsed_frame_t parsed;
+  TEST_ASSERT_FALSE(warthread_parse_frame(psdu, sizeof(psdu), &parsed));
+}
+
+void test_non_compressed_source_pan_is_skipped(void) {
+  // FCF=0xD801: data, PAN not compressed, dst short, src extended.
+  uint8_t psdu[22] = {
+      0x01, 0xd8, 0x33, 0x68, 0x76, 0xff, 0xff,  // FCF, seq, dst PAN/addr
+      0xaa, 0xbb,                                // Source PAN
+      0xd7, 0x75, 0xae, 0xfc, 0x46, 0xcf, 0xd2, 0x5a, 0x01, 0x02, 0x03, 0x04,
+  };
+
+  warthread_parsed_frame_t parsed;
+  TEST_ASSERT_TRUE(warthread_parse_frame(psdu, sizeof(psdu), &parsed));
+  TEST_ASSERT_EQUAL_HEX16(0xd801, parsed.frame_control);
   TEST_ASSERT_EQUAL_STRING("5a:d2:cf:46:fc:ae:75:d7", parsed.extd_source_str);
 }
 
@@ -94,6 +120,8 @@ int main(void) {
   UNITY_BEGIN();
   RUN_TEST(test_null_and_short_frames_rejected);
   RUN_TEST(test_ieee802154_data_frame_parsed);
+  RUN_TEST(test_short_source_frames_are_rejected);
+  RUN_TEST(test_non_compressed_source_pan_is_skipped);
   RUN_TEST(test_thread_mle_packet_parsed);
   RUN_TEST(test_thread_mle_truncated_payload_rejected);
   RUN_TEST(test_thread_mle_custom_udp_ports);

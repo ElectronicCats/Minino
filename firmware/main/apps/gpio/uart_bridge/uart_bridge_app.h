@@ -6,3 +6,4 @@
 
 // Function for enter on Uart bridge
 void uart_bridge_app_enter();
+void uart_bridge_app_stop(void);

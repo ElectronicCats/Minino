@@ -541,6 +541,10 @@ static void catdos_on_exit(void) {
   last_main_selection = 0;
 }
 
+void catdos_module_exit(void) {
+  catdos_on_exit();
+}
+
 // Wrapper for menu entry
 void app_manager_enter_wrapper_catdos(void) {
   extern const minino_app_t catdos_app;
