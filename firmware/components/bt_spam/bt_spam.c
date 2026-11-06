@@ -67,16 +67,16 @@ static size_t min_free_heap_during_spam = 0;
 #define SPAM_DWELL_SLICES_SATURATE        2
 #define SPAM_ADV_INTERVAL_SATURATE        0x20
 
-/* Bluedroid plus the controller need a healthy amount of heap before the
-   first advertising enable. Starting with less is what produced
-   "btm_ble_write_adv_enable_complete failed" on the Zigbee/Thread build:
-   the command reached the controller but it could not allocate its
-   advertising state. Keep a margin above the 30 KB heap-monitor critical
-   threshold and stop the loop if it falls below the emergency threshold. */
-#define BT_SPAM_MIN_START_HEAP_BYTES  (40 * 1024)
-#define BT_SPAM_MIN_START_BLOCK_BYTES (20 * 1024)
-#define BT_SPAM_MIN_RUN_HEAP_BYTES    (20 * 1024)
-#define BT_SPAM_MIN_RUN_BLOCK_BYTES   (8 * 1024)
+/* Bluedroid plus the controller need heap for the first advertising enable.
+   The combined Zigbee/Thread build leaves about 20 KB after Bluedroid comes
+   up; that is enough to advertise, but a few KB less is not. Refuse to start
+   below 18 KB and stop the loop if it falls below 8 KB, which is the range
+   where the controller returned "btm_ble_write_adv_enable_complete failed"
+   and the heap monitor reported EMERGENCY. */
+#define BT_SPAM_MIN_START_HEAP_BYTES  (18 * 1024)
+#define BT_SPAM_MIN_START_BLOCK_BYTES (10 * 1024)
+#define BT_SPAM_MIN_RUN_HEAP_BYTES    (8 * 1024)
+#define BT_SPAM_MIN_RUN_BLOCK_BYTES   (4 * 1024)
 
 static bool bt_spam_heap_is_safe(size_t min_free, size_t min_largest) {
   size_t free_heap = heap_caps_get_free_size(MALLOC_CAP_8BIT);
