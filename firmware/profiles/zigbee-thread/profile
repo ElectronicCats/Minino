@@ -1,1 +1,0 @@
--B build-zigbee-thread -DSDKCONFIG=build-zigbee-thread/sdkconfig -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.version;sdkconfig.zigbee-thread"
