@@ -25,12 +25,13 @@ El ESP32-C6 de Minino no dispone de hardware nRF24 ni soporte Bluetooth clásico
 
 ## Pruebas
 
-El modo Saturate debe probarse con el perfil por defecto (`make compile`), no
-con el perfil `zigbee-thread`: ese build deja poco heap y `bt_spam` rechaza
-arrancar por debajo de 40 KB para evitar que el controlador falle al habilitar
-advertising. La prueba mínima es lanzar `spam_saturate`, comprobar que aparece
-`start_adv task started` con al menos 40 KB libres, verificar anuncios BLE con
-un scanner y salir con `exit_app` comprobando que WiFi vuelve a inicializarse.
+El build por defecto incluye Zigbee/Thread y deja ~20 KB libres después de
+inicializar BLE. `bt_spam` rechaza arrancar por debajo de 18 KB para evitar que
+el controlador falle al habilitar advertising; después de usar Thread
+Sniffer/Broadcast el heap puede quedar por debajo de ese umbral. La prueba
+mínima es lanzar `spam_saturate`, comprobar que aparece `start_adv task started`,
+verificar anuncios BLE con un scanner y salir con `exit_app` comprobando que
+WiFi vuelve a inicializarse.
 
 ## Licencias
 
