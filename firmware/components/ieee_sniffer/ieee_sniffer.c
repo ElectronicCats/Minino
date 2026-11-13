@@ -53,6 +53,10 @@ int8_t ieee_sniffer_get_rssi() {
   return esp_ieee802154_get_recent_rssi();
 }
 
+uint8_t ieee_sniffer_get_lqi() {
+  return esp_ieee802154_get_recent_lqi();
+}
+
 void ieee_sniffer_set_channel(uint8_t channel) {
   if (channel < IEEE_SNIFFER_CHANNEL_MIN ||
       channel > IEEE_SNIFFER_CHANNEL_MAX) {
@@ -150,6 +154,7 @@ static void ieee_sniffer_configure() {
 }
 
 void ieee_sniffer_begin(void* args) {
+  (void) args;
   running = true;
   ieee_sniffer_configure();
   while (running) {

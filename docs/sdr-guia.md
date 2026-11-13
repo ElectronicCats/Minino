@@ -386,7 +386,7 @@ not a transmitter.
 | `sdr_capture` | Opens the native SDR app |
 | `sdr_host` | Hands the serial port over to the ESPARGOS viewer protocol |
 | `launch ssid_spam` | Opens the Wi-Fi beacon spammer (`press down` + `press right` starts the attack) |
-| `launch spam_all` | Opens the BLE spammer |
+| `launch spam_saturate` | Opens the BLE spammer |
 | `launch flock_sim` | Opens the Flock simulator |
 | `wifi_scan` | Lists visible Wi-Fi networks (useful to verify whether a transmission is arriving) |
 | `press <up\|down\|left\|right>` | Injects a button press event |

@@ -298,17 +298,25 @@ jobs:
         run: |
           set -e
           echo "Starting code review with model: $MODEL"
-          
+
           # Execute cursor-agent with error handling and timeout protection
           # Read prompt from prepared file
           cursor-agent --force --model "$MODEL" --output-format=text --print "$(cat /tmp/review-prompt.txt)" || {
             EXIT_CODE=$?
-            echo "::error::cursor-agent failed with exit code $EXIT_CODE"
             echo "Model used: $MODEL"
-            echo "Check CURSOR_API_KEY configuration and model availability"
-            exit $EXIT_CODE
+            echo "Check CURSOR_API_KEY configuration and model availability (the Free plan does not include Claude/GPT models)"
+            # The review is advisory unless BLOCKING_REVIEW is explicitly enabled.
+            # A cursor-agent failure (model unavailable, outage, quota) must not
+            # fail the workflow in the default non-blocking mode; surface it as a
+            # warning so the PR is not blocked by a review-tool problem.
+            if [ "${BLOCKING_REVIEW:-false}" = "true" ]; then
+              echo "::error::cursor-agent failed with exit code $EXIT_CODE (blocking review is enabled)"
+              exit $EXIT_CODE
+            fi
+            echo "::warning::cursor-agent failed with exit code $EXIT_CODE; skipping review (non-blocking mode)"
+            exit 0
           }
-          
+
           echo "✅ Code review completed successfully"
 
       - name: Check blocking review results

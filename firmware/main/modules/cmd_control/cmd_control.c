@@ -137,10 +137,10 @@ static int exit_app_cmd(int argc, char** argv) {
   (void) argc;
   (void) argv;
   if (app_manager_is_active()) {
-    printf("Exiting current application...\n");
+    printf("Exit...\n");
     app_manager_exit();
   } else if (menus_module_get_app_state()) {
-    printf("Exiting current application...\n");
+    printf("Exit...\n");
     menus_module_exit_app();
   } else {
     printf("Not currently inside an application.\n");
@@ -215,20 +215,34 @@ void cmd_control_register_launch_cmd() {
                "spam_android\n"
                "spam_windows\n"
                "spam_samsung\n"
-               "spam_all\n"
+               "spam_saturate\n"
+               "spam_matter\n"
                "hid\n"
+               "adv_scanner\n"
                "trackers\n"
                "switch\n"
                "light\n"
                "zigbee_sniffer\n"
+               "zbmesh\n"
                "broadcast\n"
                "thread_sniffer\n"
                "gps_wardriving\n"
+               "wardriving_start\n"
+               "warbee\n"
+               "warthread\n"
+               "gps_datetime\n"
+               "gps_location\n"
+               "gps_speed\n"
+               "gps_route\n"
+               "gps_sats\n"
+               "gps_config\n"
                "i2c_scanner\n"
                "uart_bridge\n"
                "sdr\n"
                "spectrum\n"
                "file_manager\n"
+               "file_manager_local\n"
+               "web_files\n"
                "ota"
 
                "\n\n"

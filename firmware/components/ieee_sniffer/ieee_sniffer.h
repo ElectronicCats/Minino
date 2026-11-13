@@ -82,6 +82,7 @@ void ieee_sniffer_set_channel(uint8_t channel);
 
 uint8_t ieee_sniffer_get_channel();
 int8_t ieee_sniffer_get_rssi();
+uint8_t ieee_sniffer_get_lqi();
 
 void ieee_sniffer_channel_hop();
 

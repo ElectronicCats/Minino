@@ -12,10 +12,11 @@
 
 /* ---- Local definitions (from hid_screens.h) ---- */
 
-#define HID_CONFIG_NAME  0
-#define HID_CONFIG_MAC   1
-#define HID_CONFIG_START 2
-#define HID_MENU_COUNT   3
+#define HID_CONFIG_NAME        0
+#define HID_CONFIG_MAC         1
+#define HID_CONFIG_START       2
+#define HID_CONFIG_CLEAR_BONDS 3
+#define HID_MENU_COUNT         4
 
 #define HID_DEVICE_VOL_UP     0
 #define HID_DEVICE_VOL_DOWN   1
@@ -30,7 +31,7 @@
 /* Mock data tables (from hid_data.c) */
 
 static char* hid_menu_items[HID_MENU_COUNT] = {"Device name", "Device MAC",
-                                               "Start"};
+                                               "Start", "Clear Bonds"};
 
 static char* hid_device_items[HID_DEVICE_COUNT] = {
     "Volume Up", "Volume Down", "Play",       "Pause",
@@ -44,10 +45,11 @@ void tearDown(void) {}
 /* --- Menu item counts and names --- */
 
 static void test_hid_menu_items_count(void) {
-  TEST_ASSERT_EQUAL(HID_MENU_COUNT, 3);
+  TEST_ASSERT_EQUAL(HID_MENU_COUNT, 4);
   TEST_ASSERT_EQUAL_STRING("Device name", hid_menu_items[0]);
   TEST_ASSERT_EQUAL_STRING("Device MAC", hid_menu_items[1]);
   TEST_ASSERT_EQUAL_STRING("Start", hid_menu_items[2]);
+  TEST_ASSERT_EQUAL_STRING("Clear Bonds", hid_menu_items[3]);
 }
 
 static void test_hid_device_items_count(void) {
@@ -68,7 +70,8 @@ static void test_hid_config_enums(void) {
   TEST_ASSERT_EQUAL(HID_CONFIG_NAME, 0);
   TEST_ASSERT_EQUAL(HID_CONFIG_MAC, 1);
   TEST_ASSERT_EQUAL(HID_CONFIG_START, 2);
-  TEST_ASSERT_EQUAL(HID_MENU_COUNT, 3);
+  TEST_ASSERT_EQUAL(HID_CONFIG_CLEAR_BONDS, 3);
+  TEST_ASSERT_EQUAL(HID_MENU_COUNT, 4);
 }
 
 static void test_hid_device_enums(void) {
@@ -165,21 +168,23 @@ static void test_hid_actions_require_secure_connection(void) {
 /* --- Spam mode enums --- */
 
 typedef enum {
-  BT_SPAM_MODE_ALL = 0,
+  BT_SPAM_MODE_SATURATE = 0,
   BT_SPAM_MODE_APPLE,
   BT_SPAM_MODE_ANDROID,
   BT_SPAM_MODE_WINDOWS,
   BT_SPAM_MODE_SAMSUNG,
+  BT_SPAM_MODE_MATTER,
   BT_SPAM_MODE_MAX,
 } bt_spam_mode_t;
 
 static void test_bt_spam_mode_enums(void) {
-  TEST_ASSERT_EQUAL(BT_SPAM_MODE_ALL, 0);
+  TEST_ASSERT_EQUAL(BT_SPAM_MODE_SATURATE, 0);
   TEST_ASSERT_EQUAL(BT_SPAM_MODE_APPLE, 1);
   TEST_ASSERT_EQUAL(BT_SPAM_MODE_ANDROID, 2);
   TEST_ASSERT_EQUAL(BT_SPAM_MODE_WINDOWS, 3);
   TEST_ASSERT_EQUAL(BT_SPAM_MODE_SAMSUNG, 4);
-  TEST_ASSERT_EQUAL(BT_SPAM_MODE_MAX, 5);
+  TEST_ASSERT_EQUAL(BT_SPAM_MODE_MATTER, 5);
+  TEST_ASSERT_EQUAL(BT_SPAM_MODE_MAX, 6);
 }
 
 int main(void) {

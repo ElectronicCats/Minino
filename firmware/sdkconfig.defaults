@@ -169,8 +169,12 @@ CONFIG_MININO_BT_STACK=y
 # switches have to be pinned here: the build reads them before the Kconfig
 # step runs, when the resolved sdkconfig does not exist yet (see
 # cmake/minino_kconfig.cmake).
-# CONFIG_MININO_ZIGBEE_STACK is not set
-# CONFIG_MININO_OPENTHREAD_STACK is not set
+#
+# Both are enabled by default so the Zigbee/Thread applications are native
+# entries in the Applications menu. The SDR profile explicitly turns them off
+# because the capture bank needs the SRAM.
+CONFIG_MININO_ZIGBEE_STACK=y
+CONFIG_MININO_OPENTHREAD_STACK=y
 
 # The SDR app: the capture bank is reserved and the image is capped below it.
 #

@@ -292,7 +292,9 @@ static void handle_command(const esdr_request_t* req) {
       break;
 
     case ESDR_CMD_FREQ:
-      if (req->freq_mhz < 100u || req->freq_mhz > 6000u) {
+      if ((req->freq_mhz < ESDR_FREQ_MIN_MHZ ||
+           req->freq_mhz > ESDR_FREQ_MAX_MHZ) &&
+          req->freq_mhz != 2484u) {
         port_line("ERR frequency\n");
         break;
       }
@@ -482,7 +484,7 @@ esp_err_t esdr_host_run(void) {
         port_line("ERR command\n");
       } else {
         handle_command(&req);
-        if (req.cmd == ESDR_CMD_MININO) {
+        if (req.cmd == ESDR_CMD_MININO || req.cmd == ESDR_CMD_RELEASE) {
           break;
         }
       }

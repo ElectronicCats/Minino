@@ -114,6 +114,15 @@ To build the **SDR-enabled firmware variant** (which reserves the 128 KiB SRAM h
 make build-sdr
 ```
 
+The default profile includes Zigbee/OpenThread, so `zbmesh`, `warbee`,
+`warthread`, `zigbee_sniffer`, `thread_sniffer` and `broadcast` are native
+entries in the menu. The SDR profile turns both stacks off because the capture
+bank needs the SRAM.
+
+In the combined build, `bt_spam` refuses to start below 18 KB free and stops
+below 8 KB during a run. That prevents the controller advertising failure when
+Thread Sniffer/Broadcast has left the heap low.
+
 To run the host-side unit test suites (20+ Unity and Python suites):
 
 ```bash
@@ -303,13 +312,19 @@ MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongit
 ```
 # Zigbee
 
-> [!WARNING]
-> **Not available in this beta version**: Zigbee components do not work in this beta version of Minino. These components are only available in versions prior to 1.1.13.0.
->
-> **To use Zigbee components**: If you need to use Zigbee functionality, you must checkout the version 1.1.13.0 using:
-> ```bash
-> git checkout 1.1.13.0
-> ```
+> [!NOTE]
+> Zigbee apps are included in the default profile. The SDR profile keeps the
+> stack off because the capture bank needs the SRAM.
+
+Available apps: `Spoofing > Switch`, `Spoofing > Light`, `Sniffer`,
+`Mesh Topology` (`launch zbmesh`) and `GPS > Wardriving > Zigbee Start`
+(`launch warbee`).
+
+`zbmesh` writes `/sdcard/zigbee/mesh_topology.csv`:
+
+```csv
+Timestamp,Channel,PAN_ID,Src_Short,Dst_Short,Frame_Type,LQI,RSSI,Packets
+```
 
 - **SourcePanID**: Source PAN ID
 - **SourceADDR**: Source address
@@ -323,13 +338,13 @@ SourcePanID,SourceADDR,DestinationADDR,Channel,RSSI,SecurityEnabled,FrameType,Cu
 ```
 # Thread
 
-> [!WARNING]
-> **Not available in this beta version**: Thread/OpenThread components do not work in this beta version of Minino. These components are only available in versions prior to 1.1.13.0.
+> [!NOTE]
+> Thread apps are included in the default profile. The SDR profile keeps the
+> stack off because the capture bank needs the SRAM. Available apps: `Sniffer`
+> (`launch thread_sniffer`), `Broadcast` (`launch broadcast`) and
+> `GPS > Wardriving > Thread Start` (`launch warthread`).
 >
-> **To use Thread/OpenThread components**: If you need to use Thread/OpenThread functionality, you must checkout the version 1.1.13.0 using:
-> ```bash
-> git checkout 1.1.13.0
-> ```
+> `warthread` writes `/sdcard/thread/WarThread_<timestamp>.csv`.
 
 - **DestinationPAN**: Destination PAN ID
 - **Destination**: Destination short address
@@ -352,13 +367,14 @@ DestinationPAN,Destination,ExtendedSource,Channel,UDPSource,UDPDestination,Proto
 
 # Wardriving Thread test
 
-> [!WARNING]
-> **Not available in this beta version**: Thread/OpenThread components do not work in this beta version of Minino. These components are only available in versions prior to 1.1.13.0.
->
-> **To use Thread/OpenThread components**: If you need to use Thread/OpenThread functionality, you must checkout the version 1.1.13.0 using:
-> ```bash
-> git checkout 1.1.13.0
-> ```
+Run `launch warthread` from the console or `GPS > Wardriving > Thread Start`
+from the menu. A GPS fix is required before rows are written to
+`/sdcard/thread/WarThread_<timestamp>.csv`.
+
+For a smoke test, verify that `launch warthread` prints
+`Thread Wardriving module begin`, that `exit_app` returns to `minino>`, and that
+WiFi is initialized again. BLE advertising is intentionally refused when free
+heap is below 18 KB, which can happen after using Thread Sniffer/Broadcast.
 
 # Openthread - Install example
 ## ESP-IDF

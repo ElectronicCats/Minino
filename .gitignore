@@ -42,6 +42,7 @@ hardware/minino-backups/
 /firmware/build-*/
 /firmware/minino-release-*
 /**/minino-release-*.zip
+docs/rea_jammers/evidence/
 
 # IDF sdkconfig
 /**/sdkconfig

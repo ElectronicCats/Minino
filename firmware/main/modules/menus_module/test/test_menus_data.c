@@ -224,6 +224,99 @@ static void test_every_leaf_has_an_enter_callback(void) {
   }
 }
 
+static void test_every_active_leaf_app_has_exit_callback(void) {
+  /* Every launchable leaf application (except those that intentionally reboot
+     on exit: switch, light, web_files, ota, gps_config) must provide an
+     on_exit_cb so `exit_app` from the console cleans up tasks, radio leases,
+     and heap allocations. */
+  static const char* const s_reboot_or_stateless_cmds[] = {
+      "switch", "light", "web_files", "ota", "gps_config",
+  };
+  menu_t* menus = menus_get();
+  uint8_t count = menus_count();
+  for (uint8_t i = 0; i < count; i++) {
+    if (!menus[i].is_visible || !menus[i].entry_cmd) {
+      continue;
+    }
+    int has_children = 0;
+    for (uint8_t j = 0; j < count; j++) {
+      if (j != i && menus[j].is_visible &&
+          menus[j].parent_idx == menus[i].menu_idx) {
+        has_children = 1;
+        break;
+      }
+    }
+    if (has_children) {
+      continue;
+    }
+    bool exempt = false;
+    for (size_t k = 0; k < sizeof(s_reboot_or_stateless_cmds) /
+                               sizeof(s_reboot_or_stateless_cmds[0]);
+         k++) {
+      if (!strcmp(menus[i].entry_cmd, s_reboot_or_stateless_cmds[k])) {
+        exempt = true;
+        break;
+      }
+    }
+    if (!exempt) {
+      TEST_ASSERT_NOT_NULL_MESSAGE(menus[i].on_exit_cb, menus[i].entry_cmd);
+    }
+  }
+}
+
+static void test_all_expected_cli_entry_cmds_resolve(void) {
+#if defined(CONFIG_WIFI_APPS_ENABLE) &&      \
+    defined(CONFIG_BLUETOOTH_APPS_ENABLE) && \
+    defined(CONFIG_MININO_ZIGBEE_STACK) &&   \
+    defined(CONFIG_MININO_OPENTHREAD_STACK) && defined(CONFIG_SD_ENABLED)
+  static const char* const s_expected_cmds[] = {
+      "analyzer",
+      "captive",
+      "deauth",
+      "deauth_scan",
+      "dos",
+      "ssid_spam",
+      "drone_id",
+      "droneid_scanner",
+      "modbus_tcp",
+      "flock",
+      "flock_sim",
+      "spam",
+      "spam_apple",
+      "spam_android",
+      "spam_windows",
+      "spam_samsung",
+      "spam_saturate",
+      "spam_matter",
+      "hid",
+      "adv_scanner",
+      "trackers",
+      "switch",
+      "light",
+      "zigbee_sniffer",
+      "zbmesh",
+      "broadcast",
+      "thread_sniffer",
+      "gps_wardriving",
+      "warbee",
+      "warthread",
+      "i2c_scanner",
+      "uart_bridge",
+      "file_manager",
+      "file_manager_local",
+      "web_files",
+      "ota",
+      "sdr",
+      "spectrum",
+  };
+  for (size_t i = 0; i < sizeof(s_expected_cmds) / sizeof(s_expected_cmds[0]);
+       i++) {
+    int idx = find_menu_over_cmd(s_expected_cmds[i]);
+    TEST_ASSERT_GREATER_OR_EQUAL_MESSAGE(0, idx, s_expected_cmds[i]);
+  }
+#endif
+}
+
 int main(void) {
   UNITY_BEGIN();
   RUN_TEST(test_catalogue_is_not_empty);
@@ -239,5 +332,7 @@ int main(void) {
   RUN_TEST(test_unknown_entry_cmd_does_not_resolve);
   RUN_TEST(test_callbacks_are_real_function_pointers);
   RUN_TEST(test_every_leaf_has_an_enter_callback);
+  RUN_TEST(test_every_active_leaf_app_has_exit_callback);
+  RUN_TEST(test_all_expected_cli_entry_cmds_resolve);
   return UNITY_END();
 }

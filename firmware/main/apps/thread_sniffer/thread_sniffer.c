@@ -81,18 +81,23 @@ void thread_sniffer_init() {
   ESP_LOGI(TAG, "Initializing thread sniffer");
   create_pcaps_dir();
   openthread_init();
+  openthread_wait_until_ready(2000);
   esp_log_level_set("OPENTHREAD", ESP_LOG_NONE);
-  packet_rx_queue =
-      xQueueCreate(THREAD_SNIFFER_QUEUE_SIZE, sizeof(sniffer_packet_info_t));
+  if (packet_rx_queue == NULL) {
+    packet_rx_queue =
+        xQueueCreate(THREAD_SNIFFER_QUEUE_SIZE, sizeof(sniffer_packet_info_t));
+  }
   if (packet_rx_queue == NULL) {
     ESP_LOGE(TAG, "Failed to create packet queue");
     return;
   }
-  ESP_LOGI(TAG, "Packet queue created (size=%d, item=%d bytes)",
+  ESP_LOGI(TAG, "Packet queue ready (size=%d, item=%d bytes)",
            THREAD_SNIFFER_QUEUE_SIZE, sizeof(sniffer_packet_info_t));
-  xTaskCreate(debug_handler_task, "debug_handler_task", 8192, NULL, 20,
-              &handler_task_handle);
-  ESP_LOGI(TAG, "Handler task created");
+  if (handler_task_handle == NULL) {
+    xTaskCreate(debug_handler_task, "debug_handler_task", 8192, NULL, 5,
+                &handler_task_handle);
+    ESP_LOGI(TAG, "Handler task created");
+  }
 }
 
 void thread_sniffer_run() {
@@ -113,9 +118,17 @@ void thread_sniffer_run() {
 void thread_sniffer_stop() {
   ESP_LOGI(TAG, "Stopping thread sniffer (total packets: %lu)", packets_count);
   openthread_disable_promiscous_mode();
-  sniffer_packet_info_t discarded;
-  while (xQueueReceive(packet_rx_queue, &discarded, 0) == pdTRUE) {
-    free(discarded.payload);
+  if (handler_task_handle != NULL) {
+    vTaskDelete(handler_task_handle);
+    handler_task_handle = NULL;
+  }
+  if (packet_rx_queue != NULL) {
+    sniffer_packet_info_t discarded;
+    while (xQueueReceive(packet_rx_queue, &discarded, 0) == pdTRUE) {
+      free(discarded.payload);
+    }
+    vQueueDelete(packet_rx_queue);
+    packet_rx_queue = NULL;
   }
   pcap_stop();
   thread_sniffer_show_event(THREAD_SNIFFER_STOP_EV, NULL);
@@ -149,20 +162,11 @@ static esp_err_t pcap_start() {
     chek_for_fatal_false(false, "FAILED TO CREATE PCAP FILE");
   }
 
-  char* pcap_path = (char*) malloc(100);
-  if (!pcap_path) {
-    ESP_LOGE(TAG, "Failed to allocate memory for pcap_path");
-    return ESP_ERR_NO_MEM;
-  }
-  char* pcap_dir = (char*) malloc(30);
-  if (!pcap_dir) {
-    ESP_LOGE(TAG, "Failed to allocate memory for pcap_dir");
-    free(pcap_path);
-    return ESP_ERR_NO_MEM;
-  }
-  sprintf(pcap_dir, "%s/%s", SD_CARD, THREAD_PCAPS_PATH);
-  files_ops_incremental_name(save_in_sd ? pcap_dir : FLASH_FS, "thread",
-                             ".pcap", pcap_path);
+  char pcap_path[256];
+  char pcap_dir[64];
+  snprintf(pcap_dir, sizeof(pcap_dir), "%s/%s", SD_CARD, THREAD_PCAPS_PATH);
+  files_ops_incremental_name_buf(save_in_sd ? pcap_dir : FLASH_FS, "thread",
+                                 ".pcap", pcap_path, sizeof(pcap_path));
   ESP_LOGI(TAG, "PCAP file path: %s", pcap_path);
   s_pcap_fp = fopen(pcap_path, "w");
   chek_for_fatal_false(s_pcap_fp, "open file failed");
@@ -184,8 +188,6 @@ static esp_err_t pcap_start() {
 
   thread_sniffer_show_event(THREAD_SNIFFER_DESTINATION_EV, &save_in_sd);
 
-  free(pcap_dir);
-  free(pcap_path);
   return ESP_OK;
 }
 
@@ -201,6 +203,8 @@ static esp_err_t pcap_stop() {
   thread_pcap.is_writing = false;
   thread_pcap.link_type_set = false;
   thread_pcap.pcap_handle = NULL;
+  sd_card_unmount();
+  flash_fs_unmount();
   ESP_LOGI(TAG, "PCAP session stopped");
   return ESP_OK;
 }

@@ -10,6 +10,7 @@
 extern SemaphoreHandle_t text_mutex;
 #include "app_manager.h"
 #include "wifi_controller.h"
+#include "wifi_service.h"
 
 // Selected spam mode (set by wrapper before entering app)
 static bt_spam_mode_t s_selected_spam_mode = BT_SPAM_MODE_APPLE;
@@ -25,7 +26,6 @@ static void ble_module_state_machine(uint8_t button_name,
   switch (button_name) {
     case BUTTON_LEFT:
       ble_spam_stop();
-      oled_screen_clear();
       menus_module_exit_app();
       break;
     case BUTTON_RIGHT:
@@ -39,12 +39,14 @@ static void ble_module_state_machine(uint8_t button_name,
 
 static void ble_spam_start_mode(bt_spam_mode_t mode, const char* title) {
   if (bt_spam_is_running()) {
-    bt_spam_app_stop();
+    /* stop() only joins the advertising task; the BLE lease is released by
+       deinit(). Reusing stop() here would acquire a second lease in
+       bt_spam_app_main() and leak it on exit. */
+    bt_spam_app_deinit();
   }
   hid_module_stop();
   wifi_driver_deinit_if_started();
   menus_module_set_app_state(true, ble_module_state_machine);
-  oled_screen_clear();
   ble_screens_start_scanning_animation(title);
   bt_spam_register_cb(ble_screens_display_scanning_text);
   bt_spam_register_connect_cb(ble_screens_display_peer_connected);
@@ -67,8 +69,16 @@ void ble_spam_samsung_begin(void) {
   ble_spam_start_mode(BT_SPAM_MODE_SAMSUNG, "Samsung Spam");
 }
 
-void ble_spam_all_begin(void) {
-  ble_spam_start_mode(BT_SPAM_MODE_ALL, "Random Spam");
+void ble_spam_saturate_begin(void) {
+  /* Lab-only channel-saturation stress test: payloads for every platform
+   * family rotate at the fastest legal pacing, to measure how a lab receiver's
+   * scanner handles a saturated advertising channel. */
+  ble_spam_start_mode(BT_SPAM_MODE_SATURATE, "Saturate Lab");
+}
+
+void ble_spam_matter_begin(void) {
+  /* Matter commissioning onboarding advertisement spoofing */
+  ble_spam_start_mode(BT_SPAM_MODE_MATTER, "Matter Spoof");
 }
 
 void ble_spam_stop(void) {
@@ -76,10 +86,11 @@ void ble_spam_stop(void) {
   bt_spam_register_connect_cb(NULL);
   animations_task_stop();
   bt_spam_app_deinit();
+  wifi_service_init(WIFI_MODE_STA);
 }
 
 void ble_module_begin(void) {
-  ble_spam_all_begin();
+  ble_spam_saturate_begin();
 }
 
 // ---------------------------------------------------------------------------
@@ -88,12 +99,12 @@ void ble_module_begin(void) {
 static void ble_spam_on_enter(void) {
   // Start the selected spam mode
   if (bt_spam_is_running()) {
-    bt_spam_app_stop();
+    /* Release the previous lease as well as joining the old task. */
+    bt_spam_app_deinit();
   }
   hid_module_stop();
   wifi_driver_deinit_if_started();
   menus_module_set_app_state(true, ble_module_state_machine);
-  oled_screen_clear();
   ble_screens_start_scanning_animation(NULL);  // Title already set by wrapper
   bt_spam_register_cb(ble_screens_display_scanning_text);
   bt_spam_register_connect_cb(ble_screens_display_peer_connected);
@@ -115,6 +126,7 @@ static void ble_spam_on_exit(void) {
   if (tm != NULL) {
     vSemaphoreDelete(tm);
   }
+  wifi_service_init(WIFI_MODE_STA);
 }
 
 // Wrapper functions for each menu entry
@@ -142,8 +154,8 @@ void app_manager_enter_wrapper_ble_spam_samsung(void) {
   app_manager_enter(&ble_spam_app);
 }
 
-void app_manager_enter_wrapper_ble_spam_all(void) {
-  s_selected_spam_mode = BT_SPAM_MODE_ALL;
+void app_manager_enter_wrapper_ble_spam_saturate(void) {
+  s_selected_spam_mode = BT_SPAM_MODE_SATURATE;
   extern const minino_app_t ble_spam_app;
   app_manager_enter(&ble_spam_app);
 }

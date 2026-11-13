@@ -5,5 +5,6 @@
 
 void modbus_tcp_scenes_main();
 void modbus_tcp_scenes_settings();
+void modbus_tcp_scenes_exit(void);
 
 #endif  // _MODBUS_tcp_SCENES_H_

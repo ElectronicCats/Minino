@@ -8,7 +8,7 @@ if(_minino_opt_on)
 
     idf_component_register(SRC_DIRS "src" "src/zb_data"
                            INCLUDE_DIRS "include"
-                           PRIV_REQUIRES esp-zigbee-lib console
+                           PRIV_REQUIRES espressif__esp-zigbee-lib console
                            LDFRAGMENTS linker.lf
                            WHOLE_ARCHIVE)
 else()
