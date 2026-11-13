@@ -1,9 +1,0 @@
-# Zigbee/OpenThread test profile.
-#
-# The default sdkconfig.defaults deliberately leaves both stacks off because
-# the combined image leaves very little heap for BLE advertising. This profile
-# enables them for Zigbee/Thread validation; use the default profile for BLE.
-CONFIG_MININO_ZIGBEE_STACK=y
-CONFIG_MININO_OPENTHREAD_STACK=y
-CONFIG_ZIGBEE_APPS_ENABLE=y
-CONFIG_THREAD_APPS_ENABLE=y

@@ -25,10 +25,16 @@ jobs:
         include:
           - profile: minino
             partition: partitions.csv
+            min_free: '5'
           - profile: sdr
             partition: partitions.csv
+            min_free: '5'
+          # bsides is a 4MB board: the combined Zigbee/Thread image leaves a
+          # thinner (but still safe) margin on the smaller flash, so it runs
+          # with a 4% floor instead of the default 5%.
           - profile: bsides
             partition: partitions_4MB.csv
+            min_free: '4'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,4 +45,4 @@ jobs:
           esp_idf_version: v5.5.1
           target: esp32c6
           path: './firmware'
-          command: ./tools/ci_build_profile.sh ${{ matrix.profile }} ${{ matrix.partition }}
+          command: ./tools/ci_build_profile.sh ${{ matrix.profile }} ${{ matrix.partition }} ${{ matrix.min_free }}

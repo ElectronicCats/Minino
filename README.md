@@ -153,22 +153,20 @@ Minino can operate across multiple wireless technologies and RF tools:
 
 ## Firmware profiles and memory budget
 
-The default firmware keeps the Zigbee/OpenThread stacks **off** so BLE
-advertising has enough internal SRAM. Zigbee and Thread apps are available in a
-dedicated profile:
+The default firmware includes the **Zigbee/OpenThread stacks**, so their apps
+are native entries in `Applications`:
 
 ```bash
 cd firmware
-make compile                 # default: BLE/WiFi
-make build-zigbee-thread     # Zigbee + OpenThread
-make build-sdr               # SDR capture bank, stacks off
+make compile                 # default: BLE/WiFi + Zigbee/Thread
+make build-sdr               # SDR capture bank, Zigbee/Thread off
 ```
 
-`bt_spam` refuses to start when free heap is below 40 KB and stops advertising
-if it falls below 20 KB. This prevents
-`btm_ble_write_adv_enable_complete failed` on memory-constrained builds. Use
-the default profile for BLE Spam; the Zigbee/Thread profile is intended for
-`zbmesh`, `warbee`, `warthread`, the sniffers and `broadcast`.
+The SDR variant turns the stacks off because the capture bank needs the SRAM.
+In the default combined build, `bt_spam` starts with roughly 20 KB free after
+Bluedroid comes up and refuses to advertise below **18 KB**; it stops the loop
+below **8 KB**. This prevents `btm_ble_write_adv_enable_complete failed` after
+using Thread Sniffer/Broadcast, when the heap is lower.
 
 ---
 

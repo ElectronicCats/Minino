@@ -114,17 +114,14 @@ To build the **SDR-enabled firmware variant** (which reserves the 128 KiB SRAM h
 make build-sdr
 ```
 
-To build the **Zigbee/OpenThread validation profile** (enables `zbmesh`,
-`warbee`, `warthread`, `zigbee_sniffer`, `thread_sniffer` and `broadcast`):
+The default profile includes Zigbee/OpenThread, so `zbmesh`, `warbee`,
+`warthread`, `zigbee_sniffer`, `thread_sniffer` and `broadcast` are native
+entries in the menu. The SDR profile turns both stacks off because the capture
+bank needs the SRAM.
 
-```bash
-make build-zigbee-thread
-```
-
-The default profile keeps both stacks off so BLE advertising has enough heap.
-`bt_spam` now refuses to start below 40 KB free and stops below 20 KB during a
-run. Use the default profile for BLE and the Zigbee/Thread profile for 802.15.4
-apps.
+In the combined build, `bt_spam` refuses to start below 18 KB free and stops
+below 8 KB during a run. That prevents the controller advertising failure when
+Thread Sniffer/Broadcast has left the heap low.
 
 To run the host-side unit test suites (20+ Unity and Python suites):
 
@@ -316,9 +313,8 @@ MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongit
 # Zigbee
 
 > [!NOTE]
-> Zigbee apps are built only in the `zigbee-thread` profile:
-> `make build-zigbee-thread`. The default profile keeps the stack off so BLE
-> advertising has enough heap.
+> Zigbee apps are included in the default profile. The SDR profile keeps the
+> stack off because the capture bank needs the SRAM.
 
 Available apps: `Spoofing > Switch`, `Spoofing > Light`, `Sniffer`,
 `Mesh Topology` (`launch zbmesh`) and `GPS > Wardriving > Zigbee Start`
@@ -343,8 +339,8 @@ SourcePanID,SourceADDR,DestinationADDR,Channel,RSSI,SecurityEnabled,FrameType,Cu
 # Thread
 
 > [!NOTE]
-> Thread apps are built only in the `zigbee-thread` profile:
-> `make build-zigbee-thread`. Available apps: `Sniffer`
+> Thread apps are included in the default profile. The SDR profile keeps the
+> stack off because the capture bank needs the SRAM. Available apps: `Sniffer`
 > (`launch thread_sniffer`), `Broadcast` (`launch broadcast`) and
 > `GPS > Wardriving > Thread Start` (`launch warthread`).
 >
@@ -371,14 +367,14 @@ DestinationPAN,Destination,ExtendedSource,Channel,UDPSource,UDPDestination,Proto
 
 # Wardriving Thread test
 
-Use the `zigbee-thread` profile and run `launch warthread` from the console or
-`GPS > Wardriving > Thread Start` from the menu. A GPS fix is required before
-rows are written to `/sdcard/thread/WarThread_<timestamp>.csv`.
+Run `launch warthread` from the console or `GPS > Wardriving > Thread Start`
+from the menu. A GPS fix is required before rows are written to
+`/sdcard/thread/WarThread_<timestamp>.csv`.
 
 For a smoke test, verify that `launch warthread` prints
 `Thread Wardriving module begin`, that `exit_app` returns to `minino>`, and that
-WiFi is initialized again. BLE advertising is intentionally refused in this
-profile when free heap is below 40 KB.
+WiFi is initialized again. BLE advertising is intentionally refused when free
+heap is below 18 KB, which can happen after using Thread Sniffer/Broadcast.
 
 # Openthread - Install example
 ## ESP-IDF
