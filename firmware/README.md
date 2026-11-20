@@ -119,6 +119,10 @@ The default profile includes Zigbee/OpenThread, so `zbmesh`, `warbee`,
 entries in the menu. The SDR profile turns both stacks off because the capture
 bank needs the SRAM.
 
+If `firmware/sdkconfig` comes from an older checkout where the stacks were
+disabled, `make compile` rewrites those two symbols to `y` automatically so the
+apps are not silently dropped from the build.
+
 In the combined build, `bt_spam` refuses to start below 18 KB free and stops
 below 8 KB during a run. That prevents the controller advertising failure when
 Thread Sniffer/Broadcast has left the heap low.

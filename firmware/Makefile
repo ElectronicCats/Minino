@@ -5,6 +5,23 @@ setup:
 	idf.py set-target esp32c6
 
 compile:
+	@if [ -f sdkconfig ]; then \
+	  if grep -Eq '^# CONFIG_MININO_ZIGBEE_STACK is not set|^CONFIG_MININO_ZIGBEE_STACK=n' sdkconfig; then \
+	    echo "Updating stale sdkconfig: enabling Zigbee/Thread stacks"; \
+	    sed -i \
+	      -e 's/^# CONFIG_MININO_ZIGBEE_STACK is not set/CONFIG_MININO_ZIGBEE_STACK=y/' \
+	      -e 's/^CONFIG_MININO_ZIGBEE_STACK=n/CONFIG_MININO_ZIGBEE_STACK=y/' \
+	      sdkconfig; \
+	  fi; \
+	  if grep -Eq '^# CONFIG_MININO_OPENTHREAD_STACK is not set|^CONFIG_MININO_OPENTHREAD_STACK=n' sdkconfig; then \
+	    sed -i \
+	      -e 's/^# CONFIG_MININO_OPENTHREAD_STACK is not set/CONFIG_MININO_OPENTHREAD_STACK=y/' \
+	      -e 's/^CONFIG_MININO_OPENTHREAD_STACK=n/CONFIG_MININO_OPENTHREAD_STACK=y/' \
+	      sdkconfig; \
+	  elif ! grep -q '^CONFIG_MININO_OPENTHREAD_STACK=' sdkconfig; then \
+	    echo 'CONFIG_MININO_OPENTHREAD_STACK=y' >> sdkconfig; \
+	  fi; \
+	fi
 	idf.py build
 
 flash:
