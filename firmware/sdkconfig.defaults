@@ -171,16 +171,17 @@ CONFIG_MININO_BT_STACK=y
 # cmake/minino_kconfig.cmake).
 #
 # Both are enabled by default so the Zigbee/Thread applications are native
-# entries in the Applications menu. The SDR profile explicitly turns them off
-# because the capture bank needs the SRAM.
+# entries in the Applications menu. The SDR profile turns them off to leave
+# heap next to the capture bank; the sdr-full profile keeps them on.
 CONFIG_MININO_ZIGBEE_STACK=y
 CONFIG_MININO_OPENTHREAD_STACK=y
 
 # The SDR app: the capture bank is reserved and the image is capped below it.
 #
-# Off by default: the capture bank takes a whole SRAM block out of the heap
-# and the linker script caps the image below it, and the image with the
-# Zigbee and the Thread stacks does not fit under that cap (it is 45 KB
-# over). The SDR build variant (sdkconfig.sdr) turns the app on and the two
-# stacks off, which is what makes it fit.
+# Off by default: the capture bank takes a whole 128 KB SRAM block out of the
+# heap. The full image still links below the cap (about 2 KB to spare), but
+# with the bank reserved the Zigbee and the BLE apps run with only 4-5 KB of
+# heap left (measured on hardware). Two variants turn it on:
+#   sdkconfig.sdr       SDR without Zigbee/Thread (the roomy one)
+#   sdkconfig.sdr-full  SDR with everything (works, tight heap)
 # CONFIG_SDR_ENABLE is not set

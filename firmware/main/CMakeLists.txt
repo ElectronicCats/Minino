@@ -76,10 +76,12 @@ idf_component_register(
 # from the heap via the SOC_RESERVE_MEMORY_REGION mechanism.
 #
 # The whole firmware (Bluetooth, Zigbee, Thread, the surveillance apps) fits
-# below the bank: the image is 256 KB of IRAM+data+bss and the bank is the
-# 128 KB above it. The linker script fails the build if that ever stops being
-# true, with the size of the overflow, instead of corrupting the heap at
-# capture time.
+# below the bank, with about 2 KB to spare (_heap_start = 0x4083f750 with the
+# sdr-full profile). The linker script fails the build if that ever stops
+# being true, instead of corrupting the heap at capture time. Fitting is not
+# the whole story: with everything in, the heap left below the bank is 2 KiB,
+# which is why the plain SDR profile keeps Zigbee/Thread out (see
+# sdkconfig.sdr and sdkconfig.sdr-full).
 #
 # CONFIG_SDR_ENABLE is read here (and not through minino_kconfig.cmake) on
 # purpose: the link options only matter in the second pass of this file, the

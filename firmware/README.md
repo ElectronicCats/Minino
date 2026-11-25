@@ -114,10 +114,21 @@ To build the **SDR-enabled firmware variant** (which reserves the 128 KiB SRAM h
 make build-sdr
 ```
 
+To have **SDR and Zigbee/Thread on the same device**, build the combined
+variant:
+
+```bash
+make build-sdr-full
+```
+
+It works, but the capture bank leaves little heap: on hardware the BLE
+Trackers scan and the Zigbee Switch drop to 4-5 KB free. Use `build-sdr` when
+you only need SDR, and `make compile` when you do not need SDR.
+
 The default profile includes Zigbee/OpenThread, so `zbmesh`, `warbee`,
 `warthread`, `zigbee_sniffer`, `thread_sniffer` and `broadcast` are native
-entries in the menu. The SDR profile turns both stacks off because the capture
-bank needs the SRAM.
+entries in the menu. The SDR profile turns both stacks off to leave heap next
+to the capture bank; `sdr-full` keeps them on.
 
 If `firmware/sdkconfig` comes from an older checkout where the stacks were
 disabled, `make compile` rewrites those two symbols to `y` automatically so the
@@ -133,7 +144,7 @@ To run the host-side unit test suites (20+ Unity and Python suites):
 make tests
 ```
 
-> **Note:** Every build automatically generates unified single-file firmware images (`minino-merged.bin` and `minino-merged.hex`) inside the build directory (`build/` or `build-sdr/`), ready to be flashed at offset `0x0`.
+> **Note:** Every build automatically generates unified single-file firmware images (`minino-merged.bin` and `minino-merged.hex`) inside the build directory (`build/`, `build-sdr/` or `build-sdr-full/`), ready to be flashed at offset `0x0`.
 
 ### Flashing the firmware
 
@@ -317,8 +328,8 @@ MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongit
 # Zigbee
 
 > [!NOTE]
-> Zigbee apps are included in the default profile. The SDR profile keeps the
-> stack off because the capture bank needs the SRAM.
+> Zigbee apps are included in the default profile and in `sdr-full`. The
+> `sdr` profile keeps the stack off to leave heap next to the capture bank.
 
 Available apps: `Spoofing > Switch`, `Spoofing > Light`, `Sniffer`,
 `Mesh Topology` (`launch zbmesh`) and `GPS > Wardriving > Zigbee Start`
@@ -343,8 +354,9 @@ SourcePanID,SourceADDR,DestinationADDR,Channel,RSSI,SecurityEnabled,FrameType,Cu
 # Thread
 
 > [!NOTE]
-> Thread apps are included in the default profile. The SDR profile keeps the
-> stack off because the capture bank needs the SRAM. Available apps: `Sniffer`
+> Thread apps are included in the default profile and in `sdr-full`. The `sdr`
+> profile keeps the stack off to leave heap next to the capture bank.
+> Available apps: `Sniffer`
 > (`launch thread_sniffer`), `Broadcast` (`launch broadcast`) and
 > `GPS > Wardriving > Thread Start` (`launch warthread`).
 >

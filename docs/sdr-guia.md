@@ -36,20 +36,35 @@ Additionally, while inside `Applications > SDR`, Minino **blocks USB DTR/RTS aut
 
 The capture bank consumes an entire SRAM block (128 KiB), and the linker
 script trims the memory layout so the firmware image fits below
-`0x40840000`. With the full Minino image (Bluetooth, Zigbee, and Thread
-included), it does not fit: it exceeds the limit by 45 KB. For this reason,
-there are **two firmware images**:
+`0x40840000`. The full Minino image (Bluetooth, Zigbee, and Thread included)
+fits with about 2 KB to spare, but the bank leaves it very little heap. There
+are **three firmware images**:
 
 ```bash
 cd firmware
-make builds        # Standard board image: all protocols included, SDR disabled
-make build-sdr     # SDR image: Zigbee and Thread excluded, SDR enabled
+make builds          # Standard board image: all protocols included, SDR disabled
+make build-sdr       # SDR image: Zigbee and Thread excluded, SDR enabled
+make build-sdr-full  # SDR + Zigbee + Thread: everything on one device, tight heap
 ```
 
 | Variant | Size | Flash Headroom |
 |---|---|---|
 | Standard (`profiles/minino`) | 3,377 KiB | 8.7% |
 | SDR (`profiles/sdr`) | 2,561 KiB | 32% |
+| SDR + Zigbee/Thread (`profiles/sdr-full`) | 3,398 KiB | 8.2% |
+
+Minimum free heap measured with `sdr-full` (2026-11-25, `get_min_free_heap`):
+
+| Running | Minimum free heap |
+|---|---|
+| Idle (Wi-Fi up) | 59 KB |
+| SDR capture | 42 KB |
+| Zigbee On/Off Switch | 5 KB |
+| BLE Trackers scan | 4 KB |
+
+Each app works on its own, but Zigbee and BLE run a few KB from running out.
+Pick `sdr-full` only when one device has to carry SDR and Zigbee/Thread;
+flash it with `idf.py -B build-sdr-full -p /dev/ttyACM0 flash`.
 
 ### 2.2 Flashing
 

@@ -1,0 +1,1 @@
+-B build-sdr-full -DSDKCONFIG=build-sdr-full/sdkconfig -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.version;sdkconfig.sdr-full"
