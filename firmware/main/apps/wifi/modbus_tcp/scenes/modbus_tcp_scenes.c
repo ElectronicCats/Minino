@@ -16,6 +16,8 @@
 #include "modbus_engine.h"
 
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "wifi_ap_manager.h"
 
 static uint8_t last_main_selection = 0;
@@ -238,9 +240,42 @@ static void modbus_handle_cb_ap_connection(bool state) {
   modbus_tcp_scenes_main();
 }
 
+extern const minino_app_t modbus_tcp_app;
+
+/* wifi_ap_manager_connect_index_cb() blocks the caller up to JOIN_TIMEOUT_MS
+   (5 s) inside xEventGroupWaitBits(). Running it on the input task froze the
+   whole UI for that time. Run it on its own task so input stays responsive.
+
+   Drive the result from this task's return value, not from the WiFi event
+   callback: that callback only fires on DISCONNECTED when reconnections==0, so
+   after earlier failed joins (reconnections stuck at its max) it never runs and
+   the "connecting" animation spins forever. Passing NULL disables it; the
+   blocking return code is deterministic. */
+static volatile bool mb_connecting = false;
+
+static void modbus_connect_task(void* arg) {
+  uint8_t option = (uint8_t) (uintptr_t) arg;
+  int rc = wifi_ap_manager_connect_index_cb(option, NULL);
+  /* Only drive the UI if the app is still open; the user may have left during
+     the blocking connect, in which case on_exit already stopped the animation. */
+  if (app_manager_active() == &modbus_tcp_app) {
+    modbus_handle_cb_ap_connection(rc == 0);
+  }
+  mb_connecting = false;
+  vTaskDelete(NULL);
+}
+
 static void handle_tcp_ap_connection(uint8_t option) {
+  if (mb_connecting) {
+    return;  // a connect is already in flight; ignore repeated selections
+  }
+  mb_connecting = true;
   animations_task_run(&modbus_tcp_display_connecting, 100, NULL);
-  wifi_ap_manager_connect_index_cb(option, modbus_handle_cb_ap_connection);
+  if (xTaskCreate(modbus_connect_task, "mb_connect", 4096,
+                  (void*) (uintptr_t) option, 5, NULL) != pdPASS) {
+    mb_connecting = false;
+    animations_task_stop();
+  }
 }
 
 static void modbus_error_launching_attack_write_notify(bool state) {
