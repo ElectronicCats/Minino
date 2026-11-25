@@ -21,9 +21,9 @@ compile:
 	  elif ! grep -q '^CONFIG_MININO_OPENTHREAD_STACK=' sdkconfig; then \
 	    echo 'CONFIG_MININO_OPENTHREAD_STACK=y' >> sdkconfig; \
 	  fi; \
-	  if grep -q '^CONFIG_SDR_ENABLE=y' sdkconfig; then \
-	    echo "Updating stale sdkconfig: disabling SDR (use make build-sdr or build-sdr-full)"; \
-	    sed -i 's/^CONFIG_SDR_ENABLE=y/# CONFIG_SDR_ENABLE is not set/' sdkconfig; \
+	  if grep -q '^# CONFIG_SDR_ENABLE is not set' sdkconfig; then \
+	    echo "Updating stale sdkconfig: enabling SDR"; \
+	    sed -i 's/^# CONFIG_SDR_ENABLE is not set/CONFIG_SDR_ENABLE=y/' sdkconfig; \
 	  fi; \
 	fi
 	idf.py build
@@ -83,21 +83,9 @@ builds:
 		idf.py @profiles/$$board/profile build || exit 1; \
 	done
 
-# The SDR variants: the capture bank takes a whole SRAM block out of the heap.
-# build-sdr keeps the Zigbee and the Thread stacks out to leave heap for the
-# other apps (see sdkconfig.sdr); build-sdr-full keeps everything in, which
-# works but leaves BLE and Zigbee a few KB of heap (see sdkconfig.sdr-full).
-build-sdr:
-	rm -rf build-sdr
-	idf.py @profiles/sdr/profile build
-
-build-sdr-full:
-	rm -rf build-sdr-full
-	idf.py @profiles/sdr-full/profile build
-
 tests:
 	./tools/run_host_tests.sh
 
 host-tests: tests
 
-.PHONY: test_port setup compile flash monitor clean all ff binmerge flash_fit mergebins clean_builds builds build-sdr build-sdr-full tests host-tests
+.PHONY: test_port setup compile flash monitor clean all ff binmerge flash_fit mergebins clean_builds builds tests host-tests

@@ -23,15 +23,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Every profile carries SDR: the image clears the capture-bank cap
+          # by ~2 KB, so these jobs catch a change that pushes it over.
           - profile: minino
-            partition: partitions.csv
-            min_free: '5'
-          - profile: sdr
-            partition: partitions.csv
-            min_free: '5'
-          # SDR with Zigbee/Thread: the image clears the capture-bank cap by
-          # ~2 KB, so this job is what catches a change that pushes it over.
-          - profile: sdr-full
             partition: partitions.csv
             min_free: '5'
           # bsides is a 4MB board: the combined Zigbee/Thread image leaves a

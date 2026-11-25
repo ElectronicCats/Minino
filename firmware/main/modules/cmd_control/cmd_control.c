@@ -6,6 +6,7 @@
 #include "esdr_host.h"
 #include "esp_console.h"
 #include "esp_log.h"
+#include "esp_sdr_memory.h"
 #include "esp_sdr_module.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -305,6 +306,16 @@ static int sdr_host(int argc, char** argv) {
   (void) argv;
   if (argc != 1) {
     printf("Usage: sdr_host\n");
+    return 1;
+  }
+
+  /* A normal boot gives the capture bank to the heap: reboot into an SDR
+     boot first. The USB port drops with the reboot, so the viewer has to
+     reconnect and the command has to be run again. */
+  if (!sdr_bank_is_reserved()) {
+    printf("Rebooting into SDR mode: reconnect and run sdr_host again.\n");
+    fflush(stdout);
+    sdr_bank_reboot_into_sdr(); /* does not return when SDR is built in */
     return 1;
   }
 

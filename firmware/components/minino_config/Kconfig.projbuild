@@ -844,7 +844,7 @@ menu "General project"
 
 			config SDR_ENABLE
 					bool "Enable SDR"
-					default n
+					default y
 					help
 						Show the Applications > SDR entry: the native I/Q
 						capture app. It drives the C6 dump engine in-process
@@ -858,6 +858,10 @@ menu "General project"
 						link fails with "SDR: the DRAM image overlaps the
 						capture bank" instead of corrupting the heap at
 						capture time. See docs/esp-sdr-integration.md.
+
+						The bank only leaves the heap on an SDR boot: the
+						SDR app reboots into one and its exit reboots back,
+						so the other apps keep the whole heap.
 
 						With this off, nothing reserves the bank and the
 						SDR entry is not in the menu.

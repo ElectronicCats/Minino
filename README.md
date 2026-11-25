@@ -158,11 +158,9 @@ are native entries in `Applications`:
 
 ```bash
 cd firmware
-make compile                 # default: BLE/WiFi + Zigbee/Thread
-make build-sdr               # SDR capture bank, Zigbee/Thread off
+make compile                 # BLE/WiFi + Zigbee/Thread + SDR
 ```
 
-The SDR variant turns the stacks off because the capture bank needs the SRAM.
 In the default combined build, `bt_spam` starts with roughly 20 KB free after
 Bluedroid comes up and refuses to advertise below **18 KB**; it stops the loop
 below **8 KB**. This prevents `btm_ble_write_adv_enable_complete failed` after
@@ -172,20 +170,20 @@ using Thread Sniffer/Broadcast, when the heap is lower.
 
 ## Native 80 MS/s SDR Transceiver & ESPARGOS WebSDR Host
 
-Minino integrates a **native, in-process Software Defined Radio (SDR)** engine (`firmware/main/modules/esp_sdr/`) running directly inside Minino OS without requiring dual-boot or a secondary `ota_1` partition. It drives the ESP32-C6 hardware I/Q dump engine at **80 MS/s**, reserves the 128 KiB SRAM Block 2 (`0x40840000 - 0x40860000`) at link time (`esp_sdr_bank.ld`), and locks the USB-Serial-JTAG reset register (`usb_uart_chip_rst_dis = 1`) while active so browser WebSerial DTR/RTS transitions never reboot the board.
+Minino integrates a **native, in-process Software Defined Radio (SDR)** engine (`firmware/main/modules/esp_sdr/`) running directly inside Minino OS without requiring dual-boot or a secondary `ota_1` partition. It drives the ESP32-C6 hardware I/Q dump engine at **80 MS/s**, uses the 128 KiB SRAM Block 2 (`0x40840000 - 0x40860000`) as its capture bank (the image is capped below it by `esp_sdr_bank.ld`), and locks the USB-Serial-JTAG reset register (`usb_uart_chip_rst_dis = 1`) while active so browser WebSerial DTR/RTS transitions never reboot the board.
 
-### Building & Flashing the SDR Firmware Variant
-Because the hardware I/Q capture bank requires 128 KiB of contiguous SRAM below `0x40840000`, the SDR variant compiles without the Zigbee and OpenThread stacks to fit within the 256 KiB lower-SRAM budget (`profiles/sdr/profile`). Every build automatically generates both individual partition binaries and unified single-file images (`minino-merged.bin` and `minino-merged.hex`):
+### Building & Flashing
+SDR ships in the regular firmware, next to Spectrum, BLE, Wi-Fi, Zigbee and Thread. The capture bank only leaves the heap on an **SDR boot**: opening `Applications > SDR` (or running `sdr_host`) reboots the board with the bank reserved and opens the app; leaving the app reboots back, so the other apps keep the whole heap. Every build generates both individual partition binaries and unified single-file images (`minino-merged.bin` and `minino-merged.hex`):
 
 ```bash
 cd firmware
-make build-sdr                                    # Builds the SDR-enabled firmware in build-sdr/
-idf.py -B build-sdr -p /dev/ttyACM0 flash         # Flashes bootloader, partition table, and app
+make compile                                  # Builds the firmware in build/
+idf.py -p /dev/ttyACM0 flash                  # Flashes bootloader, partition table, and app
 ```
 
 Or flash the single unified binary at address `0x0`:
 ```bash
-esptool.py --chip esp32c6 -p /dev/ttyACM0 write_flash 0x0 build-sdr/minino-merged.bin
+esptool.py --chip esp32c6 -p /dev/ttyACM0 write_flash 0x0 build/minino-merged.bin
 ```
 
 ### The 4 Operating Modes on Device (`Applications > SDR`)

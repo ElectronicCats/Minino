@@ -5,14 +5,10 @@ This script replicates the logic of esp-web-sdr (radio.js) as faithfully as
 possible: the same handshake, regular expressions, CRC verification, and I/Q
 unpacking. What happens here is what the browser viewer sees.
 
-The board must be flashed with the SDR variant (firmware/sdkconfig.sdr), which
-is the only configuration that reserves the capture bank:
-
-    make build-sdr
-    idf.py -B build-sdr flash
-
-And the port must be handed over beforehand, because the console and the
-browser cannot listen on the port at the same time:
+The board runs the regular firmware. The port must be handed over beforehand,
+because the console and the browser cannot listen on the port at the same
+time. From a normal boot, sdr_host first reboots into SDR mode (the boot that
+reserves the capture bank): reconnect and run it again.
 
     minino> sdr_host
 

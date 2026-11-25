@@ -28,6 +28,7 @@
 
 // Core components
 #include "error_handler.h"
+#include "esp_sdr_memory.h"
 #include "memory_monitor.h"
 #include "task_manager.h"
 
@@ -42,6 +43,10 @@
 static const char* TAG = "main";
 
 void app_main() {
+  // Before anything allocates: the SDR capture bank goes to the heap unless
+  // the SDR app asked for this boot.
+  bool sdr_boot = sdr_bank_boot();
+
   // Initialize core systems FIRST
   error_handler_init();
   task_manager_init();
@@ -93,4 +98,12 @@ void app_main() {
   flash_storage_begin();
 
   cat_console_begin();  // Spawns dedicated FreeRTOS console task
+
+#if defined(CONFIG_SDR_ENABLE)
+  if (sdr_boot) {
+    menus_module_set_menu(MENU_ESP_SDR);
+  }
+#else
+  (void) sdr_boot;
+#endif
 }

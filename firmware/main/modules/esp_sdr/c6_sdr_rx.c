@@ -57,6 +57,13 @@ esp_err_t c6_sdr_rx_init(void) {
     return ESP_OK;
   }
 
+  /* In a normal boot the bank is heap: letting the engine own it would
+     corrupt whatever lives there. Only an SDR boot reserves it. */
+  if (!sdr_bank_is_reserved()) {
+    ESP_LOGE(TAG, "the capture bank is heap in this boot: open the SDR app");
+    return ESP_ERR_INVALID_STATE;
+  }
+
   s_iq_buf = (volatile uint32_t*) sdr_capture_bank_base();
   ESP_LOGI(TAG, "Initializing C6 native SDR RX engine (buffer at 0x%08X)...",
            sdr_capture_bank_base());

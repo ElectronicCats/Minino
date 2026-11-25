@@ -76,12 +76,10 @@ idf_component_register(
 # from the heap via the SOC_RESERVE_MEMORY_REGION mechanism.
 #
 # The whole firmware (Bluetooth, Zigbee, Thread, the surveillance apps) fits
-# below the bank, with about 2 KB to spare (_heap_start = 0x4083f750 with the
-# sdr-full profile). The linker script fails the build if that ever stops
-# being true, instead of corrupting the heap at capture time. Fitting is not
-# the whole story: with everything in, the heap left below the bank is 2 KiB,
-# which is why the plain SDR profile keeps Zigbee/Thread out (see
-# sdkconfig.sdr and sdkconfig.sdr-full).
+# below the bank, with about 2 KB to spare (_heap_start = 0x4083f760). The
+# linker script fails the build if that ever stops being true, instead of
+# corrupting the heap at capture time. The bank is only kept off the heap on
+# an SDR boot; a normal boot hands it back (see esp_sdr_memory.c).
 #
 # CONFIG_SDR_ENABLE is read here (and not through minino_kconfig.cmake) on
 # purpose: the link options only matter in the second pass of this file, the

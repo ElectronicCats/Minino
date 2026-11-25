@@ -269,6 +269,13 @@ esp_err_t esdr_host_run(void) {
   return 0;
 }
 
+/* sdr_host only serves on an SDR boot; the test runs as one. */
+bool sdr_bank_is_reserved(void) {
+  return true;
+}
+
+void sdr_bank_reboot_into_sdr(void) {}
+
 static void register_all_commands_once(void) {
   static bool registered = false;
   if (!registered) {

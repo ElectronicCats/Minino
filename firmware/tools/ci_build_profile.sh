@@ -3,7 +3,7 @@
 # locally (`./tools/ci_build_profile.sh minino partitions.csv [min_free_percent]`).
 set -euo pipefail
 
-profile="${1:?profile (minino, sdr, bsides, ...)}"
+profile="${1:?profile (minino, bsides, ...)}"
 partition="${2:?partition table CSV}"
 # Minimum free flash the image must leave in its app partition. Defaults to
 # 5%; the 4MB bsides board overrides it because the combined Zigbee/Thread

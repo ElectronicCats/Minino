@@ -169,8 +169,8 @@ budget). After them it does, with about 2 KB to spare:
 > over the cap. That predates the trims; the `sdr-full` profile links and
 > boots.
 
-What limits the combined image is the heap, not the link. With everything
-in, the heap left below the bank is 2 KiB instead of 50 KiB:
+What limited the combined image was the heap, not the link. With the bank
+reserved, the heap left below it is 2 KiB instead of 50 KiB:
 
 ```
 heap_init: At 4083F750 len 000008B0 (2 KiB): RAM    <- below the bank
@@ -178,8 +178,8 @@ heap_init: At 40860000 len 0001C610 (113 KiB): RAM  <- above the bank
 heap_init: At 4087C610 len 00002F54 (11 KiB): RAM
 ```
 
-Measured on hardware with `sdr-full` (`get_min_free_heap`, one app at a
-time, fresh boot):
+Measured on hardware with the bank reserved permanently (the former
+`sdr-full` profile, `get_min_free_heap`, one app at a time, fresh boot):
 
 | Running | Minimum free heap |
 |---|---|
@@ -188,29 +188,26 @@ time, fresh boot):
 | Zigbee On/Off Switch | 5 KB |
 | BLE Trackers scan | 4 KB |
 
-Every app works, but Zigbee and BLE run a few KB from running out. Therefore,
-there are three profiles:
+So the bank is no longer reserved for the whole session. Every profile builds
+with `CONFIG_SDR_ENABLE=y`, and `esp_sdr_memory.c` decides at boot:
 
-| Variant | Profile | Configuration | Size | Flash Margin |
-|---|---|---|---|---|
-| Boards | `profiles/<board>/profile` | Everything enabled, `CONFIG_SDR_ENABLE` off | 3377 KiB | 8.7% |
-| SDR | `profiles/sdr/profile` | Zigbee and Thread off, `CONFIG_SDR_ENABLE` on | 2496 KiB | 32.5% |
-| SDR + Zigbee/Thread | `profiles/sdr-full/profile` | Everything enabled, `CONFIG_SDR_ENABLE` on | 3398 KiB | 8.2% |
+- **Normal boot:** the bank is reserved (`SOC_RESERVE_MEMORY_REGION`) and
+  handed back to the heap first thing in `app_main()`
+  (`heap_caps_add_region`). BLE, Zigbee and Thread get the heap they had
+  without SDR, and `c6_sdr_rx_init()` refuses to start the engine.
+- **SDR boot:** `Applications > SDR` (or `sdr_host`) writes a request to RTC
+  no-init memory and calls `esp_restart()`. On that boot the bank stays
+  reserved and `main.c` opens the SDR app; leaving the app reboots back. The
+  request is consumed on boot and only honoured after a software reset, so a
+  crash or a power cycle comes back as a normal boot.
 
 ```bash
-make builds          # standard board profiles
-make build-sdr       # SDR variant
-make build-sdr-full  # SDR with Zigbee/Thread (tight heap)
+make compile         # default profile, SDR included
+make builds          # every board profile
 ```
 
-CI builds `sdr-full` too: with 2 KB of link margin, it is the job that catches
-a change that pushes the image into the bank.
-
-The SDR variant enables the `Applications > SDR` menu entry, the
-`sdr_capture` command, and `sdr_host`. In the standard board images, the SDR
-code is still compiled (the `main` glob compiles everything), but **there is
-no capture bank reserved behind it**: that is why `CONFIG_SDR_ENABLE` is
-disabled in `sdkconfig.defaults` and the menu hides the entry.
+CI builds `minino` and `bsides`: with 2 KB of link margin, those jobs catch a
+change that pushes the image into the bank.
 
 ### Trims That Made It Fit
 
@@ -576,8 +573,8 @@ controlled signal transmitted by a second board.
 | A | Transmitter | `launch spam_saturate` (BLE), `launch ssid_spam` (Wi-Fi beacons), `launch flock_sim` (Flock simulator) |
 | B | SDR Receiver | `sdr_host` on the console, driven via the browser protocol |
 
-Both boards run the SDR build variant (`make build-sdr`), which reserves the
-capture bank.
+Both boards run the regular firmware; `sdr_host` reboots each one into SDR
+mode, which reserves the capture bank.
 
 ### 9.2 Two Bugs Uncovered During Testing
 

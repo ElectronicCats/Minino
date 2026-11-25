@@ -11,6 +11,7 @@
 #include "esdr_host.h"
 #include "esp_log.h"
 #include "esp_rom_sys.h"
+#include "esp_sdr_memory.h"
 #include "esp_timer.h"
 #include "esp_wifi.h"
 #include "files_ops.h"
@@ -18,6 +19,7 @@
 #include "freertos/task.h"
 #include "keyboard_module.h"
 #include "menus_module.h"
+#include "modals_module.h"
 #include "oled_screen.h"
 #include "sd_card.h"
 #include "sdr_screen.h"
@@ -492,6 +494,13 @@ static void esp_sdr_start(void) {
 }
 
 void esp_sdr_module_begin(void) {
+  /* A normal boot gives the capture bank to the heap: reboot with it
+     reserved. main.c opens this app again on the SDR boot. */
+  if (!sdr_bank_is_reserved()) {
+    modals_module_show_banner("SDR mode...");
+    sdr_bank_reboot_into_sdr();
+    return;
+  }
   app_manager_enter(&s_app);
 }
 
@@ -514,6 +523,12 @@ void esp_sdr_module_stop(void) {
   }
   USB_SERIAL_JTAG.chip_rst.usb_uart_chip_rst_dis = 0;
   USB_SERIAL_JTAG.config_update.config_update = 1;
+
+  /* Back to a normal boot, so the other apps get the bank as heap again.
+     It lands in Applications (the parent menu). */
+  if (sdr_bank_is_reserved()) {
+    menus_module_reset();
+  }
 }
 
 bool esp_sdr_module_is_running(void) {

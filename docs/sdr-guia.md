@@ -32,61 +32,43 @@ Additionally, while inside `Applications > SDR`, Minino **blocks USB DTR/RTS aut
 
 ## 2. Getting Started
 
-### 2.1 Build Variants
+### 2.1 Building
 
-The capture bank consumes an entire SRAM block (128 KiB), and the linker
-script trims the memory layout so the firmware image fits below
-`0x40840000`. The full Minino image (Bluetooth, Zigbee, and Thread included)
-fits with about 2 KB to spare, but the bank leaves it very little heap. There
-are **three firmware images**:
+SDR is part of the regular firmware, together with Spectrum, BLE, Wi-Fi,
+Zigbee and Thread, on every board profile:
 
 ```bash
 cd firmware
-make builds          # Standard board image: all protocols included, SDR disabled
-make build-sdr       # SDR image: Zigbee and Thread excluded, SDR enabled
-make build-sdr-full  # SDR + Zigbee + Thread: everything on one device, tight heap
+make compile         # or: make builds (every board profile)
 ```
 
-| Variant | Size | Flash Headroom |
-|---|---|---|
-| Standard (`profiles/minino`) | 3,377 KiB | 8.7% |
-| SDR (`profiles/sdr`) | 2,561 KiB | 32% |
-| SDR + Zigbee/Thread (`profiles/sdr-full`) | 3,398 KiB | 8.2% |
+The capture bank consumes an entire SRAM block (128 KiB), and the linker
+script caps the image below `0x40840000` (about 2 KB to spare: the link fails
+if it grows past it). The bank only leaves the heap on an **SDR boot**:
 
-Minimum free heap measured with `sdr-full` (2026-11-25, `get_min_free_heap`):
+1. `Applications > SDR` (or `sdr_host` on the console) reboots the board with
+   the bank reserved and opens the SDR app.
+2. Leaving the app reboots back to a normal boot, in `Applications`, where the
+   other apps have the whole heap.
 
-| Running | Minimum free heap |
-|---|---|
-| Idle (Wi-Fi up) | 59 KB |
-| SDR capture | 42 KB |
-| Zigbee On/Off Switch | 5 KB |
-| BLE Trackers scan | 4 KB |
+A crash, a watchdog reset or a power cycle in SDR mode comes back as a normal
+boot. With `sdr_host`, reconnect after the reboot and run it again.
 
-Each app works on its own, but Zigbee and BLE run a few KB from running out.
-Pick `sdr-full` only when one device has to carry SDR and Zigbee/Thread;
-flash it with `idf.py -B build-sdr-full -p /dev/ttyACM0 flash`.
+Minimum free heap measured in SDR mode (2026-11-25, `get_min_free_heap`):
+idle 59 KB, SDR capture 42 KB.
 
 ### 2.2 Flashing
 
 ```bash
 cd firmware
-idf.py -B build-sdr -p /dev/ttyACM0 flash     # or ttyACM1
+idf.py -p /dev/ttyACM0 flash     # or ttyACM1
 ```
 
-Or directly using `esptool`:
+Or the single merged image with `esptool`:
 
 ```bash
-esptool.py --chip esp32c6 -p /dev/ttyACM0 write_flash \
-  0x0    build-sdr/bootloader/bootloader.bin \
-  0x8000 build-sdr/partition_table/partition-table.bin \
-  0x15000 build-sdr/ota_data_initial.bin \
-  0xa0000 build-sdr/minino.bin
+esptool.py --chip esp32c6 -p /dev/ttyACM0 write_flash 0x0 build/minino-merged.bin
 ```
-
-Requirements: an **8 MB** board with the 8 MB partition table
-(`partitions.csv`). In the standard board image, SDR is **not present**: the
-code compiles, but there is no capture bank allocated behind it and the menu
-does not display the entry.
 
 ### 2.3 Verification
 

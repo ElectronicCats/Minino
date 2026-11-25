@@ -108,31 +108,23 @@ To build the standard firmware, run the following command:
 make compile
 ```
 
-To build the **SDR-enabled firmware variant** (which reserves the 128 KiB SRAM hardware capture bank at `0x40840000` and enables `Applications > SDR`, `sdr_capture`, and `sdr_host`):
+The firmware includes **SDR** (`Applications > SDR`, `sdr_capture`,
+`sdr_host`), Spectrum, BLE, Wi-Fi, Zigbee and Thread in one image.
 
-```bash
-make build-sdr
-```
-
-To have **SDR and Zigbee/Thread on the same device**, build the combined
-variant:
-
-```bash
-make build-sdr-full
-```
-
-It works, but the capture bank leaves little heap: on hardware the BLE
-Trackers scan and the Zigbee Switch drop to 4-5 KB free. Use `build-sdr` when
-you only need SDR, and `make compile` when you do not need SDR.
+The SDR engine needs the 128 KiB SRAM block at `0x40840000` as its capture
+bank. That block only leaves the heap on an **SDR boot**: opening the SDR app
+(or running `sdr_host`) reboots the board with the bank reserved and opens the
+app, and leaving it reboots back to a normal boot, landing in
+`Applications`. The other apps keep the whole heap. A crash or a power cycle
+in SDR mode comes back as a normal boot.
 
 The default profile includes Zigbee/OpenThread, so `zbmesh`, `warbee`,
 `warthread`, `zigbee_sniffer`, `thread_sniffer` and `broadcast` are native
-entries in the menu. The SDR profile turns both stacks off to leave heap next
-to the capture bank; `sdr-full` keeps them on.
+entries in the menu.
 
-If `firmware/sdkconfig` comes from an older checkout where the stacks were
-disabled, `make compile` rewrites those two symbols to `y` automatically so the
-apps are not silently dropped from the build.
+If `firmware/sdkconfig` comes from an older checkout where the stacks or SDR
+were disabled, `make compile` rewrites those symbols to `y` automatically so
+the apps are not silently dropped from the build.
 
 In the combined build, `bt_spam` refuses to start below 18 KB free and stops
 below 8 KB during a run. That prevents the controller advertising failure when
@@ -144,7 +136,7 @@ To run the host-side unit test suites (20+ Unity and Python suites):
 make tests
 ```
 
-> **Note:** Every build automatically generates unified single-file firmware images (`minino-merged.bin` and `minino-merged.hex`) inside the build directory (`build/`, `build-sdr/` or `build-sdr-full/`), ready to be flashed at offset `0x0`.
+> **Note:** Every build automatically generates unified single-file firmware images (`minino-merged.bin` and `minino-merged.hex`) inside the build directory (`build/` or `build-<profile>/`), ready to be flashed at offset `0x0`.
 
 ### Flashing the firmware
 
@@ -328,8 +320,7 @@ MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongit
 # Zigbee
 
 > [!NOTE]
-> Zigbee apps are included in the default profile and in `sdr-full`. The
-> `sdr` profile keeps the stack off to leave heap next to the capture bank.
+> Zigbee apps are included in every profile.
 
 Available apps: `Spoofing > Switch`, `Spoofing > Light`, `Sniffer`,
 `Mesh Topology` (`launch zbmesh`) and `GPS > Wardriving > Zigbee Start`
@@ -354,8 +345,7 @@ SourcePanID,SourceADDR,DestinationADDR,Channel,RSSI,SecurityEnabled,FrameType,Cu
 # Thread
 
 > [!NOTE]
-> Thread apps are included in the default profile and in `sdr-full`. The `sdr`
-> profile keeps the stack off to leave heap next to the capture bank.
+> Thread apps are included in every profile.
 > Available apps: `Sniffer`
 > (`launch thread_sniffer`), `Broadcast` (`launch broadcast`) and
 > `GPS > Wardriving > Thread Start` (`launch warthread`).
