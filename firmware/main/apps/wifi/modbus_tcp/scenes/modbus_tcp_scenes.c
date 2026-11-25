@@ -409,6 +409,11 @@ static void modbus_tcp_on_input(uint8_t button_name, uint8_t button_event) {
 }
 
 static void modbus_tcp_on_exit(void) {
+  // Stop the "connecting" animation. It is started by the AP-connect/attack
+  // flows and otherwise only stopped from the WiFi callback; if the app is
+  // left before that callback runs, the animation task keeps overdrawing every
+  // menu ~10x/s, which looks like a frozen screen until a manual reset.
+  animations_task_stop();
   // Stop attacks if running
   modbus_attacks_stop();
   // Unregister AP manager callback
