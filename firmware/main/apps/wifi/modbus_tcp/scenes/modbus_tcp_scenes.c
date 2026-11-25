@@ -144,7 +144,8 @@ static void handle_attack_writer_selector(uint8_t option) {
 static void handle_attack_selector(uint8_t option) {
   switch (option) {
     case MBUS_ATTACK_DOS:
-      /* Animation first, then the attack task (see handle_attack_writer_selector). */
+      /* Animation first, then the attack task (see
+       * handle_attack_writer_selector). */
       animations_task_run(&modbus_tcp_display_connecting, 100, NULL);
       modbus_attacks_dos(modbus_handle_cb_attack);
       break;
@@ -262,7 +263,8 @@ static void modbus_connect_task(void* arg) {
   uint8_t option = (uint8_t) (uintptr_t) arg;
   int rc = wifi_ap_manager_connect_index_cb(option, NULL);
   /* Only drive the UI if the app is still open; the user may have left during
-     the blocking connect, in which case on_exit already stopped the animation. */
+     the blocking connect, in which case on_exit already stopped the animation.
+   */
   if (app_manager_active() == &modbus_tcp_app) {
     modbus_handle_cb_ap_connection(rc == 0);
   }
