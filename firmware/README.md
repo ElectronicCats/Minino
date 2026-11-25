@@ -24,6 +24,8 @@ You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/p
     - [Spam SSID](#spam-ssid)
     - [Save](#save)
     - [Delete](#delete)
+  - [BLE](#ble)
+    - [Spam](#spam)
 - [Wardriving File Formats](#wardriving-file-formats)
 - [Wifi](#wifi-1)
 - [Zigbee](#zigbee)
@@ -51,8 +53,11 @@ You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/p
     - [Control the light using switch](#control-the-light-using-switch)
   - [Cool commands](#cool-commands)
 - [Change log](#change-log)
-  - [v1.1.7.0](#v1170)
+  - [Unreleased](#unreleased)
     - [Added](#added)
+    - [Fixed](#fixed)
+  - [v1.1.7.0](#v1170)
+    - [Added](#added-1)
 
 ## Prerequisites
 
@@ -301,7 +306,34 @@ When you use `spam_save` with an existing list name, the entry is updated.
 ### Delete
 To delete a saved SSID list, run `spam_show` to find its index, then run `spam_delete idx` where `idx` is the index of the SSID list you want to delete.
 
+## BLE
 
+### Spam
+
+The BLE Spam app floods nearby devices with crafted advertising packets. Open
+it from `Applications > Bluetooth > Spam` and pick a target mode:
+
+| Mode | Launch command | What it advertises |
+|----------|----------------------|-------------------------------------------------|
+| Apple | `launch spam_apple` | Apple proximity-pairing popups |
+| Android | `launch spam_android` | Android Fast Pair popups |
+| Windows | `launch spam_windows` | Windows Swift Pair popups |
+| Samsung | `launch spam_samsung` | Samsung pairing popups |
+| Saturate | `launch spam_saturate` | **Lab-only** channel-saturation stress test |
+| Matter | `launch spam_matter` | Matter commissioning onboarding spoofing |
+
+The attack starts as soon as you enter a mode; the screen shows a scanning
+animation and reports connecting peers. Press the **LEFT** button to stop and
+exit — this halts advertising and re-initializes WiFi in station mode.
+
+> **Saturate** replaces the former "spam all" mode. It rotates payloads for
+> every platform family at the fastest legal pacing to measure how a lab
+> receiver's scanner handles a saturated advertising channel. Use it only
+> against your own equipment.
+
+BLE advertising is refused when free heap is below 18 KB and stops below 8 KB
+during a run, which can happen after using Thread Sniffer/Broadcast. If a mode
+does not start, exit heavy radio apps first to free the heap.
 
 # Wardriving File Formats
 # Wifi 
@@ -532,8 +564,8 @@ The Border Router received:
 list
 # Connect to your Access Point
 connect 0
-# Set the server IP and Port 
-mb_engine_set_server 192.168.0.2500
+# Set the server IP and Port (two arguments: <ip> <port>)
+mb_engine_set_server 192.168.0.250 502
 # Set the request type
 mb_engine_set_req registers 1 2 1234
 # Connect to the server
@@ -705,6 +737,21 @@ I (1420031) : 0x40818ca6   01                                                |.|
 `zdo request neighbors -d 0x0000`
 
 # Change log
+
+## Unreleased
+### Added
+- SDR (Software Defined Radio) app shipped in the default firmware (`sdr_capture`, `sdr_host`), synced with the ESPARGOS web viewer
+- BLE Saturate mode in `bt_spam` (replaces the former "spam all"), with updated menu navigation
+- Thread wardriving (`warthread`) with stabilized stack lifecycle and an optimized sniffer
+- Zigbee mesh topology mapper (`zbmesh`) and Zigbee wardriving (`warbee`)
+- New menu icons for Mesh Topology and improved Zigbee/Thread representations
+- Combined default profile bundling SDR + Zigbee/Thread, plus `sdr-full` and `zigbee-thread` build profiles
+
+### Fixed
+- Modbus TCP: memory leaks, UI freezes when exiting menus, blocking connect moved to a task, and the orphaned "connecting" animation
+- USB console: enabled line editing and fixed typing stalls
+- `bt_spam`: guard BLE advertising against low heap and release the lease when restarting a mode
+- Thread: release OpenThread after the sniffer exits
 
 ## v1.1.7.0
 ### Added
