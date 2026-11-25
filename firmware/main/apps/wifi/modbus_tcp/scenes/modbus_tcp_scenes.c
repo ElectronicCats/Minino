@@ -129,8 +129,12 @@ static void handle_attack_writer_selector(uint8_t option) {
           modbus_attacks_writer_single());
       break;
     case MBUS_ATTACK_WRITE_LOOP:
-      modbus_attacks_writer(modbus_handle_cb_attack);
+      /* Start the animation before spawning the attack task. The task runs at a
+         higher priority and preempts immediately, so if it is created first its
+         connection callback calls animations_task_stop() before the animation
+         exists (a no-op), and the animation started afterwards never stops. */
       animations_task_run(&modbus_tcp_display_connecting, 100, NULL);
+      modbus_attacks_writer(modbus_handle_cb_attack);
       break;
     default:
       break;
@@ -140,8 +144,9 @@ static void handle_attack_writer_selector(uint8_t option) {
 static void handle_attack_selector(uint8_t option) {
   switch (option) {
     case MBUS_ATTACK_DOS:
-      modbus_attacks_dos(modbus_handle_cb_attack);
+      /* Animation first, then the attack task (see handle_attack_writer_selector). */
       animations_task_run(&modbus_tcp_display_connecting, 100, NULL);
+      modbus_attacks_dos(modbus_handle_cb_attack);
       break;
     case MBUS_ATTACK_WRITE:
       modbus_tcp_scenes_show_attacks_list();
