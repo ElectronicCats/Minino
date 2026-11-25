@@ -61,6 +61,11 @@ static void save_prefs() {
 }
 
 void modbus_tcp_prefs_begin() {
+  /* Idempotent: modbus_engine_begin() calls this on every connection. Without
+     this guard each call leaked the previous calloc + ip malloc. */
+  if (mb_tcp_prefs) {
+    return;
+  }
   mb_tcp_prefs = calloc(1, sizeof(modbus_tcp_prefs_t));
   mb_tcp_prefs->ip = malloc(IP_MAX_LEGHT);
   load_prefs();
