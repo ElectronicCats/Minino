@@ -183,4 +183,4 @@ CONFIG_MININO_OPENTHREAD_STACK=y
 # Zigbee and the Thread stacks does not fit under that cap (it is 45 KB
 # over). The SDR build variant (sdkconfig.sdr) turns the app on and the two
 # stacks off, which is what makes it fit.
-CONFIG_SDR_ENABLE=y
+# CONFIG_SDR_ENABLE is not set
