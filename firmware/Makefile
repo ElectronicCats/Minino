@@ -21,6 +21,10 @@ compile:
 	  elif ! grep -q '^CONFIG_MININO_OPENTHREAD_STACK=' sdkconfig; then \
 	    echo 'CONFIG_MININO_OPENTHREAD_STACK=y' >> sdkconfig; \
 	  fi; \
+	  if grep -q '^CONFIG_SDR_ENABLE=y' sdkconfig; then \
+	    echo "Updating stale sdkconfig: disabling SDR (use make build-sdr)"; \
+	    sed -i 's/^CONFIG_SDR_ENABLE=y/# CONFIG_SDR_ENABLE is not set/' sdkconfig; \
+	  fi; \
 	fi
 	idf.py build
 
