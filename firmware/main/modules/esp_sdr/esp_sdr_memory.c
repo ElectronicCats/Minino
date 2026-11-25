@@ -60,8 +60,8 @@ static bool s_bank_reserved = false;
 
 bool sdr_bank_boot(void) {
 #if defined(CONFIG_SDR_ENABLE)
-  bool sdr_boot = s_sdr_boot_request == SDR_BOOT_MAGIC &&
-                  esp_reset_reason() == ESP_RST_SW;
+  bool sdr_boot =
+      s_sdr_boot_request == SDR_BOOT_MAGIC && esp_reset_reason() == ESP_RST_SW;
   s_sdr_boot_request = 0;
   if (sdr_boot) {
     s_bank_reserved = true;
