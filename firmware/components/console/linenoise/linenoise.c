@@ -187,6 +187,7 @@ enum KEY_ACTION {
 
 int linenoiseHistoryAdd(const char* line);
 static void refreshLine(struct linenoiseState* l);
+uint32_t getMillis(void);
 
 /* Debugging macro. */
 #if 0
@@ -232,8 +233,13 @@ static void flushWrite(void) {
   if (__fbufsize(stdout) > 0) {
     fflush(stdout);
   }
-#endif
+#else
   fsync(fileno(stdout));
+#endif
+  /* No fsync() on chip: with the USB-Serial-JTAG driver the ISR already pushes
+   * every packet to the host, and fsync() only blocks the console until the
+   * host ACKs it (up to 50 ms per call, several calls per keystroke), which
+   * made typing stutter. */
 }
 
 /* Use the ESC [6n escape sequence to query the horizontal cursor position
@@ -266,13 +272,27 @@ static int getCursorPosition(void) {
    * read for each byte.
    * Stop right before the last character of the buffer, to be able to NULL
    * terminate it. */
+  /* Don't block forever: if no terminal is listening (e.g. it was opened
+   * after the prompt was printed) a blocking read here would swallow the
+   * user's keystrokes as if they were the reply. Give up after a timeout and
+   * let getColumns() fall back to 80 columns. */
+  const int flags = fcntl(in_fd, F_GETFL);
+  fcntl(in_fd, F_SETFL, flags | O_NONBLOCK);
+  const uint32_t deadline =
+      getMillis() + 100; /* ponytail: USB replies in a few ms, raise if slow */
   while (i < sizeof(buf) - 1) {
     /* Keep using unistd's functions. Here, using `read` instead of `fgets`
      * or `fgets` guarantees us that we we can read a byte regardless on
      * whether the sender sent end of line character(s) (CR, CRLF, LF). */
-    if (read(in_fd, buf + i, 1) != 1 || buf[i] == 'R') {
-      /* If we couldn't read a byte from STDIN or if 'R' was received,
-       * the transmission is finished. */
+    if (read(in_fd, buf + i, 1) != 1) {
+      if (getMillis() > deadline) {
+        break;
+      }
+      usleep(1000);
+      continue;
+    }
+    if (buf[i] == 'R') {
+      /* 'R' ends the transmission. */
       break;
     }
 
@@ -283,6 +303,8 @@ static int getCursorPosition(void) {
       i++;
     }
   }
+
+  fcntl(in_fd, F_SETFL, flags); /* back to blocking reads */
 
   /* NULL-terminate the buffer, this is required by `sscanf`. */
   buf[i] = '\0';
@@ -915,7 +937,11 @@ static int linenoiseEdit(char* buf, size_t buflen, const char* prompt) {
     if (nread <= 0)
       return l.len;
 
-    if ((getMillis() - t1) < LINENOISE_PASTE_KEY_DELAY && c != ENTER) {
+    /* Only printable chars at the end of the line take the paste fast path;
+     * control keys (backspace, DEL, arrows, ...) typed quickly or held down
+     * with key repeat must still be handled as edits, not inserted raw. */
+    if ((getMillis() - t1) < LINENOISE_PASTE_KEY_DELAY &&
+        isprint((unsigned char) c) && l.pos == l.len) {
       /* Pasting data, insert characters without formatting.
        * This can only be performed when the cursor is at the end of the
        * line. */
@@ -1010,6 +1036,14 @@ static int linenoiseEdit(char* buf, size_t buflen, const char* prompt) {
               switch (seq[1]) {
                 case '3': /* Delete key. */
                   linenoiseEditDelete(&l);
+                  break;
+                case '1': /* Home (PuTTY/linux console) */
+                case '7': /* Home (rxvt) */
+                  linenoiseEditMoveHome(&l);
+                  break;
+                case '4': /* End (PuTTY/linux console) */
+                case '8': /* End (rxvt) */
+                  linenoiseEditMoveEnd(&l);
                   break;
               }
             }
