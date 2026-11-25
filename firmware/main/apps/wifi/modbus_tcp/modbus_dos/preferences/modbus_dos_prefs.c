@@ -56,6 +56,12 @@ static void save_prefs() {
 }
 
 void modbus_dos_prefs_begin() {
+  /* Idempotent: modbus_tcp_scenes_main() calls this on every return to the
+     main menu. Without this guard each call leaked the previous calloc + 3
+     mallocs. */
+  if (mb_dos_prefs) {
+    return;
+  }
   mb_dos_prefs = calloc(1, sizeof(modbus_dos_prefs_t));
   mb_dos_prefs->ssid = malloc(SSID_MAX_LENGTH);
   mb_dos_prefs->pass = malloc(PASS_MAX_LEGHT);
