@@ -104,22 +104,13 @@ static void cat_console_default() {
       "Press Enter or Ctrl+C will terminate the current\n"
       "command.\n");
 
-  /* Figure out if the terminal supports escape sequences */
-  int probe_status = linenoiseProbe();
-  if (probe_status) { /* zero indicates success */
-    printf(
-        "\n"
-        "Your terminal application does not support escape sequences.\n"
-        "Line editing and history features are disabled.\n"
-        "On Windows, try using Putty instead.\n");
-    linenoiseSetDumbMode(1);
-#if CONFIG_LOG_COLORS
-    /* Since the terminal doesn't support escape sequences,
-     * don't use color codes in the prompt.
-     */
-    prompt = PROMPT_STR "> ";
-#endif  // CONFIG_LOG_COLORS
-  }
+  /* Always use line editing (arrows, DEL, history), like a Linux shell.
+   * The terminal probe runs at boot, before any host terminal is open on the
+   * USB port, so it always fails and would leave the console in dumb mode
+   * forever. esp_console_new_repl_usb_serial_jtag() also probes, so undo it.
+   * ponytail: terminals without VT100 support (e.g. Arduino Serial Monitor)
+   * will show raw escape codes; add a "dumb" toggle command if that matters. */
+  linenoiseSetDumbMode(0);
 
 restart:
   /* Main loop */
