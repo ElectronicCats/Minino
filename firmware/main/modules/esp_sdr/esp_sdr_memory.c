@@ -39,6 +39,7 @@
 #include "esp_system.h"
 #if defined(CONFIG_SDR_ENABLE)
   #include "heap_memory_layout.h"
+  #include "soc/usb_serial_jtag_struct.h"
 #endif
 #include "esp_sdr_memory.h"
 
@@ -64,6 +65,12 @@ bool sdr_bank_boot(void) {
   s_sdr_boot_request = 0;
   if (sdr_boot) {
     s_bank_reserved = true;
+    /* The ESPARGOS viewer resets the chip over USB on its second SYNC. That
+       reset lands here, before the SDR app turns it off, and would come
+       back as a normal boot: turn it off now (esp_sdr_module_stop turns it
+       back on). */
+    USB_SERIAL_JTAG.chip_rst.usb_uart_chip_rst_dis = 1;
+    USB_SERIAL_JTAG.config_update.config_update = 1;
     ESP_LOGI(TAG, "SDR boot: the capture bank stays out of the heap");
     return true;
   }

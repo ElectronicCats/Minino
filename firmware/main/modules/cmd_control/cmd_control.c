@@ -326,7 +326,7 @@ static int sdr_host(int argc, char** argv) {
       "MININO.\n");
   fflush(stdout);
 
-  esp_err_t err = esdr_host_run();
+  esp_err_t err = esdr_host_run(NULL);
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "The SDR host session ended with an error: %s",
              esp_err_to_name(err));

@@ -8,6 +8,7 @@
 #include <math.h>
 #include "c6_sdr_rx.h"
 #include "cat_console.h"
+#include "esdr_burst_proto.h"
 #include "esdr_host.h"
 #include "esp_log.h"
 #include "esp_rom_sys.h"
@@ -290,12 +291,13 @@ static void sdr_burst_run(void) {
 
 static volatile TaskHandle_t s_host_task = NULL;
 static volatile bool s_host_stopping = false;
+static char s_host_first_line[ESDR_LINE_MAX];
 
 static void sdr_web_host_task(void* arg) {
   (void) arg;
   cat_console_pause();
 
-  (void) esdr_host_run();
+  (void) esdr_host_run(s_host_first_line);
 
   s_sdr.tx_active = false;
   s_sdr.freq_mhz = c6_sdr_rx_get_freq();
@@ -307,10 +309,12 @@ static void sdr_web_host_task(void* arg) {
   vTaskDelete(NULL);
 }
 
-static void sdr_web_host_start(void) {
+static void sdr_web_host_start(const char* first_line) {
   if (s_host_task != NULL) {
     return;
   }
+  strlcpy(s_host_first_line, first_line != NULL ? first_line : "",
+          sizeof(s_host_first_line));
   s_host_stopping = false;
   s_sdr.tx_active = true;
   sdr_render_screen("WEB HOST: LISTENING", NULL);
@@ -349,7 +353,7 @@ static void sdr_cycle_mode(void) {
   }
   s_sdr.mode = (sdr_operating_mode_t) ((s_sdr.mode + 1) % 4);
   if (s_sdr.mode == SDR_MODE_WEB_HOST) {
-    sdr_web_host_start();
+    sdr_web_host_start(NULL);
     return;
   }
 
@@ -535,7 +539,7 @@ bool esp_sdr_module_is_running(void) {
   return s_sdr.running;
 }
 
-void esp_sdr_module_enter_web_host(void) {
+void esp_sdr_module_enter_web_host(const char* first_line) {
   if (!s_sdr.running) {
     return;
   }
@@ -547,7 +551,13 @@ void esp_sdr_module_enter_web_host(void) {
     }
   }
   s_sdr.mode = SDR_MODE_WEB_HOST;
-  sdr_web_host_start();
+  sdr_web_host_start(first_line);
+  /* The caller (the console) must not read the port while the session
+     runs. The host task suspends it, but it gets here first or after the
+     resume depending on scheduling, so the end of the task is what counts. */
+  while (s_host_task != NULL) {
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
 }
 
 void app_manager_enter_wrapper_esp_sdr(void) {

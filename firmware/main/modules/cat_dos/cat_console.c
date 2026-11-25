@@ -35,6 +35,7 @@
 #include "modbus_engine_cmd.h"
 
 #include "captive_cmd.h"
+#include "esp_sdr_memory.h"
 #include "esp_sdr_module.h"
 #include "gattcmd_cmd.h"
 #include "hello_cmd.h"
@@ -139,14 +140,22 @@ restart:
 
     /* If the user is inside the SDR app (even in RX_CAP mode, not yet in
        WEB_HOST) and the ESPARGOS WebSDR viewer or check_spectrum.py sends
-       SYNC or RELEASE, automatically switch into SDR Web Host mode. */
+       SYNC or RELEASE, automatically switch into SDR Web Host mode. The
+       line itself is handed over, so the viewer's first SYNC is answered
+       before it gives up and resets the board. */
     if (esp_sdr_module_is_running() &&
         (!strncmp(line, "SYNC ", 5) || !strcmp(line, "RELEASE"))) {
+      esp_sdr_module_enter_web_host(line); /* returns when the session ends */
       linenoiseFree(line);
-      esp_sdr_module_enter_web_host();
-      while (!console_paused) {
-        vTaskDelay(pdMS_TO_TICKS(10));
-      }
+      continue;
+    }
+
+    /* The viewer connected outside the SDR app: in a normal boot the
+       capture bank is heap, so reboot into SDR mode, which opens the app.
+       The USB port drops with the reboot and the viewer has to reconnect. */
+    if (!strncmp(line, "SYNC ", 5) && !sdr_bank_is_reserved()) {
+      linenoiseFree(line);
+      sdr_bank_reboot_into_sdr(); /* does not return when SDR is built in */
       continue;
     }
 

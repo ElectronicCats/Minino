@@ -31,11 +31,16 @@ extern "C" {
  * task is between two reads when this runs.
  *
  * The session ends when the client sends RELEASE, when it sends the Minino
- * specific MININO escape, or when nothing arrives for a minute.
+ * specific MININO escape, when nothing arrives for a minute, or when the
+ * client stops reading.
+ *
+ * @param first_line A line already read from the port (the viewer's first
+ *        SYNC, without the line end), answered before anything else; NULL
+ *        when there is none.
  *
  * @return ESP_OK when the session ended normally.
  */
-esp_err_t esdr_host_run(void);
+esp_err_t esdr_host_run(const char* first_line);
 
 /**
  * @brief Request the running esdr_host session to stop gracefully.

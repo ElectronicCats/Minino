@@ -48,6 +48,7 @@ static char s_line[ESDR_LINE_MAX];
 static size_t s_used = 0;
 static bool s_overflow = false;
 static bool s_pending_line = false;
+static bool s_port_dead = false; /* a write timed out: the viewer is gone */
 static bool s_gain_manual = false;
 static uint32_t s_gain_index = 40;
 
@@ -66,7 +67,7 @@ static void port_write(const void* data, size_t len) {
   const uint8_t* p = (const uint8_t*) data;
   size_t done = 0;
 
-  while (done < len) {
+  while (done < len && !s_port_dead) {
     size_t chunk = len - done;
     if (chunk > ESDR_TX_CHUNK) {
       chunk = ESDR_TX_CHUNK;
@@ -74,8 +75,9 @@ static void port_write(const void* data, size_t len) {
     int written = usb_serial_jtag_write_bytes(
         p + done, chunk, pdMS_TO_TICKS(ESDR_WRITE_TIMEOUT_MS));
     if (written <= 0) {
-      /* The host is not reading or the port went away: there is nothing to
-         do but give up on this session. */
+      /* The host is not reading or the port went away: the session ends
+         instead of streaming into a port nobody reads. */
+      s_port_dead = true;
       return;
     }
     done += (size_t) written;
@@ -437,7 +439,7 @@ static int poll_line(void) {
   return -1;
 }
 
-esp_err_t esdr_host_run(void) {
+esp_err_t esdr_host_run(const char* first_line) {
   esp_err_t ret = ESP_OK;
   bool radio_was_active = c6_sdr_rx_is_active();
   s_user_stop_requested = false;
@@ -468,13 +470,28 @@ esp_err_t esdr_host_run(void) {
   s_used = 0;
   s_overflow = false;
   s_pending_line = false;
+  s_port_dead = false;
   s_line[0] = '\0';
+  /* The viewer opens with SYNC and resets the board if it is not answered
+     within 2 s: the line the console already read is answered first. */
+  if (first_line != NULL && first_line[0] != '\0') {
+    strlcpy(s_line, first_line, sizeof(s_line));
+    s_pending_line = true;
+  }
+  int64_t last_line_us = esp_timer_get_time();
 
   for (;;) {
-    if (s_user_stop_requested) {
+    if (s_user_stop_requested || s_port_dead) {
       break;
     }
     int status = poll_line();
+    if (status == 0) {
+      if (esp_timer_get_time() - last_line_us >=
+          (int64_t) ESDR_IDLE_EXIT_MS * 1000) {
+        break; /* the viewer left without RELEASE */
+      }
+      continue;
+    }
 
     if (status < 0) {
       port_line("ERR command_length\n");
@@ -489,6 +506,8 @@ esp_err_t esdr_host_run(void) {
         }
       }
     }
+    /* A command (a long RXRUN or SPEC included) is traffic. */
+    last_line_us = esp_timer_get_time();
   }
 
   if (!radio_was_active) {

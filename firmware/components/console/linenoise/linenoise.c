@@ -242,6 +242,10 @@ static void flushWrite(void) {
    * made typing stutter. */
 }
 
+/* A byte the cursor query read that was input, not the answer: the line
+ * editor reads it first. */
+static int pending_input = -1;
+
 /* Use the ESC [6n escape sequence to query the horizontal cursor position
  * and return it. On error -1 is returned, on success the position of the
  * cursor. */
@@ -293,6 +297,14 @@ static int getCursorPosition(void) {
     }
     if (buf[i] == 'R') {
       /* 'R' ends the transmission. */
+      break;
+    }
+    /* The answer starts with ESC. Anything else is input that was already
+     * on its way (a client that never answers, like the ESPARGOS viewer
+     * sending "\nSYNC ...\n" in one packet): it goes back to the line
+     * instead of being swallowed as the reply. */
+    if (i == 0 && buf[0] != ESC && buf[0] != '\n') {
+      pending_input = (unsigned char) buf[0];
       break;
     }
 
@@ -933,7 +945,13 @@ static int linenoiseEdit(char* buf, size_t buflen, const char* prompt) {
      * about 40ms (or even more)
      */
     t1 = getMillis();
-    nread = read(in_fd, &c, 1);
+    if (pending_input >= 0) {
+      c = (char) pending_input;
+      pending_input = -1;
+      nread = 1;
+    } else {
+      nread = read(in_fd, &c, 1);
+    }
     if (nread <= 0)
       return l.len;
 

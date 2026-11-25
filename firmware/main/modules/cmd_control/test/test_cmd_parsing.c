@@ -265,7 +265,8 @@ extern void cmd_spamssid_register_commands(void);
 
 /* The command control hands the USB port over to the SDR host mode. The
    test does not open any port, so the call goes nowhere. */
-esp_err_t esdr_host_run(void) {
+esp_err_t esdr_host_run(const char* first_line) {
+  (void) first_line;
   return 0;
 }
 
