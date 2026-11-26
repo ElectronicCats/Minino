@@ -228,7 +228,7 @@ static int droneid_scanner_init_wifi(void) {
   if (radio_lease_prom_acquire(RADIO_PROM_DRONEID_SCANNER, callback) !=
       ESP_OK) {
     ESP_LOGE(TAG, "could not claim promiscuous mode");
-    return err;
+    return ESP_FAIL;
   }
 
   err = esp_wifi_set_channel(current_channel, WIFI_SECOND_CHAN_NONE);
@@ -265,6 +265,9 @@ void droneid_scanner_begin() {
 }
 
 void droneid_scanner_stop(void) {
+  /* Detach the Wi-Fi callback first: it posts to packet_queue. */
+  radio_lease_prom_release(RADIO_PROM_DRONEID_SCANNER);
+  esp_wifi_stop();
   if (channel_task_handle != NULL) {
     vTaskDelete(channel_task_handle);
     channel_task_handle = NULL;
@@ -277,8 +280,6 @@ void droneid_scanner_stop(void) {
     vQueueDelete(packet_queue);
     packet_queue = NULL;
   }
-  radio_lease_prom_release(RADIO_PROM_DRONEID_SCANNER);
-  esp_wifi_stop();
   ESP_LOGI(TAG, "Droneid scanner stopped");
 }
 
