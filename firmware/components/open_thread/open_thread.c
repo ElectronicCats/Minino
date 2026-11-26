@@ -372,6 +372,7 @@ static void ot_task_worker() {
   esp_err_t err = esp_openthread_init(&config);
   if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
     ESP_LOGE(TAG, "esp_openthread_init failed: 0x%x", err);
+    esp_vfs_eventfd_unregister();
     s_openthread_initialized = false;
     s_openthread_ready = false;
     s_ot_task_handle = NULL;
@@ -388,11 +389,12 @@ static void ot_task_worker() {
   s_openthread_ready = true;
   esp_openthread_launch_mainloop();
 
-  // Clean up
+  // Teardown runs here, on the task that owned the mainloop, so nothing
+  // finalizes the instance while the loop is still using it.
   s_openthread_ready = false;
   esp_openthread_netif_glue_deinit();
   esp_netif_destroy(openthread_netif);
-
+  esp_openthread_deinit();
   esp_vfs_eventfd_unregister();
   s_openthread_initialized = false;
   s_ot_task_handle = NULL;
@@ -400,10 +402,18 @@ static void ot_task_worker() {
 }
 
 void openthread_deinit() {
-  s_openthread_ready = false;
-  esp_openthread_deinit();
-  s_openthread_initialized = false;
-  s_ot_task_handle = NULL;
+  // The task queue that mainloop_exit() posts to only exists once the worker
+  // is ready; a deinit during bring-up waits for it (or for its failure).
+  while (s_ot_task_handle != NULL && !s_openthread_ready) {
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
+  if (s_ot_task_handle == NULL) {
+    return;
+  }
+  esp_openthread_mainloop_exit();
+  while (s_ot_task_handle != NULL) {
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
 }
 
 void openthread_init() {

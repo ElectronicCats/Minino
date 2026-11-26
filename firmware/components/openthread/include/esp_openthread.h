@@ -64,6 +64,15 @@ esp_err_t esp_openthread_auto_start(otOperationalDatasetTlvs* datasetTlvs);
 esp_err_t esp_openthread_launch_mainloop(void);
 
 /**
+ * @brief Ask a running esp_openthread_launch_mainloop() to return.
+ *
+ * Call from another task, and only once the task queue exists (after
+ * esp_openthread_init()). It does not wait; the caller waits for the
+ * mainloop task to finish its own teardown.
+ */
+esp_err_t esp_openthread_mainloop_exit(void);
+
+/**
  * @brief This function performs OpenThread stack and platform driver
  * deinitialization.
  *
