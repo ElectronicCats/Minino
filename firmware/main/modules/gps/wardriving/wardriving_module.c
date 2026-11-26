@@ -46,6 +46,7 @@ static wardriving_module_state_t wardriving_module_state =
 static TaskHandle_t wardriving_module_scan_task_handle = NULL;
 static TaskHandle_t scanning_wifi_animation_task_handle = NULL;
 static bool running_wifi_scanner_animation = false;
+static volatile bool wardriving_scan_running = false;
 
 static uint16_t csv_lines = 0;
 static uint16_t wifi_scanned_packets = 0;
@@ -157,10 +158,16 @@ void add_mac_to_table(const uint8_t* mac, uint32_t current_time) {
 }
 
 void wardriving_module_scan_task(void* pvParameters) {
-  while (true) {
+  while (wardriving_scan_running) {
     wifi_scanner_module_scan();
-    vTaskDelay(WIFI_SCAN_REFRESH_RATE_MS / portTICK_PERIOD_MS);
+    /* Sleep in slices so a stop request is noticed quickly. */
+    for (int ms = 0; ms < WIFI_SCAN_REFRESH_RATE_MS && wardriving_scan_running;
+         ms += 100) {
+      vTaskDelay(pdMS_TO_TICKS(100));
+    }
   }
+  wardriving_module_scan_task_handle = NULL;
+  task_manager_delete(NULL);
 }
 
 static void update_file_name(gps_t* gps) {
@@ -400,6 +407,7 @@ void wardriving_module_start_scan() {
   wardriving_module_state = WARDRIVING_MODULE_STATE_SCANNING;
 
   // Use Task Manager for critical tasks
+  wardriving_scan_running = true;
   esp_err_t err = task_manager_create(
       wardriving_module_scan_task, "wardriving_scan", TASK_STACK_MEDIUM, NULL,
       TASK_PRIORITY_HIGH,  // GPS is high priority
@@ -407,6 +415,7 @@ void wardriving_module_start_scan() {
 
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Failed to create wardriving scan task");
+    wardriving_scan_running = false;
     return;
   }
 
@@ -444,11 +453,16 @@ void wardriving_module_stop_scan() {
   gps_module_stop_read();
   gps_module_unregister_cb();
 
-  // Deinitialize the WiFi controller
-  wifi_driver_deinit();
-
-  // Use Task Manager to delete tasks
+  /* Let the scan task finish its current (blocking) scan and exit by itself.
+     Each scan holds its own radio_lease claim (wifi_scanner), so there is
+     nothing to deinitialize here; tearing the driver down mid-scan or
+     force-deleting the task inside esp_wifi_scan_start() is what A13 fixes. */
+  wardriving_scan_running = false;
+  for (int i = 0; i < 100 && wardriving_module_scan_task_handle != NULL; i++) {
+    vTaskDelay(pdMS_TO_TICKS(100));
+  }
   if (wardriving_module_scan_task_handle != NULL) {
+    ESP_LOGE(TAG, "Scan task did not stop, deleting it");
     task_manager_delete(wardriving_module_scan_task_handle);
     wardriving_module_scan_task_handle = NULL;
   }
