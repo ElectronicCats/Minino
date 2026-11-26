@@ -528,8 +528,8 @@ static void catdos_on_exit(void) {
     vTaskDelete(task_atack);
     task_atack = NULL;
   }
-  // Unregister AP manager callback
-  wifi_ap_manager_unregister_callback();
+  // Leave the target AP and drop the AP manager's handlers
+  wifi_ap_manager_deinit();
   // Free wifi list
   for (int i = 0; i < 20; i++) {
     if (wifi_list[i] != NULL) {

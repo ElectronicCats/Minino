@@ -54,9 +54,13 @@ static void event_handler(void* arg,
 
 static void initialise_wifi(void) {
   esp_log_level_set(TAG, ESP_LOG_WARN);
-  if (initialized) {
+  /* The flag alone goes stale when another app deinitialises the driver
+     (BLE spam, Zigbee, ...): check the driver is still there. A stopped but
+     initialised driver is fine, join's set_mode() starts it again. */
+  if (initialized && wifi_service_is_up_get()) {
     return;
   }
+  initialized = false;
   ESP_ERROR_CHECK(esp_netif_init());
   if (wifi_event_group != NULL) {
     vEventGroupDelete(wifi_event_group);
@@ -113,6 +117,9 @@ static bool wifi_ap_manager_join(const char* ssid,
   preferences_remove("ssid");
   preferences_remove("passwd");
   initialise_wifi();
+  if (!initialized) {
+    return false; /* bring-up refused, e.g. BLE holds the radio */
+  }
   wifi_config_t wifi_config = {0};
   strlcpy((char*) wifi_config.sta.ssid, ssid, sizeof(wifi_config.sta.ssid));
   if (pass) {
@@ -120,9 +127,13 @@ static bool wifi_ap_manager_join(const char* ssid,
             sizeof(wifi_config.sta.password));
   }
 
-  ESP_ERROR_CHECK(wifi_service_set_mode(WIFI_MODE_STA));
-  ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-  esp_err_t err = esp_wifi_connect();
+  esp_err_t err = wifi_service_set_mode(WIFI_MODE_STA);
+  if (err == ESP_OK) {
+    err = esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
+  }
+  if (err == ESP_OK) {
+    err = esp_wifi_connect();
+  }
   if (err != ESP_OK) {
     ESP_LOGE(__func__, "Failed to connect to AP");
     return false;
@@ -175,10 +186,6 @@ int wifi_ap_manager_connect_index_cb(int index, app_callback cb) {
   return wifi_ap_manager_connect_index(index);
 }
 
-void wifi_ap_manager_unregister_callback() {
-  callback_connection = NULL;
-}
-
 int wifi_ap_manager_delete_ap_by_index(int index) {
   char wifi_ap[100];
   char wifi_ssid[100];
@@ -217,7 +224,22 @@ int wifi_ap_manager_delete_ap_by_index(int index) {
   return 0;
 }
 
+/* Undo initialise_wifi() and the join. Handlers go first, so the disconnect
+   below does not trigger a reconnect or wipe the saved ssid/passwd, and a
+   later disconnect in another app does not either. No `initialized` guard:
+   a refused re-init clears it while the old handlers are still registered,
+   and unregistering a missing handler is harmless. */
 void wifi_ap_manager_deinit() {
+  callback_connection = NULL;
+  esp_event_handler_unregister(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED,
+                               &event_handler);
+  esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler);
+  if (wifi_service_is_up_get()) {
+    esp_wifi_disconnect();
+    esp_wifi_stop();
+  }
+  preferences_put_bool("wifi_connected", false);
+  reconnections = 0;
   if (wifi_event_group != NULL) {
     vEventGroupDelete(wifi_event_group);
     wifi_event_group = NULL;
