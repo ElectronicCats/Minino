@@ -198,6 +198,12 @@ static void wifi_app_soft_ap_config(void) {
                                  .beacon_interval = WIFI_AP_BEACON_INTERVAL,
                              }};
 
+  // WPA2 rejects an empty password (and the ESP_ERROR_CHECK below aborts), so
+  // a config that sets none gets an open AP instead.
+  if (strlen(WIFI_AP_PASSWORD) == 0) {
+    ap_config.ap.authmode = WIFI_AUTH_OPEN;
+  }
+
   // Configure the DHCP for the AP
   esp_netif_ip_info_t ap_ip_info;
   memset(&ap_ip_info, 0x00, sizeof(ap_ip_info));

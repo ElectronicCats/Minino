@@ -55,7 +55,7 @@ menu "General project"
 		
 		config WIFI_AP_PASSWORD
 		string "WIFI Ap Password"
-		default ""
+		default "Cats1234"
 		help
 			Minino Access Point Password
 		
