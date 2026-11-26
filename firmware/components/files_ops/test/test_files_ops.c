@@ -5,7 +5,7 @@
 #include <unistd.h>
 
 #include "files_ops.h"
-#include "unity/unity.h"
+#include "unity.h"
 
 static char test_temp_dir[128];
 

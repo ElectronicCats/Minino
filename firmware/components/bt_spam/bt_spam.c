@@ -1114,7 +1114,7 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
   }
 
   // Register our GAP callback via the central dispatcher so that other
-  // modules (bt_gatts, ble_hid, surv_radio, gattcmd) can also receive GAP
+  // modules (ble_hid, surv_radio, gattcmd) can also receive GAP
   // events without overwriting each other's registration.
   ret = gap_dispatcher_register(esp_gap_cb);
   if (ret != ESP_OK) {
