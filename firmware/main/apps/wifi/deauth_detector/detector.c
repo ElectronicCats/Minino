@@ -102,7 +102,8 @@ void deauth_detector_begin() {
     return;
   }
   wifi_leased = true;
-  esp_wifi_set_storage(WIFI_STORAGE_RAM); /* best effort, detector never joins */
+  esp_wifi_set_storage(
+      WIFI_STORAGE_RAM); /* best effort, detector never joins */
   /* Claim the shared promiscuous slot instead of taking it: the callback and
      the on/off switch are global to the driver, and the surveillance detector
      used to overwrite this handler and switch promiscuous mode off at the end

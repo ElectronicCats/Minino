@@ -308,8 +308,8 @@ static void wifi_analyzer_begin_task(void* pvParameters) {
 void wifi_analyzer_begin() {
   if (no_mem) {
     // Schedule the OOM handler in a safe context
-    task_manager_create(out_of_mem_task, "wifi_oom",
-                        TASK_STACK_SMALL, NULL, TASK_PRIORITY_NORMAL, NULL);
+    task_manager_create(out_of_mem_task, "wifi_oom", TASK_STACK_SMALL, NULL,
+                        TASK_PRIORITY_NORMAL, NULL);
     return;
   }
 

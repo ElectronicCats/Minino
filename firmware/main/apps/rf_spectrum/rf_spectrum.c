@@ -690,7 +690,8 @@ void rf_spectrum_set_pcap_enabled(bool enabled) {
                "Cannot start PCAP logging: MicroSD not mounted or file error");
     }
   } else {
-    /* Clear the flag first: the Wi-Fi callback writes to the file while it is set. */
+    /* Clear the flag first: the Wi-Fi callback writes to the file while it is
+     * set. */
     s_data.pcap_logging = false;
     rf_spectrum_pcap_stop();
     ESP_LOGI(TAG, "PCAP logging stopped");

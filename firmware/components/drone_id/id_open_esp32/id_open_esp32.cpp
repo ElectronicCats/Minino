@@ -311,14 +311,14 @@ void init_ble() {
    the next session brings the radio up again. Wi-Fi goes back to the boot
    state (initialised, STA) if the BLE claim had taken it down. */
 void deinit_radio() {
-#if ID_OD_WIFI
+  #if ID_OD_WIFI
   wifi_initialized = false;
   if (ble_initialized) {
     ble_initialized = false;
     radio_lease_ble_release();
   }
   wifi_service_init(WIFI_MODE_STA);
-#endif
+  #endif
 }
 
 /*
