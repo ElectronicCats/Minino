@@ -109,7 +109,7 @@ void deauth_module_begin() {
   /* Hold the WiFi driver through radio_lease for the whole app (APSTA: the
      manager AP plus STA for scanning). As the first holder this brings the
      driver up; the scan task's wifi_scanner then nests as a second holder, so
-     its release no longer deinitialises the driver and drops the AP (H7). */
+     its release no longer deinitialises the driver and drops the AP. */
   if (radio_lease_wifi_acquire(RADIO_WIFI_MODE_APSTA) != ESP_OK) {
     ESP_LOGE("deauth", "Could not acquire WiFi (BLE active?)");
     animations_task_stop();

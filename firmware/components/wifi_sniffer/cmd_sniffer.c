@@ -467,7 +467,7 @@ static esp_err_t sniffer_start(sniffer_runtime_t* sniffer) {
 
   /* Claim promiscuous mode BEFORE creating the task. A failed claim (e.g. BLE
      holds the radio) must not force-delete a task that is already drawing and
-     may hold oled_mutex (H8). The queue exists, so the few frames that arrive
+     may hold oled_mutex. The queue exists, so the few frames that arrive
      before the task starts draining are buffered, not lost. */
   switch (sniffer->interf) {
     case SNIFFER_INTF_WLAN:
