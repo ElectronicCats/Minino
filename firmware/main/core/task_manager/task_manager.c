@@ -106,48 +106,44 @@ esp_err_t task_manager_create(TaskFunction_t task_func,
 }
 
 esp_err_t task_manager_delete(TaskHandle_t handle) {
-  if (handle == NULL) {
-    return ESP_ERR_INVALID_ARG;
+  /* NULL means the calling task. It is deleted even when it is not in the
+     registry (plain xTaskCreate, pthreads): a task must never return. */
+  bool self = (handle == NULL);
+  if (self) {
+    handle = xTaskGetCurrentTaskHandle();
   }
 
-  if (task_manager_mutex == NULL) {
-    return ESP_ERR_INVALID_STATE;
-  }
-
-  if (xSemaphoreTake(task_manager_mutex, portMAX_DELAY) != pdTRUE) {
-    return ESP_ERR_TIMEOUT;
-  }
-
-  // Search for task in registry
-  for (uint32_t i = 0; i < task_count; i++) {
-    if (task_registry[i].handle == handle) {
-      ESP_LOGI(TAG, "Task deleted: '%s'",
-               task_registry[i].name ? task_registry[i].name : "unknown");
-
-      // Save name before compacting to avoid use-after-free
-      char* deleted_name = (char*) task_registry[i].name;
-
-      // Compact registry FIRST before calling vTaskDelete
-      for (uint32_t j = i; j < task_count - 1; j++) {
-        task_registry[j] = task_registry[j + 1];
+  esp_err_t ret = ESP_ERR_NOT_FOUND;
+  if (task_manager_mutex != NULL &&
+      xSemaphoreTake(task_manager_mutex, portMAX_DELAY) == pdTRUE) {
+    for (uint32_t i = 0; i < task_count; i++) {
+      if (task_registry[i].handle == handle) {
+        ESP_LOGI(TAG, "Task deleted: '%s'",
+                 task_registry[i].name ? task_registry[i].name : "unknown");
+        /* Drop the entry before vTaskDelete: for the calling task that call
+           does not return. */
+        free((char*) task_registry[i].name);
+        for (uint32_t j = i; j < task_count - 1; j++) {
+          task_registry[j] = task_registry[j + 1];
+        }
+        memset(&task_registry[task_count - 1], 0, sizeof(task_info_t));
+        task_count--;
+        ret = ESP_OK;
+        break;
       }
-      memset(&task_registry[task_count - 1], 0, sizeof(task_info_t));
-      task_count--;
-
-      // Free the name before vTaskDelete to prevent memory leak if the task
-      // deletes itself
-      if (deleted_name) {
-        free(deleted_name);
-      }
-      xSemaphoreGive(task_manager_mutex);
-      vTaskDelete(handle);
-      return ESP_OK;
     }
+    xSemaphoreGive(task_manager_mutex);
   }
 
-  xSemaphoreGive(task_manager_mutex);
-  ESP_LOGW(TAG, "Task not found in registry");
-  return ESP_ERR_NOT_FOUND;
+  if (ret != ESP_OK) {
+    ESP_LOGW(TAG, "Task not found in registry");
+  }
+  /* A handle that is not registered is not deleted: it may belong to a task
+     that already ended, and its TCB is gone. */
+  if (ret == ESP_OK || self) {
+    vTaskDelete(self ? NULL : handle);
+  }
+  return ret;
 }
 
 void task_manager_list_all(void) {

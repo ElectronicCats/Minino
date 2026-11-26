@@ -108,7 +108,7 @@ void uart_bridge_app_task(void* args) {
   uart_bridge_end();
   cat_console_resume();
 
-  vTaskDelete(NULL);
+  task_manager_delete(NULL);
 }
 
 static void keyboard_navigation_cb(uint8_t button_name, uint8_t button_event) {

@@ -173,7 +173,7 @@ static void* http_get_task(void* pvParameters) {
   if (req_len < 0 || req_len >= (int) sizeof(request)) {
     ESP_LOGE(CATDOS_TAG, "Request string too long");
     task_atack = NULL;
-    vTaskDelete(NULL);
+    task_manager_delete(NULL);
     return NULL;
   }
   running_attack = true;
@@ -214,7 +214,7 @@ static void* http_get_task(void* pvParameters) {
     close(s);
   }
   task_atack = NULL;
-  vTaskDelete(NULL);
+  task_manager_delete(NULL);
   return NULL;
 }
 
@@ -232,7 +232,7 @@ static void catdos_module_send_attack_task(void* pvParameters) {
   res = pthread_attr_init(&attr);
   if (res != 0) {
     ESP_LOGE(CATDOS_TAG, "Failed to init pthread attr: %d", res);
-    vTaskDelete(NULL);
+    task_manager_delete(NULL);
     return;
   }
   pthread_attr_setstacksize(&attr, 16384);
@@ -252,7 +252,7 @@ static void catdos_module_send_attack_task(void* pvParameters) {
   }
 
   pthread_attr_destroy(&attr);
-  vTaskDelete(NULL);
+  task_manager_delete(NULL);
 }
 
 int catdos_module_send_attack(int argc, char** argv) {
@@ -525,7 +525,7 @@ static void catdos_on_exit(void) {
   // Stop attack if running
   running_attack = false;
   if (task_atack != NULL) {
-    vTaskDelete(task_atack);
+    task_manager_delete(task_atack);
     task_atack = NULL;
   }
   // Leave the target AP and drop the AP manager's handlers

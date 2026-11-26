@@ -100,8 +100,15 @@ esp_err_t task_manager_create(TaskFunction_t task_func,
 /**
  * @brief Delete a task and update the registry
  *
- * @param handle Handle of the task to delete
- * @return ESP_OK on success
+ * A task created with task_manager_create() that ends itself must call
+ * task_manager_delete(NULL), not vTaskDelete(NULL): otherwise its registry
+ * slot is never freed and, once MAX_TASKS slots leak, every
+ * task_manager_create() fails with ESP_ERR_NO_MEM.
+ *
+ * @param handle Task to delete, or NULL for the calling task (always
+ *               deleted, registered or not; the call does not return)
+ * @return ESP_OK on success, ESP_ERR_NOT_FOUND when the task is not
+ *         registered (a non-NULL handle is then left alone)
  */
 esp_err_t task_manager_delete(TaskHandle_t handle);
 

@@ -709,7 +709,7 @@ static void nmea_parser_task_entry(void* arg) {
   if (esp_gps->task_done_sem) {
     xSemaphoreGive(esp_gps->task_done_sem);
   }
-  vTaskDelete(NULL);
+  task_manager_delete(NULL);
 }
 
 /**

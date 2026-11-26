@@ -82,6 +82,14 @@ static void out_of_mem_handler() {
   wifi_screens_show_no_mem();
 }
 
+/* out_of_mem_handler() is also the sniffer's callback, so it cannot end the
+   task itself; as a task of its own it needs this body, since a FreeRTOS task
+   that returns aborts. */
+static void out_of_mem_task(void* pvParameters) {
+  out_of_mem_handler();
+  task_manager_delete(NULL);
+}
+
 static void limit_packets_handler() {
   ESP_LOGW(TAG, "Limit packets reached");
 
@@ -204,7 +212,7 @@ static void wifi_analyzer_init_task(void* pvParameters) {
     analizer_running = false;
     xSemaphoreGive(state_mutex);
   }
-  vTaskDelete(NULL);
+  task_manager_delete(NULL);
 }
 
 // ---------------------------------------------------------------------------
@@ -217,7 +225,7 @@ static void wifi_analyzer_setup_task(void* pvParameters) {
   analizer_initialized = true;
   analizer_initializing = false;
   xSemaphoreGive(state_mutex);
-  vTaskDelete(NULL);
+  task_manager_delete(NULL);
 }
 
 // ---------------------------------------------------------------------------
@@ -270,14 +278,14 @@ static void wifi_analyzer_begin_task(void* pvParameters) {
   xSemaphoreGive(state_mutex);
 
   if (already_done) {
-    vTaskDelete(NULL);
+    task_manager_delete(NULL);
     return;
   }
 
   // Run the heavy WiFi setup (esp_wifi_init, etc.) inside this task
   wifi_analyzer_setup_task(NULL);
-  // Note: wifi_analyzer_setup_task calls vTaskDelete(NULL) at the end, which
-  // terminates THIS task too, so no vTaskDelete(NULL) is needed here.
+  // Note: wifi_analyzer_setup_task ends with task_manager_delete(NULL), which
+  // removes and deletes THIS task, so nothing more is needed here.
 }
 
 // ---------------------------------------------------------------------------
@@ -288,7 +296,7 @@ static void wifi_analyzer_begin_task(void* pvParameters) {
 void wifi_analyzer_begin() {
   if (no_mem) {
     // Schedule the OOM handler in a safe context
-    task_manager_create((TaskFunction_t) out_of_mem_handler, "wifi_oom",
+    task_manager_create(out_of_mem_task, "wifi_oom",
                         TASK_STACK_SMALL, NULL, TASK_PRIORITY_NORMAL, NULL);
     return;
   }

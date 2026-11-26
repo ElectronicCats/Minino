@@ -367,7 +367,7 @@ static void sniffer_task(void* parameters) {
   if (sniffer_cb) {
     sniffer_cb(sniffer);
   }
-  vTaskDelete(NULL);
+  task_manager_delete(NULL);
 }
 
 static esp_err_t sniffer_stop(sniffer_runtime_t* sniffer) {
