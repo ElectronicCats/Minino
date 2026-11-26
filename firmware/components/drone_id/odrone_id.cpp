@@ -136,6 +136,7 @@ void odrone_id_stop(void) {
   if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_ENABLED) {
     esp_ble_gap_stop_advertising();
   }
+  deinit_radio();
 }
 
 void odrone_id_set_ble_drone(bool enable) {

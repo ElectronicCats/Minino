@@ -104,6 +104,7 @@
 void construct2(void);
 void init_w(char*, int, uint8_t*, uint8_t);
 void init_ble();
+void deinit_radio();
 uint8_t* capability(void);
 int tag_rates(uint8_t*, int);
 int tag_ext_rates(uint8_t*, int);

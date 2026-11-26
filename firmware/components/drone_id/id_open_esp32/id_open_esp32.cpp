@@ -198,9 +198,13 @@ void init_w(char* ssid,
   // Crea una interfaz de red Wi-Fi en modo AP
   wifi_service_netif_ap();
 
-  // Configuración por defecto de Wi-Fi
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+  /* Through the service, not esp_wifi_init(): a second raw init after BLE
+     took the driver down fails on the NVS cookie and aborts, and the
+     service's guard refuses the bring-up while BLE holds the radio. */
+  if (!wifi_service_init(WIFI_MODE_AP)) {
+    wifi_initialized = false;
+    return;
+  }
 
   // Registra el manejador de eventos para eventos Wi-Fi
   // ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
@@ -255,9 +259,9 @@ void init_w(char* ssid,
 
 void init_ble() {
 #if ID_OD_WIFI
-  if (!ble_initialized) {
-    ble_initialized = true;
-  } else {
+  /* ble_initialized means "this module holds a BLE lease"; deinit_radio()
+     gives it back. */
+  if (ble_initialized) {
     return;
   }
 
@@ -277,6 +281,11 @@ void init_ble() {
     ESP_LOGE("BLE", "could not acquire the BLE stack");
     return;
   }
+  ble_initialized = true;
+  /* With no Wi-Fi lease holder, the acquire deinitialised the driver that
+     init_w() brought up. Say so, or set_wifi_ap()'s ESP_ERROR_CHECK aborts
+     on the dead driver. */
+  wifi_initialized = false;
 
   esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9);
   esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
@@ -296,6 +305,20 @@ void init_ble() {
   esp_ble_gap_start_advertising(&advParams);
 
   return;
+}
+
+/* Undo init_w()/init_ble(): give back the BLE lease and clear both flags so
+   the next session brings the radio up again. Wi-Fi goes back to the boot
+   state (initialised, STA) if the BLE claim had taken it down. */
+void deinit_radio() {
+#if ID_OD_WIFI
+  wifi_initialized = false;
+  if (ble_initialized) {
+    ble_initialized = false;
+    radio_lease_ble_release();
+  }
+  wifi_service_init(WIFI_MODE_STA);
+#endif
 }
 
 /*
