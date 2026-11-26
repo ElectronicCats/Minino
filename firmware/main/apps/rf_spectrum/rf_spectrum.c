@@ -681,7 +681,7 @@ void rf_spectrum_set_pcap_enabled(bool enabled) {
   if (enabled == s_data.pcap_logging)
     return;
   if (enabled) {
-    if (rf_spectrum_pcap_start()) {
+    if (rf_spectrum_pcap_start() == ESP_OK) {
       s_data.pcap_logging = true;
       s_data.pcap_packets = 0;
       ESP_LOGI(TAG, "PCAP logging enabled");
