@@ -148,6 +148,10 @@ void split_text_into_array(const char* input,
 }
 
 static void list_ssid_cb(uint8_t selection) {
+  /* Empty list: RIGHT still fires the callback on slot 0, which is NULL. */
+  if (ssids_list[selection] == NULL) {
+    return;
+  }
   if (strlen(ssids_list[selection]) + 7 > 16) {
     snprintf(ssid_list_label, sizeof(ssid_list_label), "[%s]",
              ssids_list[selection]);
