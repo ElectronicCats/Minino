@@ -55,6 +55,7 @@ void open_thread_module_exit(void) {}
 void open_thread_module_sniffer_enter(void) {}
 void open_thread_module_sniffer_run(void) {}
 void ota_module_init(void) {}
+void ota_module_exit(void) {}
 void sd_card_settings_verify_sd_card(void) {}
 void sleep_mode_scenes_main(void) {}
 void ssid_spam_begin(void) {}

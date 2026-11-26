@@ -583,7 +583,7 @@ static menu_t menus[] = {
      .entry_cmd = "ota",
      .last_selected_submenu = 0,
      .on_enter_cb = ota_module_init,
-     .on_exit_cb = NULL,
+     .on_exit_cb = ota_module_exit,
      .is_visible = true},
 #endif
     {.display_name = "Display",

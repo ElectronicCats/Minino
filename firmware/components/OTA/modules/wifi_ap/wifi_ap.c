@@ -30,6 +30,9 @@
 static const char TAG[] = "WIFI_APP";    // Used for ESP Serial console Message
 static QueueHandle_t wifi_app_q_handle;  // Queue Handle used to Manipulate the
                                          // main queue of events
+static TaskHandle_t wifi_app_task_handle = NULL;
+static esp_event_handler_instance_t wifi_handler_event_instance = NULL;
+static esp_event_handler_instance_t ip_handler_event_instance = NULL;
 
 // netif objects are defined in wifi_app.c and declared extern in wifi_app.h
 // We only use them here via the extern declarations from wifi_ap.h ->
@@ -84,7 +87,37 @@ void wifi_app_start(void) {
   wifi_app_q_handle = xQueueCreate(3, sizeof(wifi_app_q_msg_t));
 
   // Start the WiFi Application Task
-  xTaskCreate(&wifi_app_task, "wifi_app_task", 4 * 1024u, NULL, 5u, NULL);
+  xTaskCreate(&wifi_app_task, "wifi_app_task", 4 * 1024u, NULL, 5u,
+              &wifi_app_task_handle);
+}
+
+/*
+ * Undoes wifi_app_start(): HTTP server and its monitor, the app task and
+ * queue, the event handlers and the soft-AP. The default netifs stay for the
+ * life of the boot (see wifi_controller).
+ */
+void wifi_app_stop(void) {
+  http_server_stop();
+  if (wifi_app_task_handle != NULL) {
+    vTaskDelete(wifi_app_task_handle);
+    wifi_app_task_handle = NULL;
+  }
+  if (wifi_app_q_handle != NULL) {
+    vQueueDelete(wifi_app_q_handle);
+    wifi_app_q_handle = NULL;
+  }
+  if (wifi_handler_event_instance != NULL) {
+    esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID,
+                                          wifi_handler_event_instance);
+    wifi_handler_event_instance = NULL;
+  }
+  if (ip_handler_event_instance != NULL) {
+    esp_event_handler_instance_unregister(IP_EVENT, ESP_EVENT_ANY_ID,
+                                          ip_handler_event_instance);
+    ip_handler_event_instance = NULL;
+  }
+  esp_wifi_stop();
+  wifi_service_deinit();
 }
 
 /*
@@ -142,9 +175,6 @@ static void wifi_app_event_handler_init(void) {
   }
 
   // Event handler for the connection
-  esp_event_handler_instance_t wifi_handler_event_instance;
-  esp_event_handler_instance_t ip_handler_event_instance;
-
   esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID,
                                       &wifi_app_event_handler, NULL,
                                       &wifi_handler_event_instance);
