@@ -7,6 +7,7 @@
    CONDITIONS OF ANY KIND, either express or implied.
 */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,8 +43,14 @@ void wifi_sniffer_begin() {
   /* The WiFi driver is brought up by the analyzer through radio_lease
      (RADIO_WIFI_MODE_NULL) before the capture starts; begin() only registers
      the console commands. */
-  register_sniffer_cmd();
-  register_pcap_cmd();
+  /* Every analyzer capture re-enters begin(); the argtables are allocated
+     once and live for the boot. */
+  static bool registered = false;
+  if (!registered) {
+    register_sniffer_cmd();
+    register_pcap_cmd();
+    registered = true;
+  }
   ESP_LOGI(TAG, "Commands registered");
 }
 
@@ -67,8 +74,7 @@ esp_err_t wifi_sniffer_start() {
   char* sniffer_argv[] = {"sniffer",   "-i", "wlan",      "-c",
                           channel_str, "-n", "2147483647"};
   uint8_t sniffer_argc = 7;
-  do_sniffer_cmd(sniffer_argc, sniffer_argv);
-  return ESP_OK;
+  return do_sniffer_cmd(sniffer_argc, sniffer_argv) == 0 ? ESP_OK : ESP_FAIL;
 }
 
 void wifi_sniffer_stop() {
