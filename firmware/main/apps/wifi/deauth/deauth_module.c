@@ -6,6 +6,7 @@
 #include "freertos/FreeRTOS.h"
 #include "led_events.h"
 #include "menus_module.h"
+#include "radio_lease.h"
 #include "wifi_attacks.h"
 #include "wifi_controller.h"
 #include "wifi_scanner.h"
@@ -104,6 +105,17 @@ void deauth_module_begin() {
   animations_task_run(&deauth_display_scanning, 200, NULL);
 
   current_wifi_state.state = DEAUTH_STATE_IDLE;
+
+  /* Hold the WiFi driver through radio_lease for the whole app (APSTA: the
+     manager AP plus STA for scanning). As the first holder this brings the
+     driver up; the scan task's wifi_scanner then nests as a second holder, so
+     its release no longer deinitialises the driver and drops the AP (H7). */
+  if (radio_lease_wifi_acquire(RADIO_WIFI_MODE_APSTA) != ESP_OK) {
+    ESP_LOGE("deauth", "Could not acquire WiFi (BLE active?)");
+    animations_task_stop();
+    menus_module_exit_app();
+    return;
+  }
 
   memset(&current_wifi_state.wifi_config, 0, sizeof(wifi_config_t));
   current_wifi_state.wifi_config = wifi_driver_access_point_begin();
@@ -297,6 +309,10 @@ void deauth_module_exit(void) {
   }
   animations_task_stop();
   wifi_attacks_module_stop();
+  /* Drop the APSTA claim taken in begin(). As the last holder this stops and
+     deinitialises the driver, so the manager AP (and any cloned rogue AP)
+     stops beaconing. */
+  radio_lease_wifi_release();
   wifi_scanner_clear_ap_records();
   led_control_stop();
   current_item = 0;

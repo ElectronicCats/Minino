@@ -24,9 +24,10 @@ wifi_config_t wifi_driver_access_point_begin() {
   //   esp_log_level_set(TAG_WIFI_DRIVER, ESP_LOG_NONE);
   // #endif
 
-  if (wifi_driver_started()) {
-    wifi_driver_deinit();
-  }
+  /* The driver is brought up (and torn down) by the caller's radio_lease
+     claim; wifi_driver_ap_start() below only sets the AP config when it is
+     already running. Deinitialising here would drop the lease's driver and
+     leave the refcount pointing at nothing (H7). */
 
   esp_err_t err;
   err = esp_event_loop_create_default();
