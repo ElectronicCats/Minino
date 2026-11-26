@@ -8,7 +8,6 @@
 #include "preferences.h"
 #include "radio_lease.h"
 #include "wifi_controller.h"
-#include "wifi_service.h"
 
 #include "app_manager.h"
 #include "menus_module.h"
@@ -22,6 +21,9 @@ static uint16_t total_deauth_packets_count = 0;
 static uint16_t deauth_packets_count_list[14];
 static volatile bool running = false;
 static bool channel_hopping = false;
+/* True while this session holds the WiFi driver lease; keeps acquire/release
+   balanced across the stop() and on_exit paths. */
+static bool wifi_leased = false;
 
 static TaskHandle_t channel_hopper_handle = NULL;
 
@@ -92,20 +94,15 @@ void deauth_detector_begin() {
     ESP_LOGE(TAG, "esp_netif_init: %s", esp_err_to_name(err));
     return;
   }
-  if (!wifi_service_is_up_get() && !wifi_service_init(WIFI_MODE_STA)) {
-    ESP_LOGE(TAG, "WiFi stack init failed");
+  /* Claim the WiFi driver through the lease instead of bringing it up
+     directly: this inits STA and starts it, and keeps the refcount honest so
+     BLE cannot tear the radio down under the detector. */
+  if (radio_lease_wifi_acquire(RADIO_WIFI_MODE_STA) != ESP_OK) {
+    ESP_LOGE(TAG, "could not acquire the WiFi driver");
     return;
   }
-  err = esp_wifi_set_storage(WIFI_STORAGE_RAM);
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Error setting storage: %s", esp_err_to_name(err));
-    return;
-  }
-  err = wifi_service_set_mode(WIFI_MODE_STA);
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Error setting mode: %s", esp_err_to_name(err));
-    return;
-  }
+  wifi_leased = true;
+  esp_wifi_set_storage(WIFI_STORAGE_RAM); /* best effort, detector never joins */
   /* Claim the shared promiscuous slot instead of taking it: the callback and
      the on/off switch are global to the driver, and the surveillance detector
      used to overwrite this handler and switch promiscuous mode off at the end
@@ -113,12 +110,8 @@ void deauth_detector_begin() {
   if (radio_lease_prom_acquire(RADIO_PROM_DEAUTH_DETECTOR, packet_handler) !=
       ESP_OK) {
     ESP_LOGE(TAG, "could not claim promiscuous mode");
-    return;
-  }
-
-  err = esp_wifi_start();
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Error starting wifi: %s", esp_err_to_name(err));
+    wifi_leased = false;
+    radio_lease_wifi_release();
     return;
   }
   uint8_t get_saved_channel =
@@ -145,7 +138,12 @@ void deauth_detector_stop() {
      the packet counter stays at zero. Clear promiscuous mode while the driver
      is still running, then leave Wi-Fi running but idle. */
   radio_lease_prom_release(RADIO_PROM_DEAUTH_DETECTOR);
-  esp_wifi_stop();
+  /* Give up the driver claim; the lease stops/deinits it when nobody else
+     holds it, restoring the baseline instead of leaving STA stopped. */
+  if (wifi_leased) {
+    wifi_leased = false;
+    radio_lease_wifi_release();
+  }
   oled_screen_clear();
   detector_scenes_main_menu();
 }
@@ -171,6 +169,11 @@ static void deauth_detector_on_exit(void) {
   }
   // Ensure promiscuous lease is released
   radio_lease_prom_release(RADIO_PROM_DEAUTH_DETECTOR);
+  // Ensure the WiFi driver lease is released (if stop() did not run)
+  if (wifi_leased) {
+    wifi_leased = false;
+    radio_lease_wifi_release();
+  }
   // Reset state
   running = false;
   channel_hopping = false;

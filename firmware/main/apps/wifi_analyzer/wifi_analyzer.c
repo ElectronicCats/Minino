@@ -18,6 +18,7 @@
 #include "led_events.h"
 #include "menus_module.h"
 #include "oled_screen.h"
+#include "radio_lease.h"
 #include "sd_card.h"
 #include "wifi_analyzer.h"
 #include "wifi_attacks.h"
@@ -35,6 +36,10 @@ static volatile bool analizer_initializing = false;
 static volatile bool analizer_running = false;
 static volatile bool no_mem = false;
 static volatile bool analyzer_exiting = false;
+/* True while this session holds the WiFi driver lease (acquired in the setup
+   task, released on exit); keeps acquire/release balanced across re-entries
+   and the double exit path (menu callback plus app_manager). */
+static volatile bool wifi_leased = false;
 
 // Two separate mutexes: one for the summary buffer, one for the state flags.
 static SemaphoreHandle_t summary_mutex = NULL;
@@ -220,6 +225,11 @@ static void wifi_analyzer_init_task(void* pvParameters) {
 // wifi_driver_init_null / esp_wifi_init) in a dedicated 8 KB task.
 // ---------------------------------------------------------------------------
 static void wifi_analyzer_setup_task(void* pvParameters) {
+  /* Bring the driver up through the lease (NULL mode for promiscuous capture)
+     so the refcount is honest and BLE cannot tear it down under the capture. */
+  if (radio_lease_wifi_acquire(RADIO_WIFI_MODE_NULL) == ESP_OK) {
+    wifi_leased = true;
+  }
   wifi_sniffer_begin();
   xSemaphoreTake(state_mutex, portMAX_DELAY);
   analizer_initialized = true;
@@ -536,6 +546,12 @@ static void wifi_analyzer_on_exit(void) {
     no_mem = false;
     analyzer_exiting = false;
     xSemaphoreGive(state_mutex);
+  }
+  // Release the WiFi driver lease taken in the setup task. Guarded so the
+  // second exit (menu callback plus app_manager) does not underflow.
+  if (wifi_leased) {
+    wifi_leased = false;
+    radio_lease_wifi_release();
   }
   /* The mutexes are kept for the life of the boot: the begin, init and
      limit-handler tasks may still be about to take them, and a deleted

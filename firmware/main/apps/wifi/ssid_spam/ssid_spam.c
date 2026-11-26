@@ -9,6 +9,7 @@ static const char* TAG = "ssid_spam";
 #include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
 #include "nvs_flash.h"
+#include "radio_lease.h"
 #include "string.h"
 #include "wifi_service.h"
 
@@ -91,6 +92,9 @@ static char* ssids_attack[MAX_STRINGS];
 static uint16_t total_lines = 0;
 static uint8_t current_item = 0;
 static TaskHandle_t spam_task_handle = NULL;
+/* True while the app holds the WiFi driver lease (taken in ssid_spam_init,
+   released on exit). */
+static bool wifi_leased = false;
 
 static const general_menu_t spam_menu_main = {
     .menu_items = ssids_main_list,
@@ -285,10 +289,15 @@ static void ssid_spam_init(void) {
   }
   wifi_service_netif_ap();
 
-  if (!wifi_service_init(WIFI_MODE_AP)) {
+  /* Bring the driver up through the lease (APSTA covers the soft-AP the spam
+     needs) instead of calling wifi_service_init() directly: this starts the
+     driver and keeps the refcount honest, so nothing tears it down under the
+     attack and the exit restores the baseline. */
+  if (radio_lease_wifi_acquire(RADIO_WIFI_MODE_APSTA) != ESP_OK) {
     ESP_LOGE(TAG, "WiFi stack init failed");
     return;
   }
+  wifi_leased = true;
 
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   wifi_config_t ap_config = {.ap = {.ssid = "NotSuspisiusCat",
@@ -411,8 +420,12 @@ static void ssid_spam_on_exit(void) {
   // Stop the spam task
   animations_task_stop();
   ssid_spam_stop_task();
-  // Deinitialize WiFi (started in ssid_spam_init)
-  wifi_service_deinit();
+  // Release the WiFi driver lease taken in ssid_spam_init. Guarded so the
+  // double exit path (ssid_spam_exit plus app_manager) does not underflow.
+  if (wifi_leased) {
+    wifi_leased = false;
+    radio_lease_wifi_release();
+  }
   // Free attack strings
   for (uint8_t i = 0; i < MAX_STRINGS; i++) {
     if (ssids_attack[i]) {

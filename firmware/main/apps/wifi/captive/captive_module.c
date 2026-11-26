@@ -19,6 +19,7 @@
 
 #include "app_manager.h"
 #include "captive_module.h"
+#include "radio_lease.h"
 #include "wifi_service.h"
 
 #define MININO_CAPTIVE_DEFAULT_SSID CONFIG_WIFI_AP_NAME
@@ -81,6 +82,12 @@ static captive_files_t redirect_list = {0};
 static captive_context_t captive_context = {0};
 static wifi_scanner_ap_records_t* ap_records;
 static uint8_t selected_record = 0;
+/* True while the soft-AP portal is up and holds the WiFi driver lease. The
+   portal can be started and stopped several times in one app session (the
+   running screen's back button stops it and returns to the menu), so the
+   lease is tied to the portal, not to the app, and both exit paths release
+   only when it is actually held. */
+static bool portal_running = false;
 static user_input_t user_context = {
     .user1 = NULL,
     .user2 = NULL,
@@ -517,10 +524,14 @@ static void captive_module_disable_wifi() {
     server = NULL;
     ESP_LOGW("CAPTIVE", "HTTP server stopped");
   }
-  /* Deinitialize WiFi through the service. */
-  /* The AP netif is kept for the life of the boot (wifi_service_netif_ap):
-     destroying it left the driver pointing at freed memory. */
-  wifi_service_deinit();
+  /* Release the driver through the lease, which stops/deinits it when nobody
+     else holds it. The AP netif is kept for the life of the boot
+     (wifi_service_netif_ap): destroying it left the driver pointing at freed
+     memory. */
+  if (portal_running) {
+    portal_running = false;
+    radio_lease_wifi_release();
+  }
 
   captive_module_main();
 }
@@ -539,6 +550,12 @@ static void captive_module_wifi_begin() {
   /* DHCP and the DNS server need the AP netif; it used to exist only if
      another app had created it earlier in the boot. */
   wifi_service_netif_ap();
+  /* Claim the driver through the lease before wifi_init_softap() switches it
+     to AP mode, so the refcount is honest and the exit paths can restore the
+     baseline. wifi_init_softap() sets the actual AP mode. */
+  if (radio_lease_wifi_acquire(RADIO_WIFI_MODE_STA) == ESP_OK) {
+    portal_running = true;
+  }
   wifi_init_softap();
   server = start_webserver();
 
@@ -860,6 +877,10 @@ static void captive_module_show_aps_list() {
 }
 
 static void scanning_task() {
+  /* Hold the driver across the whole retry loop so each wifi_scanner call
+     nests on this claim instead of tearing the driver down and recalibrating
+     it between every scan. */
+  bool scan_leased = (radio_lease_wifi_acquire(RADIO_WIFI_MODE_STA) == ESP_OK);
   ap_records = wifi_scanner_get_ap_records();
   while ((ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 4)) &
          (retries < MAX_RETRIES)) {
@@ -882,6 +903,10 @@ static void scanning_task() {
     captive_module_main();
   } else {
     captive_module_show_aps_list();
+  }
+
+  if (scan_leased) {
+    radio_lease_wifi_release();
   }
 
   /* Clear before dying: on_exit would otherwise vTaskDelete a freed TCB. */
@@ -991,7 +1016,10 @@ static void captive_on_exit(void) {
     stop_dns_server(dns_server);
     dns_server = NULL;
   }
-  wifi_service_deinit();
+  if (portal_running) {
+    portal_running = false;
+    radio_lease_wifi_release();
+  }
   if (!sd_card_is_not_mounted()) {
     sd_card_unmount();
   }

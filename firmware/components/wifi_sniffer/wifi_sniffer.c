@@ -39,7 +39,9 @@ void wifi_sniffer_begin() {
 #if !defined(CONFIG_WIFI_SNIFFER_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
 #endif
-  wifi_driver_init_null();
+  /* The WiFi driver is brought up by the analyzer through radio_lease
+     (RADIO_WIFI_MODE_NULL) before the capture starts; begin() only registers
+     the console commands. */
   register_sniffer_cmd();
   register_pcap_cmd();
   ESP_LOGI(TAG, "Commands registered");
