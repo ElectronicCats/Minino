@@ -12,6 +12,7 @@ You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/p
     - [Flashing the firmware](#flashing-the-firmware)
     - [Monitoring the serial output](#monitoring-the-serial-output)
     - [Full build process](#full-build-process)
+    - [Board profiles](#board-profiles)
     - [Cleaning the project](#cleaning-the-project)
   - [Create a release](#create-a-release)
     - [Flashing release](#flashing-release)
@@ -54,10 +55,22 @@ You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/p
   - [Cool commands](#cool-commands)
 - [Change log](#change-log)
   - [Unreleased](#unreleased)
-    - [Added](#added)
-    - [Fixed](#fixed)
+  - [v1.1.16.1](#v11161)
+  - [v1.1.16.0](#v11160)
+  - [v1.1.15.2](#v11152)
+  - [v1.1.15.1](#v11151)
+  - [v1.1.15.0](#v11150)
+  - [v1.1.14.1](#v11141)
+  - [v1.1.14.0-beta](#v11140-beta)
+  - [v1.1.13.0](#v11130)
+  - [v1.1.12.0](#v11120)
+  - [v1.1.11.0](#v11110)
+  - [v1.1.10.0](#v11100)
+  - [v1.1.9.0](#v1190)
+  - [v1.1.8.0](#v1180)
+  - [v1.1.7.2](#v1172)
+  - [v1.1.7.1](#v1171)
   - [v1.1.7.0](#v1170)
-    - [Added](#added-1)
 
 ## Prerequisites
 
@@ -135,7 +148,8 @@ In the combined build, `bt_spam` refuses to start below 18 KB free and stops
 below 8 KB during a run. That prevents the controller advertising failure when
 Thread Sniffer/Broadcast has left the heap low.
 
-To run the host-side unit test suites (20+ Unity and Python suites):
+To run the host-side unit test suites (the 17 Unity C suites plus the Python
+flash-tooling test), run:
 
 ```bash
 make tests
@@ -176,6 +190,21 @@ To do all the previous steps in one command, run:
 ```bash
 make all
 ```
+
+### Board profiles
+
+`make compile` builds the default profile into `build/` using `./sdkconfig`. To
+cross-build the per-event board variants, run:
+
+```bash
+make builds
+```
+
+Each board overlays its own config (`profiles/<board>/profile`) and lands in
+`build-<board>/`. The profiles are `minino`, `bsides`, `dragonjar`, `ekoparty`,
+`bugcon` and `bsseattle`. Build a single one with
+`idf.py @profiles/<board>/profile build`, and verify every image still fits its
+partition table with `make flash_fit`.
 
 ### Cleaning the project
 
@@ -745,13 +774,127 @@ I (1420031) : 0x40818ca6   01                                                |.|
 - Thread wardriving (`warthread`) with stabilized stack lifecycle and an optimized sniffer
 - Zigbee mesh topology mapper (`zbmesh`) and Zigbee wardriving (`warbee`)
 - New menu icons for Mesh Topology and improved Zigbee/Thread representations
-- Combined default profile bundling SDR + Zigbee/Thread, plus `sdr-full` and `zigbee-thread` build profiles
+- Combined default firmware bundling SDR + Zigbee/Thread in one image, with `make builds` cross-building the per-event board profiles (`minino`, `bsides`, `dragonjar`, `ekoparty`, `bugcon`, `bsseattle`)
 
 ### Fixed
-- Modbus TCP: memory leaks, UI freezes when exiting menus, blocking connect moved to a task, and the orphaned "connecting" animation
-- USB console: enabled line editing and fixed typing stalls
 - `bt_spam`: guard BLE advertising against low heap and release the lease when restarting a mode
 - Thread: release OpenThread after the sniffer exits
+- Harden BLE, Zigbee and Thread feature implementations
+
+## v1.1.16.1
+### Fixed
+- Modbus TCP: memory leaks in the DoS/Write preferences, UI freeze when exiting the menu, blocking connect moved to a task, and the orphaned "connecting"/Run animation
+- USB console: enabled line editing and fixed typing stalls
+
+## v1.1.16.0
+### Added
+- Native SDR engine: 80 MSPS transceiver, Web Host mode synced with the ESPARGOS WebSDR viewer, GAIN negotiation and USB stability
+- RF Spectrum analyzer with 2× peak tracker, smart anti-jammer and EMA filtering
+- `radio_lease` arbiter, `wifi_service` and GAP dispatcher in the core
+- Selectable OLED menu view styles, new menu icons, `minino_app` lifecycle and input queue
+- Automatic unified `minino-merged.bin`/`.hex` on every build; SDR build profile, flash-fit checks and automated host tests in CI
+### Changed
+- Translated all firmware comments, headers, SDR test scripts and technical docs to English
+
+## v1.1.15.2
+### Fixed
+- Hardened Wi-Fi sniffing and wardriving for stability
+- Scanner OLED display and data rendering
+
+## v1.1.15.1
+### Changed
+- Localized Spanish UI text to English
+### Fixed
+- Code formatting in HID, animations and screen-saver modules
+
+## v1.1.15.0
+### Added
+- Surveillance detector app: scoring engine with decay/cooldown/tier dedupe, radio sniffer, SSID/OUI/IE/BLE matchers and a microSD signature-overlay parser
+- OTA firmware updates over an HTTP server
+- WiFi Spectrum Suite tooling: wardriving analyzer, spoofing analysis, shell completion and unit tests
+- BLE power profiles, heap stats and GAP dispatcher
+- Trackers UI redesign with an RSSI meter and GPS coordinates
+### Fixed
+- `bt_spam`: controller crash, GAP sync race, starting freeze, safe semaphore lifecycle, power fallback and WiFi teardown
+- Memory leaks in `ssid_spam`; task manager, memory monitor and preferences safety
+- Surveillance display freeze and `esp_restart` loop on back exit
+### Security
+- Web server: XSS and directory-traversal protections
+
+## v1.1.14.1
+### Added
+- Zigbee light with LED feedback, runtime channel selection and `radio_selector` integration; Zigbee/Thread modules restored into the build
+### Changed
+- Updated the ESP-IDF requirement to 5.5.1
+### Fixed
+- Broad memory and task-handle hardening across WiFi, thread sniffer, trackers, captive, warbee, animations, buzzer and zigbee modules
+- DroneID packet queue/processing; empty SSID-list handling in spam; recursive mutex for animations
+
+## v1.1.14.0-beta
+### Added
+- Task manager with error handler and memory monitor (CatDoS, LED events, GPS)
+- USB-UART bridge app
+### Changed
+- CI: code-review workflow and additional tag-naming formats; ESP-IDF version bump in the Dockerfile
+### Fixed
+- Concurrency safety and memory handling; overflow condition; build warnings
+
+## v1.1.13.0
+### Added
+- GPS config menu with update rate and test mode, UTC labels and a satellite-count running animation
+- Delete button in the web file manager
+
+## v1.1.12.0
+### Added
+- BLE recon app with a MAC-address filter and advertisement scanner
+- Firmware version shown on device; captive-portal filter file
+### Fixed
+- Wardriving crashes (double init and >200 packets); SSID with comma; file manager after wardriving; OLED cleared after file transfer; one GPX file per session
+
+## v1.1.11.0
+### Added
+- Zigbee CLI integrated into the app with an interactive screen and ZB CLI setting; Zigbee sniffer and switch
+- Captive portal from SD card with user-input capture/storage, SSID replicate and optional dump to SD
+- GATT recon/scan/write commands, a command to stop BLE services and graceful Ctrl+C shutdown
+- WiFi scan & list-SSID command with RSSI; `println` command
+### Fixed
+- Wardriving packets >200 and reset-to-0; SD write and URL decoding; Modbus engine request handling
+
+## v1.1.10.0
+### Added
+- BLE GATT write via the gattcmd tool; BLE enumerate (gattc) and scan via console
+- HID controls: mute, next/prev track and stop, with scrolling in the HID controls menu
+### Fixed
+- GATT write functionality and table formatting; menu/scroll issues; drone scan
+
+## v1.1.9.0
+### Added
+- Modbus TCP attack suite: writer/DoS commands, screens, preferences and runtime parameters
+- BLE DroneID spoofing toggle from the settings menu
+- PCB housing (hardware)
+### Fixed
+- CatDoS animations, notification and disconnect callback; WiFi settings modal and submenus
+
+## v1.1.8.0
+### Added
+- DroneID scanner and multi-drone spoofing with runtime settings (count, channel, location), a settings menu and saved preferences
+- BSides Seattle board compatibility
+### Fixed
+- Memory allocation; channel validation and range; DroneID screen and reload time
+
+## v1.1.7.2
+### Added
+- WiFi region / country-code configuration menu
+- Release automation: all boards built on a new tag, zipped release files and a draft release with flashing instructions
+### Fixed
+- GPIO menu conditions
+
+## v1.1.7.1
+### Added
+- `make builds` and a binaries-merge Make command; renamed partition tables and `get_builds.sh`
+- Automatic release on new tags; 8 MB flash as default; version read from the build script
+### Changed
+- Apps disabled by technology; OTA hidden on badges
 
 ## v1.1.7.0
 ### Added
