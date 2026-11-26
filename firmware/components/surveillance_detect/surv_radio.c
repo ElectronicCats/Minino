@@ -377,6 +377,27 @@ static void ble_claim_release(void) {
   }
 }
 
+/* Same idea for the Wi-Fi driver: releasing a claim we never took (failed
+   acquire, or one radio_task already gave back) underflows the lease or steals
+   another holder's claim. */
+static bool s_wifi_claimed = false;
+
+static esp_err_t wifi_claim(void) {
+  if (s_wifi_claimed) {
+    return ESP_OK;
+  }
+  esp_err_t err = radio_lease_wifi_acquire(RADIO_WIFI_MODE_STA);
+  s_wifi_claimed = (err == ESP_OK);
+  return err;
+}
+
+static void wifi_claim_release(void) {
+  if (s_wifi_claimed) {
+    s_wifi_claimed = false;
+    radio_lease_wifi_release();
+  }
+}
+
 static esp_err_t ble_controller_enable(void) {
   if (s_ble_claimed) {
     /* TRACKERS keeps its claim across windows; re-acquiring each time grew
@@ -488,13 +509,13 @@ static void radio_task(void* arg) {
         if (!s_running) {
           break;
         }
-        if (radio_lease_wifi_acquire(RADIO_WIFI_MODE_STA) != ESP_OK) {
+        if (wifi_claim() != ESP_OK) {
           ESP_LOGW(TAG, "wifi window skipped: the radio is held by BLE");
           vTaskDelay(pdMS_TO_TICKS(500));
           break;
         }
         wifi_window_ms(14000);
-        radio_lease_wifi_release();
+        wifi_claim_release();
         vTaskDelay(pdMS_TO_TICKS(RADIO_SWITCH_DELAY_MS));
         break;
       case SURV_PROFILE_TRACKERS:
@@ -521,10 +542,12 @@ esp_err_t surv_radio_start(surv_profile_t p, bool active_scan) {
   ble_release_classic_mem();
   //  - TRACKERS: ensure Wi-Fi is off if coming from another profile.
   if (p == SURV_PROFILE_TRACKERS) {
-    /* Our own claim first; wifi_driver_deinit_if_started() only runs if the
-       release dropped the count to zero. */
-    radio_lease_wifi_release();
-    wifi_driver_deinit_if_started();
+    /* Our own claim first; the driver only goes down if nobody else holds
+       it. */
+    wifi_claim_release();
+    if (!radio_lease_wifi_shared()) {
+      wifi_driver_deinit_if_started();
+    }
     // On ESP32-C6 WiFi and BT share the PHY: after esp_wifi_deinit the
     // teardown must finish releasing RF before radio_task powers on the BT
     // controller, or the BLE scan (SCAN_START_COMPLETE) fails with 0x1.
@@ -534,7 +557,9 @@ esp_err_t surv_radio_start(surv_profile_t p, bool active_scan) {
   //  - FLOCK: bring up Wi-Fi once; the loop keeps it on.
   if (p == SURV_PROFILE_FLOCK) {
     /* Held for the whole profile; released by surv_radio_stop(). */
-    radio_lease_wifi_acquire(RADIO_WIFI_MODE_STA);
+    if (wifi_claim() != ESP_OK) {
+      ESP_LOGW(TAG, "flock: Wi-Fi claim refused, no capture");
+    }
   }
 
   s_running = true;
@@ -553,17 +578,18 @@ void surv_radio_stop(void) {
   // esp_restart() occurs.
   s_one_shot = false;
   s_on_phase_done = NULL;
-  radio_lease_prom_release(RADIO_PROM_SURVEILLANCE);
-  ble_claim_release();
-  radio_lease_wifi_release();
   esp_ble_gap_stop_scanning();
-  // Wait for radio_task to finish and self-delete. Without this, returning
-  // early causes race conditions on radio resources (WiFi promiscuous, BLE
-  // GAP).
-  gap_dispatcher_unregister(ble_gap_cb);
+  // Wait for radio_task to finish first: it releases its own window claims,
+  // and releasing them from here mid-window made both sides give one back.
+  // The windows poll s_running every 100-250 ms.
   while (s_radio_task != NULL) {
     vTaskDelay(pdMS_TO_TICKS(10));
   }
+  gap_dispatcher_unregister(ble_gap_cb);
+  // Only what is still ours: TRACKERS' BLE claim, FLOCK's Wi-Fi claim. The
+  // promiscuous slot is already back: wifi_window_ms() releases it on exit.
+  ble_claim_release();
+  wifi_claim_release();
 }
 
 // ---------------------------------------------------------------------------
@@ -589,9 +615,10 @@ static void mux_radio_task(void* arg) {
     if (s_mux_phase == SURV_PHASE_BLE) {
       scan_ble_window(MUX_BLE_WINDOW_MS);
     } else {
-      radio_lease_wifi_acquire(RADIO_WIFI_MODE_STA);
-      wifi_window_ms(MUX_WIFI_WINDOW_MS);
-      radio_lease_wifi_release();
+      if (wifi_claim() == ESP_OK) {
+        wifi_window_ms(MUX_WIFI_WINDOW_MS);
+        wifi_claim_release();
+      }
     }
     break;
   }
