@@ -56,6 +56,11 @@ void wifi_ap_init(void) {
   esp_netif_ap = wifi_service_netif_ap();
 
   wifi_config_t ap_config = WIFI_AP_CONFIG();
+  // WPA2 rejects an empty password (and the ESP_ERROR_CHECK below aborts), so
+  // a config that sets none gets an open AP instead. Same rule as OTA.
+  if (strlen(WIFI_AP_PASSWORD) == 0) {
+    ap_config.ap.authmode = WIFI_AUTH_OPEN;
+  }
 
   esp_netif_ip_info_t ap_ip_info;
   memset(&ap_ip_info, 0, sizeof(ap_ip_info));
@@ -69,14 +74,4 @@ void wifi_ap_init(void) {
   ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &ap_config));
   ESP_ERROR_CHECK(esp_wifi_set_bandwidth(WIFI_IF_AP, WIFI_AP_BANDWIDTH));
   ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_STA_POWER_SAVE));
-}
-
-void wifi_ap_deinit(void) {
-  /* Disable AP mode. */
-  wifi_service_set_mode(WIFI_MODE_NULL);
-
-  /* Stop DHCP and destroy netif. */
-  esp_netif_dhcps_stop(esp_netif_ap);
-  esp_netif_destroy(esp_netif_ap);
-  esp_netif_ap = NULL;
 }

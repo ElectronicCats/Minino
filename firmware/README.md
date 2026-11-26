@@ -776,10 +776,34 @@ I (1420031) : 0x40818ca6   01                                                |.|
 - New menu icons for Mesh Topology and improved Zigbee/Thread representations
 - Combined default firmware bundling SDR + Zigbee/Thread in one image, with `make builds` cross-building the per-event board profiles (`minino`, `bsides`, `dragonjar`, `ekoparty`, `bugcon`, `bsseattle`)
 
+### Changed
+- The OTA and Web File Browser access points use the password `Cats1234` by default (`CONFIG_WIFI_AP_PASSWORD`). If the password is set to an empty string, the AP is open instead of aborting
+- Leaving Modbus TCP or CatDoS disconnects from the target AP, so the next session asks to connect again
+- Console `launch` and `sdr_capture` close the running app before starting the new one
+- Leaving wardriving waits for the scan in progress to finish (usually 1–3 s)
+- After a Wi-Fi app exits, the Wi-Fi driver is shut down; the next Wi-Fi app starts it again
+
 ### Fixed
 - `bt_spam`: guard BLE advertising against low heap and release the lease when restarting a mode
 - Thread: release OpenThread after the sniffer exits
 - Harden BLE, Zigbee and Thread feature implementations
+- The back button leaves the Wi-Fi analyzer, captive portal, deauth detector, Drone ID, DroneID scanner, SSID spam, CatDoS, I2C scanner, OTA, file manager, HID and Flock instead of freezing the screen
+- SSID spam: no reboot when picking an SSID list, or when the list is empty
+- OTA: no abort on entry; leaving OTA stops its access point, HTTP server and tasks
+- Deauth: the manager AP stays up for the whole session and stops when the app exits
+- RF spectrum: `spectrum_pcap on` records again
+- Wi-Fi analyzer: starting a capture while BLE holds the radio no longer hangs the board; fixed per-capture memory leaks
+- No duplicate-netif abort when switching between Wi-Fi apps; Wi-Fi apps no longer start with a stopped driver after Zigbee/Thread
+- BLE apps are no longer locked out after Drone ID or a Wi-Fi analyzer capture
+- UART bridge: the USB console works again after leaving the bridge
+- GPS, wardriving, warthread and OpenThread: safe teardown order on exit; a failed GPS start no longer blocks GPS until reboot
+- Task registry no longer fills up after repeated captures or GPS sessions
+
+### Known issues
+- Some apps still force-delete their worker tasks on exit (deauth scan, DroneID, captive scan, Drone ID spoofer)
+- CatDoS attack threads are never joined and leak on every attack
+- BLE spam stops twice on exit
+- Some apps (rf_spectrum, DroneID scanner, Drone ID, BLE spam, Modbus TCP/CatDoS, Zigbee, Thread) still drive Wi-Fi outside the radio arbiter
 
 ## v1.1.16.1
 ### Fixed
