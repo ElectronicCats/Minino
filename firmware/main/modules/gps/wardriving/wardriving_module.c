@@ -456,7 +456,8 @@ void wardriving_module_stop_scan() {
   /* Let the scan task finish its current (blocking) scan and exit by itself.
      Each scan holds its own radio_lease claim (wifi_scanner), so there is
      nothing to deinitialize here; tearing the driver down mid-scan or
-     force-deleting the task inside esp_wifi_scan_start() is what this avoids. */
+     force-deleting the task inside esp_wifi_scan_start() is what this avoids.
+   */
   wardriving_scan_running = false;
   for (int i = 0; i < 100 && wardriving_module_scan_task_handle != NULL; i++) {
     vTaskDelay(pdMS_TO_TICKS(100));

@@ -16,9 +16,9 @@ typedef void* SemaphoreHandle_t;
 typedef void (*TaskFunction_t)(void*);
 typedef enum { eRunning, eReady, eBlocked, eSuspended, eDeleted } eTaskState;
 
-#define pdTRUE            1
-#define pdPASS            1
-#define portMAX_DELAY     0xFFFFFFFFu
+#define pdTRUE             1
+#define pdPASS             1
+#define portMAX_DELAY      0xFFFFFFFFu
 #define portTICK_PERIOD_MS 1
 
 extern TaskHandle_t mock_current_task;
