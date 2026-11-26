@@ -25,6 +25,13 @@ void app_manager_enter(const minino_app_t* app) {
 void app_manager_exit(void) {
   const minino_app_t* app = s_active;
   if (app == NULL) {
+    /* App entered straight from the menu table (no app_manager_enter): leave
+       through the menu, which runs that entry's on_exit_cb. Same path as the
+       console `exit` command. The in_app check keeps a repeated exit from
+       walking up another menu level. */
+    if (menus_module_get_app_state()) {
+      menus_module_exit_app();
+    }
     return;
   }
   /* Clear first: on_exit may block, and input must not reach a half-stopped

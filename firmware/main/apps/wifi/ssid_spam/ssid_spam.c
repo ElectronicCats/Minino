@@ -83,7 +83,9 @@ static const uint8_t beacon_tail[] = {
 _Static_assert(BEACON_SSID_OFFSET == sizeof(beacon_raw),
                "the SSID payload must start right after the length byte");
 
-static char* ssids_main_list[2] = {"List SSID", "Start"};
+/* Item 0 is rewritten in place; never malloc'd, so never freed. */
+static char ssid_list_label[32] = "List SSID";
+static char* ssids_main_list[2] = {ssid_list_label, "Start"};
 static char* ssids_list[99] = {};
 static char* ssids_attack[MAX_STRINGS];
 static uint16_t total_lines = 0;
@@ -142,18 +144,13 @@ void split_text_into_array(const char* input,
 }
 
 static void list_ssid_cb(uint8_t selection) {
-  char menu_selected[32];
   if (strlen(ssids_list[selection]) + 7 > 16) {
-    snprintf(menu_selected, sizeof(menu_selected), "[%s]",
+    snprintf(ssid_list_label, sizeof(ssid_list_label), "[%s]",
              ssids_list[selection]);
   } else {
-    snprintf(menu_selected, sizeof(menu_selected), "SSID [%s]",
+    snprintf(ssid_list_label, sizeof(ssid_list_label), "SSID [%s]",
              ssids_list[selection]);
   }
-  if (ssids_main_list[0] != NULL) {
-    free(ssids_main_list[0]);
-  }
-  ssids_main_list[0] = strdup(menu_selected);
 
   storage_contex_t* item_ctx;
   item_ctx =
@@ -429,11 +426,7 @@ static void ssid_spam_on_exit(void) {
     }
   }
   total_lines = 0;
-  // Free main list
-  if (ssids_main_list[0]) {
-    free(ssids_main_list[0]);
-    ssids_main_list[0] = NULL;
-  }
+  strcpy(ssid_list_label, "List SSID");
   // Free flash storage lists
   for (uint8_t i = 0; i < FLASH_STORAGE_MAX_LIST_ITEMS; i++) {
     if (ssids_list[i]) {

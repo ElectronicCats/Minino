@@ -529,15 +529,9 @@ static void wifi_analyzer_on_exit(void) {
     analyzer_exiting = false;
     xSemaphoreGive(state_mutex);
   }
-  // Delete mutexes (optional, but clean)
-  if (summary_mutex != NULL) {
-    vSemaphoreDelete(summary_mutex);
-    summary_mutex = NULL;
-  }
-  if (state_mutex != NULL) {
-    vSemaphoreDelete(state_mutex);
-    state_mutex = NULL;
-  }
+  /* The mutexes are kept for the life of the boot: the begin, init and
+     limit-handler tasks may still be about to take them, and a deleted
+     mutex there is xSemaphoreTake(NULL). */
 }
 
 void wifi_analyzer_cleanup(void) {

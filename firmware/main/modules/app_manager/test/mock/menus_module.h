@@ -8,3 +8,5 @@ typedef void (*input_callback_t)(uint8_t button_name, uint8_t button_event);
 void menus_module_set_app_state(bool in_app, input_callback_t input_cb);
 void menus_module_set_default_input(void);
 void menus_module_return(void);
+void menus_module_exit_app(void);
+bool menus_module_get_app_state(void);

@@ -884,6 +884,8 @@ static void scanning_task() {
     captive_module_show_aps_list();
   }
 
+  /* Clear before dying: on_exit would otherwise vTaskDelete a freed TCB. */
+  scanning_task_handle = NULL;
   vTaskDelete(NULL);
 }
 
@@ -976,6 +978,11 @@ static void captive_on_exit(void) {
   // Cleanup is done in captive_module_disable_wifi which is called from
   // notification on_exit But we need to ensure it's called if app exits without
   // going through notification
+  // Stop the scan task first: it reads ap_records and wifi_list.
+  if (scanning_task_handle != NULL) {
+    vTaskDelete(scanning_task_handle);
+    scanning_task_handle = NULL;
+  }
   if (server) {
     httpd_stop(server);
     server = NULL;
@@ -1002,10 +1009,6 @@ static void captive_on_exit(void) {
       free(wifi_list[i]);
       wifi_list[i] = NULL;
     }
-  }
-  if (scanning_task_handle != NULL) {
-    vTaskDelete(scanning_task_handle);
-    scanning_task_handle = NULL;
   }
   retries = 0;
   last_index_selected = 0;
