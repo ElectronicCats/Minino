@@ -382,6 +382,30 @@ void warthread_module_exit(void) {
   }
   scanning_thread_channel_task_handle = NULL;
   scanning_thread_animation_task_handle = NULL;
+  /* Order matters: stop the producer (sniffer), then the consumer (record
+     task, which uses the GPS context, the buffer and the SD card), and only
+     then the GPS and the resources they were using. */
+  ieee_sniffer_stop();
+  vTaskDelay(pdMS_TO_TICKS(30));
+  ieee_sniffer_task_handle = NULL;
+  ieee_sniffer_register_cb(NULL);
+
+  warthread_record_running = false;
+  /* The task draws and writes the SD card; wait for it rather than risk
+     force-deleting it while it holds oled_mutex. */
+  for (int i = 0; i < 100 && warthread_record_task_handle != NULL; i++) {
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
+  if (warthread_record_task_handle != NULL) {
+    vTaskDelete(warthread_record_task_handle);
+    warthread_record_task_handle = NULL;
+  }
+
+  if (warthread_frame_queue != NULL) {
+    vQueueDelete(warthread_frame_queue);
+    warthread_frame_queue = NULL;
+  }
+
   gps_module_stop_read();
   gps_module_unregister_cb();
 
@@ -398,27 +422,6 @@ void warthread_module_exit(void) {
   if (context_session.session_str != NULL) {
     free(context_session.session_str);
     context_session.session_str = NULL;
-  }
-
-  ieee_sniffer_stop();
-  vTaskDelay(pdMS_TO_TICKS(30));
-  ieee_sniffer_task_handle = NULL;
-  ieee_sniffer_register_cb(NULL);
-
-  warthread_record_running = false;
-  if (warthread_record_task_handle != NULL) {
-    for (int i = 0; i < 50 && warthread_record_task_handle != NULL; i++) {
-      vTaskDelay(pdMS_TO_TICKS(10));
-    }
-    if (warthread_record_task_handle != NULL) {
-      vTaskDelete(warthread_record_task_handle);
-      warthread_record_task_handle = NULL;
-    }
-  }
-
-  if (warthread_frame_queue != NULL) {
-    vQueueDelete(warthread_frame_queue);
-    warthread_frame_queue = NULL;
   }
   wifi_service_init(WIFI_MODE_STA);
 }
