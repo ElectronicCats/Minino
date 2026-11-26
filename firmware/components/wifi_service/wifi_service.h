@@ -16,7 +16,12 @@
 
 #pragma once
 
+#include "esp_netif.h"
 #include "esp_wifi.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* Internal state, protected by s_wifi_mux. */
 typedef struct {
@@ -52,7 +57,18 @@ bool wifi_service_is_ap_get(void);
 wifi_second_chan_t wifi_service_primary_chan_get(void);
 wifi_second_chan_t wifi_service_secondary_chan_get(void);
 
+/* The default Wi-Fi netifs ("WIFI_STA_DEF" / "WIFI_AP_DEF"): returned if they
+ * exist, created otherwise. They live for the whole boot: esp_wifi_deinit()
+ * leaves them alone, and creating one twice asserts in esp_netif_new().
+ * Every module gets them from here and nobody destroys them. */
+esp_netif_t* wifi_service_netif_sta(void);
+esp_netif_t* wifi_service_netif_ap(void);
+
 /* --- Convenience helpers (optional) --- */
 
 #define wifi_service_is_any_active() \
   (wifi_service_is_sta_get() || wifi_service_is_ap_get())
+
+#ifdef __cplusplus
+}
+#endif

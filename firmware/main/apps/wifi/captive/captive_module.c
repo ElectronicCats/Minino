@@ -518,12 +518,9 @@ static void captive_module_disable_wifi() {
     ESP_LOGW("CAPTIVE", "HTTP server stopped");
   }
   /* Deinitialize WiFi through the service. */
+  /* The AP netif is kept for the life of the boot (wifi_service_netif_ap):
+     destroying it left the driver pointing at freed memory. */
   wifi_service_deinit();
-  esp_netif_t* netif = esp_netif_get_handle_from_ifkey(CAPTIVE_PORTAL_NET_NAME);
-  if (netif) {
-    esp_netif_destroy(netif);
-    ESP_LOGW("CAPTIVE", "Netif destroyed");
-  }
 
   captive_module_main();
 }
@@ -539,6 +536,9 @@ static void captive_module_wifi_begin() {
     ESP_LOGW(TAG_WIFI_SCANNER_MODULE, "Event loop create: %s",
              esp_err_to_name(errr));
   }
+  /* DHCP and the DNS server need the AP netif; it used to exist only if
+     another app had created it earlier in the boot. */
+  wifi_service_netif_ap();
   wifi_init_softap();
   server = start_webserver();
 
@@ -992,10 +992,6 @@ static void captive_on_exit(void) {
     dns_server = NULL;
   }
   wifi_service_deinit();
-  esp_netif_t* netif = esp_netif_get_handle_from_ifkey(CAPTIVE_PORTAL_NET_NAME);
-  if (netif) {
-    esp_netif_destroy(netif);
-  }
   if (!sd_card_is_not_mounted()) {
     sd_card_unmount();
   }

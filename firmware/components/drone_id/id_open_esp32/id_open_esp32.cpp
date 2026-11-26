@@ -58,6 +58,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "id_open.h"
+#include "wifi_service.h"
 
 #if ID_OD_WIFI
 
@@ -195,7 +196,7 @@ void init_w(char* ssid,
   esp_event_loop_create_default();
 
   // Crea una interfaz de red Wi-Fi en modo AP
-  esp_netif_create_default_wifi_ap();
+  wifi_service_netif_ap();
 
   // Configuración por defecto de Wi-Fi
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();

@@ -178,8 +178,8 @@ static void wifi_app_default_wifi_init(void) {
    * app_main(). */
   ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
-  esp_netif_sta = esp_netif_create_default_wifi_sta();
-  esp_netif_ap = esp_netif_create_default_wifi_ap();
+  esp_netif_sta = wifi_service_netif_sta();
+  esp_netif_ap = wifi_service_netif_ap();
 }
 
 /*

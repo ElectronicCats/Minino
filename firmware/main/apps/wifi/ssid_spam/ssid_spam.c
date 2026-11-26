@@ -283,12 +283,7 @@ static void ssid_spam_init(void) {
   if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
     ESP_LOGE("ssid_spam", "event_loop_create error: %s", esp_err_to_name(ret));
   }
-  /* esp_netif_create_default_wifi_ap() triggers an assert() if the AP netif
-     already exists: re-entering the app (or starting it twice without
-     exiting) caused the board to reboot with a "duplicate key" error. */
-  if (esp_netif_get_handle_from_ifkey("WIFI_AP_DEF") == NULL) {
-    esp_netif_create_default_wifi_ap();
-  }
+  wifi_service_netif_ap();
 
   if (!wifi_service_init(WIFI_MODE_AP)) {
     ESP_LOGE(TAG, "WiFi stack init failed");

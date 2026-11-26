@@ -74,9 +74,9 @@ static void initialise_wifi(void) {
     ESP_LOGE(TAG, "Error creating event loop: %s", esp_err_to_name(err));
     esp_restart();
   }
-  esp_netif_t* ap_netif = esp_netif_create_default_wifi_ap();
+  esp_netif_t* ap_netif = wifi_service_netif_ap();
   assert(ap_netif);
-  esp_netif_t* sta_netif = esp_netif_create_default_wifi_sta();
+  esp_netif_t* sta_netif = wifi_service_netif_sta();
   assert(sta_netif);
   if (!wifi_service_is_up_get() && !wifi_service_init(WIFI_MODE_AP)) {
     ESP_LOGE(TAG, "WiFi stack init failed");
