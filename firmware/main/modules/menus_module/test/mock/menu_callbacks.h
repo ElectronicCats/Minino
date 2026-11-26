@@ -55,6 +55,7 @@ void logs_output(void);
 void menu_style_open_menu(void);
 void modbus_tcp_scenes_main(void);
 void modbus_tcp_scenes_exit(void);
+void app_manager_enter_wrapper_modbus_tcp(void);
 void open_thread_module_broadcast_enter(void);
 void open_thread_module_exit(void);
 void open_thread_module_sniffer_enter(void);

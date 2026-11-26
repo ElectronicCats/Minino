@@ -228,9 +228,10 @@ static void test_every_active_leaf_app_has_exit_callback(void) {
   /* Every launchable leaf application (except those that intentionally reboot
      on exit: switch, light, web_files, ota, gps_config) must provide an
      on_exit_cb so `exit_app` from the console cleans up tasks, radio leases,
-     and heap allocations. */
+     and heap allocations. modbus_tcp is entered through app_manager, so its
+     cleanup is app_manager's on_exit, not the menu's on_exit_cb. */
   static const char* const s_reboot_or_stateless_cmds[] = {
-      "switch", "light", "web_files", "ota", "gps_config",
+      "switch", "light", "web_files", "ota", "gps_config", "modbus_tcp",
   };
   menu_t* menus = menus_get();
   uint8_t count = menus_count();
