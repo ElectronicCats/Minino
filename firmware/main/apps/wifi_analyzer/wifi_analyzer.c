@@ -227,7 +227,9 @@ static void wifi_analyzer_init_task(void* pvParameters) {
 static void wifi_analyzer_setup_task(void* pvParameters) {
   /* Bring the driver up through the lease (NULL mode for promiscuous capture)
      so the refcount is honest and BLE cannot tear it down under the capture. */
-  if (radio_lease_wifi_acquire(RADIO_WIFI_MODE_NULL) == ESP_OK) {
+  /* Every summary exit re-runs begin: take the claim once per session. */
+  if (!wifi_leased &&
+      radio_lease_wifi_acquire(RADIO_WIFI_MODE_NULL) == ESP_OK) {
     wifi_leased = true;
   }
   wifi_sniffer_begin();
