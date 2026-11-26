@@ -29,8 +29,19 @@ typedef struct {
   char entry_cmd[LAUNCH_MAX_LEN];
 } launch_args_t;
 
+/* End the running app (if any) the way the back button would, so a console
+ * launch does not stack a second app on top of the first one's resources. */
+static void exit_current_app(void) {
+  if (app_manager_is_active()) {
+    app_manager_exit();
+  } else if (menus_module_get_app_state()) {
+    menus_module_exit_app();
+  }
+}
+
 static void launch_app_task(void* arg) {
   launch_args_t* args = (launch_args_t*) arg;
+  exit_current_app();
   menus_module_set_menu_over_cmd(args->entry_cmd);
   free(args);
   vTaskDelete(NULL);
@@ -137,12 +148,9 @@ static int press_cmd(int argc, char** argv) {
 static int exit_app_cmd(int argc, char** argv) {
   (void) argc;
   (void) argv;
-  if (app_manager_is_active()) {
+  if (app_manager_is_active() || menus_module_get_app_state()) {
     printf("Exit...\n");
-    app_manager_exit();
-  } else if (menus_module_get_app_state()) {
-    printf("Exit...\n");
-    menus_module_exit_app();
+    exit_current_app();
   } else {
     printf("Not currently inside an application.\n");
   }
@@ -278,6 +286,7 @@ static void sdr_capture_task(void* arg) {
   /* Through the menu, like the button path: the menu owns the exit callback
      of the app, and a command that starts the app on its own leaves it
      running forever (the next sdr_capture would find it already up). */
+  exit_current_app();
   menus_module_set_menu_over_cmd("sdr");
   vTaskDelete(NULL);
 }
