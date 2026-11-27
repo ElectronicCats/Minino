@@ -1,6 +1,8 @@
 #include <stdio.h>
 
 #include "esp_system.h"
+#include "hal/modem_lpcon_ll.h"
+#include "hal/modem_syscon_ll.h"
 #include "sdkconfig.h"
 
 #include "buzzer.h"
@@ -52,7 +54,20 @@ static void sd_card_unmount_on_restart(void) {
   sd_card_unmount();
 }
 
+/* esp_restart() resets the modem before it reboots; an external reset
+   (USB DTR/RTS from esptool or a monitor, the RESET button) does not. With
+   the IEEE 802.15.4 radio running at that moment (a Zigbee or Thread
+   sniffer) part of the modem's state survives into the next boot, and Wi-Fi
+   and BLE stop receiving until the board is powered off. The same reset,
+   done here before any radio comes up, makes every boot start clean. */
+static void modem_reset_on_boot(void) {
+  modem_syscon_ll_reset_all(&MODEM_SYSCON);
+  modem_lpcon_ll_reset_all(&MODEM_LPCON);
+}
+
 void app_main() {
+  modem_reset_on_boot();
+
   // Before anything allocates: the SDR capture bank goes to the heap unless
   // the SDR app asked for this boot.
   bool sdr_boot = sdr_bank_boot();
