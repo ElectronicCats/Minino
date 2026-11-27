@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include "wifi_ap_config.h"
 
-#define JOIN_TIMEOUT_MS (5000)
+#define JOIN_TIMEOUT_MS (10000)
 #define MAXIMUM_RETRY   (3)
 
 typedef void (*app_callback)(bool state);
