@@ -28,12 +28,11 @@ jobs:
           - profile: minino
             partition: partitions.csv
             min_free: '5'
-          # bsides is a 4MB board: the combined Zigbee/Thread image leaves a
-          # thinner (but still safe) margin on the smaller flash, so it runs
-          # with a 4% floor instead of the default 5%.
+          # bsides is a 4MB board: same 5% floor as `make flash_fit`, which
+          # gates the release build.
           - profile: bsides
             partition: partitions_4MB.csv
-            min_free: '4'
+            min_free: '5'
     steps:
       - uses: actions/checkout@v4
         with:
