@@ -17,7 +17,7 @@ static QueueHandle_t packet_rx_queue = NULL;
 static TaskHandle_t debug_task_hdl = NULL;
 static ieee_sniffer_cb_t packet_callback = NULL;
 static int current_channel = IEEE_SNIFFER_CHANNEL_DEFAULT;
-static bool running = false;
+static volatile bool running = false;
 
 static void debug_print_packet(uint8_t* packet, uint8_t packet_length)
     __attribute__((unused));
@@ -195,7 +195,16 @@ void ieee_sniffer_stop(void) {
     ESP_LOGE(TAG_IEEE_SNIFFER, "Error disabling IEEE 802.15.4 driver: %s",
              esp_err_to_name(err));
   }
+  /* The debug task runs the app's packet callback, which draws. Let it leave
+     on its own instead of deleting it with oled_mutex taken; it cannot wait
+     for itself if the callback is what called stop. */
+  if (debug_task_hdl != xTaskGetCurrentTaskHandle()) {
+    for (int ms = 0; debug_task_hdl != NULL && ms < 2000; ms += 10) {
+      vTaskDelay(pdMS_TO_TICKS(10));
+    }
+  }
   if (debug_task_hdl != NULL) {
+    ESP_LOGE(TAG_IEEE_SNIFFER, "Debug task did not stop, deleting it");
     vTaskDelete(debug_task_hdl);
     debug_task_hdl = NULL;
   }
@@ -208,13 +217,14 @@ void ieee_sniffer_stop(void) {
 
 static void debug_handler_task(void* pvParameters) {
   uint8_t packet[128];
-  while (xQueueReceive(packet_rx_queue, packet, portMAX_DELAY) == pdTRUE) {
-    if (packet_callback) {
+  /* Short timeout so stop is noticed even when no frames arrive. */
+  while (running) {
+    if (xQueueReceive(packet_rx_queue, packet, pdMS_TO_TICKS(100)) == pdTRUE &&
+        packet_callback) {
       packet_callback(&packet[1], packet[0]);
     }
-    // debug_print_packet(&packet[1], packet[0]);
   }
-  ESP_LOGE("debug_handler_task", "Terminated");
+  debug_task_hdl = NULL;
   vTaskDelete(NULL);
 }
 
