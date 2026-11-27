@@ -7,6 +7,7 @@
 #include "freertos/task.h"
 #include "preferences.h"
 #include "radio_lease.h"
+#include "task_manager.h"
 #include "wifi_controller.h"
 
 #include "app_manager.h"
@@ -63,13 +64,26 @@ static void packet_handler(void* buf, wifi_promiscuous_pkt_type_t type) {
   }
 }
 
+/* running is already false. Wait for the hopper to leave on its own: deleting
+   it inside wifi_driver_set_channel() cuts a driver call in half. */
+static void stop_channel_hopper(void) {
+  if (!task_manager_wait_exit(&channel_hopper_handle, 2000)) {
+    ESP_LOGE(TAG, "Channel hopper did not stop, deleting it");
+    vTaskDelete(channel_hopper_handle);
+    channel_hopper_handle = NULL;
+  }
+}
+
 static void channel_hopper(void* pvParameters) {
   while (running) {
     wifi_driver_set_channel(current_channel);
-    vTaskDelay(WIFI_CHANNEL_SWITCH_INTERVAL / portTICK_PERIOD_MS);
+    for (int ms = 0; ms < WIFI_CHANNEL_SWITCH_INTERVAL && running; ms += 100) {
+      vTaskDelay(pdMS_TO_TICKS(100));
+    }
     current_channel = (current_channel % 14) + 1;
     ESP_LOGI(TAG, "Switching to channel: %d", current_channel);
   }
+  channel_hopper_handle = NULL;
   vTaskDelete(NULL);
 }
 
@@ -129,10 +143,7 @@ void deauth_detector_begin() {
 
 void deauth_detector_stop() {
   running = false;
-  if (channel_hopper_handle != NULL) {
-    vTaskDelete(channel_hopper_handle);
-    channel_hopper_handle = NULL;
-  }
+  stop_channel_hopper();
   /* Order matters: esp_wifi_stop() leaves the driver initialised but stopped,
      and the analyzer's sniffer then calls esp_wifi_set_promiscuous() /
      esp_wifi_set_channel() against a stopped driver - both fail silently and
@@ -181,10 +192,7 @@ static void deauth_detector_on_exit(void) {
   current_channel = 99;
   total_deauth_packets_count = 0;
   memset(deauth_packets_count_list, 0, sizeof(deauth_packets_count_list));
-  if (channel_hopper_handle != NULL) {
-    vTaskDelete(channel_hopper_handle);
-    channel_hopper_handle = NULL;
-  }
+  stop_channel_hopper();
 }
 
 void deauth_detector_exit(void) {
