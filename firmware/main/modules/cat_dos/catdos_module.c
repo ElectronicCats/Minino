@@ -38,7 +38,7 @@
 #include "wifi_bitmaps.h"
 
 static uint8_t last_main_selection = 0;
-static TaskHandle_t task_atack = NULL;
+static TaskHandle_t attack_task_handle = NULL;
 static volatile bool running_attack = false;
 static const char* CATDOS_TAG = "catdos_module";
 static int aps_count = 0;
@@ -172,8 +172,6 @@ static void* http_get_task(void* pvParameters) {
                "GET %s HTTP/1.0\r\nHost: %s:%s\r\n\r\n", endpoint, host, port);
   if (req_len < 0 || req_len >= (int) sizeof(request)) {
     ESP_LOGE(CATDOS_TAG, "Request string too long");
-    task_atack = NULL;
-    task_manager_delete(NULL);
     return NULL;
   }
   running_attack = true;
@@ -213,16 +211,16 @@ static void* http_get_task(void* pvParameters) {
     }
     close(s);
   }
-  task_atack = NULL;
-  task_manager_delete(NULL);
+  // Must return normally, not self-delete: this function only ever runs as
+  // a pthread body, and ESP-IDF's pthread wrapper signals pthread_join()
+  // (and does its own vTaskDelete) only after the function returns. Calling
+  // task_manager_delete(NULL)/vTaskDelete(NULL) here bypasses that wrapper
+  // and leaves every pthread_join() below blocked forever (A16).
   return NULL;
 }
 
 static void catdos_module_send_attack_task(void* pvParameters) {
   ESP_LOGI(CATDOS_TAG, "Sending attack");
-  task_manager_create((TaskFunction_t) http_get_task, "http_get_task",
-                      TASK_STACK_MEDIUM, NULL, TASK_PRIORITY_NORMAL,
-                      &task_atack);
 
   pthread_attr_t attr;
   pthread_t threads[8];
@@ -232,6 +230,7 @@ static void catdos_module_send_attack_task(void* pvParameters) {
   res = pthread_attr_init(&attr);
   if (res != 0) {
     ESP_LOGE(CATDOS_TAG, "Failed to init pthread attr: %d", res);
+    attack_task_handle = NULL;
     task_manager_delete(NULL);
     return;
   }
@@ -252,6 +251,7 @@ static void catdos_module_send_attack_task(void* pvParameters) {
   }
 
   pthread_attr_destroy(&attr);
+  attack_task_handle = NULL;
   task_manager_delete(NULL);
 }
 
@@ -259,7 +259,8 @@ int catdos_module_send_attack(int argc, char** argv) {
   (void) argc;
   (void) argv;
   task_manager_create(&catdos_module_send_attack_task, "catdos_send",
-                      TASK_STACK_MEDIUM, NULL, TASK_PRIORITY_NORMAL, NULL);
+                      TASK_STACK_MEDIUM, NULL, TASK_PRIORITY_NORMAL,
+                      &attack_task_handle);
   return 0;
 }
 
@@ -475,7 +476,7 @@ static void catdos_module_set_menu_selector(uint8_t option) {
         animations_task_run(&catdos_module_display_attack_animation, 100, NULL);
         task_manager_create(&catdos_module_send_attack_task, "catdos_send",
                             TASK_STACK_MEDIUM, NULL, TASK_PRIORITY_NORMAL,
-                            NULL);
+                            &attack_task_handle);
       } else {
         catdos_module_show_no_target();
       }
@@ -522,11 +523,18 @@ static void catdos_on_input(uint8_t button_name, uint8_t button_event) {
 }
 
 static void catdos_on_exit(void) {
-  // Stop attack if running
+  // Stop attack if running. Let catdos_module_send_attack_task finish its
+  // pthread_join() chain on its own: force-deleting it mid-connect()/write()
+  // would leak that thread's socket and addrinfo (A16). Force-delete is only
+  // a last resort if a thread is stuck past the timeout, e.g. in a long
+  // lwIP connect() retry; that ceiling is unchanged from before this fix.
   running_attack = false;
-  if (task_atack != NULL) {
-    task_manager_delete(task_atack);
-    task_atack = NULL;
+  if (attack_task_handle != NULL) {
+    if (!task_manager_wait_exit(&attack_task_handle, 5000)) {
+      ESP_LOGE(CATDOS_TAG, "Attack task did not stop, deleting it");
+      task_manager_delete(attack_task_handle);
+      attack_task_handle = NULL;
+    }
   }
   // Leave the target AP and drop the AP manager's handlers
   wifi_ap_manager_deinit();
