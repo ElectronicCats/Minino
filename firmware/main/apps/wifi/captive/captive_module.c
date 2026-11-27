@@ -20,6 +20,7 @@
 #include "app_manager.h"
 #include "captive_module.h"
 #include "radio_lease.h"
+#include "task_manager.h"
 #include "wifi_service.h"
 
 #define MININO_CAPTIVE_DEFAULT_SSID CONFIG_WIFI_AP_NAME
@@ -46,6 +47,7 @@ static dns_server_handle_t dns_server = NULL;
 static uint16_t retries = 0;
 static char wifi_ap_name[CAPTIVE_PORTAL_MAX_NAME];
 static TaskHandle_t scanning_task_handle = NULL;
+static volatile bool scan_abort = false;
 
 typedef enum {
   PORTALS,
@@ -882,10 +884,12 @@ static void scanning_task() {
      it between every scan. */
   bool scan_leased = (radio_lease_wifi_acquire(RADIO_WIFI_MODE_STA) == ESP_OK);
   ap_records = wifi_scanner_get_ap_records();
-  while ((ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 4)) &
+  while (!scan_abort && (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 4)) &&
          (retries < MAX_RETRIES)) {
     wifi_scanner_module_scan();
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    for (int ms = 0; ms < 1000 && !scan_abort; ms += 100) {
+      vTaskDelay(pdMS_TO_TICKS(100));
+    }
     if (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 4)) {
       retries++;
     }
@@ -898,11 +902,15 @@ static void scanning_task() {
 
   ap_records = wifi_scanner_get_ap_records();
 
-  animations_task_stop();
-  if (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 4)) {
-    captive_module_main();
-  } else {
-    captive_module_show_aps_list();
+  /* Stopped from outside (app exit): leave the screen to whoever stopped us,
+     but still hand the claim back below. */
+  if (!scan_abort) {
+    animations_task_stop();
+    if (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 4)) {
+      captive_module_main();
+    } else {
+      captive_module_show_aps_list();
+    }
   }
 
   if (scan_leased) {
@@ -944,6 +952,7 @@ static void captive_module_main_menu_handler(uint8_t option) {
       if (preferences_get_int(CAPTIVE_PORTAL_MODE_FS_KEY, 0) == 1) {
         retries = 0;
         captive_module_scan_clean();
+        scan_abort = false;
         xTaskCreate(scanning_task, "wifi_scan", 8096, NULL, 5,
                     &scanning_task_handle);
         animations_task_run(&general_animation_loading, 300, NULL);
@@ -1003,8 +1012,12 @@ static void captive_on_exit(void) {
   // Cleanup is done in captive_module_disable_wifi which is called from
   // notification on_exit But we need to ensure it's called if app exits without
   // going through notification
-  // Stop the scan task first: it reads ap_records and wifi_list.
-  if (scanning_task_handle != NULL) {
+  // Stop the scan task first: it reads ap_records and wifi_list. Let it end
+  // its current scan and release its radio_lease claim; deleting it from
+  // outside leaked the claim and could leave oled_mutex taken.
+  scan_abort = true;
+  if (!task_manager_wait_exit(&scanning_task_handle, 5000)) {
+    ESP_LOGE(TAG, "Scan task did not stop, deleting it");
     vTaskDelete(scanning_task_handle);
     scanning_task_handle = NULL;
   }
