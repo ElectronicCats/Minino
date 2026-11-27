@@ -10,7 +10,6 @@
 #include "spam_screens.h"
 extern SemaphoreHandle_t text_mutex;
 #include "app_manager.h"
-#include "wifi_controller.h"
 #include "wifi_service.h"
 
 // Selected spam mode (set by wrapper before entering app)
@@ -48,9 +47,7 @@ static void ble_spam_start_mode(bt_spam_mode_t mode, const char* title) {
   hid_module_stop();
   /* Free the idle driver's heap before bt_spam's start-up heap check, but
      never under a lease holder: BLE is then refused by the lease instead. */
-  if (!radio_lease_wifi_shared()) {
-    wifi_driver_deinit_if_started();
-  }
+  radio_lease_wifi_free_idle();
   menus_module_set_app_state(true, ble_module_state_machine);
   ble_screens_start_scanning_animation(title);
   bt_spam_register_cb(ble_screens_display_scanning_text);
@@ -110,9 +107,7 @@ static void ble_spam_on_enter(void) {
   hid_module_stop();
   /* Free the idle driver's heap before bt_spam's start-up heap check, but
      never under a lease holder: BLE is then refused by the lease instead. */
-  if (!radio_lease_wifi_shared()) {
-    wifi_driver_deinit_if_started();
-  }
+  radio_lease_wifi_free_idle();
   menus_module_set_app_state(true, ble_module_state_machine);
   ble_screens_start_scanning_animation(NULL);  // Title already set by wrapper
   bt_spam_register_cb(ble_screens_display_scanning_text);

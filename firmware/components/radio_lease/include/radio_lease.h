@@ -131,6 +131,24 @@ bool radio_lease_wifi_shared(void);
 /** Current number of WiFi driver claims. */
 uint8_t radio_lease_wifi_count(void);
 
+/**
+ * @brief Mark the caller's WiFi claim as a background one
+ *
+ * For a connection that outlives the app that made it (a saved AP joined from
+ * Settings or the console). The next radio_lease_wifi_acquire() or
+ * radio_lease_ble_acquire() calls `evict` first instead of sharing the driver
+ * with it or being refused, so a background connection never locks BLE out or
+ * forces its mode on the next app. `evict` must drop the claim with
+ * radio_lease_wifi_release(). One background claim at most; NULL clears it.
+ */
+void radio_lease_wifi_set_background(void (*evict)(void));
+
+/**
+ * @brief Make way for BLE: evict a background claim and, when no WiFi holder is
+ * left, take the idle driver down to give its heap back.
+ */
+void radio_lease_wifi_free_idle(void);
+
 #if CONFIG_BT_ENABLED
 /**
  * @brief Claim the BLE stack

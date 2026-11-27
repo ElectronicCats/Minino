@@ -545,9 +545,7 @@ esp_err_t surv_radio_start(surv_profile_t p, bool active_scan) {
     /* Our own claim first; the driver only goes down if nobody else holds
        it. */
     wifi_claim_release();
-    if (!radio_lease_wifi_shared()) {
-      wifi_driver_deinit_if_started();
-    }
+    radio_lease_wifi_free_idle();
     // On ESP32-C6 WiFi and BT share the PHY: after esp_wifi_deinit the
     // teardown must finish releasing RF before radio_task powers on the BT
     // controller, or the BLE scan (SCAN_START_COMPLETE) fails with 0x1.

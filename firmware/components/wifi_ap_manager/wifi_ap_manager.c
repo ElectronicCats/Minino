@@ -78,6 +78,13 @@ static void initialise_wifi(void) {
     return;
   }
   wifi_leased = true;
+  /* A connection from Settings or the console outlives that screen. As a
+     background claim it gives way to the next app that needs the radio (BLE,
+     or WiFi in another mode) through wifi_ap_manager_deinit(), instead of
+     locking BLE out until reboot. ponytail: Modbus TCP/CatDoS sessions are
+     background too, so a console BLE command run during one ends it (as
+     before the lease); pin their claim if that ever matters. */
+  radio_lease_wifi_set_background(wifi_ap_manager_deinit);
 
   ESP_ERROR_CHECK(esp_event_handler_register(
       WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &event_handler, NULL));
@@ -218,6 +225,7 @@ void wifi_ap_manager_deinit() {
                                &event_handler);
   esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler);
   if (wifi_leased) {
+    radio_lease_wifi_set_background(NULL);
     if (wifi_service_is_up_get()) {
       esp_wifi_disconnect(); /* leave the AP before dropping the claim */
     }
