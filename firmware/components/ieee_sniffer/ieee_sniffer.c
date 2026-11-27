@@ -153,9 +153,17 @@ static void ieee_sniffer_configure() {
   ieee_sniffer_apply_driver_config();
 }
 
+void ieee_sniffer_arm(void) {
+  running = true;
+}
+
 void ieee_sniffer_begin(void* args) {
   (void) args;
-  running = true;
+  /* Armed by the creator. Cleared means ieee_sniffer_stop() ran before this
+     task got its first slice: leave without touching the radio. */
+  if (!running) {
+    vTaskDelete(NULL);
+  }
   ieee_sniffer_configure();
   while (running) {
     vTaskDelay(10 / portTICK_PERIOD_MS);

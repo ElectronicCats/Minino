@@ -359,6 +359,7 @@ void warthread_module_begin(void) {
 
   ieee_sniffer_register_cb(warthread_packet_callback);
   ieee_sniffer_set_channel(current_channel);
+  ieee_sniffer_arm();
   if (xTaskCreate(ieee_sniffer_begin, "ieee_sniff", 2560, NULL, 5,
                   &ieee_sniffer_task_handle) != pdPASS) {
     ESP_LOGE(TAG, "Failed to create IEEE sniffer task");

@@ -18,6 +18,7 @@ static inline void ieee_sniffer_register_cb(ieee_sniffer_cb_t cb) {
 static inline void ieee_sniffer_set_channel(uint8_t ch) {
   (void) ch;
 }
+static inline void ieee_sniffer_arm(void) {}
 static inline void ieee_sniffer_begin(void* arg) {
   (void) arg;
 }

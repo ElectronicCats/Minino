@@ -360,6 +360,7 @@ void zigbee_mesh_mapper_begin(void) {
   ieee_sniffer_register_cb(parse_and_record_frame);
   ieee_sniffer_set_channel(s_channel);
 
+  ieee_sniffer_arm();
   xTaskCreate(ieee_sniffer_begin, "zb_mesh_sniff", 3072, NULL, 5,
               &s_sniffer_task);
   xTaskCreate(ui_update_task, "zb_mesh_ui", 3072, NULL, 4, &s_ui_task_handle);

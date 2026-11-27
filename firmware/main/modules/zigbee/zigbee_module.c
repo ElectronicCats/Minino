@@ -98,6 +98,7 @@ void zigbee_module_sniffer_enter(void) {
   ieee_sniffer_set_channel(saved_channel);
 
   sniffer_running = true;
+  ieee_sniffer_arm();
   xTaskCreate(ieee_sniffer_begin, "zb_sniff_task", 3072, NULL, 5,
               &zigbee_task_sniffer);
   xTaskCreate(sniffer_ui_task, "zb_ui_task", 3072, NULL, 4,

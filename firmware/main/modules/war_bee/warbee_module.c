@@ -438,6 +438,7 @@ void warbee_module_begin(void) {
   ieee_sniffer_set_channel(current_channel);
 
   /* Start IEEE sniffer task (ieee_sniffer_begin initializes radio once) */
+  ieee_sniffer_arm();
   if (xTaskCreate(ieee_sniffer_begin, "ieee_sniff", 2560, NULL, 5,
                   &zigbee_task_sniffer) != pdPASS) {
     ESP_LOGE("Warbee", "could not create the sniffer task");
