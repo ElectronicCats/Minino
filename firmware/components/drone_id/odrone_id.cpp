@@ -140,10 +140,7 @@ void odrone_id_stop(void) {
      softAP and esp_ble_gap_start_advertising(), so leaving the app left the
      device beaconing OpenDroneID from a hidden AP and from BLE, with no UI
      indication and no way to stop it. */
-  wifi_mode_t mode = WIFI_MODE_NULL;
-  if (esp_wifi_get_mode(&mode) == ESP_OK && mode != WIFI_MODE_NULL) {
-    esp_wifi_stop();
-  }
+  /* deinit_radio() gives the Wi-Fi claim back, which takes the soft-AP down. */
   /* Only touch GAP when Bluedroid is up; the API asserts ENABLED. */
   if (esp_bluedroid_get_status() == ESP_BLUEDROID_STATUS_ENABLED) {
     esp_ble_gap_stop_advertising();

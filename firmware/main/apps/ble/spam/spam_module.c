@@ -6,6 +6,7 @@
 #include "led_events.h"
 #include "menus_module.h"
 #include "oled_screen.h"
+#include "radio_lease.h"
 #include "spam_screens.h"
 extern SemaphoreHandle_t text_mutex;
 #include "app_manager.h"
@@ -45,7 +46,11 @@ static void ble_spam_start_mode(bt_spam_mode_t mode, const char* title) {
     bt_spam_app_deinit();
   }
   hid_module_stop();
-  wifi_driver_deinit_if_started();
+  /* Free the idle driver's heap before bt_spam's start-up heap check, but
+     never under a lease holder: BLE is then refused by the lease instead. */
+  if (!radio_lease_wifi_shared()) {
+    wifi_driver_deinit_if_started();
+  }
   menus_module_set_app_state(true, ble_module_state_machine);
   ble_screens_start_scanning_animation(title);
   bt_spam_register_cb(ble_screens_display_scanning_text);
@@ -103,7 +108,11 @@ static void ble_spam_on_enter(void) {
     bt_spam_app_deinit();
   }
   hid_module_stop();
-  wifi_driver_deinit_if_started();
+  /* Free the idle driver's heap before bt_spam's start-up heap check, but
+     never under a lease holder: BLE is then refused by the lease instead. */
+  if (!radio_lease_wifi_shared()) {
+    wifi_driver_deinit_if_started();
+  }
   menus_module_set_app_state(true, ble_module_state_machine);
   ble_screens_start_scanning_animation(NULL);  // Title already set by wrapper
   bt_spam_register_cb(ble_screens_display_scanning_text);

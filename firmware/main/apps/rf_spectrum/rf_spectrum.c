@@ -38,6 +38,7 @@ static const minino_app_t s_app = {
 };
 
 static volatile bool s_running = false;
+static bool s_wifi_leased = false;
 static TaskHandle_t s_spectrum_task_handle = NULL;
 static rf_spectrum_data_t s_data = {.current_channel = 1,
                                     .threshold_dbm = -85,
@@ -493,12 +494,14 @@ static void rf_spectrum_start(void) {
     s_data.history[i] = RF_NOISE_FLOOR;
   }
 
-  /* Ensure Wi-Fi radio is initialized in station/promiscuous mode */
-  if (!wifi_driver_get_initialized() && !wifi_driver_init_sta()) {
+  /* Claim the Wi-Fi driver (station mode) through the lease: it is released
+     in rf_spectrum_app_stop(), so the driver no longer stays up after exit. */
+  if (radio_lease_wifi_acquire(RADIO_WIFI_MODE_STA) != ESP_OK) {
     ESP_LOGE(TAG, "Wi-Fi driver unavailable (BLE holds the radio?)");
     app_manager_exit();
     return;
   }
+  s_wifi_leased = true;
 
   if (radio_lease_prom_acquire(RADIO_PROM_SPECTRUM,
                                spectrum_promiscuous_rx_cb) != ESP_OK) {
@@ -551,6 +554,10 @@ void rf_spectrum_app_stop(void) {
   }
 
   save_preferences();
+  if (s_wifi_leased) {
+    s_wifi_leased = false;
+    radio_lease_wifi_release();
+  }
   ESP_LOGI(TAG, "RF Spectrum Analyzer stopped.");
 }
 
