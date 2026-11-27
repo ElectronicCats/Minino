@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include "esp_system.h"
 #include "sdkconfig.h"
 
 #include "buzzer.h"
@@ -41,6 +42,15 @@
 #define BUZZER_PIN       CONFIG_BUZZER_PIN
 
 static const char* TAG = "main";
+
+/* Flush and unmount the SD card on any deliberate esp_restart() (web file
+   browser, Zigbee switch/light, SDR exit, console restart, the error
+   handler). Without it those paths leave the FAT file system mid-write.
+   Idempotent: sd_card_unmount() is a no-op when the card is not mounted.
+   Not run on a panic, where nothing can safely touch the SD anyway. */
+static void sd_card_unmount_on_restart(void) {
+  sd_card_unmount();
+}
 
 void app_main() {
   // Before anything allocates: the SDR capture bank goes to the heap unless
@@ -85,6 +95,8 @@ void app_main() {
 
   leds_off();
   sd_card_begin();
+  ESP_ERROR_CHECK_WITHOUT_ABORT(
+      esp_register_shutdown_handler(sd_card_unmount_on_restart));
   flash_fs_begin(flash_fs_screens_handler);
   keyboard_module_begin();
   menus_module_begin();
