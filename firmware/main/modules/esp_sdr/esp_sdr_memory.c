@@ -74,6 +74,12 @@ bool sdr_bank_boot(void) {
     ESP_LOGI(TAG, "SDR boot: the capture bank stays out of the heap");
     return true;
   }
+  /* The SDR boot's reset block survives a software reset. An SDR session
+     that ends in one instead of esp_sdr_module_stop() (console `reset`, a
+     panic, a watchdog) would leave the USB reset off for good: esptool and
+     the monitor could no longer reset the board until it is unplugged. */
+  USB_SERIAL_JTAG.chip_rst.usb_uart_chip_rst_dis = 0;
+  USB_SERIAL_JTAG.config_update.config_update = 1;
   esp_err_t err = heap_caps_add_region(
       (intptr_t) SDR_CAPTURE_BANK_BASE,
       (intptr_t) (SDR_CAPTURE_BANK_BASE + SDR_CAPTURE_BANK_SIZE));
