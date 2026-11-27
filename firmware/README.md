@@ -148,7 +148,7 @@ In the combined build, `bt_spam` refuses to start below 18 KB free and stops
 below 8 KB during a run. That prevents the controller advertising failure when
 Thread Sniffer/Broadcast has left the heap low.
 
-To run the host-side unit test suites (the 17 Unity C suites plus the Python
+To run the host-side unit test suites (the 18 Unity C suites plus the Python
 flash-tooling test), run:
 
 ```bash
@@ -778,7 +778,8 @@ I (1420031) : 0x40818ca6   01                                                |.|
 
 ### Changed
 - The OTA and Web File Browser access points use the password `Cats1234` by default (`CONFIG_WIFI_AP_PASSWORD`). If the password is set to an empty string, the AP is open instead of aborting
-- Leaving Modbus TCP or CatDoS disconnects from the target AP, so the next session asks to connect again
+- Leaving Modbus TCP or CatDoS disconnects from the target AP, so the next session asks to connect again. This also ends a connection made from `Settings > WiFi`, so the Web File Browser then starts its own access point
+- Joining a saved AP (Modbus TCP, CatDoS, `Settings > WiFi`, console `connect`) waits up to 10 s instead of 5 s before reporting a timeout
 - Console `launch` and `sdr_capture` close the running app before starting the new one
 - Leaving wardriving waits for the scan in progress to finish (usually 1–3 s)
 - After a Wi-Fi app exits, the Wi-Fi driver is shut down; the next Wi-Fi app starts it again
@@ -798,12 +799,20 @@ I (1420031) : 0x40818ca6   01                                                |.|
 - UART bridge: the USB console works again after leaving the bridge
 - GPS, wardriving, warthread and OpenThread: safe teardown order on exit; a failed GPS start no longer blocks GPS until reboot
 - Task registry no longer fills up after repeated captures or GPS sessions
+- Apps stop their worker tasks on exit instead of killing them mid-scan or mid-draw (deauth and captive scans, deauth detector, DroneID scanner, Zigbee/Thread sniffer, wardriving, Drone ID spoofer), so the display no longer freezes on exit
+- CatDoS: the attack threads finish and are cleaned up; repeated attacks no longer leak tasks or sockets
+- BLE spam: leaving the app no longer re-enables BLE scanning for another app that had paused it
+- Trackers and the ADV scanner wait for the BLE client to shut down before releasing Bluetooth
+- Zigbee sniffer: a console `exit_app` sent while the sniffer is still starting now stops it
+- The SD card is unmounted cleanly on every deliberate restart (Web File Browser, Zigbee switch/light, SDR exit, console reset)
+- rf_spectrum, DroneID scanner, Drone ID, BLE spam, Modbus TCP and CatDoS now claim Wi-Fi through the radio arbiter: rf_spectrum and the DroneID scanner shut the driver down on exit, and starting one of them while BLE holds the radio fails cleanly
+- A connection made from `Settings > WiFi` or the console `connect` command is dropped cleanly when the next app takes the radio, instead of leaving reconnect attempts running in the background
 
 ### Known issues
-- Some apps still force-delete their worker tasks on exit (deauth scan, DroneID, captive scan, Drone ID spoofer)
-- CatDoS attack threads are never joined and leak on every attack
-- BLE spam stops twice on exit
-- Some apps (rf_spectrum, DroneID scanner, Drone ID, BLE spam, Modbus TCP/CatDoS, Zigbee, Thread) still drive Wi-Fi outside the radio arbiter
+- Zigbee, Thread, Zigbee/Thread wardriving, OTA and the Web File Browser still reset Wi-Fi themselves instead of claiming it through the radio arbiter
+- Zigbee/Thread wardriving: a console `exit_app` sent while the app is still starting is ignored (the back button is not affected)
+- A console BLE command (such as `gattcmd_scan`) run during a Modbus TCP or CatDoS session ends that session's Wi-Fi connection
+- UART bridge: its own UART settings are only partly applied, because the console UART driver is still installed when the bridge starts
 
 ## v1.1.16.1
 ### Fixed
