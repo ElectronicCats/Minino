@@ -20,13 +20,14 @@ static Spoofer* ble_drone = nullptr; /* heap: same reason */
 static bool add_ble_drone = false;
 
 static TaskHandle_t s_spoofing_task_handle = NULL;
+static volatile bool s_spoofing_running = false;
 
 static void spoofing_task(void* pvParameters) {
-  while (1) {
+  while (s_spoofing_running) {
     if (add_ble_drone && ble_drone != nullptr) {
       ble_drone->update();
     }
-    for (int i = 0; i < num_spoofers; i++) {
+    for (int i = 0; i < num_spoofers && s_spoofing_running; i++) {
       spoofers[i].update();
       vTaskDelay(pdMS_TO_TICKS(num_spoofers > 0 ? (200 / num_spoofers) : 200));
     }
@@ -34,6 +35,8 @@ static void spoofing_task(void* pvParameters) {
       vTaskDelay(pdMS_TO_TICKS(200));
     }
   }
+  s_spoofing_task_handle = NULL;
+  vTaskDelete(NULL);
 }
 
 /* (Re)allocates the spoofer array for the requested number of drones. One
@@ -106,12 +109,21 @@ void odrone_id_begin(uint8_t num_drones,
     ble_drone->updateLocation(latitude, longitude);
   }
   odrone_id_set_wifi_ap(channel);
+  s_spoofing_running = true;
   xTaskCreate(&spoofing_task, "spoofing_task", 4096, NULL, 5,
               &s_spoofing_task_handle);
 }
 
 void odrone_id_stop(void) {
+  /* Let the task finish its current transmit and leave before the spoofers
+     are freed: deleting it inside esp_wifi_80211_tx() or a BLE GAP call cuts
+     the driver call in half. */
+  s_spoofing_running = false;
+  for (int ms = 0; s_spoofing_task_handle != NULL && ms < 2000; ms += 10) {
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
   if (s_spoofing_task_handle != NULL) {
+    ESP_LOGE(TAG, "Spoofing task did not stop, deleting it");
     vTaskDelete(s_spoofing_task_handle);
     s_spoofing_task_handle = NULL;
   }
