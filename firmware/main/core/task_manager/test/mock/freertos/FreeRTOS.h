@@ -41,6 +41,17 @@ static inline void vTaskDelete(TaskHandle_t h) {
   mock_last_deleted = h != NULL ? h : mock_current_task;
   mock_delete_calls++;
 }
+#define pdMS_TO_TICKS(ms) ((TickType_t) (ms))
+/* Each delay runs the test's hook, so a test can play the other task. */
+extern int mock_delay_calls;
+extern void (*mock_on_delay)(void);
+static inline void vTaskDelay(TickType_t t) {
+  (void) t;
+  mock_delay_calls++;
+  if (mock_on_delay) {
+    mock_on_delay();
+  }
+}
 static inline TaskHandle_t xTaskGetCurrentTaskHandle(void) {
   return mock_current_task;
 }

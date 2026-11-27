@@ -8,6 +8,8 @@
 TaskHandle_t mock_current_task = NULL;
 TaskHandle_t mock_last_deleted = NULL;
 int mock_delete_calls = 0;
+int mock_delay_calls = 0;
+void (*mock_on_delay)(void) = NULL;
 
 static void noop(void* arg) {
   (void) arg;
@@ -26,6 +28,8 @@ void setUp(void) {
   mock_current_task = NULL;
   mock_last_deleted = NULL;
   mock_delete_calls = 0;
+  mock_delay_calls = 0;
+  mock_on_delay = NULL;
 }
 
 void tearDown(void) {}
@@ -69,11 +73,41 @@ static void test_delete_by_handle_keeps_others(void) {
   TEST_ASSERT_TRUE(task_manager_get_info_copy(b, &(task_info_t) {0}));
 }
 
+static TaskHandle_t worker;
+static void worker_exits_on_third_delay(void) {
+  if (mock_delay_calls == 3) {
+    worker = NULL;
+  }
+}
+
+static void test_wait_exit_returns_once_the_task_clears_its_handle(void) {
+  worker = (TaskHandle_t) 0xCAFE;
+  mock_on_delay = worker_exits_on_third_delay;
+  TEST_ASSERT_TRUE(task_manager_wait_exit(&worker, 1000));
+  TEST_ASSERT_EQUAL(3, mock_delay_calls);
+}
+
+static void test_wait_exit_times_out(void) {
+  worker = (TaskHandle_t) 0xCAFE;
+  TEST_ASSERT_FALSE(task_manager_wait_exit(&worker, 100));
+  TEST_ASSERT_EQUAL(10, mock_delay_calls);
+}
+
+static void test_wait_exit_never_waits_for_itself(void) {
+  worker = (TaskHandle_t) 0xCAFE;
+  mock_current_task = worker;
+  TEST_ASSERT_FALSE(task_manager_wait_exit(&worker, 1000));
+  TEST_ASSERT_EQUAL(0, mock_delay_calls);
+}
+
 int main(void) {
   UNITY_BEGIN();
   RUN_TEST(test_self_delete_frees_the_slot);
   RUN_TEST(test_unregistered_caller_is_still_deleted);
   RUN_TEST(test_stale_handle_is_left_alone);
   RUN_TEST(test_delete_by_handle_keeps_others);
+  RUN_TEST(test_wait_exit_returns_once_the_task_clears_its_handle);
+  RUN_TEST(test_wait_exit_times_out);
+  RUN_TEST(test_wait_exit_never_waits_for_itself);
   return UNITY_END();
 }

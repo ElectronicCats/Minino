@@ -113,6 +113,21 @@ esp_err_t task_manager_create(TaskFunction_t task_func,
 esp_err_t task_manager_delete(TaskHandle_t handle);
 
 /**
+ * @brief Wait for a task to stop by itself
+ *
+ * For tasks that end on a stop flag and clear their own handle right before
+ * deleting themselves. Use it instead of deleting the task from outside, which
+ * can leave a mutex (oled_mutex) taken forever, a radio_lease claim held, or a
+ * driver call cut in half.
+ *
+ * @param handle Handle the task sets to NULL on its way out
+ * @param timeout_ms How long to wait
+ * @return true once *handle is NULL; false on timeout, or at once when called
+ *         from that same task (it cannot wait for itself)
+ */
+bool task_manager_wait_exit(TaskHandle_t volatile* handle, uint32_t timeout_ms);
+
+/**
  * @brief List all registered tasks in the system
  *
  * Prints detailed information for each task to the log

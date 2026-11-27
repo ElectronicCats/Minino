@@ -146,6 +146,18 @@ esp_err_t task_manager_delete(TaskHandle_t handle) {
   return ret;
 }
 
+bool task_manager_wait_exit(TaskHandle_t volatile* handle,
+                            uint32_t timeout_ms) {
+  if (*handle != NULL && *handle == xTaskGetCurrentTaskHandle()) {
+    return false;
+  }
+  for (uint32_t waited = 0; *handle != NULL && waited < timeout_ms;
+       waited += 10) {
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
+  return *handle == NULL;
+}
+
 void task_manager_list_all(void) {
   if (task_manager_mutex &&
       xSemaphoreTake(task_manager_mutex, portMAX_DELAY) == pdTRUE) {
