@@ -5,6 +5,7 @@
 
 void modbus_tcp_scenes_main();
 void modbus_tcp_scenes_settings();
+void modbus_tcp_scenes_exit(void);
 
 /* Menu entry point: enters through app_manager so that exiting runs the app's
    on_exit cleanup and returns to the parent menu. Calling

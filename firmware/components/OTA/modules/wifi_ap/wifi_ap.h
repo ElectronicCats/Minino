@@ -25,3 +25,4 @@ typedef struct wifi_app_q_msg {
 
 // Public Function Prototypes
 void wifi_app_start(void);
+void wifi_app_stop(void);

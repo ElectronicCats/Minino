@@ -4,20 +4,30 @@
 #include "string.h"
 #include "wifi_service.h"
 
-static volatile bool wifi_driver_initialized = false;
-static volatile bool netif_default_created = false;
-static bool run_once = false;
 static uint8_t default_ap_mac[6];
 static esp_err_t err;
+static uint8_t s_current_channel = 1;
+
+/* Up and started, read from the driver every time. A cached flag
+   went stale whenever an app called wifi_service_deinit() or esp_wifi_stop()
+   on its own, and the next init then skipped esp_wifi_start(). The tx-power
+   getter is read-only and documented to fail with ESP_ERR_WIFI_NOT_INIT or
+   ESP_ERR_WIFI_NOT_STARTED. */
+static bool wifi_driver_started(void) {
+  int8_t power;
+  return wifi_service_is_up_get() &&
+         esp_wifi_get_max_tx_power(&power) == ESP_OK;
+}
 
 wifi_config_t wifi_driver_access_point_begin() {
   // #if !defined(CONFIG_WIFI_CONTROLLER_DEBUG)
   //   esp_log_level_set(TAG_WIFI_DRIVER, ESP_LOG_NONE);
   // #endif
 
-  if (wifi_driver_initialized) {
-    wifi_driver_deinit();
-  }
+  /* The driver is brought up (and torn down) by the caller's radio_lease
+     claim; wifi_driver_ap_start() below only sets the AP config when it is
+     already running. Deinitialising here would drop the lease's driver and
+     leave the refcount pointing at nothing. */
 
   esp_err_t err;
   err = esp_event_loop_create_default();
@@ -43,7 +53,7 @@ wifi_config_t wifi_driver_access_point_begin() {
 void wifi_driver_ap_start(wifi_config_t* wifi_ap_config) {
   ESP_LOGI(TAG_WIFI_DRIVER, "Starting WiFi Access Point %s",
            wifi_ap_config->ap.ssid);
-  if (!wifi_driver_initialized) {
+  if (!wifi_driver_started()) {
     ESP_LOGI(TAG_WIFI_DRIVER, "Initializing WiFi Access Point and Station");
     wifi_driver_init_apsta();
   }
@@ -76,13 +86,7 @@ bool wifi_driver_init_apsta(void) {
              esp_err_to_name(err));
   }
 
-  // Create a defailt WiFi Access Point
-  if (!netif_default_created) {
-    // Create a default WiFi Station
-    esp_netif_create_default_wifi_sta();
-
-    netif_default_created = true;
-  }
+  wifi_service_netif_sta();
 
   if (!wifi_service_is_up_get() && !wifi_service_init(WIFI_MODE_APSTA)) {
     ESP_LOGE(TAG_WIFI_DRIVER, "WiFi stack init failed");
@@ -99,12 +103,11 @@ bool wifi_driver_init_apsta(void) {
     ESP_LOGE(TAG_WIFI_DRIVER, "esp_wifi_start failed");
     return false;
   }
-  wifi_driver_initialized = true;
   return true;
 }
 
 bool wifi_driver_init_sta(void) {
-  if (wifi_driver_initialized) {
+  if (wifi_driver_started()) {
     /* Setting the mode the driver already has restarts its radio, and the
        radio's buffers are 37 KB of heap: only ask when the mode really is a
        different one. */
@@ -127,13 +130,7 @@ bool wifi_driver_init_sta(void) {
   if (err == ESP_ERR_INVALID_STATE) {
     ESP_LOGI(TAG_WIFI_DRIVER, "Event loop already created");
   }
-  // This shouldn't be a definitive solution, but works for now
-
-  if (!run_once) {
-    run_once = true;
-    esp_netif_t* sta_netif = esp_netif_create_default_wifi_sta();
-    assert(sta_netif);
-  }
+  wifi_service_netif_sta();
 
   if (!wifi_service_is_up_get() && !wifi_service_init(WIFI_MODE_APSTA)) {
     ESP_LOGE(TAG_WIFI_DRIVER, "WiFi stack init failed");
@@ -148,12 +145,11 @@ bool wifi_driver_init_sta(void) {
              "esp_wifi_start failed: the radio is probably held by BLE");
     return false;
   }
-  wifi_driver_initialized = true;
   return true;
 }
 
 bool wifi_driver_init_null(void) {
-  if (wifi_driver_initialized) {
+  if (wifi_driver_started()) {
     return wifi_service_set_mode(WIFI_MODE_NULL) == ESP_OK;
   }
   esp_err_t err = esp_event_loop_create_default();
@@ -172,14 +168,13 @@ bool wifi_driver_init_null(void) {
     ESP_LOGE(TAG_WIFI_DRIVER, "wifi_service_set_mode(NULL) failed");
     return false;
   }
-  wifi_driver_initialized = true;
   return true;
 }
 
 void wifi_driver_deinit() {
   esp_wifi_stop();
   wifi_service_deinit();
-  wifi_driver_initialized = false;
+  s_current_channel = 1;
 }
 
 // Releases the 2.4 GHz radio for other stacks (e.g. pure BLE) without assuming
@@ -188,11 +183,11 @@ void wifi_driver_deinit() {
 void wifi_driver_deinit_if_started(void) {
   esp_wifi_stop();
   wifi_service_deinit();
-  wifi_driver_initialized = false;
+  s_current_channel = 1;
 }
 
 bool wifi_driver_get_initialized(void) {
-  return wifi_driver_initialized;
+  return wifi_driver_started();
 }
 
 void wifi_driver_sta_disconnect() {
@@ -227,7 +222,6 @@ void wifi_driver_get_sta_mac(uint8_t* mac_sta) {
    tell whether a change is needed at all: asking the driver for the channel
    it is already on still restarts its radio, and the radio's capture
    buffers cost 40 KB of heap. */
-static uint8_t s_current_channel = 1;
 
 void wifi_driver_set_channel(uint8_t channel) {
   if ((channel == 0) || (channel > 13)) {
@@ -241,6 +235,15 @@ void wifi_driver_set_channel(uint8_t channel) {
 }
 
 uint8_t wifi_driver_get_channel(void) {
+  /* Ask the driver first: it may have been re-initialised (back on channel
+     1) or moved by code outside this module. The read does not
+     touch the radio. */
+  uint8_t primary = 0;
+  wifi_second_chan_t second;
+  if (esp_wifi_get_channel(&primary, &second) == ESP_OK && primary >= 1 &&
+      primary <= 13) {
+    s_current_channel = primary;
+  }
   return s_current_channel;
 }
 

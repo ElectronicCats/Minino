@@ -55,9 +55,15 @@ static volatile bool uart_bridge_exit = false;
 void uart_bridge_app_task(void* args) {
   display_uart_bridge_screen();
 
-  uart_bridge_exit = false;
+  /* uart_bridge_exit is cleared by uart_bridge_app_begin(), before this task
+     exists. Clearing it here too loses an exit pressed before the task first
+     runs. */
 
   cat_console_pause();
+
+  /* main.c installed UART0 at boot; uart_bridge_end() deletes it, so keep the
+     boot configuration to put it back on exit. */
+  uart_bridge_config_t boot_config = uart_bridge_get_config();
 
   usb_serial_jtag_driver_config_t config = {
       .tx_buffer_size = 1024,
@@ -106,9 +112,10 @@ void uart_bridge_app_task(void* args) {
   }
 
   uart_bridge_end();
+  uart_bridge_begin(boot_config.uart_config, boot_config.buffer_size);
   cat_console_resume();
 
-  vTaskDelete(NULL);
+  task_manager_delete(NULL);
 }
 
 static void keyboard_navigation_cb(uint8_t button_name, uint8_t button_event) {
@@ -127,6 +134,13 @@ void uart_bridge_app_begin() {
   task_manager_create(uart_bridge_app_task, "uart_bridge_app_task",
                       TASK_STACK_MEDIUM, NULL, TASK_PRIORITY_LOW,
                       &uart_bridge_app_task_handle);
+}
+
+void uart_bridge_app_stop(void) {
+  /* The bridge task owns the UART/USB cleanup; asking it to leave is enough.
+     Do not delete it from here: it still has to run uart_bridge_end() and
+     cat_console_resume(). */
+  uart_bridge_exit = true;
 }
 
 void set_uart_baudrate(uint8_t option) {

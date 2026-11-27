@@ -12,7 +12,7 @@
 #else  // CONFIG_RESOLUTION_128X32
 #endif
 
-static void thread_sniffer_scanning_animation() {
+static void __attribute__((unused)) thread_sniffer_scanning_animation() {
   static uint8_t frame = 0;
 #ifdef CONFIG_RESOLUTION_128X64
   uint8_t x = 48;
@@ -44,14 +44,16 @@ static void thread_sniffer_show_destination(bool* save_in_sd) {
 #endif
 
 #ifdef CONFIG_RESOLUTION_128X64
-static void thread_sniffer_show_new_packet(uint32_t packets_count) {
+static void __attribute__((unused)) thread_sniffer_show_new_packet(
+    uint32_t packets_count) {
   char* str = (char*) malloc(17);
   sprintf(str, "Packets: %lu", packets_count);
   oled_screen_display_text_center(str, 6, OLED_DISPLAY_INVERT);
   free(str);
 }
 #else  // CONFIG_RESOLUTION_128X32
-static void thread_sniffer_show_new_packet(uint32_t packets_count) {
+static void __attribute__((unused)) thread_sniffer_show_new_packet(
+    uint32_t packets_count) {
   char* str = (char*) malloc(10);
   sprintf(str, "%lu", packets_count);
   oled_screen_display_text("Packets:", 40, 2, OLED_DISPLAY_INVERT);
@@ -80,7 +82,6 @@ void thread_sniffer_show_event_handler(thread_sniffer_events_t event,
                                        void* context) {
   switch (event) {
     case THREAD_SNIFFER_START_EV:
-      animations_task_run(thread_sniffer_scanning_animation, 100, NULL);
       break;
     case THREAD_SNIFFER_STOP_EV:
       animations_task_stop();
@@ -93,7 +94,6 @@ void thread_sniffer_show_event_handler(thread_sniffer_events_t event,
       thread_sniffer_show_destination((bool*) context);
       break;
     case THREAD_SNIFFER_NEW_PACKET_EV:
-      thread_sniffer_show_new_packet(*(uint32_t*) context);
       break;
     default:
       break;

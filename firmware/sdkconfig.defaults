@@ -169,14 +169,15 @@ CONFIG_MININO_BT_STACK=y
 # switches have to be pinned here: the build reads them before the Kconfig
 # step runs, when the resolved sdkconfig does not exist yet (see
 # cmake/minino_kconfig.cmake).
-# CONFIG_MININO_ZIGBEE_STACK is not set
-# CONFIG_MININO_OPENTHREAD_STACK is not set
-
-# The SDR app: the capture bank is reserved and the image is capped below it.
 #
-# Off by default: the capture bank takes a whole SRAM block out of the heap
-# and the linker script caps the image below it, and the image with the
-# Zigbee and the Thread stacks does not fit under that cap (it is 45 KB
-# over). The SDR build variant (sdkconfig.sdr) turns the app on and the two
-# stacks off, which is what makes it fit.
+# Both are enabled by default so the Zigbee/Thread applications are native
+# entries in the Applications menu.
+CONFIG_MININO_ZIGBEE_STACK=y
+CONFIG_MININO_OPENTHREAD_STACK=y
+
+# The SDR app, in the same image as everything else. The image is capped
+# below the capture bank (about 2 KB to spare, the link fails if it grows
+# past it). The bank only leaves the heap on an SDR boot: opening the SDR app
+# reboots into one and leaving it reboots back, so the other apps keep the
+# whole heap (see main/modules/esp_sdr/esp_sdr_memory.c).
 CONFIG_SDR_ENABLE=y

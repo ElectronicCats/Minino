@@ -73,10 +73,7 @@ static void wifi_init(char* ssid, char* pass) {
   ESP_ERROR_CHECK(esp_netif_init());
   esp_event_loop_create_default();
 
-  wifi_netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
-  if (wifi_netif == NULL) {
-    wifi_netif = esp_netif_create_default_wifi_sta();
-  }
+  wifi_netif = wifi_service_netif_sta();
 
   if (!wifi_service_is_up_get() && !wifi_service_init(WIFI_MODE_STA)) {
     ESP_LOGE(TAG, "WiFi stack init failed");

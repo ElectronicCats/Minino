@@ -122,7 +122,6 @@ void gps_module_start_scan() {
   if (is_uart_installed) {
     return;
   }
-  is_uart_installed = true;
 
 #if !defined(CONFIG_GPS_MODULE_DEBUG)
   esp_log_level_set(TAG, ESP_LOG_NONE);
@@ -134,6 +133,11 @@ void gps_module_start_scan() {
   nmea_parser_config_t config = NMEA_PARSER_CONFIG_DEFAULT();
   /* init NMEA parser library */
   nmea_hdl = nmea_parser_init(&config);
+  if (nmea_hdl == NULL) {
+    ESP_LOGE(TAG, "NMEA parser init failed");
+    return;
+  }
+  is_uart_installed = true;
   /* register event handler for NMEA parser library */
   nmea_parser_add_handler(nmea_hdl, gps_event_handler, NULL);
 

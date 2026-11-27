@@ -265,9 +265,17 @@ extern void cmd_spamssid_register_commands(void);
 
 /* The command control hands the USB port over to the SDR host mode. The
    test does not open any port, so the call goes nowhere. */
-esp_err_t esdr_host_run(void) {
+esp_err_t esdr_host_run(const char* first_line) {
+  (void) first_line;
   return 0;
 }
+
+/* sdr_host only serves on an SDR boot; the test runs as one. */
+bool sdr_bank_is_reserved(void) {
+  return true;
+}
+
+void sdr_bank_reboot_into_sdr(void) {}
 
 static void register_all_commands_once(void) {
   static bool registered = false;

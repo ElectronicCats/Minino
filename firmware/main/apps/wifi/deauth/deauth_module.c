@@ -6,6 +6,8 @@
 #include "freertos/FreeRTOS.h"
 #include "led_events.h"
 #include "menus_module.h"
+#include "radio_lease.h"
+#include "task_manager.h"
 #include "wifi_attacks.h"
 #include "wifi_controller.h"
 #include "wifi_scanner.h"
@@ -45,6 +47,7 @@ static void deauth_module_cb_event_run(uint8_t button_name,
                                        uint8_t button_event);
 
 static TaskHandle_t scanning_task_handle = NULL;
+static volatile bool scan_abort = false;
 
 static void scanning_task();
 static void deauth_run_scan_task();
@@ -52,10 +55,18 @@ static void deauth_handle_attacks();
 
 static void scanning_task() {
   uint8_t scan_count = 0;
-  while (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 2) && scan_count < 3) {
+  while (!scan_abort && ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 2) &&
+         scan_count < 3) {
     wifi_scanner_module_scan();
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    for (int ms = 0; ms < 1000 && !scan_abort; ms += 100) {
+      vTaskDelay(pdMS_TO_TICKS(100));
+    }
     scan_count++;
+  }
+  /* Stopped from outside: whoever stopped us owns the screen now. */
+  if (scan_abort) {
+    scanning_task_handle = NULL;
+    vTaskDelete(NULL);
   }
 
   // This assigment is the same, the struct returned from
@@ -71,6 +82,23 @@ static void scanning_task() {
   current_wifi_state.state = DEAUTH_STATE_MENU;
   scanning_task_handle = NULL;
   vTaskDelete(NULL);
+}
+
+/* Let the scan task finish its current scan and leave on its own. Deleting it
+   from outside could cut esp_wifi_scan_start() in half, leak wifi_scanner's
+   radio_lease claim, or leave oled_mutex taken while it draws the menu. */
+static void deauth_stop_scan_task() {
+  scan_abort = true;
+  if (!task_manager_wait_exit(&scanning_task_handle, 5000)) {
+    ESP_LOGE("deauth", "Scan task did not stop, deleting it");
+    vTaskDelete(scanning_task_handle);
+    scanning_task_handle = NULL;
+  }
+}
+
+static void deauth_start_scan_task() {
+  scan_abort = false;
+  xTaskCreate(scanning_task, "wifi_scan", 4096, NULL, 5, &scanning_task_handle);
 }
 
 static void deauth_run_scan_task() {
@@ -105,6 +133,17 @@ void deauth_module_begin() {
 
   current_wifi_state.state = DEAUTH_STATE_IDLE;
 
+  /* Hold the WiFi driver through radio_lease for the whole app (APSTA: the
+     manager AP plus STA for scanning). As the first holder this brings the
+     driver up; the scan task's wifi_scanner then nests as a second holder, so
+     its release no longer deinitialises the driver and drops the AP. */
+  if (radio_lease_wifi_acquire(RADIO_WIFI_MODE_APSTA) != ESP_OK) {
+    ESP_LOGE("deauth", "Could not acquire WiFi (BLE active?)");
+    animations_task_stop();
+    menus_module_exit_app();
+    return;
+  }
+
   memset(&current_wifi_state.wifi_config, 0, sizeof(wifi_config_t));
   current_wifi_state.wifi_config = wifi_driver_access_point_begin();
 
@@ -115,7 +154,7 @@ void deauth_module_begin() {
   }
   ap_records->count = 0;
 
-  xTaskCreate(scanning_task, "wifi_scan", 4096, NULL, 5, &scanning_task_handle);
+  deauth_start_scan_task();
 
   deauth_run_scan_task();
 
@@ -154,8 +193,7 @@ static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event) {
             deauth_clear_screen();
             deauth_display_scanning_text();
             animations_task_run(&deauth_display_scanning, 200, NULL);
-            xTaskCreate(scanning_task, "wifi_scan", 4096, NULL, 5,
-                        &scanning_task_handle);
+            deauth_start_scan_task();
             deauth_run_scan_task();
             menus_module_set_app_state(true, deauth_module_cb_event);
             current_item = 0;
@@ -195,10 +233,7 @@ static void deauth_module_cb_event(uint8_t button_name, uint8_t button_event) {
       break;
     case BUTTON_LEFT:
       if (current_wifi_state.state == DEAUTH_STATE_IDLE) {
-        if (scanning_task_handle != NULL) {
-          vTaskDelete(scanning_task_handle);
-          scanning_task_handle = NULL;
-        }
+        deauth_stop_scan_task();
         animations_task_stop();
         wifi_scanner_clear_ap_records();
         led_control_stop();
@@ -288,6 +323,21 @@ static void deauth_module_cb_event_attacks(uint8_t button_name,
     default:
       break;
   }
+}
+
+void deauth_module_exit(void) {
+  deauth_stop_scan_task();
+  animations_task_stop();
+  wifi_attacks_module_stop();
+  /* Drop the APSTA claim taken in begin(). As the last holder this stops and
+     deinitialises the driver, so the manager AP (and any cloned rogue AP)
+     stops beaconing. */
+  radio_lease_wifi_release();
+  wifi_scanner_clear_ap_records();
+  led_control_stop();
+  current_item = 0;
+  menu_stadistics.attack = 99;
+  current_wifi_state.state = DEAUTH_STATE_IDLE;
 }
 
 static void deauth_module_cb_event_run(uint8_t button_name,

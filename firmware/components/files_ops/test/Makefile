@@ -1,7 +1,10 @@
-CC ?= gcc
-CFLAGS = -Wall -Wextra -Werror -I../include -Iunity -g -O0
+IDF_PATH ?= $(HOME)/esp/esp-idf
+UNITY    := $(IDF_PATH)/components/unity/unity/src
 
-SRCS = test_files_ops.c ../files_ops.c unity/unity.c
+CC ?= gcc
+CFLAGS = -Wall -Wextra -Werror -I../include -I$(UNITY) -g -O0
+
+SRCS = test_files_ops.c ../files_ops.c $(UNITY)/unity.c
 TARGET = test_files_ops
 
 all: $(TARGET)

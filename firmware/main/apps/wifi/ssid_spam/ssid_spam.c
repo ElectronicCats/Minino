@@ -9,6 +9,7 @@ static const char* TAG = "ssid_spam";
 #include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
 #include "nvs_flash.h"
+#include "radio_lease.h"
 #include "string.h"
 #include "wifi_service.h"
 
@@ -83,12 +84,17 @@ static const uint8_t beacon_tail[] = {
 _Static_assert(BEACON_SSID_OFFSET == sizeof(beacon_raw),
                "the SSID payload must start right after the length byte");
 
-static char* ssids_main_list[2] = {"List SSID", "Start"};
+/* Item 0 is rewritten in place; never malloc'd, so never freed. */
+static char ssid_list_label[32] = "List SSID";
+static char* ssids_main_list[2] = {ssid_list_label, "Start"};
 static char* ssids_list[99] = {};
 static char* ssids_attack[MAX_STRINGS];
 static uint16_t total_lines = 0;
 static uint8_t current_item = 0;
 static TaskHandle_t spam_task_handle = NULL;
+/* True while the app holds the WiFi driver lease (taken in ssid_spam_init,
+   released on exit). */
+static bool wifi_leased = false;
 
 static const general_menu_t spam_menu_main = {
     .menu_items = ssids_main_list,
@@ -142,18 +148,17 @@ void split_text_into_array(const char* input,
 }
 
 static void list_ssid_cb(uint8_t selection) {
-  char menu_selected[32];
+  /* Empty list: RIGHT still fires the callback on slot 0, which is NULL. */
+  if (ssids_list[selection] == NULL) {
+    return;
+  }
   if (strlen(ssids_list[selection]) + 7 > 16) {
-    snprintf(menu_selected, sizeof(menu_selected), "[%s]",
+    snprintf(ssid_list_label, sizeof(ssid_list_label), "[%s]",
              ssids_list[selection]);
   } else {
-    snprintf(menu_selected, sizeof(menu_selected), "SSID [%s]",
+    snprintf(ssid_list_label, sizeof(ssid_list_label), "SSID [%s]",
              ssids_list[selection]);
   }
-  if (ssids_main_list[0] != NULL) {
-    free(ssids_main_list[0]);
-  }
-  ssids_main_list[0] = strdup(menu_selected);
 
   storage_contex_t* item_ctx;
   item_ctx =
@@ -286,17 +291,17 @@ static void ssid_spam_init(void) {
   if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
     ESP_LOGE("ssid_spam", "event_loop_create error: %s", esp_err_to_name(ret));
   }
-  /* esp_netif_create_default_wifi_ap() triggers an assert() if the AP netif
-     already exists: re-entering the app (or starting it twice without
-     exiting) caused the board to reboot with a "duplicate key" error. */
-  if (esp_netif_get_handle_from_ifkey("WIFI_AP_DEF") == NULL) {
-    esp_netif_create_default_wifi_ap();
-  }
+  wifi_service_netif_ap();
 
-  if (!wifi_service_init(WIFI_MODE_AP)) {
+  /* Bring the driver up through the lease (APSTA covers the soft-AP the spam
+     needs) instead of calling wifi_service_init() directly: this starts the
+     driver and keeps the refcount honest, so nothing tears it down under the
+     attack and the exit restores the baseline. */
+  if (radio_lease_wifi_acquire(RADIO_WIFI_MODE_APSTA) != ESP_OK) {
     ESP_LOGE(TAG, "WiFi stack init failed");
     return;
   }
+  wifi_leased = true;
 
   esp_wifi_set_storage(WIFI_STORAGE_RAM);
   wifi_config_t ap_config = {.ap = {.ssid = "NotSuspisiusCat",
@@ -419,8 +424,12 @@ static void ssid_spam_on_exit(void) {
   // Stop the spam task
   animations_task_stop();
   ssid_spam_stop_task();
-  // Deinitialize WiFi (started in ssid_spam_init)
-  wifi_service_deinit();
+  // Release the WiFi driver lease taken in ssid_spam_init. Guarded so the
+  // double exit path (ssid_spam_exit plus app_manager) does not underflow.
+  if (wifi_leased) {
+    wifi_leased = false;
+    radio_lease_wifi_release();
+  }
   // Free attack strings
   for (uint8_t i = 0; i < MAX_STRINGS; i++) {
     if (ssids_attack[i]) {
@@ -429,11 +438,7 @@ static void ssid_spam_on_exit(void) {
     }
   }
   total_lines = 0;
-  // Free main list
-  if (ssids_main_list[0]) {
-    free(ssids_main_list[0]);
-    ssids_main_list[0] = NULL;
-  }
+  strcpy(ssid_list_label, "List SSID");
   // Free flash storage lists
   for (uint8_t i = 0; i < FLASH_STORAGE_MAX_LIST_ITEMS; i++) {
     if (ssids_list[i]) {
@@ -441,6 +446,10 @@ static void ssid_spam_on_exit(void) {
     }
   }
   current_item = 0;
+}
+
+void ssid_spam_exit(void) {
+  ssid_spam_on_exit();
 }
 
 // Wrapper for menu entry

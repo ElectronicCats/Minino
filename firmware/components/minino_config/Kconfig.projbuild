@@ -55,7 +55,7 @@ menu "General project"
 		
 		config WIFI_AP_PASSWORD
 		string "WIFI Ap Password"
-		default ""
+		default "Cats1234"
 		help
 			Minino Access Point Password
 		
@@ -349,6 +349,7 @@ menu "General project"
 			config MININO_ZIGBEE_STACK
 					bool "Enable Zigbee/Thread stack"
 					default y
+					select ZB_ENABLED
 					help
 						Enable the Zigbee/Thread stack (espressif__esp-zigbee-lib,
 						openthread, ieee802154). Disabling this frees ~30+ KB of DRAM
@@ -843,7 +844,7 @@ menu "General project"
 
 			config SDR_ENABLE
 					bool "Enable SDR"
-					default n
+					default y
 					help
 						Show the Applications > SDR entry: the native I/Q
 						capture app. It drives the C6 dump engine in-process
@@ -857,6 +858,10 @@ menu "General project"
 						link fails with "SDR: the DRAM image overlaps the
 						capture bank" instead of corrupting the heap at
 						capture time. See docs/esp-sdr-integration.md.
+
+						The bank only leaves the heap on an SDR boot: the
+						SDR app reboots into one and its exit reboots back,
+						so the other apps keep the whole heap.
 
 						With this off, nothing reserves the bank and the
 						SDR entry is not in the menu.

@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -37,6 +38,26 @@ uint32_t sdr_capture_bank_base(void);
 
 /** @brief Size of the capture bank in bytes. */
 uint32_t sdr_capture_bank_size(void);
+
+/**
+ * @brief Hand the capture bank to the heap unless this is an SDR boot.
+ *
+ * Call it first thing in app_main().
+ *
+ * @return true on an SDR boot (the bank stays reserved and the caller
+ *         opens the SDR app).
+ */
+bool sdr_bank_boot(void);
+
+/** @brief Whether the bank is off the heap, i.e. the engine may own it. */
+bool sdr_bank_is_reserved(void);
+
+/**
+ * @brief Reboot with the capture bank reserved (an SDR boot).
+ *
+ * Does not return when SDR is compiled in.
+ */
+void sdr_bank_reboot_into_sdr(void);
 
 #ifdef __cplusplus
 }

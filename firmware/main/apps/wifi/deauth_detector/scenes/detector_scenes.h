@@ -9,3 +9,4 @@ void detector_scenes_help();
 
 void detector_scenes_show_table(uint16_t* deauth_packets_count_list);
 void detector_scenes_show_count(uint16_t count, uint8_t channel);
+void deauth_detector_exit(void);

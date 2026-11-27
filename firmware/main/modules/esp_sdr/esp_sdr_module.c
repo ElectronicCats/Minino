@@ -8,9 +8,11 @@
 #include <math.h>
 #include "c6_sdr_rx.h"
 #include "cat_console.h"
+#include "esdr_burst_proto.h"
 #include "esdr_host.h"
 #include "esp_log.h"
 #include "esp_rom_sys.h"
+#include "esp_sdr_memory.h"
 #include "esp_timer.h"
 #include "esp_wifi.h"
 #include "files_ops.h"
@@ -18,6 +20,7 @@
 #include "freertos/task.h"
 #include "keyboard_module.h"
 #include "menus_module.h"
+#include "modals_module.h"
 #include "oled_screen.h"
 #include "sd_card.h"
 #include "sdr_screen.h"
@@ -288,12 +291,13 @@ static void sdr_burst_run(void) {
 
 static volatile TaskHandle_t s_host_task = NULL;
 static volatile bool s_host_stopping = false;
+static char s_host_first_line[ESDR_LINE_MAX];
 
 static void sdr_web_host_task(void* arg) {
   (void) arg;
   cat_console_pause();
 
-  (void) esdr_host_run();
+  (void) esdr_host_run(s_host_first_line);
 
   s_sdr.tx_active = false;
   s_sdr.freq_mhz = c6_sdr_rx_get_freq();
@@ -305,10 +309,12 @@ static void sdr_web_host_task(void* arg) {
   vTaskDelete(NULL);
 }
 
-static void sdr_web_host_start(void) {
+static void sdr_web_host_start(const char* first_line) {
   if (s_host_task != NULL) {
     return;
   }
+  strlcpy(s_host_first_line, first_line != NULL ? first_line : "",
+          sizeof(s_host_first_line));
   s_host_stopping = false;
   s_sdr.tx_active = true;
   sdr_render_screen("WEB HOST: LISTENING", NULL);
@@ -347,7 +353,7 @@ static void sdr_cycle_mode(void) {
   }
   s_sdr.mode = (sdr_operating_mode_t) ((s_sdr.mode + 1) % 4);
   if (s_sdr.mode == SDR_MODE_WEB_HOST) {
-    sdr_web_host_start();
+    sdr_web_host_start(NULL);
     return;
   }
 
@@ -492,6 +498,13 @@ static void esp_sdr_start(void) {
 }
 
 void esp_sdr_module_begin(void) {
+  /* A normal boot gives the capture bank to the heap: reboot with it
+     reserved. main.c opens this app again on the SDR boot. */
+  if (!sdr_bank_is_reserved()) {
+    modals_module_show_banner("SDR mode...");
+    sdr_bank_reboot_into_sdr();
+    return;
+  }
   app_manager_enter(&s_app);
 }
 
@@ -514,13 +527,19 @@ void esp_sdr_module_stop(void) {
   }
   USB_SERIAL_JTAG.chip_rst.usb_uart_chip_rst_dis = 0;
   USB_SERIAL_JTAG.config_update.config_update = 1;
+
+  /* Back to a normal boot, so the other apps get the bank as heap again.
+     It lands in Applications (the parent menu). */
+  if (sdr_bank_is_reserved()) {
+    menus_module_reset();
+  }
 }
 
 bool esp_sdr_module_is_running(void) {
   return s_sdr.running;
 }
 
-void esp_sdr_module_enter_web_host(void) {
+void esp_sdr_module_enter_web_host(const char* first_line) {
   if (!s_sdr.running) {
     return;
   }
@@ -532,7 +551,13 @@ void esp_sdr_module_enter_web_host(void) {
     }
   }
   s_sdr.mode = SDR_MODE_WEB_HOST;
-  sdr_web_host_start();
+  sdr_web_host_start(first_line);
+  /* The caller (the console) must not read the port while the session
+     runs. The host task suspends it, but it gets here first or after the
+     resume depending on scheduling, so the end of the task is what counts. */
+  while (s_host_task != NULL) {
+    vTaskDelay(pdMS_TO_TICKS(10));
+  }
 }
 
 void app_manager_enter_wrapper_esp_sdr(void) {

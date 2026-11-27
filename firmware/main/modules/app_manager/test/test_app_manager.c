@@ -53,7 +53,19 @@ void menus_module_set_default_input(void) {
 
 void menus_module_return(void) {
   menus_module_set_default_input();
+  menus_in_app = false;
   menu_return_count++;
+}
+
+static int menu_exit_app_count;
+
+void menus_module_exit_app(void) {
+  menus_in_app = false;
+  menu_exit_app_count++;
+}
+
+bool menus_module_get_app_state(void) {
+  return menus_in_app;
 }
 
 static void reset(void) {
@@ -69,6 +81,26 @@ static void reset(void) {
   menus_input = NULL;
   default_input_count = 0;
   menu_return_count = 0;
+  menu_exit_app_count = 0;
+}
+
+/* Apps entered from the menu table never call app_manager_enter(); their back
+   button must still leave through the menu. */
+static void test_exit_without_active_app_leaves_menu_app(void) {
+  reset();
+  menus_in_app = true;
+  app_manager_exit();
+  TEST_ASSERT_EQUAL_INT(1, menu_exit_app_count);
+  TEST_ASSERT_EQUAL_INT(0, menu_return_count);
+  app_manager_exit();
+  TEST_ASSERT_EQUAL_INT(1, menu_exit_app_count);
+}
+
+static void test_exit_outside_any_app_is_a_no_op(void) {
+  reset();
+  app_manager_exit();
+  TEST_ASSERT_EQUAL_INT(0, menu_exit_app_count);
+  TEST_ASSERT_EQUAL_INT(0, menu_return_count);
 }
 
 static void test_enter_installs_input_and_runs_on_enter(void) {
@@ -142,5 +174,7 @@ int main(void) {
   RUN_TEST(test_second_enter_is_rejected_while_active);
   RUN_TEST(test_app_without_callbacks_is_supported);
   RUN_TEST(test_null_app_is_ignored);
+  RUN_TEST(test_exit_without_active_app_leaves_menu_app);
+  RUN_TEST(test_exit_outside_any_app_is_a_no_op);
   return UNITY_END();
 }

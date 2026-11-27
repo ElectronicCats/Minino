@@ -229,14 +229,9 @@ static void hid_module_cb_event(uint8_t button_name, uint8_t button_event) {
       }
       break;
     case BUTTON_LEFT:
-      s_hid_connected = false;
-      if (s_connected_task_handle != NULL) {
-        vTaskDelete(s_connected_task_handle);
-        s_connected_task_handle = NULL;
-      }
-      ble_hid_end();
-      menus_module_set_default_input();
-      oled_screen_clear();
+      /* Teardown runs in the exit callback (hid_module_stop / hid_on_exit).
+         Clearing in_app here first made app_manager_exit() skip the menu
+         redraw and left the screen blank. */
       app_manager_exit();
       break;
     default:

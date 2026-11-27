@@ -154,37 +154,60 @@ to fit below the bank:
 
 The capture bank is not just a slice of RAM: it is an entire hardware block
 removed from the heap, and the linker script (`esp_sdr_bank.ld`) caps the
-`sram_seg` region so the image fits below `0x40840000`. With the full
-feature set enabled, it does not fit:
+`sram_seg` region so the image fits below `0x40840000`. Before the trims
+listed below, the full feature set did not fit (301 KB against a 256 KB
+budget). After them it does, with about 2 KB to spare:
 
 | Metric | Value |
 |---|---|
 | Budget (the two SRAM blocks below the capture bank) | 256 KB |
-| Image with Bluetooth, Zigbee, and Thread included | 301 KB |
+| Image with Bluetooth, Zigbee, and Thread included (`_heap_start`) | 0x4083f750, 2,224 B below the cap |
 | Image with Zigbee and Thread stacks excluded | 249 KB |
 
-The project's own Kconfig already noted this (`MININO_ZIGBEE_STACK`):
+> **Correction (2026-11-25).** Earlier versions of this section, of
+> `sdkconfig.defaults` and of `sdkconfig.sdr` said the full image was 45 KB
+> over the cap. That predates the trims; the `sdr-full` profile links and
+> boots.
 
-> Disabling this frees ~30+ KB of DRAM **and is required for the SDR
-> build variant**.
+What limited the combined image was the heap, not the link. With the bank
+reserved, the heap left below it is 2 KiB instead of 50 KiB:
 
-Therefore, there are two profiles:
-
-| Variant | Profile | Configuration | Size | Flash Margin |
-|---|---|---|---|---|
-| Boards | `profiles/<board>/profile` | Everything enabled, `CONFIG_SDR_ENABLE` off | 3377 KiB | 8.7% |
-| SDR | `profiles/sdr/profile` | Zigbee and Thread off, `CONFIG_SDR_ENABLE` on | 2496 KiB | 32.5% |
-
-```bash
-make builds        # standard board profiles
-make build-sdr     # SDR variant
+```
+heap_init: At 4083F750 len 000008B0 (2 KiB): RAM    <- below the bank
+heap_init: At 40860000 len 0001C610 (113 KiB): RAM  <- above the bank
+heap_init: At 4087C610 len 00002F54 (11 KiB): RAM
 ```
 
-The SDR variant enables the `Applications > SDR` menu entry, the
-`sdr_capture` command, and `sdr_host`. In the standard board images, the SDR
-code is still compiled (the `main` glob compiles everything), but **there is
-no capture bank reserved behind it**: that is why `CONFIG_SDR_ENABLE` is
-disabled in `sdkconfig.defaults` and the menu hides the entry.
+Measured on hardware with the bank reserved permanently (the former
+`sdr-full` profile, `get_min_free_heap`, one app at a time, fresh boot):
+
+| Running | Minimum free heap |
+|---|---|
+| Idle (Wi-Fi up) | 59 KB |
+| SDR capture (`sdr_capture`, one burst, then `exit_app`) | 42 KB |
+| Zigbee On/Off Switch | 5 KB |
+| BLE Trackers scan | 4 KB |
+
+So the bank is no longer reserved for the whole session. Every profile builds
+with `CONFIG_SDR_ENABLE=y`, and `esp_sdr_memory.c` decides at boot:
+
+- **Normal boot:** the bank is reserved (`SOC_RESERVE_MEMORY_REGION`) and
+  handed back to the heap first thing in `app_main()`
+  (`heap_caps_add_region`). BLE, Zigbee and Thread get the heap they had
+  without SDR, and `c6_sdr_rx_init()` refuses to start the engine.
+- **SDR boot:** `Applications > SDR` (or `sdr_host`) writes a request to RTC
+  no-init memory and calls `esp_restart()`. On that boot the bank stays
+  reserved and `main.c` opens the SDR app; leaving the app reboots back. The
+  request is consumed on boot and only honoured after a software reset, so a
+  crash or a power cycle comes back as a normal boot.
+
+```bash
+make compile         # default profile, SDR included
+make builds          # every board profile
+```
+
+CI builds `minino` and `bsides`: with 2 KB of link margin, those jobs catch a
+change that pushes the image into the bank.
 
 ### Trims That Made It Fit
 
@@ -547,11 +570,11 @@ controlled signal transmitted by a second board.
 
 | Board | Role | Configuration |
 |---|---|---|
-| A | Transmitter | `launch spam_all` (BLE), `launch ssid_spam` (Wi-Fi beacons), `launch flock_sim` (Flock simulator) |
+| A | Transmitter | `launch spam_saturate` (BLE), `launch ssid_spam` (Wi-Fi beacons), `launch flock_sim` (Flock simulator) |
 | B | SDR Receiver | `sdr_host` on the console, driven via the browser protocol |
 
-Both boards run the SDR build variant (`make build-sdr`), which reserves the
-capture bank.
+Both boards run the regular firmware; `sdr_host` reboots each one into SDR
+mode, which reserves the capture bank.
 
 ### 9.2 Two Bugs Uncovered During Testing
 

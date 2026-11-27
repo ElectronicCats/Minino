@@ -30,6 +30,9 @@
 static const char TAG[] = "WIFI_APP";    // Used for ESP Serial console Message
 static QueueHandle_t wifi_app_q_handle;  // Queue Handle used to Manipulate the
                                          // main queue of events
+static TaskHandle_t wifi_app_task_handle = NULL;
+static esp_event_handler_instance_t wifi_handler_event_instance = NULL;
+static esp_event_handler_instance_t ip_handler_event_instance = NULL;
 
 // netif objects are defined in wifi_app.c and declared extern in wifi_app.h
 // We only use them here via the extern declarations from wifi_ap.h ->
@@ -84,7 +87,37 @@ void wifi_app_start(void) {
   wifi_app_q_handle = xQueueCreate(3, sizeof(wifi_app_q_msg_t));
 
   // Start the WiFi Application Task
-  xTaskCreate(&wifi_app_task, "wifi_app_task", 4 * 1024u, NULL, 5u, NULL);
+  xTaskCreate(&wifi_app_task, "wifi_app_task", 4 * 1024u, NULL, 5u,
+              &wifi_app_task_handle);
+}
+
+/*
+ * Undoes wifi_app_start(): HTTP server and its monitor, the app task and
+ * queue, the event handlers and the soft-AP. The default netifs stay for the
+ * life of the boot (see wifi_controller).
+ */
+void wifi_app_stop(void) {
+  http_server_stop();
+  if (wifi_app_task_handle != NULL) {
+    vTaskDelete(wifi_app_task_handle);
+    wifi_app_task_handle = NULL;
+  }
+  if (wifi_app_q_handle != NULL) {
+    vQueueDelete(wifi_app_q_handle);
+    wifi_app_q_handle = NULL;
+  }
+  if (wifi_handler_event_instance != NULL) {
+    esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID,
+                                          wifi_handler_event_instance);
+    wifi_handler_event_instance = NULL;
+  }
+  if (ip_handler_event_instance != NULL) {
+    esp_event_handler_instance_unregister(IP_EVENT, ESP_EVENT_ANY_ID,
+                                          ip_handler_event_instance);
+    ip_handler_event_instance = NULL;
+  }
+  esp_wifi_stop();
+  wifi_service_deinit();
 }
 
 /*
@@ -142,9 +175,6 @@ static void wifi_app_event_handler_init(void) {
   }
 
   // Event handler for the connection
-  esp_event_handler_instance_t wifi_handler_event_instance;
-  esp_event_handler_instance_t ip_handler_event_instance;
-
   esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID,
                                       &wifi_app_event_handler, NULL,
                                       &wifi_handler_event_instance);
@@ -178,8 +208,8 @@ static void wifi_app_default_wifi_init(void) {
    * app_main(). */
   ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
-  esp_netif_sta = esp_netif_create_default_wifi_sta();
-  esp_netif_ap = esp_netif_create_default_wifi_ap();
+  esp_netif_sta = wifi_service_netif_sta();
+  esp_netif_ap = wifi_service_netif_ap();
 }
 
 /*
@@ -197,6 +227,12 @@ static void wifi_app_soft_ap_config(void) {
                                  .authmode = WIFI_AUTH_WPA2_PSK,
                                  .beacon_interval = WIFI_AP_BEACON_INTERVAL,
                              }};
+
+  // WPA2 rejects an empty password (and the ESP_ERROR_CHECK below aborts), so
+  // a config that sets none gets an open AP instead.
+  if (strlen(WIFI_AP_PASSWORD) == 0) {
+    ap_config.ap.authmode = WIFI_AUTH_OPEN;
+  }
 
   // Configure the DHCP for the AP
   esp_netif_ip_info_t ap_ip_info;

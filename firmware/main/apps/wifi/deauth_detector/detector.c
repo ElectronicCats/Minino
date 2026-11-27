@@ -7,8 +7,8 @@
 #include "freertos/task.h"
 #include "preferences.h"
 #include "radio_lease.h"
+#include "task_manager.h"
 #include "wifi_controller.h"
-#include "wifi_service.h"
 
 #include "app_manager.h"
 #include "menus_module.h"
@@ -22,6 +22,9 @@ static uint16_t total_deauth_packets_count = 0;
 static uint16_t deauth_packets_count_list[14];
 static volatile bool running = false;
 static bool channel_hopping = false;
+/* True while this session holds the WiFi driver lease; keeps acquire/release
+   balanced across the stop() and on_exit paths. */
+static bool wifi_leased = false;
 
 static TaskHandle_t channel_hopper_handle = NULL;
 
@@ -61,13 +64,26 @@ static void packet_handler(void* buf, wifi_promiscuous_pkt_type_t type) {
   }
 }
 
+/* running is already false. Wait for the hopper to leave on its own: deleting
+   it inside wifi_driver_set_channel() cuts a driver call in half. */
+static void stop_channel_hopper(void) {
+  if (!task_manager_wait_exit(&channel_hopper_handle, 2000)) {
+    ESP_LOGE(TAG, "Channel hopper did not stop, deleting it");
+    vTaskDelete(channel_hopper_handle);
+    channel_hopper_handle = NULL;
+  }
+}
+
 static void channel_hopper(void* pvParameters) {
   while (running) {
     wifi_driver_set_channel(current_channel);
-    vTaskDelay(WIFI_CHANNEL_SWITCH_INTERVAL / portTICK_PERIOD_MS);
+    for (int ms = 0; ms < WIFI_CHANNEL_SWITCH_INTERVAL && running; ms += 100) {
+      vTaskDelay(pdMS_TO_TICKS(100));
+    }
     current_channel = (current_channel % 14) + 1;
     ESP_LOGI(TAG, "Switching to channel: %d", current_channel);
   }
+  channel_hopper_handle = NULL;
   vTaskDelete(NULL);
 }
 
@@ -92,20 +108,16 @@ void deauth_detector_begin() {
     ESP_LOGE(TAG, "esp_netif_init: %s", esp_err_to_name(err));
     return;
   }
-  if (!wifi_service_is_up_get() && !wifi_service_init(WIFI_MODE_STA)) {
-    ESP_LOGE(TAG, "WiFi stack init failed");
+  /* Claim the WiFi driver through the lease instead of bringing it up
+     directly: this inits STA and starts it, and keeps the refcount honest so
+     BLE cannot tear the radio down under the detector. */
+  if (radio_lease_wifi_acquire(RADIO_WIFI_MODE_STA) != ESP_OK) {
+    ESP_LOGE(TAG, "could not acquire the WiFi driver");
     return;
   }
-  err = esp_wifi_set_storage(WIFI_STORAGE_RAM);
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Error setting storage: %s", esp_err_to_name(err));
-    return;
-  }
-  err = wifi_service_set_mode(WIFI_MODE_STA);
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Error setting mode: %s", esp_err_to_name(err));
-    return;
-  }
+  wifi_leased = true;
+  esp_wifi_set_storage(
+      WIFI_STORAGE_RAM); /* best effort, detector never joins */
   /* Claim the shared promiscuous slot instead of taking it: the callback and
      the on/off switch are global to the driver, and the surveillance detector
      used to overwrite this handler and switch promiscuous mode off at the end
@@ -113,12 +125,8 @@ void deauth_detector_begin() {
   if (radio_lease_prom_acquire(RADIO_PROM_DEAUTH_DETECTOR, packet_handler) !=
       ESP_OK) {
     ESP_LOGE(TAG, "could not claim promiscuous mode");
-    return;
-  }
-
-  err = esp_wifi_start();
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Error starting wifi: %s", esp_err_to_name(err));
+    wifi_leased = false;
+    radio_lease_wifi_release();
     return;
   }
   uint8_t get_saved_channel =
@@ -135,17 +143,19 @@ void deauth_detector_begin() {
 
 void deauth_detector_stop() {
   running = false;
-  if (channel_hopper_handle != NULL) {
-    vTaskDelete(channel_hopper_handle);
-    channel_hopper_handle = NULL;
-  }
+  stop_channel_hopper();
   /* Order matters: esp_wifi_stop() leaves the driver initialised but stopped,
      and the analyzer's sniffer then calls esp_wifi_set_promiscuous() /
      esp_wifi_set_channel() against a stopped driver - both fail silently and
      the packet counter stays at zero. Clear promiscuous mode while the driver
      is still running, then leave Wi-Fi running but idle. */
   radio_lease_prom_release(RADIO_PROM_DEAUTH_DETECTOR);
-  esp_wifi_stop();
+  /* Give up the driver claim; the lease stops/deinits it when nobody else
+     holds it, restoring the baseline instead of leaving STA stopped. */
+  if (wifi_leased) {
+    wifi_leased = false;
+    radio_lease_wifi_release();
+  }
   oled_screen_clear();
   detector_scenes_main_menu();
 }
@@ -171,16 +181,22 @@ static void deauth_detector_on_exit(void) {
   }
   // Ensure promiscuous lease is released
   radio_lease_prom_release(RADIO_PROM_DEAUTH_DETECTOR);
+  // Ensure the WiFi driver lease is released (if stop() did not run)
+  if (wifi_leased) {
+    wifi_leased = false;
+    radio_lease_wifi_release();
+  }
   // Reset state
   running = false;
   channel_hopping = false;
   current_channel = 99;
   total_deauth_packets_count = 0;
   memset(deauth_packets_count_list, 0, sizeof(deauth_packets_count_list));
-  if (channel_hopper_handle != NULL) {
-    vTaskDelete(channel_hopper_handle);
-    channel_hopper_handle = NULL;
-  }
+  stop_channel_hopper();
+}
+
+void deauth_detector_exit(void) {
+  deauth_detector_on_exit();
 }
 
 // Wrapper for menu entry

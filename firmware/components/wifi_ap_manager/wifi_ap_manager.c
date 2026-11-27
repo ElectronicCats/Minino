@@ -1,11 +1,11 @@
 #include "wifi_ap_manager.h"
 #include <string.h>
 #include "esp_log.h"
-#include "esp_netif.h"
 #include "esp_wifi.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "preferences.h"
+#include "radio_lease.h"
 #include "wifi_service.h"
 
 static const char* TAG = "ap_manager";
@@ -13,7 +13,7 @@ static EventGroupHandle_t wifi_event_group = NULL;
 static app_callback callback_connection;
 static const int CONNECTED_BIT = BIT0;
 static int reconnections = 0;
-static bool initialized = false;
+static bool wifi_leased = false;
 
 static bool wifi_ap_manager_join(const char* ssid,
                                  const char* pass,
@@ -54,10 +54,12 @@ static void event_handler(void* arg,
 
 static void initialise_wifi(void) {
   esp_log_level_set(TAG, ESP_LOG_WARN);
-  if (initialized) {
+  /* One WiFi lease per session. While we hold it radio_lease cannot tear the
+     driver down under us, so holding the claim implies the driver is up: never
+     acquire a second time, that would leak a reference. */
+  if (wifi_leased) {
     return;
   }
-  ESP_ERROR_CHECK(esp_netif_init());
   if (wifi_event_group != NULL) {
     vEventGroupDelete(wifi_event_group);
     wifi_event_group = NULL;
@@ -67,38 +69,28 @@ static void initialise_wifi(void) {
     ESP_LOGE(TAG, "Failed to create wifi_event_group");
     return;
   }
-  esp_err_t err = esp_event_loop_create_default();
-  if (err == ESP_ERR_INVALID_STATE) {
-    ESP_LOGI(TAG, "Event loop already created");
-  } else if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Error creating event loop: %s", esp_err_to_name(err));
-    esp_restart();
-  }
-  esp_netif_t* ap_netif = esp_netif_create_default_wifi_ap();
-  assert(ap_netif);
-  esp_netif_t* sta_netif = esp_netif_create_default_wifi_sta();
-  assert(sta_netif);
-  if (!wifi_service_is_up_get() && !wifi_service_init(WIFI_MODE_AP)) {
+  /* radio_lease brings up the driver (netifs, STA mode, started) and refuses
+     if BLE holds the radio. */
+  if (radio_lease_wifi_acquire(RADIO_WIFI_MODE_STA) != ESP_OK) {
     ESP_LOGE(TAG, "WiFi stack init failed");
+    vEventGroupDelete(wifi_event_group);
+    wifi_event_group = NULL;
     return;
   }
+  wifi_leased = true;
+  /* A connection from Settings or the console outlives that screen. As a
+     background claim it gives way to the next app that needs the radio (BLE,
+     or WiFi in another mode) through wifi_ap_manager_deinit(), instead of
+     locking BLE out until reboot. ponytail: Modbus TCP/CatDoS sessions are
+     background too, so a console BLE command run during one ends it (as
+     before the lease); pin their claim if that ever matters. */
+  radio_lease_wifi_set_background(wifi_ap_manager_deinit);
 
   ESP_ERROR_CHECK(esp_event_handler_register(
       WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &event_handler, NULL));
   ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP,
                                              &event_handler, NULL));
   ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-  ESP_ERROR_CHECK(wifi_service_set_mode(WIFI_MODE_NULL));
-  ESP_ERROR_CHECK(esp_wifi_start());
-  initialized = true;
-
-  // Get the IP address of the ESP32 station
-  esp_netif_ip_info_t ip_info;
-  esp_netif_get_ip_info(sta_netif, &ip_info);
-  char ip_address[16];
-  sprintf(ip_address, IPSTR, IP2STR(&ip_info.ip));
-
-  ESP_LOGI(TAG, "IP Address: %s", ip_address);
 }
 
 static bool wifi_ap_manager_join(const char* ssid,
@@ -113,6 +105,9 @@ static bool wifi_ap_manager_join(const char* ssid,
   preferences_remove("ssid");
   preferences_remove("passwd");
   initialise_wifi();
+  if (!wifi_leased) {
+    return false; /* bring-up refused, e.g. BLE holds the radio */
+  }
   wifi_config_t wifi_config = {0};
   strlcpy((char*) wifi_config.sta.ssid, ssid, sizeof(wifi_config.sta.ssid));
   if (pass) {
@@ -120,9 +115,13 @@ static bool wifi_ap_manager_join(const char* ssid,
             sizeof(wifi_config.sta.password));
   }
 
-  ESP_ERROR_CHECK(wifi_service_set_mode(WIFI_MODE_STA));
-  ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-  esp_err_t err = esp_wifi_connect();
+  esp_err_t err = wifi_service_set_mode(WIFI_MODE_STA);
+  if (err == ESP_OK) {
+    err = esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
+  }
+  if (err == ESP_OK) {
+    err = esp_wifi_connect();
+  }
   if (err != ESP_OK) {
     ESP_LOGE(__func__, "Failed to connect to AP");
     return false;
@@ -175,10 +174,6 @@ int wifi_ap_manager_connect_index_cb(int index, app_callback cb) {
   return wifi_ap_manager_connect_index(index);
 }
 
-void wifi_ap_manager_unregister_callback() {
-  callback_connection = NULL;
-}
-
 int wifi_ap_manager_delete_ap_by_index(int index) {
   char wifi_ap[100];
   char wifi_ssid[100];
@@ -217,12 +212,32 @@ int wifi_ap_manager_delete_ap_by_index(int index) {
   return 0;
 }
 
+/* Undo initialise_wifi() and the join. Handlers go first, so the disconnect
+   below does not trigger a reconnect or wipe the saved ssid/passwd, and a
+   later disconnect in another app does not either. The WiFi claim is dropped
+   through radio_lease, which deinitialises the driver only when we are the
+   last holder: a co-running WiFi app keeps its radio, and we never stop the
+   driver out from under it (the old esp_wifi_stop() did). Unregistering a
+   handler that is not registered is harmless, so no guard around that. */
 void wifi_ap_manager_deinit() {
+  callback_connection = NULL;
+  esp_event_handler_unregister(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED,
+                               &event_handler);
+  esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler);
+  if (wifi_leased) {
+    radio_lease_wifi_set_background(NULL);
+    if (wifi_service_is_up_get()) {
+      esp_wifi_disconnect(); /* leave the AP before dropping the claim */
+    }
+    radio_lease_wifi_release();
+    wifi_leased = false;
+  }
+  preferences_put_bool("wifi_connected", false);
+  reconnections = 0;
   if (wifi_event_group != NULL) {
     vEventGroupDelete(wifi_event_group);
     wifi_event_group = NULL;
   }
-  initialized = false;
 }
 
 bool wifi_ap_manager_is_connect() {

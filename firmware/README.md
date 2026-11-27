@@ -12,6 +12,7 @@ You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/p
     - [Flashing the firmware](#flashing-the-firmware)
     - [Monitoring the serial output](#monitoring-the-serial-output)
     - [Full build process](#full-build-process)
+    - [Board profiles](#board-profiles)
     - [Cleaning the project](#cleaning-the-project)
   - [Create a release](#create-a-release)
     - [Flashing release](#flashing-release)
@@ -24,6 +25,8 @@ You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/p
     - [Spam SSID](#spam-ssid)
     - [Save](#save)
     - [Delete](#delete)
+  - [BLE](#ble)
+    - [Spam](#spam)
 - [Wardriving File Formats](#wardriving-file-formats)
 - [Wifi](#wifi-1)
 - [Zigbee](#zigbee)
@@ -51,8 +54,23 @@ You can build your own firmware using the [ESP-IDF](https://docs.espressif.com/p
     - [Control the light using switch](#control-the-light-using-switch)
   - [Cool commands](#cool-commands)
 - [Change log](#change-log)
+  - [Unreleased](#unreleased)
+  - [v1.1.16.1](#v11161)
+  - [v1.1.16.0](#v11160)
+  - [v1.1.15.2](#v11152)
+  - [v1.1.15.1](#v11151)
+  - [v1.1.15.0](#v11150)
+  - [v1.1.14.1](#v11141)
+  - [v1.1.14.0-beta](#v11140-beta)
+  - [v1.1.13.0](#v11130)
+  - [v1.1.12.0](#v11120)
+  - [v1.1.11.0](#v11110)
+  - [v1.1.10.0](#v11100)
+  - [v1.1.9.0](#v1190)
+  - [v1.1.8.0](#v1180)
+  - [v1.1.7.2](#v1172)
+  - [v1.1.7.1](#v1171)
   - [v1.1.7.0](#v1170)
-    - [Added](#added)
 
 ## Prerequisites
 
@@ -108,19 +126,36 @@ To build the standard firmware, run the following command:
 make compile
 ```
 
-To build the **SDR-enabled firmware variant** (which reserves the 128 KiB SRAM hardware capture bank at `0x40840000` and enables `Applications > SDR`, `sdr_capture`, and `sdr_host`):
+The firmware includes **SDR** (`Applications > SDR`, `sdr_capture`,
+`sdr_host`), Spectrum, BLE, Wi-Fi, Zigbee and Thread in one image.
 
-```bash
-make build-sdr
-```
+The SDR engine needs the 128 KiB SRAM block at `0x40840000` as its capture
+bank. That block only leaves the heap on an **SDR boot**: opening the SDR app
+(or running `sdr_host`) reboots the board with the bank reserved and opens the
+app, and leaving it reboots back to a normal boot, landing in
+`Applications`. The other apps keep the whole heap. A crash or a power cycle
+in SDR mode comes back as a normal boot.
 
-To run the host-side unit test suites (20+ Unity and Python suites):
+The default profile includes Zigbee/OpenThread, so `zbmesh`, `warbee`,
+`warthread`, `zigbee_sniffer`, `thread_sniffer` and `broadcast` are native
+entries in the menu.
+
+If `firmware/sdkconfig` comes from an older checkout where the stacks or SDR
+were disabled, `make compile` rewrites those symbols to `y` automatically so
+the apps are not silently dropped from the build.
+
+In the combined build, `bt_spam` refuses to start below 18 KB free and stops
+below 8 KB during a run. That prevents the controller advertising failure when
+Thread Sniffer/Broadcast has left the heap low.
+
+To run the host-side unit test suites (the 18 Unity C suites plus the Python
+flash-tooling test), run:
 
 ```bash
 make tests
 ```
 
-> **Note:** Every build automatically generates unified single-file firmware images (`minino-merged.bin` and `minino-merged.hex`) inside the build directory (`build/` or `build-sdr/`), ready to be flashed at offset `0x0`.
+> **Note:** Every build automatically generates unified single-file firmware images (`minino-merged.bin` and `minino-merged.hex`) inside the build directory (`build/` or `build-<profile>/`), ready to be flashed at offset `0x0`.
 
 ### Flashing the firmware
 
@@ -155,6 +190,21 @@ To do all the previous steps in one command, run:
 ```bash
 make all
 ```
+
+### Board profiles
+
+`make compile` builds the default profile into `build/` using `./sdkconfig`. To
+cross-build the per-event board variants, run:
+
+```bash
+make builds
+```
+
+Each board overlays its own config (`profiles/<board>/profile`) and lands in
+`build-<board>/`. The profiles are `minino`, `bsides`, `dragonjar`, `ekoparty`,
+`bugcon` and `bsseattle`. Build a single one with
+`idf.py @profiles/<board>/profile build`, and verify every image still fits its
+partition table with `make flash_fit`.
 
 ### Cleaning the project
 
@@ -285,7 +335,34 @@ When you use `spam_save` with an existing list name, the entry is updated.
 ### Delete
 To delete a saved SSID list, run `spam_show` to find its index, then run `spam_delete idx` where `idx` is the index of the SSID list you want to delete.
 
+## BLE
 
+### Spam
+
+The BLE Spam app floods nearby devices with crafted advertising packets. Open
+it from `Applications > Bluetooth > Spam` and pick a target mode:
+
+| Mode | Launch command | What it advertises |
+|----------|----------------------|-------------------------------------------------|
+| Apple | `launch spam_apple` | Apple proximity-pairing popups |
+| Android | `launch spam_android` | Android Fast Pair popups |
+| Windows | `launch spam_windows` | Windows Swift Pair popups |
+| Samsung | `launch spam_samsung` | Samsung pairing popups |
+| Saturate | `launch spam_saturate` | **Lab-only** channel-saturation stress test |
+| Matter | `launch spam_matter` | Matter commissioning onboarding spoofing |
+
+The attack starts as soon as you enter a mode; the screen shows a scanning
+animation and reports connecting peers. Press the **LEFT** button to stop and
+exit — this halts advertising and re-initializes WiFi in station mode.
+
+> **Saturate** replaces the former "spam all" mode. It rotates payloads for
+> every platform family at the fastest legal pacing to measure how a lab
+> receiver's scanner handles a saturated advertising channel. Use it only
+> against your own equipment.
+
+BLE advertising is refused when free heap is below 18 KB and stops below 8 KB
+during a run, which can happen after using Thread Sniffer/Broadcast. If a mode
+does not start, exit heavy radio apps first to free the heap.
 
 # Wardriving File Formats
 # Wifi 
@@ -303,13 +380,18 @@ MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongit
 ```
 # Zigbee
 
-> [!WARNING]
-> **Not available in this beta version**: Zigbee components do not work in this beta version of Minino. These components are only available in versions prior to 1.1.13.0.
->
-> **To use Zigbee components**: If you need to use Zigbee functionality, you must checkout the version 1.1.13.0 using:
-> ```bash
-> git checkout 1.1.13.0
-> ```
+> [!NOTE]
+> Zigbee apps are included in every profile.
+
+Available apps: `Spoofing > Switch`, `Spoofing > Light`, `Sniffer`,
+`Mesh Topology` (`launch zbmesh`) and `GPS > Wardriving > Zigbee Start`
+(`launch warbee`).
+
+`zbmesh` writes `/sdcard/zigbee/mesh_topology.csv`:
+
+```csv
+Timestamp,Channel,PAN_ID,Src_Short,Dst_Short,Frame_Type,LQI,RSSI,Packets
+```
 
 - **SourcePanID**: Source PAN ID
 - **SourceADDR**: Source address
@@ -323,13 +405,13 @@ SourcePanID,SourceADDR,DestinationADDR,Channel,RSSI,SecurityEnabled,FrameType,Cu
 ```
 # Thread
 
-> [!WARNING]
-> **Not available in this beta version**: Thread/OpenThread components do not work in this beta version of Minino. These components are only available in versions prior to 1.1.13.0.
+> [!NOTE]
+> Thread apps are included in every profile.
+> Available apps: `Sniffer`
+> (`launch thread_sniffer`), `Broadcast` (`launch broadcast`) and
+> `GPS > Wardriving > Thread Start` (`launch warthread`).
 >
-> **To use Thread/OpenThread components**: If you need to use Thread/OpenThread functionality, you must checkout the version 1.1.13.0 using:
-> ```bash
-> git checkout 1.1.13.0
-> ```
+> `warthread` writes `/sdcard/thread/WarThread_<timestamp>.csv`.
 
 - **DestinationPAN**: Destination PAN ID
 - **Destination**: Destination short address
@@ -352,13 +434,14 @@ DestinationPAN,Destination,ExtendedSource,Channel,UDPSource,UDPDestination,Proto
 
 # Wardriving Thread test
 
-> [!WARNING]
-> **Not available in this beta version**: Thread/OpenThread components do not work in this beta version of Minino. These components are only available in versions prior to 1.1.13.0.
->
-> **To use Thread/OpenThread components**: If you need to use Thread/OpenThread functionality, you must checkout the version 1.1.13.0 using:
-> ```bash
-> git checkout 1.1.13.0
-> ```
+Run `launch warthread` from the console or `GPS > Wardriving > Thread Start`
+from the menu. A GPS fix is required before rows are written to
+`/sdcard/thread/WarThread_<timestamp>.csv`.
+
+For a smoke test, verify that `launch warthread` prints
+`Thread Wardriving module begin`, that `exit_app` returns to `minino>`, and that
+WiFi is initialized again. BLE advertising is intentionally refused when free
+heap is below 18 KB, which can happen after using Thread Sniffer/Broadcast.
 
 # Openthread - Install example
 ## ESP-IDF
@@ -510,8 +593,8 @@ The Border Router received:
 list
 # Connect to your Access Point
 connect 0
-# Set the server IP and Port 
-mb_engine_set_server 192.168.0.2500
+# Set the server IP and Port (two arguments: <ip> <port>)
+mb_engine_set_server 192.168.0.250 502
 # Set the request type
 mb_engine_set_req registers 1 2 1234
 # Connect to the server
@@ -683,6 +766,169 @@ I (1420031) : 0x40818ca6   01                                                |.|
 `zdo request neighbors -d 0x0000`
 
 # Change log
+
+## Unreleased
+### Added
+- SDR (Software Defined Radio) app shipped in the default firmware (`sdr_capture`, `sdr_host`), synced with the ESPARGOS web viewer
+- BLE Saturate mode in `bt_spam` (replaces the former "spam all"), with updated menu navigation
+- Thread wardriving (`warthread`) with stabilized stack lifecycle and an optimized sniffer
+- Zigbee mesh topology mapper (`zbmesh`) and Zigbee wardriving (`warbee`)
+- New menu icons for Mesh Topology and improved Zigbee/Thread representations
+- Combined default firmware bundling SDR + Zigbee/Thread in one image, with `make builds` cross-building the per-event board profiles (`minino`, `bsides`, `dragonjar`, `ekoparty`, `bugcon`, `bsseattle`)
+
+### Changed
+- The OTA and Web File Browser access points use the password `Cats1234` by default (`CONFIG_WIFI_AP_PASSWORD`). If the password is set to an empty string, the AP is open instead of aborting
+- Leaving Modbus TCP or CatDoS disconnects from the target AP, so the next session asks to connect again. This also ends a connection made from `Settings > WiFi`, so the Web File Browser then starts its own access point
+- Joining a saved AP (Modbus TCP, CatDoS, `Settings > WiFi`, console `connect`) waits up to 10 s instead of 5 s before reporting a timeout
+- Console `launch` and `sdr_capture` close the running app before starting the new one
+- Leaving wardriving waits for the scan in progress to finish (usually 1–3 s)
+- After a Wi-Fi app exits, the Wi-Fi driver is shut down; the next Wi-Fi app starts it again
+
+### Fixed
+- `bt_spam`: guard BLE advertising against low heap and release the lease when restarting a mode
+- Thread: release OpenThread after the sniffer exits
+- Harden BLE, Zigbee and Thread feature implementations
+- The back button leaves the Wi-Fi analyzer, captive portal, deauth detector, Drone ID, DroneID scanner, SSID spam, CatDoS, I2C scanner, OTA, file manager, HID and Flock instead of freezing the screen
+- SSID spam: no reboot when picking an SSID list, or when the list is empty
+- OTA: no abort on entry; leaving OTA stops its access point, HTTP server and tasks
+- Deauth: the manager AP stays up for the whole session and stops when the app exits
+- RF spectrum: `spectrum_pcap on` records again
+- Wi-Fi analyzer: starting a capture while BLE holds the radio no longer hangs the board; fixed per-capture memory leaks
+- No duplicate-netif abort when switching between Wi-Fi apps; Wi-Fi apps no longer start with a stopped driver after Zigbee/Thread
+- BLE apps are no longer locked out after Drone ID or a Wi-Fi analyzer capture
+- UART bridge: the USB console works again after leaving the bridge
+- GPS, wardriving, warthread and OpenThread: safe teardown order on exit; a failed GPS start no longer blocks GPS until reboot
+- Task registry no longer fills up after repeated captures or GPS sessions
+- Apps stop their worker tasks on exit instead of killing them mid-scan or mid-draw (deauth and captive scans, deauth detector, DroneID scanner, Zigbee/Thread sniffer, wardriving, Drone ID spoofer), so the display no longer freezes on exit
+- CatDoS: the attack threads finish and are cleaned up; repeated attacks no longer leak tasks or sockets
+- BLE spam: leaving the app no longer re-enables BLE scanning for another app that had paused it
+- Trackers and the ADV scanner wait for the BLE client to shut down before releasing Bluetooth
+- Zigbee sniffer: a console `exit_app` sent while the sniffer is still starting now stops it
+- The SD card is unmounted cleanly on every deliberate restart (Web File Browser, Zigbee switch/light, SDR exit, console reset)
+- rf_spectrum, DroneID scanner, Drone ID, BLE spam, Modbus TCP and CatDoS now claim Wi-Fi through the radio arbiter: rf_spectrum and the DroneID scanner shut the driver down on exit, and starting one of them while BLE holds the radio fails cleanly
+- A connection made from `Settings > WiFi` or the console `connect` command is dropped cleanly when the next app takes the radio, instead of leaving reconnect attempts running in the background
+- Wi-Fi and BLE keep receiving after the board is reset over USB (esptool, a serial monitor) or with the RESET button while a Zigbee or Thread app is running. Before, the radio stayed deaf until the board was powered off
+
+### Known issues
+- Zigbee, Thread, Zigbee/Thread wardriving, OTA and the Web File Browser still reset Wi-Fi themselves instead of claiming it through the radio arbiter
+- Zigbee/Thread wardriving: a console `exit_app` sent while the app is still starting is ignored (the back button is not affected)
+- A console BLE command (such as `gattcmd_scan`) run during a Modbus TCP or CatDoS session ends that session's Wi-Fi connection
+- UART bridge: its own UART settings are only partly applied, because the console UART driver is still installed when the bridge starts
+
+## v1.1.16.1
+### Fixed
+- Modbus TCP: memory leaks in the DoS/Write preferences, UI freeze when exiting the menu, blocking connect moved to a task, and the orphaned "connecting"/Run animation
+- USB console: enabled line editing and fixed typing stalls
+
+## v1.1.16.0
+### Added
+- Native SDR engine: 80 MSPS transceiver, Web Host mode synced with the ESPARGOS WebSDR viewer, GAIN negotiation and USB stability
+- RF Spectrum analyzer with 2× peak tracker, smart anti-jammer and EMA filtering
+- `radio_lease` arbiter, `wifi_service` and GAP dispatcher in the core
+- Selectable OLED menu view styles, new menu icons, `minino_app` lifecycle and input queue
+- Automatic unified `minino-merged.bin`/`.hex` on every build; SDR build profile, flash-fit checks and automated host tests in CI
+### Changed
+- Translated all firmware comments, headers, SDR test scripts and technical docs to English
+
+## v1.1.15.2
+### Fixed
+- Hardened Wi-Fi sniffing and wardriving for stability
+- Scanner OLED display and data rendering
+
+## v1.1.15.1
+### Changed
+- Localized Spanish UI text to English
+### Fixed
+- Code formatting in HID, animations and screen-saver modules
+
+## v1.1.15.0
+### Added
+- Surveillance detector app: scoring engine with decay/cooldown/tier dedupe, radio sniffer, SSID/OUI/IE/BLE matchers and a microSD signature-overlay parser
+- OTA firmware updates over an HTTP server
+- WiFi Spectrum Suite tooling: wardriving analyzer, spoofing analysis, shell completion and unit tests
+- BLE power profiles, heap stats and GAP dispatcher
+- Trackers UI redesign with an RSSI meter and GPS coordinates
+### Fixed
+- `bt_spam`: controller crash, GAP sync race, starting freeze, safe semaphore lifecycle, power fallback and WiFi teardown
+- Memory leaks in `ssid_spam`; task manager, memory monitor and preferences safety
+- Surveillance display freeze and `esp_restart` loop on back exit
+### Security
+- Web server: XSS and directory-traversal protections
+
+## v1.1.14.1
+### Added
+- Zigbee light with LED feedback, runtime channel selection and `radio_selector` integration; Zigbee/Thread modules restored into the build
+### Changed
+- Updated the ESP-IDF requirement to 5.5.1
+### Fixed
+- Broad memory and task-handle hardening across WiFi, thread sniffer, trackers, captive, warbee, animations, buzzer and zigbee modules
+- DroneID packet queue/processing; empty SSID-list handling in spam; recursive mutex for animations
+
+## v1.1.14.0-beta
+### Added
+- Task manager with error handler and memory monitor (CatDoS, LED events, GPS)
+- USB-UART bridge app
+### Changed
+- CI: code-review workflow and additional tag-naming formats; ESP-IDF version bump in the Dockerfile
+### Fixed
+- Concurrency safety and memory handling; overflow condition; build warnings
+
+## v1.1.13.0
+### Added
+- GPS config menu with update rate and test mode, UTC labels and a satellite-count running animation
+- Delete button in the web file manager
+
+## v1.1.12.0
+### Added
+- BLE recon app with a MAC-address filter and advertisement scanner
+- Firmware version shown on device; captive-portal filter file
+### Fixed
+- Wardriving crashes (double init and >200 packets); SSID with comma; file manager after wardriving; OLED cleared after file transfer; one GPX file per session
+
+## v1.1.11.0
+### Added
+- Zigbee CLI integrated into the app with an interactive screen and ZB CLI setting; Zigbee sniffer and switch
+- Captive portal from SD card with user-input capture/storage, SSID replicate and optional dump to SD
+- GATT recon/scan/write commands, a command to stop BLE services and graceful Ctrl+C shutdown
+- WiFi scan & list-SSID command with RSSI; `println` command
+### Fixed
+- Wardriving packets >200 and reset-to-0; SD write and URL decoding; Modbus engine request handling
+
+## v1.1.10.0
+### Added
+- BLE GATT write via the gattcmd tool; BLE enumerate (gattc) and scan via console
+- HID controls: mute, next/prev track and stop, with scrolling in the HID controls menu
+### Fixed
+- GATT write functionality and table formatting; menu/scroll issues; drone scan
+
+## v1.1.9.0
+### Added
+- Modbus TCP attack suite: writer/DoS commands, screens, preferences and runtime parameters
+- BLE DroneID spoofing toggle from the settings menu
+- PCB housing (hardware)
+### Fixed
+- CatDoS animations, notification and disconnect callback; WiFi settings modal and submenus
+
+## v1.1.8.0
+### Added
+- DroneID scanner and multi-drone spoofing with runtime settings (count, channel, location), a settings menu and saved preferences
+- BSides Seattle board compatibility
+### Fixed
+- Memory allocation; channel validation and range; DroneID screen and reload time
+
+## v1.1.7.2
+### Added
+- WiFi region / country-code configuration menu
+- Release automation: all boards built on a new tag, zipped release files and a draft release with flashing instructions
+### Fixed
+- GPIO menu conditions
+
+## v1.1.7.1
+### Added
+- `make builds` and a binaries-merge Make command; renamed partition tables and `get_builds.sh`
+- Automatic release on new tags; 8 MB flash as default; version read from the build script
+### Changed
+- Apps disabled by technology; OTA hidden on badges
 
 ## v1.1.7.0
 ### Added

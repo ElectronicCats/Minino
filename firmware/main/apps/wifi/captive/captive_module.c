@@ -19,6 +19,8 @@
 
 #include "app_manager.h"
 #include "captive_module.h"
+#include "radio_lease.h"
+#include "task_manager.h"
 #include "wifi_service.h"
 
 #define MININO_CAPTIVE_DEFAULT_SSID CONFIG_WIFI_AP_NAME
@@ -45,6 +47,7 @@ static dns_server_handle_t dns_server = NULL;
 static uint16_t retries = 0;
 static char wifi_ap_name[CAPTIVE_PORTAL_MAX_NAME];
 static TaskHandle_t scanning_task_handle = NULL;
+static volatile bool scan_abort = false;
 
 typedef enum {
   PORTALS,
@@ -81,6 +84,12 @@ static captive_files_t redirect_list = {0};
 static captive_context_t captive_context = {0};
 static wifi_scanner_ap_records_t* ap_records;
 static uint8_t selected_record = 0;
+/* True while the soft-AP portal is up and holds the WiFi driver lease. The
+   portal can be started and stopped several times in one app session (the
+   running screen's back button stops it and returns to the menu), so the
+   lease is tied to the portal, not to the app, and both exit paths release
+   only when it is actually held. */
+static bool portal_running = false;
 static user_input_t user_context = {
     .user1 = NULL,
     .user2 = NULL,
@@ -517,12 +526,13 @@ static void captive_module_disable_wifi() {
     server = NULL;
     ESP_LOGW("CAPTIVE", "HTTP server stopped");
   }
-  /* Deinitialize WiFi through the service. */
-  wifi_service_deinit();
-  esp_netif_t* netif = esp_netif_get_handle_from_ifkey(CAPTIVE_PORTAL_NET_NAME);
-  if (netif) {
-    esp_netif_destroy(netif);
-    ESP_LOGW("CAPTIVE", "Netif destroyed");
+  /* Release the driver through the lease, which stops/deinits it when nobody
+     else holds it. The AP netif is kept for the life of the boot
+     (wifi_service_netif_ap): destroying it left the driver pointing at freed
+     memory. */
+  if (portal_running) {
+    portal_running = false;
+    radio_lease_wifi_release();
   }
 
   captive_module_main();
@@ -538,6 +548,15 @@ static void captive_module_wifi_begin() {
   if (errr != ESP_OK && errr != ESP_ERR_INVALID_STATE) {
     ESP_LOGW(TAG_WIFI_SCANNER_MODULE, "Event loop create: %s",
              esp_err_to_name(errr));
+  }
+  /* DHCP and the DNS server need the AP netif; it used to exist only if
+     another app had created it earlier in the boot. */
+  wifi_service_netif_ap();
+  /* Claim the driver through the lease before wifi_init_softap() switches it
+     to AP mode, so the refcount is honest and the exit paths can restore the
+     baseline. wifi_init_softap() sets the actual AP mode. */
+  if (radio_lease_wifi_acquire(RADIO_WIFI_MODE_STA) == ESP_OK) {
+    portal_running = true;
   }
   wifi_init_softap();
   server = start_webserver();
@@ -860,11 +879,17 @@ static void captive_module_show_aps_list() {
 }
 
 static void scanning_task() {
+  /* Hold the driver across the whole retry loop so each wifi_scanner call
+     nests on this claim instead of tearing the driver down and recalibrating
+     it between every scan. */
+  bool scan_leased = (radio_lease_wifi_acquire(RADIO_WIFI_MODE_STA) == ESP_OK);
   ap_records = wifi_scanner_get_ap_records();
-  while ((ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 4)) &
+  while (!scan_abort && (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 4)) &&
          (retries < MAX_RETRIES)) {
     wifi_scanner_module_scan();
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    for (int ms = 0; ms < 1000 && !scan_abort; ms += 100) {
+      vTaskDelay(pdMS_TO_TICKS(100));
+    }
     if (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 4)) {
       retries++;
     }
@@ -877,13 +902,23 @@ static void scanning_task() {
 
   ap_records = wifi_scanner_get_ap_records();
 
-  animations_task_stop();
-  if (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 4)) {
-    captive_module_main();
-  } else {
-    captive_module_show_aps_list();
+  /* Stopped from outside (app exit): leave the screen to whoever stopped us,
+     but still hand the claim back below. */
+  if (!scan_abort) {
+    animations_task_stop();
+    if (ap_records->count < (DEFAULT_SCAN_LIST_SIZE / 4)) {
+      captive_module_main();
+    } else {
+      captive_module_show_aps_list();
+    }
   }
 
+  if (scan_leased) {
+    radio_lease_wifi_release();
+  }
+
+  /* Clear before dying: on_exit would otherwise vTaskDelete a freed TCB. */
+  scanning_task_handle = NULL;
   vTaskDelete(NULL);
 }
 
@@ -917,6 +952,7 @@ static void captive_module_main_menu_handler(uint8_t option) {
       if (preferences_get_int(CAPTIVE_PORTAL_MODE_FS_KEY, 0) == 1) {
         retries = 0;
         captive_module_scan_clean();
+        scan_abort = false;
         xTaskCreate(scanning_task, "wifi_scan", 8096, NULL, 5,
                     &scanning_task_handle);
         animations_task_run(&general_animation_loading, 300, NULL);
@@ -976,6 +1012,15 @@ static void captive_on_exit(void) {
   // Cleanup is done in captive_module_disable_wifi which is called from
   // notification on_exit But we need to ensure it's called if app exits without
   // going through notification
+  // Stop the scan task first: it reads ap_records and wifi_list. Let it end
+  // its current scan and release its radio_lease claim; deleting it from
+  // outside leaked the claim and could leave oled_mutex taken.
+  scan_abort = true;
+  if (!task_manager_wait_exit(&scanning_task_handle, 5000)) {
+    ESP_LOGE(TAG, "Scan task did not stop, deleting it");
+    vTaskDelete(scanning_task_handle);
+    scanning_task_handle = NULL;
+  }
   if (server) {
     httpd_stop(server);
     server = NULL;
@@ -984,10 +1029,9 @@ static void captive_on_exit(void) {
     stop_dns_server(dns_server);
     dns_server = NULL;
   }
-  wifi_service_deinit();
-  esp_netif_t* netif = esp_netif_get_handle_from_ifkey(CAPTIVE_PORTAL_NET_NAME);
-  if (netif) {
-    esp_netif_destroy(netif);
+  if (portal_running) {
+    portal_running = false;
+    radio_lease_wifi_release();
   }
   if (!sd_card_is_not_mounted()) {
     sd_card_unmount();
@@ -1003,12 +1047,12 @@ static void captive_on_exit(void) {
       wifi_list[i] = NULL;
     }
   }
-  if (scanning_task_handle != NULL) {
-    vTaskDelete(scanning_task_handle);
-    scanning_task_handle = NULL;
-  }
   retries = 0;
   last_index_selected = 0;
+}
+
+void captive_module_exit(void) {
+  captive_on_exit();
 }
 
 // Wrapper for menu entry

@@ -14,8 +14,11 @@
 
 #include "wifi_service.h"
 
+#include "esp_event.h"
 #include "esp_log.h"
+#include "esp_netif.h"
 #include "esp_wifi.h"
+#include "esp_wifi_default.h"
 #include "freertos/FreeRTOS.h"
 
 static const char* TAG = "wifi_svc";
@@ -194,6 +197,31 @@ wifi_second_chan_t wifi_service_primary_chan_get(void) {
   out = s_state.primary_chan;
   portEXIT_CRITICAL(&s_wifi_mux);
   return out;
+}
+
+/* esp_netif_new() needs the TCP/IP stack and the default handlers need the
+   default event loop; both calls are no-ops the second time. */
+static void netif_prerequisites(void) {
+  esp_netif_init();
+  esp_err_t err = esp_event_loop_create_default();
+  if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
+    ESP_LOGE(TAG, "event loop: %s", esp_err_to_name(err));
+  }
+}
+
+/* ponytail: lookup-then-create is not locked; two tasks creating the same
+   netif at once would still collide. Apps run one at a time, add a mutex if
+   that ever changes. */
+esp_netif_t* wifi_service_netif_sta(void) {
+  netif_prerequisites();
+  esp_netif_t* netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
+  return netif != NULL ? netif : esp_netif_create_default_wifi_sta();
+}
+
+esp_netif_t* wifi_service_netif_ap(void) {
+  netif_prerequisites();
+  esp_netif_t* netif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+  return netif != NULL ? netif : esp_netif_create_default_wifi_ap();
 }
 
 wifi_second_chan_t wifi_service_secondary_chan_get(void) {

@@ -76,10 +76,10 @@ idf_component_register(
 # from the heap via the SOC_RESERVE_MEMORY_REGION mechanism.
 #
 # The whole firmware (Bluetooth, Zigbee, Thread, the surveillance apps) fits
-# below the bank: the image is 256 KB of IRAM+data+bss and the bank is the
-# 128 KB above it. The linker script fails the build if that ever stops being
-# true, with the size of the overflow, instead of corrupting the heap at
-# capture time.
+# below the bank, with about 2 KB to spare (_heap_start = 0x4083f760). The
+# linker script fails the build if that ever stops being true, instead of
+# corrupting the heap at capture time. The bank is only kept off the heap on
+# an SDR boot; a normal boot hands it back (see esp_sdr_memory.c).
 #
 # CONFIG_SDR_ENABLE is read here (and not through minino_kconfig.cmake) on
 # purpose: the link options only matter in the second pass of this file, the

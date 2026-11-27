@@ -184,6 +184,33 @@ esp_err_t radio_lease_prom_set_filter(const wifi_promiscuous_filter_t* filter) {
 
 static radio_wifi_init_mode_t s_wifi_mode = RADIO_WIFI_MODE_STA;
 static uint8_t s_ble_scan_block = 0;
+static void (*s_wifi_background)(void) = NULL;
+
+void radio_lease_wifi_set_background(void (*evict)(void)) {
+  portENTER_CRITICAL(&s_radio_mux);
+  s_wifi_background = evict;
+  portEXIT_CRITICAL(&s_radio_mux);
+}
+
+/* Taken out of the slot before the call: `evict` releases through
+   radio_lease_wifi_release(), which takes the same lock. */
+static void wifi_evict_background(void) {
+  portENTER_CRITICAL(&s_radio_mux);
+  void (*evict)(void) = s_wifi_background;
+  s_wifi_background = NULL;
+  portEXIT_CRITICAL(&s_radio_mux);
+  if (evict != NULL) {
+    ESP_LOGI(TAG, "evicting the background WiFi claim");
+    evict();
+  }
+}
+
+void radio_lease_wifi_free_idle(void) {
+  wifi_evict_background();
+  if (!radio_lease_wifi_shared()) {
+    wifi_driver_deinit_if_started();
+  }
+}
 
 static esp_err_t wifi_init_for_mode(radio_wifi_init_mode_t mode) {
   bool ok;
@@ -207,6 +234,7 @@ static esp_err_t wifi_init_for_mode(radio_wifi_init_mode_t mode) {
 }
 
 esp_err_t radio_lease_wifi_acquire(radio_wifi_init_mode_t mode) {
+  wifi_evict_background();
   portENTER_CRITICAL(&s_radio_mux);
   if (!radio_lease_stack_allowed(s_wifi_refs, s_ble_refs, RADIO_STACK_WIFI)) {
     portEXIT_CRITICAL(&s_radio_mux);
@@ -297,6 +325,7 @@ bool radio_lease_wifi_allowed(void) {
 }
 
 esp_err_t radio_lease_ble_acquire(void) {
+  wifi_evict_background();
   portENTER_CRITICAL(&s_radio_mux);
   bool prom_active = radio_lease_registry_count(&s_prom) > 0;
   if (!radio_lease_stack_allowed(s_wifi_refs, s_ble_refs, RADIO_STACK_BLE) ||

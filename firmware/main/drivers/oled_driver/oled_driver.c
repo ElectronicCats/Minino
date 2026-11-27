@@ -512,14 +512,6 @@ void oled_driver_bitmaps(oled_driver_t* dev,
     }
   }
 
-#if 0
-	for (int _seg=ypos;_seg<ypos+width;_seg++) {
-		oled_driver_dump_page(dev, page-1, _seg);
-	}
-	for (int _seg=ypos;_seg<ypos+width;_seg++) {
-		oled_driver_dump_page(dev, page, _seg);
-	}
-#endif
   oled_driver_show_buffer(dev);
 }
 
@@ -625,11 +617,6 @@ uint8_t oled_driver_copy_bit(uint8_t src,
   uint8_t smask = 0x01 << srcBits;
   uint8_t dmask = 0x01 << dstBits;
   uint8_t _src = src & smask;
-#if 0
-	if (_src != 0) _src = 1;
-	uint8_t _wk = _src << dstBits;
-	uint8_t _dst = dst | _wk;
-#endif
   uint8_t _dst;
   if (_src != 0) {
     _dst = dst | dmask;  // set bit

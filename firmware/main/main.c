@@ -1,5 +1,8 @@
 #include <stdio.h>
 
+#include "esp_system.h"
+#include "hal/modem_lpcon_ll.h"
+#include "hal/modem_syscon_ll.h"
 #include "sdkconfig.h"
 
 #include "buzzer.h"
@@ -28,6 +31,7 @@
 
 // Core components
 #include "error_handler.h"
+#include "esp_sdr_memory.h"
 #include "memory_monitor.h"
 #include "task_manager.h"
 
@@ -41,7 +45,33 @@
 
 static const char* TAG = "main";
 
+/* Flush and unmount the SD card on any deliberate esp_restart() (web file
+   browser, Zigbee switch/light, SDR exit, console restart, the error
+   handler). Without it those paths leave the FAT file system mid-write.
+   Idempotent: sd_card_unmount() is a no-op when the card is not mounted.
+   Not run on a panic, where nothing can safely touch the SD anyway. */
+static void sd_card_unmount_on_restart(void) {
+  sd_card_unmount();
+}
+
+/* esp_restart() resets the modem before it reboots; an external reset
+   (USB DTR/RTS from esptool or a monitor, the RESET button) does not. With
+   the IEEE 802.15.4 radio running at that moment (a Zigbee or Thread
+   sniffer) part of the modem's state survives into the next boot, and Wi-Fi
+   and BLE stop receiving until the board is powered off. The same reset,
+   done here before any radio comes up, makes every boot start clean. */
+static void modem_reset_on_boot(void) {
+  modem_syscon_ll_reset_all(&MODEM_SYSCON);
+  modem_lpcon_ll_reset_all(&MODEM_LPCON);
+}
+
 void app_main() {
+  modem_reset_on_boot();
+
+  // Before anything allocates: the SDR capture bank goes to the heap unless
+  // the SDR app asked for this boot.
+  bool sdr_boot = sdr_bank_boot();
+
   // Initialize core systems FIRST
   error_handler_init();
   task_manager_init();
@@ -80,6 +110,8 @@ void app_main() {
 
   leds_off();
   sd_card_begin();
+  ESP_ERROR_CHECK_WITHOUT_ABORT(
+      esp_register_shutdown_handler(sd_card_unmount_on_restart));
   flash_fs_begin(flash_fs_screens_handler);
   keyboard_module_begin();
   menus_module_begin();
@@ -93,4 +125,12 @@ void app_main() {
   flash_storage_begin();
 
   cat_console_begin();  // Spawns dedicated FreeRTOS console task
+
+#if defined(CONFIG_SDR_ENABLE)
+  if (sdr_boot) {
+    menus_module_set_menu(MENU_ESP_SDR);
+  }
+#else
+  (void) sdr_boot;
+#endif
 }

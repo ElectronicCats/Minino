@@ -30,6 +30,7 @@ void wifi_module_analyzer_run_exit();
 void wifi_analyzer_exit();
 void wifi_module_analyzer_summary_exit();
 void wifi_module_analyzer_destination_exit();
+void wifi_analyzer_cleanup(void);
 
 /**
  * @brief Callback to show the summary of the wifi analizer

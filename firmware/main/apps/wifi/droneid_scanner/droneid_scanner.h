@@ -52,5 +52,6 @@ typedef struct {
 
 void droneid_scanner_begin(void);
 void droneid_scanner_stop(void);
+void droneid_scanner_cleanup(void);
 
 #endif

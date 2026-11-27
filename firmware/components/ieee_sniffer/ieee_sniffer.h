@@ -64,6 +64,13 @@ typedef void (*ieee_sniffer_cb_t)(uint8_t* packet, uint8_t packet_length);
 void ieee_sniffer_register_cb(ieee_sniffer_cb_t callback);
 
 /**
+ * @brief Mark the sniffer as running. Call it right before creating the
+ * ieee_sniffer_begin task, so a stop issued before that task first runs is not
+ * lost (the task then exits at once instead of starting the radio).
+ */
+void ieee_sniffer_arm(void);
+
+/**
  * @brief Begin the IEEE sniffer
  */
 void ieee_sniffer_begin(void* args);
@@ -82,6 +89,7 @@ void ieee_sniffer_set_channel(uint8_t channel);
 
 uint8_t ieee_sniffer_get_channel();
 int8_t ieee_sniffer_get_rssi();
+uint8_t ieee_sniffer_get_lqi();
 
 void ieee_sniffer_channel_hop();
 

@@ -167,7 +167,9 @@ static void surveillance_input_cb(uint8_t button_name, uint8_t button_event) {
 
   switch (button_name) {
     case BUTTON_LEFT:
-      surveillance_module_stop();
+      /* Leave through the menu: its exit callback (surveillance_module_stop)
+         tears down, then the parent menu is redrawn. */
+      app_manager_exit();
       break;
     case BUTTON_UP:
       s_in_help = true;
@@ -283,7 +285,6 @@ void surveillance_module_stop(void) {
   // 4. Restore menu and screen state
   menus_module_set_default_input();
   oled_screen_clear();
-  // app_manager_exit() will be called by on_exit
 }
 
 void surveillance_module_boot_resume(void) {

@@ -41,23 +41,42 @@ void ic_bt(int x, int y) {
   ln(c, y + 8, c + 3, y + 6);
   ln(c + 3, y + 6, c - 3, y + 3);
 }
-void ic_zig(int x, int y) {
-  int cx = x + 6, hx[6], hy[6];
-  float cy = y + 4.5f;
-  for (int i = 0; i < 6; i++) {
-    float a = (i * 60 + 30) * M_PI / 180;
-    hx[i] = cx + (int) roundf(3.8f * cosf(a));
-    hy[i] = (int) roundf(cy + 3.8f * sinf(a));
-  }
-  for (int i = 0; i < 6; i++)
-    ln(hx[i], hy[i], hx[(i + 1) % 6], hy[(i + 1) % 6]);
+/* 10x10 pixel-exact ring (circ() leaves gaps at this size). */
+static void ring(int x, int y) {
+  ln(x + 4, y, x + 7, y);
+  ln(x + 4, y + 9, x + 7, y + 9);
+  ln(x + 1, y + 2, x + 1, y + 7);
+  ln(x + 10, y + 2, x + 10, y + 7);
+  ln(x + 2, y + 1, x + 3, y + 1);
+  ln(x + 8, y + 1, x + 9, y + 1);
+  ln(x + 2, y + 8, x + 3, y + 8);
+  ln(x + 8, y + 8, x + 9, y + 8);
 }
-void ic_thread(int x, int y) {
-  int nx[4] = {x + 2, x + 10, x + 2, x + 10},
-      ny[4] = {y + 1, y + 1, y + 8, y + 8};
-  for (int i = 0; i < 4; i++)
-    for (int j = i + 1; j < 4; j++)
-      ln(nx[i], ny[i], nx[j], ny[j]);
+void ic_zig(int x, int y) { /* ringed "Z", as in the Zigbee logo */
+  ring(x, y);
+  ln(x + 3, y + 3, x + 8, y + 3);
+  ln(x + 7, y + 4, x + 4, y + 5);
+  ln(x + 3, y + 6, x + 8, y + 6);
+}
+void ic_thread(int x, int y) { /* ringed "T", as in the Thread logo */
+  ring(x, y);
+  ln(x + 3, y + 3, x + 8, y + 3);
+  rc(x + 5, y + 4, 2, 4);
+}
+void ic_mesh(int x, int y) { /* 4 linked nodes around a central hub */
+  rc(x + 1, y, 3, 3);
+  rc(x + 8, y, 3, 3);
+  rc(x + 1, y + 7, 3, 3);
+  rc(x + 8, y + 7, 3, 3);
+  rc(x + 5, y + 4, 2, 2);
+  ln(x + 4, y + 1, x + 7, y + 1);
+  ln(x + 4, y + 8, x + 7, y + 8);
+  ln(x + 2, y + 3, x + 2, y + 6);
+  ln(x + 9, y + 3, x + 9, y + 6);
+  p(x + 4, y + 3);
+  p(x + 7, y + 3);
+  p(x + 4, y + 6);
+  p(x + 7, y + 6);
 }
 void ic_gps(int x, int y) {
   ln(x + 4, y + 1, x + 8, y + 1);
@@ -320,6 +339,7 @@ static map_t MAP[] = {
     {"Bluetooth", ic_bt},
     {"Zigbee", ic_zig},
     {"Thread", ic_thread},
+    {"Mesh Topology", ic_mesh},
     {"GPS", ic_gps},
     {"GPIO", ic_chip},
     {"File Manager", ic_folder},

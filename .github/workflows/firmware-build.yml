@@ -23,12 +23,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Every profile carries SDR: the image clears the capture-bank cap
+          # by ~2 KB, so these jobs catch a change that pushes it over.
           - profile: minino
             partition: partitions.csv
-          - profile: sdr
-            partition: partitions.csv
+            min_free: '5'
+          # bsides is a 4MB board: same 5% floor as `make flash_fit`, which
+          # gates the release build.
           - profile: bsides
             partition: partitions_4MB.csv
+            min_free: '5'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,4 +43,4 @@ jobs:
           esp_idf_version: v5.5.1
           target: esp32c6
           path: './firmware'
-          command: ./tools/ci_build_profile.sh ${{ matrix.profile }} ${{ matrix.partition }}
+          command: ./tools/ci_build_profile.sh ${{ matrix.profile }} ${{ matrix.partition }} ${{ matrix.min_free }}

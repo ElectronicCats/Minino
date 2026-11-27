@@ -2,6 +2,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "radio_lease.h"
+#include "task_manager.h"
 #include "wifi_controller.h"
 
 #include "app_manager.h"
@@ -19,6 +20,7 @@ static ODID_UAS_Data UAS_data;
 static int current_channel = 1;
 static TaskHandle_t channel_task_handle = NULL;
 static TaskHandle_t process_task_handle = NULL;
+static volatile bool scanner_running = false;
 static QueueHandle_t packet_queue = NULL;
 
 #define MAX_PAYLOAD_LEN   512
@@ -30,7 +32,7 @@ typedef struct {
 } wifi_packet_t;
 
 static void task_change_channel(void* args) {
-  while (true) {
+  while (scanner_running) {
     current_channel = (current_channel + 1) % 14;
     if (current_channel == 0)
       current_channel++;
@@ -39,11 +41,12 @@ static void task_change_channel(void* args) {
     wifi_driver_note_channel(current_channel);
     if (err != ESP_OK) {
       ESP_LOGE(TAG, "Error setting channel: %s", esp_err_to_name(err));
-      continue;
-      ;
     }
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    for (int ms = 0; ms < 1000 && scanner_running; ms += 100) {
+      vTaskDelay(pdMS_TO_TICKS(100));
+    }
   }
+  channel_task_handle = NULL;
   vTaskDelete(NULL);
 }
 
@@ -115,7 +118,11 @@ static bool parse_odid(uav_data* UAV, ODID_UAS_Data* UAS_data2) {
 
 static void droneid_scanner_process_task(void* pvParameters) {
   wifi_packet_t packet;
-  while (xQueueReceive(packet_queue, &packet, portMAX_DELAY)) {
+  while (scanner_running) {
+    /* Short timeout so a stop is seen even when no frames arrive. */
+    if (xQueueReceive(packet_queue, &packet, pdMS_TO_TICKS(100)) != pdTRUE) {
+      continue;
+    }
     uint8_t* payload = packet.payload;
     int packet_len = packet.len;
 
@@ -185,6 +192,8 @@ static void droneid_scanner_process_task(void* pvParameters) {
     }
     free(currentUAV);
   }
+  process_task_handle = NULL;
+  vTaskDelete(NULL);
 }
 
 static void callback(void* buf, wifi_promiscuous_pkt_type_t type) {
@@ -204,47 +213,49 @@ static void callback(void* buf, wifi_promiscuous_pkt_type_t type) {
   xQueueSend(packet_queue, &packet, 0);
 }
 
+static bool wifi_leased = false;
+
 static int droneid_scanner_init_wifi(void) {
   esp_err_t err = esp_netif_init();
   if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
     ESP_LOGE(TAG, "esp_netif_init: %s", esp_err_to_name(err));
     return err;
   }
-  if (!wifi_service_is_up_get() && !wifi_service_init(WIFI_MODE_NULL)) {
-    ESP_LOGE(TAG, "WiFi stack init failed");
-    return ESP_FAIL;
+  /* The lease brings the driver up (NULL mode, started) and keeps BLE from
+     tearing it down under the scanner; it is given back in stop() or on any
+     failure below. */
+  err = radio_lease_wifi_acquire(RADIO_WIFI_MODE_NULL);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "WiFi stack init failed: %s", esp_err_to_name(err));
+    return err;
   }
+  wifi_leased = true;
   err = esp_wifi_set_storage(WIFI_STORAGE_RAM);
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Error setting storage: %s", esp_err_to_name(err));
-    return err;
-  }
-  err = wifi_service_set_mode(WIFI_MODE_NULL);
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Error setting mode: %s", esp_err_to_name(err));
-    return err;
+    goto fail;
   }
 
-  if (radio_lease_prom_acquire(RADIO_PROM_DRONEID_SCANNER, callback) !=
-      ESP_OK) {
+  err = radio_lease_prom_acquire(RADIO_PROM_DRONEID_SCANNER, callback);
+  if (err != ESP_OK) {
     ESP_LOGE(TAG, "could not claim promiscuous mode");
-    return err;
+    goto fail;
   }
 
   err = esp_wifi_set_channel(current_channel, WIFI_SECOND_CHAN_NONE);
   wifi_driver_note_channel(current_channel);
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "Error setting channel: %s", esp_err_to_name(err));
-    return err;
-  }
-
-  err = esp_wifi_start();
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Error starting wifi: %s", esp_err_to_name(err));
-    return err;
+    radio_lease_prom_release(RADIO_PROM_DRONEID_SCANNER);
+    goto fail;
   }
   ESP_LOGI(TAG, "Droneid scanner started");
   return ESP_OK;
+
+fail:
+  wifi_leased = false;
+  radio_lease_wifi_release();
+  return err;
 }
 
 void droneid_scanner_begin() {
@@ -258,6 +269,7 @@ void droneid_scanner_begin() {
   }
 
   droneid_scanner_screen_main();
+  scanner_running = true;
   xTaskCreate(task_change_channel, "channhop", 4096, NULL, 5,
               &channel_task_handle);
   xTaskCreate(droneid_scanner_process_task, "id_proc", 4096, NULL, 5,
@@ -265,20 +277,31 @@ void droneid_scanner_begin() {
 }
 
 void droneid_scanner_stop(void) {
-  if (channel_task_handle != NULL) {
+  scanner_running = false;
+  /* Detach the Wi-Fi callback first: it posts to packet_queue. */
+  radio_lease_prom_release(RADIO_PROM_DRONEID_SCANNER);
+  /* Let both tasks leave on their own before the driver stops and the queue
+     goes: the process task draws the drone list (oled_mutex) and the hopper
+     sits in esp_wifi_set_channel(). */
+  if (!task_manager_wait_exit(&channel_task_handle, 2000)) {
+    ESP_LOGE(TAG, "Channel task did not stop, deleting it");
     vTaskDelete(channel_task_handle);
     channel_task_handle = NULL;
   }
-  if (process_task_handle != NULL) {
+  if (!task_manager_wait_exit(&process_task_handle, 2000)) {
+    ESP_LOGE(TAG, "Process task did not stop, deleting it");
     vTaskDelete(process_task_handle);
     process_task_handle = NULL;
+  }
+  /* The lease stops the driver when this was the last holder. */
+  if (wifi_leased) {
+    wifi_leased = false;
+    radio_lease_wifi_release();
   }
   if (packet_queue != NULL) {
     vQueueDelete(packet_queue);
     packet_queue = NULL;
   }
-  radio_lease_prom_release(RADIO_PROM_DRONEID_SCANNER);
-  esp_wifi_stop();
   ESP_LOGI(TAG, "Droneid scanner stopped");
 }
 

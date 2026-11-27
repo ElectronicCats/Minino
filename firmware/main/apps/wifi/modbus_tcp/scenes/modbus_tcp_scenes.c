@@ -458,8 +458,8 @@ static void modbus_tcp_on_exit(void) {
   animations_task_stop();
   // Stop attacks if running
   modbus_attacks_stop();
-  // Unregister AP manager callback
-  wifi_ap_manager_unregister_callback();
+  // Leave the target AP and drop the AP manager's handlers
+  wifi_ap_manager_deinit();
   // Free AP list
   for (int i = 0; i < 20; i++) {
     if (list_ap[i] != NULL) {
@@ -469,6 +469,10 @@ static void modbus_tcp_on_exit(void) {
   }
   last_main_selection = 0;
   last_settings_selection = 0;
+}
+
+void modbus_tcp_scenes_exit(void) {
+  modbus_tcp_on_exit();
 }
 
 // Wrapper for menu entry

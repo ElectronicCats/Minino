@@ -28,5 +28,6 @@
 #define CAPTIVE_DATA_FILENAME "user_creds.txt"
 
 void captive_module_main(void);
+void captive_module_exit(void);
 void captive_module_change_ap_name(char* name);
 #endif

@@ -8,4 +8,4 @@
 
 typedef int esp_err_t;
 
-esp_err_t esdr_host_run(void);
+esp_err_t esdr_host_run(const char* first_line);

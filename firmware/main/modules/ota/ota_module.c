@@ -7,6 +7,12 @@
 
 void ota_module_input(uint8_t button_name, uint8_t button_event);
 
+/* Menu on_exit_cb: the menu table enters OTA through ota_module_init(), so
+   app_manager is not active and its on_exit never runs. */
+void ota_module_exit(void) {
+  OTA_deinit();
+}
+
 void ota_module_init() {
   OTA_set_show_event_cb(ota_module_screens_show_event);
   ota_module_screens_show_help();
@@ -47,8 +53,8 @@ static void ota_on_input(uint8_t button_name, uint8_t button_event) {
 }
 
 static void ota_on_exit(void) {
-  // OTA doesn't need special cleanup; menus_module_restart() was the old exit
-  // No resources to free here
+  // Wi-Fi task, soft-AP, event handlers and HTTP server started by OTA_init()
+  OTA_deinit();
 }
 
 // Wrapper for menu entry

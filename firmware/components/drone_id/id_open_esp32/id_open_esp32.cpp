@@ -58,6 +58,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "id_open.h"
+#include "wifi_service.h"
 
 #if ID_OD_WIFI
 
@@ -80,6 +81,7 @@ esp_err_t esp_wifi_80211_tx(wifi_interface_t ifx,
 static const char* password = PASSWORD;
 
 static bool wifi_initialized = false;
+static bool wifi_leased = false;  // this module holds a Wi-Fi driver claim
 static bool ble_initialized = false;
 static bool _read_only;
 
@@ -160,8 +162,8 @@ void set_wifi_ap(char* ssid, uint8_t wifi_channel) {
     wifi_manager_config.ap.authmode = WIFI_AUTH_OPEN;
   }
 
-  // Establece el modo Wi-Fi en AP y aplica la configuración
-  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+  // Establece el modo Wi-Fi en AP (stop/set/start) y aplica la configuración
+  ESP_ERROR_CHECK(wifi_service_set_mode(WIFI_MODE_AP));
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_manager_config));
 #endif
 }
@@ -195,11 +197,17 @@ void init_w(char* ssid,
   esp_event_loop_create_default();
 
   // Crea una interfaz de red Wi-Fi en modo AP
-  esp_netif_create_default_wifi_ap();
+  wifi_service_netif_ap();
 
-  // Configuración por defecto de Wi-Fi
-  wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-  ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+  /* Through the lease, not esp_wifi_init(): a second raw init after BLE
+     took the driver down fails on the NVS cookie and aborts, and the lease
+     refuses the bring-up while BLE holds the radio. NULL mode: set_wifi_ap()
+     switches to AP, so no stray default-config soft-AP appears first. */
+  if (radio_lease_wifi_acquire(RADIO_WIFI_MODE_NULL) != ESP_OK) {
+    wifi_initialized = false;
+    return;
+  }
+  wifi_leased = true;
 
   // Registra el manejador de eventos para eventos Wi-Fi
   // ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
@@ -219,9 +227,7 @@ void init_w(char* ssid,
     }
   }
   wifi_channel = value;
-  set_wifi_ap(ssid, value);
-
-  ESP_ERROR_CHECK(esp_wifi_start());
+  set_wifi_ap(ssid, value);  // leaves the driver started in AP mode
 
   // Establece la potencia de transmisión máxima
   const int8_t wifi_power =
@@ -252,11 +258,20 @@ void init_w(char* ssid,
   return;
 }
 
+#if ID_OD_WIFI
+static void release_wifi_lease() {
+  if (wifi_leased) {
+    wifi_leased = false;
+    radio_lease_wifi_release();
+  }
+}
+#endif
+
 void init_ble() {
 #if ID_OD_WIFI
-  if (!ble_initialized) {
-    ble_initialized = true;
-  } else {
+  /* ble_initialized means "this module holds a BLE lease"; deinit_radio()
+     gives it back. */
+  if (ble_initialized) {
     return;
   }
 
@@ -272,10 +287,19 @@ void init_ble() {
      scanner), and esp_bt_controller_init()/esp_bluedroid_init() return
      ESP_ERR_INVALID_STATE in that case - which ESP_ERROR_CHECK turns into an
      abort(). radio_lease brings the stack up and holds the claim. */
+  /* BLE and Wi-Fi exclude each other: give the Wi-Fi claim up first (this
+     takes the AP beacons down, as the BLE bring-up always did), otherwise the
+     lease refuses BLE. */
+  release_wifi_lease();
   if (radio_lease_ble_acquire() != ESP_OK) {
     ESP_LOGE("BLE", "could not acquire the BLE stack");
     return;
   }
+  ble_initialized = true;
+  /* With no Wi-Fi lease holder, the acquire deinitialised the driver that
+     init_w() brought up. Say so, or set_wifi_ap()'s ESP_ERROR_CHECK aborts
+     on the dead driver. */
+  wifi_initialized = false;
 
   esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9);
   esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
@@ -295,6 +319,21 @@ void init_ble() {
   esp_ble_gap_start_advertising(&advParams);
 
   return;
+}
+
+/* Undo init_w()/init_ble(): give back the BLE lease and clear both flags so
+   the next session brings the radio up again. Wi-Fi goes back to the boot
+   state (initialised, STA) if the BLE claim had taken it down. */
+void deinit_radio() {
+  #if ID_OD_WIFI
+  wifi_initialized = false;
+  release_wifi_lease();
+  if (ble_initialized) {
+    ble_initialized = false;
+    radio_lease_ble_release();
+  }
+  wifi_service_init(WIFI_MODE_STA);
+  #endif
 }
 
 /*

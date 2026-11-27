@@ -6,6 +6,7 @@
 #include "esdr_host.h"
 #include "esp_console.h"
 #include "esp_log.h"
+#include "esp_sdr_memory.h"
 #include "esp_sdr_module.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -28,8 +29,19 @@ typedef struct {
   char entry_cmd[LAUNCH_MAX_LEN];
 } launch_args_t;
 
+/* End the running app (if any) the way the back button would, so a console
+ * launch does not stack a second app on top of the first one's resources. */
+static void exit_current_app(void) {
+  if (app_manager_is_active()) {
+    app_manager_exit();
+  } else if (menus_module_get_app_state()) {
+    menus_module_exit_app();
+  }
+}
+
 static void launch_app_task(void* arg) {
   launch_args_t* args = (launch_args_t*) arg;
+  exit_current_app();
   menus_module_set_menu_over_cmd(args->entry_cmd);
   free(args);
   vTaskDelete(NULL);
@@ -136,12 +148,9 @@ static int press_cmd(int argc, char** argv) {
 static int exit_app_cmd(int argc, char** argv) {
   (void) argc;
   (void) argv;
-  if (app_manager_is_active()) {
-    printf("Exiting current application...\n");
-    app_manager_exit();
-  } else if (menus_module_get_app_state()) {
-    printf("Exiting current application...\n");
-    menus_module_exit_app();
+  if (app_manager_is_active() || menus_module_get_app_state()) {
+    printf("Exit...\n");
+    exit_current_app();
   } else {
     printf("Not currently inside an application.\n");
   }
@@ -215,20 +224,34 @@ void cmd_control_register_launch_cmd() {
                "spam_android\n"
                "spam_windows\n"
                "spam_samsung\n"
-               "spam_all\n"
+               "spam_saturate\n"
+               "spam_matter\n"
                "hid\n"
+               "adv_scanner\n"
                "trackers\n"
                "switch\n"
                "light\n"
                "zigbee_sniffer\n"
+               "zbmesh\n"
                "broadcast\n"
                "thread_sniffer\n"
                "gps_wardriving\n"
+               "wardriving_start\n"
+               "warbee\n"
+               "warthread\n"
+               "gps_datetime\n"
+               "gps_location\n"
+               "gps_speed\n"
+               "gps_route\n"
+               "gps_sats\n"
+               "gps_config\n"
                "i2c_scanner\n"
                "uart_bridge\n"
                "sdr\n"
                "spectrum\n"
                "file_manager\n"
+               "file_manager_local\n"
+               "web_files\n"
                "ota"
 
                "\n\n"
@@ -263,6 +286,7 @@ static void sdr_capture_task(void* arg) {
   /* Through the menu, like the button path: the menu owns the exit callback
      of the app, and a command that starts the app on its own leaves it
      running forever (the next sdr_capture would find it already up). */
+  exit_current_app();
   menus_module_set_menu_over_cmd("sdr");
   vTaskDelete(NULL);
 }
@@ -294,6 +318,16 @@ static int sdr_host(int argc, char** argv) {
     return 1;
   }
 
+  /* A normal boot gives the capture bank to the heap: reboot into an SDR
+     boot first. The USB port drops with the reboot, so the viewer has to
+     reconnect and the command has to be run again. */
+  if (!sdr_bank_is_reserved()) {
+    printf("Rebooting into SDR mode: reconnect and run sdr_host again.\n");
+    fflush(stdout);
+    sdr_bank_reboot_into_sdr(); /* does not return when SDR is built in */
+    return 1;
+  }
+
   printf("Serving the ESP-SDR protocol on the USB port.\n");
   printf("Open https://espargos.net/espsdr/app/ and connect to this board.\n");
   printf(
@@ -301,7 +335,7 @@ static int sdr_host(int argc, char** argv) {
       "MININO.\n");
   fflush(stdout);
 
-  esp_err_t err = esdr_host_run();
+  esp_err_t err = esdr_host_run(NULL);
   if (err != ESP_OK) {
     ESP_LOGE(TAG, "The SDR host session ended with an error: %s",
              esp_err_to_name(err));

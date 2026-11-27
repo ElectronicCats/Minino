@@ -2,7 +2,7 @@
 #include <string.h>
 #include "esp_log.h"
 #include "esp_wifi.h"
-#include "wifi_service.h"
+#include "radio_lease.h"
 
 /**
  * @brief Stores last scanned AP records into linked list.
@@ -20,33 +20,26 @@ void wifi_scanner_module_scan() {
              esp_err_to_name(err));
   }
   ap_records.count = CONFIG_SCAN_MAX_AP;
-  if (!wifi_service_is_up_get() && !wifi_service_init(WIFI_MODE_STA)) {
-    ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to init wifi");
-    return;
-  }
-  err = wifi_service_set_mode(WIFI_MODE_STA);
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to set wifi mode: %s",
-             esp_err_to_name(err));
-    return;
-  }
-  err = esp_wifi_start();
-  if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
-    ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to start wifi: %s",
-             esp_err_to_name(err));
+  /* Claim the WiFi driver for the duration of the scan instead of bringing it
+     up behind the radio_lease's back: as the first holder this inits STA and
+     starts it; under a caller that already holds the driver it only bumps the
+     refcount, so the scan composes with the app that invoked it and the driver
+     returns to its baseline when the matching release runs. */
+  if (radio_lease_wifi_acquire(RADIO_WIFI_MODE_STA) != ESP_OK) {
+    ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to acquire wifi for scan");
     return;
   }
   err = esp_wifi_clear_ap_list();
   if (err != ESP_OK) {
     ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to clear AP list: %s",
              esp_err_to_name(err));
-    return;
+    goto done;
   }
   err = esp_wifi_scan_start(NULL, true);
   if (err != ESP_OK) {
     ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to start scan: %s",
              esp_err_to_name(err));
-    return;
+    goto done;
   }
   ESP_LOGI(TAG_WIFI_SCANNER_MODULE, "Max AP number ap_info can hold = %u",
            ap_records.count);
@@ -54,10 +47,12 @@ void wifi_scanner_module_scan() {
   if (err != ESP_OK) {
     ESP_LOGE(TAG_WIFI_SCANNER_MODULE, "Failed to get AP records: %s",
              esp_err_to_name(err));
-    return;
+    goto done;
   }
   ESP_LOGI(TAG_WIFI_SCANNER_MODULE, "Found %u APs.", ap_records.count);
   ESP_LOGD(TAG_WIFI_SCANNER_MODULE, "Scan done.");
+done:
+  radio_lease_wifi_release();
 }
 
 wifi_scanner_ap_records_t* wifi_scanner_get_ap_records() {

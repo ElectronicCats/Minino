@@ -5,14 +5,10 @@ This script replicates the logic of esp-web-sdr (radio.js) as faithfully as
 possible: the same handshake, regular expressions, CRC verification, and I/Q
 unpacking. What happens here is what the browser viewer sees.
 
-The board must be flashed with the SDR variant (firmware/sdkconfig.sdr), which
-is the only configuration that reserves the capture bank:
-
-    make build-sdr
-    idf.py -B build-sdr flash
-
-And the port must be handed over beforehand, because the console and the
-browser cannot listen on the port at the same time:
+The board runs the regular firmware. The port must be handed over beforehand,
+because the console and the browser cannot listen on the port at the same
+time. From a normal boot, sdr_host first reboots into SDR mode (the boot that
+reserves the capture bank): reconnect and run it again.
 
     minino> sdr_host
 
@@ -203,6 +199,7 @@ c = Client(PORT)
 # drops while RTS is high (matching resetUsbJtag() in radio.js). Wait for boot
 # to complete before talking to the board.
 print("[0] boot (opening the port resets the chip)")
+c.write(b"\r\n")
 boot = b""
 t0 = time.perf_counter()
 while time.perf_counter() - t0 < 6:
@@ -271,10 +268,10 @@ c.command("CAPS")
 caps = c.line()
 flags = caps.split(" ")
 check("CAPS is non-empty", len(flags) > 1, caps)
-for want in ("VERSION", "RXLIMITS", "HWAGC", "IQ8", "SERIALLEASE", "TUNEEXT", "RX40", "RX16",
+for want in ("VERSION", "RXLIMITS", "HWAGC", "GAIN", "IQ8", "SERIALLEASE", "TUNEEXT", "RX40", "RX16",
               "UARTBAUD", "SPEC", "SPECN", "SPECCAPS", "DCT"):
     check(f"CAPS advertises {want}", want in flags)
-for absent in ("GPIO", "GAIN", "ALPF", "SPECSTAT"):
+for absent in ("GPIO", "ALPF", "SPECSTAT"):
     check(f"CAPS does NOT advertise {absent} (viewer would hide that control)", absent not in flags)
 
 if "UARTBAUD" in flags:

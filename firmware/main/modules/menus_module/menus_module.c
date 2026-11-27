@@ -96,6 +96,9 @@ static void display_menus() {
           menus_ctx->submenus_count > 0 ? menus_ctx->submenus_count - 1 : 0;
     }
   }
+  if (menus_ctx == NULL || menus_ctx->submenus_count == 0) {
+    return;
+  }
   menu_views_render(menus_ctx);
   oled_screen_display_show();
 }
@@ -169,6 +172,7 @@ static void menus_input_cb(uint8_t button_name, uint8_t button_event) {
 
   if (app_state.in_app) {
     if (app_state.input_callback) {
+      sleep_mode_reset_timer();
       app_state.input_callback(button_name, button_event);
       return;
     }
@@ -217,7 +221,7 @@ static void show_logo() {
 
 void menus_module_set_reset_screen(menu_idx_t menu) {
   preferences_put_int("MENUNUMBER", menu);
-  modals_module_show_banner("Exiting...");
+  modals_module_show_banner("Exit...");
 }
 
 static void get_reset_menu() {

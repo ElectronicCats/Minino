@@ -1,6 +1,8 @@
 #include "bt_gattc.h"
 #include "esp_bt.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "gap_dispatcher.h"
 #include "gatt_dispatcher.h"
 #include "inttypes.h"
@@ -24,6 +26,9 @@ static bool s_passive_scan = false;
  * uses it so it never kills a scan that another BLE app (gattcmd, the ADV
  * scanner restart loop) owns by then. */
 static volatile bool s_scan_started = false;
+/* Set by the GATTC callback when the queued esp_ble_gattc_app_unregister()
+   completes (ESP_GATTC_UNREG_EVT); bt_gattc_task_stop() waits on it. */
+static volatile bool s_unreg_done = false;
 
 static struct gattc_profile_inst ble_client_gattc_profile_tab[DEVICE_PROFILES] =
     {[DEVICE_PROFILE] = {
@@ -491,6 +496,9 @@ void ble_client_esp_gap_cb(esp_gap_ble_cb_event_t event,
 void ble_client_esp_gattc_cb(esp_gattc_cb_event_t event,
                              esp_gatt_if_t gattc_if,
                              esp_ble_gattc_cb_param_t* param) {
+  if (event == ESP_GATTC_UNREG_EVT) {
+    s_unreg_done = true;
+  }
   /* If event is register event, store the gattc_if for each profile */
   if (event == ESP_GATTC_REG_EVT) {
     if (param->reg.status == ESP_GATT_OK) {
@@ -583,8 +591,20 @@ void bt_gattc_task_stop(void) {
   }
   if (ble_client_gattc_profile_tab[DEVICE_PROFILE].gattc_if !=
       ESP_GATT_IF_NONE) {
-    esp_ble_gattc_app_unregister(
-        ble_client_gattc_profile_tab[DEVICE_PROFILE].gattc_if);
+    s_unreg_done = false;
+    if (esp_ble_gattc_app_unregister(
+            ble_client_gattc_profile_tab[DEVICE_PROFILE].gattc_if) == ESP_OK) {
+      /* The unregister only queues work on the BTC task. Releasing the lease
+         right away could tear the stack down under it, and the dispatcher
+         must still be registered to see the completion event. Bounded, like
+         ble_hid_end(). */
+      for (int i = 0; i < 50 && !s_unreg_done; i++) {
+        vTaskDelay(pdMS_TO_TICKS(10));
+      }
+      if (!s_unreg_done) {
+        ESP_LOGW(TAG_BT_GATTC, "gattc app_unregister completion not observed");
+      }
+    }
     ble_client_gattc_profile_tab[DEVICE_PROFILE].gattc_if = ESP_GATT_IF_NONE;
   }
   gatt_dispatcher_unregister(ble_client_esp_gattc_cb);

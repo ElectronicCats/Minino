@@ -5,6 +5,27 @@ setup:
 	idf.py set-target esp32c6
 
 compile:
+	@if [ -f sdkconfig ]; then \
+	  if grep -Eq '^# CONFIG_MININO_ZIGBEE_STACK is not set|^CONFIG_MININO_ZIGBEE_STACK=n' sdkconfig; then \
+	    echo "Updating stale sdkconfig: enabling Zigbee/Thread stacks"; \
+	    sed -i \
+	      -e 's/^# CONFIG_MININO_ZIGBEE_STACK is not set/CONFIG_MININO_ZIGBEE_STACK=y/' \
+	      -e 's/^CONFIG_MININO_ZIGBEE_STACK=n/CONFIG_MININO_ZIGBEE_STACK=y/' \
+	      sdkconfig; \
+	  fi; \
+	  if grep -Eq '^# CONFIG_MININO_OPENTHREAD_STACK is not set|^CONFIG_MININO_OPENTHREAD_STACK=n' sdkconfig; then \
+	    sed -i \
+	      -e 's/^# CONFIG_MININO_OPENTHREAD_STACK is not set/CONFIG_MININO_OPENTHREAD_STACK=y/' \
+	      -e 's/^CONFIG_MININO_OPENTHREAD_STACK=n/CONFIG_MININO_OPENTHREAD_STACK=y/' \
+	      sdkconfig; \
+	  elif ! grep -q '^CONFIG_MININO_OPENTHREAD_STACK=' sdkconfig; then \
+	    echo 'CONFIG_MININO_OPENTHREAD_STACK=y' >> sdkconfig; \
+	  fi; \
+	  if grep -q '^# CONFIG_SDR_ENABLE is not set' sdkconfig; then \
+	    echo "Updating stale sdkconfig: enabling SDR"; \
+	    sed -i 's/^# CONFIG_SDR_ENABLE is not set/CONFIG_SDR_ENABLE=y/' sdkconfig; \
+	  fi; \
+	fi
 	idf.py build
 
 flash:
@@ -62,16 +83,9 @@ builds:
 		idf.py @profiles/$$board/profile build || exit 1; \
 	done
 
-# The SDR variant: the capture bank takes a whole SRAM block out of the heap
-# and the image has to fit below it, which means the Zigbee and the Thread
-# stacks stay out. See sdkconfig.sdr.
-build-sdr:
-	rm -rf build-sdr
-	idf.py @profiles/sdr/profile build
-
 tests:
 	./tools/run_host_tests.sh
 
 host-tests: tests
 
-.PHONY: test_port setup compile flash monitor clean all ff binmerge flash_fit mergebins clean_builds builds build-sdr tests host-tests
+.PHONY: test_port setup compile flash monitor clean all ff binmerge flash_fit mergebins clean_builds builds tests host-tests

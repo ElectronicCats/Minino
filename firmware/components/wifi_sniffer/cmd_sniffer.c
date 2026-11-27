@@ -344,6 +344,7 @@ static void sniffer_task(void* parameters) {
         } else {
           sniffer_stop(sniffer);
         }
+        free(packet_info.payload);
         break;
       }
     }
@@ -367,7 +368,7 @@ static void sniffer_task(void* parameters) {
   if (sniffer_cb) {
     sniffer_cb(sniffer);
   }
-  vTaskDelete(NULL);
+  task_manager_delete(NULL);
 }
 
 static esp_err_t sniffer_stop(sniffer_runtime_t* sniffer) {
@@ -463,15 +464,11 @@ static esp_err_t sniffer_start(sniffer_runtime_t* sniffer) {
   sniffer->sem_task_over = xSemaphoreCreateBinary();
   ESP_GOTO_ON_FALSE(sniffer->sem_task_over, ESP_FAIL, err_sem, TAG,
                     "create work queue failed");
-  esp_err_t task_err = task_manager_create(
-      sniffer_task, "wifi_sniffer",
-      TASK_STACK_MEDIUM,  // 4KB (CONFIG_SNIFFER_TASK_STACK_SIZE)
-      sniffer,
-      TASK_PRIORITY_HIGH,  // Higher priority to drain the queue swiftly
-      &sniffer->task);
-  ESP_GOTO_ON_FALSE(task_err == ESP_OK, ESP_FAIL, err_task, TAG,
-                    "create task failed");
 
+  /* Claim promiscuous mode BEFORE creating the task. A failed claim (e.g. BLE
+     holds the radio) must not force-delete a task that is already drawing and
+     may hold oled_mutex. The queue exists, so the few frames that arrive
+     before the task starts draining are buffered, not lost. */
   switch (sniffer->interf) {
     case SNIFFER_INTF_WLAN:
       /* Start WiFi Promiscuous Mode */
@@ -482,7 +479,7 @@ static esp_err_t sniffer_start(sniffer_runtime_t* sniffer) {
          receiving frames. */
       ESP_GOTO_ON_ERROR(
           radio_lease_prom_acquire(RADIO_PROM_SNIFFER, wifi_sniffer_cb),
-          err_start, TAG, "claim promiscuous mode failed");
+          err_prom, TAG, "claim promiscuous mode failed");
       esp_wifi_set_channel(sniffer->channel, WIFI_SECOND_CHAN_NONE);
       ESP_LOGI(TAG, "start WiFi promiscuous ok");
       break;
@@ -491,11 +488,21 @@ static esp_err_t sniffer_start(sniffer_runtime_t* sniffer) {
     default:
       break;
   }
+
+  esp_err_t task_err = task_manager_create(
+      sniffer_task, "wifi_sniffer",
+      TASK_STACK_MEDIUM,  // 4KB (CONFIG_SNIFFER_TASK_STACK_SIZE)
+      sniffer,
+      TASK_PRIORITY_HIGH,  // Higher priority to drain the queue swiftly
+      &sniffer->task);
+  ESP_GOTO_ON_FALSE(task_err == ESP_OK, ESP_FAIL, err_task, TAG,
+                    "create task failed");
   return ret;
-err_start:
-  task_manager_delete(sniffer->task);
-  sniffer->task = NULL;
 err_task:
+  if (sniffer->interf == SNIFFER_INTF_WLAN) {
+    radio_lease_prom_release(RADIO_PROM_SNIFFER);
+  }
+err_prom:
   vSemaphoreDelete(sniffer->sem_task_over);
   sniffer->sem_task_over = NULL;
 err_sem:
@@ -503,6 +510,7 @@ err_sem:
   sniffer->work_queue = NULL;
 err_queue:
   sniffer->is_running = false;
+  sniff_packet_stop();
 err:
   // Only trigger the OOM handler for genuine out-of-memory failures.
   // Calling it for ESP_ERR_INVALID_STATE or other errors would corrupt
@@ -597,8 +605,10 @@ int do_sniffer_cmd(int argc, char** argv) {
   }
 
   /* start sniffer */
-  sniffer_start(&snf_rt);
-  return 0;
+  esp_err_t err = sniffer_start(&snf_rt);
+  /* NO_MEM was already reported through out_of_mem_cb; reporting it again
+     would run the app's handler twice. */
+  return (err == ESP_OK || err == ESP_ERR_NO_MEM) ? 0 : 1;
 }
 
 void register_sniffer_cmd(void) {

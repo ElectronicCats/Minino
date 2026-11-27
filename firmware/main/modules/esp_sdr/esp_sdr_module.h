@@ -29,8 +29,14 @@ bool esp_sdr_module_is_running(void);
 /**
  * @brief Switch the native ESP-SDR application into Web Host mode and start
  *        serving the ESPARGOS burst protocol on the USB port.
+ *
+ * Returns when the session ends: the caller is the console, which must not
+ * read the port meanwhile.
+ *
+ * @param first_line The line that opened the session (the viewer's SYNC),
+ *        answered first; NULL when there is none.
  */
-void esp_sdr_module_enter_web_host(void);
+void esp_sdr_module_enter_web_host(const char* first_line);
 
 #ifdef __cplusplus
 }

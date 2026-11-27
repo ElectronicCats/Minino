@@ -18,6 +18,7 @@
 #include "led_events.h"
 #include "menus_module.h"
 #include "oled_screen.h"
+#include "radio_lease.h"
 #include "sd_card.h"
 #include "wifi_analyzer.h"
 #include "wifi_attacks.h"
@@ -35,6 +36,10 @@ static volatile bool analizer_initializing = false;
 static volatile bool analizer_running = false;
 static volatile bool no_mem = false;
 static volatile bool analyzer_exiting = false;
+/* True while this session holds the WiFi driver lease (acquired in the setup
+   task, released on exit); keeps acquire/release balanced across re-entries
+   and the double exit path (menu callback plus app_manager). */
+static volatile bool wifi_leased = false;
 
 // Two separate mutexes: one for the summary buffer, one for the state flags.
 static SemaphoreHandle_t summary_mutex = NULL;
@@ -80,6 +85,14 @@ static void out_of_mem_handler() {
     wifi_module_summary_exit_cb();
   }
   wifi_screens_show_no_mem();
+}
+
+/* out_of_mem_handler() is also the sniffer's callback, so it cannot end the
+   task itself; as a task of its own it needs this body, since a FreeRTOS task
+   that returns aborts. */
+static void out_of_mem_task(void* pvParameters) {
+  out_of_mem_handler();
+  task_manager_delete(NULL);
 }
 
 static void limit_packets_handler() {
@@ -204,7 +217,7 @@ static void wifi_analyzer_init_task(void* pvParameters) {
     analizer_running = false;
     xSemaphoreGive(state_mutex);
   }
-  vTaskDelete(NULL);
+  task_manager_delete(NULL);
 }
 
 // ---------------------------------------------------------------------------
@@ -212,12 +225,19 @@ static void wifi_analyzer_init_task(void* pvParameters) {
 // wifi_driver_init_null / esp_wifi_init) in a dedicated 8 KB task.
 // ---------------------------------------------------------------------------
 static void wifi_analyzer_setup_task(void* pvParameters) {
+  /* Bring the driver up through the lease (NULL mode for promiscuous capture)
+     so the refcount is honest and BLE cannot tear it down under the capture. */
+  /* Every summary exit re-runs begin: take the claim once per session. */
+  if (!wifi_leased &&
+      radio_lease_wifi_acquire(RADIO_WIFI_MODE_NULL) == ESP_OK) {
+    wifi_leased = true;
+  }
   wifi_sniffer_begin();
   xSemaphoreTake(state_mutex, portMAX_DELAY);
   analizer_initialized = true;
   analizer_initializing = false;
   xSemaphoreGive(state_mutex);
-  vTaskDelete(NULL);
+  task_manager_delete(NULL);
 }
 
 // ---------------------------------------------------------------------------
@@ -270,14 +290,14 @@ static void wifi_analyzer_begin_task(void* pvParameters) {
   xSemaphoreGive(state_mutex);
 
   if (already_done) {
-    vTaskDelete(NULL);
+    task_manager_delete(NULL);
     return;
   }
 
   // Run the heavy WiFi setup (esp_wifi_init, etc.) inside this task
   wifi_analyzer_setup_task(NULL);
-  // Note: wifi_analyzer_setup_task calls vTaskDelete(NULL) at the end, which
-  // terminates THIS task too, so no vTaskDelete(NULL) is needed here.
+  // Note: wifi_analyzer_setup_task ends with task_manager_delete(NULL), which
+  // removes and deletes THIS task, so nothing more is needed here.
 }
 
 // ---------------------------------------------------------------------------
@@ -288,8 +308,8 @@ static void wifi_analyzer_begin_task(void* pvParameters) {
 void wifi_analyzer_begin() {
   if (no_mem) {
     // Schedule the OOM handler in a safe context
-    task_manager_create((TaskFunction_t) out_of_mem_handler, "wifi_oom",
-                        TASK_STACK_SMALL, NULL, TASK_PRIORITY_NORMAL, NULL);
+    task_manager_create(out_of_mem_task, "wifi_oom", TASK_STACK_SMALL, NULL,
+                        TASK_PRIORITY_NORMAL, NULL);
     return;
   }
 
@@ -512,27 +532,36 @@ static void wifi_analyzer_on_exit(void) {
     led_control_stop();
     wifi_sniffer_close_file();
   }
-  // Free summary buffer
-  xSemaphoreTake(summary_mutex, portMAX_DELAY);
-  wifi_analizer_free_summary();
-  xSemaphoreGive(summary_mutex);
-  // Reset all state
-  xSemaphoreTake(state_mutex, portMAX_DELAY);
-  analizer_running = false;
-  analizer_initialized = false;
-  analizer_initializing = false;
-  no_mem = false;
-  analyzer_exiting = false;
-  xSemaphoreGive(state_mutex);
-  // Delete mutexes (optional, but clean)
+  // Free summary buffer. The cleanup path can run more than once (menu
+  // callback plus app_manager), so every mutex has to be checked first.
   if (summary_mutex != NULL) {
-    vSemaphoreDelete(summary_mutex);
-    summary_mutex = NULL;
+    xSemaphoreTake(summary_mutex, portMAX_DELAY);
+    wifi_analizer_free_summary();
+    xSemaphoreGive(summary_mutex);
   }
+  // Reset all state
   if (state_mutex != NULL) {
-    vSemaphoreDelete(state_mutex);
-    state_mutex = NULL;
+    xSemaphoreTake(state_mutex, portMAX_DELAY);
+    analizer_running = false;
+    analizer_initialized = false;
+    analizer_initializing = false;
+    no_mem = false;
+    analyzer_exiting = false;
+    xSemaphoreGive(state_mutex);
   }
+  // Release the WiFi driver lease taken in the setup task. Guarded so the
+  // second exit (menu callback plus app_manager) does not underflow.
+  if (wifi_leased) {
+    wifi_leased = false;
+    radio_lease_wifi_release();
+  }
+  /* The mutexes are kept for the life of the boot: the begin, init and
+     limit-handler tasks may still be about to take them, and a deleted
+     mutex there is xSemaphoreTake(NULL). */
+}
+
+void wifi_analyzer_cleanup(void) {
+  wifi_analyzer_on_exit();
 }
 
 // App definition for app_manager

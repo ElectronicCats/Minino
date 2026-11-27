@@ -12,7 +12,7 @@ void wardriving_screens_show_help();
  *
  * @return void
  */
-void wardriving_screens_wifi_animation_task();
+void wardriving_screens_wifi_animation_frame();
 
 /**
  * @brief Display the scanning screen

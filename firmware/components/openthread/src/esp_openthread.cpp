@@ -171,12 +171,14 @@ esp_err_t esp_openthread_auto_start(otOperationalDatasetTlvs* datasetTlvs) {
   return ESP_OK;
 }
 
+static volatile bool s_mainloop_exit_requested = false;
+
 esp_err_t esp_openthread_launch_mainloop(void) {
   esp_openthread_mainloop_context_t mainloop;
   otInstance* instance = esp_openthread_get_instance();
   esp_err_t error = ESP_OK;
 
-  while (true) {
+  while (!s_mainloop_exit_requested) {
     FD_ZERO(&mainloop.read_fds);
     FD_ZERO(&mainloop.write_fds);
     FD_ZERO(&mainloop.error_fds);
@@ -219,6 +221,7 @@ esp_err_t esp_openthread_launch_mainloop(void) {
       break;
     }
   }
+  s_mainloop_exit_requested = false;
   return error;
 }
 
@@ -229,6 +232,14 @@ esp_err_t esp_openthread_deinit(void) {
 
 static void stub_task(void* context) {
   // this is a empty function used for ot-task signal pending
+}
+
+// Backport of IDF's esp_openthread_mainloop_exit(): the vendored loop above had
+// no way out, so a deinit from another task finalized the instance under it.
+// The stub post wakes select() so the loop sees the flag at once.
+esp_err_t esp_openthread_mainloop_exit(void) {
+  s_mainloop_exit_requested = true;
+  return esp_openthread_task_queue_post(stub_task, NULL);
 }
 
 void otTaskletsSignalPending(otInstance* aInstance) {

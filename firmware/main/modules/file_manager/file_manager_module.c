@@ -172,11 +172,7 @@ static file_manager_context_t* file_manager_context_alloc() {
 }
 
 static void file_manager_module_exit() {
-  clear_items();
-  if (fm_ctx != NULL) {
-    free(fm_ctx);
-    fm_ctx = NULL;
-  }
+  /* Cleanup runs in the menu's on_exit_cb (file_manager_module_cleanup). */
   app_manager_exit();
 }
 
@@ -413,11 +409,15 @@ static void file_manager_on_input(uint8_t button_name, uint8_t button_event) {
 }
 
 static void file_manager_on_exit(void) {
-  clear_items();
   if (fm_ctx != NULL) {
+    clear_items();
     free(fm_ctx);
     fm_ctx = NULL;
   }
+}
+
+void file_manager_module_cleanup(void) {
+  file_manager_on_exit();
 }
 
 // Wrapper for menu entry

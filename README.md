@@ -71,6 +71,8 @@ Minino can operate across multiple wireless technologies and RF tools:
 
 #### BLE (`Applications > Bluetooth`)
 - [x] **BLE Spammer**: Floods advertisement popups targeting iOS (Apple), Android, Windows, and Samsung devices.
+- [x] **BLE Saturate**: Lab-only channel-saturation mode with 20 ms advertising and MAC rotation.
+- [x] **BLE Matter Spoof**: Emits Matter commissioning onboarding advertisements (`0xFFF6`).
 - [x] **BLE HID Spoofing**: Emulates Bluetooth Human Interface Devices (keyboard, mouse, media remote).
 - [x] **BLE ADV Sniffer**: Raw advertisement packet sniffer with Wireshark serial streaming.
 - [x] **BLE Trackers Scanner**: Detects and tracks Apple AirTags, Samsung SmartTags, Tile, and Chipolo with RSSI signal and distance estimation.
@@ -79,19 +81,20 @@ Minino can operate across multiple wireless technologies and RF tools:
 #### Zigbee (`Applications > Zigbee`)
 - [x] **Zigbee Sniffer**: IEEE 802.15.4 over-the-air packet sniffer.
 - [x] **Zigbee Spoofing**: End Device emulation (smart light bulbs and switches).
-- [x] **Wardriving**: Geotagged Zigbee network reconnaissance.
+- [x] **Mesh Topology**: Passive PAN/link map with LQI/RSSI and SD logging.
+- [x] **Wardriving (WarBee)**: Geotagged Zigbee network reconnaissance with channel hopping.
 - [x] **Wireshark integration**: Zigbee frame capture streaming to Wireshark.
 
 #### Thread (`Applications > Thread`)
 - [x] **Thread Sniffer**: IEEE 802.15.4 / 6LoWPAN Thread network packet sniffer.
 - [x] **Thread Broadcast**: Injects multicast and broadcast packets into Thread networks.
-- [ ] Wardriving
+- [x] **Wardriving (WarThread)**: Geotagged Thread/802.15.4 reconnaissance with MLE parsing.
 - [x] Wireshark integration
 
 #### Matter (`Applications > Matter`)
+- [x] **Matter onboarding advertisement spoofing (BLE)**: `Applications > Bluetooth > Spam > Matter`.
 - [ ] Matter protocol support
 - [ ] Matter CLI
-- [ ] Matter Spoof
 
 #### GPS (`Applications > GPS`)
 - [x] **Wardriving**: Geotagged reconnaissance (WiFi, Zigbee, Thread) logged to SD card.
@@ -148,22 +151,39 @@ Minino can operate across multiple wireless technologies and RF tools:
 
 ---
 
-## Native 80 MS/s SDR Transceiver & ESPARGOS WebSDR Host
+## Firmware profiles and memory budget
 
-Minino integrates a **native, in-process Software Defined Radio (SDR)** engine (`firmware/main/modules/esp_sdr/`) running directly inside Minino OS without requiring dual-boot or a secondary `ota_1` partition. It drives the ESP32-C6 hardware I/Q dump engine at **80 MS/s**, reserves the 128 KiB SRAM Block 2 (`0x40840000 - 0x40860000`) at link time (`esp_sdr_bank.ld`), and locks the USB-Serial-JTAG reset register (`usb_uart_chip_rst_dis = 1`) while active so browser WebSerial DTR/RTS transitions never reboot the board.
-
-### Building & Flashing the SDR Firmware Variant
-Because the hardware I/Q capture bank requires 128 KiB of contiguous SRAM below `0x40840000`, the SDR variant compiles without the Zigbee and OpenThread stacks to fit within the 256 KiB lower-SRAM budget (`profiles/sdr/profile`). Every build automatically generates both individual partition binaries and unified single-file images (`minino-merged.bin` and `minino-merged.hex`):
+The default firmware includes the **Zigbee/OpenThread stacks**, so their apps
+are native entries in `Applications`:
 
 ```bash
 cd firmware
-make build-sdr                                    # Builds the SDR-enabled firmware in build-sdr/
-idf.py -B build-sdr -p /dev/ttyACM0 flash         # Flashes bootloader, partition table, and app
+make compile                 # BLE/WiFi + Zigbee/Thread + SDR
+```
+
+In the default combined build, `bt_spam` starts with roughly 20 KB free after
+Bluedroid comes up and refuses to advertise below **18 KB**; it stops the loop
+below **8 KB**. This prevents `btm_ble_write_adv_enable_complete failed` after
+using Thread Sniffer/Broadcast, when the heap is lower.
+
+---
+
+## Native 80 MS/s SDR Transceiver & ESPARGOS WebSDR Host
+
+Minino integrates a **native, in-process Software Defined Radio (SDR)** engine (`firmware/main/modules/esp_sdr/`) running directly inside Minino OS without requiring dual-boot or a secondary `ota_1` partition. It drives the ESP32-C6 hardware I/Q dump engine at **80 MS/s**, uses the 128 KiB SRAM Block 2 (`0x40840000 - 0x40860000`) as its capture bank (the image is capped below it by `esp_sdr_bank.ld`), and locks the USB-Serial-JTAG reset register (`usb_uart_chip_rst_dis = 1`) while active so browser WebSerial DTR/RTS transitions never reboot the board.
+
+### Building & Flashing
+SDR ships in the regular firmware, next to Spectrum, BLE, Wi-Fi, Zigbee and Thread. The capture bank only leaves the heap on an **SDR boot**: opening `Applications > SDR` (or running `sdr_host`) reboots the board with the bank reserved and opens the app; leaving the app reboots back, so the other apps keep the whole heap. Every build generates both individual partition binaries and unified single-file images (`minino-merged.bin` and `minino-merged.hex`):
+
+```bash
+cd firmware
+make compile                                  # Builds the firmware in build/
+idf.py -p /dev/ttyACM0 flash                  # Flashes bootloader, partition table, and app
 ```
 
 Or flash the single unified binary at address `0x0`:
 ```bash
-esptool.py --chip esp32c6 -p /dev/ttyACM0 write_flash 0x0 build-sdr/minino-merged.bin
+esptool.py --chip esp32c6 -p /dev/ttyACM0 write_flash 0x0 build/minino-merged.bin
 ```
 
 ### The 4 Operating Modes on Device (`Applications > SDR`)

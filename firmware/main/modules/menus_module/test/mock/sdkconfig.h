@@ -66,6 +66,7 @@
 #endif
 #if TEST_CONFIG_BLUETOOTH_APPS_ENABLE
   #define CONFIG_BLUETOOTH_APPS_ENABLE 1
+  #define CONFIG_BT_ENABLED            1
 #endif
 /* The stacks the build variants leave out. The catalogue gates the Zigbee
    and the Thread entries on them as well as on the app switch: the apps

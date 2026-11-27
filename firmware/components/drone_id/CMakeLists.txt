@@ -19,7 +19,7 @@ if(_minino_opt_on)
                                      "opendroneid"
                                      "spoofer"
                                      "utm"
-                        PRIV_REQUIRES esp_wifi nvs_flash bt radio_lease)
+                        PRIV_REQUIRES esp_wifi nvs_flash bt radio_lease wifi_service)
 else()
     idf_component_register()
 endif()
