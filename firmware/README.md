@@ -807,6 +807,7 @@ I (1420031) : 0x40818ca6   01                                                |.|
 - The SD card is unmounted cleanly on every deliberate restart (Web File Browser, Zigbee switch/light, SDR exit, console reset)
 - rf_spectrum, DroneID scanner, Drone ID, BLE spam, Modbus TCP and CatDoS now claim Wi-Fi through the radio arbiter: rf_spectrum and the DroneID scanner shut the driver down on exit, and starting one of them while BLE holds the radio fails cleanly
 - A connection made from `Settings > WiFi` or the console `connect` command is dropped cleanly when the next app takes the radio, instead of leaving reconnect attempts running in the background
+- Wi-Fi and BLE keep receiving after the board is reset over USB (esptool, a serial monitor) or with the RESET button while a Zigbee or Thread app is running. Before, the radio stayed deaf until the board was powered off
 
 ### Known issues
 - Zigbee, Thread, Zigbee/Thread wardriving, OTA and the Web File Browser still reset Wi-Fi themselves instead of claiming it through the radio arbiter
