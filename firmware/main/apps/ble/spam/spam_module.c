@@ -122,7 +122,10 @@ static void ble_spam_on_exit(void) {
   bt_spam_register_connect_cb(NULL);
   animations_task_stop();
   bt_spam_app_deinit();
-  void* tm = ble_screens_get_text_mutex();
+  /* Clear the global first: spam_screens recreates the mutex only when it is
+     NULL, so a dangling handle would be reused on the next entry. */
+  SemaphoreHandle_t tm = text_mutex;
+  text_mutex = NULL;
   if (tm != NULL) {
     vSemaphoreDelete(tm);
   }
