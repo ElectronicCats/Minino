@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "freertos/task.h"
 #include "general_interact_screen.h"
 #include "ieee_sniffer.h"
@@ -22,6 +23,19 @@ static volatile uint16_t packet_count = 0;
 static TaskHandle_t zigbee_task_sniffer = NULL;
 static TaskHandle_t zigbee_ui_task_handle = NULL;
 static volatile bool sniffer_running = false;
+/* Serialises enter/exit: a console exit_app can land while the (slow) entry
+ * is still running on the launch task, and sniffer_running is only set at its
+ * end, so the exit used to return early and the entry then left the tasks up. */
+static StaticSemaphore_t sniffer_lifecycle_buf;
+static SemaphoreHandle_t sniffer_lifecycle_lock = NULL;
+
+static SemaphoreHandle_t sniffer_lifecycle_get(void) {
+  if (sniffer_lifecycle_lock == NULL) {
+    sniffer_lifecycle_lock =
+        xSemaphoreCreateMutexStatic(&sniffer_lifecycle_buf);
+  }
+  return sniffer_lifecycle_lock;
+}
 
 static void light_input_cb(uint8_t button_name, uint8_t button_event);
 static void switch_input_cb(uint8_t button_name, uint8_t button_event);
@@ -69,7 +83,10 @@ static void on_interactive_screen_back(void) {
 }
 
 void zigbee_module_sniffer_enter(void) {
+  SemaphoreHandle_t lock = sniffer_lifecycle_get();
+  xSemaphoreTake(lock, portMAX_DELAY);
   if (sniffer_running) {
+    xSemaphoreGive(lock);
     return;
   }
 
@@ -103,10 +120,14 @@ void zigbee_module_sniffer_enter(void) {
               &zigbee_task_sniffer);
   xTaskCreate(sniffer_ui_task, "zb_ui_task", 3072, NULL, 4,
               &zigbee_ui_task_handle);
+  xSemaphoreGive(lock);
 }
 
 void zigbee_module_sniffer_exit(void) {
+  SemaphoreHandle_t lock = sniffer_lifecycle_get();
+  xSemaphoreTake(lock, portMAX_DELAY); /* waits for an in-flight enter */
   if (!sniffer_running) {
+    xSemaphoreGive(lock);
     return;
   }
   sniffer_running = false;
@@ -126,6 +147,7 @@ void zigbee_module_sniffer_exit(void) {
 
   /* Restore WiFi in STA mode */
   wifi_service_init(WIFI_MODE_STA);
+  xSemaphoreGive(lock);
 }
 
 void zigbee_module_switch_enter(void) {
