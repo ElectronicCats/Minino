@@ -25,7 +25,8 @@ static TaskHandle_t zigbee_ui_task_handle = NULL;
 static volatile bool sniffer_running = false;
 /* Serialises enter/exit: a console exit_app can land while the (slow) entry
  * is still running on the launch task, and sniffer_running is only set at its
- * end, so the exit used to return early and the entry then left the tasks up. */
+ * end, so the exit used to return early and the entry then left the tasks up.
+ */
 static StaticSemaphore_t sniffer_lifecycle_buf;
 static SemaphoreHandle_t sniffer_lifecycle_lock = NULL;
 
