@@ -45,7 +45,11 @@ static wardriving_module_state_t wardriving_module_state =
     WARDRIVING_MODULE_STATE_STOPPED;
 static TaskHandle_t wardriving_module_scan_task_handle = NULL;
 static TaskHandle_t scanning_wifi_animation_task_handle = NULL;
-static bool running_wifi_scanner_animation = false;
+/* Show/hide replaces vTaskSuspend/vTaskResume: suspending the animation task
+   inside an OLED call left oled_mutex taken, and the next screen drawn from
+   the GPS task then blocked forever. */
+static volatile bool running_wifi_scanner_animation = false;
+static volatile bool wifi_animation_stop = false;
 static volatile bool wardriving_scan_running = false;
 
 static uint16_t csv_lines = 0;
@@ -155,6 +159,17 @@ void add_mac_to_table(const uint8_t* mac, uint32_t current_time) {
     mac_table[mac_table_head].timestamp = current_time;
     mac_table_head = (mac_table_head + 1) % MAX_MAC_TABLE_SIZE;
   }
+}
+
+static void wardriving_wifi_animation_task(void* pvParameters) {
+  while (!wifi_animation_stop) {
+    if (running_wifi_scanner_animation) {
+      wardriving_screens_wifi_animation_frame();
+    }
+    vTaskDelay(pdMS_TO_TICKS(500));
+  }
+  scanning_wifi_animation_task_handle = NULL;
+  task_manager_delete(NULL);
 }
 
 void wardriving_module_scan_task(void* pvParameters) {
@@ -301,11 +316,6 @@ void wardriving_gps_event_handler_cb(gps_t* gps) {
   counter++;
 
   if (gps->sats_in_use == 0) {
-    /* Guards against vTaskSuspend(NULL), which would suspend this NMEA task
-       (priority 20) and stop GPS parsing for the rest of the session. */
-    if (scanning_wifi_animation_task_handle != NULL) {
-      vTaskSuspend(scanning_wifi_animation_task_handle);
-    }
     running_wifi_scanner_animation = false;
     wardriving_screens_module_no_gps_signal();
     return;
@@ -313,10 +323,7 @@ void wardriving_gps_event_handler_cb(gps_t* gps) {
 
   if (!running_wifi_scanner_animation) {
     oled_screen_clear();
-    if (scanning_wifi_animation_task_handle != NULL) {
-      vTaskResume(scanning_wifi_animation_task_handle);
-      running_wifi_scanner_animation = true;
-    }
+    running_wifi_scanner_animation = true;
   }
 
   if (counter % DISPLAY_REFRESH_RATE_SEC == 0 || counter == 1) {
@@ -419,24 +426,19 @@ void wardriving_module_start_scan() {
     return;
   }
 
-  /* The return value matters: task_manager_create() leaves the handle NULL when
-     xTaskCreate fails or the registry is full, and vTaskSuspend(NULL) suspends
-     the *calling* task - which here is the esp_timer task that runs the button
-     callbacks, so a failure would freeze the whole UI. */
+  /* Starts hidden; the GPS callback shows it once there is a fix. */
+  running_wifi_scanner_animation = false;
+  wifi_animation_stop = false;
   err = task_manager_create(
-      wardriving_screens_wifi_animation_task, "wardriving_anim",
+      wardriving_wifi_animation_task, "wardriving_anim",
       TASK_STACK_SMALL,  // Animations only need a small stack
       NULL,
       TASK_PRIORITY_LOW,  // UI low priority
       &scanning_wifi_animation_task_handle);
-
-  if (err == ESP_OK) {
-    vTaskSuspend(scanning_wifi_animation_task_handle);
-  } else {
+  if (err != ESP_OK) {
     ESP_LOGE(TAG, "Failed to create the wardriving animation task");
     scanning_wifi_animation_task_handle = NULL;
   }
-  running_wifi_scanner_animation = false;
 
   gps_module_register_cb(wardriving_gps_event_handler_cb);
   wardriving_screens_module_loading_text();
@@ -468,7 +470,12 @@ void wardriving_module_stop_scan() {
     wardriving_module_scan_task_handle = NULL;
   }
 
-  if (scanning_wifi_animation_task_handle != NULL) {
+  /* Let the animation finish its frame: deleting it mid-draw leaves
+     oled_mutex taken. */
+  running_wifi_scanner_animation = false;
+  wifi_animation_stop = true;
+  if (!task_manager_wait_exit(&scanning_wifi_animation_task_handle, 1500)) {
+    ESP_LOGE(TAG, "Animation task did not stop, deleting it");
     task_manager_delete(scanning_wifi_animation_task_handle);
     scanning_wifi_animation_task_handle = NULL;
   }

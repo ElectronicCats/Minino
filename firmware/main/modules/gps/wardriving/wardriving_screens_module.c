@@ -26,17 +26,11 @@ void wardriving_screens_show_help() {
   general_screen_display_scrolling_text_handler(menus_module_exit_app);
 }
 
-void wardriving_screens_wifi_animation_task() {
-  oled_screen_clear_buffer();
-
-  while (true) {
-    static uint8_t idx = 0;
-    oled_screen_display_bitmap(epd_bitmap_wifi_loading[idx], 0, 0, 56, 56,
-                               OLED_DISPLAY_NORMAL);
-    idx = (idx + 1 > 3) ? 0 : (idx + 1);
-    vTaskDelay(500 / portTICK_PERIOD_MS);
-  }
-  vTaskDelete(NULL);
+void wardriving_screens_wifi_animation_frame() {
+  static uint8_t idx = 0;
+  oled_screen_display_bitmap(epd_bitmap_wifi_loading[idx], 0, 0, 56, 56,
+                             OLED_DISPLAY_NORMAL);
+  idx = (idx + 1 > 3) ? 0 : (idx + 1);
 }
 
 void wardriving_screens_module_scanning(uint32_t packets, char* signal) {
