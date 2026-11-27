@@ -38,6 +38,11 @@ static bool gap_callback_registered = false;
    exactly once, either from bt_spam_app_deinit() or from the error path of
    bt_spam_app_main(). */
 static bool bt_spam_lease_held = false;
+/* True while this module holds its one scan block. Unblocking is tied to this
+   flag because bt_spam_app_deinit() can run twice on exit (ble_spam_stop, then
+   the app_manager on_exit) and an unconditional unblock would drop another
+   app's block. */
+static bool bt_spam_scan_blocked = false;
 
 /* Chained GAP callback for other modules (e.g., bt_gattc) */
 static esp_gap_ble_cb_t chained_gap_cb = NULL;
@@ -1084,6 +1089,7 @@ void bt_spam_app_main(bt_spam_mode_t mode) {
    * a scan behind our back (the restart loops of the bt_gattc consumers check
    * radio_lease_ble_scan_allowed() before re-arming). */
   radio_lease_ble_block_scan();
+  bt_spam_scan_blocked = true;
 
   /* Bluedroid has already allocated its host buffers here. Check again before
      creating the advertising task: the pre-acquire check alone cannot see
@@ -1194,7 +1200,10 @@ error:
     gap_dispatcher_unregister(esp_gap_cb);
     gap_callback_registered = false;
   }
-  radio_lease_ble_unblock_scan();
+  if (bt_spam_scan_blocked) {
+    radio_lease_ble_unblock_scan();
+    bt_spam_scan_blocked = false;
+  }
   if (bt_spam_lease_held) {
     radio_lease_ble_release();
     bt_spam_lease_held = false;
@@ -1264,7 +1273,10 @@ void bt_spam_app_deinit(void) {
     bt_spam_lease_held = false;
   }
   /* Only now may the scanners take the radio again. */
-  radio_lease_ble_unblock_scan();
+  if (bt_spam_scan_blocked) {
+    radio_lease_ble_unblock_scan();
+    bt_spam_scan_blocked = false;
+  }
 
   if (adv_sem != NULL) {
     vSemaphoreDelete(adv_sem);
